@@ -55,7 +55,6 @@ import { getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/user-utils'
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 
 // Consolidated settings subpage imports
-import ProfileManager from '@/components/ProfileManager';
 import SessionsManager from '@/components/SessionsManager';
 import ActivityLogs from '@/components/ActivityLogs';
 import ConnectedIdentities from '@/components/ConnectedIdentities';
@@ -113,7 +112,7 @@ function SettingsPageInner() {
     const _nativeSidebar = useNativeSidebarOptional();
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'general' | 'billing' | 'agents' | 'workspace' | 'profile' | 'security' | 'privacy' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'billing' | 'agents' | 'workspace' | 'security' | 'privacy' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
     const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
     const [mfaFactors, setMfaFactors] = useState<any>(null);
     const [accountMfaEnabled, setAccountMfaEnabled] = useState(false);
@@ -123,13 +122,18 @@ function SettingsPageInner() {
     useEffect(() => {
         const section = (searchParams.get('section') || '').toLowerCase();
         const tab = (searchParams.get('tab') || '').toLowerCase();
-        const allowed = new Set(['general', 'billing', 'agents', 'workspace', 'profile', 'security', 'privacy', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
+        const allowed = new Set(['general', 'billing', 'agents', 'workspace', 'security', 'privacy', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
         if (section.startsWith('admin') || tab === 'admin') {
             setActiveTab('admin');
             if (section.includes('user')) setAdminSubTab('users');
             else if (section.includes('email')) setAdminSubTab('email');
             else if (section.includes('coupon')) setAdminSubTab('coupons');
             else setAdminSubTab('dashboard');
+            return;
+        }
+        if (section === 'profile' || tab === 'profile') {
+            setIsEditModalOpen(true);
+            setActiveTab('general');
             return;
         }
         if (tab === 'assistants' || tab === 'agent') {
@@ -529,7 +533,6 @@ function SettingsPageInner() {
         { id: 'billing', label: 'Billing', icon: BillingIcon },
         { id: 'agents', label: 'Smart Agents', icon: Bot },
         { id: 'workspace', label: 'Workspace', icon: WorkspaceIcon },
-        { id: 'profile', label: 'Profile', icon: ProfileIcon },
         { id: 'security', label: 'Security & 2FA', icon: SecurityIcon },
         { id: 'privacy', label: 'Privacy', icon: ShieldCheck },
         { id: 'developers', label: 'Developers', icon: DevelopersIcon },
@@ -909,46 +912,31 @@ function SettingsPageInner() {
                                     {telegramConnected ? 'Manage Link' : 'Link Telegram Bot'}
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                )}
 
-                {activeTab === 'profile' && (
-                    <div className="flex flex-col gap-8 pb-24 max-w-3xl">
-                        <div id="identity" className="bg-[#161412] border border-white/5 rounded-[32px] p-6 md:p-10">
-                            <ProfileManager 
-                                onProfileUpdate={async () => {
-                                    await refreshUser(true);
-                                    await fetchProfile();
-                                }}
-                            />
-                        </div>
-
-                        <div id="identifiers" className="space-y-4">
-                            <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-                                Account Email
-                            </h2>
-                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <div>
-                                    <span className="text-[10px] text-[#9B9691] font-bold font-mono uppercase tracking-wider block mb-1">
-                                        Primary Mail Relay
-                                    </span>
-                                    <span className="text-lg text-white font-extrabold tracking-tight">
-                                        {user?.email}
-                                    </span>
+                            {/* Primary Account Email Card */}
+                            <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-3">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                    <div>
+                                        <span className="text-[10px] text-[#9B9691] font-bold font-mono uppercase tracking-wider block mb-1">
+                                            Primary Mail Relay
+                                        </span>
+                                        <span className="text-sm md:text-base text-white font-extrabold font-mono tracking-tight break-all">
+                                            {user?.email || 'No email attached'}
+                                        </span>
+                                    </div>
+                                    {user?.email && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(user.email);
+                                                toast.success('Email copied');
+                                            }}
+                                            className="py-2 px-4 rounded-xl border border-white/10 text-white font-bold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all cursor-pointer flex-shrink-0"
+                                        >
+                                            Copy Email
+                                        </button>
+                                    )}
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (user?.email) {
-                                            navigator.clipboard.writeText(user.email);
-                                            toast.success('Email copied');
-                                        }
-                                    }}
-                                    className="py-2 px-4 rounded-xl border border-white/10 text-white font-bold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all cursor-pointer flex-shrink-0"
-                                >
-                                    Copy Email
-                                </button>
                             </div>
                         </div>
                     </div>
