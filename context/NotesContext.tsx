@@ -778,9 +778,13 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     const sub = realtime.subscribe(channels, (response) => {
       const payload = normalizeVisibility(response.payload as Notes);
       const isKnownNote = notesRef.current.some(n => n.$id === payload.$id);
+      const isWorkspaceNote = Boolean(payload.isWorkspace || (payload as any).projectId);
       const isOwner =
         !user?.$id ||
         isKnownNote ||
+        isWorkspaceNote ||
+        payload.isPublic ||
+        payload.isGuest ||
         !payload.userId ||
         payload.userId === user.$id ||
         (payload as any).owner_id === user.$id ||

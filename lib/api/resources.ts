@@ -512,6 +512,13 @@ export const ApiResources = {
         tags: cleanTags,
         updatedAt: now,
       },
+      permissions: wsId || isPublic || isGuest
+        ? [
+            Permission.read(Role.any()),
+            Permission.update(Role.user(actor.userId)),
+            Permission.delete(Role.user(actor.userId)),
+          ]
+        : undefined,
     }).catch(() => null);
 
     // Link into project_objects join table
