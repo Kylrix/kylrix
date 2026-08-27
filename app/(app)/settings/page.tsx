@@ -28,6 +28,9 @@ import {
     Users,
     Copy,
     Check,
+    Download,
+    HardDrive,
+    AlertTriangle,
 } from 'lucide-react';
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
 import { AgentsSettingsTab } from '@/components/settings/AgentsSettingsTab';
@@ -1124,44 +1127,114 @@ function SettingsPageInner() {
                 )}
 
                 {activeTab === 'account' && (
-                    <div id="root-mgmt" className="space-y-6 pb-24 max-w-3xl">
-                        <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-                            Account Settings
-                        </h2>
-                        <div className="bg-white/[0.01] border border-white/5 rounded-[28px] p-6 md:p-8 space-y-6">
-                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                                <div>
-                                    <h4 className="text-base font-extrabold text-white mb-1">Export Account Data</h4>
-                                    <p className="text-xs text-[#9B9691] leading-relaxed max-w-[600px] font-satoshi">
-                                        Download a copy of your account profile, preferences, and active session details.
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={triggerExport}
-                                    className="py-3 px-5 rounded-xl border border-white/10 text-white font-extrabold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all min-w-[200px] cursor-pointer"
-                                >
-                                    Download Data
-                                </button>
-                            </div>
-                            
-                            <div className="h-px bg-white/5 w-full" />
+                    <div id="root-mgmt" className="space-y-6 pb-24 max-w-3xl select-none">
+                        <div>
+                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-white/40 m-0">
+                                Sovereignty & Lifecycle
+                            </p>
+                            <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize mt-0.5">
+                                Account Management
+                            </h2>
+                        </div>
 
-                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                                <div>
-                                    <h4 className="text-base font-extrabold text-red-500 mb-1">Delete Account</h4>
-                                    <p className="text-xs text-[#9B9691] leading-relaxed max-w-[600px] font-satoshi">
-                                        Permanently delete your account and all associated data. This action cannot be undone.
+                        {/* Export & Data Sovereignty Card */}
+                        <div className="p-6 md:p-7 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl space-y-5">
+                            <div className="flex items-start gap-4">
+                                <div className="w-11 h-11 rounded-2xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center shrink-0 border border-[#6366F1]/20">
+                                    <Download size={20} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-base font-black text-white font-clash m-0">
+                                            Export Sovereign Account Archive
+                                        </h3>
+                                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-mono text-white/60 font-bold uppercase">
+                                            JSON
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-white/50 leading-relaxed font-medium mt-1 m-0">
+                                        Download a complete, offline snapshot of your public identity, app preferences, and active authentication session records. Client-side encrypted secrets remain protected under your local master key.
                                     </p>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={triggerDeleteAccount}
-                                    className="py-3 px-5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-extrabold text-xs transition-all min-w-[200px] cursor-pointer"
-                                >
-                                    Delete Account
-                                </button>
                             </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 rounded-2xl bg-[#0A0908] border border-white/[0.06]">
+                                <div className="p-2.5 rounded-xl bg-[#161412]/50 border border-white/[0.04]">
+                                    <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
+                                        Portability
+                                    </span>
+                                    <span className="text-xs font-mono text-white font-bold block mt-0.5">
+                                        100% Sovereign
+                                    </span>
+                                </div>
+                                <div className="p-2.5 rounded-xl bg-[#161412]/50 border border-white/[0.04]">
+                                    <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
+                                        Encryption
+                                    </span>
+                                    <span className="text-xs font-mono text-emerald-400 font-bold block mt-0.5">
+                                        Client Sealed
+                                    </span>
+                                </div>
+                                <div className="p-2.5 rounded-xl bg-[#161412]/50 border border-white/[0.04]">
+                                    <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
+                                        Format
+                                    </span>
+                                    <span className="text-xs font-mono text-white font-bold block mt-0.5">
+                                        Formatted JSON
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={triggerExport}
+                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#6366F1]/10"
+                            >
+                                <Download size={14} />
+                                <span>Download Account Archive</span>
+                            </button>
+                        </div>
+
+                        {/* Irreversible Account Purge (Danger Zone) */}
+                        <div className="p-6 md:p-7 bg-[#161412] border border-rose-500/20 rounded-[28px] shadow-2xl space-y-5">
+                            <div className="flex items-start gap-4">
+                                <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/20">
+                                    <AlertTriangle size={20} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-base font-black text-rose-400 font-clash m-0">
+                                            Permanent Master Purge
+                                        </h3>
+                                        <span className="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-[9px] font-mono text-rose-300 font-bold uppercase">
+                                            No Undo
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-white/50 leading-relaxed font-medium mt-1 m-0">
+                                        Instantly destroy all account records, vault credentials, private notes, workspaces, and identity bindings. There is no grace period, no recycle bin, and no recovery possible.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2">
+                                <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-white/40 m-0">
+                                    Purge Scope Breakdown
+                                </p>
+                                <ul className="text-xs text-white/70 space-y-1.5 list-disc pl-4 m-0 font-medium leading-relaxed">
+                                    <li>All vault secrets, TOTP keys, keychain identities, and encrypted rows</li>
+                                    <li>All workspaces, ideas, goals, tasks, forms, feeds, and thread discussions</li>
+                                    <li>Instant termination of active sessions across all devices</li>
+                                </ul>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={triggerDeleteAccount}
+                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-600/10"
+                            >
+                                <Trash2 size={14} />
+                                <span>Initiate Account Purge</span>
+                            </button>
                         </div>
                     </div>
                 )}

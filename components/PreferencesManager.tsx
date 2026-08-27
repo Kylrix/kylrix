@@ -1,65 +1,59 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { AppwriteService } from '@/lib/appwrite';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Sliders, 
+  Terminal, 
+  Sparkles, 
+  Volume2, 
+  Vibrate, 
+  Mail, 
+  ShieldAlert, 
+  Moon, 
+  Sun, 
+  Laptop,
+  Check,
+  RefreshCw,
+  LayoutGrid
+} from 'lucide-react';
 import { account } from '@/lib/appwrite/client';
 import { useTheme } from '@/lib/theme-context';
 import { useDevMode } from '@/lib/dev-mode';
-import Link from 'next/link';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import { toast } from 'react-hot-toast';
 
-interface PrefsData {
-  language?: string;
-  timezone?: string;
+interface KylrixPrefs {
   theme?: 'light' | 'dark' | 'system';
+  demo_mode?: boolean;
+  compact_density?: boolean;
+  smartSystemHistory?: boolean;
+  sound_effects?: boolean;
+  haptic_feedback?: boolean;
   emailNotifications?: boolean;
   sessionReminders?: boolean;
-  dataCollection?: boolean;
   marketingEmails?: boolean;
-  publicProfile?: boolean;
-  smartSystemHistory?: boolean;
 }
 
-interface PreferencesManagerProps {
-  onSave?: () => void;
-}
-
-const LANGUAGES = [
-  { code: 'en', label: 'English' },
-  { code: 'es', label: 'Español' },
-  { code: 'fr', label: 'Français' },
-  { code: 'de', label: 'Deutsch' },
-  { code: 'it', label: 'Italiano' },
-  { code: 'pt', label: 'Português' },
-  { code: 'ja', label: '日本語' },
-  { code: 'zh', label: '中文' }
-];
-
-const TIMEZONES = [
-  { value: 'UTC', label: 'UTC' },
-  { value: 'US/Eastern', label: 'Eastern Time' },
-  { value: 'US/Central', label: 'Central Time' },
-  { value: 'US/Mountain', label: 'Mountain Time' },
-  { value: 'US/Pacific', label: 'Pacific Time' },
-  { value: 'Europe/London', label: 'London' },
-  { value: 'Europe/Paris', label: 'Paris' },
-  { value: 'Europe/Berlin', label: 'Berlin' },
-  { value: 'Asia/Tokyo', label: 'Tokyo' },
-  { value: 'Asia/Singapore', label: 'Singapore' },
-  { value: 'Asia/Dubai', label: 'Dubai' },
-  { value: 'Australia/Sydney', label: 'Sydney' }
-];
-
-function Switch({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+function ModernSwitch({ 
+  checked, 
+  onChange, 
+  disabled = false 
+}: { 
+  checked: boolean; 
+  onChange: (val: boolean) => void; 
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-40 ${
         checked ? 'bg-[#6366F1]' : 'bg-white/10'
       }`}
     >
       <span
-        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
           checked ? 'translate-x-5' : 'translate-x-0'
         }`}
       />
@@ -67,316 +61,327 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (checked: b
   );
 }
 
-export default function PreferencesManager({ onSave }: PreferencesManagerProps) {
-  const { setTheme } = useTheme();
+export default function PreferencesManager({ onSave }: { onSave?: () => void }) {
+  const { theme, setTheme } = useTheme();
   const { devMode, toggleDevMode } = useDevMode();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
   const [allPrefs, setAllPrefs] = useState<Record<string, any>>({});
-  const [prefs, setPrefs] = useState<PrefsData>({
-    language: 'en',
-    timezone: 'UTC',
+  const [prefs, setPrefs] = useState<KylrixPrefs>({
     theme: 'system',
+    demo_mode: false,
+    compact_density: false,
+    smartSystemHistory: true,
+    sound_effects: true,
+    haptic_feedback: true,
     emailNotifications: true,
     sessionReminders: true,
-    dataCollection: false,
     marketingEmails: false,
-    publicProfile: true,
-    smartSystemHistory: true});
+  });
 
-  useEffect(() => {
-    loadPreferences();
-  }, []);
-
-  const loadPreferences = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const appPrefs = await account.getPrefs();
-      setAllPrefs(appPrefs || {});
+  const loadPreferences = useCallback(async () => {
+    // 1. Check local cache first for instant paint
+    const cached = await LocalEngine.cacheGet<Record<string, any>>('kylrix_user_prefs_cache');
+    if (cached) {
+      setAllPrefs(cached);
       setPrefs({
-        language: appPrefs?.language || 'en',
-        timezone: appPrefs?.timezone || 'UTC',
-        theme: appPrefs?.theme || 'system',
-        emailNotifications: appPrefs?.emailNotifications !== false,
-        sessionReminders: appPrefs?.sessionReminders !== false,
-        dataCollection: appPrefs?.dataCollection === true,
-        marketingEmails: appPrefs?.marketingEmails === true,
-        publicProfile: appPrefs?.publicProfile !== false,
-        smartSystemHistory: appPrefs?.smartSystemHistory !== false});
-    } catch (err: unknown) {
-      setError((err as Error).message);
+        theme: (cached.theme as any) || 'system',
+        demo_mode: Boolean(cached.demo_mode),
+        compact_density: Boolean(cached.compact_density),
+        smartSystemHistory: cached.smartSystemHistory !== false,
+        sound_effects: cached.sound_effects !== false,
+        haptic_feedback: cached.haptic_feedback !== false,
+        emailNotifications: cached.emailNotifications !== false,
+        sessionReminders: cached.sessionReminders !== false,
+        marketingEmails: Boolean(cached.marketingEmails),
+      });
+      setLoading(false);
+    }
+
+    // 2. Fetch fresh preferences from Appwrite
+    try {
+      const appPrefs = await account.getPrefs();
+      if (appPrefs) {
+        setAllPrefs(appPrefs);
+        setPrefs({
+          theme: (appPrefs.theme as any) || 'system',
+          demo_mode: Boolean(appPrefs.demo_mode),
+          compact_density: Boolean(appPrefs.compact_density),
+          smartSystemHistory: appPrefs.smartSystemHistory !== false,
+          sound_effects: appPrefs.sound_effects !== false,
+          haptic_feedback: appPrefs.haptic_feedback !== false,
+          emailNotifications: appPrefs.emailNotifications !== false,
+          sessionReminders: appPrefs.sessionReminders !== false,
+          marketingEmails: Boolean(appPrefs.marketingEmails),
+        });
+        void LocalEngine.cacheSet('kylrix_user_prefs_cache', appPrefs);
+      }
+    } catch (err) {
+      console.warn('Failed to load user preferences:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const updatePreference = async (key: keyof PrefsData, value: any) => {
+  useEffect(() => {
+    void loadPreferences();
+  }, [loadPreferences]);
+
+  const updatePreference = async (key: keyof KylrixPrefs, value: any) => {
+    setSavingKey(key);
+    const updatedUIPrefs = { ...prefs, [key]: value };
+    setPrefs(updatedUIPrefs);
+
+    const updatedAllPrefs = { ...allPrefs, [key]: value };
+    setAllPrefs(updatedAllPrefs);
+    void LocalEngine.cacheSet('kylrix_user_prefs_cache', updatedAllPrefs);
+
     try {
-      setError(null);
-      const updatedUIPrefs = { ...prefs, [key]: value };
-      setPrefs(updatedUIPrefs);
-      
-      // Merge with ALL existing prefs
-      const updatedAllPrefs = { ...allPrefs, [key]: value };
-      setAllPrefs(updatedAllPrefs);
-      
       if (key === 'theme') {
         await setTheme(value);
       } else {
         await account.updatePrefs(updatedAllPrefs);
       }
-
-      // Sync to global directory if discoverability changed
-      if (key === 'publicProfile' || key === 'language') {
-        const user = await account.get();
-        await AppwriteService.syncGlobalProfile(user, updatedAllPrefs);
-      }
-
+      toast.success('Preference updated');
       onSave?.();
-    } catch (_err: unknown) {
-      const err = _err as Error;
-      setError(err.message);
-      // Reload from server on error
-      loadPreferences();
+    } catch (_err) {
+      toast.error('Failed to save preference');
+      void loadPreferences();
+    } finally {
+      setSavingKey(null);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
+      <div className="flex justify-center items-center py-16">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1]" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 text-white font-satoshi">
-      {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold">
-          <span className="block font-bold mb-1">Error</span>
-          {error}
-        </div>
-      )}
-
-      <div className="space-y-6">
-        {/* Localization & Display Settings */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight">
-            Display & Localization
+    <div className="space-y-6 text-white select-none">
+      {/* SECTION 1: Workspace & Environment */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Terminal size={15} className="text-[#6366F1]" />
+          <h3 className="text-xs font-black uppercase tracking-wider font-mono text-white/50 m-0">
+            Workspace & Environment
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <span className="text-[10px] text-[#9B9691] font-bold font-mono uppercase tracking-wider block">
-                Theme
-              </span>
-              <select
-                value={prefs.theme || 'system'}
-                onChange={(e) => updatePreference('theme', e.target.value)}
-                className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/10 focus:outline-none cursor-pointer transition-all duration-200"
-              >
-                <option value="system" className="bg-[#161412]">System Default</option>
-                <option value="light" className="bg-[#161412]">Light Mode</option>
-                <option value="dark" className="bg-[#161412]">Dark Mode</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <span className="text-[10px] text-[#9B9691] font-bold font-mono uppercase tracking-wider block">
-                Language
-              </span>
-              <select
-                value={prefs.language || 'en'}
-                onChange={(e) => updatePreference('language', e.target.value)}
-                className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/10 focus:outline-none cursor-pointer transition-all duration-200"
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code} className="bg-[#161412]">
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <span className="text-[10px] text-[#9B9691] font-bold font-mono uppercase tracking-wider block">
-                Timezone
-              </span>
-              <select
-                value={prefs.timezone || 'UTC'}
-                onChange={(e) => updatePreference('timezone', e.target.value)}
-                className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/10 focus:outline-none cursor-pointer transition-all duration-200"
-              >
-                {TIMEZONES.map((tz) => (
-                  <option key={tz.value} value={tz.value} className="bg-[#161412]">
-                    {tz.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
         </div>
 
-        <div className="h-px bg-white/5 w-full" />
-
-        {/* Developer Mode */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight flex items-center justify-between">
-            <span>Developer Mode</span>
-            {devMode && (
-              <span className="px-2.5 py-0.5 rounded-md bg-[#6366F1]/20 border border-[#6366F1]/40 text-[#6366F1] text-[10px] font-extrabold uppercase font-mono tracking-wider">
-                Active
-              </span>
-            )}
-          </h3>
-          <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
-            <div className="space-y-1">
-              <h4 className="text-sm font-extrabold text-white">
-                Developer Mode & Experimental Tools
-              </h4>
-              <p className="text-xs text-[#9B9691]">
-                Enable Flows engine, advanced action logs, and experimental developer features
+        <div className="space-y-2.5">
+          {/* Developer Mode */}
+          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-bold text-white m-0">Developer Mode & Tools</h4>
+                {devMode && (
+                  <span className="px-2 py-0.5 rounded-md bg-[#6366F1]/20 border border-[#6366F1]/30 text-[#818cf8] text-[9px] font-mono font-bold uppercase">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
+                Enable action log traces, internal flow execution engines, and debug controls across the suite.
               </p>
             </div>
-            <Switch
+            <ModernSwitch
               checked={devMode}
               onChange={(checked) => void toggleDevMode(checked)}
             />
           </div>
-        </div>
 
-        <div className="h-px bg-white/5 w-full" />
-
-        {/* Discoverability Settings */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight">
-            Discoverability
-          </h3>
-          <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
-            <div className="space-y-1">
-              <h4 className="text-sm font-extrabold text-white">
-                Public Profile
-              </h4>
-              <p className="text-xs text-[#9B9691]">
-                Allow other users to find you by name or username
+          {/* Demo Mode */}
+          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-bold text-white m-0">Demo / Presentation Mode</h4>
+                {prefs.demo_mode && (
+                  <span className="px-2 py-0.5 rounded-md bg-[#F59E0B]/20 border border-[#F59E0B]/30 text-[#F59E0B] text-[9px] font-mono font-bold uppercase">
+                    Sandbox
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
+                Populate playground environments with interactive mock nodes, workflows, and test data.
               </p>
             </div>
-            <Switch
-              checked={prefs.publicProfile !== false}
-              onChange={(checked) => updatePreference('publicProfile', checked)}
+            <ModernSwitch
+              checked={Boolean(prefs.demo_mode)}
+              onChange={(checked) => updatePreference('demo_mode', checked)}
+            />
+          </div>
+
+          {/* Smart System History */}
+          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm font-bold text-white m-0">Smart Assistant Interaction Memory</h4>
+              <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
+                Keep a client-side local IndexedDB journal of interactions and prompt sequences with assistants.
+              </p>
+            </div>
+            <ModernSwitch
+              checked={prefs.smartSystemHistory !== false}
+              onChange={(checked) => updatePreference('smartSystemHistory', checked)}
             />
           </div>
         </div>
+      </div>
 
-        <div className="h-px bg-white/5 w-full" />
-
-        {/* Notification Settings */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight">
-            Notifications
+      {/* SECTION 2: Appearance & Visual Theme */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center gap-2">
+          <Moon size={15} className="text-[#6366F1]" />
+          <h3 className="text-xs font-black uppercase tracking-wider font-mono text-white/50 m-0">
+            Appearance & Surfaces
           </h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
-              <div className="space-y-1">
-                <h4 className="text-sm font-extrabold text-white">
-                  Email Notifications
-                </h4>
-                <p className="text-xs text-[#9B9691]">
-                  Receive emails about account activity
-                </p>
-              </div>
-              <Switch
-                checked={prefs.emailNotifications !== false}
-                onChange={(checked) => updatePreference('emailNotifications', checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
-              <div className="space-y-1">
-                <h4 className="text-sm font-extrabold text-white">
-                  Session Reminders
-                </h4>
-                <p className="text-xs text-[#9B9691]">
-                  Get reminded about active sessions
-                </p>
-              </div>
-              <Switch
-                checked={prefs.sessionReminders !== false}
-                onChange={(checked) => updatePreference('sessionReminders', checked)}
-              />
-            </div>
-          </div>
         </div>
 
-        <div className="h-px bg-white/5 w-full" />
+        <div className="space-y-2.5">
+          {/* Theme Palette */}
+          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
+            <div>
+              <h4 className="text-sm font-bold text-white m-0">Color Scheme & Contrast</h4>
+              <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
+                Select your preferred interface luminance. High-contrast pitch surfaces are default across OpenBricks.
+              </p>
+            </div>
 
-        {/* Privacy Settings */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight">
-            Privacy & Data
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {[
+                { id: 'dark', label: 'Dark', icon: Moon },
+                { id: 'system', label: 'System', icon: Laptop },
+                { id: 'light', label: 'Light', icon: Sun },
+              ].map((item) => {
+                const Icon = item.icon;
+                const isSelected = (prefs.theme || theme) === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => updatePreference('theme', item.id)}
+                    className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#161412] border-[#6366F1] text-white shadow-lg'
+                        : 'bg-[#161412]/50 border-white/[0.06] text-white/50 hover:text-white hover:bg-[#161412]'
+                    }`}
+                  >
+                    <Icon size={16} className={isSelected ? 'text-[#6366F1]' : 'text-white/40'} />
+                    <span className="text-xs font-bold font-mono">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Compact Density */}
+          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm font-bold text-white m-0">Compact Information Density</h4>
+              <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
+                Reduce vertical padding in note lists, credential rows, and sidebars for higher information throughput.
+              </p>
+            </div>
+            <ModernSwitch
+              checked={Boolean(prefs.compact_density)}
+              onChange={(checked) => updatePreference('compact_density', checked)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 3: Tactile & Audio Feedback */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center gap-2">
+          <Volume2 size={15} className="text-[#6366F1]" />
+          <h3 className="text-xs font-black uppercase tracking-wider font-mono text-white/50 m-0">
+            Tactile & Feedback
           </h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
-              <div className="space-y-1">
-                <h4 className="text-sm font-extrabold text-white">
-                  Data Collection
-                </h4>
-                <p className="text-xs text-[#9B9691]">
-                  Allow collection of usage analytics
-                </p>
-              </div>
-              <Switch
-                checked={prefs.dataCollection === true}
-                onChange={(checked) => updatePreference('dataCollection', checked)}
-              />
-            </div>
+        </div>
 
-            <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
-              <div className="space-y-1">
-                <h4 className="text-sm font-extrabold text-white">
-                  Smart System Chat History
-                </h4>
-                <p className="text-xs text-[#9B9691]">
-                  Keep a local-first interactive history of Smart System chats & requests
-                </p>
-              </div>
-              <Switch
-                checked={prefs.smartSystemHistory !== false}
-                onChange={(checked) => updatePreference('smartSystemHistory', checked)}
-              />
+        <div className="space-y-2.5">
+          {/* Sound FX */}
+          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm font-bold text-white m-0">Tactile Audio Feedback</h4>
+              <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
+                Play subtle audio clicks and chimes on note creation, unlock authentication, and completed sweeps.
+              </p>
             </div>
+            <ModernSwitch
+              checked={prefs.sound_effects !== false}
+              onChange={(checked) => updatePreference('sound_effects', checked)}
+            />
+          </div>
 
-            <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
-              <div className="space-y-1">
-                <h4 className="text-sm font-extrabold text-white">
-                  Agent Permissions & Settings
-                </h4>
-                <p className="text-xs text-[#9B9691]">
-                  View and manage authorization rules and sweeps for agentic actions
-                </p>
-              </div>
-              <Link 
-                href="/settings/agents"
-                className="px-3 py-1.5 text-xs font-bold text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all border border-white/5"
-              >
-                Configure
-              </Link>
+          {/* Haptic Feedback */}
+          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm font-bold text-white m-0">Mobile Haptic Vibration</h4>
+              <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
+                Trigger lightweight device vibrations during drawer gestures and primary button actions.
+              </p>
             </div>
+            <ModernSwitch
+              checked={prefs.haptic_feedback !== false}
+              onChange={(checked) => updatePreference('haptic_feedback', checked)}
+            />
+          </div>
+        </div>
+      </div>
 
-            <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
-              <div className="space-y-1">
-                <h4 className="text-sm font-extrabold text-white">
-                  Marketing Emails
-                </h4>
-                <p className="text-xs text-[#9B9691]">
-                  Receive promotional and marketing emails
-                </p>
-              </div>
-              <Switch
-                checked={prefs.marketingEmails === true}
-                onChange={(checked) => updatePreference('marketingEmails', checked)}
-              />
+      {/* SECTION 4: Email Dispatch & Alerts */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center gap-2">
+          <Mail size={15} className="text-[#6366F1]" />
+          <h3 className="text-xs font-black uppercase tracking-wider font-mono text-white/50 m-0">
+            Email Dispatch & Notifications
+          </h3>
+        </div>
+
+        <div className="space-y-2.5">
+          {/* Activity Notifications */}
+          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm font-bold text-white m-0">Account Activity Relay</h4>
+              <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
+                Receive transactional email digests when workspace collaborations or shared objects change.
+              </p>
             </div>
+            <ModernSwitch
+              checked={prefs.emailNotifications !== false}
+              onChange={(checked) => updatePreference('emailNotifications', checked)}
+            />
+          </div>
+
+          {/* Session Reminders */}
+          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm font-bold text-white m-0">New Session & Security Alerts</h4>
+              <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
+                Notify your primary email address whenever a new device or browser session logs in.
+              </p>
+            </div>
+            <ModernSwitch
+              checked={prefs.sessionReminders !== false}
+              onChange={(checked) => updatePreference('sessionReminders', checked)}
+            />
+          </div>
+
+          {/* Marketing Updates */}
+          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm font-bold text-white m-0">Product Releases & Announcements</h4>
+              <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
+                Occasional announcements about new OpenBricks tools, platform releases, and upgrades.
+              </p>
+            </div>
+            <ModernSwitch
+              checked={Boolean(prefs.marketingEmails)}
+              onChange={(checked) => updatePreference('marketingEmails', checked)}
+            />
           </div>
         </div>
       </div>
