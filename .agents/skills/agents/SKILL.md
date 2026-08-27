@@ -27,7 +27,7 @@ export BASE="${KYLRIX_API_BASE:-https://www.kylrix.space/api/v1}"
    - Contains operational permissions (`workspaces:*`, `notes:*`, `goals:*`, `chats:*`, `agents:*`).
    - The agent uses this token for all runtime CRUD, task logging, and collaboration.
 
-## Secure System Configuration Storage
+## Secure System Configuration Storage & Caching Structure
 
 Agents must keep their credentials and runtime metadata cleanly partitioned in the system config directory, **never** in project working directories:
 
@@ -44,6 +44,25 @@ Agents must keep their credentials and runtime metadata cleanly partitioned in t
     "createdAt": "2026-08-26T..."
   }
   ```
+
+### Recommended Agent Storage & Cache Subdirectory Structure
+
+To prevent redundant network round-trips when accessing frequently used objects (e.g. active workspace manifests, cached note IDs, project schemas, or temporary artifacts), agents should maintain local cache subdirectories alongside their identity config:
+
+```text
+~/.kylrix/agents/
+├── <agent-name>.json             # Identity credentials, sovereign keys, PAT
+└── <agent-name>/                 # Dedicated local caching & scratch directory
+    ├── cache/                    # Fast local cache for ecosystem objects
+    │   ├── workspaces.json       # Cached list of active workspaces
+    │   ├── notes.json            # Cached note manifests & IDs
+    │   └── tags.json             # Cached user tags catalog
+    ├── state/                    # Ephemeral session state & active pointers
+    └── artifacts/                # Generated agent artifacts and scratch files
+```
+
+- **Fast Access**: Check `~/.kylrix/agents/<agent-name>/cache/<entity>.json` before re-requesting the API for unchanged reference data.
+- **Cache Invalidation**: Invalidate or refresh local cache files whenever the agent performs write operations (`POST`, `PATCH`, `DELETE`).
 
 ## Workspaces & Standalone Collaboration
 
