@@ -420,19 +420,19 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                 <div className="flex items-center gap-1 shrink-0">
                     <button 
                         type="button"
-                        onClick={() => setIsFullscreen(!isFullscreen)} 
-                        className="p-1.5 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
-                        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                    >
-                        {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                    </button>
-                    <button 
-                        type="button"
                         onClick={handlePopOut} 
                         className="p-1.5 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
                         title="Open in Standalone Page"
                     >
                         <ArrowUpRight size={16} />
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => setIsFullscreen(!isFullscreen)} 
+                        className="p-1.5 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                    >
+                        {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                     </button>
                     <button 
                         type="button"

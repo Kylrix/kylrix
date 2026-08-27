@@ -98,14 +98,40 @@ OpenBricks 4.0 evolves the Kylrix design language from rigid, corporate SaaS con
 
 ---
 
+## 7. Drawer Architecture & Contrast Hierarchy
+
+- **Deprecated Drag Handles**:
+  - Rounded pill drag handles (`<div className="w-10 h-1 rounded-full bg-white/20" />`) are deprecated and removed.
+  - The thin 1px outline boundary (`borderTop: 1px solid rgba(255,255,255,0.08)`) defines the surface edge.
+- **Fixed 60% Height Mandate**:
+  - Bottom drawers must default to a **fixed 60% viewport height** (`60vh` / `60dvh`).
+  - 🚫 **Negative Feature (Strictly Prohibited)**: Varying or auto-calculating drawer height based on changing child content. Auto-collapsing heights cause visual jitter, layout thrash, and jumping interaction targets.
+- **High-Contrast Surface Layering**:
+  - **Outer Drawer Shell**: Signature opaque ash background (`#161412`) to contrast against the standard pitch-black app canvas (`#000000` / `#050505`).
+  - **Inner Interactive Components**: Pitch-black wells (`#0A0908` / `#0B0A09`) for cards, text fields, radio buttons, and inputs to create crisp, legible contrast.
+
+---
+
+## 8. Standardized Action Icons Order
+
+Drawer top action bars must follow a strict 3-slot button order:
+1. **Pop Out** (Optional, only for resources with a dedicated standalone URL): Navigates to `/form/[id]`, `/note/[id]`, etc. (`ArrowUpRight` / `ExternalLink`).
+2. **Expand / Contract** (Dynamic): Toggles between the default **60vh** height and **100vh** full-screen view (`Maximize2` when at 60vh, `Minimize2` when expanded).
+3. **Dismiss / Cancel / Done**: Closes the drawer (`X` icon or `Done` action button based on context).
+
+---
+
 ## Summary Checklist for OpenBricks 4.0 Upgrades
 
 | Feature | Old (SaaS-y / Clunky) | OpenBricks 4.0 (Tactile & Clean) |
 |---|---|---|
 | **Access Picker** | Sub-drawer popup inside bottom drawer | Inline segmented toggle (`Public` / `Private`) |
+| **Drawer Height** | Dynamic / content-based varying height | Fixed 60% viewport height (`60dvh`) |
+| **Drag Handles** | Centered floating pill drag handles | Thin 1px outline edge (`rgba(255,255,255,0.08)`) |
+| **Surfaces** | Translucent blur or inconsistent blacks | Signature ash shell (`#161412`) + pitch-black wells (`#0A0908`) |
+| **Top Action Icons** | Randomly placed / missing buttons | Standardized: `Pop Out` → `Expand/Contract` → `Dismiss/Done` |
 | **Inputs** | MUI Textfield with thick floating borders | Inset `#0A0908` dark fields with subtle focus rings |
 | **Outlines** | Missing borders / blurry translucent gradients | Crisp 1px thin outline (`alpha(accent, 0.22)` or `white/0.08`) |
 | **CTA Rows** | Full-width single buttons stacked vertically | Dynamic 2-column compact grid for complementary CTAs |
 | **Copy Tone** | Corporate wizard steps & jargon | Plain English, crisp, action-oriented labels |
-| **Drawer Close** | Missing or tucked inside subheadings | Unified top-right circular dismiss button (`✕`) |
 | **Text Overflow** | Text pushing container outside viewport | Strict `minWidth: 0` + `textOverflow: 'ellipsis'` |
