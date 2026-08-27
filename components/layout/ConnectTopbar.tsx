@@ -533,11 +533,14 @@ export default function ConnectTopbar({
   }, [profileSeed.userId]);
 
   const handleCopyUsername = useCallback(async () => {
-    if (!profileSeed.username || typeof navigator === 'undefined' || !navigator.clipboard) return;
-    await navigator.clipboard.writeText(`@${profileSeed.username}`);
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    const textToCopy = profileUsername ? `@${profileUsername}` : profileDisplayName || profileSeed.userId || '';
+    if (!textToCopy) return;
+    await navigator.clipboard.writeText(textToCopy);
     setCopyState('copied-username');
+    toast.success(`Copied ${textToCopy}`);
     window.setTimeout(() => setCopyState('idle'), 1600);
-  }, [profileSeed.username]);
+  }, [profileUsername, profileDisplayName, profileSeed.userId]);
 
   const handleCopyReferralLink = useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return;
@@ -1841,36 +1844,6 @@ export default function ConnectTopbar({
     );
   };
 
-  const handleCopyUsername = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
-    const textToCopy = profileUsername ? `@${profileUsername}` : profileDisplayName || profileSeed.userId || '';
-    if (!textToCopy) return;
-    await navigator.clipboard.writeText(textToCopy);
-    setCopyState('copied-username');
-    toast.success(`Copied ${textToCopy}`);
-    window.setTimeout(() => setCopyState('idle'), 1600);
-  }, [profileUsername, profileDisplayName, profileSeed.userId]);
-
-  const handleCopyReferralLink = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
-    const base = window.location.origin;
-    const refCode = profileUsername
-      ? `u_${String(profileUsername).replace(/^@+/, '')}`
-      : `id_${profileSeed.userId || ''}`;
-    const refLink = `${base}/?ref=${refCode}`;
-    await navigator.clipboard.writeText(refLink);
-    setCopyState('copied-referral');
-    toast.success('Referral link copied');
-    window.setTimeout(() => setCopyState('idle'), 1600);
-  }, [profileUsername, profileSeed.userId]);
-
-  const handleOpenFullProfile = useCallback(() => {
-    if (!profileSeed.username) return;
-    stageProfileView(profileSeed as any, profileSeed.avatar || null);
-    handleCloseAll();
-    router.push(`/u/${encodeURIComponent(profileSeed.username)}?transition=profile`);
-  }, [profileSeed, handleCloseAll, router]);
-
   const renderProfilePanel = () => {
     if (!profileMenuAnchorEl || !user) return null;
 
@@ -1971,51 +1944,33 @@ export default function ConnectTopbar({
           </div>
         </div>
 
-        {/* 3. Action Menu (Clean vertical stack, zero horizontal wrap/overflow) */}
-        <div className="space-y-1.5 min-w-0 max-w-full">
-          {profileSeed.username && (
+        {/* 3. Action Buttons (Wallet & Settings side-by-side, Sign out below) */}
+        <div className="space-y-2 min-w-0 max-w-full pt-0.5">
+          <div className="grid grid-cols-2 gap-2 min-w-0">
             <button
               type="button"
-              onClick={handleOpenFullProfile}
-              className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group min-w-0"
+              onClick={() => {
+                handleCloseAll();
+                openWallet();
+              }}
+              className="h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.06] hover:border-white/10 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <UserIcon size={14} className="text-[#818CF8] shrink-0" />
-                <span className="truncate">Public Profile</span>
-              </div>
-              <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors shrink-0" />
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              handleCloseAll();
-              openWallet();
-            }}
-            className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group min-w-0"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
               <Wallet size={14} className="text-[#F59E0B] shrink-0" />
-              <span className="truncate">Wallet & Balance</span>
-            </div>
-            <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors shrink-0" />
-          </button>
+              <span className="truncate">Wallet</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              handleCloseAll();
-              router.push('/settings');
-            }}
-            className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group min-w-0"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => {
+                handleCloseAll();
+                router.push('/settings');
+              }}
+              className="h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.06] hover:border-white/10 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
+            >
               <Settings size={14} className="text-white/70 shrink-0" />
-              <span className="truncate">Settings & Preferences</span>
-            </div>
-            <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors shrink-0" />
-          </button>
+              <span className="truncate">Settings</span>
+            </button>
+          </div>
 
           {!isPro && (
             <button
@@ -2024,13 +1979,10 @@ export default function ConnectTopbar({
                 handleCloseAll();
                 openProUpgrade();
               }}
-              className="w-full h-10 px-3 rounded-xl bg-[#EC4899]/10 hover:bg-[#EC4899]/20 border border-[#EC4899]/25 text-[#EC4899] text-xs font-extrabold flex items-center justify-between transition-all cursor-pointer group min-w-0"
+              className="w-full h-9 px-3 rounded-xl bg-[#EC4899]/10 hover:bg-[#EC4899]/20 border border-[#EC4899]/25 text-[#EC4899] text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Sparkles size={14} className="shrink-0" />
-                <span className="truncate">Upgrade to Pro</span>
-              </div>
-              <span className="text-[10px] font-mono uppercase tracking-wider font-bold shrink-0">Pro →</span>
+              <Sparkles size={13} className="shrink-0" />
+              <span>Upgrade to Pro</span>
             </button>
           )}
 
@@ -2040,13 +1992,10 @@ export default function ConnectTopbar({
               handleCloseAll();
               void logout();
             }}
-            className="w-full h-10 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-bold flex items-center justify-between transition-all cursor-pointer group min-w-0"
+            className="w-full h-10 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <LogOut size={14} className="shrink-0" />
-              <span className="truncate">Sign Out</span>
-            </div>
-            <span className="text-[10px] font-mono text-red-400/60 shrink-0">End Session</span>
+            <LogOut size={14} className="shrink-0" />
+            <span>Sign Out</span>
           </button>
         </div>
       </div>
