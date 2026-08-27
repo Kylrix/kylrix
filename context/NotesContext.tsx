@@ -603,6 +603,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     if (options?.pending !== false) {
       autonomicSyncEngine.markPending(stamped.$id, stamped.updatedAt, stamped);
       autonomicSyncEngine.nudge();
+    } else {
+      autonomicSyncEngine.markConfirmed(stamped.$id);
     }
   }, [upsertNote]);
 

@@ -182,7 +182,11 @@ export function NoteDetailSidebar({
             onClose?.();
             return;
           }
-          onUpdate(payload as Notes);
+          updateLocalAndParentNote(payload as Notes);
+          try {
+            const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+            autonomicSyncEngine.markConfirmed(payload.$id);
+          } catch {}
         }
       });
     })();
