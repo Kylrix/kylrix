@@ -5,14 +5,26 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useToast } from './Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import {
-  NoteAdd as NoteAddIcon,
-  Search as SearchIcon,
-  Sync as SyncIcon,
-  Settings as SettingsIcon,
-  Lock as LockIcon,
-  Folder as FolderIcon,
-  Chat as ChatIcon,
-  Refresh as RefreshIcon} from '@/lib/openbricks/icons';
+  FileText,
+  Search,
+  RefreshCw,
+  Settings,
+  Lock,
+  Folder,
+  MessageSquare,
+  Sparkles,
+  Sliders,
+  Share2,
+  ExternalLink,
+  Copy,
+  Plus,
+  CheckCircle2,
+  Calendar,
+  Layers,
+  Shield,
+  Bot,
+  Users
+} from 'lucide-react';
 
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { isFlowPath } from '@/lib/routing/app-paths';
@@ -114,14 +126,14 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener('scroll', onScroll);
   }, [isOpen, closeMenu]);
 
-  // Global contextmenu listener to block standard browser behavior and display dynamic morphing menu
+  // Global contextmenu listener with intelligent adaptive scoping
   useEffect(() => {
     const handleGlobalContextMenu = (e: MouseEvent) => {
       if (e.defaultPrevented) {
         return;
       }
 
-      // If a specific React component (like NoteCard) already opened a menu, do not override it
+      // If a specific React component (like MomentCard, NoteCard, GoalRow) handled the menu, do not override
       if (menuOpenedInCurrentTick.current) {
         menuOpenedInCurrentTick.current = false;
         return;
@@ -134,72 +146,202 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
       if (pathname?.startsWith('/app')) appType = 'note';
       else if (pathname?.startsWith('/connect')) appType = 'connect';
       else if (pathname?.startsWith('/vault')) appType = 'vault';
-      else if (isFlowPath(pathname)) appType = 'flow';
-      else if (pathname?.startsWith('/accounts')) appType = 'accounts';
-      else if (pathname?.startsWith('/settings')) appType = 'accounts';
+      else if (isFlowPath(pathname) || pathname?.startsWith('/goals') || pathname?.startsWith('/flows')) appType = 'flow';
+      else if (pathname?.startsWith('/accounts') || pathname?.startsWith('/settings')) appType = 'accounts';
 
       // 1. Identify clicked component target
       const target = e.target as HTMLElement;
+
+      // Check if user has highlighted text on the page
+      const selectedText = typeof window !== 'undefined' ? window.getSelection()?.toString().trim() : '';
+      if (selectedText && selectedText.length > 0) {
+        const titleSnippet = selectedText.length > 28 ? `"${selectedText.slice(0, 25)}..."` : `"${selectedText}"`;
+        const selectionItems: ContextMenuItem[] = [
+          {
+            label: 'Copy Selected Text',
+            icon: <Copy size={16} />,
+            onClick: () => {
+              navigator.clipboard.writeText(selectedText);
+              showSuccess('Copied', 'Selection copied to clipboard');
+            },
+          },
+          {
+            label: 'Create Note with Selection',
+            icon: <FileText size={16} />,
+            onClick: () => {
+              try {
+                window.localStorage.setItem('kylrix:draft:prefill', selectedText);
+              } catch {}
+              openUnifiedDrawer('note');
+            },
+          },
+          {
+            label: 'Search Selection in Kylrix',
+            icon: <Search size={16} />,
+            onClick: () => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(
+                  new CustomEvent('kylrix:open-topbar-search', {
+                    detail: { mode: 'all', placeholder: `Search "${selectedText.slice(0, 20)}"...` }
+                  })
+                );
+              }
+            },
+          },
+        ];
+
+        setState({
+          x: e.clientX,
+          y: e.clientY,
+          title: `Selection: ${titleSnippet}`,
+          items: selectionItems,
+          appType,
+        });
+        return;
+      }
+
+      // Check if right-clicking on an image/media element
+      const imgElement = target.closest('img') as HTMLImageElement | null;
+      if (imgElement && imgElement.src) {
+        const src = imgElement.src;
+        const mediaItems: ContextMenuItem[] = [
+          {
+            label: 'Open Image Full View',
+            icon: <ExternalLink size={16} />,
+            onClick: () => window.open(src, '_blank'),
+          },
+          {
+            label: 'Copy Image URL',
+            icon: <Share2 size={16} />,
+            onClick: () => {
+              navigator.clipboard.writeText(src);
+              showSuccess('Copied', 'Image link copied to clipboard');
+            },
+          },
+        ];
+
+        setState({
+          x: e.clientX,
+          y: e.clientY,
+          title: 'Media Actions',
+          items: mediaItems,
+          appType,
+        });
+        return;
+      }
+
       const isSidebar = target.closest('[data-testid="sidebar"]') || target.closest('aside');
       const isTopbar = target.closest('header') || target.closest('#connect-topbar');
 
       const items: MenuState['items'] = [];
+      let menuTitle = 'Quick Actions';
 
-      // Helper function for quick note capture
-      const triggerQuickNote = () => {
-        openUnifiedDrawer('note');
-      };
-
-      // Helper for topbar search focus
-      const focusGlobalSearch = () => {
-        const input = document.getElementById("topbar-search-input") as HTMLInputElement | null;
-        if (input) {
-          input.focus();
-          input.select?.();
+      const focusGlobalSearch = (placeholder?: string) => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:open-topbar-search', {
+              detail: { mode: 'all', placeholder: placeholder || 'Search Kylrix ecosystem...' }
+            })
+          );
         }
       };
 
-      // Compile Morphing Options
       if (isSidebar) {
+        menuTitle = 'Navigation Hub';
         items.push(
-          { label: 'Notes Vault', icon: <FolderIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/app') },
-          { label: 'Connect Hub', icon: <ChatIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/connect') },
-          { label: 'Vault', icon: <LockIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/vault') },
-          { label: 'Settings', icon: <SettingsIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/settings') }
+          { label: 'Notes & Ideas', icon: <FileText size={16} />, onClick: () => router.push('/app') },
+          { label: 'Connect Hub', icon: <MessageSquare size={16} />, onClick: () => router.push('/connect') },
+          { label: 'Goals & Tasks', icon: <CheckCircle2 size={16} />, onClick: () => router.push('/goals') },
+          { label: 'Security Vault', icon: <Lock size={16} />, onClick: () => router.push('/vault') },
+          { label: 'Workspaces', icon: <Layers size={16} />, onClick: () => router.push('/workspaces') },
+          { label: 'Settings', icon: <Settings size={16} />, onClick: () => router.push('/settings') }
         );
       } else if (isTopbar) {
+        menuTitle = 'Topbar Actions';
         items.push(
-          { label: 'Focus Search', icon: <SearchIcon sx={{ fontSize: 16 }} />, onClick: focusGlobalSearch },
-          { label: 'Quick Capture Note', icon: <NoteAddIcon sx={{ fontSize: 16 }} />, onClick: triggerQuickNote },
-          { label: 'Sync Vault', icon: <SyncIcon sx={{ fontSize: 16 }} />, onClick: () => showSuccess('Vault Synced', 'All encrypted local rows are in active alignment.') }
+          { label: 'Universal Search', icon: <Search size={16} />, onClick: () => focusGlobalSearch() },
+          { label: 'Quick Capture Note', icon: <Plus size={16} />, onClick: () => openUnifiedDrawer('note') },
+          { label: 'Explore Workspaces', icon: <Layers size={16} />, onClick: () => router.push('/workspaces') }
         );
       } else {
-        // Page-specific morphing options
-        if (appType === 'note') {
+        // Highly contextual per-route actions
+        if (appType === 'connect') {
+          menuTitle = 'Connect Hub';
           items.push(
-            { label: 'New Scratch Note', icon: <NoteAddIcon sx={{ fontSize: 16 }} />, onClick: triggerQuickNote },
-            { label: 'Search Note Directory', icon: <SearchIcon sx={{ fontSize: 16 }} />, onClick: focusGlobalSearch },
-            { label: 'Go to Settings', icon: <SettingsIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/settings') }
+            {
+              label: 'Create New Moment',
+              icon: <Sparkles size={16} className="text-amber-400" />,
+              onClick: () => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('kylrix:open-moment-composer'));
+                }
+              },
+            },
+            {
+              label: 'Feed Settings & Topics',
+              icon: <Sliders size={16} />,
+              onClick: () => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('kylrix:open-feed-settings'));
+                }
+              },
+            },
+            {
+              label: 'Search Feed & Topics',
+              icon: <Search size={16} />,
+              onClick: () => focusGlobalSearch('Search feed moments, topics, and authors...'),
+            },
+            {
+              label: 'Refresh Live Stream',
+              icon: <RefreshCw size={16} />,
+              onClick: () => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('kylrix:feed-refresh'));
+                }
+              },
+            },
+            {
+              label: 'Chats & Hangouts',
+              icon: <MessageSquare size={16} />,
+              onClick: () => router.push('/connect/chats'),
+            }
           );
-        } else if (appType === 'connect') {
+        } else if (appType === 'note') {
+          menuTitle = 'Notes & Ideas';
           items.push(
-            { label: 'New Frequency Chat', icon: <ChatIcon sx={{ fontSize: 16 }} />, onClick: () => openUnifiedDrawer('navbar') },
-            { label: 'Search Users', icon: <SearchIcon sx={{ fontSize: 16 }} />, onClick: focusGlobalSearch },
-            { label: 'Reload Channels', icon: <RefreshIcon sx={{ fontSize: 16 }} />, onClick: () => window.location.reload() }
+            { label: 'New Scratch Note', icon: <Plus size={16} className="text-amber-400" />, onClick: () => openUnifiedDrawer('note') },
+            { label: 'Search Notes Directory', icon: <Search size={16} />, onClick: () => focusGlobalSearch('Search notes, tags, and ideas...') },
+            { label: 'Workspaces Hub', icon: <Layers size={16} />, onClick: () => router.push('/workspaces') },
+            { label: 'Settings', icon: <Settings size={16} />, onClick: () => router.push('/settings') }
           );
         } else if (appType === 'vault') {
+          menuTitle = 'Security Vault';
           items.push(
-            { label: 'Vault', icon: <LockIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/vault/lock') },
-            { label: 'Quick Capture Note', icon: <NoteAddIcon sx={{ fontSize: 16 }} />, onClick: triggerQuickNote },
-            { label: 'Sync Engine', icon: <SyncIcon sx={{ fontSize: 16 }} />, onClick: () => showSuccess('Engine Synced', 'Active rows successfully validated.') }
+            { label: 'Add Password / Secret', icon: <Plus size={16} className="text-emerald-400" />, onClick: () => router.push('/vault?action=new') },
+            { label: 'Add 2FA TOTP Code', icon: <Shield size={16} />, onClick: () => router.push('/vault/totp?action=new') },
+            { label: 'Security & Passkeys', icon: <Settings size={16} />, onClick: () => router.push('/settings?tab=security') }
+          );
+        } else if (appType === 'flow') {
+          menuTitle = 'Goals & Workflows';
+          items.push(
+            { label: 'New Goal / Task', icon: <Plus size={16} className="text-emerald-400" />, onClick: () => openUnifiedDrawer('task') },
+            { label: 'Create Workflow', icon: <Layers size={16} />, onClick: () => router.push('/flows') },
+            { label: 'Notes & Ideas', icon: <FileText size={16} />, onClick: () => router.push('/app') }
+          );
+        } else if (appType === 'accounts') {
+          menuTitle = 'Settings & Identity';
+          items.push(
+            { label: 'Account & Profile', icon: <Users size={16} />, onClick: () => router.push('/settings') },
+            { label: 'Security & Masterpass', icon: <Lock size={16} />, onClick: () => router.push('/settings?tab=security') },
+            { label: 'AI Autonomous Agents', icon: <Bot size={16} />, onClick: () => router.push('/settings/agents') }
           );
         } else {
-          // General / Default options
+          menuTitle = 'Quick Actions';
           items.push(
-            { label: 'Quick Capture Note', icon: <NoteAddIcon sx={{ fontSize: 16 }} />, onClick: triggerQuickNote },
-            { label: 'Ecosystem Portal', icon: <FolderIcon sx={{ fontSize: 16 }} />, onClick: focusGlobalSearch },
-            { label: 'Sync Vault', icon: <SyncIcon sx={{ fontSize: 16 }} />, onClick: () => showSuccess('Vault Synced', 'All encrypted local rows are in active alignment.') },
-            { label: 'Go to Settings', icon: <SettingsIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/settings') }
+            { label: 'Quick Capture Note', icon: <Plus size={16} />, onClick: () => openUnifiedDrawer('note') },
+            { label: 'Universal Search', icon: <Search size={16} />, onClick: () => focusGlobalSearch() },
+            { label: 'Connect Stream', icon: <MessageSquare size={16} />, onClick: () => router.push('/connect') },
+            { label: 'Settings', icon: <Settings size={16} />, onClick: () => router.push('/settings') }
           );
         }
       }
@@ -207,6 +349,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
       setState({
         x: e.clientX,
         y: e.clientY,
+        title: menuTitle,
         items,
         appType
       });

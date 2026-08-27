@@ -1,7 +1,5 @@
-'use client';
-
 import React, { useMemo, useState } from 'react';
-import { Globe, Heart, MessageCircle, Repeat2, Share, Shield, Zap } from 'lucide-react';
+import { Globe, Heart, MessageCircle, Repeat2, Share, Shield, Zap, Copy, Bookmark, User, Trash2 } from 'lucide-react';
 import type { UnifiedFeedItem } from '@/components/connect/useConnectMomentsFeed';
 import { toggleMomentLike } from '@/lib/connect/moment-engagement';
 import { extractPostImages, truncateMomentBody } from '@/lib/connect/moment-media';
@@ -11,6 +9,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import toast from 'react-hot-toast';
 
@@ -262,6 +261,106 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     });
   };
 
+  const contextMenu = useContextMenu();
+  const openMenu = contextMenu?.openMenu;
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!openMenu) return;
+
+    const isAuthor = Boolean(user?.$id && item.rawEvent?.userId === user.$id);
+    const postUrl = item.source === 'nostr'
+      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/connect/post/nostr_${momentId}`
+      : buildPublicResourceUrl('moment', momentId || item.id);
+
+    const menuItems = [
+      {
+        label: 'Open Thread & Comments',
+        icon: <MessageCircle size={16} />,
+        onClick: open,
+      },
+      {
+        label: liked ? 'Unlike Moment' : 'Like Moment',
+        icon: <Heart size={16} className={liked ? 'text-pink-500 fill-pink-500' : ''} />,
+        onClick: onLike,
+      },
+      {
+        label: reposted ? 'Reposted' : 'Pulse / Repost',
+        icon: <Repeat2 size={16} className={reposted ? 'text-emerald-400' : ''} />,
+        onClick: onRepost,
+      },
+      {
+        label: 'Zap Creator',
+        icon: <Zap size={16} className="text-amber-400" />,
+        onClick: onZap,
+      },
+      {
+        label: 'Copy Post Link',
+        icon: <Share size={16} />,
+        onClick: () => {
+          navigator.clipboard.writeText(postUrl);
+          toast.success('Post link copied');
+        },
+      },
+      {
+        label: 'Copy Post Text',
+        icon: <Copy size={16} />,
+        onClick: () => {
+          navigator.clipboard.writeText(item.content || '');
+          toast.success('Post text copied');
+        },
+      },
+      {
+        label: 'Save to Bookmarks',
+        icon: <Bookmark size={16} />,
+        onClick: async () => {
+          if (!momentId) return;
+          try {
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            const currentBookmarks = (await LocalEngine.cacheGet<string[]>('kylrix:bookmarks')) || [];
+            if (!currentBookmarks.includes(momentId)) {
+              await LocalEngine.cacheSet('kylrix:bookmarks', [...currentBookmarks, momentId]);
+            }
+            toast.success('Saved to bookmarks');
+          } catch {
+            toast.error('Could not bookmark');
+          }
+        },
+      },
+      {
+        label: `View ${item.authorName.replace(/^@/, '')}'s Profile`,
+        icon: <User size={16} />,
+        onClick: () => openProfilePreview(e),
+      },
+    ];
+
+    if (item.source === 'ecosystem' && isAuthor && momentId) {
+      menuItems.push({
+        label: 'Delete Moment',
+        icon: <Trash2 size={16} />,
+        variant: 'destructive' as const,
+        onClick: async () => {
+          try {
+            const { deleteMoment } = await import('@/lib/appwrite');
+            await deleteMoment(momentId);
+            toast.success('Moment deleted');
+          } catch {
+            toast.error('Failed to delete moment');
+          }
+        },
+      });
+    }
+
+    openMenu({
+      x: e.clientX,
+      y: e.clientY,
+      title: `${item.authorName.replace(/^@/, '')}'s Moment`,
+      appType: 'connect',
+      items: menuItems,
+    });
+  };
+
   const isSyncedToNostr = !isNostr && Boolean(item.rawEvent?.nostrId);
 
   return (
@@ -269,6 +368,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
       role="button"
       tabIndex={0}
       onClick={open}
+      onContextMenu={handleContextMenu}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
