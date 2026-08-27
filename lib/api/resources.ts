@@ -26,14 +26,14 @@ const FLOW_DB = APPWRITE_CONFIG.DATABASES.FLOW;
 const TASKS = APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 const WORKFLOWS = 'workflows';
 
-function badRequest(message: string) {
+function badRequest(message: string): never {
   const err = new Error(message);
   (err as any).status = 400;
   (err as any).code = 'bad_request';
   throw err;
 }
 
-function notFound(message: string) {
+function notFound(message: string): never {
   const err = new Error(message);
   (err as any).status = 404;
   (err as any).code = 'not_found';
@@ -100,7 +100,7 @@ const PROJECT_OBJECTS = 'project_objects';
 async function linkObjectToWorkspace(
   tables: ReturnType<typeof createSystemTablesDB>,
   projectId: string,
-  entityKind: 'note' | 'goal' | 'form' | 'event' | 'credential' | 'totp' | 'agent_session',
+  entityKind: 'note' | 'goal' | 'form' | 'event' | 'credential' | 'totp' | 'agent_session' | 'secret',
   entityId: string,
   userId: string,
   metadata?: any
@@ -200,6 +200,109 @@ async function getAllLinkedWorkspaceObjectIds(
   } catch {
     return new Set();
   }
+}
+
+async function resolveWorkspaceMekBytes(
+  tables: any,
+  actor: ApiActor,
+  opts?: { workspaceId?: string | null; agentId?: string | null; mek?: string | null }
+): Promise<Uint8Array | null> {
+  if (opts?.mek) {
+    try {
+      return parseMekToBytes(opts.mek);
+    } catch {}
+  }
+
+  let targetAgentId = opts?.agentId ? String(opts.agentId).replace(/^agent_/, '') : null;
+
+  // 1. Check agentic workspace by workspaceId
+  if (!targetAgentId && opts?.workspaceId) {
+    try {
+      const proj = (await tables
+        .getRow({
+          databaseId: FLOW_DB,
+          tableId: (APPWRITE_CONFIG.TABLES as any).PROJECTS || 'projects',
+          rowId: opts.workspaceId,
+        })
+        .catch(() => null)) as any;
+
+      if (proj) {
+        if (proj.isAgentic || proj.agentId) {
+          targetAgentId = String(proj.agentId || proj.ownerId).replace(/^agent_/, '');
+        }
+        if (!targetAgentId && proj.metadata) {
+          try {
+            const meta = typeof proj.metadata === 'string' ? JSON.parse(proj.metadata) : proj.metadata;
+            if (meta.agentId) targetAgentId = String(meta.agentId).replace(/^agent_/, '');
+          } catch {}
+        }
+      }
+    } catch {}
+  }
+
+  if (targetAgentId) {
+    // A. Check agents table
+    try {
+      const agentRow = (await tables
+        .getRow({
+          databaseId: FLOW_DB,
+          tableId: APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
+          rowId: targetAgentId,
+        })
+        .catch(() => null)) as any;
+
+      if (agentRow?.config) {
+        const parsed = JSON.parse(agentRow.config);
+        if (parsed.mekHex) return parseMekToBytes(parsed.mekHex);
+        if (parsed.entropyHex) return parseMekToBytes(parsed.entropyHex);
+      }
+    } catch {}
+
+    // B. Check profiles table
+    try {
+      const profileRow = (await tables
+        .getRow({
+          databaseId: CHAT_DB,
+          tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+          rowId: `agent_${targetAgentId}`,
+        })
+        .catch(() => null)) as any;
+
+      if (profileRow?.preferences) {
+        const pref = typeof profileRow.preferences === 'string' ? JSON.parse(profileRow.preferences) : profileRow.preferences;
+        if (pref.mekHex) return parseMekToBytes(pref.mekHex);
+        if (pref.entropyHex) return parseMekToBytes(pref.entropyHex);
+      }
+    } catch {}
+  }
+
+  // C. Check local filesystem sovereign store (~/.kylrix/agents/)
+  if (typeof process !== 'undefined') {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const os = await import('os');
+      const agentsDir = path.join(os.homedir(), '.kylrix', 'agents');
+      if (fs.existsSync(agentsDir)) {
+        const files = fs.readdirSync(agentsDir);
+        for (const file of files) {
+          if (file.endsWith('.json')) {
+            const fullPath = path.join(agentsDir, file);
+            const content = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+            if (
+              ((targetAgentId && (content.agentId === targetAgentId || content.agentUserId === `agent_${targetAgentId}`)) ||
+                (opts?.workspaceId && (content.workspaceId === opts.workspaceId || content.defaultWorkspaceId === opts.workspaceId))) &&
+              content.mekHex
+            ) {
+              return parseMekToBytes(content.mekHex);
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return null;
 }
 
 /**
@@ -1895,7 +1998,11 @@ export const ApiResources = {
     }));
   },
 
-  async listVaultItems(actor: ApiActor, limit = 25, opts?: { mek?: string | null }) {
+  async listVaultItems(
+    actor: ApiActor,
+    limit = 25,
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+  ) {
     requireScope(actor, 'vault:read');
     const tables = createSystemTablesDB();
     const res = await tables.listRows({
@@ -1909,7 +2016,7 @@ export const ApiResources = {
       ],
     });
 
-    const mekBytes = opts?.mek ? parseMekToBytes(opts.mek) : null;
+    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
 
     return Promise.all(
       res.rows.map(async (r: any) => {
@@ -1946,7 +2053,11 @@ export const ApiResources = {
     );
   },
 
-  async getVaultItem(actor: ApiActor, id: string, opts?: { mek?: string | null }) {
+  async getVaultItem(
+    actor: ApiActor,
+    id: string,
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+  ) {
     requireScope(actor, 'vault:read');
     const tables = createSystemTablesDB();
     const r = (await tables
@@ -1959,7 +2070,7 @@ export const ApiResources = {
 
     if (!r || r.userId !== actor.userId || r.isDeleted) notFound('Vault item not found');
 
-    const mekBytes = opts?.mek ? parseMekToBytes(opts.mek) : null;
+    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
     let decryptedSecret: string | null = null;
     let decryptedNotes: string | null = null;
 
@@ -1993,19 +2104,30 @@ export const ApiResources = {
     };
   },
 
-  async createVaultItem(actor: ApiActor, body: Record<string, unknown>, opts?: { mek?: string | null }) {
+  async createVaultItem(
+    actor: ApiActor,
+    body: Record<string, unknown>,
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+  ) {
     requireScope(actor, 'vault:write');
     const name = String(body.name || body.title || '').trim();
     if (!name) badRequest('name required');
 
-    const rawMek = opts?.mek || (body.mek as string);
-    if (!rawMek || typeof rawMek !== 'string' || !rawMek.trim()) {
-      const err = new Error('Vault creation requires MEK (pass X-Kylrix-MEK header or mek body property)');
+    const tables = createSystemTablesDB();
+    const wsId = (body.workspaceId || body.projectId || opts?.workspaceId) as string | undefined;
+    const agId = (body.agentId || opts?.agentId) as string | undefined;
+    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, {
+      workspaceId: wsId,
+      agentId: agId,
+      mek: opts?.mek || (body.mek as string),
+    });
+
+    if (!mekBytes) {
+      const err = new Error('Vault creation requires MEK or an Agentic Workspace context (pass X-Kylrix-MEK, mek, or workspaceId)');
       (err as any).status = 400;
       (err as any).code = 'mek_required';
       throw err;
     }
-    const mekBytes = parseMekToBytes(rawMek);
 
     let rawSecret = body.secret != null ? String(body.secret) : (body.password != null ? String(body.password) : '');
     let wasGenerated = false;
@@ -2024,7 +2146,6 @@ export const ApiResources = {
       encryptedNotes = sealedNotes.encrypted;
     }
 
-    const tables = createSystemTablesDB();
     const itemId = ID.unique();
     const now = new Date().toISOString();
     const itemType = String(body.itemType || body.type || 'login').slice(0, 50);
@@ -2057,6 +2178,10 @@ export const ApiResources = {
       ],
     });
 
+    if (wsId) {
+      await linkObjectToWorkspace(tables, wsId, 'secret', itemId, actor.userId, { title: name });
+    }
+
     return {
       id: (row as any).$id,
       name: (row as any).name,
@@ -2075,7 +2200,12 @@ export const ApiResources = {
     };
   },
 
-  async updateVaultItem(actor: ApiActor, id: string, body: Record<string, unknown>, opts?: { mek?: string | null }) {
+  async updateVaultItem(
+    actor: ApiActor,
+    id: string,
+    body: Record<string, unknown>,
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+  ) {
     requireScope(actor, 'vault:write');
     const tables = createSystemTablesDB();
     const existing = (await tables
@@ -2101,12 +2231,16 @@ export const ApiResources = {
     if (body.isPinned !== undefined) patch.isPinned = !!body.isPinned;
     if (body.tags !== undefined && Array.isArray(body.tags)) patch.tags = body.tags.map(String);
 
-    const rawMek = opts?.mek || (body.mek as string);
     if (body.secret !== undefined || body.password !== undefined || body.notes !== undefined) {
-      if (!rawMek || typeof rawMek !== 'string' || !rawMek.trim()) {
-        badRequest('Updating encrypted secret/notes requires MEK header X-Kylrix-MEK or mek body property');
+      const mekBytes = await resolveWorkspaceMekBytes(tables, actor, {
+        workspaceId: (body.workspaceId || body.projectId || opts?.workspaceId) as string,
+        agentId: (body.agentId || opts?.agentId) as string,
+        mek: opts?.mek || (body.mek as string),
+      });
+
+      if (!mekBytes) {
+        badRequest('Updating encrypted secret/notes requires MEK header X-Kylrix-MEK, mek body property, or agentic workspace context');
       }
-      const mekBytes = parseMekToBytes(rawMek);
 
       if (body.secret !== undefined || body.password !== undefined) {
         const rawSecret = String(body.secret ?? body.password ?? '');

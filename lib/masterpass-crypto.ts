@@ -735,6 +735,27 @@ class MasterPassCrypto {
     }
   }
 
+  // Decrypt data with dynamic workspace MEK resolution (Agentic Workspace support)
+  async decryptDataForWorkspace(
+    encryptedData: string,
+    workspace?: { isAgentic?: boolean; agentId?: string | null } | null,
+    wrappedDek?: string | null
+  ): Promise<unknown> {
+    if (workspace?.isAgentic && workspace?.agentId) {
+      try {
+        const text = await ecosystemSecurity.decryptWithWorkspace(encryptedData, workspace, wrappedDek);
+        try {
+          return JSON.parse(text);
+        } catch {
+          return text;
+        }
+      } catch (err) {
+        logError("Agentic workspace decryption failed, attempting standard fallback:", err as Error);
+      }
+    }
+    return this.decryptData(encryptedData);
+  }
+
   // Application lock functionality
   lockApplication(): void {
     // Clear all decrypted data from memory

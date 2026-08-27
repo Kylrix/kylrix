@@ -189,4 +189,62 @@ export const AgentIdentityService = {
       return null;
     }
   },
+
+  /**
+   * Resolves the agent's MEK in hex format.
+   * If stored in agent's config/identity directly or encrypted under owner MEK,
+   * it retrieves and unwraps it seamlessly.
+   */
+  async getAgentMekHex(agentId: string): Promise<string | null> {
+    const rawId = agentId.replace(/^agent_/, '');
+    try {
+      // 1. Try fetching from agents table
+      const agentRes = await tablesDB.getRow<any>(
+        APPWRITE_CONFIG.DATABASES.FLOW,
+        APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
+        rawId
+      ).catch(() => null);
+
+      if (agentRes?.config) {
+        try {
+          const parsed = JSON.parse(agentRes.config);
+          if (parsed.mekHex) return String(parsed.mekHex);
+          if (parsed.entropyHex) return String(parsed.entropyHex);
+        } catch {}
+      }
+
+      // 2. Try fetching from profiles table
+      const profile = await this.getAgentProfile(rawId);
+      if (profile?.preferences) {
+        try {
+          const pref = typeof profile.preferences === 'string' ? JSON.parse(profile.preferences) : profile.preferences;
+          if (pref.mekHex) return String(pref.mekHex);
+          if (pref.encryptedKeyBlob && ecosystemSecurity.status.isUnlocked) {
+            const decryptedJson = await ecosystemSecurity.decrypt(pref.encryptedKeyBlob);
+            const decrypted = JSON.parse(decryptedJson);
+            if (decrypted.mekHex) return String(decrypted.mekHex);
+            if (decrypted.entropyHex) return String(decrypted.entropyHex);
+          }
+        } catch {}
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Imports and returns the Agent's MEK as a WebCrypto CryptoKey.
+   */
+  async getAgentCryptoKey(agentId: string): Promise<CryptoKey | null> {
+    const hex = await this.getAgentMekHex(agentId);
+    if (!hex || hex.length < 32) return null;
+    try {
+      const { importMekCryptoKey, parseMekToBytes } = await import('@/lib/api/vault-crypto');
+      return await importMekCryptoKey(parseMekToBytes(hex));
+    } catch {
+      return null;
+    }
+  },
 };

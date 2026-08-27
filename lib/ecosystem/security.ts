@@ -19,6 +19,7 @@ class EcosystemSecurity {
   private currentUserId: string | null = null;
   private identitySyncPromise: Promise<string | null> | null = null;
   private conversationKeys: Map<string, CryptoKey> = new Map();
+  private agentMekCache: Map<string, CryptoKey> = new Map();
   private decryptionCache: Map<string, string> = new Map();
   private isUnlocked = false;
   private nodeId = 'unknown';
@@ -412,6 +413,94 @@ class EcosystemSecurity {
     const plaintext = decoder.decode(decrypted);
     this.decryptionCache.set(encryptedData, plaintext);
     return plaintext;
+  }
+
+  /**
+   * Resolves and caches the MEK for a specific agent.
+   */
+  async getAgentMek(agentId: string): Promise<CryptoKey | null> {
+    const cleanId = agentId.replace(/^agent_/, '');
+    if (this.agentMekCache.has(cleanId)) {
+      return this.agentMekCache.get(cleanId)!;
+    }
+    try {
+      const { AgentIdentityService } = await import('@/lib/services/agent-identity');
+      const key = await AgentIdentityService.getAgentCryptoKey(cleanId);
+      if (key) {
+        this.agentMekCache.set(cleanId, key);
+        return key;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Resolves the appropriate MEK for the given workspace.
+   * If the workspace is agentic, retrieves the agent's MEK; otherwise returns user's masterKey.
+   */
+  async resolveWorkspaceMek(workspace?: { isAgentic?: boolean; agentId?: string | null } | null): Promise<CryptoKey | null> {
+    if (workspace?.isAgentic && workspace.agentId) {
+      const agentKey = await this.getAgentMek(workspace.agentId);
+      if (agentKey) return agentKey;
+    }
+    return this.masterKey;
+  }
+
+  /**
+   * Seamless workspace-aware decryption supporting agentic workspaces, DEK wrappers, and standard vault payloads.
+   */
+  async decryptWithWorkspace(
+    encryptedData: string,
+    workspace?: { isAgentic?: boolean; agentId?: string | null } | null,
+    wrappedDek?: string | null
+  ): Promise<string> {
+    if (this.decryptionCache.has(encryptedData)) return this.decryptionCache.get(encryptedData)!;
+
+    const targetKey = await this.resolveWorkspaceMek(workspace);
+    if (!targetKey && !this.masterKey) {
+      throw new Error("VAULT_LOCKED");
+    }
+    const keyToUse = targetKey || this.masterKey!;
+
+    // 1. If wrappedDek is present, unwrap DEK and decrypt payload
+    if (wrappedDek) {
+      try {
+        const dekBytes = atob(wrappedDek).split('').map((c) => c.charCodeAt(0));
+        const dekIv = new Uint8Array(dekBytes.slice(0, EcosystemSecurity.IV_SIZE));
+        const dekEncrypted = new Uint8Array(dekBytes.slice(EcosystemSecurity.IV_SIZE));
+        const rawDek = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dekIv }, keyToUse, dekEncrypted);
+        const itemKey = await crypto.subtle.importKey("raw", rawDek, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+
+        const dataBytes = atob(encryptedData).split('').map((c) => c.charCodeAt(0));
+        const dataIv = new Uint8Array(dataBytes.slice(0, EcosystemSecurity.IV_SIZE));
+        const dataEncrypted = new Uint8Array(dataBytes.slice(EcosystemSecurity.IV_SIZE));
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dataIv }, itemKey, dataEncrypted);
+        const plaintext = new TextDecoder().decode(decrypted);
+        this.decryptionCache.set(encryptedData, plaintext);
+        return plaintext;
+      } catch {}
+    }
+
+    // 2. Direct decryption with workspace key
+    try {
+      const combined = new Uint8Array(
+        atob(encryptedData).split("").map((char: any) => char.charCodeAt(0))
+      );
+      const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
+      const encrypted = combined.slice(EcosystemSecurity.IV_SIZE);
+      const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, keyToUse, encrypted);
+      const plaintext = new TextDecoder().decode(decrypted);
+      this.decryptionCache.set(encryptedData, plaintext);
+      return plaintext;
+    } catch (directErr) {
+      // Fallback: If agentic decryption failed, try masterKey fallback if different
+      if (keyToUse !== this.masterKey && this.masterKey) {
+        return this.decrypt(encryptedData);
+      }
+      throw directErr;
+    }
   }
 
   async saveRecoveryIdentity(

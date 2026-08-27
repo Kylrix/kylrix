@@ -232,21 +232,37 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
 
   // Vault
   if (a === 'vault' && (!b || b === 'items') && !c) {
+    const wsId = req.nextUrl.searchParams.get('workspaceId') || req.nextUrl.searchParams.get('projectId') || undefined;
+    const agId = req.nextUrl.searchParams.get('agentId') || undefined;
     if (method === 'GET') {
-      return jsonOk(await ApiResources.listVaultItems(actor, limit(), { mek: mekHeader }));
+      return jsonOk(await ApiResources.listVaultItems(actor, limit(), { mek: mekHeader, workspaceId: wsId, agentId: agId }));
     }
     if (method === 'POST') {
       const body = await readBody(req);
-      return jsonOk(await ApiResources.createVaultItem(actor, body, { mek: mekHeader || (body.mek as string) }));
+      return jsonOk(
+        await ApiResources.createVaultItem(actor, body, {
+          mek: mekHeader || (body.mek as string),
+          workspaceId: wsId || (body.workspaceId as string) || (body.projectId as string),
+          agentId: agId || (body.agentId as string),
+        }),
+      );
     }
   }
   if (a === 'vault' && b && b !== 'items' && !c) {
+    const wsId = req.nextUrl.searchParams.get('workspaceId') || req.nextUrl.searchParams.get('projectId') || undefined;
+    const agId = req.nextUrl.searchParams.get('agentId') || undefined;
     if (method === 'GET') {
-      return jsonOk(await ApiResources.getVaultItem(actor, b, { mek: mekHeader }));
+      return jsonOk(await ApiResources.getVaultItem(actor, b, { mek: mekHeader, workspaceId: wsId, agentId: agId }));
     }
     if (method === 'PATCH' || method === 'PUT') {
       const body = await readBody(req);
-      return jsonOk(await ApiResources.updateVaultItem(actor, b, body, { mek: mekHeader || (body.mek as string) }));
+      return jsonOk(
+        await ApiResources.updateVaultItem(actor, b, body, {
+          mek: mekHeader || (body.mek as string),
+          workspaceId: wsId || (body.workspaceId as string) || (body.projectId as string),
+          agentId: agId || (body.agentId as string),
+        }),
+      );
     }
     if (method === 'DELETE') {
       return jsonOk(await ApiResources.deleteVaultItem(actor, b));

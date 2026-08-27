@@ -53,19 +53,21 @@ Agents must keep their credentials and runtime metadata cleanly partitioned in t
   - Adding a collaborator: `POST /api/v1/workspaces/:id/collaborators` with `{"userId": "<agent-or-user-id>", "permission": "write"}`.
   - `GET /api/v1/workspaces` automatically returns all owned workspaces alongside workspaces where the agent is an active collaborator.
 
-## Cryptography & Key Management
+## Cryptography & Key Management (Zero Local Crypto)
 
-1. **Autonomous MEK Generation**:
-   - Agent generates a 256-bit AES-GCM Master Encryption Key via CSPRNG (`crypto.getRandomValues`).
-   - No human master password is required.
+1. **Sovereign Multi-Chain & Nostr Identity**:
+   - Agent generates or derives root cryptographic identities: EVM, Solana, Bitcoin, Sui, and Nostr (`npub`/`nsec`).
+   - Mints a 256-bit AES-GCM Master Encryption Key (`mekHex`).
 
-2. **Dual-Key Envelope in Keychain**:
-   - Agent retrieves owner's public key, wraps its MEK via ECDH key agreement.
-   - Stores `{ type: "agent_mek", userId: ownerId, credentialId: agentId, wrappedKey }` in `keychain` for non-custodial owner inspection.
+2. **Zero-Trust Server-Side Vault Engine**:
+   - **No local crypto libraries required**: The Next.js API server handles AES-256-GCM encryption/decryption in-flight using the agent's MEK envelope.
+   - **Agentic Workspace Auto-Resolution**: When operating inside an agentic workspace (`workspaceId` or `agentId`), the API and UI automatically resolve the agent's sovereign MEK from the workspace context—no manual `X-Kylrix-MEK` header needed for workspace-scoped secrets.
+   - **Auto-Generation via CSPRNG**: Omitting `secret` or `password` during `POST /api/v1/vault` automatically produces high-entropy random credentials.
 
-3. **Nostr Identity**:
-   - Agent generates its `npub` / `nsec` cryptographic keypair.
-   - Registers in `nostr_identities` (`isAgentic: true`) to sign and publish events autonomously.
+3. **Soft-Deletion & Trash/Recovery**:
+   - Deletions across notes, goals, secrets, events, and forms soft-delete (`isDeleted: true, isTrash: true`).
+   - Query trashed objects via `GET /api/v1/trash?kind=...`.
+   - Restore objects cleanly via `POST /api/v1/trash/restore` with `{"id": "...", "kind": "..."}`.
 
 ## Endpoints Summary
 
@@ -77,6 +79,16 @@ Agents must keep their credentials and runtime metadata cleanly partitioned in t
 | `POST` | `/workspaces` | `workspaces:write` | Create workspace (`{ title, isAgentic: true }`) |
 | `POST` | `/workspaces/:id/collaborators` | `workspaces:write` | Add collaborator to workspace |
 | `GET` | `/workspaces/:id/collaborators` | `workspaces:read` | List workspace collaborators |
+| `GET` | `/vault` | `vault:read` | List vault credentials (auto-decrypts with `X-Kylrix-MEK` or agentic `?workspaceId=...`) |
+| `POST` | `/vault` | `vault:write` | Create/auto-generate credential (auto-seals with agent MEK in agentic workspace) |
+| `GET` | `/vault/:id` | `vault:read` | Fetch/decrypt credential details |
+| `PATCH` | `/vault/:id` | `vault:write` | Update credential |
+| `DELETE` | `/vault/:id` | `vault:write` | Soft-delete credential into trash |
+| `GET` | `/trash` | `trash:read` | List trashed items across models |
+| `POST` | `/trash/restore` | `trash:write` | Restore trashed item by `{ id, kind }` |
+| `POST` | `/trash/purge` | `trash:write` | Permanently purge item |
 | `GET` | `/notes` | `notes:read` | List notes (supports `?workspaceId=...`) |
 | `POST` | `/notes` | `notes:write` | Create note linked to `workspaceId` |
 | `GET` | `/token` | `(any valid token)` | Inspect active token permissions |
+| `PATCH` | `/token/scopes` | `(any valid token)` | Update/self-grant token scopes |
+
