@@ -6,21 +6,18 @@ import {
   Typography,
   Stack,
   Button,
-  TextField,
   CircularProgress,
   IconButton,
   Drawer,
   useTheme,
-  useMediaQuery} from '@/lib/openbricks/primitives';
-import { 
+  useMediaQuery,
+} from '@/lib/openbricks/primitives';
+import {
   X as CloseIcon,
   FolderKanban as ProjectIcon,
   Lock,
   Globe,
   Check,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp
 } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
@@ -34,16 +31,10 @@ import { attachObjectToProject } from '@/lib/projects/object-attachment';
 
 const SURFACE_ASH = '#161412';
 const VOID = '#0A0908';
-const HOVER = '#1C1A18';
-const BORDER_HAIRLINE = '#34322F';
+const BORDER_HAIRLINE = 'rgba(255, 255, 255, 0.08)';
 const TEXT_MUTED = '#9B9691';
 const SYSTEM_PRIMARY = '#6366F1';
-const SYSTEM_HOVER = '#575CF0';
-
-const BORDER = `1px solid ${BORDER_HAIRLINE}`;
-const BRAND_TRANSITION = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
-const RADIUS_LARGE = '24px';
-const RADIUS_SMALL = '12px';
+const SYSTEM_HOVER = '#5254E8';
 
 export function NewProjectDrawer() {
   const theme = useTheme();
@@ -57,13 +48,9 @@ export function NewProjectDrawer() {
   const template = drawerData?.template;
   const onSuccess = drawerData?.onCreated as ((project: any) => void) | undefined;
 
-
-
   const [step, setStep] = useState(1);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isVisibilityDrawerOpen, setIsVisibilityDrawerOpen] = useState(false);
-  
+
   // Resources for picking
   const [resources, setResources] = useState<any[]>([]);
   const [loadingResources, setLoadingResources] = useState(false);
@@ -74,23 +61,30 @@ export function NewProjectDrawer() {
   const [summary, setSummary] = useState('');
   const [visibility, setVisibility] = useState<'private' | 'public'>('public');
   const [isGuest, setIsGuest] = useState(true);
-  const [isGuestExpanded, setIsGuestExpanded] = useState(false);
 
   const fetchResources = useCallback(async () => {
     if (!user?.$id) return;
     setLoadingResources(true);
     try {
-        if (template?.id === 'form-to-project' || template?.id === 'service-desk' || template?.id === 'event-command-center') {
-            const res = await FormsService.listUserForms(user.$id);
-            setResources(res?.rows || []);
-        } else if (template?.id === 'idea-to-execution' || template?.id === 'wiki-knowledge-hub' || template?.id === 'product-roadmap') {
-            const res = await listNotesByUser(user.$id);
-            setResources(res?.rows || []);
-        }
+      if (
+        template?.id === 'form-to-project' ||
+        template?.id === 'service-desk' ||
+        template?.id === 'event-command-center'
+      ) {
+        const res = await FormsService.listUserForms(user.$id);
+        setResources(res?.rows || []);
+      } else if (
+        template?.id === 'idea-to-execution' ||
+        template?.id === 'wiki-knowledge-hub' ||
+        template?.id === 'product-roadmap'
+      ) {
+        const res = await listNotesByUser(user.$id);
+        setResources(res?.rows || []);
+      }
     } catch (e) {
-        console.error('Failed to fetch resources', e);
+      console.error('Failed to fetch resources', e);
     } finally {
-        setLoadingResources(false);
+      setLoadingResources(false);
     }
   }, [user?.$id, template?.id]);
 
@@ -99,27 +93,32 @@ export function NewProjectDrawer() {
       setTitle(template?.title || '');
       setSummary(template?.summary || '');
       setVisibility('public');
-      setIsExpanded(false);
       setIsGuest(true);
-      setIsGuestExpanded(false);
 
       const preSelectedId = drawerData?.selectedResourceId || drawerData?.formId || '';
       setSelectedResourceId(preSelectedId);
-      
-      // Determine if we need a picker step
-      const needsPicker = ['form-to-project', 'idea-to-execution', 'service-desk', 'wiki-knowledge-hub', 'event-command-center', 'product-roadmap'].includes(template?.id);
+
+      const needsPicker = [
+        'form-to-project',
+        'idea-to-execution',
+        'service-desk',
+        'wiki-knowledge-hub',
+        'event-command-center',
+        'product-roadmap',
+      ].includes(template?.id);
+
       if (needsPicker && !preSelectedId) {
-          setStep(1);
-          fetchResources();
+        setStep(1);
+        void fetchResources();
       } else {
-          setStep(2);
-          if (preSelectedId) {
-              if (drawerData?.formTitle) {
-                  setTitle(drawerData.formTitle);
-                  setSummary(drawerData.formDescription || '');
-              }
-              fetchResources();
+        setStep(2);
+        if (preSelectedId) {
+          if (drawerData?.formTitle) {
+            setTitle(drawerData.formTitle);
+            setSummary(drawerData.formDescription || '');
           }
+          void fetchResources();
+        }
       }
     }
   }, [isOpen, template, fetchResources, drawerData]);
@@ -130,23 +129,28 @@ export function NewProjectDrawer() {
 
     setLoading(true);
     try {
-      // 1. Prepare Metadata based on template
       const metadata: any = {
         templateId: template?.id,
-        createdAt: new Date().toISOString()};
+        createdAt: new Date().toISOString(),
+      };
 
       if (template?.id === 'academic-research') {
-          metadata.proFeatures = true;
-          metadata.maxCharacterLimit = 6000000;
-          metadata.milestones = ['Proposal', 'Literature Review', 'Data Collection', 'Analysis', 'Final Draft'];
+        metadata.proFeatures = true;
+        metadata.maxCharacterLimit = 6000000;
+        metadata.milestones = [
+          'Proposal',
+          'Literature Review',
+          'Data Collection',
+          'Analysis',
+          'Final Draft',
+        ];
       }
 
       if (template?.id === 'idea-to-execution') {
-          metadata.meetings = [{ title: 'Weekly Sync', frequency: 'weekly', day: 'Monday' }];
-          metadata.vaultEnabled = true;
+        metadata.meetings = [{ title: 'Weekly Sync', frequency: 'weekly', day: 'Monday' }];
+        metadata.vaultEnabled = true;
       }
 
-      // 2. Create Project
       const project = await ProjectsService.createProject({
         title: title.trim(),
         summary: summary.trim(),
@@ -154,30 +158,36 @@ export function NewProjectDrawer() {
         isPublic: visibility === 'public',
         isGuest: visibility === 'public' ? isGuest : false,
         status: 'active',
-        metadata: JSON.stringify(metadata)
+        metadata: JSON.stringify(metadata),
       } as any);
 
-      // 3. Post-Creation Magic (Under the hood)
       if (selectedResourceId) {
-          const resourceKind = (template?.id === 'form-to-project' || template?.id === 'service-desk' || template?.id === 'event-command-center') ? 'form' : 'note';
-          
-          // Link Resource
-          await attachObjectToProject({
-            projectId: project.$id,
-            entityKind: resourceKind,
-            entityId: selectedResourceId});
-          
-          // Auto-spin up Task if it's the Form-to-Project flow
-          if (template?.id === 'form-to-project' || template?.id === 'service-desk') {
-              await tasks.create({
-                  title: `Process: ${title}`,
-                  description: `Reviewing submissions from linked form and generating roadmap for ${title}.`,
-                  status: 'todo',
-                  priority: 'high',
-                  userId: user.$id,
-                  metadata: JSON.stringify({ origin: 'template_automation', sourceId: selectedResourceId })
-              } as any);
-          }
+        const resourceKind =
+          template?.id === 'form-to-project' ||
+          template?.id === 'service-desk' ||
+          template?.id === 'event-command-center'
+            ? 'form'
+            : 'note';
+
+        await attachObjectToProject({
+          projectId: project.$id,
+          entityKind: resourceKind,
+          entityId: selectedResourceId,
+        });
+
+        if (template?.id === 'form-to-project' || template?.id === 'service-desk') {
+          await tasks.create({
+            title: `Process: ${title}`,
+            description: `Reviewing submissions from linked form and generating roadmap for ${title}.`,
+            status: 'todo',
+            priority: 'high',
+            userId: user.$id,
+            metadata: JSON.stringify({
+              origin: 'template_automation',
+              sourceId: selectedResourceId,
+            }),
+          } as any);
+        }
       }
 
       showSuccess('Workspace created');
@@ -198,208 +208,364 @@ export function NewProjectDrawer() {
   const mainFormContent = (
     <Box
       sx={{
-        px: { xs: 2.25, sm: 2.75 },
+        px: { xs: 2.25, sm: 3 },
         pb: 'max(20px, env(safe-area-inset-bottom))',
-        pt: isDesktop ? 2.5 : 0,
+        pt: isDesktop ? 2.5 : 1,
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
-        bgcolor: SURFACE_ASH
+        bgcolor: SURFACE_ASH,
       }}
     >
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+      {/* Header */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          mb: 2.5,
+          pb: 1.5,
+          borderBottom: `1px solid ${BORDER_HAIRLINE}`,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
           <Box
             sx={{
-              width: 40,
-              height: 40,
-              borderRadius: RADIUS_SMALL,
+              width: 38,
+              height: 38,
+              borderRadius: '14px',
               display: 'grid',
               placeItems: 'center',
-              bgcolor: VOID,
-              border: BORDER,
-              flexShrink: 0}}
+              bgcolor: 'rgba(99, 102, 241, 0.12)',
+              border: '1px solid rgba(99, 102, 241, 0.25)',
+              color: SYSTEM_PRIMARY,
+              flexShrink: 0,
+            }}
           >
-            {template?.icon ? <template.icon size={20} color={template.color} strokeWidth={2.5} /> : <ProjectIcon size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />}
+            {template?.icon ? (
+              <template.icon size={18} color={template.color || SYSTEM_PRIMARY} strokeWidth={2.2} />
+            ) : (
+              <ProjectIcon size={18} strokeWidth={2.2} />
+            )}
           </Box>
-          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-              <Typography component="span" sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: fontDisplay, letterSpacing: '-0.02em', lineHeight: 1.25 }} noWrap>
-                  {template?.title || 'New Workspace'}
-              </Typography>
-              <Typography component="span" sx={{ color: TEXT_MUTED, fontWeight: 700, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', fontSize: '0.65rem', lineHeight: 1.35 }} noWrap>
-                  {step === 1 ? 'Step 1: Link Context' : 'Step 2: Finalize Workspace'}
-              </Typography>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography
+              component="span"
+              sx={{
+                color: '#fff',
+                fontWeight: 900,
+                fontSize: '1.05rem',
+                fontFamily: fontDisplay,
+                lineHeight: 1.2,
+                display: 'block',
+              }}
+              noWrap
+            >
+              {template?.title || 'New Workspace'}
+            </Typography>
+            <Typography
+              component="span"
+              sx={{
+                color: TEXT_MUTED,
+                fontSize: '0.74rem',
+                display: 'block',
+                mt: 0.2,
+              }}
+              noWrap
+            >
+              {step === 1 ? 'Select resource to link' : 'Set up workspace details'}
+            </Typography>
           </Box>
-        </Stack>
+        </Box>
+
         <IconButton
           onClick={close}
           aria-label="Close"
+          size="small"
           sx={{
-            color: '#E8E6E3',
-            bgcolor: VOID,
-            border: BORDER,
-            '&:hover': { bgcolor: HOVER },
+            width: 32,
+            height: 32,
+            borderRadius: '999px',
+            color: 'rgba(255, 255, 255, 0.6)',
+            bgcolor: 'rgba(255, 255, 255, 0.04)',
+            border: `1px solid ${BORDER_HAIRLINE}`,
+            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#fff' },
             flexShrink: 0,
-            ml: 2}}
+          }}
         >
-          <CloseIcon size={18} />
+          <CloseIcon size={16} />
         </IconButton>
-      </Stack>
+      </Box>
 
-      <Box 
-        component="form" 
+      {/* Body / Form */}
+      <Box
+        component="form"
         onSubmit={handleSubmit}
-        sx={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
           gap: 2,
           overflowY: 'auto',
-          pr: 0.5
+          minHeight: 0,
         }}
       >
         {step === 1 && (
-            <Box>
-                <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
-                    Select existing {template?.id?.includes('form') ? 'Form' : 'Note'} to link
-                </Typography>
-                
-                {loadingResources ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress size={24} sx={{ color: SYSTEM_PRIMARY }} />
-                  </Box>
-                ) : resources.length === 0 ? (
-                  <Box sx={{ p: 2, borderRadius: RADIUS_SMALL, bgcolor: VOID, border: BORDER, textAlign: 'center' }}>
-                    <Typography component="span" sx={{ color: TEXT_MUTED, fontSize: '0.82rem' }}>
-                      No {template?.id?.includes('form') ? 'forms' : 'notes'} found. Proceeding without linking.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Stack spacing={1}>
-                    {resources.map((item) => {
-                      const isSelected = selectedResourceId === item.$id;
-                      return (
-                        <Box
-                          key={item.$id}
-                          component="button"
-                          type="button"
-                          onClick={() => setSelectedResourceId(isSelected ? '' : item.$id)}
-                          sx={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            p: 1.5,
-                            borderRadius: RADIUS_SMALL,
-                            bgcolor: isSelected ? 'rgba(99, 102, 241, 0.1)' : VOID,
-                            border: '1px solid',
-                            borderColor: isSelected ? SYSTEM_PRIMARY : BORDER_HAIRLINE,
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            '&:hover': { bgcolor: isSelected ? 'rgba(99, 102, 241, 0.15)' : HOVER }
-                          }}
-                        >
-                          <Typography component="span" sx={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600 }} noWrap>
-                            {item.title || item.name || 'Untitled'}
-                          </Typography>
-                          {isSelected && <Check size={16} color={SYSTEM_PRIMARY} />}
-                        </Box>
-                      );
-                    })}
-                  </Stack>
-                )}
-            </Box>
-        )}
-        {step === 2 && (
-          <Stack spacing={2.5}>
-            <Box>
-              <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
-                Workspace Name
-              </Typography>
-              <TextField
-                fullWidth
-                value={title}
-                onChange={(e: any) => setTitle(e.target.value)}
-                placeholder="e.g. Q3 Product Launch"
-                variant="outlined"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: VOID,
-                    color: '#fff',
-                    borderRadius: RADIUS_SMALL,
-                    '& fieldset': { borderColor: BORDER_HAIRLINE },
-                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-                    '&.Mui-focused fieldset': { borderColor: SYSTEM_PRIMARY }
-                  }
-                }}
-              />
-            </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+            <Typography
+              component="span"
+              sx={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                color: 'rgba(255,255,255,0.5)',
+                fontFamily: 'monospace',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}
+            >
+              Link existing {template?.id?.includes('form') ? 'Form' : 'Note'} (Optional)
+            </Typography>
 
-            <Box>
-              <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
-                Summary / Purpose
-              </Typography>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                value={summary}
-                onChange={(e: any) => setSummary(e.target.value)}
-                placeholder="Brief description of this workspace's goals..."
-                variant="outlined"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: VOID,
-                    color: '#fff',
-                    borderRadius: RADIUS_SMALL,
-                    '& fieldset': { borderColor: BORDER_HAIRLINE },
-                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-                    '&.Mui-focused fieldset': { borderColor: SYSTEM_PRIMARY }
-                  }
-                }}
-              />
-            </Box>
-
-            <Box>
-              <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
-                Access Level
-              </Typography>
+            {loadingResources ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress size={22} sx={{ color: SYSTEM_PRIMARY }} />
+              </Box>
+            ) : resources.length === 0 ? (
               <Box
-                component="button"
-                type="button"
-                onClick={() => setIsVisibilityDrawerOpen(true)}
                 sx={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  p: 1.75,
-                  borderRadius: RADIUS_SMALL,
+                  p: 2.25,
+                  borderRadius: '18px',
                   bgcolor: VOID,
-                  border: BORDER,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  '&:hover': { bgcolor: HOVER }
+                  border: `1px solid ${BORDER_HAIRLINE}`,
+                  textAlign: 'center',
                 }}
               >
-                <Stack direction="row" alignItems="center" spacing={1.5}>
-                  {visibility === 'public' ? <Globe size={18} color={SYSTEM_PRIMARY} /> : <Lock size={18} color={TEXT_MUTED} />}
-                  <Box>
-                    <Typography component="span" sx={{ color: '#fff', fontSize: '0.88rem', fontWeight: 700, display: 'block' }}>
-                      {visibility === 'public' ? 'Public Workspace' : 'Private Workspace'}
-                    </Typography>
-                    <Typography component="span" sx={{ color: TEXT_MUTED, fontSize: '0.75rem', display: 'block' }}>
-                      {visibility === 'public' ? (isGuest ? 'Anyone can view without login' : 'Public to authenticated members') : 'Only invited members'}
-                    </Typography>
-                  </Box>
-                </Stack>
-                <ChevronRight size={16} color={TEXT_MUTED} />
+                <Typography component="span" sx={{ color: TEXT_MUTED, fontSize: '0.82rem' }}>
+                  No items found. You can proceed directly.
+                </Typography>
               </Box>
-            </Box>
-          </Stack>
+            ) : (
+              <Stack spacing={1}>
+                {resources.map((item) => {
+                  const isSelected = selectedResourceId === item.$id;
+                  return (
+                    <Box
+                      key={item.$id}
+                      component="button"
+                      type="button"
+                      onClick={() => setSelectedResourceId(isSelected ? '' : item.$id)}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        px: 2,
+                        py: 1.5,
+                        borderRadius: '16px',
+                        bgcolor: isSelected ? 'rgba(99, 102, 241, 0.12)' : VOID,
+                        border: '1px solid',
+                        borderColor: isSelected ? SYSTEM_PRIMARY : BORDER_HAIRLINE,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          bgcolor: isSelected
+                            ? 'rgba(99, 102, 241, 0.18)'
+                            : 'rgba(255,255,255,0.03)',
+                        },
+                      }}
+                    >
+                      <Typography
+                        component="span"
+                        sx={{
+                          color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)',
+                          fontSize: '0.86rem',
+                          fontWeight: 700,
+                        }}
+                        noWrap
+                      >
+                        {item.title || item.name || 'Untitled'}
+                      </Typography>
+                      {isSelected && (
+                        <Check size={16} color={SYSTEM_PRIMARY} style={{ flexShrink: 0 }} />
+                      )}
+                    </Box>
+                  );
+                })}
+              </Stack>
+            )}
+          </Box>
         )}
 
+        {step === 2 && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Name Input */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  color: 'rgba(255,255,255,0.5)',
+                  fontFamily: 'monospace',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                Workspace Name
+              </Typography>
+              <Box
+                component="input"
+                type="text"
+                value={title}
+                onChange={(e: any) => setTitle(e.target.value)}
+                placeholder="e.g. Q3 Roadmap, Design Studio"
+                autoFocus
+                sx={{
+                  width: '100%',
+                  px: 2,
+                  py: 1.5,
+                  borderRadius: '16px',
+                  bgcolor: VOID,
+                  border: `1px solid ${BORDER_HAIRLINE}`,
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.2s',
+                  '&:focus': { borderColor: SYSTEM_PRIMARY },
+                  '&::placeholder': { color: 'rgba(255,255,255,0.25)' },
+                }}
+              />
+            </Box>
+
+            {/* Description / Summary Input */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  color: 'rgba(255,255,255,0.5)',
+                  fontFamily: 'monospace',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                Description (Optional)
+              </Typography>
+              <Box
+                component="textarea"
+                rows={2}
+                value={summary}
+                onChange={(e: any) => setSummary(e.target.value)}
+                placeholder="What is this workspace about?"
+                sx={{
+                  width: '100%',
+                  px: 2,
+                  py: 1.25,
+                  borderRadius: '16px',
+                  bgcolor: VOID,
+                  border: `1px solid ${BORDER_HAIRLINE}`,
+                  color: '#fff',
+                  fontSize: '0.86rem',
+                  fontWeight: 500,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  resize: 'none',
+                  fontFamily: 'inherit',
+                  transition: 'border-color 0.2s',
+                  '&:focus': { borderColor: SYSTEM_PRIMARY },
+                  '&::placeholder': { color: 'rgba(255,255,255,0.25)' },
+                }}
+              />
+            </Box>
+
+            {/* Tactile Visibility Segmented Control */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  color: 'rgba(255,255,255,0.5)',
+                  fontFamily: 'monospace',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                Access
+              </Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 1,
+                  p: 0.75,
+                  borderRadius: '18px',
+                  bgcolor: VOID,
+                  border: `1px solid ${BORDER_HAIRLINE}`,
+                }}
+              >
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setVisibility('public')}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                    py: 1.2,
+                    px: 1.5,
+                    borderRadius: '14px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    bgcolor: visibility === 'public' ? 'rgba(99, 102, 241, 0.18)' : 'transparent',
+                    color: visibility === 'public' ? '#818CF8' : 'rgba(255, 255, 255, 0.5)',
+                    fontWeight: 800,
+                    fontSize: '0.84rem',
+                    transition: 'all 0.2s',
+                    '&:hover': { color: '#fff' },
+                  }}
+                >
+                  <Globe size={15} />
+                  <span>Public</span>
+                </Box>
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setVisibility('private')}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                    py: 1.2,
+                    px: 1.5,
+                    borderRadius: '14px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    bgcolor:
+                      visibility === 'private' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                    color: visibility === 'private' ? '#fff' : 'rgba(255, 255, 255, 0.5)',
+                    fontWeight: 800,
+                    fontSize: '0.84rem',
+                    transition: 'all 0.2s',
+                    '&:hover': { color: '#fff' },
+                  }}
+                >
+                  <Lock size={15} />
+                  <span>Private</span>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        )}
+
+        {/* CTA Buttons */}
         <Box sx={{ mt: 'auto', pt: 2 }}>
           {step === 1 ? (
             <Button
@@ -410,32 +576,34 @@ export function NewProjectDrawer() {
                 color: '#fff',
                 fontWeight: 800,
                 fontSize: '0.9rem',
-                py: 1.5,
-                borderRadius: RADIUS_SMALL,
+                py: 1.4,
+                borderRadius: '16px',
                 textTransform: 'none',
-                '&:hover': { bgcolor: SYSTEM_HOVER }
+                '&:hover': { bgcolor: SYSTEM_HOVER },
               }}
             >
-              Continue to Details
+              Continue
             </Button>
           ) : (
-            <Stack direction="row" spacing={1.5}>
-              <Button
-                onClick={() => setStep(1)}
-                sx={{
-                  px: 2.5,
-                  bgcolor: VOID,
-                  color: '#fff',
-                  border: BORDER,
-                  fontWeight: 700,
-                  fontSize: '0.88rem',
-                  borderRadius: RADIUS_SMALL,
-                  textTransform: 'none',
-                  '&:hover': { bgcolor: HOVER }
-                }}
-              >
-                Back
-              </Button>
+            <Stack direction="row" spacing={1.25}>
+              {['form-to-project', 'idea-to-execution'].includes(template?.id) && (
+                <Button
+                  onClick={() => setStep(1)}
+                  sx={{
+                    px: 2.25,
+                    bgcolor: 'rgba(255,255,255,0.04)',
+                    color: '#fff',
+                    border: `1px solid ${BORDER_HAIRLINE}`,
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    borderRadius: '16px',
+                    textTransform: 'none',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
+                  }}
+                >
+                  Back
+                </Button>
+              )}
               <Button
                 type="submit"
                 disabled={loading || !title.trim()}
@@ -445,14 +613,21 @@ export function NewProjectDrawer() {
                   color: '#fff',
                   fontWeight: 800,
                   fontSize: '0.9rem',
-                  py: 1.5,
-                  borderRadius: RADIUS_SMALL,
+                  py: 1.4,
+                  borderRadius: '16px',
                   textTransform: 'none',
                   '&:hover': { bgcolor: SYSTEM_HOVER },
-                  '&.Mui-disabled': { bgcolor: 'rgba(99, 102, 241, 0.4)', color: 'rgba(255,255,255,0.4)' }
+                  '&.Mui-disabled': {
+                    bgcolor: 'rgba(99, 102, 241, 0.3)',
+                    color: 'rgba(255,255,255,0.3)',
+                  },
                 }}
               >
-                {loading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Create Workspace'}
+                {loading ? (
+                  <CircularProgress size={18} sx={{ color: '#fff' }} />
+                ) : (
+                  'Create Workspace'
+                )}
               </Button>
             </Stack>
           )}
@@ -461,236 +636,56 @@ export function NewProjectDrawer() {
     </Box>
   );
 
-  const visibilitySubDrawer = (
-    <Drawer
-      anchor="bottom"
-      open={isVisibilityDrawerOpen}
-      onClose={() => setIsVisibilityDrawerOpen(false)}
-      ModalProps={{ keepMounted: false, disableScrollLock: false }}
-      sx={{
-        '& .ob-drawer-panel': {
-          bgcolor: SURFACE_ASH,
-          borderTopLeftRadius: RADIUS_LARGE,
-          borderTopRightRadius: RADIUS_LARGE,
-          border: BORDER,
-          borderBottom: 0,
-          pb: 'max(24px, env(safe-area-inset-bottom))',
-          pt: 2,
-          px: { xs: 2.25, sm: 2.75 }}
-      }}
-    >
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-        <Typography component="span" sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: fontDisplay, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-          Project Visibility
-        </Typography>
-        <IconButton
-          onClick={() => setIsVisibilityDrawerOpen(false)}
-          sx={{
-            color: '#E8E6E3',
-            bgcolor: VOID,
-            border: BORDER,
-            '&:hover': { bgcolor: HOVER },
-            flexShrink: 0}}
-        >
-          <CloseIcon size={18} />
-        </IconButton>
-      </Stack>
-
-      <Stack spacing={2}>
-        {[
-          { id: 'private', label: 'Private', desc: 'Only you and explicitly added collaborators can access.', icon: Lock, color: TEXT_MUTED },
-          { id: 'public', label: 'Public', desc: 'Visible and searchable to the entire ecosystem and guests.', icon: Globe, color: '#10B981' }
-        ].map((opt) => {
-          const isSelected = visibility === opt.id;
-          return (
-            <Box
-              key={opt.id}
-              component="button"
-              type="button"
-              onClick={() => {
-                setVisibility(opt.id as any);
-                if (opt.id === 'public') {
-                  setIsGuest(true);
-                  setIsGuestExpanded(false);
-                } else {
-                  setIsVisibilityDrawerOpen(false);
-                }
-              }}
-              sx={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                px: 2.25,
-                py: 1.75,
-                borderRadius: '16px',
-                bgcolor: isSelected ? 'rgba(99, 102, 241, 0.05)' : VOID,
-                border: isSelected ? `1px solid ${SYSTEM_PRIMARY}` : BORDER,
-                textAlign: 'left',
-                cursor: 'pointer',
-                transition: BRAND_TRANSITION,
-                '&:hover': { borderColor: isSelected ? SYSTEM_PRIMARY : '#4F4C49', bgcolor: isSelected ? 'rgba(99, 102, 241, 0.08)' : HOVER }}}
-            >
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '12px',
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                  bgcolor: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.05)'}}
-              >
-                <opt.icon size={18} color={opt.color} />
-              </Box>
-              <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25, color: '#fff' }}>
-                  {opt.label}
-                </Typography>
-                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
-                  {opt.desc}
-                </Typography>
-              </Box>
-              {isSelected && <Check size={20} color={SYSTEM_PRIMARY} style={{ flexShrink: 0 }} />}
-            </Box>
-          );
-        })}
-      </Stack>
-
-      {visibility === 'public' && (
-        <Box sx={{ border: BORDER, borderRadius: '16px', bgcolor: VOID, overflow: 'hidden', mt: 2 }}>
-          <Box
-            component="button"
-            type="button"
-            onClick={() => setIsGuestExpanded(!isGuestExpanded)}
-            sx={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              p: 2,
-              bgcolor: 'transparent',
-              border: 0,
-              cursor: 'pointer',
-              color: TEXT_MUTED,
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.01)' }
-            }}
-          >
-            <Typography component="span" sx={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: fontDisplay }}>
-              Advanced Access Control
-            </Typography>
-            {isGuestExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </Box>
-
-          {isGuestExpanded && (
-            <Box sx={{ p: 2, pt: 0, borderTop: `1px solid ${BORDER_HAIRLINE}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifySpace: 'space-between', gap: 2, mt: 2 }}>
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#fff', display: 'block' }}>
-                    Anonymous Guest View
-                  </Typography>
-                  <Typography component="span" sx={{ fontSize: '0.68rem', color: TEXT_MUTED, display: 'block', mt: 0.5, maxWidth: 280, lineHeight: 1.4 }}>
-                    Allow anyone with the link to read project details without registering.
-                  </Typography>
-                </Box>
-                <Box
-                  component="button"
-                  type="button"
-                  onClick={() => setIsGuest(!isGuest)}
-                  sx={{
-                    width: 44,
-                    height: 24,
-                    borderRadius: 999,
-                    p: '2px',
-                    border: 0,
-                    cursor: 'pointer',
-                    bgcolor: isGuest ? SYSTEM_PRIMARY : 'rgba(255,255,255,0.08)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    transition: 'background-color 0.2s'}}
-                >
-                  <Box
-                    sx={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: '50%',
-                      bgcolor: '#fff',
-                      boxShadow: 2,
-                      transform: isGuest ? 'translateX(20px)' : 'translateX(0px)',
-                      transition: 'transform 0.2s'}}
-                  />
-                </Box>
-              </Box>
-            </Box>
-          )}
-        </Box>
-      )}
-
-      {visibility === 'public' && (
-        <Button
-          fullWidth
-          onClick={() => setIsVisibilityDrawerOpen(false)}
-          sx={{
-            mt: 3,
-            bgcolor: SYSTEM_PRIMARY,
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: '0.88rem',
-            py: 1.5,
-            borderRadius: RADIUS_SMALL,
-            textTransform: 'none',
-            '&:hover': { bgcolor: SYSTEM_HOVER }
-          }}
-        >
-          Confirm Visibility
-        </Button>
-      )}
-    </Drawer>
-  );
-
   if (isDesktop) {
     return (
-      <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', bgcolor: SURFACE_ASH }}>
+      <Box
+        sx={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: SURFACE_ASH,
+        }}
+      >
         {mainFormContent}
-        {visibilitySubDrawer}
       </Box>
     );
   }
 
   return (
-    <>
-      <Drawer
-        anchor="bottom"
-        open={isOpen}
-        onClose={close}
-        ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
+    <Drawer
+      anchor="bottom"
+      open={isOpen}
+      onClose={close}
+      keepMounted={false}
+      disablePortal={true}
+      sx={{
+        '& .ob-drawer-panel': {
+          maxHeight: '85dvh',
+          borderTopLeftRadius: '28px',
+          borderTopRightRadius: '28px',
+          border: `1px solid ${BORDER_HAIRLINE}`,
+          borderBottom: 0,
+          bgcolor: SURFACE_ASH,
+          boxShadow: '0 -12px 48px rgba(0,0,0,0.6)',
+          backgroundImage: 'none',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      }}
+    >
+      <Box
         sx={{
-          '& .ob-drawer-panel': {
-            height: isExpanded ? '92dvh' : '60dvh',
-            minHeight: '60dvh',
-            maxHeight: '92dvh',
-            transition: BRAND_TRANSITION,
-            borderTopLeftRadius: RADIUS_LARGE,
-            borderTopRightRadius: RADIUS_LARGE,
-            border: BORDER,
-            borderBottom: 0,
-            bgcolor: SURFACE_ASH,
-            boxShadow: 'none',
-            backgroundImage: 'none',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'}}}
+          display: 'flex',
+          justifyContent: 'center',
+          pt: 1.5,
+          pb: 0.5,
+        }}
       >
-        <Box 
-            sx={{ display: 'flex', justifyContent: 'center', py: 1.5, cursor: 'pointer' }}
-            onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
-        </Box>
-        {mainFormContent}
-      </Drawer>
-      {visibilitySubDrawer}
-    </>
+        <Box sx={{ width: 36, height: 4, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.18)' }} />
+      </Box>
+      {mainFormContent}
+    </Drawer>
   );
 }
