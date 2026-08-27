@@ -47,7 +47,8 @@ function shapeNote(r: any) {
     content: r.content ?? r.body ?? null,
     updatedAt: r.$updatedAt || r.updatedAt || null,
     createdAt: r.$createdAt || r.createdAt || null,
-    isPublic: !!r.isPublic,
+    isPublic: r.isPublic !== undefined ? Boolean(r.isPublic) : true,
+    isGuest: r.isGuest !== undefined ? Boolean(r.isGuest) : true,
   };
 }
 
@@ -59,6 +60,8 @@ function shapeGoal(r: any) {
     status: r.status || null,
     updatedAt: r.$updatedAt || r.updatedAt || null,
     createdAt: r.$createdAt || r.createdAt || null,
+    isPublic: r.isPublic !== undefined ? Boolean(r.isPublic) : true,
+    isGuest: r.isGuest !== undefined ? Boolean(r.isGuest) : true,
   };
 }
 
@@ -474,13 +477,17 @@ export const ApiResources = {
       filterNoteData,
     });
 
+    const isPublic = body?.isPublic !== undefined ? Boolean(body.isPublic) : true;
+    const isGuest = body?.isGuest !== undefined ? Boolean(body.isGuest) : (body?.isPublic !== undefined ? Boolean(body.isPublic) : true);
+
     const cleanTags = await ensureTagsExist(tables, actor.userId, body?.tags as any[]);
 
     const note = await service.createNote({
       title,
       content,
       format: 'markdown',
-      isPublic: isPublic || Boolean(wsId),
+      isPublic,
+      isGuest,
       isWorkspace: Boolean(wsId),
       projectId: wsId || undefined,
       tags: cleanTags.length ? cleanTags : undefined,
@@ -495,6 +502,8 @@ export const ApiResources = {
       data: {
         userId: actor.userId,
         creatorId: actor.userId,
+        isPublic,
+        isGuest,
         isWorkspace: Boolean(wsId),
         projectId: wsId || null,
         tags: cleanTags,
@@ -522,7 +531,8 @@ export const ApiResources = {
       patch.title = clampNoteTitle(String(body.title || '').trim() || 'Untitled', 'Untitled');
     }
     if (body.content !== undefined) patch.content = String(body.content);
-    if (body.isPublic !== undefined) patch.isPublic = !!body.isPublic;
+    if (body.isPublic !== undefined) patch.isPublic = Boolean(body.isPublic);
+    if (body.isGuest !== undefined) patch.isGuest = Boolean(body.isGuest);
     if (body.tags !== undefined) {
       patch.tags = await ensureTagsExist(tables, actor.userId, body.tags as any[]);
     }
@@ -611,6 +621,9 @@ export const ApiResources = {
     const tables = createSystemTablesDB();
     const goalId = ID.unique();
 
+    const isPublic = body?.isPublic !== undefined ? Boolean(body.isPublic) : true;
+    const isGuest = body?.isGuest !== undefined ? Boolean(body.isGuest) : (body?.isPublic !== undefined ? Boolean(body.isPublic) : true);
+
     const cleanTags = body?.tags !== undefined ? await ensureTagsExist(tables, actor.userId, body.tags as any[]) : undefined;
 
     const row = await tables.createRow({
@@ -623,8 +636,8 @@ export const ApiResources = {
         status: String(body?.status || 'todo'),
         tags: cleanTags && cleanTags.length > 0 ? cleanTags : undefined,
         userId: actor.userId,
-        isPublic: Boolean(wsId),
-        isGuest: Boolean(wsId),
+        isPublic,
+        isGuest,
       },
       permissions: [
         Permission.read(Role.any()),
@@ -647,6 +660,8 @@ export const ApiResources = {
     if (body.title !== undefined) patch.title = String(body.title).trim().slice(0, 255);
     if (body.description !== undefined) patch.description = String(body.description);
     if (body.status !== undefined) patch.status = String(body.status);
+    if (body.isPublic !== undefined) patch.isPublic = Boolean(body.isPublic);
+    if (body.isGuest !== undefined) patch.isGuest = Boolean(body.isGuest);
     if (body.tags !== undefined) {
       patch.tags = await ensureTagsExist(tables, actor.userId, body.tags as any[]);
     }
