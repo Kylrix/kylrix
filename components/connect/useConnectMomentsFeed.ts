@@ -246,13 +246,7 @@ function buildItems(
   }
 
   return rows
-    .sort((a, b) => {
-      // Primary: rank descending (50 is neutral; lower = lower quality)
-      const rankDiff = (b.rank ?? 50) - (a.rank ?? 50);
-      if (rankDiff !== 0) return rankDiff;
-      // Secondary: recency
-      return b.createdAt - a.createdAt;
-    })
+    .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, MAX_FEED);
 }
 
@@ -265,8 +259,8 @@ function patchExisting(
   const next = prev.map((row) => {
     const inc = incomingById.get(row.id);
     if (!inc) return row;
-    const likes = inc.likesCount ?? row.likesCount;
-    const replies = inc.repliesCount ?? row.repliesCount;
+    const likes = Math.max(inc.likesCount ?? 0, row.likesCount ?? 0);
+    const replies = Math.max(inc.repliesCount ?? 0, row.repliesCount ?? 0);
     const avatar = inc.authorAvatar || row.authorAvatar;
     const name = inc.isEcosystemUser ? inc.authorName : row.authorName;
     const username = inc.authorUsername || row.authorUsername;
@@ -294,21 +288,36 @@ function patchExisting(
 }
 
 /**
- * Silent add: prepend brand-new ids (higher rank), patch existing.
- * Never removes rows. Never reshuffles existing order.
+ * Merge feed items and strictly maintain chronological order (newest first).
  */
 function silentMerge(prev: UnifiedFeedItem[], incoming: UnifiedFeedItem[]): UnifiedFeedItem[] {
   if (!incoming.length) return prev;
-  const incomingById = new Map(incoming.map((i) => [i.id, i]));
-  const existingIds = new Set(prev.map((i) => i.id));
-  const additions = incoming
-    .filter((i) => !existingIds.has(i.id))
-    .sort((a, b) => b.createdAt - a.createdAt);
+  const byId = new Map<string, UnifiedFeedItem>();
+  
+  for (const item of prev) {
+    byId.set(item.id, item);
+  }
+  
+  for (const inc of incoming) {
+    const existing = byId.get(inc.id);
+    if (existing) {
+      byId.set(inc.id, {
+        ...existing,
+        ...inc,
+        likesCount: Math.max(existing.likesCount || 0, inc.likesCount || 0),
+        pulsesCount: Math.max(existing.pulsesCount || 0, inc.pulsesCount || 0),
+        repliesCount: Math.max(existing.repliesCount || 0, inc.repliesCount || 0),
+        zapsCount: Math.max(existing.zapsCount || 0, inc.zapsCount || 0),
+        repostsCount: Math.max(existing.repostsCount || 0, inc.repostsCount || 0),
+      });
+    } else {
+      byId.set(inc.id, inc);
+    }
+  }
 
-  const patched = patchExisting(prev, incomingById);
-  if (!additions.length) return patched;
-
-  return [...additions, ...patched].slice(0, MAX_FEED);
+  return Array.from(byId.values())
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, MAX_FEED);
 }
 
 function persistUnified(rows: UnifiedFeedItem[]) {
@@ -319,7 +328,7 @@ function persistUnified(rows: UnifiedFeedItem[]) {
 
 export function useConnectMomentsFeed() {
   const { user } = useAuth();
-  const { feed: nostrFeed } = useNostrFeed();
+  const { feed: nostrFeed, refresh: refreshNostr } = useNostrFeed();
   const [feedSettings, setFeedSettings] = useState<any>(null);
   const [ecosystemMoments, setEcosystemMoments] = useState<any[]>(() => (memoryEco ? [...memoryEco] : []));
   const [resolvedProfiles, setResolvedProfiles] = useState<
@@ -545,34 +554,22 @@ export function useConnectMomentsFeed() {
         // Retain items matching declared interests, or native ecosystem posts (capped)
         const matched = scored.filter(s => s.score > 0 || s.item.source === 'ecosystem');
         if (matched.length > 0) {
-          // Sort strictly by affinity score + recency
+          // Sort strictly by recency (newest first)
           const sorted = matched
-            .sort((a, b) => (b.score - a.score) || (b.item.createdAt - a.item.createdAt));
+            .sort((a, b) => b.item.createdAt - a.item.createdAt);
 
           // Dynamic author slot allocation (0-3 posts per author in a single FYP view)
           const balanced: typeof sorted = [];
           const authorPostCount: Record<string, number> = {};
-          const topicRecentCount: Record<string, number> = {};
 
           for (const entry of sorted) {
             const authorKey = entry.item.authorUsername || entry.item.authorName || entry.item.id;
             const count = authorPostCount[authorKey] || 0;
-
-            // Dynamic quota based on interest alignment:
-            // High affinity (score >= 5): up to 3 slots
-            // Medium affinity (score >= 2): up to 2 slots
-            // Low / baseline affinity: 1 slot
-            // Zero affinity external Nostr: 0 slots (already filtered)
             const allowedSlots = entry.score >= 5 ? 3 : entry.score >= 2 ? 2 : 1;
 
             if (count < allowedSlots) {
-              const primaryTopic = entry.matchedTopics[0] || 'general';
-              const topicCount = topicRecentCount[primaryTopic] || 0;
-              if (topicCount < 4 || primaryTopic === 'general') {
-                balanced.push(entry);
-                authorPostCount[authorKey] = count + 1;
-                topicRecentCount[primaryTopic] = topicCount + 1;
-              }
+              balanced.push(entry);
+              authorPostCount[authorKey] = count + 1;
             }
           }
 
@@ -706,6 +703,7 @@ export function useConnectMomentsFeed() {
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
+      void refreshNostr().catch(() => {});
       const liveRes = await SocialService.getFeed(user?.$id);
       const liveMoments = Array.isArray(liveRes) ? liveRes : (liveRes as any)?.rows || [];
       if (liveMoments.length) {
@@ -733,7 +731,7 @@ export function useConnectMomentsFeed() {
     } finally {
       setRefreshing(false);
     }
-  }, [user?.$id]);
+  }, [user?.$id, refreshNostr]);
 
   const hasMore = visibleCount < displayItems.length;
   const loadingMoreRef = useRef(false);

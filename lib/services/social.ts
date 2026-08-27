@@ -326,22 +326,7 @@ export const SocialService = {
     },
 
     async getFeed(userId?: string, targetUserId?: string) {
-        // Use FeedRanker if no specific target user, else fallback to standard chronological
-        if (!targetUserId) {
-            try {
-                const rankedIds = await FeedRanker.rankMomentsForUser(userId || 'anon', 50);
-                if (rankedIds.length > 0) {
-                    const moments = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
-                        Query.equal('$id', rankedIds),
-                        Query.limit(50),
-                    ]);
-                    const rankedRows = moments.rows.sort((a: any, b: any) => rankedIds.indexOf(a.$id) - rankedIds.indexOf(b.$id));
-                    return { ...moments, rows: rankedRows };
-                }
-            } catch (error) {
-                console.warn('[SocialService.getFeed] FeedRanker failed, falling back to chronological feed:', error);
-            }
-        }
+        // True chronological feed with full enrichment
 
         // Standard feed logic...
         const queries = [
