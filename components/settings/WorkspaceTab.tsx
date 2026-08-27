@@ -214,40 +214,44 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
 
   if (!isCustomWorkspace) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
-        <div className="p-12 text-center rounded-3xl bg-[#161412] border border-[#1C1A18]">
-          <FolderKanban className="h-12 w-12 text-white/20 mx-auto mb-4" />
-          <h3 className="text-lg font-black text-white mb-2 font-clash">Personal Workspace Selected</h3>
-          <p className="text-sm text-[#9B9691] max-w-md mx-auto mb-6">
-            You are currently in your default personal workspace. Switch to a custom workspace using the top header navigation to configure workspace-level settings, members, and access control.
+      <div className="space-y-6 max-w-4xl mx-auto font-satoshi">
+        <div className="p-8 md:p-10 text-center rounded-[24px] bg-[#161412] border border-white/10 shadow-xl">
+          <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/10 text-white/30 grid place-items-center mx-auto mb-4">
+            <FolderKanban className="h-7 w-7" />
+          </div>
+          <h3 className="text-base md:text-lg font-black text-white mb-1.5 font-clash">Personal Workspace Active</h3>
+          <p className="text-xs md:text-sm text-white/50 max-w-md mx-auto mb-6 leading-relaxed">
+            You are currently in your default personal workspace. Switch to or create a custom workspace using the top navigation to configure workspace-level settings, members, and access control.
           </p>
         </div>
 
         {/* Workspace Keys — disabled for personal workspace */}
-        <div className="p-6 md:p-8 rounded-3xl bg-[#161412] border border-[#1C1A18]">
-          <div className="flex items-center justify-between mb-4">
+        <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-white/10 shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-black text-white font-clash">Workspace Keys</h2>
-              <p className="text-xs text-[#9B9691] mt-0.5">Tokens scoped exclusively to a workspace</p>
+              <h2 className="text-base font-black text-white font-clash m-0">Workspace Keys</h2>
+              <p className="text-xs text-white/40 mt-0.5 m-0">Tokens scoped exclusively to a specific workspace</p>
             </div>
-            <KeyRound className="h-5 w-5 text-[#6366F1]/50" />
+            <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 grid place-items-center text-[#818CF8]">
+              <KeyRound size={15} />
+            </div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-[#0A0908] border border-dashed border-white/10 flex flex-col items-center gap-3 text-center">
-            <div className="w-10 h-10 rounded-full bg-[#6366F1]/10 flex items-center justify-center">
-              <KeyRound className="h-5 w-5 text-[#6366F1]/60" />
+          <div className="p-6 rounded-[20px] bg-[#0A0908] border border-dashed border-white/10 flex flex-col items-center gap-2.5 text-center">
+            <div className="w-10 h-10 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center text-[#818CF8]">
+              <KeyRound size={18} />
             </div>
-            <p className="text-sm font-bold text-white/70">Not available in Personal Workspace</p>
-            <p className="text-xs text-[#9B9691] max-w-xs leading-relaxed">
-              Workspace Keys can only be created for custom workspaces. For API access to your personal data, use a general Personal Access Token instead.
+            <p className="text-xs font-bold text-white/80 m-0">Not available in Personal Workspace</p>
+            <p className="text-xs text-white/40 max-w-xs leading-relaxed m-0">
+              Workspace Keys are created for custom collaborative workspaces. For personal data access, use a Personal Access Token.
             </p>
             <button
               type="button"
               onClick={() => onGoToDevelopers?.()}
-              className="mt-1 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-extrabold transition-colors"
+              className="mt-2 inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer shadow-md"
             >
-              <Code2 size={14} />
-              Go to Settings &rsaquo; Developers
+              <Code2 size={13} />
+              <span>Go to Settings &rsaquo; Developers</span>
             </button>
           </div>
         </div>
@@ -256,154 +260,162 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto font-satoshi">
       {/* Overview & Metadata */}
-      <div className="p-6 md:p-8 rounded-3xl bg-[#161412] border border-[#1C1A18]">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-white/10 shadow-xl space-y-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-black text-white font-clash">Workspace Settings</h2>
+              <h2 className="text-base md:text-lg font-black text-white font-clash m-0">Workspace Settings</h2>
               {loading && <RefreshCw size={14} className="animate-spin text-[#6366F1]" />}
             </div>
-            <p className="text-xs text-[#9B9691]">Manage details and visibility for &quot;{activeWorkspace.title}&quot;</p>
+            <p className="text-xs text-white/40 mt-0.5 m-0">Manage details and visibility for &quot;{activeWorkspace.title}&quot;</p>
           </div>
-          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-            status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider ${
+            status === 'active' 
+              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
           }`}>
             {status}
           </span>
         </div>
 
-        <form onSubmit={handleSaveDetails} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[#9B9691] uppercase tracking-wider">Workspace Title</label>
+        <form onSubmit={handleSaveDetails} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-mono font-bold text-white/50 uppercase tracking-wider">Workspace Title</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full h-11 px-4 rounded-xl bg-[#0A0908] border border-[#1C1A18] text-white focus:outline-none focus:border-[#6366F1] text-sm"
+              className="w-full h-11 px-3.5 rounded-xl bg-[#0A0908] border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] text-xs font-medium transition-colors"
               placeholder="Workspace Name"
               required
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[#9B9691] uppercase tracking-wider">Description / Summary</label>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-mono font-bold text-white/50 uppercase tracking-wider">Description / Summary</label>
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               rows={3}
-              className="w-full p-4 rounded-xl bg-[#0A0908] border border-[#1C1A18] text-white focus:outline-none focus:border-[#6366F1] text-sm resize-none"
+              className="w-full p-3.5 rounded-xl bg-[#0A0908] border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] text-xs font-medium resize-none transition-colors"
               placeholder="What is this workspace focused on?"
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-[#9B9691] uppercase tracking-wider">Visibility Mode</label>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-mono font-bold text-white/50 uppercase tracking-wider">Visibility Mode</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setVisibility('private')}
-                className={`p-4 rounded-2xl border text-left flex items-start gap-3 transition-all ${
+                className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
                   visibility === 'private'
-                    ? 'bg-[#6366F1]/10 border-[#6366F1] text-white'
-                    : 'bg-[#0A0908] border-[#1C1A18] text-white/60 hover:border-white/20'
+                    ? 'bg-[#6366F1]/10 border-[#6366F1]/50 text-white'
+                    : 'bg-[#0A0908] border-white/10 text-white/60 hover:border-white/20'
                 }`}
               >
-                <Lock className="h-5 w-5 mt-0.5 text-[#6366F1]" />
-                <div>
-                  <div className="text-sm font-bold">Private</div>
-                  <div className="text-xs text-[#9B9691]">Only invited collaborators can access</div>
+                <div className="w-8 h-8 rounded-lg bg-[#6366F1]/15 text-[#818CF8] grid place-items-center shrink-0">
+                  <Lock size={15} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-white font-clash">Private</div>
+                  <div className="text-[11px] text-white/40 mt-0.5 truncate">Only invited collaborators can access</div>
                 </div>
               </button>
 
               <button
                 type="button"
                 onClick={() => setVisibility('public')}
-                className={`p-4 rounded-2xl border text-left flex items-start gap-3 transition-all ${
+                className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
                   visibility === 'public'
-                    ? 'bg-[#6366F1]/10 border-[#6366F1] text-white'
-                    : 'bg-[#0A0908] border-[#1C1A18] text-white/60 hover:border-white/20'
+                    ? 'bg-emerald-500/10 border-emerald-500/50 text-white'
+                    : 'bg-[#0A0908] border-white/10 text-white/60 hover:border-white/20'
                 }`}
               >
-                <Globe className="h-5 w-5 mt-0.5 text-emerald-400" />
-                <div>
-                  <div className="text-sm font-bold">Public</div>
-                  <div className="text-xs text-[#9B9691]">Accessible across ecosystem directory</div>
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 grid place-items-center shrink-0">
+                  <Globe size={15} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-white font-clash">Public</div>
+                  <div className="text-[11px] text-white/40 mt-0.5 truncate">Accessible across ecosystem directory</div>
                 </div>
               </button>
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-2">
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 px-6 h-11 bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-sm rounded-xl transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 h-10 bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer shadow-md"
             >
-              <Save size={16} />
-              {saving ? 'Saving...' : 'Save Workspace Changes'}
+              {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
+              <span>{saving ? 'Saving...' : 'Save Workspace Changes'}</span>
             </button>
           </div>
         </form>
       </div>
 
       {/* Members & Collaborators */}
-      <div className="p-6 md:p-8 rounded-3xl bg-[#161412] border border-[#1C1A18]">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-white/10 shadow-xl space-y-5">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-black text-white font-clash">Members & Collaborators</h2>
-            <p className="text-xs text-[#9B9691]">Manage people with access to this workspace</p>
+            <h2 className="text-base md:text-lg font-black text-white font-clash m-0">Members & Collaborators</h2>
+            <p className="text-xs text-white/40 mt-0.5 m-0">Manage people with access to this workspace</p>
           </div>
-          <Users className="h-5 w-5 text-[#6366F1]" />
+          <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 grid place-items-center text-[#818CF8]">
+            <Users size={15} />
+          </div>
         </div>
 
-        <form onSubmit={handleAddMember} className="flex gap-3 mb-6">
-          <div className="relative flex-1">
+        <form onSubmit={handleAddMember} className="flex gap-2.5">
+          <div className="relative flex-1 min-w-0">
             <Mail className="absolute left-3.5 top-3 h-4 w-4 text-white/30" />
             <input
               type="text"
               value={newMemberEmail}
               onChange={(e) => setNewMemberEmail(e.target.value)}
               placeholder="Enter User ID or Email to invite..."
-              className="w-full h-10 pl-10 pr-4 rounded-xl bg-[#0A0908] border border-[#1C1A18] text-white text-xs focus:outline-none focus:border-[#6366F1]"
+              className="w-full h-10 pl-10 pr-3.5 rounded-xl bg-[#0A0908] border border-white/10 text-white text-xs placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] transition-colors"
             />
           </div>
           <button
             type="submit"
             disabled={addingMember || !newMemberEmail.trim()}
-            className="px-4 h-10 bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+            className="px-4 h-10 bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold rounded-xl transition-all disabled:opacity-40 inline-flex items-center gap-1.5 cursor-pointer shadow-md shrink-0"
           >
-            <UserPlus size={14} />
-            {addingMember ? 'Adding...' : 'Add Member'}
+            <UserPlus size={13} />
+            <span>{addingMember ? 'Adding...' : 'Add Member'}</span>
           </button>
         </form>
 
         <div className="space-y-2">
           {collaborators.length === 0 ? (
-            <div className="p-4 text-center text-xs text-[#9B9691] rounded-xl bg-[#0A0908] border border-[#1C1A18]">
+            <div className="p-4 text-center text-xs text-white/40 rounded-xl bg-[#0A0908] border border-white/10">
               No additional collaborators registered. You are the sole workspace owner.
             </div>
           ) : (
             collaborators.map((c) => (
-              <div key={c.$id || c.entityId || c.userId} className="flex items-center justify-between p-3.5 rounded-xl bg-[#0A0908] border border-[#1C1A18]">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#6366F1]/20 text-[#6366F1] flex items-center justify-center text-xs font-bold">
+              <div key={c.$id || c.entityId || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border border-white/10 gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center text-xs font-mono font-bold shrink-0">
                     {(c.userId || c.entityId || '?').charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">{c.userId || c.entityId}</div>
-                    <div className="text-[10px] text-[#9B9691] capitalize">{c.role || 'Member'}</div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-white font-mono truncate">{c.userId || c.entityId}</div>
+                    <div className="text-[10px] text-white/40 uppercase font-mono font-bold">{c.role || 'Member'}</div>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleRemoveMember(c.userId || c.entityId)}
-                  className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                  className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
                   title="Remove Member"
                 >
-                  <UserMinus size={16} />
+                  <UserMinus size={14} />
                 </button>
               </div>
             ))
@@ -412,40 +424,40 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
       </div>
 
       {/* Workspace Keys */}
-      <div className="p-6 md:p-8 rounded-3xl bg-[#161412] border border-[#1C1A18]">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-white/10 shadow-xl space-y-5">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h2 className="text-xl font-black text-white font-clash">Workspace Keys</h2>
-            <p className="text-xs text-[#9B9691] mt-0.5">Personal Access Tokens scoped exclusively to this workspace</p>
+            <h2 className="text-base md:text-lg font-black text-white font-clash m-0">Workspace Keys</h2>
+            <p className="text-xs text-white/40 mt-0.5 m-0">Personal Access Tokens scoped exclusively to this workspace</p>
           </div>
           <button
             type="button"
             onClick={() => setCreatePatOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-extrabold transition-colors"
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer shadow-md"
           >
-            <Plus size={14} />
-            Create Key
+            <Plus size={13} />
+            <span>Create Key</span>
           </button>
         </div>
 
         {loadingPats ? (
-          <div className="py-8 flex justify-center">
-            <RefreshCw size={20} className="animate-spin text-[#6366F1]" />
+          <div className="py-6 flex justify-center text-white/40 text-xs">
+            <RefreshCw size={16} className="animate-spin text-[#6366F1] mr-2" /> Loading keys...
           </div>
         ) : pats.length === 0 ? (
           <div className="p-6 rounded-2xl bg-[#0A0908] border border-dashed border-white/10 text-center">
             <KeyRound className="h-6 w-6 text-white/20 mx-auto mb-2" />
-            <p className="text-sm font-bold text-white/50">No workspace keys yet</p>
-            <p className="text-xs text-[#9B9691] mt-1">Create a key to interact with this workspace via the API</p>
+            <p className="text-xs font-bold text-white/70 m-0">No workspace keys yet</p>
+            <p className="text-xs text-white/40 mt-1 m-0">Create a key to interact with this workspace via the API</p>
           </div>
         ) : (
           <div className="space-y-2">
             {pats.map((p) => (
-              <div key={p.id} className="flex items-center justify-between p-4 rounded-2xl bg-[#0A0908] border border-[#1C1A18] gap-3">
+              <div key={p.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#0A0908] border border-white/10 gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-bold text-white truncate">{p.name}</p>
-                    <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                    <p className="text-xs font-bold text-white font-clash m-0 truncate">{p.name}</p>
+                    <span className={`text-[9px] font-mono font-bold uppercase px-2 py-0.2 rounded ${
                       p.status === 'active'
                         ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
                         : 'bg-white/10 text-white/40 border border-white/10'
@@ -453,7 +465,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                       {p.status}
                     </span>
                   </div>
-                  <p className="text-[10px] font-mono text-white/40 mt-0.5 truncate">
+                  <p className="text-[11px] font-mono text-[#818CF8] mt-0.5 m-0 truncate">
                     kyl_pat_{p.tokenPrefix}_...
                   </p>
                 </div>
@@ -461,10 +473,10 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                   <button
                     type="button"
                     onClick={() => handleRevokePat(p.id)}
-                    className="shrink-0 p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-colors"
+                    className="shrink-0 p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
                     title="Revoke key"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={13} />
                   </button>
                 )}
               </div>
@@ -482,30 +494,30 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
       />
 
       {/* Danger Zone */}
-      <div className="p-6 md:p-8 rounded-3xl bg-[#161412] border border-red-500/20">
-        <div className="flex items-center gap-2 text-red-500 mb-2">
-          <AlertTriangle size={18} />
-          <h2 className="text-lg font-black font-clash">Danger Zone</h2>
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-red-500/30 space-y-4">
+        <div className="flex items-center gap-2 text-red-400">
+          <AlertTriangle size={16} />
+          <h2 className="text-base font-bold font-clash m-0">Danger Zone</h2>
         </div>
-        <p className="text-xs text-[#9B9691] mb-6">Archive or permanently purge this workspace.</p>
+        <p className="text-xs text-white/50 m-0">Archive or permanently purge this workspace and detach objects.</p>
 
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             type="button"
             onClick={handleArchiveWorkspace}
-            className="flex-1 px-4 py-3 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-2"
+            className="flex-1 h-10 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold text-xs rounded-xl transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
           >
-            <Archive size={16} />
-            {status === 'active' ? 'Archive Workspace' : 'Restore Workspace'}
+            <Archive size={14} />
+            <span>{status === 'active' ? 'Archive Workspace' : 'Restore Workspace'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleDeleteWorkspace}
-            className="flex-1 px-4 py-3 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs rounded-xl transition-colors inline-flex items-center justify-center gap-2"
+            className="flex-1 h-10 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs rounded-xl transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
           >
-            <Trash2 size={16} />
-            Purge Workspace
+            <Trash2 size={14} />
+            <span>Purge Workspace</span>
           </button>
         </div>
       </div>
