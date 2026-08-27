@@ -279,11 +279,11 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#0A0908] text-white font-satoshi">
+    <div className="flex h-full min-h-0 flex-col bg-[#161412] text-white font-satoshi">
       {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-white/[0.06] bg-[#0A0908] px-5 py-4 shrink-0">
+      <div className="flex items-center justify-between border-b border-white/[0.06] bg-[#161412] px-5 py-3.5 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-[#161412] border border-white/[0.06] grid place-items-center text-[#F59E0B]">
+          <div className="h-8 w-8 rounded-lg bg-[#0A0908] border border-white/[0.06] grid place-items-center text-[#F59E0B]">
             {mode.type === 'manage_provisioning_keys' ? <Key size={16} /> : <Bot size={16} />}
           </div>
           <div>
@@ -306,7 +306,8 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-[#161412] transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+          title="Close"
         >
           <X size={18} />
         </button>
@@ -498,21 +499,10 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                   onChange={(e) => setPrompt(e.target.value)}
                   rows={6}
                   placeholder="Define your agent's persona, operational boundaries, and response rules..."
-                  className="w-full rounded-xl bg-[#161412] border border-white/[0.06] p-3 text-xs font-mono text-white placeholder:text-white/30 focus:outline-none focus:border-[#F59E0B]/40 leading-relaxed"
+                  className="w-full rounded-xl bg-[#0A0908] border border-white/[0.06] p-3 text-xs font-mono text-white placeholder:text-white/30 focus:outline-none focus:border-[#F59E0B]/40 leading-relaxed"
                 />
               </div>
             </div>
-
-            {/* Save Button */}
-            <button
-              type="button"
-              onClick={handleSaveCustomAgent}
-              disabled={saving || !name.trim()}
-              className="w-full h-11 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold flex items-center justify-center gap-2 hover:bg-[#F59E0B]/90 transition-colors disabled:opacity-40 cursor-pointer"
-            >
-              {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-              <span>{mode.type === 'create_custom' ? 'Mint Custom Agent' : 'Save Agent Details'}</span>
-            </button>
 
             {/* ── Section: Agentic PATs under this Custom Agent ── */}
             {mode.type === 'edit_custom' && (
@@ -724,7 +714,7 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
         {/* MODE 5: Manage Agent Provisioning Keys (kyl_apk_...) */}
         {mode.type === 'manage_provisioning_keys' && (
           <div className="space-y-6">
-            <div className="p-4 rounded-2xl bg-[#161412] border border-white/[0.06] space-y-2">
+            <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2">
               <div className="flex items-center gap-2 text-white font-bold text-xs">
                 <ShieldCheck size={15} className="text-[#6366F1]" />
                 <span>Zero-Trust Provisioning Architecture</span>
@@ -764,30 +754,6 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
               </div>
             )}
 
-            {/* Mint New Provisioning Key Input */}
-            <div className="p-4 rounded-2xl bg-[#161412] border border-white/[0.06] space-y-3">
-              <label className="text-xs font-bold text-white/60 uppercase tracking-wider font-mono block">
-                Create New Provisioning Key
-              </label>
-              <div className="flex gap-2">
-                <input
-                  value={newApkName}
-                  onChange={(e) => setNewApkName(e.target.value)}
-                  placeholder="e.g. Local Cursor Agent Key"
-                  className="flex-1 h-10 rounded-xl bg-[#0A0908] border border-white/[0.06] px-3 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1]/40"
-                />
-                <button
-                  type="button"
-                  onClick={handleCreateApk}
-                  disabled={creatingApk}
-                  className="h-10 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
-                >
-                  {creatingApk ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
-                  <span>Generate Key</span>
-                </button>
-              </div>
-            </div>
-
             {/* Active Provisioning Keys List */}
             <div className="space-y-2.5">
               <h4 className="text-xs font-bold text-white/40 uppercase tracking-wider font-mono m-0">
@@ -795,18 +761,18 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
               </h4>
 
               {loadingApk ? (
-                <div className="p-6 rounded-2xl bg-[#161412] border border-white/5 flex items-center justify-center text-white/40 text-xs">
+                <div className="p-6 rounded-2xl bg-[#0A0908] border border-white/5 flex items-center justify-center text-white/40 text-xs">
                   <RefreshCw size={14} className="animate-spin mr-2" /> Loading keys...
                 </div>
               ) : apkList.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-[#161412] border border-white/5 text-center text-xs text-white/40">
-                  No active provisioning keys. Generate one above to connect CLI agents.
+                <div className="p-6 rounded-2xl bg-[#0A0908] border border-white/5 text-center text-xs text-white/40">
+                  No active provisioning keys. Generate one below to connect CLI agents.
                 </div>
               ) : (
                 apkList.map((apk) => (
                   <div
                     key={apk.id}
-                    className="p-4 rounded-2xl bg-[#161412] border border-white/[0.06] flex items-center justify-between gap-3"
+                    className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -834,6 +800,49 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
           </div>
         )}
       </div>
+
+      {/* Fixed Non-Scrolling Bottom Action Bars */}
+      {(mode.type === 'create_custom' || mode.type === 'edit_custom') && (
+        <div className="shrink-0 border-t border-white/[0.06] bg-[#161412] px-5 py-3 md:py-3.5 z-10">
+          <button
+            type="button"
+            onClick={handleSaveCustomAgent}
+            disabled={saving || !name.trim()}
+            className="w-full h-10 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold flex items-center justify-center gap-2 hover:bg-[#F59E0B]/90 transition-colors disabled:opacity-40 cursor-pointer shadow-lg shadow-[#F59E0B]/10"
+          >
+            {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+            <span>{mode.type === 'create_custom' ? 'Mint Custom Agent' : 'Save Agent Details'}</span>
+          </button>
+        </div>
+      )}
+
+      {mode.type === 'manage_provisioning_keys' && (
+        <div className="shrink-0 border-t border-white/[0.06] bg-[#161412] px-5 py-3 md:py-3.5 z-10">
+          <div className="flex gap-2 max-w-full">
+            <input
+              value={newApkName}
+              onChange={(e) => setNewApkName(e.target.value)}
+              placeholder="Key label e.g. Cursor Local Agent"
+              className="flex-1 h-10 rounded-xl bg-[#0A0908] border border-white/[0.08] px-3.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1]/50 truncate min-w-0"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void handleCreateApk();
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleCreateApk}
+              disabled={creatingApk}
+              className="h-10 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 shrink-0 shadow-lg shadow-[#6366F1]/10"
+            >
+              {creatingApk ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+              <span>Generate Key</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
