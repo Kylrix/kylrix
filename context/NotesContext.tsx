@@ -591,16 +591,19 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       content: note.content || '',
       tags,
       at: Date.now()});
+    const isPending = options?.pending !== false;
+    const nowIso = new Date().toISOString();
     const stamped: Notes = {
       ...note,
       title: cardTitle,
       content: note.content || '',
       tags,
-      $updatedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()};
+      $updatedAt: isPending ? nowIso : (note.$updatedAt || note.updatedAt || nowIso),
+      updatedAt: isPending ? nowIso : (note.updatedAt || note.$updatedAt || nowIso),
+    };
     upsertNote(stamped);
     // Sync engine is SoT for amber — enqueue live revision (never an Appwrite field).
-    if (options?.pending !== false) {
+    if (isPending) {
       autonomicSyncEngine.markPending(stamped.$id, stamped.updatedAt, stamped);
       autonomicSyncEngine.nudge();
     } else {
