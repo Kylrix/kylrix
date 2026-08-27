@@ -27,6 +27,7 @@ import { SYSTEM_AGENTS } from '@/lib/agentic/system-agents';
 import { KYLRIX_AGENTS_SKILL_INSTALL } from '@/lib/api/public';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { AgenticSettingsDrawer, type AgentDrawerMode } from './AgenticSettingsDrawer';
+import { AgentActionDrawer } from './AgentActionDrawer';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 
@@ -41,6 +42,9 @@ export function AgentsSettingsTab() {
 
   // Default Agent Setting (Kylie or Custom Agent)
   const [defaultAgentId, setDefaultAgentId] = useState<string>('kylie');
+
+  // Selected Agent for Action Drawer
+  const [selectedAgentForAction, setSelectedAgentForAction] = useState<any | null>(null);
 
   // Custom Provider / BYOK State
   const [byokKeyInput, setByokKeyInput] = useState('');
@@ -166,20 +170,33 @@ export function AgentsSettingsTab() {
     }
   };
 
-  const handleDeleteCustomAgent = async (e: React.MouseEvent, agentId: string, name: string) => {
-    e.stopPropagation();
-    if (!confirm(`Delete custom agent "${name}"?`)) return;
+  const handleDeleteCustomAgent = async (e?: React.MouseEvent, agentId?: string, name?: string) => {
+    e?.stopPropagation();
+    const id = agentId || selectedAgentForAction?.$id || selectedAgentForAction?.id;
+    const agentName = name || selectedAgentForAction?.name || 'Agent';
+    if (!id) return;
+    if (!confirm(`Delete custom agent "${agentName}"?`)) return;
     try {
       const { tablesDB } = await import('@/lib/appwrite/client');
       const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
       await tablesDB.deleteRow(
         APPWRITE_CONFIG.DATABASES.FLOW,
         APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-        agentId
+        id
       );
+
+      // Clean up agent profile in background
+      try {
+        await tablesDB.deleteRow(
+          APPWRITE_CONFIG.DATABASES.CHAT,
+          APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+          `agent_${id}`
+        );
+      } catch {}
+
       toast.success('Agent deleted');
-      setCustomAgents((prev) => prev.filter((a) => a.$id !== agentId));
-      if (defaultAgentId === agentId) {
+      setCustomAgents((prev) => prev.filter((a) => a.$id !== id));
+      if (defaultAgentId === id) {
         handleSelectDefaultAgent('kylie');
       }
     } catch {
@@ -353,13 +370,7 @@ export function AgentsSettingsTab() {
               return (
                 <div
                   key={ca.$id}
-                  onClick={() =>
-                    openAgentDrawer({
-                      type: 'edit_custom',
-                      agent: ca,
-                      onSaved: () => void loadAgents(),
-                    })
-                  }
+                  onClick={() => setSelectedAgentForAction(ca)}
                   className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[24px] shadow-xl flex flex-col justify-between gap-3.5 transition-all duration-300 cursor-pointer group"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -400,10 +411,10 @@ export function AgentsSettingsTab() {
 
                   <div className="flex items-center justify-between text-xs font-mono text-white/50 border-t border-white/[0.04] pt-2.5">
                     <span className="flex items-center gap-1">
-                      <Key size={11} className="text-emerald-400" /> Manage Agentic PATs
+                      <Key size={11} className="text-emerald-400" /> View Profile & Keys
                     </span>
                     <span className="text-[#6366F1] font-bold group-hover:underline flex items-center gap-0.5">
-                      Configure <ChevronRight size={12} />
+                      Actions <ChevronRight size={12} />
                     </span>
                   </div>
                 </div>
@@ -433,12 +444,7 @@ export function AgentsSettingsTab() {
             return (
               <div
                 key={agent.id}
-                onClick={() =>
-                  openAgentDrawer({
-                    type: 'preview_system',
-                    agent,
-                  })
-                }
+                onClick={() => setSelectedAgentForAction(agent)}
                 className="p-3.5 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[20px] shadow-lg flex flex-col justify-between gap-2.5 transition-all duration-200 cursor-pointer group"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -634,6 +640,34 @@ export function AgentsSettingsTab() {
           </div>
         </div>
       </div>
+
+      {/* Agent Actions & Profile Drawer */}
+      {selectedAgentForAction && (
+        <AgentActionDrawer
+          open={Boolean(selectedAgentForAction)}
+          onClose={() => setSelectedAgentForAction(null)}
+          agent={selectedAgentForAction}
+          isDefault={defaultAgentId === (selectedAgentForAction.$id || selectedAgentForAction.id)}
+          onSelectDefault={(id) => handleSelectDefaultAgent(id)}
+          onEdit={(agent) => {
+            openAgentDrawer({
+              type: 'edit_custom',
+              agent,
+              onSaved: () => void loadAgents(),
+            });
+          }}
+          onManageKeys={(agent) => {
+            openAgentDrawer({
+              type: 'edit_custom',
+              agent,
+              onSaved: () => void loadAgents(),
+            });
+          }}
+          onDelete={(agentId, name) => {
+            handleDeleteCustomAgent(undefined, agentId, name);
+          }}
+        />
+      )}
     </div>
   );
 }

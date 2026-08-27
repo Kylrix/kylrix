@@ -204,6 +204,15 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
             }),
           }
         );
+        const { AgentIdentityService } = await import('@/lib/services/agent-identity');
+        await AgentIdentityService.syncAgentProfile({
+          agentId: mode.agent.$id,
+          ownerId: user.$id,
+          name: name.trim(),
+          role: role.trim(),
+          goal: prompt.trim(),
+          framework,
+        }).catch(() => null);
         toast.success('Agent updated');
         mode.onSaved?.();
       }

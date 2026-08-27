@@ -41,10 +41,11 @@ export const AgenticService = {
     framework?: AgentFramework;
   }) {
     const framework = input.framework === 'openclaw' || input.framework === 'hermes' ? input.framework : 'kylrix';
+    const agentId = ID.unique();
     const res = await tablesDB.createRow(
       APPWRITE_CONFIG.DATABASES.FLOW,
       APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-      ID.unique(),
+      agentId,
       {
         ownerId: input.userId,
         parentId: null,
@@ -56,6 +57,23 @@ export const AgenticService = {
           framework})},
       agentPermissions(input.userId));
     agentsCache.invalidate();
+
+    // Mint Agentic Wallet, Nostr Identity & Sync Profile in profiles table
+    void (async () => {
+      try {
+        const { AgentIdentityService } = await import('./agent-identity');
+        await AgentIdentityService.syncAgentProfile({
+          agentId: res.$id,
+          ownerId: input.userId,
+          name: input.name.trim(),
+          goal: input.goal?.trim(),
+          framework,
+        });
+      } catch (err) {
+        console.warn('[AgenticService] Background profile sync failed:', err);
+      }
+    })();
+
     return res;
   },
 

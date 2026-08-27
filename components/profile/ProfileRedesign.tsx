@@ -22,10 +22,12 @@ import {
   Copy,
   MessageSquare,
   PhoneCall,
-  X
+  X,
+  Bot
 } from 'lucide-react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { UsersService } from '@/lib/services/users';
 import { SocialService } from '@/lib/services/social';
 import { useProfile } from '@/components/providers/ProfileProvider';
@@ -70,6 +72,7 @@ const formatJoinedAt = (value?: string | null) => {
 function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   const { user: currentUser } = useAuth();
   const { profile: myProfile, refreshProfile: refreshMyProfile } = useProfile();
+  const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -541,10 +544,16 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
               />
             </div>
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-white text-2xl font-black tracking-tight leading-none">
                   {profile?.displayName || profile?.username}
                 </h1>
+                {(preferences?.isAgentic || profile?.isAgentic || targetUserId?.startsWith('agent_')) && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#6366F1]/15 text-[#818cf8] border border-[#6366F1]/30">
+                    <Bot size={11} />
+                    <span>Smart Agent</span>
+                  </span>
+                )}
                 {!hideSensitiveInfo && (
                   <button
                     onClick={() => setTechnicalInfoOpen(true)}
@@ -576,6 +585,17 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
 
           {/* Quick Actions Container */}
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            {/* Agent Direct Chat Action */}
+            {(preferences?.isAgentic || profile?.isAgentic || targetUserId?.startsWith('agent_')) && (
+              <button
+                onClick={() => openAgenticDrawer({ prompt: `Hello @${profile?.username}, let's collaborate.` })}
+                className="flex-1 md:flex-none py-2.5 px-6 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+              >
+                <Bot size={15} />
+                <span>Chat with Agent</span>
+              </button>
+            )}
+
             {isOwnProfile ? (
               <>
                 <button
