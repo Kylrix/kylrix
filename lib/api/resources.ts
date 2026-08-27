@@ -40,6 +40,13 @@ function notFound(message: string): never {
   throw err;
 }
 
+function forbidden(message: string): never {
+  const err = new Error(message);
+  (err as any).status = 403;
+  (err as any).code = 'forbidden';
+  throw err;
+}
+
 function shapeNote(r: any) {
   return {
     id: r.$id,
@@ -2500,7 +2507,7 @@ export const ApiResources = {
         const row = (await tables
           .getRow({
             databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-            tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+            tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets',
             rowId: tid,
           })
           .catch(() => null)) as any;
@@ -2514,7 +2521,7 @@ export const ApiResources = {
       const linkedIds = await getAllLinkedWorkspaceObjectIds(tables, 'totp');
       const res = await tables.listRows({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets',
         queries: [
           Query.equal('userId', actor.userId),
           Query.equal('isDeleted', false),
@@ -2567,7 +2574,7 @@ export const ApiResources = {
     const r = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets',
         rowId: id,
       })
       .catch(() => null)) as any;
@@ -2645,10 +2652,12 @@ export const ApiResources = {
     );
 
     const tags = Array.isArray(body.tags) ? body.tags.map(String) : [];
+    const itemId = ID.unique();
+    const now = new Date().toISOString();
 
     const row = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-      tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets',
       rowId: itemId,
       data: {
         userId: actor.userId,
@@ -2712,7 +2721,7 @@ export const ApiResources = {
     const existing = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets',
         rowId: id,
       })
       .catch(() => null)) as any;
@@ -2772,7 +2781,7 @@ export const ApiResources = {
 
     await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-      tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets',
       rowId: id,
       data: patch as any,
     });
@@ -2786,7 +2795,7 @@ export const ApiResources = {
     const existing = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets',
         rowId: id,
       })
       .catch(() => null)) as any;
@@ -2795,7 +2804,7 @@ export const ApiResources = {
 
     await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-      tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets',
       rowId: id,
       data: {
         isDeleted: true,

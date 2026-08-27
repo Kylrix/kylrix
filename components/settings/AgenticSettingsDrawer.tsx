@@ -17,7 +17,7 @@ import {
   ArrowLeft,
   ChevronRight
 } from 'lucide-react';
-import type { SystemAgentDefinition } from '@/lib/agentic/system-agents';
+import { SYSTEM_AGENTS, type SystemAgentDefinition } from '@/lib/agentic/system-agents';
 import type { AgentRecord } from '@/lib/services/agentic';
 import type { PatPublic } from '@/lib/services/pats';
 import { createPat, listPats, revokePat } from '@/lib/actions/client-ops';
