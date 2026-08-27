@@ -121,6 +121,16 @@ Drawer top action bars must follow a strict 3-slot button order:
 
 ---
 
+## 9. Fixed Non-Scrolling Action Footers
+
+- **Permanent Visibility for State Mutations**:
+  - All state-changing or workflow-completion triggers (`Done`, `Next`, `Submit`, `Create`, `Save`, `Confirm`) must be pinned in a **fixed bottom action bar** (`shrink-0 border-t border-white/5 bg-[#161412] px-5 py-3 md:py-3.5`).
+- **Zero Scroll Reliance for Action**:
+  - 🚫 **Negative Feature (Strictly Prohibited)**: Placing primary action buttons inside the scrollable content container where users must scroll through questions or text to reach them.
+  - The content area (`flex-1 overflow-y-auto`) scrolls independently while the action footer remains pinned and immediately clickable at all times.
+
+---
+
 ## Summary Checklist for OpenBricks 4.0 Upgrades
 
 | Feature | Old (SaaS-y / Clunky) | OpenBricks 4.0 (Tactile & Clean) |
@@ -128,6 +138,7 @@ Drawer top action bars must follow a strict 3-slot button order:
 | **Access Picker** | Sub-drawer popup inside bottom drawer | Inline segmented toggle (`Public` / `Private`) |
 | **Drawer Height** | Dynamic / content-based varying height | Fixed 60% viewport height (`60dvh`) |
 | **Drag Handles** | Centered floating pill drag handles | Thin 1px outline edge (`rgba(255,255,255,0.08)`) |
+| **Action Buttons** | Embedded in scroll container (needs scroll) | Fixed pinned bottom footer (`shrink-0 bg-[#161412]`) |
 | **Surfaces** | Translucent blur or inconsistent blacks | Signature ash shell (`#161412`) + pitch-black wells (`#0A0908`) |
 | **Top Action Icons** | Randomly placed / missing buttons | Standardized: `Pop Out` → `Expand/Contract` → `Dismiss/Done` |
 | **Inputs** | MUI Textfield with thick floating borders | Inset `#0A0908` dark fields with subtle focus rings |
