@@ -523,8 +523,10 @@ export default function ConnectTopbar({
   const handleCopyReferralLink = useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return;
     const base = window.location.origin;
-    const identifier = profileUsername ? String(profileUsername).replace(/^@+/, '') : (profileSeed.userId || '');
-    const refLink = `${base}/?ref=u_${identifier}`;
+    const refCode = profileUsername
+      ? `u_${String(profileUsername).replace(/^@+/, '')}`
+      : `id_${profileSeed.userId || ''}`;
+    const refLink = `${base}/?ref=${refCode}`;
     await navigator.clipboard.writeText(refLink);
     setCopyState('copied-referral');
     window.setTimeout(() => setCopyState('idle'), 1600);
@@ -1823,32 +1825,36 @@ export default function ConnectTopbar({
   const renderProfilePanel = () => {
     if (!profileMenuAnchorEl || !user) return null;
 
+    const referralCode = profileUsername
+      ? `u_${String(profileUsername).replace(/^@+/, '')}`
+      : `id_${profileSeed.userId || ''}`;
+
     const profileContent = (
-      <div className="w-full font-satoshi text-white p-4 space-y-3.5">
+      <div className="w-full max-w-full font-satoshi text-white p-4 space-y-3.5 box-border overflow-x-hidden min-w-0">
         {/* Top bar header inside drawer */}
-        <div className="flex items-center justify-between pb-1">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between pb-1 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center text-white shrink-0">
               <Logo app={activeApp} size={15} variant="icon" />
             </div>
-            <div>
-              <h3 className="text-xs font-black font-clash text-white uppercase tracking-wider m-0">
+            <div className="min-w-0">
+              <h3 className="text-xs font-black font-clash text-white uppercase tracking-wider m-0 truncate">
                 Account & Identity
               </h3>
-              <p className="text-[10px] text-white/40 font-mono m-0">Kylrix Ecosystem</p>
+              <p className="text-[10px] text-white/40 font-mono m-0 truncate">Kylrix Ecosystem</p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleCloseAll}
-            className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/50 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/50 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
           >
             ✕
           </button>
         </div>
 
         {/* 1. Single Clean Identity Card */}
-        <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center gap-3.5">
+        <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center gap-3.5 min-w-0 max-w-full">
           <IdentityAvatar
             userId={user?.$id}
             size={48}
@@ -1856,8 +1862,8 @@ export default function ConnectTopbar({
             fallback={profileName.slice(0, 1).toUpperCase()}
           />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-1">
-              <h4 className="text-sm font-bold text-white truncate m-0 font-clash">
+            <div className="flex items-center justify-between gap-1 min-w-0">
+              <h4 className="text-sm font-bold text-white truncate m-0 font-clash min-w-0">
                 {profileName}
               </h4>
               <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#EC4899]/15 text-[#EC4899] font-black uppercase tracking-wider shrink-0">
@@ -1866,10 +1872,10 @@ export default function ConnectTopbar({
             </div>
 
             {/* Username / User ID Row */}
-            <div className="mt-1 flex items-center gap-1.5">
+            <div className="mt-1 flex items-center gap-1.5 min-w-0">
               {profileUsername ? (
                 <div className="flex items-center gap-1 min-w-0 flex-1">
-                  <span className="text-xs font-mono font-bold text-[#818cf8] truncate select-all">
+                  <span className="text-xs font-mono font-bold text-[#818cf8] truncate select-all min-w-0">
                     @{String(profileUsername).replace(/^@+/, '')}
                   </span>
                   <button
@@ -1882,15 +1888,15 @@ export default function ConnectTopbar({
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center justify-between gap-1 w-full">
-                  <span className="text-[11px] font-mono text-white/40 truncate select-all">
+                <div className="flex items-center justify-between gap-1 w-full min-w-0">
+                  <span className="text-[11px] font-mono text-white/40 truncate select-all min-w-0">
                     {shortenUserId(profileSeed.userId)}
                   </span>
                   <button
                     type="button"
                     onClick={handleGenerateUsername}
                     disabled={isGeneratingUsername}
-                    className="px-2 py-0.5 rounded-lg bg-[#6366F1]/20 hover:bg-[#6366F1]/30 text-[#818cf8] text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    className="px-2 py-0.5 rounded-lg bg-[#6366F1]/20 hover:bg-[#6366F1]/30 text-[#818cf8] text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 shrink-0"
                   >
                     <Sparkles size={11} />
                     <span>{isGeneratingUsername ? '...' : 'Claim @name'}</span>
@@ -1902,19 +1908,19 @@ export default function ConnectTopbar({
         </div>
 
         {/* 2. Referral Card (Compact single-row) */}
-        <div className="p-3 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider flex items-center gap-1">
-              <Users size={12} className="text-[#10B981]" />
-              <span>Referral Invite</span>
+        <div className="p-3 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-1.5 min-w-0 max-w-full">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider flex items-center gap-1 min-w-0">
+              <Users size={12} className="text-[#10B981] shrink-0" />
+              <span className="truncate">Referral Invite</span>
             </span>
-            <span className="text-[9px] font-mono font-bold text-[#10B981] bg-[#10B981]/10 px-1.5 py-0.2 rounded">
+            <span className="text-[9px] font-mono font-bold text-[#10B981] bg-[#10B981]/10 px-1.5 py-0.2 rounded shrink-0">
               +1.5 $KYL
             </span>
           </div>
-          <div className="flex items-center gap-2 bg-[#161412] p-1.5 rounded-xl border border-white/[0.04]">
-            <span className="text-[11px] font-mono text-white/80 truncate flex-1 px-1 select-all">
-              {typeof window !== 'undefined' ? `${window.location.host}/?ref=u_${profileUsername ? String(profileUsername).replace(/^@+/, '') : shortenUserId(profileSeed.userId)}` : '/?ref=...'}
+          <div className="flex items-center gap-2 bg-[#161412] p-1.5 rounded-xl border border-white/[0.04] min-w-0 max-w-full overflow-hidden">
+            <span className="text-[11px] font-mono text-white/80 truncate flex-1 px-1 min-w-0 select-all">
+              {typeof window !== 'undefined' ? `${window.location.host}/?ref=${referralCode}` : '/?ref=...'}
             </span>
             <button
               type="button"
@@ -1932,18 +1938,18 @@ export default function ConnectTopbar({
         </div>
 
         {/* 3. Action Menu (Clean vertical stack, zero horizontal wrap/overflow) */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0 max-w-full">
           {profileSeed.username && (
             <button
               type="button"
               onClick={handleOpenFullProfile}
-              className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group"
+              className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group min-w-0"
             >
-              <div className="flex items-center gap-2.5">
-                <UserIcon size={14} className="text-[#818CF8]" />
-                <span>Public Profile</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <UserIcon size={14} className="text-[#818CF8] shrink-0" />
+                <span className="truncate">Public Profile</span>
               </div>
-              <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors" />
+              <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors shrink-0" />
             </button>
           )}
 
@@ -1953,13 +1959,13 @@ export default function ConnectTopbar({
               handleCloseAll();
               openWallet();
             }}
-            className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group"
+            className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group min-w-0"
           >
-            <div className="flex items-center gap-2.5">
-              <Wallet size={14} className="text-[#F59E0B]" />
-              <span>Wallet & Balance</span>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Wallet size={14} className="text-[#F59E0B] shrink-0" />
+              <span className="truncate">Wallet & Balance</span>
             </div>
-            <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors" />
+            <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors shrink-0" />
           </button>
 
           <button
@@ -1968,13 +1974,13 @@ export default function ConnectTopbar({
               handleCloseAll();
               router.push('/settings');
             }}
-            className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group"
+            className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group min-w-0"
           >
-            <div className="flex items-center gap-2.5">
-              <Settings size={14} className="text-white/70" />
-              <span>Settings & Preferences</span>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Settings size={14} className="text-white/70 shrink-0" />
+              <span className="truncate">Settings & Preferences</span>
             </div>
-            <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors" />
+            <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors shrink-0" />
           </button>
 
           {!isPro && (
@@ -1984,13 +1990,13 @@ export default function ConnectTopbar({
                 handleCloseAll();
                 openProUpgrade();
               }}
-              className="w-full h-10 px-3 rounded-xl bg-[#EC4899]/10 hover:bg-[#EC4899]/20 border border-[#EC4899]/25 text-[#EC4899] text-xs font-extrabold flex items-center justify-between transition-all cursor-pointer group"
+              className="w-full h-10 px-3 rounded-xl bg-[#EC4899]/10 hover:bg-[#EC4899]/20 border border-[#EC4899]/25 text-[#EC4899] text-xs font-extrabold flex items-center justify-between transition-all cursor-pointer group min-w-0"
             >
-              <div className="flex items-center gap-2.5">
-                <Sparkles size={14} />
-                <span>Upgrade to Pro</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Sparkles size={14} className="shrink-0" />
+                <span className="truncate">Upgrade to Pro</span>
               </div>
-              <span className="text-[10px] font-mono uppercase tracking-wider font-bold">Pro →</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider font-bold shrink-0">Pro →</span>
             </button>
           )}
 
@@ -2000,13 +2006,13 @@ export default function ConnectTopbar({
               handleCloseAll();
               void logout();
             }}
-            className="w-full h-10 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-bold flex items-center justify-between transition-all cursor-pointer group"
+            className="w-full h-10 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-bold flex items-center justify-between transition-all cursor-pointer group min-w-0"
           >
-            <div className="flex items-center gap-2.5">
-              <LogOut size={14} />
-              <span>Sign Out</span>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <LogOut size={14} className="shrink-0" />
+              <span className="truncate">Sign Out</span>
             </div>
-            <span className="text-[10px] font-mono text-red-400/60">End Session</span>
+            <span className="text-[10px] font-mono text-red-400/60 shrink-0">End Session</span>
           </button>
         </div>
       </div>
@@ -2021,7 +2027,7 @@ export default function ConnectTopbar({
             width={360}
             title="Profile"
           >
-            <div className="bg-[#161412] h-full overflow-y-auto">
+            <div className="bg-[#161412] h-full overflow-y-auto overflow-x-hidden">
               {profileContent}
             </div>
           </NativeSidebarMount>
@@ -2039,16 +2045,18 @@ export default function ConnectTopbar({
             sx: {
               bgcolor: '#161412',
               width: 340,
+              maxWidth: '100vw',
               height: '100vh',
               borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
               p: 0,
               display: 'flex',
               flexDirection: 'column',
               boxSizing: 'border-box',
+              overflowX: 'hidden',
             }
           }}
         >
-          <div className="h-full overflow-y-auto">
+          <div className="h-full overflow-y-auto overflow-x-hidden">
             {profileContent}
           </div>
         </Drawer>
@@ -2060,15 +2068,20 @@ export default function ConnectTopbar({
         data-kylrix-topbar-panel
         sx={{
           width: '100%',
+          maxWidth: '100vw',
+          boxSizing: 'border-box',
           borderTop: '1px solid rgba(255,255,255,0.04)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '0 0 24px 24px',
           bgcolor: '#161412',
-          overflow: 'hidden',
+          overflowX: 'hidden',
+          overflowY: 'auto',
           boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
         }}
       >
-        {profileContent}
+        <Box sx={{ width: '100%', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+          {profileContent}
+        </Box>
       </Box>
     );
   };

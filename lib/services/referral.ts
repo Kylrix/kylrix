@@ -31,14 +31,22 @@ export type ReferralStats = {
 export const ReferralService = {
   /**
    * Generates the canonical, RFC-compliant referral URL.
-   * Format: https://www.kylrix.space/?ref=u_<usernameOrId>
+   * Format: 
+   * - Usernames: https://www.kylrix.space/?ref=u_<username>
+   * - User IDs: https://www.kylrix.space/?ref=id_<userId>
+   * - Agents: https://www.kylrix.space/?ref=agt_<agentId>
    */
-  buildReferralLink(identifier: string, src = 'user', origin?: string): string {
+  buildReferralLink(identifier: string, src = 'user', origin?: string, isUserId?: boolean): string {
     const base = typeof window !== 'undefined' ? window.location.origin : 'https://www.kylrix.space';
     const cleanId = String(identifier || '').replace(/^@+/, '').trim();
     let refParam = cleanId;
+
     if (src === 'agent' && !cleanId.startsWith('agt_')) {
       refParam = `agt_${cleanId}`;
+    } else if (isUserId || src === 'userid' || cleanId.startsWith('id_') || cleanId.startsWith('uid_')) {
+      if (!cleanId.startsWith('id_') && !cleanId.startsWith('uid_')) {
+        refParam = `id_${cleanId}`;
+      }
     } else if (src === 'user' && !cleanId.startsWith('u_')) {
       refParam = `u_${cleanId}`;
     }
@@ -52,27 +60,25 @@ export const ReferralService = {
   },
 
   /**
-   * Resolves a referral token (e.g., u_alice, agt_bot1, or raw ID) to a concrete referrer userId.
+   * Resolves a referral token to a concrete referrer userId with zero ambiguity.
    */
   async resolveReferrer(ref: string): Promise<{ referrerUserId: string; src: string } | null> {
     if (!ref) return null;
     const tables = createSystemTablesDB();
-    let cleanCode = ref.trim();
-    let src = 'user';
+    const cleanCode = ref.trim();
 
+    // 1. Agent Referrals: agt_<agentId>
     if (cleanCode.startsWith('agt_')) {
-      cleanCode = cleanCode.replace(/^agt_/, '');
-      src = 'agent';
-      // Check agents table
+      const agentId = cleanCode.replace(/^agt_/, '');
       try {
         const agentRows = await tables.listRows({
           databaseId: DB,
           tableId: APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
           queries: [
             Query.or([
-              Query.equal('$id', cleanCode),
-              Query.equal('agentId', cleanCode),
-              Query.equal('name', cleanCode)
+              Query.equal('$id', agentId),
+              Query.equal('agentId', agentId),
+              Query.equal('name', agentId)
             ]),
             Query.limit(1)
           ]
@@ -82,12 +88,57 @@ export const ReferralService = {
           return { referrerUserId: agent.ownerId || agent.userId || agent.$id, src: 'agent' };
         }
       } catch {}
-    } else if (cleanCode.startsWith('u_')) {
-      cleanCode = cleanCode.replace(/^u_/, '');
-      src = 'user';
+      return null;
     }
 
-    // Try finding profile by username or ID
+    // 2. Concrete User ID Referrals: id_<userId> or uid_<userId>
+    if (cleanCode.startsWith('id_') || cleanCode.startsWith('uid_')) {
+      const targetUserId = cleanCode.replace(/^(id_|uid_)/, '');
+      try {
+        const profileRows = await tables.listRows({
+          databaseId: DB,
+          tableId: PROFILES_TABLE,
+          queries: [
+            Query.or([
+              Query.equal('userId', targetUserId),
+              Query.equal('$id', targetUserId)
+            ]),
+            Query.limit(1)
+          ]
+        });
+        if (profileRows.rows.length > 0) {
+          const profile = profileRows.rows[0];
+          return { referrerUserId: profile.userId || profile.$id, src: 'userid' };
+        }
+      } catch {}
+
+      if (/^[a-zA-Z0-9._-]{1,36}$/.test(targetUserId)) {
+        return { referrerUserId: targetUserId, src: 'userid' };
+      }
+      return null;
+    }
+
+    // 3. Username Referrals: u_<username> or @<username>
+    if (cleanCode.startsWith('u_') || cleanCode.startsWith('@')) {
+      const targetUsername = cleanCode.replace(/^(@|u_)/, '').toLowerCase();
+      try {
+        const profileRows = await tables.listRows({
+          databaseId: DB,
+          tableId: PROFILES_TABLE,
+          queries: [
+            Query.equal('username', targetUsername),
+            Query.limit(1)
+          ]
+        });
+        if (profileRows.rows.length > 0) {
+          const profile = profileRows.rows[0];
+          return { referrerUserId: profile.userId || profile.$id, src: 'username' };
+        }
+      } catch {}
+      return null;
+    }
+
+    // 4. Legacy fallback: attempt both username and direct user ID
     try {
       const profileRows = await tables.listRows({
         databaseId: DB,
@@ -104,13 +155,12 @@ export const ReferralService = {
 
       if (profileRows.rows.length > 0) {
         const profile = profileRows.rows[0];
-        return { referrerUserId: profile.userId || profile.$id, src };
+        return { referrerUserId: profile.userId || profile.$id, src: 'user' };
       }
     } catch {}
 
-    // Fallback: direct ID if looks like Appwrite UID (up to 36 hex chars)
     if (/^[a-zA-Z0-9._-]{1,36}$/.test(cleanCode)) {
-      return { referrerUserId: cleanCode, src };
+      return { referrerUserId: cleanCode, src: 'user' };
     }
 
     return null;
@@ -222,7 +272,9 @@ export const ReferralService = {
   async getReferralStats(userId: string, username?: string | null): Promise<ReferralStats> {
     const tables = createSystemTablesDB();
     const cleanUsername = String(username || '').replace(/^@+/, '').trim();
-    const referralLink = this.buildReferralLink(cleanUsername || userId);
+    const referralLink = cleanUsername
+      ? this.buildReferralLink(cleanUsername, 'user')
+      : this.buildReferralLink(userId, 'userid', undefined, true);
 
     try {
       const res = await tables.listRows({

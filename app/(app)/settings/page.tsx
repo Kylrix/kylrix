@@ -387,7 +387,9 @@ function SettingsPageInner() {
 
     const handleCopyReferral = async () => {
         if (!user?.$id) return;
-        const link = referralStats?.referralLink || `${window.location.origin}/?ref=u_${getEffectiveUsername(user) || user?.$id}`;
+        const effUsername = getEffectiveUsername(user);
+        const refParam = effUsername ? `u_${effUsername}` : `id_${user.$id}`;
+        const link = referralStats?.referralLink || `${window.location.origin}/?ref=${refParam}`;
         try {
             await navigator.clipboard.writeText(link);
             setCopiedReferral(true);
@@ -773,7 +775,7 @@ function SettingsPageInner() {
                                     <input 
                                         type="text"
                                         readOnly
-                                        value={referralStats?.referralLink || (typeof window !== 'undefined' ? `${window.location.origin}/?ref=u_${getEffectiveUsername(user) || user?.$id || ''}` : '')}
+                                        value={referralStats?.referralLink || (typeof window !== 'undefined' ? `${window.location.origin}/?ref=${getEffectiveUsername(user) ? `u_${getEffectiveUsername(user)}` : `id_${user?.$id || ''}`}` : '')}
                                         className="flex-1 bg-transparent px-2 text-xs font-mono text-white/90 border-none outline-none truncate"
                                     />
                                     <button
