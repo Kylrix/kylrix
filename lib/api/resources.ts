@@ -459,69 +459,51 @@ export const ApiResources = {
     const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
     const tables = createSystemTablesDB();
     const now = new Date().toISOString();
-
-    const service = createNoteCreationService({
-      databaseId: DB,
-      tableId: NOTES,
-      generateId: () => ID.unique(),
-      getCurrentUser: async () => ({ $id: actor.userId }),
-      createRow: async (databaseId, tableId, data, rowId, permissions) =>
-        tables.createRow({
-          databaseId,
-          tableId,
-          rowId: rowId || ID.unique(),
-          data: data as any,
-          permissions,
-        }) as any,
-      getNote: async (noteId) =>
-        tables.getRow({ databaseId: DB, tableId: NOTES, rowId: noteId }) as any,
-      getNotePermissions,
-      cleanRowData,
-      filterNoteData,
-    });
+    const noteId = ID.unique();
 
     const isPublic = body?.isPublic !== undefined ? Boolean(body.isPublic) : true;
     const isGuest = body?.isGuest !== undefined ? Boolean(body.isGuest) : (body?.isPublic !== undefined ? Boolean(body.isPublic) : true);
 
     const cleanTags = await ensureTagsExist(tables, actor.userId, body?.tags as any[]);
 
-    const note = await service.createNote({
-      title,
-      content,
-      format: 'markdown',
-      isPublic,
-      isGuest,
-      isWorkspace: Boolean(wsId),
-      projectId: wsId || undefined,
-      tags: cleanTags.length ? cleanTags : undefined,
-    });
+    const permissions = wsId || isPublic || isGuest
+      ? [
+          Permission.read(Role.any()),
+          Permission.update(Role.user(actor.userId)),
+          Permission.delete(Role.user(actor.userId)),
+        ]
+      : [
+          Permission.read(Role.user(actor.userId)),
+          Permission.update(Role.user(actor.userId)),
+          Permission.delete(Role.user(actor.userId)),
+        ];
 
-    // Ensure ownership and workspace isolation metadata exist
-    const noteId = (note as any).$id;
-    await tables.updateRow({
+    const metadataObj: Record<string, unknown> = {
+      isWorkspace: Boolean(wsId),
+    };
+    if (wsId) {
+      metadataObj.projectId = wsId;
+    }
+
+    const note = await tables.createRow({
       databaseId: DB,
       tableId: NOTES,
       rowId: noteId,
       data: {
         userId: actor.userId,
-        creatorId: actor.userId,
+        title,
+        content,
+        format: 'markdown',
         isPublic,
         isGuest,
-        isWorkspace: Boolean(wsId),
-        projectId: wsId || null,
+        metadata: JSON.stringify(metadataObj),
         tags: cleanTags,
+        createdAt: now,
         updatedAt: now,
       },
-      permissions: wsId || isPublic || isGuest
-        ? [
-            Permission.read(Role.any()),
-            Permission.update(Role.user(actor.userId)),
-            Permission.delete(Role.user(actor.userId)),
-          ]
-        : undefined,
-    }).catch(() => null);
+      permissions,
+    });
 
-    // Link into project_objects join table
     if (wsId) {
       await linkObjectToWorkspace(tables, wsId, 'note', noteId, actor.userId, { title });
     }
