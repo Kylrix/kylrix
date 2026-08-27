@@ -444,15 +444,15 @@ export function EditProfileModal({
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/75 z-[1100] transition-opacity duration-200 ease-in-out cursor-default"
+        className="fixed inset-0 bg-black/80 z-[99998] transition-opacity duration-200 ease-in-out cursor-default"
         onClick={onClose}
       />
 
       {/* Central Profile Drawer */}
       <div className={
         isFullscreen 
-          ? "fixed inset-0 z-[1200] w-screen h-screen bg-[#161412] text-white flex flex-col select-none overflow-hidden" 
-          : "fixed bottom-0 left-0 right-0 h-[60dvh] max-h-[60dvh] min-h-[60dvh] md:top-0 md:bottom-0 md:right-0 md:left-auto md:w-[500px] md:h-full md:max-h-full bg-[#161412] border-t md:border-t-0 md:border-l border-white/[0.08] rounded-t-[28px] md:rounded-t-none z-[1200] text-white flex flex-col shadow-2xl overflow-hidden animate-slide-up select-none"
+          ? "fixed inset-0 top-0 left-0 right-0 bottom-0 z-[99999] w-screen h-screen min-h-[100dvh] bg-[#161412] text-white flex flex-col select-none overflow-hidden" 
+          : "fixed bottom-0 left-0 right-0 h-[60dvh] max-h-[60dvh] min-h-[60dvh] md:top-0 md:bottom-0 md:right-0 md:left-auto md:w-[500px] md:h-full md:max-h-full bg-[#161412] border-t md:border-t-0 md:border-l border-white/[0.08] rounded-t-[28px] md:rounded-t-none z-[99999] text-white flex flex-col shadow-2xl overflow-hidden animate-slide-up select-none"
       }>
         {/* Top Minimalist Header Layer */}
         <div className="px-4 py-2.5 flex items-center justify-between border-b border-white/[0.06] bg-[#161412] shrink-0">
@@ -780,10 +780,15 @@ export function EditProfileModal({
                 </h4>
 
                 <div className="space-y-3">
-                  {/* Public Profile */}
+                  {/* Public Profile (Private profile requires Pro) */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-white m-0">Public Profile</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-bold text-white m-0">Public Profile</p>
+                        <span className="text-[8px] font-mono uppercase px-1.5 py-0.2 bg-[#F59E0B]/15 text-[#F59E0B] font-bold rounded">
+                          Private is Pro
+                        </span>
+                      </div>
                       <p className="text-[11px] text-white/40 m-0">Allow members to find and view your profile</p>
                     </div>
                     <input
@@ -791,8 +796,13 @@ export function EditProfileModal({
                       checked={isPublic || isGuest}
                       disabled={isGuest}
                       onChange={(e) => {
-                        setIsPublic(e.target.checked);
-                        if (!e.target.checked) setIsGuest(false);
+                        const nextPublic = e.target.checked;
+                        if (!nextPublic && !isPro) {
+                          openProUpgrade();
+                          return;
+                        }
+                        setIsPublic(nextPublic);
+                        if (!nextPublic) setIsGuest(false);
                       }}
                       className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#6366F1] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform disabled:opacity-50"
                     />
