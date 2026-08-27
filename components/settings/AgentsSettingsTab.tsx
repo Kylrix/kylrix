@@ -7,23 +7,15 @@ import {
   Plus, 
   Key, 
   Radio, 
-  RefreshCw, 
   ChevronRight, 
-  Lock, 
-  Trash2, 
-  Check, 
-  Copy, 
   Terminal, 
-  BookOpen,
   Zap
 } from 'lucide-react';
-import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'react-hot-toast';
 import { BYOKManager } from '@/lib/ai/byok';
 import { AgenticService, type AgentRecord } from '@/lib/services/agentic';
 import { SYSTEM_AGENTS } from '@/lib/agentic/system-agents';
-import { KYLRIX_AGENTS_SKILL_INSTALL } from '@/lib/api/public';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { AgenticSettingsDrawer, type AgentDrawerMode } from './AgenticSettingsDrawer';
 import { AgentActionDrawer } from './AgentActionDrawer';
@@ -37,7 +29,7 @@ export function AgentsSettingsTab() {
 
   // Custom User Agents
   const [customAgents, setCustomAgents] = useState<AgentRecord[]>([]);
-  const [loadingAgents, setLoadingAgents] = useState(true);
+  const [_loadingAgents, setLoadingAgents] = useState(true);
 
   // Default Agent Setting (Kylie or Custom Agent)
   const [defaultAgentId, setDefaultAgentId] = useState<string>('kylie');
@@ -46,11 +38,8 @@ export function AgentsSettingsTab() {
   const [selectedAgentForAction, setSelectedAgentForAction] = useState<any | null>(null);
 
   // Custom Provider / BYOK State
-  const [byokKeyInput, setByokKeyInput] = useState('');
   const [hasByok, setHasByok] = useState(false);
   const [_byokLoading, setByokLoading] = useState(true);
-  const [byokSaving, setByokSaving] = useState(false);
-  const [showByokInput, setShowByokInput] = useState(false);
 
   // Compute Balance State
   const [computeState, setComputeState] = useState<{
@@ -133,41 +122,6 @@ export function AgentsSettingsTab() {
       })
       .catch(() => setByokLoading(false));
   }, [user?.$id]);
-
-  const handleSaveByok = async () => {
-    if (!user?.$id || !byokKeyInput.trim()) {
-      toast.error('Enter a valid Gemini API key');
-      return;
-    }
-    setByokSaving(true);
-    try {
-      await BYOKManager.saveKey(user.$id, 'gemini', byokKeyInput.trim());
-      toast.success('Custom Gemini key saved');
-      setHasByok(true);
-      setByokKeyInput('');
-      setShowByokInput(false);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Could not save key');
-    } finally {
-      setByokSaving(false);
-    }
-  };
-
-  const handleDeleteByok = async () => {
-    if (!user?.$id) return;
-    setByokSaving(true);
-    try {
-      await BYOKManager.deleteKey(user.$id, 'gemini');
-      toast.success('Custom key removed');
-      setHasByok(false);
-      setByokKeyInput('');
-      setShowByokInput(false);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Could not remove key');
-    } finally {
-      setByokSaving(false);
-    }
-  };
 
   const handleDeleteCustomAgent = async (e?: React.MouseEvent, agentId?: string, name?: string) => {
     e?.stopPropagation();

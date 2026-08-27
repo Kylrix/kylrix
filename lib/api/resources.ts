@@ -9,15 +9,11 @@ import { clampNoteTitle } from '@/constants/noteTitle';
 import {
   cleanRowData,
   filterNoteData,
-  getNotePermissions,
 } from '@/lib/appwrite/note';
-import { createNoteCreationService } from '@/lib/sdk';
 import { WorkflowDbService } from '@/lib/services/workflows';
 import {
   generateRandomVaultSecret,
   parseMekToBytes,
-  sealVaultSecret,
-  unsealVaultSecret,
   sealRowFields,
   unsealRowFields,
   looksEncrypted,

@@ -70,7 +70,6 @@ import {
   listFlowEvents, 
   listKeepCredentials, 
   Query, 
-  realtime,
   toggleNoteVisibility, 
   rotatePublicNoteLink, 
   getShareableUrl, 

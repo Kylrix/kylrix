@@ -15,6 +15,7 @@ import {
   Globe, 
   Radio, 
   ShieldCheck, 
+  Plus,
   Maximize2, 
   Minimize2, 
   ArrowUpRight 
@@ -120,20 +121,20 @@ export function AgentActionDrawer({
       const { createPat } = await import('@/lib/actions/client-ops');
       const res = await createPat({
         name: newTokenName.trim(),
-        category: 'agentic_pat',
+        keyCategory: 'agentic_pat',
         agentId,
         scopes: ['notes:read', 'notes:write', 'vault:read', 'vault:write', 'goals:read', 'goals:write', 'workspaces:read', 'workspaces:write'],
-        expiresInDays: 365,
+        expiresAt: new Date(Date.now() + 365 * 86400000).toISOString(),
       });
 
-      if (res?.success && res.token) {
+      if (res?.token) {
         setNewlyMintedToken(res.token);
         setNewTokenName('');
         setIsCreatingToken(false);
         toast.success('Agentic PAT minted');
         void loadTokens();
       } else {
-        toast.error((res as any)?.error || 'Could not create token');
+        toast.error('Could not create token');
       }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to mint token');

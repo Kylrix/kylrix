@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   FileText as NotesIcon,
@@ -23,7 +23,6 @@ import { isFlowPath } from '@/lib/routing/app-paths';
  */
 export function UnifiedBottomBar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { activeContent } = useUnifiedDrawer();
   const { mode } = useAppChrome();
   const { isDrawerOpen } = useDrawerState();

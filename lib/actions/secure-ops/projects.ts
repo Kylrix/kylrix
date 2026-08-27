@@ -2062,7 +2062,7 @@ export async function getSharedWorkspaceEntitiesSecure(
  */
 export async function resolveAgentKeyBlobSecure(
   agentOrWorkspaceId: string,
-  jwt?: string
+  _jwt?: string
 ): Promise<{ success: boolean; encryptedKeyBlob?: string; mekHex?: string; agentId?: string; error?: string }> {
   try {
     const rawId = String(agentOrWorkspaceId).replace(/^agent_/, '').trim();

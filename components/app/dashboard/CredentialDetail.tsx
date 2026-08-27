@@ -12,7 +12,6 @@ import {
   Eye, 
   EyeOff, 
   Globe, 
-  ShieldCheck, 
   ExternalLink, 
   Folder,
   Share2,

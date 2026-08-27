@@ -393,7 +393,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
-        const totpChannel = `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.tables.${APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS}.rows`;
+        const totpChannel = `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.tables.${APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS}.rows`;
 
         const cleanup = await LocalEngine.subscribeRealtime(totpChannel, (payload: any) => {
           if (!payload || !payload.$id || cancelled) return;
