@@ -424,6 +424,44 @@ class EcosystemSecurity {
       return this.agentMekCache.get(cleanId)!;
     }
     try {
+      // 1. Resolve sealed keyblob or hex from privileged Server Action
+      const { resolveAgentKeyBlobSecure } = await import('@/lib/actions/secure-ops/projects');
+      const blobRes = await resolveAgentKeyBlobSecure(cleanId).catch(() => null);
+
+      if (blobRes?.success) {
+        // A. If encryptedKeyBlob is returned, unwrap it using Owner Masterpass MEK (Gold Key -> Silver Key)
+        if (blobRes.encryptedKeyBlob && (this.masterKey || this.status.isUnlocked)) {
+          try {
+            const decryptedSecret = await this.decrypt(blobRes.encryptedKeyBlob);
+            const parsed = JSON.parse(decryptedSecret);
+            const hex = parsed.mekHex || parsed.entropyHex;
+            if (hex) {
+              const { importMekCryptoKey, parseMekToBytes } = await import('@/lib/api/vault-crypto');
+              const key = await importMekCryptoKey(parseMekToBytes(hex));
+              if (key) {
+                this.agentMekCache.set(cleanId, key);
+                return key;
+              }
+            }
+          } catch (unwrapErr) {
+            console.warn('[EcosystemSecurity] Failed to unwrap agent encryptedKeyBlob:', unwrapErr);
+          }
+        }
+
+        // B. If direct mekHex is available
+        if (blobRes.mekHex) {
+          try {
+            const { importMekCryptoKey, parseMekToBytes } = await import('@/lib/api/vault-crypto');
+            const key = await importMekCryptoKey(parseMekToBytes(blobRes.mekHex));
+            if (key) {
+              this.agentMekCache.set(cleanId, key);
+              return key;
+            }
+          } catch {}
+        }
+      }
+
+      // 2. Fallback to AgentIdentityService
       const { AgentIdentityService } = await import('@/lib/services/agent-identity');
       const key = await AgentIdentityService.getAgentCryptoKey(cleanId);
       if (key) {

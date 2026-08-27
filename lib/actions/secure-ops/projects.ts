@@ -2041,54 +2041,6 @@ export async function getSharedWorkspaceEntitiesSecure(
         break;
     }
 
-    // If workspace is agentic, unseal credentials and TOTP secrets using workspace agent MEK
-    const isAgentic = (access as any).project?.isAgentic === true || (access as any).project?.agentId;
-    if (isAgentic && (normKind === 'credential' || normKind === 'totp')) {
-      try {
-        const { resolveWorkspaceMekBytes } = await import('@/lib/api/resources');
-        const { unsealRowFields, VAULT_ENCRYPTED_FIELDS } = await import('@/lib/api/vault-crypto');
-        const mekBytes = await resolveWorkspaceMekBytes(tables, { userId: (access as any).user?.$id || '' }, {
-          workspaceId,
-          agentId: (access as any).project?.agentId,
-        });
-
-        if (mekBytes) {
-          if (normKind === 'credential') {
-            for (const [id, row] of rowsById.entries()) {
-              try {
-                const unsealed = await unsealRowFields(row, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes);
-                rowsById.set(id, {
-                  ...row,
-                  ...unsealed,
-                  name: unsealed.name || row.name,
-                  username: unsealed.username !== undefined ? unsealed.username : row.username,
-                  password: unsealed.password !== undefined ? unsealed.password : row.password,
-                  url: unsealed.url !== undefined ? unsealed.url : row.url,
-                  notes: unsealed.notes !== undefined ? unsealed.notes : row.notes,
-                });
-              } catch {}
-            }
-          } else if (normKind === 'totp') {
-            for (const [id, row] of rowsById.entries()) {
-              try {
-                const unsealed = await unsealRowFields(row, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes);
-                rowsById.set(id, {
-                  ...row,
-                  ...unsealed,
-                  issuer: unsealed.issuer || row.issuer,
-                  accountName: unsealed.accountName !== undefined ? unsealed.accountName : row.accountName,
-                  secretKey: unsealed.secretKey !== undefined ? unsealed.secretKey : row.secretKey,
-                  url: unsealed.url !== undefined ? unsealed.url : row.url,
-                });
-              } catch {}
-            }
-          }
-        }
-      } catch (unsealErr) {
-        console.warn('[getSharedWorkspaceEntitiesSecure] Agentic unseal error:', unsealErr);
-      }
-    }
-
     const finalRows = Array.from(rowsById.values()).filter((r) => r.isTrash !== true && r.trash !== true);
     return {
       success: true,
@@ -2101,6 +2053,115 @@ export async function getSharedWorkspaceEntitiesSecure(
       rows: [],
       error: err?.message || 'Failed to fetch shared workspace entities',
     };
+  }
+}
+
+/**
+ * Server Action to resolve the sealed keyblob for an agent or agentic workspace.
+ * Allows client to unwrap the Agent MEK locally using the Owner's Masterpass MEK (3-tier envelope).
+ */
+export async function resolveAgentKeyBlobSecure(
+  agentOrWorkspaceId: string,
+  jwt?: string
+): Promise<{ success: boolean; encryptedKeyBlob?: string; mekHex?: string; agentId?: string; error?: string }> {
+  try {
+    const rawId = String(agentOrWorkspaceId).replace(/^agent_/, '').trim();
+    if (!rawId) return { success: false, error: 'Agent ID required' };
+
+    const tables = createSystemTablesDB();
+    const dbId = APPWRITE_CONFIG.DATABASES.FLOW;
+
+    // 1. Try direct agent row
+    const agentRow = await tables.getRow({
+      databaseId: dbId,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.AGENTS || 'agents',
+      rowId: rawId,
+    }).catch(() => null);
+
+    let resolvedAgentId = rawId;
+    let mekHex: string | undefined;
+    let encryptedKeyBlob: string | undefined;
+
+    if (agentRow?.config) {
+      try {
+        const parsed = JSON.parse(agentRow.config);
+        if (parsed.mekHex) mekHex = String(parsed.mekHex);
+        if (parsed.entropyHex) mekHex = String(parsed.entropyHex);
+      } catch {}
+    }
+
+    // 2. Try agent by workspaceId
+    if (!mekHex && !encryptedKeyBlob) {
+      try {
+        const wsAgents = await tables.listRows({
+          databaseId: dbId,
+          tableId: APPWRITE_CONFIG.TABLES.FLOW.AGENTS || 'agents',
+          queries: [Query.equal('workspaceId', rawId), Query.limit(1)] as any,
+        }).catch(() => ({ rows: [] as any[] }));
+        if (wsAgents.rows && wsAgents.rows.length > 0) {
+          resolvedAgentId = wsAgents.rows[0].$id;
+          if (wsAgents.rows[0].config) {
+            const parsed = JSON.parse(wsAgents.rows[0].config);
+            if (parsed.mekHex) mekHex = String(parsed.mekHex);
+            if (parsed.entropyHex) mekHex = String(parsed.entropyHex);
+          }
+        }
+      } catch {}
+    }
+
+    // 3. Try profile table for preferences.encryptedKeyBlob
+    try {
+      const profileRow = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+        tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES || 'profiles',
+        queries: [
+          Query.equal('userId', `agent_${resolvedAgentId}`),
+          Query.limit(1),
+        ] as any,
+      }).catch(() => ({ rows: [] as any[] }));
+
+      if (profileRow.rows && profileRow.rows.length > 0) {
+        const pref = typeof profileRow.rows[0].preferences === 'string'
+          ? JSON.parse(profileRow.rows[0].preferences)
+          : profileRow.rows[0].preferences;
+        if (pref?.encryptedKeyBlob) encryptedKeyBlob = String(pref.encryptedKeyBlob);
+        if (!mekHex && pref?.mekHex) mekHex = String(pref.mekHex);
+        if (!mekHex && pref?.entropyHex) mekHex = String(pref.entropyHex);
+      }
+    } catch {}
+
+    // 4. Try sovereign store ~/.kylrix/agents/<agent>.json
+    if (!mekHex && !encryptedKeyBlob) {
+      try {
+        const fs = await import('fs');
+        const path = await import('path');
+        const os = await import('os');
+        const configDir = path.join(os.homedir(), '.kylrix', 'agents');
+        if (fs.existsSync(configDir)) {
+          const files = fs.readdirSync(configDir);
+          for (const f of files) {
+            if (f.endsWith('.json')) {
+              try {
+                const data = JSON.parse(fs.readFileSync(path.join(configDir, f), 'utf-8'));
+                if (data.agentId === resolvedAgentId || data.defaultWorkspaceId === rawId) {
+                  if (data.mekHex) mekHex = String(data.mekHex);
+                  break;
+                }
+              } catch {}
+            }
+          }
+        }
+      } catch {}
+    }
+
+    return {
+      success: Boolean(encryptedKeyBlob || mekHex),
+      encryptedKeyBlob,
+      mekHex,
+      agentId: resolvedAgentId,
+    };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to resolve agent key blob' };
   }
 }
 
