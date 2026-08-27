@@ -1270,7 +1270,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                     </ListItemButton>
                   </ListItem>
                 );
-              })}
+              })
+            })()}
             </List>
           </Box>
         </Drawer>
