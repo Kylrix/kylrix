@@ -399,15 +399,20 @@ export const ApiResources = {
       filterNoteData,
     });
 
+    const userTags = Array.isArray(body?.tags) ? (body.tags as string[]).map(String) : [];
+    const noteTags = wsId ? Array.from(new Set([...userTags, `workspace:${wsId}`, `project:${wsId}`])) : userTags;
+
     const note = await service.createNote({
       title,
       content,
       format: 'markdown',
       isPublic: isPublic || Boolean(wsId),
-      tags: Array.isArray(body?.tags) ? (body.tags as string[]).map(String) : undefined,
+      isWorkspace: Boolean(wsId),
+      projectId: wsId || undefined,
+      tags: noteTags.length ? noteTags : undefined,
     });
 
-    // Ensure ownership exists
+    // Ensure ownership and workspace isolation metadata exist
     const noteId = (note as any).$id;
     await tables.updateRow({
       databaseId: DB,
@@ -416,6 +421,9 @@ export const ApiResources = {
       data: {
         userId: actor.userId,
         creatorId: actor.userId,
+        isWorkspace: Boolean(wsId),
+        projectId: wsId || null,
+        tags: noteTags,
         updatedAt: now,
       },
     }).catch(() => null);
