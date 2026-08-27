@@ -170,7 +170,7 @@ async function unlinkObjectFromWorkspace(
   }
 }
 
-const TAGS_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.TAGS || 'tags';
+const TAGS_TABLE = APPWRITE_CONFIG.TABLES.TAGS || APPWRITE_CONFIG.TABLES.NOTE.TAGS || '67ff06280034908cf08a';
 
 async function ensureTagsExist(
   tables: ReturnType<typeof createSystemTablesDB>,
@@ -452,7 +452,6 @@ export const ApiResources = {
     requireScope(actor, 'notes:write');
     const title = clampNoteTitle(String(body?.title || '').trim() || 'Untitled', 'Untitled');
     const content = body?.content != null ? String(body.content) : '';
-    const isPublic = !!body?.isPublic;
     const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
     const tables = createSystemTablesDB();
     const now = new Date().toISOString();
