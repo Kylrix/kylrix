@@ -902,6 +902,10 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                   )}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
         {/* ── Mode 6: BYOK & Compute ── */}
         {mode.type === 'manage_byok' && (
           <div className="space-y-4">
