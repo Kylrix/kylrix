@@ -191,6 +191,7 @@ export function KylrixWYSIWYGEditor({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const lastEmittedValueRef = useRef(value);
+  const isExternalSyncRef = useRef(false);
 
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
@@ -307,6 +308,7 @@ export function KylrixWYSIWYGEditor({
         EditorView.lineWrapping,
         EditorView.editable.of(!readOnly),
         EditorView.updateListener.of((update) => {
+          if (isExternalSyncRef.current) return;
           if (update.docChanged) {
             const str = update.state.doc.toString();
             lastEmittedValueRef.current = str;
@@ -347,9 +349,14 @@ export function KylrixWYSIWYGEditor({
     const currentDoc = viewRef.current.state.doc.toString();
     if (value !== currentDoc) {
       lastEmittedValueRef.current = value;
-      viewRef.current.dispatch({
-        changes: { from: 0, to: currentDoc.length, insert: value },
-      });
+      isExternalSyncRef.current = true;
+      try {
+        viewRef.current.dispatch({
+          changes: { from: 0, to: currentDoc.length, insert: value },
+        });
+      } finally {
+        isExternalSyncRef.current = false;
+      }
     }
   }, [value]);
 
