@@ -85,12 +85,26 @@ OpenBricks 4.0 evolves the Kylrix design language from rigid, corporate SaaS con
 
 ---
 
+## 6. Thin Outline Depth & Form Definition
+
+- **Formalized Outer Boundaries**:
+  - All drawers (top and bottom), sidebars, and dropdown panels must feature a crisp, thin 1px outline to give a clean sense of form and depth:
+    - Inner panel card outline: `border: 1px solid alpha(appAccent, 0.22)` or `border: 1px solid rgba(255, 255, 255, 0.08)`.
+    - Mobile top drawer / panel: `borderBottom: '1px solid rgba(255, 255, 255, 0.08)'`, `borderRadius: '0 0 28px 28px'`.
+    - Mobile bottom drawer: `borderTop: '1px solid rgba(255, 255, 255, 0.08)'`, `borderRadius: '28px 28px 0 0'`.
+    - Desktop right sidebar: `borderLeft: '1px solid rgba(255, 255, 255, 0.06)'`.
+    - Desktop left sidebar: `borderRight: '1px solid rgba(255, 255, 255, 0.06)'`.
+- **Purpose**: Establishes unambiguous structural contouring and tactile form definition across opaque ash surfaces without blurry glassmorphism or translucent haze.
+
+---
+
 ## Summary Checklist for OpenBricks 4.0 Upgrades
 
 | Feature | Old (SaaS-y / Clunky) | OpenBricks 4.0 (Tactile & Clean) |
 |---|---|---|
 | **Access Picker** | Sub-drawer popup inside bottom drawer | Inline segmented toggle (`Public` / `Private`) |
 | **Inputs** | MUI Textfield with thick floating borders | Inset `#0A0908` dark fields with subtle focus rings |
+| **Outlines** | Missing borders / blurry translucent gradients | Crisp 1px thin outline (`alpha(accent, 0.22)` or `white/0.08`) |
 | **CTA Rows** | Full-width single buttons stacked vertically | Dynamic 2-column compact grid for complementary CTAs |
 | **Copy Tone** | Corporate wizard steps & jargon | Plain English, crisp, action-oriented labels |
 | **Drawer Close** | Missing or tucked inside subheadings | Unified top-right circular dismiss button (`✕`) |
