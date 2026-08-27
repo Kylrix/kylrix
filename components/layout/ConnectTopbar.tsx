@@ -2536,7 +2536,65 @@ export default function ConnectTopbar({
                         Agent Workspace
                       </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e: MouseEvent) => {
+                          e.stopPropagation();
+                          handleCloseAll();
+                          markWorkspacePublic(w.id);
+                          void executeInstantShare('project', w.id, {
+                            resourceTitle: w.title,
+                            isPublic: true,
+                            isGuest: true,
+                          });
+                          openUnified('share-context', {
+                            resourceType: 'project',
+                            resourceId: w.id,
+                            resourceTitle: w.title,
+                            isPublic: true,
+                            isGuest: true,
+                            accentColor: '#818CF8',
+                          });
+                        }}
+                        sx={{
+                          color: w.isPublic ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
+                          bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                          p: 0.75,
+                          borderRadius: '8px',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            color: w.isPublic ? '#10B981' : '#818CF8',
+                            bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.22)' : 'rgba(99, 102, 241, 0.15)',
+                            transform: 'scale(1.08)',
+                          },
+                        }}
+                        title={w.isPublic ? 'Public sharing enabled (click to manage)' : 'Share workspace'}
+                      >
+                        <ShareIcon size={14} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={(e: MouseEvent) => {
+                          e.stopPropagation();
+                          handleCloseAll();
+                          openUnified('project-settings', { project: w });
+                        }}
+                        sx={{
+                          color: 'rgba(255, 255, 255, 0.35)',
+                          p: 0.75,
+                          borderRadius: '8px',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            color: '#FFFFFF',
+                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                            transform: 'scale(1.08)',
+                          },
+                        }}
+                        title="Workspace settings"
+                      >
+                        <MoreIcon size={14} />
+                      </IconButton>
                       {isActive ? (
                         <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#818CF8', boxShadow: '0 0 8px #818CF8', flexShrink: 0 }} />
                       ) : null}

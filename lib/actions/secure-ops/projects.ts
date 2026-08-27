@@ -1803,6 +1803,9 @@ export async function resolveWorkspaceShareAccessSecure(workspaceId: string, jwt
   const title = row.title || row.name || 'Shared Workspace';
   const isPublic = row.isPublic === true || row.isGuest === true;
 
+  const isAgentic = row.isAgentic === true || String(row.isAgentic) === 'true';
+  const agentId = row.agentId || null;
+
   // 1. Lazy check: If workspace is public, return access immediately!
   if (isPublic) {
     return {
@@ -1812,6 +1815,8 @@ export async function resolveWorkspaceShareAccessSecure(workspaceId: string, jwt
         title,
         ownerId,
         isPublic: true,
+        isAgentic,
+        agentId,
         isOwner: actor?.$id ? actor.$id === ownerId : false,
       },
     };
@@ -1826,6 +1831,8 @@ export async function resolveWorkspaceShareAccessSecure(workspaceId: string, jwt
         title,
         ownerId,
         isPublic: false,
+        isAgentic,
+        agentId,
         isOwner: true,
       },
     };
@@ -1842,6 +1849,8 @@ export async function resolveWorkspaceShareAccessSecure(workspaceId: string, jwt
           title,
           ownerId,
           isPublic: false,
+          isAgentic,
+          agentId,
           isCollaborator: true,
         },
       };

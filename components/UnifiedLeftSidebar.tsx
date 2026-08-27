@@ -208,15 +208,15 @@ export function UnifiedLeftSidebar() {
                     width: 28,
                     height: 28,
                     borderRadius: '8px',
-                    bgcolor: 'rgba(245, 158, 11, 0.15)',
-                    color: '#F59E0B',
+                    bgcolor: activeWorkspace?.isAgentic ? 'rgba(99, 102, 241, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                    color: activeWorkspace?.isAgentic ? '#818CF8' : '#F59E0B',
                     display: 'grid',
                     placeItems: 'center',
                     fontWeight: 900,
                     fontSize: '0.8rem',
                     flexShrink: 0}}
                 >
-                  {(activeWorkspace?.title || 'W').charAt(0).toUpperCase()}
+                  {activeWorkspace?.isAgentic ? <BotIcon size={14} color="#818CF8" /> : (activeWorkspace?.title || 'W').charAt(0).toUpperCase()}
                 </Box>
                 {!isCollapsed && (
                   <Box sx={{ minWidth: 0, flex: 1, overflow: 'hidden', textAlign: 'left' }}>
@@ -236,7 +236,7 @@ export function UnifiedLeftSidebar() {
                       {activeWorkspace?.title || 'Workspace'}
                     </span>
                     <span style={{ display: 'block', color: 'rgba(255, 255, 255, 0.45)', fontWeight: 600, fontSize: '0.68rem', fontFamily: 'var(--font-satoshi)' }}>
-                      {activeWorkspace?.isPersonal ? 'Default workspace' : 'Workspace'}
+                      {activeWorkspace?.isPersonal ? 'Default workspace' : activeWorkspace?.isAgentic ? 'Agent workspace' : 'Workspace'}
                     </span>
                   </Box>
                 )}
@@ -583,6 +583,54 @@ export function UnifiedLeftSidebar() {
                             </span>
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                            <Box
+                              component="span"
+                              onClick={(e: React.MouseEvent) => handleShareWorkspace(e, w)}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                p: 0.5,
+                                borderRadius: '6px',
+                                color: w.isPublic ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
+                                bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                  color: w.isPublic ? '#10B981' : '#818CF8',
+                                  bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.15)',
+                                  transform: 'scale(1.08)',
+                                },
+                              }}
+                              title={w.isPublic ? 'Public sharing enabled (click to manage)' : 'Share workspace'}
+                            >
+                              <ShareIcon size={13} />
+                            </Box>
+                            <Box
+                              component="span"
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                openUnified('project-settings', { project: w });
+                              }}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                p: 0.5,
+                                borderRadius: '6px',
+                                color: 'rgba(255, 255, 255, 0.35)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                  color: '#FFFFFF',
+                                  bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                  transform: 'scale(1.08)',
+                                },
+                              }}
+                              title="Workspace settings"
+                            >
+                              <MoreIcon size={13} />
+                            </Box>
                             {isActive && <CheckIcon size={14} color="#818CF8" style={{ flexShrink: 0 }} />}
                           </Box>
                         </Box>

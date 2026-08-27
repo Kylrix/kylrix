@@ -406,13 +406,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         if (cancelled || !access.success || !access.workspace) return;
 
         const isOwner = access.workspace.ownerId === userId && userId !== 'guest';
+        const isAgentic = Boolean(access.workspace.isAgentic);
+        const agentId = access.workspace.agentId || null;
         setWorkspaces((prev) => {
+          const existing = prev.find((w) => w.id === targetId);
+          const effectiveIsAgentic = isAgentic || Boolean(existing?.isAgentic);
           const item: WorkspaceItem = {
             id: targetId,
-            title: access.workspace!.title || 'Shared Workspace',
-            ownerId: access.workspace!.ownerId || '',
+            title: access.workspace!.title || existing?.title || 'Shared Workspace',
+            ownerId: access.workspace!.ownerId || existing?.ownerId || '',
             isPersonal: false,
-            isShared: !isOwner,
+            isShared: !isOwner && !effectiveIsAgentic,
+            isAgentic: effectiveIsAgentic,
+            agentId: agentId || existing?.agentId || null,
             isPublic: !!access.workspace!.isPublic,
             role: isOwner ? 'owner' : 'viewer',
           };
