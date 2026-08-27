@@ -903,12 +903,19 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
 
       {/* Fixed Non-Scrolling Bottom Action Bars */}
       {(mode.type === 'create_custom' || mode.type === 'edit_custom') && (
-        <div className="shrink-0 border-t border-white/[0.06] bg-[#161412] px-5 py-3 md:py-3.5 z-10">
+        <div className="shrink-0 border-t border-white/[0.06] bg-[#161412] px-5 py-3 md:py-3.5 z-10 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white font-bold text-xs transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             onClick={handleSaveCustomAgent}
             disabled={saving || !name.trim()}
-            className="w-full h-10 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold flex items-center justify-center gap-2 hover:bg-[#F59E0B]/90 transition-colors disabled:opacity-40 cursor-pointer shadow-lg shadow-[#F59E0B]/10"
+            className="flex-1 h-10 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold flex items-center justify-center gap-2 hover:bg-[#F59E0B]/90 transition-colors disabled:opacity-40 cursor-pointer shadow-lg shadow-[#F59E0B]/10"
           >
             {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
             <span>{mode.type === 'create_custom' ? 'Mint Custom Agent' : 'Save Agent Details'}</span>
@@ -946,15 +953,27 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
               </button>
             </div>
           ) : isCreatingApkKey ? (
-            <button
-              type="button"
-              onClick={handleCreateApk}
-              disabled={creatingApk || !newApkName.trim()}
-              className="w-full h-10 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40 shadow-lg shadow-[#6366F1]/10"
-            >
-              {creatingApk ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
-              <span>Generate Key</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreatingApkKey(false);
+                  setNewApkName('');
+                }}
+                className="px-4 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateApk}
+                disabled={creatingApk || !newApkName.trim()}
+                className="flex-1 h-10 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40 shadow-lg shadow-[#6366F1]/10"
+              >
+                {creatingApk ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+                <span>Generate Key</span>
+              </button>
+            </div>
           ) : (
             <button
               type="button"
