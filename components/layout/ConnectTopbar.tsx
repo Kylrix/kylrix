@@ -52,7 +52,9 @@ import {
 
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/context/auth/AuthContext';
-import { getUserProfilePicId, hasEffectivePaidAccess } from '@/lib/utils';
+import { getUserProfilePicId, getEffectiveUsername, hasEffectivePaidAccess } from '@/lib/utils';
+import { getCachedIdentityById } from '@/lib/identity-cache';
+import { toast } from 'react-hot-toast';
 import { APP_BASE_PATHS } from '@/lib/constants';
 import { getAppTone, type KylrixApp } from '@/lib/sdk/design';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
@@ -256,8 +258,25 @@ export default function ConnectTopbar({
   const tone = getAppTone(activeApp);
   const appAccent = getAppColor(activeApp);
   const { profile: myProfile } = useProfile();
-  const profileName = user?.name || user?.email || 'User';
-  const profileUsername = myProfile?.username || (user as any)?.username || (user as any)?.prefs?.username || null;
+  const cachedIdentity = (user as any)?.$id ? getCachedIdentityById((user as any).$id) : null;
+  const rawUsername =
+    myProfile?.username ||
+    (user as any)?.prefs?.username ||
+    (user as any)?.prefs?.user_name ||
+    (user as any)?.username ||
+    (user as any)?.profile?.username ||
+    cachedIdentity?.username ||
+    getEffectiveUsername(user) ||
+    null;
+
+  const profileUsername = rawUsername ? String(rawUsername).replace(/^@+/, '').trim() : null;
+  const profileDisplayName =
+    myProfile?.displayName ||
+    user?.name ||
+    (user as any)?.prefs?.name ||
+    cachedIdentity?.displayName ||
+    (user?.email ? user.email.split('@')[0] : 'User');
+  const profileName = profileDisplayName;
   
   const [_isClient, setIsClient] = useState(true);
   useEffect(() => setIsClient(true), []);
@@ -265,10 +284,10 @@ export default function ConnectTopbar({
   const profileSeed = useMemo(
     () => ({
       username: profileUsername ? String(profileUsername).replace(/^@+/, '').toLowerCase() : null,
-      displayName: profileName,
+      displayName: profileDisplayName,
       avatar: profileAvatarUrl || profilePicId || null,
       userId: (user as any)?.$id || null}),
-    [profileAvatarUrl, profileName, profilePicId, profileUsername, user]);
+    [profileAvatarUrl, profileDisplayName, profilePicId, profileUsername, user]);
 
   const previewManager = useMemo(
     () =>
@@ -1822,6 +1841,36 @@ export default function ConnectTopbar({
     );
   };
 
+  const handleCopyUsername = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    const textToCopy = profileUsername ? `@${profileUsername}` : profileDisplayName || profileSeed.userId || '';
+    if (!textToCopy) return;
+    await navigator.clipboard.writeText(textToCopy);
+    setCopyState('copied-username');
+    toast.success(`Copied ${textToCopy}`);
+    window.setTimeout(() => setCopyState('idle'), 1600);
+  }, [profileUsername, profileDisplayName, profileSeed.userId]);
+
+  const handleCopyReferralLink = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    const base = window.location.origin;
+    const refCode = profileUsername
+      ? `u_${String(profileUsername).replace(/^@+/, '')}`
+      : `id_${profileSeed.userId || ''}`;
+    const refLink = `${base}/?ref=${refCode}`;
+    await navigator.clipboard.writeText(refLink);
+    setCopyState('copied-referral');
+    toast.success('Referral link copied');
+    window.setTimeout(() => setCopyState('idle'), 1600);
+  }, [profileUsername, profileSeed.userId]);
+
+  const handleOpenFullProfile = useCallback(() => {
+    if (!profileSeed.username) return;
+    stageProfileView(profileSeed as any, profileSeed.avatar || null);
+    handleCloseAll();
+    router.push(`/u/${encodeURIComponent(profileSeed.username)}?transition=profile`);
+  }, [profileSeed, handleCloseAll, router]);
+
   const renderProfilePanel = () => {
     if (!profileMenuAnchorEl || !user) return null;
 
@@ -1829,93 +1878,78 @@ export default function ConnectTopbar({
       ? `u_${String(profileUsername).replace(/^@+/, '')}`
       : `id_${profileSeed.userId || ''}`;
 
+    const primaryHandle = profileUsername ? `@${profileUsername}` : profileDisplayName;
+
     const profileContent = (
-      <div className="w-full max-w-full font-satoshi text-white p-4 space-y-3.5 box-border overflow-x-hidden min-w-0">
-        {/* Top bar header inside drawer */}
-        <div className="flex items-center justify-between pb-1 min-w-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center text-white shrink-0">
-              <Logo app={activeApp} size={15} variant="icon" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-xs font-black font-clash text-white uppercase tracking-wider m-0 truncate">
-                Account & Identity
-              </h3>
-              <p className="text-[10px] text-white/40 font-mono m-0 truncate">Kylrix Ecosystem</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleCloseAll}
-            className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/50 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
-          >
-            ✕
-          </button>
-        </div>
+      <div className="w-full max-w-full font-satoshi text-white p-3.5 space-y-3 box-border overflow-x-hidden min-w-0">
+        {/* 1. Primary Profile Header Card (Avatar + Username/Name Click-to-Copy + Close) */}
+        <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-3 min-w-0 max-w-full">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <IdentityAvatar
+              userId={user?.$id}
+              size={46}
+              pro={isPro}
+              fallback={(profileUsername || profileDisplayName || 'U')[0].toUpperCase()}
+            />
+            <div className="min-w-0 flex-1">
+              {/* Clickable primary handle to copy instantly */}
+              <button
+                type="button"
+                onClick={handleCopyUsername}
+                title="Click to copy handle"
+                className="group/handle flex items-center gap-1.5 min-w-0 max-w-full cursor-pointer bg-transparent border-none p-0 outline-none text-left"
+              >
+                <span className="text-sm font-black font-clash text-white group-hover/handle:text-[#818CF8] transition-colors truncate min-w-0">
+                  {primaryHandle}
+                </span>
+                <span className="shrink-0 p-1 rounded-md text-white/30 group-hover/handle:text-white group-hover/handle:bg-white/[0.06] transition-all">
+                  {copyState === 'copied-username' ? <Check size={12} className="text-[#10B981]" /> : <CopyIcon size={12} />}
+                </span>
+              </button>
 
-        {/* 1. Single Clean Identity Card */}
-        <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center gap-3.5 min-w-0 max-w-full">
-          <IdentityAvatar
-            userId={user?.$id}
-            size={48}
-            pro={isPro}
-            fallback={profileName.slice(0, 1).toUpperCase()}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-1 min-w-0">
-              <h4 className="text-sm font-bold text-white truncate m-0 font-clash min-w-0">
-                {profileName}
-              </h4>
-              <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#EC4899]/15 text-[#EC4899] font-black uppercase tracking-wider shrink-0">
-                {currentTier}
-              </span>
-            </div>
-
-            {/* Username / User ID Row */}
-            <div className="mt-1 flex items-center gap-1.5 min-w-0">
-              {profileUsername ? (
-                <div className="flex items-center gap-1 min-w-0 flex-1">
-                  <span className="text-xs font-mono font-bold text-[#818cf8] truncate select-all min-w-0">
-                    @{String(profileUsername).replace(/^@+/, '')}
+              <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#EC4899]/15 text-[#EC4899] font-black uppercase tracking-wider shrink-0">
+                  {currentTier}
+                </span>
+                {profileUsername && profileDisplayName && profileDisplayName !== profileUsername && (
+                  <span className="text-[11px] text-white/40 truncate min-w-0">
+                    {profileDisplayName}
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleCopyUsername}
-                    title="Copy username"
-                    className="p-1 rounded-md text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0"
-                  >
-                    {copyState === 'copied-username' ? <Check size={12} className="text-[#10B981]" /> : <CopyIcon size={12} />}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-1 w-full min-w-0">
-                  <span className="text-[11px] font-mono text-white/40 truncate select-all min-w-0">
-                    {shortenUserId(profileSeed.userId)}
-                  </span>
+                )}
+                {!profileUsername && (
                   <button
                     type="button"
                     onClick={handleGenerateUsername}
                     disabled={isGeneratingUsername}
                     className="px-2 py-0.5 rounded-lg bg-[#6366F1]/20 hover:bg-[#6366F1]/30 text-[#818cf8] text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 shrink-0"
                   >
-                    <Sparkles size={11} />
+                    <Sparkles size={10} />
                     <span>{isGeneratingUsername ? '...' : 'Claim @name'}</span>
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={handleCloseAll}
+            className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/50 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title="Close"
+          >
+            ✕
+          </button>
         </div>
 
-        {/* 2. Referral Card (Compact single-row) */}
+        {/* 2. Referral Invite Card (Compact single-row) */}
         <div className="p-3 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-1.5 min-w-0 max-w-full">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <span className="text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider flex items-center gap-1 min-w-0">
               <Users size={12} className="text-[#10B981] shrink-0" />
-              <span className="truncate">Referral Invite</span>
+              <span className="truncate">Referral Link</span>
             </span>
             <span className="text-[9px] font-mono font-bold text-[#10B981] bg-[#10B981]/10 px-1.5 py-0.2 rounded shrink-0">
-              +1.5 $KYL
+              +1.5 $KYL / join
             </span>
           </div>
           <div className="flex items-center gap-2 bg-[#161412] p-1.5 rounded-xl border border-white/[0.04] min-w-0 max-w-full overflow-hidden">
