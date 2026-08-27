@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Mail, ArrowLeft, Fingerprint, Bot, ExternalLink } from 'lucide-react';
+import { X, Mail, ArrowLeft, Fingerprint, Bot, ExternalLink, Terminal, Key, Copy, Check } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import OAuthButtons from '@/components/OAuthButtons';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { account, invalidateCurrentUserCache } from '@/lib/appwrite/client';
 import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction } from '@/lib/actions/auth-actions';
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
+import { KYLRIX_AGENTS_SKILL_INSTALL } from '@/lib/api/public';
 
 type LoginStep = 'initial' | 'email' | 'otp' | 'agent';
 
@@ -56,6 +57,7 @@ export function LoginDrawer() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [useOTPAlternative, setUseOTPAlternative] = useState(false);
+  const [copiedSkill, setCopiedSkill] = useState(false);
 
   useEffect(() => {
     if (step !== 'email') {
@@ -464,35 +466,68 @@ export function LoginDrawer() {
 
       case 'agent':
         return (
-          <div className="space-y-5 animate-fadeIn">
-            <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 space-y-2">
+          <div className="space-y-4 animate-fadeIn font-satoshi">
+            <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2">
               <div className="flex items-center gap-2">
-                <Bot className="w-4 h-4 text-[#A5B4FC]" />
-                <span className="text-xs font-bold text-[#A5B4FC] uppercase tracking-wider">
+                <div className="w-6 h-6 rounded-lg bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center">
+                  <Terminal className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-xs font-bold text-white font-mono uppercase tracking-wider">
                   Agent Authentication
                 </span>
               </div>
-              <p className="text-xs text-white/70 leading-relaxed font-satoshi">
-                Autonomous agents authenticate using <strong>Agent Provisioning Keys</strong>. These specialized tokens grant zero access to human user data while letting the agent create its own identity, manage encryption keys, and publish Nostr events.
+              <p className="text-xs text-white/60 leading-relaxed font-sans m-0">
+                Autonomous agents operate in isolated environments using <strong>Agent Provisioning Keys</strong> (<code className="text-[#818CF8] font-mono">kyl_apk_…</code>). They have zero access to your private notes or credentials.
               </p>
             </div>
 
-            <div className="space-y-3">
+            {/* Install Box */}
+            <div className="p-3 rounded-xl bg-[#0A0908] border border-white/[0.06] space-y-1.5">
+              <p className="text-[11px] font-bold text-white/50 font-mono uppercase tracking-wider m-0">
+                CLI Skill Install
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 min-w-0 text-[11px] font-mono text-white/80 bg-[#161412] border border-white/[0.04] rounded-lg px-2.5 py-1.5 truncate select-all">
+                  {KYLRIX_AGENTS_SKILL_INSTALL}
+                </code>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(KYLRIX_AGENTS_SKILL_INSTALL);
+                      setCopiedSkill(true);
+                      toast.success('Install command copied');
+                      setTimeout(() => setCopiedSkill(false), 2000);
+                    } catch {
+                      toast.success(KYLRIX_AGENTS_SKILL_INSTALL);
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-[#6366F1] hover:bg-[#5254E8] text-white cursor-pointer flex items-center gap-1 shrink-0 transition-colors"
+                >
+                  {copiedSkill ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedSkill ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2.5 pt-1">
               <Link
-                href="/docs/agents"
+                href="/settings?tab=agents"
                 onClick={handleClose}
-                className="w-full h-[52px] rounded-xl bg-white hover:bg-white/90 text-black font-black text-sm transition-all flex items-center justify-center gap-2"
+                className="w-full h-[48px] rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#6366F1]/10 select-none cursor-pointer"
               >
-                <span>Read Agent Documentation</span>
-                <ExternalLink className="w-4 h-4" />
+                <Key className="w-4 h-4 text-white" />
+                <span>Manage Agent Keys in Settings</span>
               </Link>
 
               <Link
-                href="/settings?tab=developers"
+                href="/docs/agents"
                 onClick={handleClose}
-                className="w-full h-[50px] rounded-xl border border-white/10 hover:border-white/20 bg-white/[0.03] text-white/80 hover:text-white font-bold text-xs transition-all flex items-center justify-center gap-2"
+                className="w-full h-[46px] rounded-xl bg-[#0A0908] hover:bg-[#161412] border border-white/10 hover:border-white/20 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 select-none cursor-pointer"
               >
-                <span>Manage Agent Keys in Settings</span>
+                <span>Read Agent Documentation</span>
+                <ExternalLink className="w-3.5 h-3.5 text-white/50" />
               </Link>
             </div>
           </div>
