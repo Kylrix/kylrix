@@ -2157,8 +2157,8 @@ export default function ConnectTopbar({
     if (!appMenuAnchorEl) return null;
 
     const workspaceSwitcher = (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5, width: '100%', minWidth: 0 }}>
           <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, color: '#9B9691', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             Workspaces
           </Typography>
@@ -2204,10 +2204,12 @@ export default function ConnectTopbar({
               }}
               sx={{
                 width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                px: 2,
+                px: { xs: 1.25, sm: 2 },
                 py: 1.25,
                 borderRadius: '14px',
                 bgcolor: isActive ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.02)',
@@ -2216,20 +2218,22 @@ export default function ConnectTopbar({
                 color: 'white',
                 textAlign: 'left',
                 cursor: 'pointer',
+                minWidth: 0,
+                overflow: 'hidden',
                 '&:hover': {
                   bgcolor: isActive ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255,255,255,0.04)',
                 },
               }}
             >
-              <Box sx={{ minWidth: 0, flex: 1, pr: 1, overflow: 'hidden' }}>
-                <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
+              <Box sx={{ minWidth: 0, flex: '1 1 0%', pr: 1, overflow: 'hidden' }}>
+                <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
                   {w.title}
                 </Typography>
-                <Typography sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
+                <Typography sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
                   {w.isPersonal ? 'Default workspace' : 'Workspace'}
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, flexGrow: 0 }}>
                 {!w.isPersonal && (
                   <>
                     <IconButton
@@ -2326,10 +2330,12 @@ export default function ConnectTopbar({
                   }}
                   sx={{
                     width: '100%',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    px: 2,
+                    px: { xs: 1.25, sm: 2 },
                     py: 1.25,
                     borderRadius: '14px',
                     bgcolor: isActive ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255, 255, 255, 0.02)',
@@ -2338,20 +2344,22 @@ export default function ConnectTopbar({
                     color: 'white',
                     textAlign: 'left',
                     cursor: 'pointer',
+                    minWidth: 0,
+                    overflow: 'hidden',
                     '&:hover': {
                       bgcolor: isActive ? 'rgba(99, 102, 241, 0.22)' : 'rgba(255,255,255,0.04)',
                     },
                   }}
                 >
-                  <Box sx={{ minWidth: 0, flex: 1, pr: 1, overflow: 'hidden' }}>
-                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
+                  <Box sx={{ minWidth: 0, flex: '1 1 0%', pr: 1, overflow: 'hidden' }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
                       {w.title}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.72rem', color: 'rgba(99, 102, 241, 0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
+                    <Typography sx={{ fontSize: '0.72rem', color: 'rgba(99, 102, 241, 0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
                       {w.role ? `Shared (${w.role})` : 'Shared with you'}
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, flexGrow: 0 }}>
                     <IconButton
                       size="small"
                       onClick={(e: MouseEvent) => {
@@ -2484,10 +2492,12 @@ export default function ConnectTopbar({
                     }}
                     sx={{
                       width: '100%',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      px: 2,
+                      px: { xs: 1.25, sm: 2 },
                       py: 1.25,
                       borderRadius: '14px',
                       bgcolor: isActive ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255, 255, 255, 0.02)',
@@ -2496,20 +2506,22 @@ export default function ConnectTopbar({
                       color: 'white',
                       textAlign: 'left',
                       cursor: 'pointer',
+                      minWidth: 0,
+                      overflow: 'hidden',
                       '&:hover': {
                         bgcolor: isActive ? 'rgba(99, 102, 241, 0.22)' : 'rgba(255,255,255,0.04)',
                       },
                     }}
                   >
-                    <Box sx={{ minWidth: 0, flex: 1, pr: 1, overflow: 'hidden' }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#818CF8' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
+                    <Box sx={{ minWidth: 0, flex: '1 1 0%', pr: 1, overflow: 'hidden' }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#818CF8' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
                         {w.title}
                       </Typography>
-                      <Typography sx={{ fontSize: '0.72rem', color: 'rgba(129, 140, 248, 0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
+                      <Typography sx={{ fontSize: '0.72rem', color: 'rgba(129, 140, 248, 0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
                         Agent Workspace
                       </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, flexGrow: 0 }}>
                       <IconButton
                         size="small"
                         onClick={(e: MouseEvent) => {
