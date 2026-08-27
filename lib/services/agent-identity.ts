@@ -198,7 +198,7 @@ export const AgentIdentityService = {
   async getAgentMekHex(agentId: string): Promise<string | null> {
     const rawId = agentId.replace(/^agent_/, '');
     try {
-      // 1. Try fetching from agents table
+      // 1. Try fetching from agents table directly
       const agentRes = await tablesDB.getRow<any>(
         APPWRITE_CONFIG.DATABASES.FLOW,
         APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
@@ -213,12 +213,50 @@ export const AgentIdentityService = {
         } catch {}
       }
 
+      // 1b. Try querying agents table by workspaceId
+      try {
+        const agentByWs = await tablesDB.listRows<any>(
+          APPWRITE_CONFIG.DATABASES.FLOW,
+          APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
+          [Query.equal('workspaceId', rawId), Query.limit(1)]
+        );
+        if (agentByWs.rows && agentByWs.rows.length > 0 && agentByWs.rows[0].config) {
+          const parsed = JSON.parse(agentByWs.rows[0].config);
+          if (parsed.mekHex) return String(parsed.mekHex);
+          if (parsed.entropyHex) return String(parsed.entropyHex);
+        }
+      } catch {}
+
+      // 1c. Try querying projects table to find linked agentId
+      try {
+        const projectRow = await tablesDB.getRow<any>(
+          APPWRITE_CONFIG.DATABASES.FLOW,
+          (APPWRITE_CONFIG.TABLES as any).PROJECTS || 'projects',
+          rawId
+        ).catch(() => null);
+
+        if (projectRow) {
+          let nestedAgentId = projectRow.agentId;
+          if (!nestedAgentId && projectRow.metadata) {
+            try {
+              const meta = typeof projectRow.metadata === 'string' ? JSON.parse(projectRow.metadata) : projectRow.metadata;
+              if (meta.agentId) nestedAgentId = meta.agentId;
+            } catch {}
+          }
+          if (nestedAgentId) {
+            const nestedMek = await this.getAgentMekHex(String(nestedAgentId));
+            if (nestedMek) return nestedMek;
+          }
+        }
+      } catch {}
+
       // 2. Try fetching from profiles table
       const profile = await this.getAgentProfile(rawId);
       if (profile?.preferences) {
         try {
           const pref = typeof profile.preferences === 'string' ? JSON.parse(profile.preferences) : profile.preferences;
           if (pref.mekHex) return String(pref.mekHex);
+          if (pref.entropyHex) return String(pref.entropyHex);
           if (pref.encryptedKeyBlob && ecosystemSecurity.status.isUnlocked) {
             const decryptedJson = await ecosystemSecurity.decrypt(pref.encryptedKeyBlob);
             const decrypted = JSON.parse(decryptedJson);

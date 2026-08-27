@@ -9,6 +9,7 @@ import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuI
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { useWorkspace } from '@/context/WorkspaceContext';
 
 export default function CredentialItem({
   credential,
@@ -86,6 +87,8 @@ export default function CredentialItem({
     };
   }, []);
 
+  const { activeWorkspace } = useWorkspace();
+
   useEffect(() => {
     let cancelled = false;
     const tryDecrypt = async () => {
@@ -94,18 +97,17 @@ export default function CredentialItem({
         if (!cancelled) setDisplayCredential(credential);
         return;
       }
-      // Only decrypt when vault is unlocked and we are currently sitting with placeholder
-      if (!isVaultUnlockedState) return;
+      const isAgentic = Boolean(activeWorkspace?.isAgentic || (credential as any).isAgentic);
+      // Only decrypt when vault is unlocked or inside an agentic workspace
+      if (!isVaultUnlockedState && !isAgentic) return;
       try {
-        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
-        if (!masterPassCrypto.isVaultUnlocked()) return;
-        const { decryptField } = await import('@/lib/masterpass-crypto');
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
         const updated: any = { ...credential };
         let changed = false;
         let dekKey: CryptoKey | null = null;
         if (credential.dek && looksEncrypted(credential.dek)) {
           try {
-            const dekBase64 = await decryptField(credential.dek);
+            const dekBase64 = await ecosystemSecurity.decryptWithWorkspace(credential.dek, activeWorkspace);
             const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
             dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
           } catch {}
@@ -116,7 +118,7 @@ export default function CredentialItem({
             try {
               let plain: string | null = null;
               if (dekKey) plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
-              else plain = await decryptField(val);
+              else plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
               if (plain && plain !== val) { updated[field] = plain; changed = true; }
             } catch {}
           }
@@ -126,7 +128,7 @@ export default function CredentialItem({
     };
     void tryDecrypt();
     return () => { cancelled = true; };
-  }, [credential, isVaultUnlockedState]);
+  }, [credential, isVaultUnlockedState, activeWorkspace]);
 
   const handleCopy = (value: string) => {
     onCopy(value);

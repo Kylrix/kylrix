@@ -6,6 +6,7 @@ import type { Credentials } from '@/lib/appwrite/types';
 import { storage, deleteCredential } from '@/lib/appwrite';
 import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { 
   ArrowLeft, 
   X, 
@@ -47,16 +48,19 @@ export default function CredentialDetail({
   const { requestSudo } = useSudo();
   const { open: openUnified } = useUnifiedDrawer();
 
+  const { activeWorkspace } = useWorkspace();
+
   useEffect(() => {
     setLiveCredential(credential);
     let isCancelled = false;
 
     const decryptAllFields = async () => {
       try {
-        const { decryptField, masterPassCrypto } = await import('@/lib/masterpass-crypto');
+        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
         const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
         
-        if (!masterPassCrypto.isVaultUnlocked()) return;
+        const isAgentic = Boolean(activeWorkspace?.isAgentic || (credential as any).isAgentic);
+        if (!masterPassCrypto.isVaultUnlocked() && !isAgentic) return;
 
         const fieldsToDecrypt = ['name', 'username', 'password', 'url', 'notes', 'customFields'];
         const updated = { ...credential };
@@ -65,7 +69,7 @@ export default function CredentialDetail({
         let dekKey: CryptoKey | null = null;
         if (credential.dek) {
           try {
-            const dekBase64 = await decryptField(credential.dek);
+            const dekBase64 = await ecosystemSecurity.decryptWithWorkspace(credential.dek, activeWorkspace);
             const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
             dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
           } catch {}
@@ -80,10 +84,10 @@ export default function CredentialDetail({
                 try {
                   plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
                 } catch {
-                  plain = await decryptField(val);
+                  plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
                 }
               } else {
-                plain = await decryptField(val);
+                plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
               }
               if (plain && plain !== val) {
                 (updated as any)[field] = plain;
@@ -107,7 +111,7 @@ export default function CredentialDetail({
     return () => {
       isCancelled = true;
     };
-  }, [credential]);
+  }, [credential, activeWorkspace]);
 
   const handleShareLink = useCallback(async () => {
     try {

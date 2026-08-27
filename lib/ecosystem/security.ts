@@ -440,10 +440,25 @@ class EcosystemSecurity {
    * Resolves the appropriate MEK for the given workspace.
    * If the workspace is agentic, retrieves the agent's MEK; otherwise returns user's masterKey.
    */
-  async resolveWorkspaceMek(workspace?: { isAgentic?: boolean; agentId?: string | null } | null): Promise<CryptoKey | null> {
-    if (workspace?.isAgentic && workspace.agentId) {
-      const agentKey = await this.getAgentMek(workspace.agentId);
-      if (agentKey) return agentKey;
+  async resolveWorkspaceMek(workspace?: { isAgentic?: boolean; agentId?: string | null; id?: string; ownerId?: string; metadata?: any } | null): Promise<CryptoKey | null> {
+    if (workspace?.isAgentic) {
+      let agentId = workspace.agentId;
+      if (!agentId && workspace.metadata) {
+        try {
+          const meta = typeof workspace.metadata === 'string' ? JSON.parse(workspace.metadata) : workspace.metadata;
+          if (meta.agentId) agentId = meta.agentId;
+        } catch {}
+      }
+      if (!agentId && workspace.ownerId && workspace.ownerId.startsWith('agent_')) {
+        agentId = workspace.ownerId.replace(/^agent_/, '');
+      }
+      if (!agentId && workspace.id) {
+        agentId = workspace.id;
+      }
+      if (agentId) {
+        const agentKey = await this.getAgentMek(agentId);
+        if (agentKey) return agentKey;
+      }
     }
     return this.masterKey;
   }

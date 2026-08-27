@@ -99,17 +99,16 @@ function TOTPCardStable({
     const tryDecrypt = async () => {
       const isEncrypted = looksEncrypted(totp.issuer) || looksEncrypted(totp.accountName) || looksEncrypted(totp.secretKey) || looksEncrypted((totp as any).dek);
       if (!isEncrypted) { if (!cancelled) setDisplayTotp(totp); return; }
-      if (!isVaultUnlockedState) return;
+      const isAgentic = Boolean(activeWorkspace?.isAgentic || (totp as any).isAgentic);
+      if (!isVaultUnlockedState && !isAgentic) return;
       try {
-        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
-        if (!masterPassCrypto.isVaultUnlocked()) return;
-        const { decryptField } = await import('@/lib/masterpass-crypto');
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
         const updated: any = { ...totp };
         let changed = false;
         let dekKey: any = null;
         if ((totp as any).dek && looksEncrypted((totp as any).dek)) {
           try {
-            const dekBase64 = await decryptField((totp as any).dek);
+            const dekBase64 = await ecosystemSecurity.decryptWithWorkspace((totp as any).dek, activeWorkspace);
             const rawKey = new Uint8Array(atob(dekBase64).split('').map((c: any) => c.charCodeAt(0)));
             dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
           } catch {}
@@ -120,7 +119,7 @@ function TOTPCardStable({
             try {
               let plain: string | null = null;
               if (dekKey) plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
-              else plain = await decryptField(val);
+              else plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, (totp as any).dek);
               if (plain && plain !== val) { updated[field] = plain; changed = true; }
             } catch {}
           }
@@ -130,7 +129,7 @@ function TOTPCardStable({
     };
     void tryDecrypt();
     return () => { cancelled = true; };
-  }, [totp.$id, totp.issuer, totp.accountName, totp.secretKey, (totp as any).dek, isVaultUnlockedState]);
+  }, [totp.$id, totp.issuer, totp.accountName, totp.secretKey, (totp as any).dek, isVaultUnlockedState, activeWorkspace]);
   const isLockedEncrypted = !isVaultUnlockedState && looksEncrypted(displayTotp.secretKey);
   const code = isLockedEncrypted ? '--- ---' : generateTOTP(displayTotp.secretKey, { step: displayTotp.period || 30, digits: displayTotp.digits || 6 });
   const timeRemaining = getTimeRemaining(displayTotp.period || 30);
