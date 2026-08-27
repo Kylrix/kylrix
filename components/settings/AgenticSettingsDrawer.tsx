@@ -15,7 +15,8 @@ import {
   Trash2,
   Terminal,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 import { SYSTEM_AGENTS, type SystemAgentDefinition } from '@/lib/agentic/system-agents';
 import type { AgentRecord } from '@/lib/services/agentic';
@@ -290,9 +291,24 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
       {/* Top Header */}
       <div className="flex items-center justify-between border-b border-white/[0.06] bg-[#161412] px-5 py-3.5 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-[#0A0908] border border-white/[0.06] grid place-items-center text-[#F59E0B]">
-            {mode.type === 'manage_provisioning_keys' ? <Key size={16} /> : <Bot size={16} />}
-          </div>
+          {mode.type === 'manage_provisioning_keys' && isCreatingApkKey && !newlyCreatedApk ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreatingApkKey(false);
+                setNewApkName('');
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white font-bold text-xs transition-colors cursor-pointer"
+              title="Back to Keys"
+            >
+              <ArrowLeft size={14} />
+              <span>Back</span>
+            </button>
+          ) : (
+            <div className="h-8 w-8 rounded-lg bg-[#0A0908] border border-white/[0.06] grid place-items-center text-[#F59E0B]">
+              {mode.type === 'manage_provisioning_keys' ? <Key size={16} /> : <Bot size={16} />}
+            </div>
+          )}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-mono m-0">
               {mode.type === 'preview_system' && 'Internal System Agent'}
@@ -900,27 +916,15 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
               </button>
             </div>
           ) : isCreatingApkKey ? (
-            <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCreatingApkKey(false);
-                  setNewApkName('');
-                }}
-                className="px-4 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-bold text-xs transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateApk}
-                disabled={creatingApk || !newApkName.trim()}
-                className="px-5 h-10 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 ml-auto shadow-lg shadow-[#6366F1]/10"
-              >
-                {creatingApk ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
-                <span>Generate Key</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleCreateApk}
+              disabled={creatingApk || !newApkName.trim()}
+              className="w-full h-10 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40 shadow-lg shadow-[#6366F1]/10"
+            >
+              {creatingApk ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+              <span>Generate Key</span>
+            </button>
           ) : (
             <button
               type="button"

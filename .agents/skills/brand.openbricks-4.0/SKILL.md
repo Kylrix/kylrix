@@ -129,6 +129,17 @@ Drawer top action bars must follow a strict 3-slot button order:
   - 🚫 **Negative Feature (Strictly Prohibited)**: Placing primary action buttons inside the scrollable content container where users must scroll through questions or text to reach them.
   - The content area (`flex-1 overflow-y-auto`) scrolls independently while the action footer remains pinned and immediately clickable at all times.
 
+## 10. Top Bar Back Button Placement & Real Estate Optimization
+
+- **Leading Top Bar Back Control**:
+  - In multi-step flows, wizard states, or sub-view transitions (e.g., `currentStep > 0`, `isCreatingKey`, sub-page drilling), place the **Back button** (`ArrowLeft` / `ChevronLeft`) on the **leading (left) side of the top header bar**, on the exact same horizontal row as the trailing control icons (`Pop Out`, `Expand/Contract`, `Dismiss`).
+- **Thin Minimalist Header Layer**:
+  - Keep the top controls bar slim (`px-4 py-2.5` / `px-5 py-3 shrink-0`) placed directly above titles and content. It must never eat into body content real estate.
+- **Conditional & Conspicuous**:
+  - The Back button displays conditionally only when backward navigation is possible, with conspicuous high-contrast styling (`text-white/70 hover:text-white`).
+- **Footer Real Estate Preservation**:
+  - Placing the Back button in the top bar relieves the bottom fixed action bar from splitting space, giving 100% of the footer width to the primary forward action button (`Next`, `Submit`, `Generate Key`, `Mint Agent`).
+
 ---
 
 ## Summary Checklist for OpenBricks 4.0 Upgrades
@@ -138,6 +149,7 @@ Drawer top action bars must follow a strict 3-slot button order:
 | **Access Picker** | Sub-drawer popup inside bottom drawer | Inline segmented toggle (`Public` / `Private`) |
 | **Drawer Height** | Dynamic / content-based varying height | Fixed 60% viewport height (`60dvh`) |
 | **Drag Handles** | Centered floating pill drag handles | Thin 1px outline edge (`rgba(255,255,255,0.08)`) |
+| **Back Button** | Crammed in bottom footer next to CTA | Leading top controls bar (`ArrowLeft` above title) |
 | **Action Buttons** | Embedded in scroll container (needs scroll) | Fixed pinned bottom footer (`shrink-0 bg-[#161412]`) |
 | **Surfaces** | Translucent blur or inconsistent blacks | Signature ash shell (`#161412`) + pitch-black wells (`#0A0908`) |
 | **Top Action Icons** | Randomly placed / missing buttons | Standardized: `Pop Out` → `Expand/Contract` → `Dismiss/Done` |

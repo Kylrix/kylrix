@@ -413,9 +413,23 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
 
             {/* Minimal Slim Topbar (No crowded text, full real-estate) */}
             <div className="px-4 py-2.5 flex items-center justify-between border-b border-white/5 bg-[#161412] shrink-0">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest truncate">
-                    {form?.title || 'Form'}
-                </span>
+                <div className="flex items-center gap-2 min-w-0">
+                    {currentStep > 0 && !submitted ? (
+                        <button
+                            type="button"
+                            onClick={handleBack}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors text-xs font-bold cursor-pointer"
+                            title="Go Back"
+                        >
+                            <ArrowLeft size={15} />
+                            <span>Back</span>
+                        </button>
+                    ) : (
+                        <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest truncate">
+                            {form?.title || 'Form'}
+                        </span>
+                    )}
+                </div>
 
                 <div className="flex items-center gap-1 shrink-0">
                     <button 
@@ -540,39 +554,26 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                 )}
             </div>
 
-            {/* Fixed Bottom Action Bar: Always visible, never requires scroll */}
+            {/* Fixed Bottom Action Bar: Always visible, full-width CTA */}
             {!loading && !submitted && activeField && (
                 <div className="shrink-0 border-t border-white/5 bg-[#161412] px-5 py-3 md:py-3.5 z-10">
-                    <div className="max-w-3xl w-full mx-auto flex items-center justify-between gap-3">
-                        {currentStep > 0 ? (
-                            <button
-                                type="button"
-                                onClick={handleBack}
-                                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                            >
-                                <ArrowLeft size={14} />
-                                <span>Back</span>
-                            </button>
-                        ) : (
-                            <div />
-                        )}
-
+                    <div className="max-w-3xl w-full mx-auto">
                         <button
                             type="button"
                             onClick={handleNext}
                             disabled={submitting}
-                            className="px-5 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-lg shadow-[#6366F1]/10 ml-auto"
+                            className="w-full h-11 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-lg shadow-[#6366F1]/10"
                         >
                             {submitting ? (
                                 <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
                             ) : currentStep < visibleFields.length - 1 ? (
                                 <>
                                     <span>Next</span>
-                                    <ArrowRight size={14} />
+                                    <ArrowRight size={15} />
                                 </>
                             ) : (
                                 <>
-                                    <Send size={14} />
+                                    <Send size={15} />
                                     <span>Submit</span>
                                 </>
                             )}
