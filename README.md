@@ -16,11 +16,13 @@
   <a href="LICENSE">AGPL-3.0-or-later</a> ·
   <a href="ARCHITECTURE.md">Architecture</a> ·
   <a href="https://www.kylrix.space">kylrix.space</a> ·
+  <a href="https://www.kylrix.space/sponsor">Sponsor</a> ·
   <a href="https://www.kylrix.space/docs/api">API Docs</a>
 </p>
 
 <p align="center">
   <a href="https://smithery.ai/servers/kylrix/kylrix"><img src="https://smithery.ai/badge/kylrix/kylrix" alt="smithery badge"></a>
+  <a href="https://www.kylrix.space/sponsor"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-EC4899?style=flat&logo=githubsponsors&logoColor=white" alt="Sponsor Kylrix"></a>
 </p>
 
 ---
@@ -190,6 +192,20 @@ Comprehensive documentation for all interfaces is available in the [Kylrix Docs]
 | **Third-Party App Authentication** | Sign in with Kylrix (OAuth 2.1 / OIDC) | Authorization Code flow with PKCE, consent management (`/oauth/consent`), JWKS validation, and granular user scopes. | [docs/oauth2.md](https://github.com/Kylrix/kylrix/blob/master/docs/oauth2.md) |
 | **Autonomous Workspace Agents** | Agentic Runtime & Provisioning | Zero-trust Agent Provisioning Keys, sovereign EVM/Nostr agent identities, and sandboxed workspace memory execution. | [docs/agents.md](https://github.com/Kylrix/kylrix/blob/master/docs/agents.md) |
 | **Cross-Object Reactive Automations** | Flows & Event Engine | Declarative trigger-action routines at `/flows` to automate task lifecycles, webhook reactions, and cross-table event pipelines. | [docs/api.md](https://github.com/Kylrix/kylrix/blob/master/docs/api.md) |
+
+---
+
+## Sponsor & Support
+
+Support ongoing open-source development, zero-trust cryptographic research, and native Model Context Protocol (MCP) tooling.
+
+<p align="center">
+  <a href="https://www.kylrix.space/sponsor" target="_blank" rel="noopener noreferrer">
+    <img src="https://img.shields.io/badge/Sponsor_Kylrix-%E2%9D%A4-EC4899?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor Kylrix" />
+  </a>
+</p>
+
+Sponsorships fund continuous sovereign local-first development and feature instant Lightning & Nostr Zaps, multi-chain crypto checkout (BlockBee), and on-profile Sovereign Badges.
 
 ---
 
