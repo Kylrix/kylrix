@@ -248,6 +248,21 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   useEffect(() => { notesRef.current = notes; }, [notes]);
   useEffect(() => { cursorRef.current = cursor; }, [cursor]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleLogout = () => {
+      setNotes([]);
+      notesRef.current = [];
+      setTotalNotes(0);
+      setCursor(null);
+      setHasMore(true);
+      setIsCacheLoaded(false);
+      hydratedUserIdRef.current = null;
+    };
+    window.addEventListener('kylrix:auth:logout', handleLogout);
+    return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
+  }, []);
+
   // Instant local hydration — same cascade as attach-object drawer / goals.
   // Re-runs when auth resolves guest → real user so we don't stick on an empty guest miss.
   useEffect(() => {

@@ -194,6 +194,25 @@ export async function getRxDB(): Promise<RxDatabase> {
     return dbPromise;
 }
 
+export async function purgeRxDB(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    try {
+        if (dbPromise) {
+            const db = await dbPromise.catch(() => null);
+            if (db) {
+                if (typeof (db as any).remove === 'function') {
+                    await (db as any).remove().catch(() => {});
+                } else if (typeof (db as any).destroy === 'function') {
+                    await (db as any).destroy().catch(() => {});
+                }
+            }
+        }
+    } catch {}
+    dbPromise = null;
+    await removeDatabaseSafely(DB_NAME).catch(() => {});
+    await removeDatabaseSafely('kylrix_nexus_db_v2').catch(() => {});
+}
+
 /**
  * Migration helper: Moves localStorage keys to RxDB cache.
  */

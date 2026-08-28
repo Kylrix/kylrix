@@ -56,6 +56,19 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
             await migrateLocalStorageToRxDB();
             console.log('[Nexus] RxDB substrate initialized and legacy data migrated.');
         })();
+
+        const handleClear = () => {
+            memoryCache.current.clear();
+            activeRequests.current.clear();
+            backgroundRefreshRequests.current.clear();
+        };
+
+        window.addEventListener('kylrix:nexus:clear', handleClear);
+        window.addEventListener('kylrix:auth:logout', handleClear);
+        return () => {
+            window.removeEventListener('kylrix:nexus:clear', handleClear);
+            window.removeEventListener('kylrix:auth:logout', handleClear);
+        };
     }, []);
 
     const getCachedData = useCallback(function<T>(key: string, ttl: number = DEFAULT_TTL): T | null {

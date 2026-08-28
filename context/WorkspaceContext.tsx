@@ -218,6 +218,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleLogout = () => {
+      hydratedRef.current = false;
+      lastSetIdRef.current = 'personal';
+      lastUserIdRef.current = null;
+      setActiveWorkspaceIdState('personal');
+      setWorkspaces([personalWorkspace]);
+    };
+    window.addEventListener('kylrix:auth:logout', handleLogout);
+    return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
+  }, [personalWorkspace]);
+
+  useEffect(() => {
     if (lastUserIdRef.current !== userId) {
       hydratedRef.current = false;
       lastSetIdRef.current = userId;
@@ -234,12 +247,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     void (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const [userProjects, globalProjects, localShared] = await Promise.all([
+        const [userProjects, localShared] = await Promise.all([
           LocalEngine.cacheGet(`f_projects_list_${userId}`),
-          LocalEngine.cacheGet('f_projects_list'),
           LocalEngine.cacheGet<WorkspaceItem[]>(`visited_shared_workspaces_${userId}`).catch(() => []),
         ]);
-        const mapped = mapProjectRows(userProjects || globalProjects || []);
+        const mapped = mapProjectRows(userProjects || []);
         const mappedLocal = Array.isArray(localShared)
           ? localShared.filter((s) => s.id && s.id !== personalWorkspace.id)
           : [];

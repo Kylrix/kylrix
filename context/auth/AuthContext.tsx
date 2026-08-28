@@ -63,6 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshUserRef = useRef<() => Promise<User | null>>(async () => null);
   const attemptSilentAuthRef = useRef<() => Promise<boolean>>(async () => false);
   const sessionVerifySeq = useRef(0);
+  const lastSeenUserIdRef = useRef<string | null>(initialPulseSnapshot?.$id || null);
 
   // 2. Background Revalidation (Mandatory account.get)
   const attemptSilentAuth = useCallback(async (): Promise<boolean> => {
@@ -122,6 +123,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 1. Get from cache or query Appwrite
       const session = await getCurrentUser(forceRefresh || isOAuthSuccess);
       if (session && session.$id) {
+        if (lastSeenUserIdRef.current && lastSeenUserIdRef.current !== session.$id) {
+          const { purgeAllClientStorageOnLogout } = await import('@/lib/services/wipe-client-storage');
+          await purgeAllClientStorageOnLogout();
+        }
+        lastSeenUserIdRef.current = session.$id;
         setUser(session as any);
         setKylrixPulse(session);
 
@@ -134,10 +140,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return session as any;
       }
 
+      lastSeenUserIdRef.current = null;
       setUser(null);
       clearKylrixPulse();
       return null;
     } catch (_error) {
+      lastSeenUserIdRef.current = null;
       setUser(null);
       clearKylrixPulse();
       return null;
@@ -272,12 +280,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = useCallback(async () => {
     sessionVerifySeq.current += 1;
+    lastSeenUserIdRef.current = null;
     try {
       await account.deleteSession('current');
+    } catch {
     } finally {
-      invalidateCurrentUserCache();
+      const { purgeAllClientStorageOnLogout } = await import('@/lib/services/wipe-client-storage');
+      await purgeAllClientStorageOnLogout();
       setUser(null);
-      clearKylrixPulse();
       setIDMWindowOpen(false);
     }
   }, []);

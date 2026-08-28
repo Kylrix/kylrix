@@ -41,7 +41,7 @@
 ### 🤖 Agent Verification & Tooling Policy (STRICT)
 - **No Playwright Unless Asked**: Do not run Playwright, headless browser verification, screenshot capture, or pixel/FPS checks unless the user explicitly requests it. User's eyes are the verifier by default.
 - **No Agent Dev Servers**: Do not start dedicated dev servers (`pnpm dev`, `next dev`, etc.) as the agent. Port `3005` is user-pinned — never occupy it or spawn competing servers. If a running server is needed, ask the user to start it.
-- **No Build/Lint Unless Asked**: Do not run `pnpm build`, `pnpm lint`, `tsc`, or equivalent verification gates unless the user explicitly tells you to. Default to surgical code edits only.
+- **No Build/Lint Unless Asked (STRICT)**: NEVER run `pnpm build`, `pnpm lint`, `tsc`, or equivalent verification commands unless the user explicitly asks for them in their prompt. Zero unprompted linting or building under all circumstances. Default strictly to surgical code edits.
 - **CI Workflows Disabled By Default (STRICT)**: Ota governance and Docker build/publish GitHub Actions workflows are disabled by default on standard commits to ensure ultra-fast push velocity. They must ONLY run when the user explicitly requests `pnpm build` and `pnpm lint` verification, both commands succeed with 0 errors, and the agent tags the commit message with `[ci-build]` (or uses `workflow_dispatch`). Standard feature/bugfix commits must never trigger CI runs.
 
 ### 📡 Real-Time Local Dev Console & Error Streaming (`/api/dev/logs`)

@@ -60,6 +60,15 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
   const [pinSets, setPinSets] = useState<Record<PinnableResourceType, Set<string>>>(defaultPinSets);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleLogout = () => {
+      setPinSets(defaultPinSets());
+    };
+    window.addEventListener('kylrix:auth:logout', handleLogout);
+    return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
+  }, []);
+
   // Fast initial hydration from LocalEngine / IndexedDB
   useEffect(() => {
     if (!user?.$id) return;

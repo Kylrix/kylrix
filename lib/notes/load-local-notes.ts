@@ -51,11 +51,7 @@ export async function loadNotesFromLocalCopy(opts: {
   }
 
   const userId = String(opts.userId || '').trim() || 'guest';
-  const nexusKeys = [
-    `initial_notes_${userId}`,
-    'initial_notes_page',
-    userId !== 'guest' ? 'initial_notes_guest' : '',
-  ].filter(Boolean);
+  const nexusKeys = [`initial_notes_${userId}`];
 
   // 1) Sync Nexus memory (0ms)
   for (const key of nexusKeys) {

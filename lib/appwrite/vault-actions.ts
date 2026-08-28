@@ -255,13 +255,9 @@ export async function logoutAppwrite() {
   try {
     await appwriteAccount.deleteSession("current");
   } catch { }
-  invalidateCurrentUserCache();
-  // Clear vault/session data
   if (typeof window !== "undefined") {
-    sessionStorage.removeItem("vault_unlocked");
-    sessionStorage.removeItem("kylrix_vault_unlocked");
-    localStorage.removeItem("vault_timeout_minutes");
-    // Optionally clear other app-specific keys here
+    const { purgeAllClientStorageOnLogout } = await import('@/lib/services/wipe-client-storage');
+    await purgeAllClientStorageOnLogout();
   }
 }
 

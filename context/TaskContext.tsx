@@ -1005,6 +1005,18 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     };
   }, [authUser?.$id, getCachedData, getCachedDataAsync, dispatchSyncedData]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleLogout = () => {
+      tasksRef.current = [];
+      threadTasksRef.current = [];
+      dispatch({ type: 'SET_DATA', payload: { tasks: [], projects: [] } });
+      dispatch({ type: 'SET_USER', payload: 'guest' });
+    };
+    window.addEventListener('kylrix:auth:logout', handleLogout);
+    return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
+  }, []);
+
   // Initial Data Fetch & Cold Hydration
   useEffect(() => {
     if (isAuthLoading) return;
@@ -1041,9 +1053,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         const [cachedTasksRes, cachedCalsRes, guestTasksRes, goalsListCache, rxTasks] = await Promise.all([
             getCachedDataAsync<any>(tasksKey, COLD_START_TTL),
             getCachedDataAsync<any>(calsKey, COLD_START_TTL),
-            userId !== 'guest' ? getCachedDataAsync<any>('f_tasks_guest', COLD_START_TTL) : Promise.resolve(null),
+            userId === 'guest' ? getCachedDataAsync<any>('f_tasks_guest', COLD_START_TTL) : Promise.resolve(null),
             LocalEngine.cacheGet<any[]>(`f_goals_list_${userId}`),
-            db?.tasks ? db.tasks.find().exec().then((docs: any[]) => docs.map((d) => d.toJSON())).catch(() => []) : Promise.resolve([]),
+            db?.tasks ? db.tasks.find({ selector: { userId: { $eq: userId } } }).exec().then((docs: any[]) => docs.map((d) => d.toJSON())).catch(() => []) : Promise.resolve([]),
         ]);
 
         const combinedTasks = mergeTaskRows(

@@ -62,11 +62,24 @@ const EventsContext = createContext<EventsContextType>({
   refetchEvents: async () => {},
 });
 
+import { useAuth } from '@/context/auth/AuthContext';
 import { registerLiveEventGetter } from '@/lib/sync/pending-sync-bridge';
 
 export function EventsProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.$id || 'guest';
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleLogout = () => {
+      setEvents([]);
+      setIsLoading(false);
+    };
+    window.addEventListener('kylrix:auth:logout', handleLogout);
+    return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
+  }, []);
 
   useEffect(() => {
     registerLiveEventGetter((id) => {
@@ -84,13 +97,15 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       try {
         const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
         const db = await getRxDB();
-        localItems = (await db.events.find().exec()).map((d: any) => d.toJSON());
+        const selector = userId !== 'guest' ? { selector: { userId: { $eq: userId } } } : undefined;
+        localItems = (await db.events.find(selector).exec()).map((d: any) => d.toJSON());
       } catch {
         localItems = [];
       }
 
+      const cacheKey = `f_events_list_${userId}`;
       if (localItems.length === 0) {
-        localItems = (await LocalEngine.cacheGet<any[]>('f_events_list')) || [];
+        localItems = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
       }
 
       if (localItems.length > 0) {
@@ -115,17 +130,17 @@ export function EventsProvider({ children }: { children: ReactNode }) {
           localNotes: mappedLocal,
         });
         setEvents(merged);
-        void LocalEngine.cacheSet('f_events_list', merged);
+        void LocalEngine.cacheSet(cacheKey, merged);
       } else if (localItems.length > 0) {
         setEvents(mappedLocal);
-        void LocalEngine.cacheSet('f_events_list', localItems);
+        void LocalEngine.cacheSet(cacheKey, localItems);
       }
     } catch (err) {
       console.error('Failed to load events in EventsProvider:', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     void loadEvents();
@@ -144,7 +159,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
           setEvents((prev) => {
             const filtered = prev.filter((e) => (e.id || (e as any).$id) !== payload.$id);
             const nextList = [normalized, ...filtered];
-            void LocalEngine.cacheSet('f_events_list', nextList);
+            void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
             return nextList;
           });
         } else if (type === 'update') {
@@ -154,13 +169,13 @@ export function EventsProvider({ children }: { children: ReactNode }) {
           }
           setEvents((prev) => {
             const nextList = prev.map((e) => ((e.id || (e as any).$id) === payload.$id ? normalized : e));
-            void LocalEngine.cacheSet('f_events_list', nextList);
+            void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
             return nextList;
           });
         } else if (type === 'delete') {
           setEvents((prev) => {
             const nextList = prev.filter((e) => (e.id || (e as any).$id) !== payload.$id);
-            void LocalEngine.cacheSet('f_events_list', nextList);
+            void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
             return nextList;
           });
         }
@@ -171,7 +186,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       if (typeof unsub === 'function') unsub();
       else if (unsub?.unsubscribe) unsub.unsubscribe();
     };
-  }, [loadEvents]);
+  }, [loadEvents, userId]);
 
   const pushLiveEvent = useCallback((event: Event, options?: { pending?: boolean }) => {
     const eventId = event.id || (event as any).$id;
@@ -189,7 +204,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
         return eId !== eventId && eId !== (event as any).$id && e.id !== event.id;
       });
       const nextList = [normalized, ...filtered];
-      void LocalEngine.cacheSet('f_events_list', nextList);
+      void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
       return nextList;
     });
 
@@ -201,7 +216,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('kylrix:event-updated', { detail: normalized }));
     }
-  }, []);
+  }, [userId]);
 
   const replaceDraftEventId = useCallback((draftId: string, savedEvent: Event) => {
     const savedId = savedEvent.id || (savedEvent as any).$id;
@@ -217,7 +232,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
         return id !== draftId && id !== savedId;
       });
       const nextList = [normalized, ...filtered];
-      void LocalEngine.cacheSet('f_events_list', nextList);
+      void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
       return nextList;
     });
 
