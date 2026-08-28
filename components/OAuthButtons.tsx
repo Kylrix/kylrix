@@ -2,9 +2,11 @@
 
 import { account } from '@/lib/appwrite/client';
 import { OAuthProvider } from 'appwrite';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { isSelfHostedDeployment } from '@/lib/deployment/surface';
+import { getEnabledOAuthProvidersAction } from '@/lib/actions/auth-actions';
 
-const providers = [
+const ALL_PROVIDERS = [
   {
     id: OAuthProvider.Google,
     name: 'Google',
@@ -40,6 +42,41 @@ interface OAuthButtonsProps {
 export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableProviders, setAvailableProviders] = useState(ALL_PROVIDERS);
+  const [discovering, setDiscovering] = useState(isSelfHostedDeployment());
+
+  useEffect(() => {
+    if (!isSelfHostedDeployment()) {
+      setAvailableProviders(ALL_PROVIDERS);
+      setDiscovering(false);
+      return;
+    }
+
+    let active = true;
+    const fetchProviders = async () => {
+      try {
+        const res = await getEnabledOAuthProvidersAction();
+        if (active && res.success) {
+          const enabledSet = new Set(res.providers.map((p) => p.toLowerCase()));
+          const filtered = ALL_PROVIDERS.filter((p) => enabledSet.has(p.id.toLowerCase()));
+          setAvailableProviders(filtered);
+        }
+      } catch (err) {
+        console.warn('Failed to discover OAuth providers on self-hosted instance:', err);
+      } finally {
+        if (active) setDiscovering(false);
+      }
+    };
+
+    fetchProviders();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (availableProviders.length === 0 && !discovering) {
+    return null;
+  }
 
   const handleLogin = async (provider: OAuthProvider) => {
     setLoading(true);
@@ -70,7 +107,7 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
         </div>
       )}
 
-      {providers.map((provider) => {
+      {availableProviders.map((provider) => {
         const isLastUsed = lastUsed === provider.id;
         return (
           <button

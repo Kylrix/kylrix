@@ -480,8 +480,59 @@ export async function initializeSelfHostedUserVaultAction(payload: {
 }
 
 /**
- * Verifies a passkey registration response on the server and returns the correct COSE public key.
+ * Discovers enabled OAuth providers for the active Appwrite project.
+ * On Cloud, defaults to ['google', 'github'].
+ * On Self-Hosted, probes the Appwrite project OAuth provider configurations.
  */
+export async function getEnabledOAuthProvidersAction(): Promise<{
+  success: boolean;
+  providers: string[];
+}> {
+  try {
+    if (!isSelfHostedDeployment()) {
+      return { success: true, providers: ['google', 'github'] };
+    }
+
+    const systemClient = createSystemClient();
+    const endpoint = (process.env.APPWRITE_ENDPOINT || process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'http://127.0.0.1/v1').replace(/\/+$/, '');
+    const projectId = process.env.APPWRITE_PROJECT_ID || process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '';
+    const apiKey = process.env.APPWRITE_API || '';
+
+    const discoveredProviders: string[] = [];
+
+    // Probe supported OAuth providers against the Appwrite project
+    const candidateProviders = ['google', 'github'];
+
+    for (const provider of candidateProviders) {
+      try {
+        const testUrl = `${endpoint}/account/sessions/oauth2/${provider}?project=${projectId}`;
+        const res = await fetch(testUrl, {
+          method: 'GET',
+          redirect: 'manual',
+          headers: apiKey ? { 'X-Appwrite-Key': apiKey } : {}
+        });
+
+        // If provider is configured in Appwrite, it redirects to the OAuth provider (301/302/307/308)
+        // If not enabled/configured, Appwrite responds with 400 / 404 / 501 / error JSON
+        if (res.status >= 300 && res.status < 400) {
+          const location = res.headers.get('location') || '';
+          if (location && !location.includes('error=')) {
+            discoveredProviders.push(provider);
+          }
+        } else if (res.status === 200) {
+          discoveredProviders.push(provider);
+        }
+      } catch (err) {
+        console.warn(`[OAuth Discovery] Probe failed for provider ${provider}:`, err);
+      }
+    }
+
+    return { success: true, providers: discoveredProviders };
+  } catch (error: any) {
+    console.error('Error fetching enabled OAuth providers:', error);
+    return { success: false, providers: [] };
+  }
+}
 export async function verifyPasskeyRegistrationAction(
   registrationResponse: any,
   expectedChallenge: string,
