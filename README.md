@@ -81,39 +81,6 @@ Local copy is truth. The network confirms. Guests get the same engine. No featur
 
 ---
 
-## The Unified System
-
-Kylrix replaces disconnected point apps with a compounding graph where notes, tasks, credentials, calendar events, and discussions share the same underlying object primitives. An action in one domain immediately enriches context for search, real-time collaboration, and autonomous agents.
-
-Local state serves as the immediate source of truth with background confirmation, while agents and external integrations leverage identical tool calls through the REST and MCP interfaces.
-
-| Domain | Core Primitive | Cross-System Synergy |
-|---|---|---|
-| **Ideas & Notes** | `notes` | Captures knowledge that cross-links directly with vault secrets, tasks, and project workspaces without join tables. |
-| **Flow & Tasks** | `goals`, `events` | Promotes ideas to structured goals, calendar events, focus sessions, and automated workflow triggers. |
-| **Workspaces** | `projects` | Unifies objects, collaborator permissions, and context into a single addressable API surface. |
-| **Connect & DMs** | `conversations`, `messages` | Powers project threads, DMs, presence, and peer-to-peer WebRTC calls over a single channel architecture. |
-| **Vault & Security** | `sec_enclave_*` | Client-encrypted (Argon2id + AES-256-GCM) enclave exposing safe metadata chips without exposing secrets. |
-| **Agents & Context** | `CompiledLocalContext` | In-workspace intelligence operating directly on recent context with 1:1 parity to user tool calls. |
-
----
-
-## SDK & Extensibility
-
-Kylrix is intentionally engineered as a single, sovereign web codebase to maintain unmatched iteration velocity and zero multi-repo divergence. As a design principle, first-party mobile, desktop, or CLI client apps are not shipped in core; instead, Kylrix provides comprehensive protocols, standard APIs, and developer tooling so third-party developers, agents, and community builders can build custom native clients, CLI tools, scripts, and ecosystem integrations.
-
-Comprehensive documentation for all interfaces is available in the [Kylrix Docs](https://github.com/Kylrix/kylrix/tree/master/docs).
-
-| What You Want to Build | System / Protocol | Developer Capabilities | Documentation |
-|---|---|---|---|
-| **AI Assistants & LLM Workflows** | Model Context Protocol (MCP) | Streamable HTTP & SSE MCP server at `/api/v1/mcp` with 1:1 tool parity across notes, goals, workspaces, events, forms, flows, and vault metadata. | [docs/mcp.md](https://github.com/Kylrix/kylrix/blob/master/docs/mcp.md) |
-| **Custom Clients, Mobile Apps & CLI** | REST API (`/api/v1`) | Scoped Personal Access Tokens (PATs) with Bearer auth for complete CRUD, cross-object filtering, and workspace operations (`npx skills add kylrix/kylrix/api`). | [docs/api.md](https://github.com/Kylrix/kylrix/blob/master/docs/api.md) |
-| **Third-Party App Authentication** | Sign in with Kylrix (OAuth 2.1 / OIDC) | Authorization Code flow with PKCE, consent management (`/oauth/consent`), JWKS validation, and granular user scopes. | [docs/oauth2.md](https://github.com/Kylrix/kylrix/blob/master/docs/oauth2.md) |
-| **Autonomous Workspace Agents** | Agentic Runtime & Provisioning | Zero-trust Agent Provisioning Keys, sovereign EVM/Nostr agent identities, and sandboxed workspace memory execution. | [docs/agents.md](https://github.com/Kylrix/kylrix/blob/master/docs/agents.md) |
-| **Cross-Object Reactive Automations** | Flows & Event Engine | Declarative trigger-action routines at `/flows` to automate task lifecycles, webhook reactions, and cross-table event pipelines. | [docs/api.md](https://github.com/Kylrix/kylrix/blob/master/docs/api.md) |
-
----
-
 ## Integrations & MCP Installation
 
 Connect any AI client, CLI, or autonomous agent directly to Kylrix via the Model Context Protocol (MCP) and official Agent Skills.
@@ -190,6 +157,39 @@ Configure an HTTP or SSE MCP server pointing to the instance endpoint:
 - **Server URL**: `https://www.kylrix.space/api/v1/mcp` (or `http://localhost:5003/api/v1/mcp`)
 - **Transport**: `http` (or `sse` via `/api/v1/mcp?transport=sse`)
 - **Header**: `Authorization: Bearer <YOUR_PAT_TOKEN>` (create tokens in **Settings > Developers**)
+
+---
+
+## The Unified System
+
+Kylrix replaces disconnected point apps with a compounding graph where notes, tasks, credentials, calendar events, and discussions share the same underlying object primitives. An action in one domain immediately enriches context for search, real-time collaboration, and autonomous agents.
+
+Local state serves as the immediate source of truth with background confirmation, while agents and external integrations leverage identical tool calls through the REST and MCP interfaces.
+
+| Domain | Core Primitive | Cross-System Synergy |
+|---|---|---|
+| **Ideas & Notes** | `notes` | Captures knowledge that cross-links directly with vault secrets, tasks, and project workspaces without join tables. |
+| **Flow & Tasks** | `goals`, `events` | Promotes ideas to structured goals, calendar events, focus sessions, and automated workflow triggers. |
+| **Workspaces** | `projects` | Unifies objects, collaborator permissions, and context into a single addressable API surface. |
+| **Connect & DMs** | `conversations`, `messages` | Powers project threads, DMs, presence, and peer-to-peer WebRTC calls over a single channel architecture. |
+| **Vault & Security** | `sec_enclave_*` | Client-encrypted (Argon2id + AES-256-GCM) enclave exposing safe metadata chips without exposing secrets. |
+| **Agents & Context** | `CompiledLocalContext` | In-workspace intelligence operating directly on recent context with 1:1 parity to user tool calls. |
+
+---
+
+## SDK & Extensibility
+
+Kylrix is intentionally engineered as a single, sovereign web codebase to maintain unmatched iteration velocity and zero multi-repo divergence. As a design principle, first-party mobile, desktop, or CLI client apps are not shipped in core; instead, Kylrix provides comprehensive protocols, standard APIs, and developer tooling so third-party developers, agents, and community builders can build custom native clients, CLI tools, scripts, and ecosystem integrations.
+
+Comprehensive documentation for all interfaces is available in the [Kylrix Docs](https://github.com/Kylrix/kylrix/tree/master/docs).
+
+| What You Want to Build | System / Protocol | Developer Capabilities | Documentation |
+|---|---|---|---|
+| **AI Assistants & LLM Workflows** | Model Context Protocol (MCP) | Streamable HTTP & SSE MCP server at `/api/v1/mcp` with 1:1 tool parity across notes, goals, workspaces, events, forms, flows, and vault metadata. | [docs/mcp.md](https://github.com/Kylrix/kylrix/blob/master/docs/mcp.md) |
+| **Custom Clients, Mobile Apps & CLI** | REST API (`/api/v1`) | Scoped Personal Access Tokens (PATs) with Bearer auth for complete CRUD, cross-object filtering, and workspace operations (`npx skills add kylrix/kylrix/api`). | [docs/api.md](https://github.com/Kylrix/kylrix/blob/master/docs/api.md) |
+| **Third-Party App Authentication** | Sign in with Kylrix (OAuth 2.1 / OIDC) | Authorization Code flow with PKCE, consent management (`/oauth/consent`), JWKS validation, and granular user scopes. | [docs/oauth2.md](https://github.com/Kylrix/kylrix/blob/master/docs/oauth2.md) |
+| **Autonomous Workspace Agents** | Agentic Runtime & Provisioning | Zero-trust Agent Provisioning Keys, sovereign EVM/Nostr agent identities, and sandboxed workspace memory execution. | [docs/agents.md](https://github.com/Kylrix/kylrix/blob/master/docs/agents.md) |
+| **Cross-Object Reactive Automations** | Flows & Event Engine | Declarative trigger-action routines at `/flows` to automate task lifecycles, webhook reactions, and cross-table event pipelines. | [docs/api.md](https://github.com/Kylrix/kylrix/blob/master/docs/api.md) |
 
 ---
 
