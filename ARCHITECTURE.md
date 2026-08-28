@@ -252,7 +252,7 @@ UI **Workspaces** (`/workspaces`, `/workspaces/[projectId]`) over `projects` tab
 
 ```
 Dockerfile (Node 22 standalone) · docker-compose.yml (full) / docker-compose.app-only.yml
-ota.yaml (verify, sqlite-dev, selfhost) · appwrite.config.json (declarative schema)
+ota.yaml (verify, dev, selfhost) · appwrite.config.json (declarative schema)
 ```
 
 `appwrite push` deploys tables/indexes/RLS/buckets/functions. Endpoint `https://api.kylrix.space/v1`, DB `passwordManagerDb`.

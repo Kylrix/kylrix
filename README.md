@@ -97,10 +97,10 @@ ota validate .
 ota doctor
 ota tasks --use
 ota up --workflow verify --mode native
-ota up --workflow sqlite-dev
+ota up --workflow dev
 ```
 
-See `ota.yaml` (verify, sqlite-dev, selfhost) and `appwrite.config.json`.
+See `ota.yaml` (verify, dev, selfhost) and `appwrite.config.json`.
 
 ## SDK & Extensibility
 

@@ -2,7 +2,7 @@ version: 1
 
 project:
   name: kylrix
-  description: Kylrix contributor verification and offline SQLite development contract
+  description: Kylrix contributor verification and development contract
 
 execution:
   default_context: host
@@ -89,12 +89,6 @@ tasks:
               mode: replace
             NEXT_PUBLIC_ORIGIN:
               value: http://localhost:3005
-              mode: replace
-            DATABASE_PROVIDER:
-              value: sqlite
-              mode: replace
-            NEXT_PUBLIC_DATABASE_PROVIDER:
-              value: sqlite
               mode: replace
             SELFHOST_MODE:
               value: "true"
