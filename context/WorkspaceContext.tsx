@@ -107,8 +107,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const initialItems = useMemo<WorkspaceItem[]>(() => {
-    return [personalWorkspace, ...mapProjectRows(getSessionProjectsList() || [])];
-  }, [personalWorkspace, mapProjectRows]);
+    return [personalWorkspace, ...mapProjectRows(getSessionProjectsList(userId) || [])];
+  }, [personalWorkspace, mapProjectRows, userId]);
 
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>(initialItems);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
@@ -225,6 +225,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       lastUserIdRef.current = null;
       setActiveWorkspaceIdState('personal');
       setWorkspaces([personalWorkspace]);
+      try {
+        const { clearSessionProjectsList } = require('@/lib/projects/projects-cache');
+        clearSessionProjectsList();
+      } catch {}
     };
     window.addEventListener('kylrix:auth:logout', handleLogout);
     return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
@@ -237,6 +241,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       lastUserIdRef.current = userId;
       setActiveWorkspaceIdState(userId);
       setWorkspaces([personalWorkspace]);
+      try {
+        const { clearSessionProjectsList } = require('@/lib/projects/projects-cache');
+        clearSessionProjectsList();
+      } catch {}
     } else {
       setActiveWorkspaceIdState((prev) => (prev === 'guest' && userId !== 'guest' ? userId : prev));
     }
@@ -447,22 +455,28 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
   }, [activeWorkspaceId, userId, personalWorkspace]);
 
+  // Active workspace validation: if current active workspace ID does not exist in the active user's workspaces list, reset to personal
+  useEffect(() => {
+    if (!loadingWorkspaces && workspaces.length > 0 && activeWorkspaceId && activeWorkspaceId !== userId && activeWorkspaceId !== 'guest' && activeWorkspaceId !== 'personal') {
+      const exists = workspaces.some((w) => w.id === activeWorkspaceId);
+      if (!exists) {
+        setActiveWorkspaceIdState(userId);
+        lastSetIdRef.current = userId;
+        void (async () => {
+          try {
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, userId);
+          } catch {}
+        })();
+      }
+    }
+  }, [loadingWorkspaces, workspaces, activeWorkspaceId, userId, ACTIVE_WORKSPACE_CACHE_KEY]);
+
   const activeWorkspace = useMemo<WorkspaceItem>(() => {
     const found = workspaces.find((w) => w.id === activeWorkspaceId);
     if (found) return found;
-    if (activeWorkspaceId && activeWorkspaceId !== userId && activeWorkspaceId !== 'guest') {
-      return {
-        id: activeWorkspaceId,
-        title: 'Shared Workspace',
-        ownerId: '',
-        isPersonal: false,
-        isShared: true,
-        isPublic: true,
-        role: 'viewer',
-      };
-    }
     return personalWorkspace;
-  }, [workspaces, activeWorkspaceId, personalWorkspace, userId]);
+  }, [workspaces, activeWorkspaceId, personalWorkspace]);
 
   const agentWorkspaces = useMemo(
     () => workspaces.filter((w) => !w.isPersonal && w.isAgentic === true),

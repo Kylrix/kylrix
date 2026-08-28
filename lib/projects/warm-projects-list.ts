@@ -25,7 +25,7 @@ export function normalizeProjectsList(raw: unknown): Projects[] {
  * Session → LocalEngine → network (with Realtime), DataNexus path removed to cut duplicate reads
  */
 export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
-  const session = getSessionProjectsList();
+  const session = getSessionProjectsList(deps.userId);
   if (session?.length) return session;
 
   const { LocalEngine } = await import('@/lib/services/LocalEngine');
@@ -37,7 +37,7 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
       { ttl: PROJECTS_LIST_TTL, realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents` }
     )
   );
-  setSessionProjectsList(rows);
+  setSessionProjectsList(rows, deps.userId);
   try {
     void LocalEngine.cacheSet(cacheKey, rows);
   } catch {
