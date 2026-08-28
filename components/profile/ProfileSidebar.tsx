@@ -8,6 +8,8 @@ import { UsersService } from '@/lib/services/users';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityById } from '@/lib/identity-cache';
 import { useAuth } from '@/lib/auth';
+import { getUserBadgesAction } from '@/lib/actions/sponsor-actions';
+import { BadgeChip } from '@/components/sponsor/SponsorBadges';
 import toast from 'react-hot-toast';
 
 /**
@@ -43,6 +45,16 @@ export function ProfileSidebar({
   const [groupTab, setGroupTab] = useState<'overview' | 'members' | 'media'>('overview');
 
   const isGroup = Boolean(conversation?.type === 'group' || conversation?.type === 'channel');
+  const [badges, setBadges] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!uid || isGroup) return;
+    getUserBadgesAction(uid)
+      .then((res) => {
+        if (res) setBadges(res);
+      })
+      .catch(() => {});
+  }, [uid, isGroup]);
 
   useEffect(() => {
     if (isGroup) return;
@@ -189,6 +201,15 @@ export function ProfileSidebar({
             <p className="text-xs text-white/35 font-satoshi italic m-0">
               {isGroup ? 'Group hangout' : 'No bio yet'}
             </p>
+          )}
+
+          {/* User Badges */}
+          {!isGroup && badges.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {badges.map((b) => (
+                <BadgeChip key={b.$id} badge={b} size="sm" />
+              ))}
+            </div>
           )}
 
           {/* Group Tabs vs User Stats */}

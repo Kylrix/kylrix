@@ -14,6 +14,8 @@ import {
   getBlockBeePendingCheckout,
   markBlockBeePendingCheckoutConsumed,
   releaseBlockBeeIpnLock} from '@/lib/services/internal/blockbee-pending-checkout';
+import { SponsorshipService } from '@/lib/services/sponsorship-service';
+import { BadgeTier } from '@/lib/types/badges';
 
 const DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 const SUB_COLLECTION_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
@@ -263,6 +265,52 @@ export async function POST(req: Request) {
   }
   if (lock === 'retry') {
     return new Response('retry', { status: 503 });
+  }
+
+  // Handle Sponsorship payment fulfillment
+  if (meta.planId?.startsWith('SPONSOR_') || params.get('is_sponsorship') === '1') {
+    try {
+      let sponsorCouponMeta: any = {};
+      if (meta.couponId) {
+        try {
+          sponsorCouponMeta = JSON.parse(meta.couponId);
+        } catch {}
+      }
+      const resolvedTier = (sponsorCouponMeta.tier || meta.planId.replace('SPONSOR_', '').toLowerCase() || 'supporter') as BadgeTier;
+      const targetUserId = meta.payerUserId && meta.payerUserId !== 'guest_sponsor' ? meta.payerUserId : null;
+
+      await SponsorshipService.recordCompletedSponsorship({
+        userId: targetUserId,
+        sponsorName: meta.giftRecipientName || null,
+        sponsorMessage: meta.giftMessage || null,
+        sponsorUrl: sponsorCouponMeta.sponsorUrl || null,
+        sponsorEmail: sponsorCouponMeta.sponsorEmail || null,
+        amount: valuePaidUsd,
+        currency: 'USD',
+        provider: 'blockbee',
+        tier: resolvedTier,
+        txHash: paymentId,
+        isPublic: sponsorCouponMeta.isPublic ?? true,
+        isAnonymous: sponsorCouponMeta.isAnonymous ?? false,
+        metadata: {
+          blockbeePaymentId: paymentId,
+          paidUsd: valuePaidUsd,
+        },
+      });
+
+      await completeBlockBeeIpnLock(paymentId, meta.payerUserId, {
+        subscriptionId: 'sponsorship_' + paymentId,
+        targetUserId: targetUserId || 'anonymous',
+        planId: meta.planId,
+        valuePaidUsd,
+      });
+      await markBlockBeePendingCheckoutConsumed(paymentId);
+      return new Response('*ok*', { status: 200 });
+    } catch (err) {
+      console.error('[BlockBee IPN] Failed to fulfill sponsorship:', err);
+      await releaseBlockBeeIpnLock(paymentId);
+      return new Response('*ok*', { status: 200 });
+    }
   }
 
   try {

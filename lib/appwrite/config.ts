@@ -42,6 +42,8 @@ export const APPWRITE_CONFIG = {
         CONTEXTS: 'contexts',
         KNOWLEDGE_GRAPH: 'knowledge_graph',
         PATTERNS: 'patterns',
+        SPONSORSHIPS: 'sponsorships',
+        USER_BADGES: 'user_badges',
 
         NOTE: {
             USERS: '67ff05c900247b5673d3',

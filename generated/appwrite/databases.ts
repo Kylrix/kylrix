@@ -119,6 +119,9 @@ tableIdMap["passwordManagerDb"]["Feed Sessions"] = "feed_sessions";
 tableIdMap["passwordManagerDb"]["Contexts"] = "contexts";
 tableIdMap["passwordManagerDb"]["Knowledge Graph"] = "knowledge_graph";
 tableIdMap["passwordManagerDb"]["Patterns"] = "patterns";
+tableIdMap["passwordManagerDb"]["referrals"] = "referrals";
+tableIdMap["passwordManagerDb"]["Sponsorships"] = "sponsorships";
+tableIdMap["passwordManagerDb"]["User Badges"] = "user_badges";
 
 const tablesWithRelationships = new Set<string>();
 

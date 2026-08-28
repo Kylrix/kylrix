@@ -1528,3 +1528,46 @@ export type Patterns = Models.Row & {
     createdAt: string | null;
     updatedAt: string | null;
 }
+
+export type Referrals = Models.Row & {
+    tokensRewarded: boolean;
+    userId: string;
+    referrerId: string;
+    refCode: string;
+    src: string;
+    origin: string;
+    status: string;
+}
+
+export type Sponsorships = Models.Row & {
+    userId: string | null;
+    sponsorName: string | null;
+    sponsorUrl: string | null;
+    sponsorEmail: string | null;
+    sponsorMessage: string | null;
+    amount: number;
+    currency: string;
+    provider: string | null;
+    tier: string;
+    status: string;
+    txHash: string | null;
+    isPublic: boolean;
+    isAnonymous: boolean;
+    badgeAwarded: boolean;
+    metadata: string | null;
+    createdAt: string | null;
+}
+
+export type UserBadges = Models.Row & {
+    userId: string;
+    badgeId: string;
+    badgeType: string;
+    tier: string | null;
+    name: string;
+    description: string | null;
+    icon: string | null;
+    isPublic: boolean;
+    awardedAt: string | null;
+    sponsorshipId: string | null;
+    metadata: string | null;
+}

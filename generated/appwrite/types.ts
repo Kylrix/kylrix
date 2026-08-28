@@ -2765,6 +2765,92 @@ export type Patterns = Models.Row & {
     "updatedAt"?: string | null;
 }
 
+export type ReferralsCreate = {
+    "tokensRewarded"?: boolean;
+    "userId": string;
+    "referrerId": string;
+    "refCode"?: string;
+    "src"?: string;
+    "origin"?: string;
+    "status"?: string;
+}
+
+export type Referrals = Models.Row & {
+    "tokensRewarded"?: boolean;
+    "userId": string;
+    "referrerId": string;
+    "refCode"?: string;
+    "src"?: string;
+    "origin"?: string;
+    "status"?: string;
+}
+
+export type SponsorshipsCreate = {
+    "userId"?: string | null;
+    "sponsorName"?: string | null;
+    "sponsorUrl"?: string | null;
+    "sponsorEmail"?: string | null;
+    "sponsorMessage"?: string | null;
+    "amount": number;
+    "currency"?: string;
+    "provider"?: string | null;
+    "tier": string;
+    "status"?: string;
+    "txHash"?: string | null;
+    "isPublic"?: boolean;
+    "isAnonymous"?: boolean;
+    "badgeAwarded"?: boolean;
+    "metadata"?: string | null;
+    "createdAt"?: string | null;
+}
+
+export type Sponsorships = Models.Row & {
+    "userId"?: string | null;
+    "sponsorName"?: string | null;
+    "sponsorUrl"?: string | null;
+    "sponsorEmail"?: string | null;
+    "sponsorMessage"?: string | null;
+    "amount": number;
+    "currency"?: string;
+    "provider"?: string | null;
+    "tier": string;
+    "status"?: string;
+    "txHash"?: string | null;
+    "isPublic"?: boolean;
+    "isAnonymous"?: boolean;
+    "badgeAwarded"?: boolean;
+    "metadata"?: string | null;
+    "createdAt"?: string | null;
+}
+
+export type UserBadgesCreate = {
+    "userId": string;
+    "badgeId": string;
+    "badgeType"?: string;
+    "tier"?: string | null;
+    "name": string;
+    "description"?: string | null;
+    "icon"?: string | null;
+    "isPublic"?: boolean;
+    "awardedAt"?: string | null;
+    "sponsorshipId"?: string | null;
+    "metadata"?: string | null;
+}
+
+export type UserBadges = Models.Row & {
+    "userId": string;
+    "badgeId": string;
+    "badgeType"?: string;
+    "tier"?: string | null;
+    "name": string;
+    "description"?: string | null;
+    "icon"?: string | null;
+    "isPublic"?: boolean;
+    "awardedAt"?: string | null;
+    "sponsorshipId"?: string | null;
+    "metadata"?: string | null;
+}
+
 declare const __roleStringBrand: unique symbol;
 export type RoleString = string & { readonly [__roleStringBrand]: never };
 
@@ -5580,6 +5666,101 @@ export type DatabaseTableMap = {
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Patterns>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Patterns>>(field: K, value: QueryableFieldValue<Patterns, K>) => string; notEqual: <K extends QueryableKeys<Patterns>>(field: K, value: QueryableFieldValue<Patterns, K>) => string; lessThan: <K extends QueryableKeys<Patterns>>(field: K, value: QueryableFieldValue<Patterns, K>) => string; lessThanEqual: <K extends QueryableKeys<Patterns>>(field: K, value: QueryableFieldValue<Patterns, K>) => string; greaterThan: <K extends QueryableKeys<Patterns>>(field: K, value: QueryableFieldValue<Patterns, K>) => string; greaterThanEqual: <K extends QueryableKeys<Patterns>>(field: K, value: QueryableFieldValue<Patterns, K>) => string; contains: <K extends QueryableKeys<Patterns>>(field: K, value: QueryableFieldValue<Patterns, K>) => string; search: <K extends QueryableKeys<Patterns>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Patterns>>(field: K) => string; isNotNull: <K extends QueryableKeys<Patterns>>(field: K) => string; startsWith: <K extends QueryableKeys<Patterns>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Patterns>>(field: K, value: string) => string; between: <K extends QueryableKeys<Patterns>>(field: K, start: QueryableFieldValue<Patterns, K>, end: QueryableFieldValue<Patterns, K>) => string; select: <K extends keyof Patterns>(fields: K[]) => string; orderAsc: <K extends keyof Patterns>(field: K) => string; orderDesc: <K extends keyof Patterns>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Patterns[] }>;
+    };
+    "referrals": {
+      create: (data: {
+        "tokensRewarded"?: boolean;
+        "userId": string;
+        "referrerId": string;
+        "refCode"?: string;
+        "src"?: string;
+        "origin"?: string;
+        "status"?: string;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Referrals>;
+      get: (id: string) => Promise<Referrals>;
+      update: (id: string, data: Partial<{
+        "tokensRewarded"?: boolean;
+        "userId": string;
+        "referrerId": string;
+        "refCode"?: string;
+        "src"?: string;
+        "origin"?: string;
+        "status"?: string;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Referrals>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Referrals>>(field: K, value: QueryableFieldValue<Referrals, K>) => string; notEqual: <K extends QueryableKeys<Referrals>>(field: K, value: QueryableFieldValue<Referrals, K>) => string; lessThan: <K extends QueryableKeys<Referrals>>(field: K, value: QueryableFieldValue<Referrals, K>) => string; lessThanEqual: <K extends QueryableKeys<Referrals>>(field: K, value: QueryableFieldValue<Referrals, K>) => string; greaterThan: <K extends QueryableKeys<Referrals>>(field: K, value: QueryableFieldValue<Referrals, K>) => string; greaterThanEqual: <K extends QueryableKeys<Referrals>>(field: K, value: QueryableFieldValue<Referrals, K>) => string; contains: <K extends QueryableKeys<Referrals>>(field: K, value: QueryableFieldValue<Referrals, K>) => string; search: <K extends QueryableKeys<Referrals>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Referrals>>(field: K) => string; isNotNull: <K extends QueryableKeys<Referrals>>(field: K) => string; startsWith: <K extends QueryableKeys<Referrals>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Referrals>>(field: K, value: string) => string; between: <K extends QueryableKeys<Referrals>>(field: K, start: QueryableFieldValue<Referrals, K>, end: QueryableFieldValue<Referrals, K>) => string; select: <K extends keyof Referrals>(fields: K[]) => string; orderAsc: <K extends keyof Referrals>(field: K) => string; orderDesc: <K extends keyof Referrals>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Referrals[] }>;
+    };
+    "Sponsorships": {
+      create: (data: {
+        "userId"?: string | null;
+        "sponsorName"?: string | null;
+        "sponsorUrl"?: string | null;
+        "sponsorEmail"?: string | null;
+        "sponsorMessage"?: string | null;
+        "amount": number;
+        "currency"?: string;
+        "provider"?: string | null;
+        "tier": string;
+        "status"?: string;
+        "txHash"?: string | null;
+        "isPublic"?: boolean;
+        "isAnonymous"?: boolean;
+        "badgeAwarded"?: boolean;
+        "metadata"?: string | null;
+        "createdAt"?: string | null;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Sponsorships>;
+      get: (id: string) => Promise<Sponsorships>;
+      update: (id: string, data: Partial<{
+        "userId"?: string | null;
+        "sponsorName"?: string | null;
+        "sponsorUrl"?: string | null;
+        "sponsorEmail"?: string | null;
+        "sponsorMessage"?: string | null;
+        "amount": number;
+        "currency"?: string;
+        "provider"?: string | null;
+        "tier": string;
+        "status"?: string;
+        "txHash"?: string | null;
+        "isPublic"?: boolean;
+        "isAnonymous"?: boolean;
+        "badgeAwarded"?: boolean;
+        "metadata"?: string | null;
+        "createdAt"?: string | null;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Sponsorships>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Sponsorships>>(field: K, value: QueryableFieldValue<Sponsorships, K>) => string; notEqual: <K extends QueryableKeys<Sponsorships>>(field: K, value: QueryableFieldValue<Sponsorships, K>) => string; lessThan: <K extends QueryableKeys<Sponsorships>>(field: K, value: QueryableFieldValue<Sponsorships, K>) => string; lessThanEqual: <K extends QueryableKeys<Sponsorships>>(field: K, value: QueryableFieldValue<Sponsorships, K>) => string; greaterThan: <K extends QueryableKeys<Sponsorships>>(field: K, value: QueryableFieldValue<Sponsorships, K>) => string; greaterThanEqual: <K extends QueryableKeys<Sponsorships>>(field: K, value: QueryableFieldValue<Sponsorships, K>) => string; contains: <K extends QueryableKeys<Sponsorships>>(field: K, value: QueryableFieldValue<Sponsorships, K>) => string; search: <K extends QueryableKeys<Sponsorships>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Sponsorships>>(field: K) => string; isNotNull: <K extends QueryableKeys<Sponsorships>>(field: K) => string; startsWith: <K extends QueryableKeys<Sponsorships>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Sponsorships>>(field: K, value: string) => string; between: <K extends QueryableKeys<Sponsorships>>(field: K, start: QueryableFieldValue<Sponsorships, K>, end: QueryableFieldValue<Sponsorships, K>) => string; select: <K extends keyof Sponsorships>(fields: K[]) => string; orderAsc: <K extends keyof Sponsorships>(field: K) => string; orderDesc: <K extends keyof Sponsorships>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Sponsorships[] }>;
+    };
+    "User Badges": {
+      create: (data: {
+        "userId": string;
+        "badgeId": string;
+        "badgeType"?: string;
+        "tier"?: string | null;
+        "name": string;
+        "description"?: string | null;
+        "icon"?: string | null;
+        "isPublic"?: boolean;
+        "awardedAt"?: string | null;
+        "sponsorshipId"?: string | null;
+        "metadata"?: string | null;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<UserBadges>;
+      get: (id: string) => Promise<UserBadges>;
+      update: (id: string, data: Partial<{
+        "userId": string;
+        "badgeId": string;
+        "badgeType"?: string;
+        "tier"?: string | null;
+        "name": string;
+        "description"?: string | null;
+        "icon"?: string | null;
+        "isPublic"?: boolean;
+        "awardedAt"?: string | null;
+        "sponsorshipId"?: string | null;
+        "metadata"?: string | null;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<UserBadges>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<UserBadges>>(field: K, value: QueryableFieldValue<UserBadges, K>) => string; notEqual: <K extends QueryableKeys<UserBadges>>(field: K, value: QueryableFieldValue<UserBadges, K>) => string; lessThan: <K extends QueryableKeys<UserBadges>>(field: K, value: QueryableFieldValue<UserBadges, K>) => string; lessThanEqual: <K extends QueryableKeys<UserBadges>>(field: K, value: QueryableFieldValue<UserBadges, K>) => string; greaterThan: <K extends QueryableKeys<UserBadges>>(field: K, value: QueryableFieldValue<UserBadges, K>) => string; greaterThanEqual: <K extends QueryableKeys<UserBadges>>(field: K, value: QueryableFieldValue<UserBadges, K>) => string; contains: <K extends QueryableKeys<UserBadges>>(field: K, value: QueryableFieldValue<UserBadges, K>) => string; search: <K extends QueryableKeys<UserBadges>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<UserBadges>>(field: K) => string; isNotNull: <K extends QueryableKeys<UserBadges>>(field: K) => string; startsWith: <K extends QueryableKeys<UserBadges>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<UserBadges>>(field: K, value: string) => string; between: <K extends QueryableKeys<UserBadges>>(field: K, start: QueryableFieldValue<UserBadges, K>, end: QueryableFieldValue<UserBadges, K>) => string; select: <K extends keyof UserBadges>(fields: K[]) => string; orderAsc: <K extends keyof UserBadges>(field: K) => string; orderDesc: <K extends keyof UserBadges>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: UserBadges[] }>;
     }
   }
 };

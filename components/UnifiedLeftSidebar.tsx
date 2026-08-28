@@ -12,6 +12,7 @@ import {
   MessageCircleMore as HangoutIcon,
   Share2 as ShareIcon,
   MoreVertical as MoreIcon,
+  Heart as HeartIcon,
 } from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -728,6 +729,53 @@ export function UnifiedLeftSidebar() {
         </Stack>
 
         <Box sx={{ mt: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 1, px: isCollapsed ? 0 : 0.5, flexShrink: 0, pt: 1.5 }}>
+          {/* Sponsor CTA */}
+          <Tooltip title="Sponsor Kylrix" placement="right" arrow={isCollapsed}>
+            <a
+              href="/sponsor"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
+                gap: isCollapsed ? '0px' : '14px',
+                width: isCollapsed ? '46px' : '100%',
+                height: '40px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                color: '#EC4899',
+                backgroundColor: 'rgba(236, 72, 153, 0.08)',
+                border: '1px solid rgba(236, 72, 153, 0.22)',
+                transition: 'all 0.25s ease',
+                textDecoration: 'none',
+                boxSizing: 'border-box',
+                paddingLeft: isCollapsed ? '0px' : '14px',
+                paddingRight: isCollapsed ? '0px' : '14px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#F472B6';
+                e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.16)';
+                e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.45)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#EC4899';
+                e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.22)';
+              }}
+            >
+              <HeartIcon size={18} style={{ flexShrink: 0 }} />
+              {!isCollapsed && (
+                <span style={{ 
+                  fontFamily: 'var(--font-satoshi)', 
+                  fontWeight: 700, 
+                  fontSize: '0.82rem',
+                  letterSpacing: '0.01em',
+                }}>
+                  Sponsor
+                </span>
+              )}
+            </a>
+          </Tooltip>
+
           {/* GitHub CTA */}
           <Tooltip title="View Source on GitHub" placement="right" arrow={isCollapsed}>
             <a
