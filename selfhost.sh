@@ -48,7 +48,7 @@ else
 fi
 
 INSTALL_DIR="${KYLRIX_DIR:-$HOME/kylrix-selfhost}"
-PORT="${KYLRIX_PORT:-3006}"
+PORT="${KYLRIX_PORT:-5003}"
 
 echo -e "Installing Kylrix into: ${CYAN}${INSTALL_DIR}${NC}"
 echo -e "Application port:      ${CYAN}${PORT}${NC}\n"

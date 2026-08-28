@@ -12,7 +12,7 @@ To install and run Kylrix in a single step:
 curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
 ```
 
-Once started, access your local instance at **`http://localhost:3006`** (or the port specified).
+Once started, access your local instance at **`http://localhost:5003`** (or the port specified).
 
 ---
 
@@ -32,7 +32,7 @@ cp .env.example .env
 ```
 Default ports and parameters:
 ```env
-APP_PORT=3006
+APP_PORT=5003
 PORT=3000
 NODE_ENV=production
 NEXT_TELEMETRY_DISABLED=1

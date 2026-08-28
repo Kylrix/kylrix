@@ -71,7 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | 
 #### Option 2: Docker Direct Pull
 ```bash
 docker pull ghcr.io/kylrix/kylrix:latest
-docker run -d -p 3006:3000 --name kylrix-app ghcr.io/kylrix/kylrix:latest
+docker run -d -p 5003:3000 --name kylrix-app ghcr.io/kylrix/kylrix:latest
 ```
 
 #### Option 3: Docker Compose
