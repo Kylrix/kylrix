@@ -45,6 +45,7 @@ export function ProfileSidebar({
   const [groupTab, setGroupTab] = useState<'overview' | 'members' | 'media'>('overview');
 
   const isGroup = Boolean(conversation?.type === 'group' || conversation?.type === 'channel');
+  const uid = profile?.userId || profile?.$id || userId;
   const [badges, setBadges] = useState<any[]>([]);
 
   useEffect(() => {
@@ -95,7 +96,6 @@ export function ProfileSidebar({
   const handle = isGroup ? null : profile?.username || username || '';
   const bio = isGroup ? (conversation?.description || 'Group hangout channel').trim() : (profile?.bio || seed?.bio || '').trim();
   const shortBio = bio.length > 140 ? `${bio.slice(0, 139).trim()}…` : bio;
-  const uid = profile?.userId || profile?.$id || userId;
   const isOwn = Boolean(!isGroup && user?.$id && uid && user.$id === uid);
   const displayName = name.replace(/\s*\(You\)\s*/gi, '').trim() || name;
 

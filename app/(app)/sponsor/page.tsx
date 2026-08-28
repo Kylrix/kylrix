@@ -1,23 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
 import {
   Heart,
   Sparkles,
-  Hammer,
-  Crown,
   Zap,
   Check,
   Copy,
   ExternalLink,
-  Shield,
   ArrowRight,
   Globe,
   MessageSquare,
   User,
-  QrCode,
-  Layers,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { account } from '@/lib/appwrite/client';
@@ -30,7 +24,6 @@ import {
   BadgeTier,
   Sponsorship,
   UserBadge,
-  SPONSOR_BADGE_DEFINITIONS,
   resolveBadgeForAmount,
 } from '@/lib/types/badges';
 import { BadgeChip, BadgesShowcaseGrid, getBadgeIcon } from '@/components/sponsor/SponsorBadges';
@@ -86,8 +79,7 @@ const DIRECT_ADDRESSES = [
 ];
 
 export default function SponsorPage() {
-  const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
 
   const [selectedTier, setSelectedTier] = useState<BadgeTier>('patron');
   const [customAmount, setCustomAmount] = useState<string>('25');
@@ -102,7 +94,6 @@ export default function SponsorPage() {
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const [loadingSponsors, setLoadingSponsors] = useState<boolean>(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [showQr, setShowQr] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const currentAmount = parseFloat(customAmount) || 0;

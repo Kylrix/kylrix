@@ -493,7 +493,6 @@ export async function getEnabledOAuthProvidersAction(): Promise<{
       return { success: true, providers: ['google', 'github'] };
     }
 
-    const systemClient = createSystemClient();
     const endpoint = (process.env.APPWRITE_ENDPOINT || process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'http://127.0.0.1/v1').replace(/\/+$/, '');
     const projectId = process.env.APPWRITE_PROJECT_ID || process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '';
     const apiKey = process.env.APPWRITE_API || '';

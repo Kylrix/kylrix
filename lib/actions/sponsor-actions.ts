@@ -4,7 +4,7 @@ import { getAuthenticatedUserForBillingAction } from '@/lib/services/internal/bi
 import { resolveBlockBeeNotifyBaseUrl, resolveBlockBeeRedirectBaseUrl } from '@/lib/billing/blockbee-urls';
 import { registerBlockBeePendingCheckout } from '@/lib/services/internal/blockbee-pending-checkout';
 import { SponsorshipService } from '@/lib/services/sponsorship-service';
-import { BadgeTier, resolveBadgeForAmount, SPONSOR_BADGE_DEFINITIONS } from '@/lib/types/badges';
+import { BadgeTier, resolveBadgeForAmount } from '@/lib/types/badges';
 
 export async function createSponsorshipCheckoutAction(input: {
   amountUsd: number;
