@@ -19,9 +19,8 @@ export interface McpTool {
     required?: string[];
   };
   outputSchema?: {
-    type: string;
+    type: 'object';
     properties?: Record<string, any>;
-    items?: Record<string, any>;
     description?: string;
   };
   annotations?: McpToolAnnotation;
@@ -59,17 +58,22 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          title: { type: 'string' },
-          summary: { type: 'string', nullable: true },
-          visibility: { type: 'string' },
-          isAgentic: { type: 'boolean' },
-          createdAt: { type: 'string' },
-          updatedAt: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              summary: { type: 'string', nullable: true },
+              visibility: { type: 'string' },
+              isAgentic: { type: 'boolean' },
+              createdAt: { type: 'string' },
+              updatedAt: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -175,12 +179,17 @@ export const MCP_TOOLS: McpTool[] = [
       required: ['workspaceId'],
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          userId: { type: 'string' },
-          role: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              userId: { type: 'string' },
+              role: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -219,16 +228,21 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          title: { type: 'string' },
-          content: { type: 'string', nullable: true },
-          updatedAt: { type: 'string' },
-          createdAt: { type: 'string' },
-          isPublic: { type: 'boolean' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              content: { type: 'string', nullable: true },
+              updatedAt: { type: 'string' },
+              createdAt: { type: 'string' },
+              isPublic: { type: 'boolean' },
+            },
+          },
         },
       },
     },
@@ -337,16 +351,21 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          title: { type: 'string' },
-          description: { type: 'string', nullable: true },
-          status: { type: 'string' },
-          updatedAt: { type: 'string' },
-          createdAt: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string', nullable: true },
+              status: { type: 'string' },
+              updatedAt: { type: 'string' },
+              createdAt: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -452,15 +471,20 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          title: { type: 'string' },
-          startTime: { type: 'string' },
-          endTime: { type: 'string' },
-          location: { type: 'string', nullable: true },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              startTime: { type: 'string' },
+              endTime: { type: 'string' },
+              location: { type: 'string', nullable: true },
+            },
+          },
         },
       },
     },
@@ -568,13 +592,18 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          title: { type: 'string' },
-          description: { type: 'string', nullable: true },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string', nullable: true },
+            },
+          },
         },
       },
     },
@@ -652,14 +681,19 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          name: { type: 'string' },
-          type: { type: 'string' },
-          participants: { type: 'array', items: { type: 'string' } },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              type: { type: 'string' },
+              participants: { type: 'array', items: { type: 'string' } },
+            },
+          },
         },
       },
     },
@@ -697,14 +731,19 @@ export const MCP_TOOLS: McpTool[] = [
       required: ['conversationId'],
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          senderId: { type: 'string' },
-          content: { type: 'string' },
-          createdAt: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              senderId: { type: 'string' },
+              content: { type: 'string' },
+              createdAt: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -744,14 +783,19 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          title: { type: 'string' },
-          description: { type: 'string' },
-          category: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              category: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -829,13 +873,18 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          name: { type: 'string' },
-          color: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              color: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -893,14 +942,19 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          caption: { type: 'string' },
-          type: { type: 'string' },
-          createdAt: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              caption: { type: 'string' },
+              type: { type: 'string' },
+              createdAt: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -959,14 +1013,19 @@ export const MCP_TOOLS: McpTool[] = [
       required: ['momentId'],
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          text: { type: 'string' },
-          userId: { type: 'string' },
-          createdAt: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              text: { type: 'string' },
+              userId: { type: 'string' },
+              createdAt: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -1006,14 +1065,19 @@ export const MCP_TOOLS: McpTool[] = [
       required: ['threadId'],
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          content: { type: 'string' },
-          userId: { type: 'string' },
-          createdAt: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              content: { type: 'string' },
+              userId: { type: 'string' },
+              createdAt: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -1053,14 +1117,19 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          title: { type: 'string' },
-          harness: { type: 'string' },
-          status: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              harness: { type: 'string' },
+              status: { type: 'string' },
+            },
+          },
         },
       },
     },
@@ -1122,14 +1191,19 @@ export const MCP_TOOLS: McpTool[] = [
       },
     },
     outputSchema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          kind: { type: 'string' },
-          title: { type: 'string' },
-          deletedAt: { type: 'string' },
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              kind: { type: 'string' },
+              title: { type: 'string' },
+              deletedAt: { type: 'string' },
+            },
+          },
         },
       },
     },
