@@ -382,13 +382,21 @@ export default function CredentialDetail({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  copyToClipboard(liveCredential.$id, 'id');
+                  handleCopy(liveCredential.$id, 'header-id');
                 }}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] text-white/40 hover:text-white/80 border border-white/5 text-[10px] font-mono transition-colors group cursor-pointer"
-                title="Click to copy Resource ID"
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-all group cursor-pointer ${
+                  copied === 'header-id'
+                    ? 'bg-[#10B981]/20 border-[#10B981]/40 text-[#10B981]'
+                    : 'bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white border-white/10'
+                }`}
+                title="Click to copy Item ID"
               >
-                <Copy className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 transition-opacity" />
-                <span className="truncate max-w-[100px]">{liveCredential.$id}</span>
+                {copied === 'header-id' ? (
+                  <Check className="w-3 h-3 text-[#10B981]" />
+                ) : (
+                  <Copy className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+                )}
+                <span className="truncate max-w-[120px]">{liveCredential.$id}</span>
               </button>
             )}
           </div>
@@ -642,30 +650,55 @@ export default function CredentialDetail({
 
           <div className="h-px bg-[#2C2A28] my-1" />
 
+          {/* Item ID Highlight Box */}
+          {credential.$id && (
+            <div>
+              <FieldLabel label="Item ID" />
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => handleCopy(credential.$id, 'id')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCopy(credential.$id, 'id');
+                  }
+                }}
+                className={`relative group p-3.5 rounded-xl border transition-all font-mono text-xs cursor-pointer flex items-center justify-between gap-3 select-none ${
+                  copied === 'id'
+                    ? 'border-[#10B981] bg-[#10B981]/15 text-[#10B981]'
+                    : 'bg-[#141211] border-[#2C2A28] text-[#F5F2ED] hover:border-[#10B981]/50 hover:bg-[#1A1817]'
+                }`}
+                title="Click to copy Item ID"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-[10px] uppercase font-bold text-white/40 tracking-wider">ID</span>
+                  <span className="truncate">{credential.$id}</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {copied === 'id' ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase text-[#10B981] bg-[#10B981]/20 px-2.5 py-1 rounded-lg border border-[#10B981]/40">
+                      <Check className="w-3 h-3" />
+                      Copied
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-[#9B9691] group-hover:text-white bg-white/5 px-2.5 py-1 rounded-lg border border-white/5 transition-colors">
+                      <Copy className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                      Copy
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Metadata & Audit Info */}
           <div>
             <span className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase mb-2.5 flex items-center gap-1.5 font-clash">
               <Info className="w-3.5 h-3.5 text-[#10B981]" />
-              <span>Information</span>
+              <span>Timestamps</span>
             </span>
             <div className="flex flex-col gap-1.5 text-xs text-[#9B9691]">
-              {credential.$id && (
-                <div className="flex justify-between items-center">
-                  <span>Resource ID:</span>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(credential.$id, 'id')}
-                    title="Click to copy Resource ID"
-                    className="inline-flex items-center gap-1.5 font-mono text-white/80 hover:text-[#10B981] hover:bg-white/5 px-1.5 py-0.5 rounded transition-colors cursor-pointer group"
-                  >
-                    <Copy className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
-                    <span>{credential.$id}</span>
-                    {copied === 'id' ? (
-                      <span className="text-[10px] text-[#10B981] lowercase">(copied!)</span>
-                    ) : null}
-                  </button>
-                </div>
-              )}
               {credential.createdAt && (
                 <p className="flex justify-between">
                   <span>Created:</span>
