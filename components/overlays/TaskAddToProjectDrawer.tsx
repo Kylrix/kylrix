@@ -141,7 +141,7 @@ export function TaskAddToProjectDrawer({
         className={`fixed bg-[#161412] border-[#34322F] shadow-2xl flex flex-col overflow-hidden z-[1201] ${
           isDesktop
             ? 'top-0 right-0 h-screen w-[480px] border-l'
-            : 'bottom-0 left-0 right-0 max-h-[85dvh] h-auto border-t rounded-t-[28px] max-w-[720px] mx-auto w-full'
+            : 'bottom-0 left-0 right-0 max-h-[60dvh] h-auto border-t rounded-t-[28px] max-w-[720px] mx-auto w-full'
         }`}
       >
 

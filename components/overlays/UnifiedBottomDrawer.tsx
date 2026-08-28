@@ -64,7 +64,7 @@ export function UnifiedBottomDrawer() {
           border: isFullscreenMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
           borderBottom: 0,
           height: isFullscreenMobile ? '100dvh' : isCompactBottomDrawer ? 'auto' : '60dvh',
-          maxHeight: isFullscreenMobile ? '100dvh' : isCompactBottomDrawer ? '85dvh' : '60dvh',
+          maxHeight: isFullscreenMobile ? '100dvh' : '60dvh',
           maxWidth: isFullscreenMobile ? '100vw' : '640px',
           width: '100%',
           mx: 'auto',

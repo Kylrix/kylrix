@@ -142,7 +142,7 @@ export function ContextMenu({ onCloseAction, items, appType, title }: ContextMen
       />
       <div
         data-kylrix-context-menu="true"
-        className="fixed bottom-0 left-0 right-0 max-h-[75vh] bg-[#161412] border-t border-white/10 rounded-t-[24px] z-[10100] text-white p-3.5 flex flex-col gap-2 animate-slide-up overflow-y-auto font-satoshi shadow-[0_-24px_48px_rgba(0,0,0,0.8)] max-w-lg mx-auto"
+        className="fixed bottom-0 left-0 right-0 max-h-[60dvh] bg-[#161412] border-t border-white/10 rounded-t-[24px] z-[10100] text-white p-3.5 flex flex-col gap-2 animate-slide-up overflow-y-auto font-satoshi shadow-[0_-24px_48px_rgba(0,0,0,0.8)] max-w-lg mx-auto"
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >

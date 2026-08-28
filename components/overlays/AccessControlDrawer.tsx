@@ -121,7 +121,7 @@ export function AccessControlDrawer({
       />
       
       {/* 2. Slide-up Panel */}
-      <div className="fixed bottom-0 left-0 right-0 max-h-[85vh] md:max-h-[60vh] bg-[#161412] border-t border-white/8 rounded-t-[28px] z-[100] text-white p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
+      <div className="fixed bottom-0 left-0 right-0 max-h-[60dvh] bg-[#161412] border-t border-white/8 rounded-t-[28px] z-[100] text-white p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
         {/* Drag handle */}
         <div className="w-10 h-1 bg-white/12 rounded-[2px] mx-auto mb-2 flex-shrink-0" />
         

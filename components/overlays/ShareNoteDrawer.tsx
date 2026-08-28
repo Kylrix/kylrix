@@ -597,7 +597,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
         className={`fixed bg-[#161412] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-[10003] ${
           isDesktop 
             ? 'top-0 right-0 h-screen w-[480px] border-l rounded-l-none'
-            : 'bottom-0 left-0 right-0 max-h-[90dvh] h-auto border-t rounded-t-[28px] max-w-[720px] mx-auto'
+            : 'bottom-0 left-0 right-0 max-h-[60dvh] h-auto border-t rounded-t-[28px] max-w-[720px] mx-auto'
         }`}
       >
         {/* Header */}
@@ -651,7 +651,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
             className={`fixed bg-[#0A0908] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-[10004] ${
               isDesktop 
                 ? 'top-0 right-0 h-screen w-[480px] border-l rounded-l-none'
-                : 'bottom-0 left-0 right-0 max-h-[80dvh] h-auto border-t rounded-t-[24px] max-w-[720px] mx-auto'
+                : 'bottom-0 left-0 right-0 max-h-[60dvh] h-auto border-t rounded-t-[24px] max-w-[720px] mx-auto'
             }`}
           >
             <div className="p-6">

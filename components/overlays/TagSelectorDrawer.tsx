@@ -144,7 +144,7 @@ export function TagSelectorDrawer() {
         zIndex: 16000,
         '& .ob-drawer-panel': {
           height: '54dvh',
-          maxHeight: '80dvh',
+          maxHeight: '60dvh',
           borderTopLeftRadius: '28px',
           borderTopRightRadius: '28px',
           border: '1px solid rgba(255, 255, 255, 0.08)',
