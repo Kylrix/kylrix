@@ -16,28 +16,22 @@
   <a href="LICENSE">AGPL-3.0-or-later</a> ·
   <a href="ARCHITECTURE.md">Architecture</a> ·
   <a href="https://www.kylrix.space">kylrix.space</a> ·
-  <a href="https://www.kylrix.space/sponsor">Sponsor</a> ·
   <a href="https://www.kylrix.space/docs/api">API Docs</a>
 </p>
 
 <p align="center">
   <a href="https://smithery.ai/servers/kylrix/kylrix"><img src="https://smithery.ai/badge/kylrix/kylrix" alt="smithery badge"></a>
-  <a href="https://www.kylrix.space/sponsor"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-EC4899?style=flat&logo=githubsponsors&logoColor=white" alt="Sponsor Kylrix"></a>
 </p>
 
 ---
 
-## Sponsor & Support
-
-Support sovereign local-first software, zero-trust cryptographic research, and native Model Context Protocol (MCP) agent tooling.
+## Sponsor
 
 <p align="center">
   <a href="https://www.kylrix.space/sponsor" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/Sponsor_Kylrix-%E2%9D%A4-EC4899?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor Kylrix" />
+    <img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-EC4899?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor" />
   </a>
 </p>
-
-Sponsorships feature instant Lightning & Nostr Zaps, multi-chain crypto checkout (BlockBee), and on-profile Sovereign Badges.
 
 ---
 
