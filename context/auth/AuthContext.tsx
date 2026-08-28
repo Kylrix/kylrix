@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshUserRef = useRef<() => Promise<User | null>>(async () => null);
   const attemptSilentAuthRef = useRef<() => Promise<boolean>>(async () => false);
   const sessionVerifySeq = useRef(0);
-  const lastSeenUserIdRef = useRef<string | null>(initialPulseSnapshot?.$id || null);
+  const lastSeenUserIdRef = useRef<string | null>(user?.$id || null);
 
   // 2. Background Revalidation (Mandatory account.get)
   const attemptSilentAuth = useCallback(async (): Promise<boolean> => {
