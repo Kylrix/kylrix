@@ -166,13 +166,13 @@ function DashboardPageContent() {
   const loadAllCredentials = useCallback(async (background = false, cursorToUse: string | null = null) => {
     const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
     if (!activeUserId) { setLoading(false); return; }
-    if (!background && !cursorToUse && allCredentials.length === 0) setLoading(true);
+    if (!background && !cursorToUse) setLoading(true);
     if (cursorToUse) setLoadingMore(true);
 
     const cacheKey = `vault_credentials_${activeUserId}`;
 
     // Instant local copy read on mount
-    if (!cursorToUse && allCredentials.length === 0) {
+    if (!cursorToUse) {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const cachedRows = await LocalEngine.cacheGet<any[]>(cacheKey);
@@ -233,12 +233,11 @@ function DashboardPageContent() {
       }
     } catch (error: unknown) {
       console.error("[Vault] Failed to load credentials:", error);
-      if (allCredentials.length === 0) toast.error(`Vault load error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [user, allCredentials.length]);
+  }, [user?.$id]);
 
   const loadMoreCredentials = useCallback(() => {
     if (loadingMore || !hasMore || !nextCursor) return;

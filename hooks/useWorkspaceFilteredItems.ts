@@ -29,6 +29,7 @@ export function useSharedWorkspaceEntities<T = any>(
   const [rows, setRows] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
   const mountedRef = useRef(true);
+  const inFlightRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -48,6 +49,9 @@ export function useSharedWorkspaceEntities<T = any>(
         }
         return;
       }
+
+      if (inFlightRef.current && !force) return;
+      inFlightRef.current = true;
 
       // 1. Try local copy first (LocalEngine pocket) for instant 0ms display
       if (!force) {
@@ -93,6 +97,7 @@ export function useSharedWorkspaceEntities<T = any>(
       } catch (err) {
         console.warn('[useSharedWorkspaceEntities] fetch failed:', err);
       } finally {
+        inFlightRef.current = false;
         if (mountedRef.current) setLoading(false);
       }
     },
@@ -153,7 +158,7 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
   const { rows: sharedWorkspaceRows, loading: loadingSharedRows } = useSharedWorkspaceEntities<T>(
     customWorkspaceId,
     entityKind,
-    isCustomWorkspace,
+    isSharedWorkspace,
   );
 
   const filteredItems = useMemo(() => {

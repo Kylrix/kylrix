@@ -551,7 +551,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     return () => {
       isCancelled = true;
     };
-  }, [user, showNew, isVaultUnlocked, unlockOnDemand]);
+  }, [user?.$id]);
 
   useEffect(() => {
     if (unlockOnDemand) {
