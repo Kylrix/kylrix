@@ -35,6 +35,48 @@ export type ProjectDetailCache = {
   taggedResources: ProjectTaggedResources;
 };
 
+export function projectsListCacheKey(userId: string): string {
+  return `projects_list_${userId}`;
+}
+
+export function projectDetailCacheKey(projectId: string): string {
+  return `project_detail_${projectId}`;
+}
+
+export function projectObjectsCacheKey(projectId: string): string {
+  return `project_objects_${projectId}`;
+}
+
+/** Cache key for a filtered slice: all objects of a given entityKind inside a project. */
+export function projectObjectsKindCacheKey(projectId: string, entityKind: string): string {
+  return `project_objects_${projectId}_kind_${entityKind}`;
+}
+
+export function projectMetaCacheKey(projectId: string): string {
+  return `project_meta_${projectId}`;
+}
+
+export function projectTaggedCacheKey(projectId: string, tagIds: string[]): string {
+  const sorted = [...tagIds].sort().join(',');
+  return `project_tagged_${projectId}_${sorted}`;
+}
+
+export function projectEntityCacheKey(
+  projectId: string,
+  kind: string,
+  ids: string[]): string {
+  const sorted = [...ids].sort().join(',');
+  if (sorted.length <= 120) {
+    return `project_entities_${projectId}_${kind}_${sorted}`;
+  }
+  let hash = 0;
+  for (let i = 0; i < sorted.length; i += 1) {
+    hash = (hash << 5) - hash + sorted.charCodeAt(i);
+    hash |= 0;
+  }
+  return `project_entities_${projectId}_${kind}_${Math.abs(hash)}`;
+}
+
 let sessionProjectsList: { userId: string; rows: Projects[] } | null = null;
 const sessionProjectDetails = new Map<string, ProjectDetailCache>();
 
