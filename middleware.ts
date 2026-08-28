@@ -5,6 +5,7 @@ import {
   isValidAppResumePath,
   LAST_ROUTE_COOKIE,
 } from '@/lib/ecosystem/resume-route';
+import { isSelfHostedDeployment } from '@/lib/deployment/surface';
 
 /**
  * KYLRIX APPLICATION LAYER PROTECTION
@@ -62,6 +63,18 @@ export function middleware(request: NextRequest) {
 
   // Handle Root URL ('/')
   if (pathname === '/' || pathname === '') {
+    const isSelfHosted = isSelfHostedDeployment();
+
+    if (isSelfHosted) {
+      // In self-hosted mode, brand landing page is completely disabled.
+      // Always route to the last active app route or /app.
+      const lastRoute = readResumePathFromCookie(request);
+      const target = (lastRoute && lastRoute.startsWith('/') && lastRoute !== '/')
+        ? lastRoute
+        : DEFAULT_AUTHENTICATED_ROUTE;
+      return NextResponse.redirect(new URL(target, request.url));
+    }
+
     if (ref) {
       // If referral link clicked:
       if (hasAuthSessionHint(request)) {

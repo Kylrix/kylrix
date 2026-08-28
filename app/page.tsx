@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { isSelfHostedDeployment } from '@/lib/deployment/surface';
 
 export default function RootPage() {
   const router = useRouter();
   const [shouldStay, setShouldStay] = useState<boolean | null>(null);
 
   useEffect(() => {
+    const isSelfHosted = isSelfHostedDeployment();
     const hash = window.location.hash;
     const search = window.location.search;
-    const hasStay = hash.includes('stay') || search.includes('stay');
+    const hasStay = !isSelfHosted && (hash.includes('stay') || search.includes('stay'));
 
     if (hasStay) {
       setShouldStay(true);
@@ -19,7 +21,7 @@ export default function RootPage() {
         .split('; ')
         .find((row) => row.startsWith('kylrix_last_route='))
         ?.split('=')[1];
-      const target = lastRoute ? decodeURIComponent(lastRoute) : '/app';
+      const target = (lastRoute && decodeURIComponent(lastRoute) !== '/') ? decodeURIComponent(lastRoute) : '/app';
       router.replace(target);
     }
   }, [router]);
