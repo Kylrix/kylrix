@@ -312,8 +312,57 @@ class MasterPassCrypto {
       throw new Error("Vault is locked");
     }
 
-    // Re-wrap MEK with new password
-    await this.createKeychainEntry(this.masterKey, newPassword, userId);
+    const rawMek = await crypto.subtle.exportKey("raw", this.masterKey);
+    const freshSalt = crypto.getRandomValues(new Uint8Array(MasterPassCrypto.SALT_SIZE));
+    const freshAuthKey = await this.deriveKey(newPassword, freshSalt, true);
+    const freshIv = crypto.getRandomValues(new Uint8Array(MasterPassCrypto.IV_SIZE));
+    const freshEncryptedMek = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: freshIv },
+      freshAuthKey,
+      rawMek
+    );
+
+    // MANDATORY ROUNDTRIP INTEGRITY CHECK
+    const testDecrypted = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: freshIv },
+      freshAuthKey,
+      freshEncryptedMek
+    );
+    if (!testDecrypted || testDecrypted.byteLength !== rawMek.byteLength) {
+      throw new Error("KEYCHAIN_ENCRYPTION_VERIFICATION_FAILED: Encrypted MEK failed in-memory roundtrip validation");
+    }
+
+    const freshCombined = new Uint8Array(freshIv.length + freshEncryptedMek.byteLength);
+    freshCombined.set(freshIv);
+    freshCombined.set(new Uint8Array(freshEncryptedMek), freshIv.length);
+
+    const wrappedKeyBase64 = btoa(String.fromCharCode(...freshCombined));
+    const saltBase64 = btoa(String.fromCharCode(...freshSalt));
+    const paramsJson = JSON.stringify({
+      memory: MasterPassCrypto.ARGON2_MEMORY,
+      iterations: MasterPassCrypto.ARGON2_ITERATIONS,
+      parallelism: MasterPassCrypto.ARGON2_PARALLELISM,
+      algo: "Argon2id"
+    });
+
+    try {
+      const { upgradeKeychainToArgon } = await import("./actions/client-ops");
+      const res = await upgradeKeychainToArgon({
+        userId,
+        wrappedKey: wrappedKeyBase64,
+        salt: saltBase64,
+        params: paramsJson,
+      });
+
+      if (res?.success && res.entry) {
+        const { SecurityEnclave } = await import('@/lib/security/enclave');
+        await SecurityEnclave.setKeychain(userId, [res.entry]);
+      } else {
+        await this.createKeychainEntry(this.masterKey, newPassword, userId);
+      }
+    } catch {
+      await this.createKeychainEntry(this.masterKey, newPassword, userId);
+    }
 
     // Trigger password sync silently if masterpass_for_login_enabled is active
     try {
@@ -512,6 +561,17 @@ class MasterPassCrypto {
                 freshAuthKey,
                 rawMek
               );
+
+              // MANDATORY ROUNDTRIP INTEGRITY CHECK
+              const testDecrypted = await crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: freshIv },
+                freshAuthKey,
+                freshEncryptedMek
+              );
+              if (!testDecrypted || testDecrypted.byteLength !== rawMek.byteLength) {
+                throw new Error("KEYCHAIN_ENCRYPTION_VERIFICATION_FAILED: Encrypted MEK failed in-memory roundtrip validation");
+              }
+
               const freshCombined = new Uint8Array(freshIv.length + freshEncryptedMek.byteLength);
               freshCombined.set(freshIv);
               freshCombined.set(new Uint8Array(freshEncryptedMek), freshIv.length);
@@ -574,6 +634,16 @@ class MasterPassCrypto {
         authKey,
         mekBytes
       );
+
+      // MANDATORY ROUNDTRIP INTEGRITY CHECK
+      const testDecrypted = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: iv },
+        authKey,
+        encryptedMek
+      );
+      if (!testDecrypted || testDecrypted.byteLength !== mekBytes.byteLength) {
+        throw new Error("KEYCHAIN_ENCRYPTION_VERIFICATION_FAILED: Encrypted MEK failed in-memory roundtrip validation");
+      }
 
       // Combine IV + Encrypted MEK
       const combined = new Uint8Array(iv.length + encryptedMek.byteLength);
