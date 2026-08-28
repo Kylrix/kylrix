@@ -100,9 +100,17 @@ Local state serves as the immediate source of truth with background confirmation
 
 ## SDK & Extensibility
 
-- **Workflows & Automation:** Build declarative trigger-action routines at `/flows` to automate tasks, form reactions, and cross-object event pipelines.
-- **REST & Agentic API:** Integrate via `/api/v1` using Personal Access Tokens (PATs) across notes, goals, workspaces, events, forms, and vault metadata (`npx skills add kylrix/kylrix/api`).
-- **Sign in with Kylrix (OAuth 2.1 / OIDC):** Build custom third-party apps and services authenticated directly through Kylrix accounts with granular permission scopes.
+Kylrix is intentionally engineered as a single, sovereign web codebase to maintain unmatched iteration velocity and zero multi-repo divergence. As a design principle, first-party mobile, desktop, or CLI client apps are not shipped in core; instead, Kylrix provides comprehensive protocols, standard APIs, and developer tooling so third-party developers, agents, and community builders can build custom native clients, CLI tools, scripts, and ecosystem integrations.
+
+Comprehensive documentation for all interfaces is available in the [Kylrix Docs](https://github.com/Kylrix/kylrix/tree/master/docs).
+
+| What You Want to Build | System / Protocol | Developer Capabilities | Documentation |
+|---|---|---|---|
+| **AI Assistants & LLM Workflows** | Model Context Protocol (MCP) | Streamable HTTP & SSE MCP server at `/api/v1/mcp` with 1:1 tool parity across notes, goals, workspaces, events, forms, flows, and vault metadata. | [docs/mcp.md](https://github.com/Kylrix/kylrix/blob/master/docs/mcp.md) |
+| **Custom Clients, Mobile Apps & CLI** | REST API (`/api/v1`) | Scoped Personal Access Tokens (PATs) with Bearer auth for complete CRUD, cross-object filtering, and workspace operations (`npx skills add kylrix/kylrix/api`). | [docs/api.md](https://github.com/Kylrix/kylrix/blob/master/docs/api.md) |
+| **Third-Party App Authentication** | Sign in with Kylrix (OAuth 2.1 / OIDC) | Authorization Code flow with PKCE, consent management (`/oauth/consent`), JWKS validation, and granular user scopes. | [docs/oauth2.md](https://github.com/Kylrix/kylrix/blob/master/docs/oauth2.md) |
+| **Autonomous Workspace Agents** | Agentic Runtime & Provisioning | Zero-trust Agent Provisioning Keys, sovereign EVM/Nostr agent identities, and sandboxed workspace memory execution. | [docs/agents.md](https://github.com/Kylrix/kylrix/blob/master/docs/agents.md) |
+| **Cross-Object Reactive Automations** | Flows & Event Engine | Declarative trigger-action routines at `/flows` to automate task lifecycles, webhook reactions, and cross-table event pipelines. | [docs/api.md](https://github.com/Kylrix/kylrix/blob/master/docs/api.md) |
 
 ## Bug Reports, Feature Requests & Security
 
