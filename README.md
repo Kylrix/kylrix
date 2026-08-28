@@ -25,6 +25,52 @@
 
 ---
 
+## Quick Start & Setup
+
+### Self-Hosting
+
+#### Option 1: 1-Command Script
+```bash
+curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
+```
+
+#### Option 2: Docker Direct Pull
+```bash
+docker pull ghcr.io/kylrix/kylrix:latest
+docker run -d -p 5003:3000 --name kylrix-app ghcr.io/kylrix/kylrix:latest
+```
+
+#### Option 3: Docker Compose
+```bash
+docker compose up -d
+```
+
+### Local Development
+
+```bash
+git clone https://github.com/Kylrix/kylrix.git
+cd kylrix
+cp .env.example .env
+pnpm install
+pnpm dev
+```
+
+Open **http://localhost:3005**.
+
+### Ota Contributor Workflow
+
+```bash
+ota validate .
+ota doctor
+ota tasks --use
+ota up --workflow verify --mode native
+ota up --workflow dev
+```
+
+See `ota.yaml` (verify, dev, selfhost) and `appwrite.config.json`.
+
+---
+
 ## Philosophy
 
 > **Everything is an object, every action is just a tool call, and every result is more context.**
@@ -58,49 +104,6 @@ Local copy is truth. The network confirms. Guests get the same engine. No featur
 **The loop:** object → tool call → context → next object. Ship daily, the system gets smarter.
 
 ---
-
-## Quick start
-
-### Self-Hosting
-
-#### Option 1: 1-Command Script
-```bash
-curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
-```
-
-#### Option 2: Docker Direct Pull
-```bash
-docker pull ghcr.io/kylrix/kylrix:latest
-docker run -d -p 5003:3000 --name kylrix-app ghcr.io/kylrix/kylrix:latest
-```
-
-#### Option 3: Docker Compose
-```bash
-docker compose up -d
-```
-
-### Local Development
-```bash
-git clone https://github.com/Kylrix/kylrix.git
-cd kylrix
-cp .env.example .env
-pnpm install
-pnpm dev
-```
-
-Open **http://localhost:3005**.
-
-## Ota
-
-```bash
-ota validate .
-ota doctor
-ota tasks --use
-ota up --workflow verify --mode native
-ota up --workflow dev
-```
-
-See `ota.yaml` (verify, dev, selfhost) and `appwrite.config.json`.
 
 ## SDK & Extensibility
 
