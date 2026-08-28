@@ -41,7 +41,7 @@ Add to your `mcp.json` or `claude_desktop_config.json`:
 
 | Category | Tools | Description |
 |---|---|---|
-| **Identity & Profile** | `get_my_profile` | Get authenticated account ID, type, and active authorized scopes |
+| **Identity & Scopes** | `get_my_profile`, `get_token_info`, `list_available_scopes`, `refresh_token_scopes` | Get identity details, inspect token metadata, view scope catalog, and refresh/grant authorized scopes on the fly |
 | **Workspaces** | `list_workspaces`, `get_workspace`, `create_workspace`, `update_workspace`, `delete_workspace`, `list_workspace_collaborators`, `add_workspace_collaborator` | Manage project and agentic workspaces |
 | **Notes & Ideas** | `list_notes`, `get_note`, `create_note`, `update_note`, `delete_note` | Full CRUD on markdown notes with tags and public sharing |
 | **Goals & Tasks** | `list_goals`, `get_goal`, `create_goal`, `update_goal`, `delete_goal` | Track tasks, priorities (`low`, `medium`, `high`, `urgent`), and status |

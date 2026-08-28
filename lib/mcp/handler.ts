@@ -46,6 +46,68 @@ export const MCP_TOOLS: McpTool[] = [
     },
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 1.0 },
   },
+  {
+    name: 'get_token_info',
+    description: 'Inspect active personal access token metadata, authorized permission scopes, expiration, and rate limits.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        auth: { type: 'string' },
+        userId: { type: 'string' },
+        patId: { type: 'string' },
+        scopes: { type: 'array', items: { type: 'string' } },
+        catalog: { type: 'array', items: { type: 'object' } },
+      },
+    },
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.9 },
+  },
+  {
+    name: 'list_available_scopes',
+    description: 'List all permission scopes available in the Kylrix ecosystem catalog.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        scopes: { type: 'array', items: { type: 'object' } },
+      },
+    },
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.8 },
+  },
+  {
+    name: 'refresh_token_scopes',
+    description: 'Refresh or adjust permission scopes on the current active Bearer PAT token on the fly. Allows autonomous agents to dynamically grant themselves needed workspace and agentic scopes.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        scopes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of permission scopes to grant or replace on this token (e.g. ["notes:read", "notes:write", "goals:read", "goals:write", "tags:read", "tags:write", "flows:read", "flows:write", "workspaces:read", "workspaces:write"])',
+        },
+        mode: {
+          type: 'string',
+          enum: ['grant', 'replace'],
+          description: 'Whether to addively grant new scopes or replace current scope set (default: grant)',
+        },
+      },
+      required: ['scopes'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        scopes: { type: 'array', items: { type: 'string' } },
+        hint: { type: 'string' },
+      },
+    },
+    annotations: { audience: ['user', 'assistant'], readOnly: false, idempotent: true, priority: 0.9 },
+  },
 
   // ── 2. Workspaces ──
   {
@@ -1251,9 +1313,18 @@ export const MCP_TOOLS: McpTool[] = [
 
 export async function executeMcpTool(actor: ApiActor, name: string, args: Record<string, any> = {}): Promise<any> {
   switch (name) {
-    // Profile
+    // Profile & Token Scopes
     case 'get_my_profile':
       return ApiResources.me(actor);
+    case 'get_token_info':
+      return ApiResources.tokenMe(actor);
+    case 'list_available_scopes':
+      return ApiResources.tokenScopeCatalog(actor);
+    case 'refresh_token_scopes':
+      return ApiResources.tokenUpdateScopes(actor, {
+        scopes: args.scopes,
+        mode: args.mode || 'grant',
+      }, args.mode === 'replace' ? 'replace' : 'grant');
 
     // Workspaces
     case 'list_workspaces':
@@ -1468,7 +1539,29 @@ export async function handleMcpRpc(req: NextRequest, rpcPayload: any): Promise<a
     const toolArgs = params?.arguments || {};
 
     try {
-      const actor = await resolveApiActor(req);
+      let actor: ApiActor;
+      try {
+        actor = await resolveApiActor(req);
+      } catch (authErr) {
+        if (toolName === 'list_available_scopes') {
+          const { listScopeCatalog } = await import('@/lib/api/scopes');
+          return {
+            jsonrpc: '2.0',
+            id: id ?? null,
+            result: {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({ scopes: listScopeCatalog() }, null, 2),
+                },
+              ],
+              isError: false,
+            },
+          };
+        }
+        throw authErr;
+      }
+
       const toolResult = await executeMcpTool(actor, toolName, toolArgs);
 
       return {

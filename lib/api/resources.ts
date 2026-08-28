@@ -808,6 +808,18 @@ export const ApiResources = {
       badRequest('Only personal access tokens can refresh their own scopes');
     }
     const scopes = body.scopes ?? body.grant ?? body.add;
+
+    if (actor.isAgent) {
+      // Guardrail: Agents can self-grant workspace and agentic scopes, but cannot self-grant user private vault or PAT management
+      const RESTRICTED_USER_SCOPES = new Set(['vault:read', 'vault:write', 'pats:write', 'admin:keys']);
+      const requestedList: string[] = Array.isArray(scopes) ? scopes.map(String) : typeof scopes === 'string' ? [scopes] : [];
+      for (const s of requestedList) {
+        if (RESTRICTED_USER_SCOPES.has(s) && !actor.scopes.includes(s)) {
+          badRequest(`Agentic tokens cannot self-grant restricted scope '${s}'. Manual authorization via owner agent provisioning key is required.`);
+        }
+      }
+    }
+
     const pat = await PatService.updateScopes({
       patId: actor.patId!,
       userId: actor.userId,

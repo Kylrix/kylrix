@@ -1,5 +1,6 @@
-import { createSystemFunctions } from '@/lib/appwrite-admin';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { MCP_TOOLS, executeMcpTool } from '@/lib/mcp/handler';
+import { PAT_SCOPES } from '@/lib/api/scopes';
+import type { ApiActor } from '@/lib/api/guard';
 
 export type McpToolDefinition = {
   name: string;
@@ -9,21 +10,16 @@ export type McpToolDefinition = {
 
 export const McpServerService = {
   /**
-   * Discovers tools registered on the Kylrix MCP server.
+   * Discovers tools registered on the native Kylrix MCP server.
    */
   async listTools(): Promise<{ ok: boolean; tools?: McpToolDefinition[]; error?: string }> {
     try {
-      const functions = createSystemFunctions();
-      const functionId = APPWRITE_CONFIG.FUNCTIONS.MCP_SERVER || '6a8f212e003d1f3518db';
-
-      const execution = await functions.createExecution(
-        functionId,
-        JSON.stringify({ method: 'tools/list' }),
-        false
-      );
-
-      const resBody = execution.responseBody ? JSON.parse(execution.responseBody) : {};
-      return { ok: execution.responseStatusCode < 400 && !resBody.isError, tools: resBody.tools, error: resBody.error };
+      const tools: McpToolDefinition[] = MCP_TOOLS.map((t) => ({
+        name: t.name,
+        description: t.description,
+        inputSchema: t.inputSchema,
+      }));
+      return { ok: true, tools };
     } catch (err: any) {
       console.error('[McpServerService.listTools]', err);
       return { ok: false, error: err.message };
@@ -31,27 +27,33 @@ export const McpServerService = {
   },
 
   /**
-   * Executes a specific tool on the Kylrix MCP server.
+   * Executes a specific tool on the native Kylrix MCP server.
    */
-  async callTool(name: string, args: Record<string, unknown> = {}): Promise<{ ok: boolean; content?: any[]; error?: string }> {
+  async callTool(
+    name: string,
+    args: Record<string, unknown> = {},
+    actor?: ApiActor
+  ): Promise<{ ok: boolean; content?: any[]; error?: string }> {
     try {
-      const functions = createSystemFunctions();
-      const functionId = APPWRITE_CONFIG.FUNCTIONS.MCP_SERVER || '6a8f212e003d1f3518db';
+      const systemActor: ApiActor = actor || {
+        userId: 'system',
+        kind: 'session',
+        scopes: [...PAT_SCOPES],
+      };
 
-      const execution = await functions.createExecution(
-        functionId,
-        JSON.stringify({
-          method: 'tools/call',
-          params: { name, arguments: args },
-        }),
-        false
-      );
-
-      const resBody = execution.responseBody ? JSON.parse(execution.responseBody) : {};
-      return { ok: execution.responseStatusCode < 400 && !resBody.isError, content: resBody.content, error: resBody.error };
+      const result = await executeMcpTool(systemActor, name, args);
+      return {
+        ok: true,
+        content: [
+          {
+            type: 'text',
+            text: typeof result === 'string' ? result : JSON.stringify(result, null, 2),
+          },
+        ],
+      };
     } catch (err: any) {
       console.error('[McpServerService.callTool]', err);
-      return { ok: false, error: err.message };
+      return { ok: false, error: err?.message || 'Tool execution failed' };
     }
   },
 };
