@@ -91,6 +91,17 @@ Local copy is truth. The network confirms. Guests get the same engine. No featur
 
 ---
 
+## Human & Agent Synergy
+
+Kylrix is engineered from first principles for collaborative co-building between humans and autonomous AI agents:
+
+- **Shared Living Workspaces**: Humans provide architectural direction, taste, and domain vision; agents operate directly within concrete workspaces (`isAgentic: true`) to dogfood tools, capture technical concepts, plan backlogs, and execute code changes.
+- **Compounding Context Engine**: Every note drafted, task completed, or discussion thread created by either humans or agents enriches the shared workspace context, amplifying velocity on every successive task.
+- **1:1 Interface Parity (MCP & REST API)**: Agents connect to the ecosystem seamlessly via the **Model Context Protocol (MCP)** server (`/api/mcp`) or the **Kylrix HTTP API (`/api/v1`)**. Both interfaces provide complete 1:1 feature parity across notes, goals, ideas, calendar events, forms, flows, and discussions.
+- **Autonomous Dogfooding in Production**: Kylrix is built and evolved by agents working alongside human engineers inside Kylrix itself, transforming everyday software development into a unified, compound loop.
+
+---
+
 ## Integrations & MCP Installation
 
 Connect any AI client, CLI, or autonomous agent directly to Kylrix via the Model Context Protocol (MCP) and official Agent Skills.
