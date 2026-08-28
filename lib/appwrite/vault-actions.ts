@@ -18,7 +18,6 @@ import {
   APPWRITE_DATABASE_ID,
   APPWRITE_COLLECTION_KEYCHAIN_ID,
   appwriteAccount,
-  invalidateCurrentUserCache,
 } from "./client";
 import type {
   Credentials,

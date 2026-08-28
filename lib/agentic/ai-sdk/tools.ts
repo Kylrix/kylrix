@@ -20,7 +20,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
     create_note: tool({
       description:
         'Create a new Idea/Note in Kylrix. System assigns userId and ID. Emits create_note toolCall for UI live-sync.',
-      parameters: z.object({
+      inputSchema: z.object({
         title: z.string().describe('Title of the idea or note'),
         content: z.string().describe('Full markdown content of the note'),
         tags: z.array(z.string()).optional().describe('Optional tags for indexing and organization'),
@@ -39,7 +39,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     update_note: tool({
       description: 'Update an existing Idea/Note by its ID with new title, content, or tags.',
-      parameters: z.object({
+      inputSchema: z.object({
         id: z.string().describe('Target Note ID ($id)'),
         title: z.string().optional().describe('Updated title'),
         content: z.string().optional().describe('Updated markdown content'),
@@ -59,7 +59,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     get_note: tool({
       description: 'Fetch and read an Idea/Note by its ID for analysis or discussion.',
-      parameters: z.object({
+      inputSchema: z.object({
         id: z.string().describe('Note ID ($id) to fetch'),
       }),
       execute: async (args) => {
@@ -75,7 +75,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     create_goal: tool({
       description: 'Create a Goal/Task in Kylrix Flow to track deliverables, milestones, and actionable tasks.',
-      parameters: z.object({
+      inputSchema: z.object({
         title: z.string().describe('Title of the goal or task'),
         status: z.enum(['todo', 'in_progress', 'done']).optional().describe('Status of the task'),
         priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().describe('Priority level'),
@@ -96,7 +96,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     update_goal: tool({
       description: 'Modify status, priority, title, or details of an existing Goal/Task.',
-      parameters: z.object({
+      inputSchema: z.object({
         id: z.string().describe('Goal/Task ID ($id)'),
         title: z.string().optional().describe('New title'),
         status: z.enum(['todo', 'in_progress', 'done']).optional().describe('Updated status'),
@@ -116,7 +116,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     create_project: tool({
       description: 'Create a new Project Workspace for grouping goals, ideas, and agentic workflows.',
-      parameters: z.object({
+      inputSchema: z.object({
         title: z.string().describe('Project title'),
         summary: z.string().optional().describe('Short project summary or mission'),
       }),
@@ -133,7 +133,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     link_to_project: tool({
       description: 'Connect an Idea or Goal to a specific Project Workspace.',
-      parameters: z.object({
+      inputSchema: z.object({
         objectType: z.enum(['note', 'goal']).describe('Type of resource being attached'),
         objectId: z.string().describe('Resource ID ($id)'),
         projectId: z.string().optional().describe('Target Project Workspace ID'),
@@ -151,7 +151,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     switch_workspace: tool({
       description: 'Switch active workspace context to target workspace without leaving the app.',
-      parameters: z.object({
+      inputSchema: z.object({
         workspaceId: z.string().describe('Target Workspace ID'),
         workspaceTitle: z.string().optional().describe('Target Workspace Title'),
       }),
@@ -168,7 +168,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     'ui.navigate': tool({
       description: 'Navigate the application via semantic target IDs (e.g. settings.passkeys, goals.home, ideas.home) or route.',
-      parameters: z.object({
+      inputSchema: z.object({
         target: z.string().optional().describe('Semantic navigation target ID'),
         route: z.string().optional().describe('Raw relative URL route'),
       }),
@@ -185,7 +185,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     search_ecosystem: tool({
       description: 'Perform cross-domain search across Ideas, Goals, Events, Forms, and Workspaces.',
-      parameters: z.object({
+      inputSchema: z.object({
         query: z.string().describe('Search query phrase'),
         limit: z.number().optional().describe('Maximum number of search results to retrieve (default 8)'),
       }),
@@ -202,7 +202,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     suggest_next_steps: tool({
       description: 'Emit 2–4 clickable next-step action chips in the chat UI.',
-      parameters: z.object({
+      inputSchema: z.object({
         suggestions: z.array(
           z.object({
             label: z.string().describe('Short UI chip text (e.g. "Create Goal", "Add Note")'),

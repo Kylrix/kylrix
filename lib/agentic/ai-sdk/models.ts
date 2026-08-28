@@ -6,8 +6,8 @@
  */
 
 import { google, createGoogleGenerativeAI } from '@ai-sdk/google';
-import { openai, createOpenAI } from '@ai-sdk/openai';
-import type { LanguageModelV1 } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import type { LanguageModel } from 'ai';
 
 export interface ModelResolutionOptions {
   modelName?: string;
@@ -20,7 +20,7 @@ export interface ModelResolutionOptions {
  * Resolves the appropriate Vercel AI SDK LanguageModel instance
  * dynamically based on environment configuration and caller options.
  */
-export function resolveLanguageModel(options?: ModelResolutionOptions): LanguageModelV1 {
+export function resolveLanguageModel(options?: ModelResolutionOptions): LanguageModel {
   const provider = options?.provider || 'auto';
 
   // 1. Ollama / Local OpenAI-compatible endpoint

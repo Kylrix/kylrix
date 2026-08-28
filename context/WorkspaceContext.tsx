@@ -69,7 +69,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const hydratedRef = useRef(false);
   const lastSetIdRef = useRef<string | null>(null);
   const pendingPrefSyncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastUserIdRef = useRef(userId);
+  const lastUserIdRef = useRef<string | null>(userId);
   const pendingProjectObjectsRef = useRef<Map<string, Set<string>>>(new Map());
   const isEntityPendingInActiveWorkspace = useCallback(
     (entityKind: string, entityId: string) => {

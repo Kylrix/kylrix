@@ -3,16 +3,16 @@
  * Handles autonomous multi-step reasoning, tool execution loops, and structured responses.
  */
 
-import { generateText, streamText, generateObject, type CoreMessage, type LanguageModelV1 } from 'ai';
+import { generateText, streamText, generateObject, isStepCount, type ModelMessage, type LanguageModel } from 'ai';
 import { resolveLanguageModel, type ModelResolutionOptions } from './models';
 import { getKylrixAiTools, type ToolExecutionContext } from './tools';
 import type { z } from 'zod';
 
 export interface AgenticChatOptions {
-  messages: Array<CoreMessage | { role: 'user' | 'assistant' | 'system'; content: string }>;
+  messages: Array<ModelMessage | { role: 'user' | 'assistant' | 'system'; content: string }>;
   systemInstruction?: string;
   modelOptions?: ModelResolutionOptions;
-  modelInstance?: LanguageModelV1;
+  modelInstance?: LanguageModel;
   maxSteps?: number;
   userId?: string;
   jwt?: string;
@@ -48,9 +48,9 @@ export async function runAgenticChat(options: AgenticChatOptions): Promise<Agent
   const result = await generateText({
     model,
     system: options.systemInstruction,
-    messages: options.messages as CoreMessage[],
+    messages: options.messages as any,
     tools,
-    maxSteps,
+    stopWhen: isStepCount(maxSteps),
     onStepFinish: options.onStepFinish,
   });
 
@@ -58,10 +58,11 @@ export async function runAgenticChat(options: AgenticChatOptions): Promise<Agent
   const collectedCalls = [...emittedToolCalls];
   if (result.toolCalls && Array.isArray(result.toolCalls)) {
     for (const tc of result.toolCalls) {
-      if (!collectedCalls.some((c) => c.name === tc.toolName && JSON.stringify(c.args) === JSON.stringify(tc.args))) {
+      const toolInput = (tc as any).input || (tc as any).args || {};
+      if (!collectedCalls.some((c) => c.name === tc.toolName && JSON.stringify(c.args) === JSON.stringify(toolInput))) {
         collectedCalls.push({
           name: tc.toolName,
-          args: (tc.args as Record<string, any>) || {},
+          args: toolInput,
         });
       }
     }
@@ -70,7 +71,7 @@ export async function runAgenticChat(options: AgenticChatOptions): Promise<Agent
   return {
     text: result.text.trim(),
     toolCalls: collectedCalls,
-    steps: result.steps || [],
+    steps: (result as any).steps || [],
     finishReason: result.finishReason,
     usage: result.usage,
   };
@@ -92,9 +93,9 @@ export async function streamAgenticChat(options: AgenticChatOptions) {
   return streamText({
     model,
     system: options.systemInstruction,
-    messages: options.messages as CoreMessage[],
+    messages: options.messages as any,
     tools,
-    maxSteps,
+    stopWhen: isStepCount(maxSteps),
     onStepFinish: options.onStepFinish,
   });
 }

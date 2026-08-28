@@ -6,7 +6,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { generateText, streamText, type CoreMessage } from 'ai';
+import { generateText, streamText } from 'ai';
 import { resolveLanguageModel } from './ai-sdk/models';
 import { runAgenticChat, streamAgenticChat, type AgenticChatOptions } from './ai-sdk/runner';
 
