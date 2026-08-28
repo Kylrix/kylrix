@@ -61,9 +61,22 @@ Local copy is truth. The network confirms. Guests get the same engine. No featur
 
 ## Quick start
 
-### Self-Hosting (1-Command Install)
+### Self-Hosting
+
+#### Option 1: 1-Command Script
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
+```
+
+#### Option 2: Docker Direct Pull
+```bash
+docker pull ghcr.io/kylrix/kylrix:latest
+docker run -d -p 3006:3000 --name kylrix-app ghcr.io/kylrix/kylrix:latest
+```
+
+#### Option 3: Docker Compose
+```bash
+docker compose up -d
 ```
 
 ### Local Development
