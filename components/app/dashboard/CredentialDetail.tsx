@@ -18,7 +18,9 @@ import {
   Lock,
   Tag as TagIcon,
   Trash2,
-  Info
+  Info,
+  Copy,
+  Check
 } from 'lucide-react';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
@@ -375,6 +377,20 @@ export default function CredentialDetail({
               <Lock className="w-3 h-3" />
               <span>Vault Secret</span>
             </span>
+            {liveCredential.$id && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(liveCredential.$id, 'id');
+                }}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] text-white/40 hover:text-white/80 border border-white/5 text-[10px] font-mono transition-colors group cursor-pointer"
+                title="Click to copy Resource ID"
+              >
+                <Copy className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 transition-opacity" />
+                <span className="truncate max-w-[100px]">{liveCredential.$id}</span>
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
@@ -634,10 +650,21 @@ export default function CredentialDetail({
             </span>
             <div className="flex flex-col gap-1.5 text-xs text-[#9B9691]">
               {credential.$id && (
-                <p className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span>Resource ID:</span>
-                  <span className="font-mono text-white/80">{credential.$id}</span>
-                </p>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(credential.$id, 'id')}
+                    title="Click to copy Resource ID"
+                    className="inline-flex items-center gap-1.5 font-mono text-white/80 hover:text-[#10B981] hover:bg-white/5 px-1.5 py-0.5 rounded transition-colors cursor-pointer group"
+                  >
+                    <Copy className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+                    <span>{credential.$id}</span>
+                    {copied === 'id' ? (
+                      <span className="text-[10px] text-[#10B981] lowercase">(copied!)</span>
+                    ) : null}
+                  </button>
+                </div>
               )}
               {credential.createdAt && (
                 <p className="flex justify-between">
