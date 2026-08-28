@@ -397,7 +397,7 @@ class MasterPassCrypto {
         );
       } catch (_primaryErr) {
         // Safe fallback: If primary failed and we assumed Argon2id, test legacy PBKDF2 derivation ONCE
-        if (isArgon && !isArgonBySalt) {
+        if (isArgon) {
           try {
             logDebug("[Vault] Primary Argon2id unlock failed. Trying legacy PBKDF2 fallback...");
             const fallbackKey = await this.deriveKey(password, salt, false);
@@ -406,7 +406,9 @@ class MasterPassCrypto {
               fallbackKey,
               ciphertext
             );
-            usedFallbackPBKDF2 = true;
+            if (decryptedMek) {
+              usedFallbackPBKDF2 = true;
+            }
           } catch (_fallbackErr) {}
         }
       }
@@ -426,7 +428,6 @@ class MasterPassCrypto {
             const entrySalt = this.decodeBase64(entry.salt);
             const isArgonCheck = Boolean(
               entry.isArgon ||
-              entrySalt.length === MasterPassCrypto.SALT_SIZE ||
               (typeof entry.params === 'string' && entry.params.includes('Argon2id')) ||
               entry.params?.algo === 'Argon2id'
             );
@@ -502,18 +503,43 @@ class MasterPassCrypto {
               
               sessionStorage.setItem(backupId, btoa(String.fromCharCode(...combinedBackup)));
               
-              // 1. Write new elite entry (marked as PENDING)
-              const { AppwriteService } = await import("./appwrite");
-              const newEntry = await this.createKeychainEntry(this.masterKey, password, userId, true, true);
-              
-              // 2. Delete legacy entry ONLY after successful new entry creation
-              if (keychainEntry.$id && newEntry?.$id) {
-                  await AppwriteService.deleteKeychainEntry(keychainEntry.$id);
-                  // 3. Finalize new entry (remove PENDING status)
-                  await AppwriteService.updateKeychainEntry(newEntry.$id, { isPending: false });
+              // Derive fresh Argon2id key and wrap MEK
+              const freshSalt = crypto.getRandomValues(new Uint8Array(MasterPassCrypto.SALT_SIZE));
+              const freshAuthKey = await this.deriveKey(password, freshSalt, true);
+              const freshIv = crypto.getRandomValues(new Uint8Array(MasterPassCrypto.IV_SIZE));
+              const freshEncryptedMek = await crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: freshIv },
+                freshAuthKey,
+                rawMek
+              );
+              const freshCombined = new Uint8Array(freshIv.length + freshEncryptedMek.byteLength);
+              freshCombined.set(freshIv);
+              freshCombined.set(new Uint8Array(freshEncryptedMek), freshIv.length);
+
+              const wrappedKeyBase64 = btoa(String.fromCharCode(...freshCombined));
+              const saltBase64 = btoa(String.fromCharCode(...freshSalt));
+              const paramsJson = JSON.stringify({
+                memory: MasterPassCrypto.ARGON2_MEMORY,
+                iterations: MasterPassCrypto.ARGON2_ITERATIONS,
+                parallelism: MasterPassCrypto.ARGON2_PARALLELISM,
+                algo: "Argon2id"
+              });
+
+              // Execute atomic multi-table transaction
+              const { upgradeKeychainToArgon } = await import("./actions/client-ops");
+              const res = await upgradeKeychainToArgon({
+                userId,
+                wrappedKey: wrappedKeyBase64,
+                salt: saltBase64,
+                params: paramsJson,
+              });
+
+              if (res?.success && res.entry) {
+                const { SecurityEnclave } = await import('@/lib/security/enclave');
+                await SecurityEnclave.setKeychain(userId, [res.entry]);
               }
 
-              logDebug("[Migration] Successfully upgraded to Argon2id via Double-Lock.");
+              logDebug("[Migration] Successfully upgraded to Argon2id via atomic transaction.");
               sessionStorage.removeItem(backupId); // Purge backup immediately
               this.onMigrationEnd?.(true);
           } catch (err) {

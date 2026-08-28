@@ -100,6 +100,7 @@ import {
   getProfilePicturePreviewSecure,
   getObjectsByParentSecure,
   syncMasterpassToAccountPasswordAction,
+  upgradeKeychainToArgonAction,
   createStandaloneTagSecure,
   toggleTaskReminderSecure,
   purgeExpiredTrashSecure} from './secure-ops/misc';
@@ -244,6 +245,7 @@ export {
   getProfilePicturePreviewSecure,
   getObjectsByParentSecure,
   syncMasterpassToAccountPasswordAction,
+  upgradeKeychainToArgonAction,
   
   createStandaloneTagSecure,
   toggleTaskReminderSecure,

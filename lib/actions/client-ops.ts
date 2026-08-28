@@ -487,6 +487,17 @@ export async function syncMasterpassToAccountPassword(userId: string, masterpass
   return syncMasterpassToAccountPasswordAction({ userId, masterpass, jwt });
 }
 
+export async function upgradeKeychainToArgon(params: {
+  userId: string;
+  wrappedKey: string;
+  salt: string;
+  params: string;
+}) {
+  const jwt = await getJwt();
+  const { upgradeKeychainToArgonAction } = await import('./secure-ops');
+  return upgradeKeychainToArgonAction({ ...params, jwt });
+}
+
 
 export async function createStandaloneTag(tagName: string) {
   const jwt = await getJwt();

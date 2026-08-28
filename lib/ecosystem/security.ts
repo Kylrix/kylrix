@@ -356,11 +356,28 @@ class EcosystemSecurity {
       const iv = wrappedKeyBytes.slice(0, EcosystemSecurity.IV_SIZE);
       const ciphertext = wrappedKeyBytes.slice(EcosystemSecurity.IV_SIZE);
 
-      const mekBytes = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: iv },
-        authKey,
-        ciphertext
-      );
+      let mekBytes: ArrayBuffer | null = null;
+      try {
+        mekBytes = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: iv },
+          authKey,
+          ciphertext
+        );
+      } catch {
+        if (isArgon) {
+          try {
+            const fallbackKey = await this.deriveKey(password, salt, false);
+            mekBytes = await crypto.subtle.decrypt(
+              { name: "AES-GCM", iv: iv },
+              fallbackKey,
+              ciphertext
+            );
+          } catch {}
+        }
+      }
+
+      if (!mekBytes) return false;
+
       this.masterKey = await crypto.subtle.importKey(
         "raw",
         mekBytes,

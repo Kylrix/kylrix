@@ -1771,6 +1771,84 @@ export async function syncMasterpassToAccountPasswordAction(payload: {
   return { success: true };
 }
 
+export async function upgradeKeychainToArgonAction(payload: {
+  userId: string;
+  wrappedKey: string;
+  salt: string;
+  params: string;
+  jwt?: string;
+}) {
+  const { z } = await import('zod');
+  const validatedUserId = IDSchema.parse(payload.userId);
+  const validatedJwt = JWTSchema.parse(payload.jwt);
+  const validatedWrappedKey = z.string().min(1).parse(payload.wrappedKey);
+  const validatedSalt = z.string().min(1).parse(payload.salt);
+  const validatedParams = z.string().min(1).parse(payload.params);
+
+  const actor = await getActor(validatedJwt);
+  if (!actor?.$id || actor.$id !== validatedUserId) {
+    throw new Error('Unauthorized');
+  }
+
+  const { createSystemClient, createSystemTablesDB } = await import('@/lib/appwrite-admin');
+  const { withSystemTransaction } = await import('@/lib/services/internal/transaction');
+  const { databases } = createSystemClient();
+  const tables: any = createSystemTablesDB();
+
+  // Find existing password entries to preserve authPass and clean up legacy records
+  const existing = await databases.listRows(
+    APPWRITE_CONFIG.DATABASES.VAULT,
+    APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+    [
+      Query.equal('userId', validatedUserId),
+      Query.equal('type', 'password'),
+      Query.limit(25)
+    ]
+  ).catch(() => ({ rows: [] }));
+
+  const existingRows = existing.rows || [];
+  const hadAuthPass = existingRows.some((r: any) => r.authPass === true);
+
+  return await withSystemTransaction(async (txId) => {
+    // 1. Delete all old/pending password rows inside the transaction
+    for (const row of existingRows) {
+      await tables.deleteRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+        rowId: row.$id,
+        transactionId: txId
+      });
+    }
+
+    // 2. Insert new Argon2id password entry inside the same transaction
+    const newEntry = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+      rowId: ID.unique(),
+      data: {
+        userId: validatedUserId,
+        type: 'password',
+        credentialId: null,
+        wrappedKey: validatedWrappedKey,
+        salt: validatedSalt,
+        params: validatedParams,
+        isArgon: true,
+        isPending: false,
+        isBackup: false,
+        authPass: hadAuthPass
+      },
+      permissions: [
+        Permission.read(Role.user(validatedUserId)),
+        Permission.update(Role.user(validatedUserId)),
+        Permission.delete(Role.user(validatedUserId))
+      ],
+      transactionId: txId
+    });
+
+    return { success: true, entry: JSON.parse(JSON.stringify(newEntry)) };
+  });
+}
+
 export async function createStandaloneTagSecure(tagName: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
