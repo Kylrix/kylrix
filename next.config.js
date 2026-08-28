@@ -1,7 +1,11 @@
 const webpack = require('webpack');
+const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   env: {
     NEXT_PUBLIC_SELFHOSTED: process.env.SELFHOSTED === 'true' ? 'true' : 'false',
   },
