@@ -112,6 +112,87 @@ Comprehensive documentation for all interfaces is available in the [Kylrix Docs]
 | **Autonomous Workspace Agents** | Agentic Runtime & Provisioning | Zero-trust Agent Provisioning Keys, sovereign EVM/Nostr agent identities, and sandboxed workspace memory execution. | [docs/agents.md](https://github.com/Kylrix/kylrix/blob/master/docs/agents.md) |
 | **Cross-Object Reactive Automations** | Flows & Event Engine | Declarative trigger-action routines at `/flows` to automate task lifecycles, webhook reactions, and cross-table event pipelines. | [docs/api.md](https://github.com/Kylrix/kylrix/blob/master/docs/api.md) |
 
+---
+
+## Integrations & MCP Installation
+
+Connect any AI client, CLI, or autonomous agent directly to Kylrix via the Model Context Protocol (MCP) and official Agent Skills.
+
+### 1. Agent Skills Installation
+
+Add domain-specific capabilities directly to your coding assistant or CLI:
+
+```bash
+# Kylrix MCP Server Skill
+npx skills add kylrix/kylrix/mcp
+
+# Kylrix REST API (PAT) Skill
+npx skills add kylrix/kylrix/api
+
+# Autonomous Agents Runtime Skill
+npx skills add kylrix/kylrix/agents
+```
+
+### 2. Installing Kylrix MCP into Different Tools
+
+The Kylrix MCP server runs over Streamable HTTP and SSE at `https://www.kylrix.space/api/v1/mcp` (or `http://localhost:5003/api/v1/mcp` when self-hosting).
+
+#### Claude Code
+```bash
+claude mcp add --transport http kylrix https://www.kylrix.space/api/v1/mcp \
+  --header "Authorization: Bearer <YOUR_PAT_TOKEN>"
+```
+
+#### Smithery CLI (Automated 1-Command Install)
+```bash
+# Claude Desktop
+npx -y @smithery/cli install kylrix/kylrix --client claude
+
+# Cursor
+npx -y @smithery/cli install kylrix/kylrix --client cursor
+
+# Windsurf
+npx -y @smithery/cli install kylrix/kylrix --client windsurf
+```
+
+#### Cursor (`.cursor/mcp.json` or Settings > Features > MCP)
+```json
+{
+  "mcpServers": {
+    "kylrix": {
+      "type": "http",
+      "url": "https://www.kylrix.space/api/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer <YOUR_PAT_TOKEN>"
+      }
+    }
+  }
+}
+```
+
+#### Claude Desktop (`claude_desktop_config.json`)
+```json
+{
+  "mcpServers": {
+    "kylrix": {
+      "type": "http",
+      "url": "https://www.kylrix.space/api/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer <YOUR_PAT_TOKEN>"
+      }
+    }
+  }
+}
+```
+
+#### Windsurf, Goose, Cline & Continue
+Configure an HTTP or SSE MCP server pointing to the instance endpoint:
+- **Server URL**: `https://www.kylrix.space/api/v1/mcp` (or `http://localhost:5003/api/v1/mcp`)
+- **Transport**: `http` (or `sse` via `/api/v1/mcp?transport=sse`)
+- **Header**: `Authorization: Bearer <YOUR_PAT_TOKEN>` (create tokens in **Settings > Developers**)
+
+---
+
 ## Bug Reports, Feature Requests & Security
 
 Submit bug reports, feature suggestions, or responsible vulnerability disclosures directly through our [Unified Feedback & Security Portal](https://www.kylrix.space/form/6a2a653f002b0f296958). For architecture specs, see `ARCHITECTURE.md`.
