@@ -1,12 +1,14 @@
 /**
  * Dynamic LLM Engine for Kylrix
  * Supports:
- *  1. Local Ollama (OLLAMA_BASE_URL, e.g. http://localhost:11434 or http://host.docker.internal:11434)
- *  2. Custom OpenAI-compatible local/remote endpoints (OPENAI_BASE_URL + OPENAI_API_KEY)
- *  3. Google Gemini (GOOGLE_API_KEY)
+ *  1. Vercel AI SDK (Unified provider with Google Gemini, OpenAI, Ollama)
+ *  2. Legacy Direct Provider Fallbacks (@google/generative-ai, Ollama REST, OpenAI REST)
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateText, streamText, type CoreMessage } from 'ai';
+import { resolveLanguageModel } from './ai-sdk/models';
+import { runAgenticChat, streamAgenticChat, type AgenticChatOptions } from './ai-sdk/runner';
 
 export interface GenerateLLMParams {
   prompt: string;
@@ -14,6 +16,59 @@ export interface GenerateLLMParams {
   responseMimeType?: string;
 }
 
+/**
+ * Modern Vercel AI SDK completion entrypoint.
+ * Generates text or JSON with structured schemas and multi-step tool execution.
+ */
+export async function generateAiSdkCompletion(params: {
+  prompt: string;
+  systemInstruction?: string;
+  modelName?: string;
+  responseMimeType?: string;
+}): Promise<string> {
+  const model = resolveLanguageModel({ modelName: params.modelName });
+  const res = await generateText({
+    model,
+    system: params.systemInstruction,
+    prompt: params.prompt,
+  });
+  return res.text.trim();
+}
+
+/**
+ * Modern Vercel AI SDK streaming completion entrypoint.
+ */
+export async function streamAiSdkCompletion(params: {
+  prompt: string;
+  systemInstruction?: string;
+  modelName?: string;
+}) {
+  const model = resolveLanguageModel({ modelName: params.modelName });
+  return streamText({
+    model,
+    system: params.systemInstruction,
+    prompt: params.prompt,
+  });
+}
+
+/**
+ * Multi-turn agentic execution powered by Vercel AI SDK with autonomous tool execution.
+ */
+export async function runMultiTurnAgenticTurn(options: AgenticChatOptions) {
+  return runAgenticChat(options);
+}
+
+/**
+ * Streams a multi-turn agentic execution powered by Vercel AI SDK.
+ */
+export async function streamMultiTurnAgenticTurn(options: AgenticChatOptions) {
+  return streamAgenticChat(options);
+}
+
+/**
+ * Core LLM Completion (Backwards-compatible gateway).
+ * Falls through Ollama -> Custom OpenAI endpoint -> Google Gemini.
+ */
 export async function generateLLMCompletion(params: GenerateLLMParams): Promise<string> {
   const ollamaUrl = process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST;
   const ollamaModel = process.env.OLLAMA_MODEL || 'llama3:latest';
@@ -80,16 +135,26 @@ export async function generateLLMCompletion(params: GenerateLLMParams): Promise<
 
   // 3. Fallback to Google Gemini
   if (geminiKey) {
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({
-      model: geminiModel,
-      systemInstruction: params.systemInstruction,
-      generationConfig: {
-        responseMimeType: params.responseMimeType || 'application/json',
-      },
-    });
-    const response = await model.generateContent(params.prompt);
-    return response.response.text().trim();
+    try {
+      const genAI = new GoogleGenerativeAI(geminiKey);
+      const model = genAI.getGenerativeModel({
+        model: geminiModel,
+        systemInstruction: params.systemInstruction,
+        generationConfig: {
+          responseMimeType: params.responseMimeType || 'application/json',
+        },
+      });
+      const response = await model.generateContent(params.prompt);
+      return response.response.text().trim();
+    } catch (err) {
+      console.warn('[LLM-Provider] Google Gemini direct call failed, trying Vercel AI SDK provider:', err);
+      // Fallback to Vercel AI SDK provider
+      try {
+        return await generateAiSdkCompletion(params);
+      } catch {
+        throw err;
+      }
+    }
   }
 
   throw new Error('No AI provider configured. Please set OLLAMA_BASE_URL, OPENAI_BASE_URL, or GOOGLE_API_KEY.');
