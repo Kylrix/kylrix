@@ -1,11 +1,14 @@
 'use server';
 
 import { generateAuthenticationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_KEYCHAIN_ID } from '@/lib/appwrite';
-import { Query } from 'node-appwrite';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { Query, ID, Permission, Role } from 'node-appwrite';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { isSelfHostedDeployment } from '@/lib/deployment/surface';
+import { withSystemTransaction } from '@/lib/services/internal/transaction';
 
 function getAppwriteSecret(): string {
   const secret = process.env.APPWRITE_API;
@@ -256,6 +259,7 @@ export async function getPasskeyRegisterFallbackSeedAction(credentialId: string)
  */
 export async function checkEmailAuthStatusAction(email: string) {
   try {
+    const isSelfHosted = isSelfHostedDeployment();
     const systemClient = createSystemClient();
     const db = systemClient.databases;
 
@@ -266,13 +270,13 @@ export async function checkEmailAuthStatusAction(email: string) {
     ]);
 
     if (usersList.total === 0) {
-      return { success: true, exists: false, hasMasterpass: false };
+      return { success: true, exists: false, hasMasterpass: false, isSelfHosted };
     }
 
     const userId = usersList.users[0].$id;
 
     // 2. Strict check: masterpass enabled FOR LOGIN (authPass flag) — keychain only
-    // New users or users without authPass must NOT see password input (OTP only)
+    // New users or users without authPass must NOT see password input (OTP only in cloud)
     let hasMasterpass = false;
     try {
       const keychainRows = await db.listRows(
@@ -292,9 +296,185 @@ export async function checkEmailAuthStatusAction(email: string) {
       console.warn('Error checking keychain table for authPass:', e);
     }
 
-    return { success: true, exists: true, hasMasterpass, userId };
+    return { success: true, exists: true, hasMasterpass, userId, isSelfHosted };
   } catch (error: any) {
     console.error('Error checking email auth status action:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Creates a new user account with email and password on self-hosted instances.
+ */
+export async function selfHostedSignUpAction(payload: {
+  email: string;
+  password: string;
+  name?: string;
+}) {
+  try {
+    if (!isSelfHostedDeployment()) {
+      return { success: false, error: 'Self-hosted email/password signup is disabled in cloud deployments.' };
+    }
+
+    const email = (payload.email || '').trim().toLowerCase();
+    const password = payload.password;
+    const name = (payload.name || '').trim() || email.split('@')[0];
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { success: false, error: 'Please enter a valid email address.' };
+    }
+
+    if (!password || password.length < 8) {
+      return { success: false, error: 'Password must be at least 8 characters.' };
+    }
+
+    const systemClient = createSystemClient();
+    const { users } = systemClient;
+
+    // Check if user already exists
+    const existing = await users.list([
+      Query.equal('email', email),
+      Query.limit(1)
+    ]);
+
+    if (existing.total > 0) {
+      return { success: false, error: 'An account with this email already exists. Please log in.' };
+    }
+
+    const userId = ID.unique();
+    const user = await users.create(
+      userId,
+      email,
+      undefined,
+      password,
+      name
+    );
+
+    // Update preferences so hasPass is true and masterpass login is enabled
+    try {
+      await users.updatePrefs(userId, {
+        hasPass: true,
+        masterpass_for_login_enabled: true
+      });
+    } catch (prefErr) {
+      console.warn('Failed to set initial user prefs on signup:', prefErr);
+    }
+
+    return { success: true, userId: user.$id };
+  } catch (error: any) {
+    console.error('Self-hosted signup error:', error);
+    return { success: false, error: error.message || 'Failed to create user account' };
+  }
+}
+
+/**
+ * Initializes a user's vault, keychain, identity, and profile using atomic multi-table transaction.
+ */
+export async function initializeSelfHostedUserVaultAction(payload: {
+  userId: string;
+  keychain: {
+    wrappedKey: string;
+    salt: string;
+    params?: string;
+    isArgon?: boolean;
+  };
+  identity?: {
+    publicKey: string;
+    passkeyBlob: string;
+  };
+  profile?: {
+    username: string;
+    displayName: string;
+  };
+}) {
+  try {
+    if (!isSelfHostedDeployment()) {
+      return { success: false, error: 'Self-hosted vault provisioning is not permitted in cloud.' };
+    }
+
+    const { userId, keychain, identity, profile } = payload;
+    const now = new Date().toISOString();
+    const tables: any = createSystemTablesDB();
+
+    await withSystemTransaction(async (txId) => {
+      // 1. Keychain Entry
+      if (keychain?.wrappedKey && keychain?.salt) {
+        await tables.createRow({
+          databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+          tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+          rowId: ID.unique(),
+          data: {
+            userId,
+            type: 'password',
+            authPass: true,
+            wrappedKey: keychain.wrappedKey,
+            salt: keychain.salt,
+            params: keychain.params || JSON.stringify({ algo: 'Argon2id', memory: 65536, iterations: 3, parallelism: 4 }),
+            isArgon: keychain.isArgon ?? true,
+            isPending: false,
+            createdAt: now,
+            updatedAt: now
+          },
+          permissions: [
+            Permission.read(Role.user(userId)),
+            Permission.update(Role.user(userId)),
+            Permission.delete(Role.user(userId))
+          ],
+          transactionId: txId
+        });
+      }
+
+      // 2. Identity Entry
+      if (identity?.publicKey && identity?.passkeyBlob) {
+        await tables.createRow({
+          databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
+          tableId: APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES,
+          rowId: ID.unique(),
+          data: {
+            userId,
+            identityType: 'e2e_connect',
+            label: 'Connect E2E Identity',
+            publicKey: identity.publicKey,
+            passkeyBlob: identity.passkeyBlob,
+            createdAt: now,
+            updatedAt: now
+          },
+          permissions: [
+            Permission.read(Role.user(userId)),
+            Permission.update(Role.user(userId)),
+            Permission.delete(Role.user(userId))
+          ],
+          transactionId: txId
+        });
+      }
+
+      // 3. User Profile
+      if (profile?.username) {
+        await tables.createRow({
+          databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+          tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+          rowId: userId,
+          data: {
+            userId,
+            username: profile.username.toLowerCase(),
+            displayName: profile.displayName || profile.username,
+            publicKey: identity?.publicKey || null,
+            tier: 'FREE',
+            createdAt: now,
+            updatedAt: now
+          },
+          permissions: [
+            Permission.read(Role.any()),
+            Permission.update(Role.user(userId))
+          ],
+          transactionId: txId
+        });
+      }
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error initializing self-hosted user vault transactionally:', error);
     return { success: false, error: error.message };
   }
 }

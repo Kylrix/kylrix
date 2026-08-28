@@ -11,9 +11,10 @@ import { getCurrentLoginMethod, isMfaRequiredError } from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { account, invalidateCurrentUserCache } from '@/lib/appwrite/client';
-import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction } from '@/lib/actions/auth-actions';
+import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction, selfHostedSignUpAction } from '@/lib/actions/auth-actions';
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
 import { KYLRIX_AGENTS_SKILL_INSTALL } from '@/lib/api/public';
+import { isSelfHostedDeployment } from '@/lib/deployment/surface';
 
 type LoginStep = 'initial' | 'email' | 'otp' | 'agent';
 
@@ -36,6 +37,7 @@ export function LoginDrawer() {
   const { loginWithEmailOTP, verifyEmailOTP, refreshUser } = useAuth();
   const { setIsDrawerOpen } = useDrawerState();
   const isDesktop = useIsDesktop();
+  const isSelfHosted = isSelfHostedDeployment();
 
   const customTitle = drawerData?.title || 'Continue to Kylrix';
   const customSubtitle = drawerData?.subtitle;
@@ -54,6 +56,7 @@ export function LoginDrawer() {
 
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [hasMasterpass, setHasMasterpass] = useState(false);
+  const [userExists, setUserExists] = useState<boolean | null>(null);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [useOTPAlternative, setUseOTPAlternative] = useState(false);
@@ -62,6 +65,7 @@ export function LoginDrawer() {
   useEffect(() => {
     if (step !== 'email') {
       setHasMasterpass(false);
+      setUserExists(null);
       setPassword('');
       setUseOTPAlternative(false);
       return;
@@ -72,6 +76,7 @@ export function LoginDrawer() {
 
     if (!emailValid) {
       setHasMasterpass(false);
+      setUserExists(null);
       setPassword('');
       setUseOTPAlternative(false);
       return;
@@ -81,9 +86,18 @@ export function LoginDrawer() {
     const timer = setTimeout(async () => {
       try {
         const res = await checkEmailAuthStatusAction(emailTrimmed);
-        if (res.success && res.exists && res.hasMasterpass) {
-          setHasMasterpass(true);
+        if (res.success) {
+          setUserExists(Boolean(res.exists));
+          if (res.exists && res.hasMasterpass) {
+            setHasMasterpass(true);
+          } else {
+            setHasMasterpass(false);
+            if (!isSelfHosted) {
+              setUseOTPAlternative(false);
+            }
+          }
         } else {
+          setUserExists(null);
           setHasMasterpass(false);
           setUseOTPAlternative(false);
         }
@@ -92,10 +106,70 @@ export function LoginDrawer() {
       } finally {
         setCheckingEmail(false);
       }
-    }, 500);
+    }, 400);
 
     return () => clearTimeout(timer);
-  }, [email, step]);
+  }, [email, step, isSelfHosted]);
+
+  const handleSelfHostedSignUp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const emailTrimmed = email.trim();
+    if (!emailTrimmed || !password) return;
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+    setLoading(true);
+    localStorage.setItem('kylrix_last_auth_method', 'password');
+    setLastUsedMethod('password');
+
+    try {
+      const signUpRes = await selfHostedSignUpAction({
+        email: emailTrimmed,
+        password,
+        name: emailTrimmed.split('@')[0]
+      });
+
+      if (!signUpRes.success || !signUpRes.userId) {
+        throw new Error(signUpRes.error || 'Failed to create account');
+      }
+
+      // Establish Appwrite session
+      await account.deleteSession('current').catch(() => {});
+      invalidateCurrentUserCache();
+      const session: any = await account.createEmailPasswordSession(emailTrimmed, password);
+
+      // Initialize MasterPass vault, keychain, E2E identity and profile
+      try {
+        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+        const { UsersService } = await import('@/lib/services/users');
+
+        await masterPassCrypto.unlock(password, session.userId, true);
+        const pubKey = await ecosystemSecurity.syncIdentity(session.userId).catch(() => null);
+        const profile = await UsersService.ensureProfileForUser({
+          $id: session.userId,
+          email: emailTrimmed,
+          name: emailTrimmed.split('@')[0]
+        });
+        if (pubKey && profile) {
+          await UsersService.updateProfile(session.userId, { publicKey: pubKey });
+        }
+        toast.success('Vault secured with master password');
+      } catch (vaultErr) {
+        console.warn('Vault auto-initialization warning on signup:', vaultErr);
+      }
+
+      toast.success('Account created successfully!');
+      await refreshUser(true);
+      close();
+    } catch (err: any) {
+      console.error('Self-hosted signup failed:', err);
+      toast.error(err.message || 'Signup failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePasswordLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -363,10 +437,44 @@ export function LoginDrawer() {
         );
 
       case 'email':
-        const showPasswordField = hasMasterpass && !useOTPAlternative;
+        const isNewSelfHostedUser = isSelfHosted && userExists === false;
+        const showPasswordField = isSelfHosted 
+          ? !useOTPAlternative 
+          : (hasMasterpass && !useOTPAlternative);
+
+        const submitHandler = isNewSelfHostedUser && showPasswordField
+          ? handleSelfHostedSignUp
+          : (showPasswordField ? handlePasswordLogin : handleSendOTP);
+
+        let buttonLabel = 'Send Login Code';
+        if (isSelfHosted) {
+          if (isNewSelfHostedUser) {
+            buttonLabel = showPasswordField ? 'Create Account' : 'Send Signup Code';
+          } else {
+            buttonLabel = showPasswordField ? 'Login with Password' : 'Send Login Code';
+          }
+        } else {
+          buttonLabel = showPasswordField ? 'Login with Password' : 'Send Login Code';
+        }
+
+        let switchLabel = '';
+        if (isSelfHosted) {
+          if (isNewSelfHostedUser) {
+            switchLabel = useOTPAlternative ? 'Create account with Password instead' : 'Sign up with Email OTP instead';
+          } else {
+            switchLabel = useOTPAlternative ? 'Login with Password instead' : 'Login with Email OTP instead';
+          }
+        } else if (hasMasterpass) {
+          switchLabel = useOTPAlternative ? 'Use Password Login instead' : 'Login with Email OTP instead';
+        }
+
+        const passwordPlaceholder = isNewSelfHostedUser
+          ? 'Create a password (min. 8 chars)'
+          : (isSelfHosted ? 'Enter your password' : 'Enter your master password');
+
         return (
           <form 
-            onSubmit={showPasswordField ? handlePasswordLogin : handleSendOTP} 
+            onSubmit={submitHandler} 
             className="space-y-4 animate-fadeIn"
           >
             <div className="relative">
@@ -397,7 +505,7 @@ export function LoginDrawer() {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your master password"
+                  placeholder={passwordPlaceholder}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
@@ -423,18 +531,18 @@ export function LoginDrawer() {
               {loading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black" />
               ) : (
-                showPasswordField ? 'Login with Password' : 'Send Login Code'
+                buttonLabel
               )}
             </button>
 
-            {hasMasterpass && (
+            {switchLabel && (
               <div className="flex justify-center pt-2">
                 <button
                   type="button"
                   onClick={() => setUseOTPAlternative(!useOTPAlternative)}
                   className="text-xs text-[#6366F1] hover:underline font-bold transition-all"
                 >
-                  {useOTPAlternative ? 'Use Password Login instead' : 'Login with Email OTP instead'}
+                  {switchLabel}
                 </button>
               </div>
             )}
