@@ -55,10 +55,10 @@ import { getUserProfilePicId, getEffectiveUsername, hasEffectivePaidAccess } fro
 import { getCachedIdentityById } from '@/lib/identity-cache';
 import { toast } from 'react-hot-toast';
 import { APP_BASE_PATHS } from '@/lib/constants';
-import { type KylrixApp } from '@/lib/sdk/design';
+import { type KylrixApp } from '@/sdk/design';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
-import { createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
-import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/sdk/appwrite';
+import { createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtTop } from '@/sdk/topbar';
+import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/sdk/appwrite';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';

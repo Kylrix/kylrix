@@ -8,7 +8,7 @@ import { z } from 'zod';
 import {
   goalCreateInputZod,
   goalUpdateInputZod,
-} from '@/lib/domain/goal-contract';
+} from '@/sdk/contracts';
 
 export interface ToolExecutionContext {
   userId?: string;

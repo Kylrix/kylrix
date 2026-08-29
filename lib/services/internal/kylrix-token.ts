@@ -6,7 +6,7 @@ import {
   createKylrixTokenContract,
   type KylrixActivitySignal,
   type KylrixActivityType,
-  type KylrixTokenEventType} from '@/lib/sdk/token';
+  type KylrixTokenEventType} from '@/sdk/token';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.KYLRIX_TOKEN_LEDGER;

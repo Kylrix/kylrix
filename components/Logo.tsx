@@ -2,7 +2,7 @@
 
 import React from 'react';
 import LogoComponent from './common/Logo';
-import { KylrixApp } from '@/lib/sdk';
+import { KylrixApp } from '@/sdk';
 interface LogoProps {
   sx?: any;
   size?: number;

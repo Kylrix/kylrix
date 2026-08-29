@@ -11,9 +11,9 @@ import { TargetType } from '@/types/appwrite';
 
 import { APPWRITE_CONFIG } from './config';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { createNoteCreationService } from '@/lib/sdk';
+import { createNoteCreationService } from '@/sdk';
 import { buildAutoTitleFromContent, clampNoteTitle } from '@/constants/noteTitle';
-import { buildSourceNoteTags } from '@/lib/sdk/crosslinks';
+import { buildSourceNoteTags } from '@/sdk/crosslinks';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { invalidateTablesDbRowCache } from '@/lib/ecosystem/tablesdb-row-cache';
 import { publishNexusInvalidate } from '@/lib/ecosystem/nexus-bridge';

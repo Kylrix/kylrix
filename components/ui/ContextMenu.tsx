@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { KylrixApp } from '@/lib/sdk/design';
+import { KylrixApp } from '@/sdk/design';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ContextMenuItem {

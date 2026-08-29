@@ -60,7 +60,7 @@ Mint tokens: **Settings → Developers** on [kylrix.space](https://www.kylrix.sp
 
 ### Goals
 - `GET /goals?workspaceId=&status=&limit=` · `POST /goals` · `GET|PATCH|DELETE /goals/:id`
-- Fields: `title`, `description`, `status`, `priority`, `dueDate`, `tags`, `workspaceId` — see `lib/domain/goal-contract.ts`
+- Fields: `title`, `description`, `status`, `priority`, `dueDate`, `tags`, `workspaceId` — see `sdk/contracts/goals.ts`
 
 ### Workspaces
 - `GET /workspaces` · `POST /workspaces` · `GET|PATCH|DELETE /workspaces/:id`

@@ -14,7 +14,7 @@ import {
   APPWRITE_BUCKET_BACKUPS_ID,
   APPWRITE_COLLECTION_KEYCHAIN_ID
 } from './client';
-import { buildVaultNoteTags } from "../sdk/crosslinks";
+import { buildVaultNoteTags } from "@/sdk/crosslinks";
 import type {
   Credentials,
   CredentialsCreate,

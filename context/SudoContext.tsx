@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, React
 import SudoModal from '@/components/overlays/SudoModal';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { usePathname } from 'next/navigation';
-import type { KylrixApp } from '@/lib/sdk/design';
+import type { KylrixApp } from '@/sdk/design';
 
 import { useAuth } from '@/context/auth/AuthContext';
 import { isFlowPath } from '@/lib/routing/app-paths';

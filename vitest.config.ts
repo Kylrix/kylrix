@@ -15,7 +15,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['lib/sdk/**', 'utils/**'],
+      include: ['sdk/**', 'utils/**'],
       exclude: ['**/*.d.ts', '**/*.config.*', '__tests__/**'],
       thresholds: {
         statements: 85,

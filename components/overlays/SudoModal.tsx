@@ -17,7 +17,7 @@ import { useAuth } from "@/context/auth/AuthContext";
 import { unlockWithPasskey } from "@/lib/passkey";
 import { PasskeySetup } from "./PasskeySetup";
 import toast from "react-hot-toast";
-import { getAppTone, type KylrixApp } from "@/lib/sdk/design";
+import { getAppTone, type KylrixApp } from "@/sdk/design";
 import { masterPassCrypto } from "@/lib/masterpass-crypto";
 import { useDrawerState } from "@/components/ui/DrawerStateContext";
 import { useAppwriteVault } from "@/context/appwrite-context";

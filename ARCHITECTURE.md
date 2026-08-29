@@ -234,7 +234,7 @@ UI **Workspaces** (`/workspaces`, `/workspaces/[projectId]`) over `projects` tab
 
 **Threads:** Same tables as hangouts; `participants` + member rows enforce RLS; retention is explicit delete, not 7-day expiry. Presence channels carry typing/online, not DB epochs.
 
-**CrossLinks (`lib/sdk/crosslinks.ts`):** `source:kylrixnote:id` composite tags replace joins across vault/tasks/projects.
+**CrossLinks (`sdk/crosslinks.ts`):** `source:kylrixnote:id` composite tags replace joins across vault/tasks/projects.
 
 **Context Engine (`lib/context-engine.tsx`):** `LocalContextProvider` buffers 30 events (workspace/productivity/connect/security/intelligence/billing/system) → `CompiledLocalContext` for Kylie; owns workflow recording.
 

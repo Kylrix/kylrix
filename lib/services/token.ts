@@ -6,7 +6,7 @@ import {
   DEFAULT_KYLRIX_TOKEN_POLICY,
   type KylrixActivitySignal,
   type KylrixActivityType,
-  type KylrixTokenEventType} from '@/lib/sdk/token';
+  type KylrixTokenEventType} from '@/sdk/token';
 
 const tokenPermissionsForSystemEvent = (userId: string, counterpartyUserId?: string | null) => {
   const grants = new Set<string>();

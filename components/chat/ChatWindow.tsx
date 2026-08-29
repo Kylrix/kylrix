@@ -59,7 +59,7 @@ import { markConversationRead } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
 import MuralPattern from './MuralPattern';
 import { IdentityAvatar, IdentityName } from '../common/IdentityBadge';
-import { buildNoteAttachmentMetadata } from '@/lib/sdk';
+import { buildNoteAttachmentMetadata } from '@/sdk';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';

@@ -1,3 +1,5 @@
+export * from './api';
+export * from './contracts';
 export * from './design';
 export * from './identity';
 export * from './appwrite';
@@ -10,25 +12,5 @@ export * from './messaging';
 export * from './huddles';
 export * from './extensions';
 export * from './token';
-
-// --- Re-export crosslinks SDK ---
-export {     buildNoteAttachmentMetadata } from './crosslinks';
-
-// --- Re-export orchestration SDK ---
-;
-
-// --- Re-export ecosystem SDK ---
-;
-
-// --- Re-export routing SDK ---
-;
-
-// --- Re-export topbar SDK ---
-;
-;
-
-// --- Re-export navigation policy ---
-;
-
-// --- Re-export note creation service ---
+export { buildNoteAttachmentMetadata, buildSourceNoteTags, buildVaultNoteTags } from './crosslinks';
 export { createNoteCreationService } from './notes';

@@ -18,7 +18,7 @@ import {
 import { X } from "lucide-react";
 import { useSudo } from "@/context/SudoContext";
 import { UsersService } from "@/lib/services/users";
-import { createKylrixTokenOperationsClient } from "@/lib/sdk/token";
+import { createKylrixTokenOperationsClient } from "@/sdk/token";
 
 const nowMs = () => Date.now();
 

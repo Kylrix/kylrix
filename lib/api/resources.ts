@@ -24,7 +24,7 @@ import {
   buildGoalCreateRow,
   buildGoalUpdatePatch,
   resolveWorkspaceId,
-} from '@/lib/domain/goal-contract';
+} from '@/sdk/contracts';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
 const NOTES = APPWRITE_CONFIG.TABLES.NOTE?.NOTES || APPWRITE_CONFIG.TABLES.NOTES;

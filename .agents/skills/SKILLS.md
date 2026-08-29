@@ -72,7 +72,7 @@ _Catalog covers 86 skills._
 | `system.hexagonal-registry` | Deep dive into the dynamic Dependency Injection (DI) registry in Kylrix. Explains port/adapter decoupling, lazy instantiation, and run-time mock overrides for t |
 | `system.join-request-gating` | Deep dive into the Group Join Request system in Kylrix. Explains the composite-key SHA-256 ID derivation, invite link expiration verification, and admin-only no |
 | `system.query-expression-mapping` | Deep dive into the database query mapper in Kylrix. Explains how clean QueryExpressions (e.g. equal, contains, limit) are mapped to database-specific formats to |
-| `system.sdk-consistency` | Keeps shared sdk/service contracts consistent across the single codebase. Use when editing `lib/sdk`, shared exports, or broad consumer callsites. |
+| `system.sdk-consistency` | Keeps shared sdk/service contracts consistent across the single codebase. Use when editing `sdk/`, shared exports, or broad consumer callsites. |
 | `system.server-sdk-action` | Server Actions vs Admin SDK patterns for privileged TablesDB mutations. |
 | `system.tablesdb-row-cache` | Explains the read-through caching engine for TablesDB. Explains key hashing, cache eviction schedules, and coalescing concurrent inflight queries to prevent net |
 

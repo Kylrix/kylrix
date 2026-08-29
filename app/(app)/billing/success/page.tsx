@@ -28,7 +28,7 @@ function LoadingSpinner({ size = 28 }: { size?: number }) {
   );
 }
 
-import { getLastActiveAppRedirectUrl } from '@/lib/sdk/ecosystem/useLastActiveApp';
+import { getLastActiveAppRedirectUrl } from '@/sdk/ecosystem/useLastActiveApp';
 
 export default function ProSuccessPage() {
   const { user, isLoading: authLoading } = useAuth();

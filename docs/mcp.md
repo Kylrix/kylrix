@@ -74,4 +74,4 @@ Mint PAT: **Settings → Developers** on [kylrix.space](https://www.kylrix.space
 
 ## Unified with REST
 
-MCP `tools/call` and `/api/v1/*` share **`ApiResources`**. Goal fields: **`lib/domain/goal-contract.ts`**.
+MCP `tools/call` and `/api/v1/*` share **`ApiResources`**. Goal fields: **`sdk/contracts/goals.ts`**.

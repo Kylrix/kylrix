@@ -3,7 +3,7 @@
 import React from 'react';
 import { Box, Typography, useTheme } from '@/lib/openbricks/primitives';
 import { motion } from 'framer-motion';
-import { KylrixApp } from '@/lib/sdk';
+import { KylrixApp } from '@/sdk';
 
 interface LogoProps {
   sx?: any;

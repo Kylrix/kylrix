@@ -8,7 +8,7 @@ import {
   MCP_GOAL_CREATE_INPUT,
   MCP_GOAL_LIST_INPUT,
   MCP_GOAL_UPDATE_INPUT,
-} from '@/lib/domain/goal-contract';
+} from '@/sdk/contracts';
 
 export interface McpToolAnnotation {
   audience?: Array<'user' | 'assistant'>;
@@ -409,7 +409,7 @@ export const MCP_TOOLS: McpTool[] = [
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: true, priority: 0.6 },
   },
 
-  // ── 4. Goals & Tasks (schemas from lib/domain/goal-contract.ts) ──
+  // ── 4. Goals & Tasks (schemas from sdk/contracts/goals.ts) ──
   {
     name: 'list_goals',
     description: 'List goals and task items, with optional status and workspace filtering.',

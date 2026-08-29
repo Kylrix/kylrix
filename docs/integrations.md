@@ -96,7 +96,7 @@ curl -sS -X POST "https://www.kylrix.space/api/v1/mcp" \
 
 ## 6. MCP vs REST
 
-Both call the same **`ApiResources`** in-process. Domain shapes (e.g. goals) live in **`lib/domain/goal-contract.ts`**.
+Both call the same **`ApiResources`** in-process. Domain shapes (e.g. goals) live in **`sdk/contracts/goals.ts`**.
 
 | | MCP | REST |
 |---|-----|------|

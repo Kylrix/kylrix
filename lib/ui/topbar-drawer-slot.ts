@@ -1,4 +1,4 @@
-import { TOPBAR_LAYOUT } from '@/lib/sdk/design';
+import { TOPBAR_LAYOUT } from '@/sdk/design';
 
 /**
  * OpenBricks Drawer backdrops default to full-viewport (z-index ~modal) and sit above the
