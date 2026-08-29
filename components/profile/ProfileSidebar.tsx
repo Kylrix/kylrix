@@ -21,7 +21,7 @@ import toast from 'react-hot-toast';
 export function ProfileSidebar({
   userId,
   username,
-  conversationId,
+  conversationId: _conversationId,
   conversation,
   seed,
   isExpanded,

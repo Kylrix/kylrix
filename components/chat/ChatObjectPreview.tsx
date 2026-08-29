@@ -19,14 +19,17 @@ const KIND_LABELS: Record<string, string> = {
   link: 'Link',
 };
 
-function kindIcon(payload: SecondaryObjectPayload) {
+function ChatObjectKindIcon({ payload }: { payload: SecondaryObjectPayload }) {
+  const iconProps = { size: 18, strokeWidth: 2 as const };
   const subTab = String(payload.metadata?.subTab || '');
-  if (subTab === 'goals' || payload.childKind === 'task') return Target;
-  if (subTab === 'projects') return FolderKanban;
-  if (subTab === 'totps' || subTab === 'vault' || payload.childKind === 'vault') return Key;
-  if (subTab === 'sessions' || payload.childKind === 'session') return Bot;
-  if (payload.childKind === 'form') return FileText;
-  return Shield;
+  if (subTab === 'goals' || payload.childKind === 'task') return <Target {...iconProps} />;
+  if (subTab === 'projects') return <FolderKanban {...iconProps} />;
+  if (subTab === 'totps' || subTab === 'vault' || payload.childKind === 'vault') {
+    return <Key {...iconProps} />;
+  }
+  if (subTab === 'sessions' || payload.childKind === 'session') return <Bot {...iconProps} />;
+  if (payload.childKind === 'form') return <FileText {...iconProps} />;
+  return <Shield {...iconProps} />;
 }
 
 export function ChatObjectPreview({
@@ -38,7 +41,6 @@ export function ChatObjectPreview({
 }) {
   const { user } = useAuth();
   const [title, setTitle] = useState(payload.label || 'Attachment');
-  const Icon = useMemo(() => kindIcon(payload), [payload]);
 
   const thumb = useMemo(() => {
     const mime = String(payload.metadata?.mimeType || '');
@@ -103,7 +105,7 @@ export function ChatObjectPreview({
         <img src={thumb} alt="" className="h-14 w-14 shrink-0 object-cover bg-[#161412]" />
       ) : (
         <div className="grid h-14 w-14 shrink-0 place-items-center bg-[#161412] text-[#A855F7]">
-          <Icon size={18} strokeWidth={2} />
+          <ChatObjectKindIcon payload={payload} />
         </div>
       )}
       <div className="min-w-0 flex-1 flex flex-col justify-center px-3 py-2 border-l border-white/[0.06]">

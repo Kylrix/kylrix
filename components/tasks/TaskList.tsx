@@ -79,13 +79,27 @@ export default function TaskList() {
   const activeTasks = tasks.filter(t => t.status !== 'done');
   const completedTasks = tasks.filter(t => t.status === 'done');
 
-  const pinnedTasks = sortByDeadlineThenUpdatedAt(
+  const sortTasksByDeadline = (rows: typeof activeTasks) => {
+    const order = sortByDeadlineThenUpdatedAt(
+      rows.map((t) => ({
+        $id: t.id,
+        dueDate: t.dueDate,
+        createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt ?? ''),
+        updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : String(t.updatedAt ?? ''),
+        isPinned: t.isPinned,
+      })),
+    ).map((row) => row.$id);
+    const byId = new Map(rows.map((t) => [t.id, t]));
+    return order.map((id) => byId.get(id)).filter((t): t is (typeof activeTasks)[number] => Boolean(t));
+  };
+
+  const pinnedTasks = sortTasksByDeadline(
     activeTasks.filter((t) => isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned)),
   );
-  const unpinnedTasks = sortByDeadlineThenUpdatedAt(
+  const unpinnedTasks = sortTasksByDeadline(
     activeTasks.filter((t) => !isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned)),
   );
-  const sortedCompletedTasks = sortByDeadlineThenUpdatedAt(completedTasks);
+  const sortedCompletedTasks = sortTasksByDeadline(completedTasks);
 
   const rawTagOptions = getTagFilterOptions();
   const directTaskTags = Array.from(

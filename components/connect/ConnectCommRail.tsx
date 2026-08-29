@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Plus, ShieldCheck, Lock, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
@@ -81,7 +80,6 @@ function mapThreads(rows: any[]): RailItem[] {
  */
 export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Props) {
   const { user } = useAuth();
-  const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
   const { requestSudo } = useSudo();
   const { openAgenticDrawer } = useAgenticDrawer();
@@ -95,8 +93,6 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
   );
   const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
   const [needsMasterPass, setNeedsMasterPass] = useState(false);
-
-  const { open: openUnified } = useUnifiedDrawer();
 
   const openItem = useCallback(
     (id: string) => {

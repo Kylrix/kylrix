@@ -17,7 +17,6 @@ import {
 import { X, Users } from 'lucide-react';
 import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
-import { usePathname, useRouter } from 'next/navigation';
 import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
@@ -42,8 +41,6 @@ const DRAWER_SX = {
 
 export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
     const { user } = useAuth();
-    const router = useRouter();
-    const pathname = usePathname();
     const { requestSudo } = useSudo();
     const theme = useTheme();
     const isDesktop = useMediaQuery(theme.breakpoints.up('md'));

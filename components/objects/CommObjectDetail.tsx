@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { ObjectDetailHost } from '@/components/objects/ObjectDetailHost';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { getNote } from '@/lib/appwrite/note';
@@ -34,7 +33,6 @@ export function CommObjectDetail({
   embedded = false,
   title,
 }: Props) {
-  const router = useRouter();
   const [_isHuddle, setIsHuddle] = useState(kind === 'thread');
   const [huddleTitle, setHuddleTitle] = useState(title || 'Thread');
 

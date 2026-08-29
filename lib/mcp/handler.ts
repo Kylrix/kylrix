@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { resolveApiActor, type ApiActor, MAX_API_BODY_BYTES } from '@/lib/api/guard';
+import { resolveApiActor, type ApiActor } from '@/lib/api/guard';
 import { RateLimitError } from '@/lib/api/rate-limits';
 import { EdgeShieldError, assertShieldAllowed, enforceMcpPublicShield } from '@/lib/api/edge-shield';
 import { ApiResources } from '@/lib/api/resources';
@@ -24,7 +24,7 @@ export interface McpTool {
   inputSchema: {
     type: 'object';
     properties: Record<string, any>;
-    required?: string[];
+    required?: readonly string[];
   };
   outputSchema?: {
     type: 'object';

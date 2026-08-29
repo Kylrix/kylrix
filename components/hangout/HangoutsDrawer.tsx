@@ -246,9 +246,10 @@ export function HangoutsDrawer({
 
     const channel1 = `databases.${dbId}.collections.${convsTable}.documents`;
     const channel2 = `databases.${dbId}.collections.${msgsTable}.documents`;
-    const channel3 = `databases.${APPWRITE_CONFIG.DATABASES.MAIN}.collections.${threadsTable}.documents`;
+    const channel3 = `databases.${dbId}.collections.${threadsTable}.documents`;
 
-    const unsub = realtime.subscribe([channel1, channel2, channel3], (event: any) => {
+    let unsubPromise: Promise<unknown> | undefined;
+    unsubPromise = realtime.subscribe([channel1, channel2, channel3], (event: any) => {
       const payload = event.payload;
       if (!payload) return;
 
@@ -310,11 +311,15 @@ export function HangoutsDrawer({
     });
 
     return () => {
-      try {
-        unsub();
-      } catch (e) {
-        console.warn('[HangoutsDrawer] Realtime unsubscribe error:', e);
-      }
+      void (async () => {
+        try {
+          const unsub = (await unsubPromise) as { unsubscribe?: () => void } | (() => void);
+          if (typeof unsub === 'function') unsub();
+          else if (unsub?.unsubscribe) unsub.unsubscribe();
+        } catch (e) {
+          console.warn('[HangoutsDrawer] Realtime unsubscribe error:', e);
+        }
+      })();
     };
   }, [user?.$id]);
 

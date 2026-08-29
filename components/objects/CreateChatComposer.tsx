@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Lock, MessageSquare, Shield, Users, X } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
 import { useAuth } from '@/lib/auth';
@@ -35,8 +34,6 @@ export function CreateChatComposer({
   onToggleExpand,
 }: Props) {
   const { user } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
   const { requestSudo } = useSudo();
   const { openOverlay, closeOverlay } = useOverlay();
   const { openSidebar, closeSidebar } = useDynamicSidebar();

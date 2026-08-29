@@ -3,7 +3,6 @@
 import { Avatar, Badge, Box, Typography, alpha } from '@/lib/openbricks/primitives';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Lock, MessageCircle, Video } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 export interface ChatIslandNotification {
@@ -31,7 +30,6 @@ interface ChatIslandPresenceProps {
  * session) so the lazy chunk is fetched on first chat event, not on initial paint.
  */
 export default function ChatIslandPresence({ notification, onDismiss }: ChatIslandPresenceProps) {
-  const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
 
   return (

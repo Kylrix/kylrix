@@ -376,8 +376,6 @@ export default function ConversationActionsSheet({
     void loadPendingRequests();
   }, [loadPendingRequests]);
 
-  const { open: openUnified } = useUnifiedDrawer();
-
   const handleOpenDirectChat = () => {
     if (!currentConversation) return;
     openUnified('hangouts', { initialConversationId: currentConversation.$id });
