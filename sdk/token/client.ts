@@ -1,10 +1,10 @@
-import { account } from '@/lib/appwrite/client';
 import type { KylrixActivityType } from './contract';
-
 
 export interface KylrixTokenClientOptions {
   endpoint?: string;
   headers?: Record<string, string>;
+  /** Session JWT for secure server actions. Inject from Appwrite `account.createJWT()` in app code. */
+  getJwt?: () => Promise<string | null | undefined>;
 }
 
 export interface KylrixTokenStateResponse {
@@ -143,9 +143,15 @@ function validateRequest(request: TokenOperationRequest) {
   }
 }
 
+async function resolveJwt(options: KylrixTokenClientOptions): Promise<string | null> {
+  if (!options.getJwt) return null;
+  const jwt = await options.getJwt();
+  return jwt || null;
+}
+
 /**
- * Calls **`runTokenOperationSecure`** Server Actions (`'use server'`). Auth is **`createServerClient()` +
- * Appwrite session cookies** on that request — if Actions do not receive the session cookie chain, you get Unauthorized.
+ * Calls **`runTokenOperationSecure`** Server Actions (`'use server'`). Auth is the injected
+ * session JWT plus Appwrite session cookies on that request.
  *
  * **Read-only** balance / ledger while signed in via the SDK in the browser: use `KylrixTokenService`
  * (`@/lib/services/token`) with TablesDB row permissions (`read("user:…")` on ledger events).
@@ -158,7 +164,7 @@ export function createKylrixTokenOperationsClient(options: KylrixTokenClientOpti
     validateRequest(request);
     void endpoint;
     void baseHeaders;
-    const { jwt } = await account.createJWT().catch(() => ({ jwt: null }));
+    const jwt = await resolveJwt(options);
     if (typeof window !== 'undefined') {
       const { runTokenOperation } = await import('@/lib/actions/client-ops');
       return (await runTokenOperation({ ...request, jwt })) as T;
@@ -185,17 +191,26 @@ export function createKylrixTokenOperationsClient(options: KylrixTokenClientOpti
       execute({ action: 'lock_claim', ...request }),
     settleClaim: (request: Omit<SettleClaimRequest, 'action'>) =>
       execute({ action: 'settle_claim', ...request }),
-    requestPaymentIntent: async (agentId: string, amount: number, contextPayload: Record<string, any>, chainId?: number) => {
-      const { jwt } = await account.createJWT().catch(() => ({ jwt: null }));
-      const targetChainId = chainId || (typeof window !== 'undefined' && localStorage.getItem('kylrix_wallet_testnet_mode') === '1' ? 421614 : 42161);
+    requestPaymentIntent: async (
+      agentId: string,
+      amount: number,
+      contextPayload: Record<string, any>,
+      chainId?: number,
+    ) => {
+      const jwt = await resolveJwt(options);
+      const targetChainId =
+        chainId ||
+        (typeof window !== 'undefined' && localStorage.getItem('kylrix_wallet_testnet_mode') === '1'
+          ? 421614
+          : 42161);
       const { createPaymentIntentAction } = await import('@/lib/actions/secure-ops/arbitrum-rail');
       return createPaymentIntentAction({
         jwt: jwt || undefined,
         agentId,
         amount,
         contextPayload,
-        chainId: targetChainId
+        chainId: targetChainId,
       });
-    }
+    },
   };
 }

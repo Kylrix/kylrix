@@ -19,6 +19,7 @@ import { X } from "lucide-react";
 import { useSudo } from "@/context/SudoContext";
 import { UsersService } from "@/lib/services/users";
 import { createKylrixTokenOperationsClient } from "@/sdk/token";
+import { account } from "@/lib/appwrite/client";
 
 const nowMs = () => Date.now();
 
@@ -92,7 +93,12 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
   const tokenClientRef = React.useRef<ReturnType<typeof createKylrixTokenOperationsClient> | null>(null);
   const getTokenClient = useCallback(() => {
     if (!tokenClientRef.current) {
-      tokenClientRef.current = createKylrixTokenOperationsClient();
+      tokenClientRef.current = createKylrixTokenOperationsClient({
+        getJwt: async () => {
+          const { jwt } = await account.createJWT().catch(() => ({ jwt: null }));
+          return jwt;
+        },
+      });
     }
     return tokenClientRef.current;
   }, []);

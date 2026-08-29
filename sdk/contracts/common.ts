@@ -45,3 +45,6 @@ export const mcpItemsOutput = (itemSchema: Record<string, unknown>) =>
       },
     },
   }) as const;
+
+/** Wrap REST list payloads for MCP tools that declare an `items` output schema. */
+export const mcpListResult = (items: readonly unknown[]) => ({ items });

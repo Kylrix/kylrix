@@ -31,6 +31,7 @@ import {
   shapeChatMessage,
   shapeEventDetail,
   shapeEventListItem,
+  shapeFlowListItem,
   shapeFormDetail,
   shapeFormListItem,
   shapeMoment,
@@ -43,6 +44,7 @@ import {
   shapeTrashNoteItem,
   shapeTrashVaultItem,
   shapeWorkspace,
+  shapeWorkspaceCollaborator,
 } from '@/sdk/contracts';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
@@ -683,17 +685,7 @@ export const ApiResources = {
         Query.limit(Math.min(100, Math.max(1, limit))),
       ],
     });
-    return res.rows.map((r: any) => ({
-      id: r.workflowId || r.$id,
-      name: r.name,
-      description: r.description,
-      isPublic: !!r.isPublic,
-      steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : r.steps,
-      installCount: r.installCount ?? 0,
-      reviewStatus: r.reviewStatus || null,
-      version: r.version ?? 0,
-      contentHash: r.contentHash || null,
-    }));
+    return res.rows.map((r: any) => shapeFlowListItem(r));
   },
 
   async createFlow(actor: ApiActor, body: Record<string, unknown>) {
@@ -1277,14 +1269,7 @@ export const ApiResources = {
       ],
     }).catch(() => ({ rows: [] as any[] }));
 
-    return res.rows.map((r: any) => ({
-      id: r.$id,
-      userId: r.userId,
-      permission: r.permission,
-      status: r.status,
-      inviterId: r.inviterId || null,
-      invitedAt: r.invitedAt || null,
-    }));
+    return res.rows.map((r: any) => shapeWorkspaceCollaborator(r));
   },
 
   async listEvents(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {

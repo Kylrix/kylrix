@@ -78,6 +78,19 @@ export function shapeWorkspace(
   };
 }
 
+export function shapeWorkspaceCollaborator(row: Record<string, unknown>) {
+  const r = row as any;
+  return {
+    id: String(r.$id || r.id),
+    userId: r.userId,
+    role: r.permission || r.role || 'writer',
+    permission: r.permission || null,
+    status: r.status || null,
+    inviterId: r.inviterId || null,
+    invitedAt: r.invitedAt || null,
+  };
+}
+
 export const WORKSPACE_RECORD_JSON_SCHEMA = {
   type: 'object',
   properties: {
