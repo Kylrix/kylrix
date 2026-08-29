@@ -45,6 +45,11 @@ import {
   resolveConversationListLabel,
   resolveDirectChatPeerId,
 } from '@/lib/chat/conversation-list-label';
+import {
+  ENCRYPTED_LIST_PREVIEW_LABEL,
+  resolveConversationPreviewText,
+} from '@/lib/chat/conversation-preview-label';
+import { isLikelyChatCiphertext } from '@/lib/chat/local-chat-cache';
 import { getCachedIdentityById, resolveIdentityById, seedIdentityCache } from '@/lib/identity-cache';
 
 export type ShareObject = {
@@ -93,8 +98,59 @@ export function HangoutsDrawer({
   const [filterTab, setFilterTab] = useState<'all' | 'direct' | 'group' | 'thread'>('all');
   const [showCreateChat, setShowCreateChat] = useState(false);
   const [identityHydrationTick, setIdentityHydrationTick] = useState(0);
+  const [isUnlocked, setIsUnlocked] = useState(() => ecosystemSecurity.status.isUnlocked);
 
-  const isUnlocked = ecosystemSecurity.status.isUnlocked;
+  useEffect(() => {
+    return ecosystemSecurity.onStatusChange((status) => {
+      setIsUnlocked(status.isUnlocked);
+    });
+  }, []);
+
+  const isVaultUnlocked = isUnlocked;
+
+  const hydrateDecryptedSecureChats = useCallback(
+    async (rows: any[]) => {
+      if (!user?.$id || !ecosystemSecurity.status.isUnlocked || !rows.length) return rows;
+      const patches = new Map<string, { name?: string; lastMessageText?: string }>();
+      await Promise.allSettled(
+        rows
+          .filter((conv) => conv?.isEncrypted)
+          .map(async (conv) => {
+            const id = conv.$id || conv.id;
+            if (!id) return;
+            try {
+              const decrypted = await (ChatService as any)._decryptConversation({ ...conv }, user.$id);
+              if (!decrypted) return;
+              const patch: { name?: string; lastMessageText?: string } = {};
+              if (
+                decrypted.name &&
+                decrypted.name !== conv.name &&
+                !isLikelyChatCiphertext(decrypted.name)
+              ) {
+                patch.name = decrypted.name;
+              }
+              if (
+                decrypted.lastMessageText &&
+                decrypted.lastMessageText !== conv.lastMessageText &&
+                !isLikelyChatCiphertext(decrypted.lastMessageText)
+              ) {
+                patch.lastMessageText = decrypted.lastMessageText;
+              }
+              if (Object.keys(patch).length) patches.set(id, patch);
+            } catch {
+              /* keep masked preview */
+            }
+          }),
+      );
+      if (!patches.size) return rows;
+      return rows.map((conv) => {
+        const id = conv.$id || conv.id;
+        const patch = id ? patches.get(id) : undefined;
+        return patch ? { ...conv, ...patch } : conv;
+      });
+    },
+    [user?.$id],
+  );
 
   const openConversation = useCallback(
     (conversationId: string, kind: 'chat' | 'thread' = 'chat', title?: string) => {
@@ -127,7 +183,8 @@ export function HangoutsDrawer({
 
       let hasAnyLocal = false;
       if (cachedChats?.length) {
-        startTransition(() => setSecureChats(cachedChats));
+        const decryptedCached = await hydrateDecryptedSecureChats(cachedChats);
+        startTransition(() => setSecureChats(decryptedCached));
         hasAnyLocal = true;
       }
       if (cachedThreads?.length) {
@@ -143,8 +200,9 @@ export function HangoutsDrawer({
           const res = await ChatService.getConversations(user.$id, { forceRefresh: !hasAnyLocal });
           const rows = Array.isArray(res) ? res : res?.rows || [];
           if (rows.length) {
-            startTransition(() => setSecureChats(rows));
-            void writeChatsListLocal(rows);
+            const decryptedRows = await hydrateDecryptedSecureChats(rows);
+            startTransition(() => setSecureChats(decryptedRows));
+            void writeChatsListLocal(decryptedRows);
           }
           markEmptyEscapeHatchRan('chats', user.$id);
         } catch (fetchErr) {
@@ -156,11 +214,27 @@ export function HangoutsDrawer({
     } finally {
       setInitialLoading(false);
     }
-  }, [user?.$id]);
+  }, [user?.$id, hydrateDecryptedSecureChats]);
 
   useEffect(() => {
     void refreshChats();
   }, [refreshChats]);
+
+  useEffect(() => {
+    if (!isVaultUnlocked) return;
+    let cancelled = false;
+    void (async () => {
+      const current = peekChatsListMemory();
+      if (!current.length) return;
+      const decryptedRows = await hydrateDecryptedSecureChats(current);
+      if (cancelled) return;
+      startTransition(() => setSecureChats(decryptedRows));
+      void writeChatsListLocal(decryptedRows);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isVaultUnlocked, hydrateDecryptedSecureChats]);
 
   // Realtime subscription for instant updates
   useEffect(() => {
@@ -551,14 +625,19 @@ export function HangoutsDrawer({
           <div>
             {filteredTargets.map((target) => {
               const isSelected = selected.has(target.id);
-              const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !isUnlocked;
-              const preview =
-                target.lastMessageText ||
-                (target.kind === 'secure'
+              const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !isVaultUnlocked;
+              const previewFallback =
+                target.kind === 'secure'
                   ? target.type === 'group'
                     ? `${target.participants?.length || 2} members`
                     : 'No messages yet'
-                  : 'Resource discussion');
+                  : 'Resource discussion';
+              const displayPreview = resolveConversationPreviewText(target.lastMessageText, {
+                isEncrypted: target.isEncrypted,
+                isVaultUnlocked,
+                fallback: previewFallback,
+              });
+              const previewIsEncrypted = displayPreview === ENCRYPTED_LIST_PREVIEW_LABEL;
               const avatarUserId =
                 target.otherUserId ||
                 (target.kind === 'secure'
@@ -622,7 +701,14 @@ export function HangoutsDrawer({
                       ) : null}
                     </div>
                     <p className="m-0 mt-0.5 truncate text-[13px] leading-snug text-white/45">
-                      {preview}
+                      {previewIsEncrypted ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Lock size={12} className="text-white/35" />
+                          <span>{displayPreview}</span>
+                        </span>
+                      ) : (
+                        displayPreview
+                      )}
                       {isSecureLocked ? ' · vault locked' : ''}
                     </p>
                   </div>
@@ -676,3 +762,5 @@ export function HangoutsDrawer({
     </div>
   );
 }
+
+HangoutsDrawer.displayName = 'HangoutsDrawer';

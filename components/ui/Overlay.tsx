@@ -8,6 +8,12 @@ import {
 } from '@/lib/openbricks/primitives';
 import { useOverlay } from './OverlayContext';
 
+function isHangoutsDrawerContent(content: React.ReactNode): boolean {
+  if (!React.isValidElement(content)) return false;
+  const type = content.type as { name?: string; displayName?: string };
+  return type?.displayName === 'HangoutsDrawer' || type?.name === 'HangoutsDrawer';
+}
+
 const Overlay: React.FC = () => {
   const { isOpen, content, closeOverlay } = useOverlay();
   const [isMobile, setIsMobile] = useState(false);
@@ -21,6 +27,14 @@ const Overlay: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsExpanded(false);
+      return;
+    }
+    setIsExpanded(isHangoutsDrawerContent(content));
+  }, [isOpen, content]);
   const dragStartY = useRef(0);
   const startHeight = useRef(0);
 

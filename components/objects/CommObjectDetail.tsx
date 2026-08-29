@@ -7,6 +7,7 @@ import { ChatWindow } from '@/components/chat/ChatWindow';
 import { getNote } from '@/lib/appwrite/note';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { chatConversationCacheKey } from '@/lib/chat/local-chat-cache';
+import { isGenericConversationName } from '@/lib/chat/conversation-list-label';
 import type { UnifiedObjectDetailModel } from '@/lib/objects/types';
 
 type CommKind = 'chat' | 'thread' | 'call';
@@ -119,6 +120,36 @@ export function CommObjectDetail({
     };
   }, [conversationId, kind, title]);
 
+  const chatSeedTitle = useMemo(() => {
+    const fromProp = title?.trim();
+    if (fromProp && !isGenericConversationName(fromProp)) return fromProp;
+    const fromHuddle = huddleTitle?.trim();
+    if (fromHuddle && fromHuddle !== 'Thread' && !isGenericConversationName(fromHuddle)) {
+      return fromHuddle;
+    }
+    return undefined;
+  }, [title, huddleTitle]);
+
+  useEffect(() => {
+    if (!chatSeedTitle) return;
+    void (async () => {
+      try {
+        const cached = await LocalEngine.cacheGet<Record<string, unknown>>(
+          chatConversationCacheKey(conversationId),
+        );
+        await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), {
+          ...(cached || {}),
+          $id: conversationId,
+          id: conversationId,
+          name: chatSeedTitle,
+          title: chatSeedTitle,
+        });
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [conversationId, chatSeedTitle]);
+
   const item = useMemo<UnifiedObjectDetailModel>(
     () => ({
       kind: 'agent_session',
@@ -138,7 +169,12 @@ export function CommObjectDetail({
         Call surface uses this same shell next.
       </div>
     ) : (
-      <ChatWindow conversationId={conversationId} onBack={handleClose} layout="fill" />
+      <ChatWindow
+        conversationId={conversationId}
+        onBack={handleClose}
+        layout="fill"
+        seedTitle={chatSeedTitle}
+      />
     );
 
   if (embedded) {

@@ -54,6 +54,10 @@ import {
     getNuclearPending,
     MAX_NUCLEAR_RETRIES,
 } from '@/lib/chat/local-chat-cache';
+import {
+    ENCRYPTED_LIST_PREVIEW_LABEL,
+    resolveConversationPreviewText,
+} from '@/lib/chat/conversation-preview-label';
 const alpha = (hexColor: string, opacity: number) => {
     let hex = hexColor.replace('#', '');
     if (hex.length === 3) {
@@ -177,7 +181,7 @@ export const ChatList = ({
     }, [onTabChange]);
 
     const openConversation = useCallback(
-        (conversationId: string, kind: 'chat' | 'thread' = 'chat') => {
+        (conversationId: string, kind: 'chat' | 'thread' = 'chat', title?: string) => {
             if (onOpenConversation) {
                 onOpenConversation(conversationId, kind);
                 return;
@@ -186,6 +190,7 @@ export const ChatList = ({
             openCommObjectDetail({
                 conversationId,
                 kind,
+                title,
                 openSidebar,
                 openOverlay,
                 closeSidebar,
@@ -745,47 +750,17 @@ export const ChatList = ({
         }
     }, [externalQuery]);
 
-    const isLikelyEncrypted = useCallback((val: string) => {
-        if (!val || typeof val !== 'string') return false;
-        const trimmed = val.trim();
-        if (
-            trimmed.startsWith('http://') ||
-            trimmed.startsWith('https://') ||
-            trimmed.startsWith('ftp://') ||
-            trimmed.startsWith('mailto:') ||
-            trimmed.startsWith('nostr:') ||
-            trimmed.startsWith('npub1') ||
-            trimmed.startsWith('nsec1') ||
-            trimmed.startsWith('note1')
-        ) {
-            return false;
-        }
-        if (
-            trimmed.startsWith('{"iv"') ||
-            trimmed.startsWith('{"data"') ||
-            trimmed.startsWith('{"ct"') ||
-            trimmed.startsWith('{"ciphertext"') ||
-            trimmed.startsWith('[DECRYPTION_')
-        ) {
-            return true;
-        }
-        if (trimmed.includes('://') || trimmed.includes('/') || trimmed.includes('?')) {
-            return false;
-        }
-        return trimmed.length >= 32 && !trimmed.includes(' ') && /^[A-Za-z0-9+/=_-]+$/.test(trimmed);
-    }, []);
-
     const formatPreviewFromMessage = useCallback((message: any) => {
         if (!message) return 'No messages yet';
         const rawContent = message.content || `[${message.type || 'message'}]`;
-        if (isLikelyEncrypted(rawContent)) {
-            return '🔒 Encrypted message';
+        if (isLikelyChatCiphertext(rawContent)) {
+            return ENCRYPTED_LIST_PREVIEW_LABEL;
         }
         if (message.type === 'text' || message.type === 'attachment') {
             return rawContent;
         }
         return `[${message.type || 'message'}]`;
-    }, [isLikelyEncrypted]);
+    }, []);
 
     const handleGlobalSearch = useCallback(async (query: string) => {
         if (!query.trim() || query.length < 2) {
@@ -1255,31 +1230,51 @@ export const ChatList = ({
             setIsInitializing(false);
             setLoading(false);
 
-            // Background group name decrypt — for encrypted groups the name is stored as ciphertext.
-            // Uses ChatService._decryptConversation for full key resolution (cache → local store → lockbox).
-            // Decrypted names are persisted to local cache so they survive vault-locked sessions.
+            // Background decrypt for encrypted rows when vault is unlocked (names + previews).
             void (async () => {
                 if (!ecosystemSecurity.status.isUnlocked) return;
-                const encryptedGroups = sorted.filter(
-                    (conv: any) => conv.type !== 'direct' && conv.isEncrypted && isLikelyChatCiphertext(conv.name)
-                );
-                if (!encryptedGroups.length) return;
-                const patches: Array<{ id: string; name: string }> = [];
-                await Promise.allSettled(encryptedGroups.map(async (conv: any) => {
+                const encryptedRows = sorted.filter((conv: any) => conv.isEncrypted);
+                if (!encryptedRows.length) return;
+                const patches: Array<{ id: string; name?: string; lastMessageText?: string }> = [];
+                await Promise.allSettled(encryptedRows.map(async (conv: any) => {
                     try {
                         const decrypted = await (ChatService as any)._decryptConversation({ ...conv }, user!.$id);
-                        if (decrypted?.name && decrypted.name !== conv.name && !isLikelyChatCiphertext(decrypted.name)) {
-                            patches.push({ id: conv.$id, name: decrypted.name });
+                        if (!decrypted) return;
+                        const patch: { id: string; name?: string; lastMessageText?: string } = { id: conv.$id };
+                        let hasPatch = false;
+                        if (
+                            decrypted.name &&
+                            decrypted.name !== conv.name &&
+                            !isLikelyChatCiphertext(decrypted.name)
+                        ) {
+                            patch.name = decrypted.name;
+                            hasPatch = true;
                         }
-                    } catch (_e) { /* keep placeholder if decryption fails */ }
+                        if (
+                            decrypted.lastMessageText &&
+                            decrypted.lastMessageText !== conv.lastMessageText &&
+                            !isLikelyChatCiphertext(decrypted.lastMessageText)
+                        ) {
+                            patch.lastMessageText = decrypted.lastMessageText;
+                            hasPatch = true;
+                        }
+                        if (hasPatch) patches.push(patch);
+                    } catch (_e) { /* keep masked until opened */ }
                 }));
                 if (!patches.length) return;
                 startTransition(() => {
                     setConversations((prev) => {
-                        const patchMap = new Map(patches.map((p) => [p.id, p.name]));
-                        const next = prev.map((c) => patchMap.has(c.$id) ? { ...c, name: patchMap.get(c.$id)! } : c);
+                        const patchMap = new Map(patches.map((p) => [p.id, p]));
+                        const next = prev.map((c) => {
+                            const patch = patchMap.get(c.$id);
+                            if (!patch) return c;
+                            return {
+                                ...c,
+                                ...(patch.name ? { name: patch.name } : {}),
+                                ...(patch.lastMessageText ? { lastMessageText: patch.lastMessageText } : {}),
+                            };
+                        });
                         conversationsRef.current = next;
-                        // Persist plaintext names so vault-locked loads show the real name from cache
                         writeChatsListLocal(next);
                         return next;
                     });
@@ -1759,7 +1754,7 @@ export const ChatList = ({
                                             }
                                             handleItemClick(e);
                                             if (!isInitializing) {
-                                                openConversation(conv.$id, openKind);
+                                                openConversation(conv.$id, openKind, conv.name);
                                             }
                                         }}
                                         onContextMenu={handler}
@@ -1771,7 +1766,7 @@ export const ChatList = ({
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 e.preventDefault();
                                                 if (!isInitializing) {
-                                                    openConversation(conv.$id, openKind);
+                                                    openConversation(conv.$id, openKind, conv.name);
                                                 }
                                             }
                                         }}
@@ -1859,16 +1854,26 @@ export const ChatList = ({
                                                 )}
                                             </span>
                                             <span className="text-[#9B9691] font-medium text-sm truncate flex items-center gap-1.5">
-                                                {isSecure ? (() => {
+                                                {(() => {
                                                     const memoryPreview = ChatService.getConversationPreviewSnapshot(conv.$id);
                                                     const memoryAt = memoryPreview?.lastMessageAt ? new Date(memoryPreview.lastMessageAt).getTime() : -1;
                                                     const rowAt = conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : -1;
                                                     const memoryText = memoryPreview && (memoryAt >= rowAt || !conv.lastMessageText) ? memoryPreview.lastMessageText : null;
                                                     const resolvedPreview = livePreviewByConversation[conv.$id]?.lastMessageText || memoryText || conv.lastMessageText || 'No messages yet';
-                                                    return (conv.isEncrypted && !conv.isSelf && isLikelyEncrypted(resolvedPreview)) ? (
-                                                        <span className="flex items-center gap-1"><Lock size={12} className="text-[#9B9691]" /><span>Secured Payload</span></span>
-                                                    ) : (<span>{resolvedPreview}</span>);
-                                                })() : (<span>{conv.lastMessageText}</span>)}
+                                                    const displayPreview = resolveConversationPreviewText(resolvedPreview, {
+                                                        isEncrypted: !!conv.isEncrypted,
+                                                        isVaultUnlocked: isUnlocked,
+                                                    });
+                                                    if (displayPreview === ENCRYPTED_LIST_PREVIEW_LABEL) {
+                                                        return (
+                                                            <span className="flex items-center gap-1">
+                                                                <Lock size={12} className="text-[#9B9691]" />
+                                                                <span>{displayPreview}</span>
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return <span>{displayPreview}</span>;
+                                                })()}
                                             </span>
                                         </div>
                                         <div className="flex-shrink-0 flex flex-col items-end gap-1.5 ml-2">

@@ -91,16 +91,53 @@ import { ChatMessageContent } from './ChatMessageContent';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import {
+    pickConversationDisplayName,
+    resolveConversationHeaderName,
+} from '@/lib/chat/conversation-list-label';
+
+function seedConversationFromList(
+    conversationId: string,
+    seedTitle?: string,
+    currentUserId?: string,
+): any | null {
+    const fromList = peekChatsListMemory().find(
+        (c: any) => c.$id === conversationId || c.id === conversationId,
+    );
+    if (fromList) {
+        const name = resolveConversationHeaderName({
+            conversation: fromList,
+            currentUserId,
+            seedTitle,
+        });
+        if (!name) return fromList;
+        return name === fromList.name ? fromList : { ...fromList, name, title: name };
+    }
+    if (seedTitle) {
+        return {
+            $id: conversationId,
+            id: conversationId,
+            name: seedTitle,
+            title: seedTitle,
+            type: 'direct',
+            participants: [],
+        };
+    }
+    return null;
+}
 
 export const ChatWindow = ({
     conversationId,
     onBack,
     layout = 'fill',
+    seedTitle,
 }: {
     conversationId: string;
     onBack?: () => void;
     /** fill = in-page / object detail (respects primary sidebar). fixed = legacy fullscreen. */
     layout?: 'fill' | 'fixed';
+    /** Resolved label from chat list / opener — avoids flashing generic "Direct Chat". */
+    seedTitle?: string;
 }) => {
     const { user } = useAuth();
     const { openProUpgrade } = useProUpgrade();
@@ -117,12 +154,9 @@ export const ChatWindow = ({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
     const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [conversation, setConversation] = useState<any>(() => {
-        const fromList = peekChatsListMemory().find(
-            (c: any) => c.$id === conversationId || c.id === conversationId,
-        );
-        return fromList || null;
-    });
+    const [conversation, setConversation] = useState<any>(() =>
+        seedConversationFromList(conversationId, seedTitle, user?.$id),
+    );
     const [_loading, setLoading] = useState(false);
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [sending, setSending] = useState(false);
@@ -158,8 +192,11 @@ export const ChatWindow = ({
     const _searchParams = useSearchParams();
 
     const partnerId = useMemo(() => {
-        if (!conversation || conversation.type !== 'direct' || !user?.$id) return null;
-        return conversation.participants.find((p: string) => p !== user.$id) || null;
+        if (!conversation) return null;
+        if (conversation.otherUserId) return conversation.otherUserId as string;
+        const type = String(conversation.type || 'direct');
+        if (type !== 'direct' || !user?.$id) return null;
+        return conversation.participants?.find((p: string) => p !== user.$id) || null;
     }, [conversation, user?.$id]);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -248,12 +285,91 @@ export const ChatWindow = ({
         !hasRepliedToPartner
     );
 
+    const applyDisplayName = React.useCallback(
+        (conv: any, profile?: { displayName?: string | null; username?: string | null } | null) => {
+            if (!conv) return conv;
+            const name = resolveConversationHeaderName({
+                conversation: conv,
+                currentUserId: user?.$id,
+                seedTitle,
+                partnerProfile: profile,
+            });
+            if (!name || name === conv.name) return conv;
+            return { ...conv, name, title: name };
+        },
+        [seedTitle, user?.$id],
+    );
+
+    const conversationDisplayName = useMemo(() => {
+        const resolved = resolveConversationHeaderName({
+            conversation,
+            currentUserId: user?.$id,
+            seedTitle,
+            partnerProfile,
+        });
+        return resolved || 'Loading...';
+    }, [conversation, seedTitle, user?.$id, partnerProfile]);
+
+    useEffect(() => {
+        if (!partnerId) return undefined;
+        const cached = getCachedIdentityById(partnerId);
+        if (cached && !partnerProfile) {
+            setPartnerProfile(cached);
+        }
+        return subscribeIdentityCache((identity) => {
+            if (identity?.userId !== partnerId) return;
+            startTransition(() => {
+                setPartnerProfile(identity);
+                setConversation((prev: any) => {
+                    if (!prev) return prev;
+                    const name = resolveConversationHeaderName({
+                        conversation: prev,
+                        currentUserId: user?.$id,
+                        seedTitle,
+                        partnerProfile: identity,
+                    });
+                    if (!name || name === prev.name) return prev;
+                    return { ...prev, name, title: name };
+                });
+            });
+        });
+    }, [partnerId, seedTitle, user?.$id, startTransition]);
+
+    useEffect(() => {
+        if (!conversationId) return;
+        setConversation((prev: any) => {
+            const fromList = peekChatsListMemory().find(
+                (c: any) => c.$id === conversationId || c.id === conversationId,
+            );
+            const base = prev || fromList;
+            if (!base) {
+                if (!seedTitle) return prev;
+                return {
+                    $id: conversationId,
+                    id: conversationId,
+                    name: seedTitle,
+                    title: seedTitle,
+                    type: 'direct',
+                    participants: [],
+                };
+            }
+            const name = resolveConversationHeaderName({
+                conversation: base,
+                currentUserId: user?.$id,
+                seedTitle,
+                partnerProfile,
+            });
+            if (!name || base.name === name) return base;
+            return { ...base, name, title: name };
+        });
+    }, [conversationId, user?.$id, seedTitle, partnerProfile?.displayName, partnerProfile?.username]);
+
     const loadConversation = React.useCallback(async () => {
         if (!user?.$id) return;
         try {
             const cachedConv = await LocalEngine.cacheGet<any>(chatConversationCacheKey(conversationId));
             if (cachedConv?.$id || cachedConv?.id) {
-                startTransition(() => setConversation(cachedConv));
+                startTransition(() => setConversation(applyDisplayName(cachedConv)));
             }
 
             if (ecosystemSecurity.status.isUnlocked) {
@@ -270,7 +386,14 @@ export const ChatWindow = ({
                   || (await import('@/lib/chat/local-chat-cache')).peekThreadsListMemory?.().find((c: any) => c.$id === conversationId || c.id === conversationId)
                   || null;
                 if (rosterHit) {
-                  const fallbackName = rosterHit.name || rosterHit.title || rosterHit.lastMessageText || 'Thread';
+                  const fallbackName =
+                    resolveConversationHeaderName({
+                      conversation: rosterHit,
+                      currentUserId: user?.$id,
+                      seedTitle,
+                    }) ||
+                    pickConversationDisplayName(seedTitle, rosterHit.title, rosterHit.name) ||
+                    'Thread';
                   const fallback = {
                     $id: conversationId,
                     id: conversationId,
@@ -289,7 +412,14 @@ export const ChatWindow = ({
                 const { ThreadService } = await import('@/lib/services/threads');
                 const t = await (ThreadService as any).getById?.(conversationId).catch(() => null);
                 if (t) {
-                  const fallbackName = t.title || 'Thread';
+                  const fallbackName =
+                    resolveConversationHeaderName({
+                      conversation: { ...t, type: 'thread', title: t.title },
+                      currentUserId: user?.$id,
+                      seedTitle,
+                    }) ||
+                    pickConversationDisplayName(seedTitle, t.title) ||
+                    'Thread';
                   const fallback = {
                     $id: t.id,
                     id: t.id,
@@ -330,18 +460,25 @@ export const ChatWindow = ({
                             } catch (_e) {}
                         }
                         seedIdentityCache({ ...profile, avatar: profile?.avatar || avatarUrl });
-                        const next = {
-                            ...conv,
-                            name: profile ? (profile.displayName || profile.username) : `@${otherId.slice(0, 7)}`,
-                            avatarUrl
-                        };
+                        const next = applyDisplayName(
+                            {
+                                ...conv,
+                                name: profile
+                                    ? profile.displayName || profile.username
+                                    : `@${otherId.slice(0, 7)}`,
+                                avatarUrl,
+                            },
+                            profile,
+                        );
                         startTransition(() => setConversation(next));
                         void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), next);
                     } catch (_e: unknown) {
                         startTransition(() => {
                             setPartnerProfile(null);
                             setPartnerVerification(getVerificationState(null));
-                            setConversation({ ...conv, name: `@${otherId.slice(0, 7)}` });
+                            setConversation(
+                                applyDisplayName({ ...conv, name: `@${otherId.slice(0, 7)}` }),
+                            );
                         });
                     }
                 } else {
@@ -361,7 +498,7 @@ export const ChatWindow = ({
                         } catch (_e) {}
                     }
                     seedIdentityCache({ ...myProfile, avatar: myProfile?.avatar || avatarUrl });
-                    const next = { ...conv, name: `${myName} (You)`, avatarUrl };
+                    const next = applyDisplayName({ ...conv, name: `${myName} (You)`, avatarUrl });
                     startTransition(() => setConversation(next));
                     void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), next);
                 }
@@ -369,9 +506,12 @@ export const ChatWindow = ({
                 startTransition(() => {
                     setPartnerProfile(null);
                     setPartnerVerification(getVerificationState(null));
-                    setConversation(conv);
+                    setConversation(applyDisplayName(conv));
                 });
-                void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), conv);
+                void LocalEngine.cacheSet(
+                    chatConversationCacheKey(conversationId),
+                    applyDisplayName(conv),
+                );
             }
 
             // Pre-warm & self-heal keys automatically when opening chat — prompt unlock if sealed material
@@ -385,7 +525,7 @@ export const ChatWindow = ({
         } catch (error: unknown) {
             console.error('Failed to load conversation:', error);
         }
-    }, [conversationId, user, startTransition]);
+    }, [conversationId, user, startTransition, seedTitle, applyDisplayName]);
 
     const loadReactions = React.useCallback(async () => {
         try {
@@ -818,7 +958,20 @@ export const ChatWindow = ({
             const fromList = peekChatsListMemory().find(
                 (c: any) => c.$id === conversationId || c.id === conversationId,
             );
-            if (fromList) setConversation(fromList);
+            if (fromList) {
+                setConversation(applyDisplayName(fromList));
+            } else if (seedTitle) {
+                setConversation((prev: any) =>
+                    prev || {
+                        $id: conversationId,
+                        id: conversationId,
+                        name: seedTitle,
+                        title: seedTitle,
+                        type: 'direct',
+                        participants: [],
+                    },
+                );
+            }
             void loadMessages();
             void loadConversation();
         }
@@ -828,11 +981,30 @@ export const ChatWindow = ({
                 [
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`,
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.rows`,
+                    `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.rows`,
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`,
-                    `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.documents`
+                    `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.documents`,
+                    `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.documents`,
                 ],
                 async (response) => {
                     const payload = response.payload as any;
+                    const convTable = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
+                    if (
+                        payload &&
+                        (payload.$id === conversationId || payload.id === conversationId) &&
+                        response.events.some(
+                            (event) =>
+                                event.includes(convTable) ||
+                                event.includes('conversations'),
+                        )
+                    ) {
+                        startTransition(() => {
+                            setConversation((prev: any) =>
+                                applyDisplayName({ ...(prev || {}), ...payload }),
+                            );
+                        });
+                        return;
+                    }
                     // Handle Message Reactions realtime updates
                     if (payload?.conversationId === conversationId && (response.events.some(e => e.includes('message_reactions')) || payload.emoji)) {
                         void loadReactions();
@@ -892,7 +1064,7 @@ export const ChatWindow = ({
             if (typeof unsub === 'function') unsub();
             else if (unsub?.unsubscribe) unsub.unsubscribe();
         };
-    }, [conversationId, user, user?.$id, loadConversation, loadMessages, startTransition]);
+    }, [conversationId, user, user?.$id, loadConversation, loadMessages, startTransition, seedTitle, applyDisplayName]);
 
     useEffect(() => {
         return () => {
@@ -1480,7 +1652,7 @@ export const ChatWindow = ({
                                 conversationId={conversationId}
                                 conversation={conversation}
                                 seed={isGroup ? null : {
-                                  displayName: partnerProfile?.displayName || conversation?.name,
+                                  displayName: partnerProfile?.displayName || conversationDisplayName,
                                   username: partnerProfile?.username,
                                   bio: partnerProfile?.bio,
                                   avatar: partnerProfile?.avatar || conversation?.avatarUrl,
@@ -1506,9 +1678,9 @@ export const ChatWindow = ({
                                     ? null
                                     : (conversation?.avatar || conversation?.avatarUrl || null)
                             }
-                            alt={conversation?.name}
+                            alt={conversationDisplayName}
                             fallback={
-                                (conversation?.name || user?.name || 'Y')
+                                (conversationDisplayName || user?.name || 'Y')
                                     .replace(/\(You\)/gi, '')
                                     .replace(/^@/, '')
                                     .trim()
@@ -1524,7 +1696,7 @@ export const ChatWindow = ({
                                         verified={partnerVerification.verified}
                                         sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', lineHeight: 1.1, color: '#fff', fontSize: '1rem' }}
                                     >
-                                        {conversation?.name || 'Loading...'}
+                                        {conversationDisplayName}
                                     </IdentityName>
                                     {conversation?.isEncrypted ? (
                                         <Lock size={13} strokeWidth={2.5} color="#F59E0B" aria-label="Secure chat" />
@@ -1533,7 +1705,7 @@ export const ChatWindow = ({
                             ) : (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                     <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', lineHeight: 1.1, color: isSelf ? '#6366F1' : '#fff', fontSize: '1rem' }}>
-                                        {conversation?.name || 'Loading...'}
+                                        {conversationDisplayName}
                                     </Typography>
                                     {conversation?.isEncrypted ? (
                                         <Lock size={13} strokeWidth={2.5} color="#F59E0B" aria-label="Secure chat" />
@@ -1775,7 +1947,7 @@ export const ChatWindow = ({
                             const senderVerification = getVerificationState(senderProfile?.preferences || null);
                             const senderName = isOutgoing
                                 ? 'You'
-                                : senderProfile?.displayName || senderProfile?.username || (conversation?.type === 'direct' ? conversation?.name || 'Partner' : `@${String(msg.senderId || '').slice(0, 7)}`);
+                                : senderProfile?.displayName || senderProfile?.username || (conversation?.type === 'direct' ? conversationDisplayName || 'Partner' : `@${String(msg.senderId || '').slice(0, 7)}`);
 
                             return (
                                 <div
@@ -1835,7 +2007,7 @@ export const ChatWindow = ({
                                                         className="mb-2 w-full text-left rounded-xl bg-[#0A0908] border border-white/[0.04] border-l-[3px] border-l-[#F59E0B] px-2.5 py-1.5"
                                                     >
                                                         <span className="block text-[11px] font-extrabold text-[#F59E0B] mb-0.5">
-                                                            {messages.find(m => m.$id === msg.replyTo)?.senderId === user?.$id ? 'You' : (conversation?.name || 'Partner')}
+                                                            {messages.find(m => m.$id === msg.replyTo)?.senderId === user?.$id ? 'You' : (conversationDisplayName || 'Partner')}
                                                         </span>
                                                         <span className="block text-xs text-white/50 line-clamp-2 leading-[1.35] font-satoshi">
                                                             {messages.find(m => m.$id === msg.replyTo)?.content || 'Original message'}
@@ -1980,7 +2152,7 @@ export const ChatWindow = ({
                     <div className="mb-2 flex items-center gap-2 rounded-2xl bg-[#161412] border border-white/[0.06] border-l-4 border-l-[#F59E0B] px-3 py-2.5">
                         <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[#F59E0B] font-mono">
-                                Replying to {replyingTo.senderId === user?.$id ? 'yourself' : (conversation?.name || 'Partner')}
+                                Replying to {replyingTo.senderId === user?.$id ? 'yourself' : (conversationDisplayName || 'Partner')}
                             </span>
                             <span className="text-sm text-white/50 font-satoshi truncate">
                                 {replyingTo.content}
@@ -2144,7 +2316,7 @@ export const ChatWindow = ({
                                         source: 'ecosystem',
                                         targetKind: 'chat',
                                         targetOwnerId: msg.senderId,
-                                        authorName: conversation?.name || 'Message Author',
+                                        authorName: conversationDisplayName || 'Message Author',
                                     });
                                 }}
                                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-400/10 border border-amber-400/30 text-sm font-bold text-amber-300 hover:bg-amber-400/20 transition-all text-left cursor-pointer"
