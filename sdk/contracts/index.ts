@@ -1,4 +1,5 @@
 export * from './common';
+export * from './auth';
 export * from './goals';
 export * from './notes';
 export * from './workspaces';

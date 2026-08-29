@@ -1,5 +1,46 @@
 import { MCP_ID_INPUT, MCP_LIMIT_INPUT, mcpItemsOutput } from './common';
 
+export function shapeChatListItem(row: Record<string, unknown>) {
+  const r = row as any;
+  return {
+    id: String(r.$id || r.id),
+    type: r.type || null,
+    name: r.name || null,
+    participantCount: r.participantCount ?? (Array.isArray(r.participants) ? r.participants.length : null),
+    lastMessageAt: r.lastMessageAt || null,
+    isEncrypted: !!r.isEncrypted,
+  };
+}
+
+export function shapeChatDetail(row: Record<string, unknown>) {
+  const r = row as any;
+  const parts = Array.isArray(r.participants) ? r.participants : [];
+  return {
+    id: String(r.$id || r.id),
+    type: r.type || null,
+    name: r.name || null,
+    participants: parts,
+    lastMessageAt: r.lastMessageAt || null,
+    isEncrypted: !!r.isEncrypted,
+  };
+}
+
+export function shapeChatMessage(row: Record<string, unknown>, chatIsEncrypted = false) {
+  const r = row as any;
+  const encrypted = r.isEncrypted !== false && chatIsEncrypted;
+  const plaintext = r.content || r.body || null;
+  return {
+    id: String(r.$id || r.id),
+    conversationId: r.conversationId || null,
+    senderId: r.senderId || null,
+    createdAt: r.$createdAt || r.createdAt || null,
+    isEncrypted: encrypted,
+    hasCiphertext: !!(r.content || r.ciphertext || r.body),
+    content: encrypted ? null : plaintext,
+    contentPreview: encrypted ? null : plaintext,
+  };
+}
+
 const CHAT_LIST_ITEM_SCHEMA = {
   type: 'object',
   properties: {

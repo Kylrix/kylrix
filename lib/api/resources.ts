@@ -24,10 +24,16 @@ import {
   buildGoalCreateRow,
   buildGoalUpdatePatch,
   resolveWorkspaceId,
+  shapeChatDetail,
+  shapeChatListItem,
+  shapeChatMessage,
   shapeEventDetail,
   shapeEventListItem,
+  shapeFormDetail,
+  shapeFormListItem,
   shapeMoment,
   shapeNote,
+  shapeProfile,
   shapeTag,
   shapeWorkspace,
 } from '@/sdk/contracts';
@@ -368,12 +374,7 @@ export async function resolveWorkspaceMekBytes(
 export const ApiResources = {
   async me(actor: ApiActor) {
     requireScope(actor, 'profile:read');
-    return {
-      id: actor.userId,
-      auth: actor.kind,
-      scopes: actor.scopes,
-      patId: actor.patId || null,
-    };
+    return shapeProfile(actor);
   },
 
   async listNotes(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
@@ -1334,12 +1335,7 @@ export const ApiResources = {
           .getRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: fid })
           .catch(() => null)) as any;
         if (row && (row.userId === actor.userId || row.isPublic || row.isGuest)) {
-          rows.push({
-            id: row.$id,
-            title: row.title || row.name || 'Untitled',
-            updatedAt: row.$updatedAt || null,
-            isPublic: !!row.isPublic,
-          });
+          rows.push(shapeFormListItem(row));
         }
       }
       return rows.slice(0, Math.min(100, Math.max(1, limit)));
@@ -1357,12 +1353,7 @@ export const ApiResources = {
     });
     return res.rows
       .filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id))
-      .map((r: any) => ({
-        id: r.$id,
-        title: r.title || r.name || 'Untitled',
-        updatedAt: r.$updatedAt || null,
-        isPublic: !!r.isPublic,
-      }));
+      .map((r: any) => shapeFormListItem(r));
   },
 
   async listAgentSessions(actor: ApiActor, limit = 25, opts?: { harness?: string | null; workspaceId?: string | null }) {
@@ -1613,14 +1604,7 @@ export const ApiResources = {
         Query.limit(Math.min(100, Math.max(1, limit))),
       ],
     });
-    return res.rows.map((r: any) => ({
-      id: r.$id,
-      type: r.type || null,
-      name: r.name || null,
-      participantCount: r.participantCount ?? (Array.isArray(r.participants) ? r.participants.length : null),
-      lastMessageAt: r.lastMessageAt || null,
-      isEncrypted: !!r.isEncrypted,
-    }));
+    return res.rows.map((r: any) => shapeChatListItem(r));
   },
 
   async getChat(actor: ApiActor, id: string) {
@@ -1634,14 +1618,7 @@ export const ApiResources = {
     if (!row) notFound('Chat not found');
     const parts = Array.isArray(row.participants) ? row.participants : [];
     if (!parts.includes(actor.userId)) notFound('Chat not found');
-    return {
-      id: row.$id,
-      type: row.type || null,
-      name: row.name || null,
-      participants: parts,
-      lastMessageAt: row.lastMessageAt || null,
-      isEncrypted: !!row.isEncrypted,
-    };
+    return shapeChatDetail(row);
   },
 
   async listChatMessages(actor: ApiActor, conversationId: string, limit = 50) {
@@ -1659,20 +1636,7 @@ export const ApiResources = {
       ],
     });
     // E2EE: metadata only. Unencrypted / thread-style: full plaintext.
-    return res.rows.map((r: any) => {
-      const encrypted = r.isEncrypted !== false && chat.isEncrypted;
-      const plaintext = r.content || r.body || null;
-      return {
-        id: r.$id,
-        conversationId: r.conversationId,
-        senderId: r.senderId || null,
-        createdAt: r.$createdAt || r.createdAt || null,
-        isEncrypted: encrypted,
-        hasCiphertext: !!(r.content || r.ciphertext || r.body),
-        content: encrypted ? null : plaintext,
-        contentPreview: encrypted ? null : plaintext,
-      };
-    });
+    return res.rows.map((r: any) => shapeChatMessage(r, chat.isEncrypted));
   },
 
   async sendChatMessage(actor: ApiActor, conversationId: string, body: Record<string, unknown>) {
@@ -1926,14 +1890,7 @@ export const ApiResources = {
       .getRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id })
       .catch(() => null)) as any;
     if (!row || row.userId !== actor.userId) notFound('Form not found');
-    return {
-      id: row.$id,
-      title: row.title || 'Untitled',
-      description: row.description || null,
-      schema: row.schema || null,
-      status: row.status || null,
-      isPublic: !!row.isPublic,
-    };
+    return shapeFormDetail(row);
   },
 
   async createForm(actor: ApiActor, body: Record<string, unknown>) {

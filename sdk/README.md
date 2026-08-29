@@ -4,7 +4,7 @@ Shared contracts and integration surfaces for UI, REST (`/api/v1`), MCP, and ext
 
 ## What belongs here
 
-- **contracts/** — canonical domain shapes (goals, notes, workspaces, agentic tools)
+- **contracts/** — canonical domain shapes (auth, goals, notes, workspaces, events, chats, agentic tools, …)
 - **api/** — path builders (`KYLRIX_API_V1_BASE`, `apiV1Path`)
 - **token/**, **crosslinks/**, **notes/** — platform-agnostic business rules with dependency injection
 - **identity/** — profile pic resolution, username normalization, verification flags

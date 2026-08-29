@@ -201,3 +201,29 @@ export const MCP_GOAL_LIST_INPUT = {
     limit: { type: 'number', description: 'Maximum number of goals to return (default: 25)' },
   },
 } as const;
+
+export const MCP_GOAL_LIST_OUTPUT = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      items: GOAL_RECORD_JSON_SCHEMA,
+    },
+  },
+} as const;
+
+export const MCP_GOAL_GET_INPUT = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', description: 'ID of the goal to retrieve' },
+  },
+  required: ['id'],
+} as const;
+
+export const MCP_GOAL_DELETE_INPUT = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', description: 'ID of the goal to delete' },
+  },
+  required: ['id'],
+} as const;

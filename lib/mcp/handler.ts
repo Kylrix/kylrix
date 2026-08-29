@@ -37,7 +37,10 @@ import {
   MCP_FORM_LIST_INPUT,
   MCP_FORM_LIST_OUTPUT,
   MCP_GOAL_CREATE_INPUT,
+  MCP_GOAL_DELETE_INPUT,
+  MCP_GOAL_GET_INPUT,
   MCP_GOAL_LIST_INPUT,
+  MCP_GOAL_LIST_OUTPUT,
   MCP_GOAL_UPDATE_INPUT,
   MCP_MOMENT_COMMENT_CREATE_INPUT,
   MCP_MOMENT_COMMENTS_LIST_INPUT,
@@ -51,6 +54,8 @@ import {
   MCP_NOTE_LIST_INPUT,
   MCP_NOTE_LIST_OUTPUT,
   MCP_NOTE_UPDATE_INPUT,
+  MCP_PROFILE_GET_INPUT,
+  MCP_SCOPE_CATALOG_INPUT,
   MCP_SUCCESS_OUTPUT,
   MCP_TAG_CREATE_INPUT,
   MCP_TAG_DELETE_INPUT,
@@ -59,6 +64,8 @@ import {
   MCP_THREAD_MESSAGE_CREATE_INPUT,
   MCP_THREAD_MESSAGES_LIST_INPUT,
   MCP_THREAD_MESSAGES_LIST_OUTPUT,
+  MCP_TOKEN_INFO_INPUT,
+  MCP_TOKEN_REFRESH_INPUT,
   MCP_TRASH_LIST_INPUT,
   MCP_TRASH_LIST_OUTPUT,
   MCP_TRASH_PURGE_INPUT,
@@ -74,8 +81,12 @@ import {
   MCP_WORKSPACE_UPDATE_INPUT,
   MOMENT_RECORD_JSON_SCHEMA,
   NOTE_RECORD_JSON_SCHEMA,
+  PROFILE_RECORD_JSON_SCHEMA,
+  SCOPE_CATALOG_JSON_SCHEMA,
   TAG_RECORD_JSON_SCHEMA,
   THREAD_MESSAGE_JSON_SCHEMA,
+  TOKEN_INFO_JSON_SCHEMA,
+  TOKEN_REFRESH_JSON_SCHEMA,
   WORKSPACE_RECORD_JSON_SCHEMA,
 } from '@/sdk/contracts';
 import { executeMcpTool } from '@/lib/mcp/dispatch';
@@ -111,81 +122,29 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: 'get_my_profile',
     description: 'Retrieve identity details, active permissions, and scopes for the currently authenticated actor (user or agent).',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'User or agent account ID' },
-        auth: { type: 'string', description: 'Authentication provider type (pat, oauth, session)' },
-        scopes: { type: 'array', items: { type: 'string' }, description: 'Active authorized scopes' },
-        patId: { type: 'string', nullable: true, description: 'Personal Access Token ID if using PAT auth' },
-      },
-    },
+    inputSchema: MCP_PROFILE_GET_INPUT,
+    outputSchema: PROFILE_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 1.0 },
   },
   {
     name: 'get_token_info',
     description: 'Inspect active personal access token metadata, authorized permission scopes, expiration, and rate limits.',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        auth: { type: 'string' },
-        userId: { type: 'string' },
-        patId: { type: 'string' },
-        scopes: { type: 'array', items: { type: 'string' } },
-        catalog: { type: 'array', items: { type: 'object' } },
-      },
-    },
+    inputSchema: MCP_TOKEN_INFO_INPUT,
+    outputSchema: TOKEN_INFO_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.9 },
   },
   {
     name: 'list_available_scopes',
     description: 'List all permission scopes available in the Kylrix ecosystem catalog.',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        scopes: { type: 'array', items: { type: 'object' } },
-      },
-    },
+    inputSchema: MCP_SCOPE_CATALOG_INPUT,
+    outputSchema: SCOPE_CATALOG_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.8 },
   },
   {
     name: 'refresh_token_scopes',
     description: 'Refresh or adjust permission scopes on the current active Bearer PAT token on the fly. Allows autonomous agents to dynamically grant themselves needed workspace and agentic scopes.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        scopes: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Array of permission scopes to grant or replace on this token (e.g. ["notes:read", "notes:write", "goals:read", "goals:write", "tags:read", "tags:write", "flows:read", "flows:write", "workspaces:read", "workspaces:write"])',
-        },
-        mode: {
-          type: 'string',
-          enum: ['grant', 'replace'],
-          description: 'Whether to addively grant new scopes or replace current scope set (default: grant)',
-        },
-      },
-      required: ['scopes'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        scopes: { type: 'array', items: { type: 'string' } },
-        hint: { type: 'string' },
-      },
-    },
+    inputSchema: MCP_TOKEN_REFRESH_INPUT,
+    outputSchema: TOKEN_REFRESH_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: false, idempotent: true, priority: 0.9 },
   },
 
@@ -282,27 +241,13 @@ export const MCP_TOOLS: McpTool[] = [
     name: 'list_goals',
     description: 'List goals and task items, with optional status and workspace filtering.',
     inputSchema: MCP_GOAL_LIST_INPUT,
-    outputSchema: {
-      type: 'object',
-      properties: {
-        items: {
-          type: 'array',
-          items: GOAL_RECORD_JSON_SCHEMA,
-        },
-      },
-    },
+    outputSchema: MCP_GOAL_LIST_OUTPUT,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.95 },
   },
   {
     name: 'get_goal',
     description: 'Retrieve full details, status, and description of a goal or task.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'ID of the goal to retrieve' },
-      },
-      required: ['id'],
-    },
+    inputSchema: MCP_GOAL_GET_INPUT,
     outputSchema: GOAL_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.9 },
   },
@@ -323,19 +268,8 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: 'delete_goal',
     description: 'Delete a goal or task item.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'ID of the goal to delete' },
-      },
-      required: ['id'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-      },
-    },
+    inputSchema: MCP_GOAL_DELETE_INPUT,
+    outputSchema: MCP_SUCCESS_OUTPUT,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: true, priority: 0.6 },
   },
 
