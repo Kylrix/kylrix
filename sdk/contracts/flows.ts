@@ -1,4 +1,29 @@
 import { MCP_ID_INPUT, MCP_LIMIT_INPUT, mcpItemsOutput } from './common';
+import { z } from 'zod';
+
+export const flowCreateInputZod = z.object({
+  title: z.string().min(1).optional(),
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+  steps: z.array(z.record(z.string(), z.unknown())).optional(),
+  category: z.string().optional(),
+  niche: z.string().optional(),
+  id: z.string().optional(),
+});
+
+export function resolveFlowCreateFields(body: Record<string, unknown>) {
+  const name = String(body.name || body.title || '').trim();
+  if (!name) {
+    throw new Error('name required');
+  }
+  return {
+    id: body.id != null ? String(body.id) : `flow_${Date.now()}`,
+    name,
+    description: String(body.description || ''),
+    niche: String(body.category || body.niche || 'workspace'),
+    steps: Array.isArray(body.steps) ? body.steps : [],
+  };
+}
 
 export function shapeFlowListItem(row: Record<string, unknown>) {
   const r = row as any;
@@ -51,11 +76,11 @@ export const MCP_FLOW_GET_INPUT = MCP_ID_INPUT('ID of the flow');
 export const MCP_FLOW_CREATE_INPUT = {
   type: 'object',
   properties: {
-    title: { type: 'string', description: 'Title of the flow' },
+    title: { type: 'string', description: 'Title of the flow (alias: name)' },
+    name: { type: 'string', description: 'Name of the flow (alias: title)' },
     description: { type: 'string', description: 'Flow description' },
     steps: { type: 'array', items: { type: 'object' }, description: 'Sequential executable steps' },
     category: { type: 'string', description: 'Category (productivity, agent, data, etc.)' },
   },
-  required: ['title'],
 } as const;
 export const MCP_FLOW_DELETE_INPUT = MCP_ID_INPUT('ID of the flow to delete');

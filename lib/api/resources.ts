@@ -32,9 +32,13 @@ import {
   shapeEventDetail,
   shapeEventListItem,
   shapeFlowListItem,
+  resolveFlowCreateFields,
   shapeFormDetail,
   shapeFormListItem,
   shapeMoment,
+  shapeMomentCommentCreated,
+  shapeMomentCommentEcosystem,
+  shapeMomentCommentNostr,
   shapeNote,
   shapeProfile,
   shapeTag,
@@ -690,22 +694,24 @@ export const ApiResources = {
 
   async createFlow(actor: ApiActor, body: Record<string, unknown>) {
     requireScope(actor, 'flows:write');
-    const name = String(body?.name || '').trim();
-    if (!name) badRequest('name required');
-    const id = String(body?.id || `flow_${Date.now()}`);
-    const steps = Array.isArray(body?.steps) ? body.steps : [];
+    let fields: ReturnType<typeof resolveFlowCreateFields>;
+    try {
+      fields = resolveFlowCreateFields(body);
+    } catch {
+      badRequest('name or title required');
+    }
     const wf = {
-      id,
-      name,
-      description: String(body?.description || ''),
-      niche: (body?.niche as any) || 'workspace',
-      steps,
+      id: fields.id,
+      name: fields.name,
+      description: fields.description,
+      niche: fields.niche as any,
+      steps: fields.steps,
       isPublic: false,
       isAnonymized: false,
       createdAt: new Date().toISOString(),
     };
     await WorkflowDbService.saveWorkflow(wf, actor.userId);
-    return await this.getFlow(actor, id);
+    return await this.getFlow(actor, fields.id);
   },
 
   async getFlow(actor: ApiActor, id: string) {
@@ -3098,13 +3104,7 @@ export const ApiResources = {
     if (source === 'nostr') {
       const { fetchNostrReplies } = await import('@/lib/nostr/server-query');
       const eng = await fetchNostrReplies(id);
-      return eng.replies.slice(0, lim).map((e) => ({
-        id: e.id,
-        source: 'nostr' as const,
-        content: e.content || '',
-        authorPubkey: e.pubkey,
-        createdAt: new Date(e.created_at * 1000).toISOString(),
-      }));
+      return eng.replies.slice(0, lim).map((e) => shapeMomentCommentNostr(e));
     }
 
     await this.getMoment(actor, id);
@@ -3119,13 +3119,7 @@ export const ApiResources = {
         Query.limit(lim),
       ],
     });
-    return res.rows.map((r: any) => ({
-      id: r.$id,
-      source: 'ecosystem' as const,
-      content: r.caption || '',
-      userId: r.userId || null,
-      createdAt: r.$createdAt || r.createdAt || null,
-    }));
+    return res.rows.map((r: any) => shapeMomentCommentEcosystem(r));
   },
 
   async createMomentComment(actor: ApiActor, rawId: string, body: Record<string, unknown>) {
@@ -3169,13 +3163,12 @@ export const ApiResources = {
         Permission.read(Role.any()),
       ],
     });
-    return {
+    return shapeMomentCommentCreated({
       id: (row as any).$id,
-      source: 'ecosystem' as const,
       content,
       userId: actor.userId,
       createdAt: now,
-    };
+    });
   },
 
   async createMoment(actor: ApiActor, body: Record<string, unknown>) {

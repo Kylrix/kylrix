@@ -20,6 +20,7 @@ import {
   THREAD_CHANNEL_GENERAL,
   type ThreadParentKind,
 } from '@/lib/threads/types';
+import { shapeLegacyThreadComment, shapeThreadMessage } from '@/sdk/contracts';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
 const THREADS = APPWRITE_CONFIG.TABLES.NOTE.THREADS || 'threads';
@@ -62,25 +63,6 @@ function shapeThread(r: any) {
     isEncrypted: !!r.isEncrypted,
     isPublic: !!r.isPublic,
     legacyNoteId: r.legacyNoteId || null,
-    createdAt: r.$createdAt || r.createdAt || null,
-    updatedAt: r.$updatedAt || r.updatedAt || null,
-  };
-}
-
-function shapeMessage(r: any) {
-  return {
-    id: r.$id,
-    threadId: r.threadId,
-    userId: r.userId,
-    parentMessageId: r.parentMessageId || null,
-    rootMessageId: r.rootMessageId || null,
-    content: r.content || '',
-    contentType: r.contentType || 'text',
-    isEncrypted: !!r.isEncrypted,
-    isVoice: !!r.isVoice,
-    isDeleted: !!r.isDeleted,
-    replyCount: Number(r.replyCount || 0),
-    metadata: r.metadata || null,
     createdAt: r.$createdAt || r.createdAt || null,
     updatedAt: r.$updatedAt || r.updatedAt || null,
   };
@@ -346,7 +328,7 @@ export const ThreadService = {
       );
     }
 
-    const messages = rows.map(shapeMessage);
+    const messages = rows.map(shapeThreadMessage);
 
     if (
       messages.length === 0 &&
@@ -365,23 +347,7 @@ export const ThreadService = {
             ],
           })
           .catch(() => ({ rows: [] as any[] }));
-        return (legacy.rows || []).map((r: any) => ({
-          id: r.$id,
-          threadId,
-          userId: r.userId,
-          parentMessageId: r.parentCommentId || null,
-          rootMessageId: null,
-          content: r.content || '',
-          contentType: 'legacy_comment',
-          isEncrypted: !!r.isEncrypted,
-          isVoice: !!r.isVoice,
-          isDeleted: false,
-          replyCount: 0,
-          metadata: r.metadata || null,
-          createdAt: r.$createdAt || r.createdAt || null,
-          updatedAt: null,
-          legacy: true,
-        }));
+        return (legacy.rows || []).map((r: any) => shapeLegacyThreadComment(r, threadId));
       }
     }
 
@@ -487,7 +453,7 @@ export const ThreadService = {
       },
     });
 
-    return shapeMessage(row);
+    return shapeThreadMessage(row);
   },
 
   async addReaction(params: {

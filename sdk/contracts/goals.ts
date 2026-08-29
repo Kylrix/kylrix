@@ -3,6 +3,7 @@
  * MCP tools, and agent runtimes. Add or change a field here once; all surfaces follow.
  */
 import { z } from 'zod';
+import { MCP_ID_INPUT } from './common';
 
 export const GOAL_STATUSES = ['todo', 'in_progress', 'done', 'blocked'] as const;
 export const GOAL_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
@@ -212,18 +213,5 @@ export const MCP_GOAL_LIST_OUTPUT = {
   },
 } as const;
 
-export const MCP_GOAL_GET_INPUT = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', description: 'ID of the goal to retrieve' },
-  },
-  required: ['id'],
-} as const;
-
-export const MCP_GOAL_DELETE_INPUT = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', description: 'ID of the goal to delete' },
-  },
-  required: ['id'],
-} as const;
+export const MCP_GOAL_GET_INPUT = MCP_ID_INPUT('ID of the goal to retrieve');
+export const MCP_GOAL_DELETE_INPUT = MCP_ID_INPUT('ID of the goal to delete');

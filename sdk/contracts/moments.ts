@@ -86,3 +86,65 @@ export const MCP_MOMENT_COMMENT_CREATE_INPUT = {
   },
   required: ['momentId', 'content'],
 } as const;
+
+export const MOMENT_COMMENT_JSON_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    source: { type: 'string', enum: ['ecosystem', 'nostr'] },
+    content: { type: 'string', nullable: true },
+    text: { type: 'string', nullable: true },
+    userId: { type: 'string', nullable: true },
+    authorPubkey: { type: 'string', nullable: true },
+    createdAt: { type: 'string', nullable: true },
+  },
+} as const;
+
+export const MCP_MOMENT_COMMENTS_LIST_OUTPUT = mcpItemsOutput(MOMENT_COMMENT_JSON_SCHEMA);
+
+export function shapeMomentCommentNostr(event: {
+  id: string;
+  content?: string;
+  pubkey: string;
+  created_at: number;
+}) {
+  const content = event.content || '';
+  return {
+    id: event.id,
+    source: 'nostr' as const,
+    content,
+    text: content,
+    authorPubkey: event.pubkey,
+    userId: null,
+    createdAt: new Date(event.created_at * 1000).toISOString(),
+  };
+}
+
+export function shapeMomentCommentEcosystem(row: Record<string, unknown>) {
+  const r = row as any;
+  const content = r.caption || '';
+  return {
+    id: String(r.$id || r.id),
+    source: 'ecosystem' as const,
+    content,
+    text: content,
+    userId: r.userId || null,
+    createdAt: r.$createdAt || r.createdAt || null,
+  };
+}
+
+export function shapeMomentCommentCreated(params: {
+  id: string;
+  content: string;
+  userId: string;
+  createdAt: string;
+}) {
+  return {
+    id: params.id,
+    source: 'ecosystem' as const,
+    content: params.content,
+    text: params.content,
+    userId: params.userId,
+    createdAt: params.createdAt,
+  };
+}
