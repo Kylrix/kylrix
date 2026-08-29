@@ -301,7 +301,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
             {
               label: 'Chats & Hangouts',
               icon: <MessageSquare size={16} />,
-              onClick: () => router.push('/connect/chats'),
+              onClick: () => openUnifiedDrawer('hangouts'),
             }
           );
         } else if (appType === 'note') {

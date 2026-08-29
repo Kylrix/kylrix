@@ -112,13 +112,17 @@ export function UnifiedLeftSidebar() {
   };
 
   const handleNavChange = (navId: NavId) => {
+    if (navId === 'hangout') {
+      openUnified('hangouts');
+      return;
+    }
     const routes: Record<NavId, string> = {
       note: '/app',
       goal: '/goals',
       vault: '/vault',
       connect: '/connect',
       moments: '/connect',
-      hangout: '/connect/chats',
+      hangout: '/connect',
       flow: '/flows',
     };
     navPush(routes[navId] || '/app');

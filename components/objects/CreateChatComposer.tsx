@@ -132,12 +132,6 @@ export function CreateChatComposer({
   const openConversation = useCallback(
     (id: string, kind: 'chat' | 'thread' = 'chat') => {
       onClose();
-      const onChatsPage = Boolean(pathname?.startsWith('/connect/chats'));
-      const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
-      if (isDesktop && onChatsPage) {
-        router.replace(`/connect/chats?c=${encodeURIComponent(id)}`, { scroll: false });
-        return;
-      }
       openCommObjectDetail({
         conversationId: id,
         kind,
@@ -147,7 +141,7 @@ export function CreateChatComposer({
         closeOverlay,
       });
     },
-    [onClose, pathname, router, openSidebar, openOverlay, closeSidebar, closeOverlay],
+    [onClose, openSidebar, openOverlay, closeSidebar, closeOverlay],
   );
 
   const handleCreate = useCallback(async () => {

@@ -326,7 +326,7 @@ export function searchLocalEngine(qRaw: string, ctx: GlobalSearchCtx): GlobalRes
         id: ch.$id || ch.id,
         title,
         subtitle: ch.lastMessageText?.slice(0, 60) || '',
-        href: `/connect/chats?c=${encodeURIComponent(ch.$id || ch.id)}`,
+        href: `/connect`,
         accent: ACCENT.chat,
         raw: ch,
       });
@@ -342,7 +342,7 @@ export function searchLocalEngine(qRaw: string, ctx: GlobalSearchCtx): GlobalRes
         id: th.$id || th.id,
         title,
         subtitle: th.lastMessageText?.slice(0, 60) || '',
-        href: `/connect/chats?c=${encodeURIComponent(th.$id || th.id)}`,
+        href: `/connect`,
         accent: ACCENT.thread,
         raw: th,
       });

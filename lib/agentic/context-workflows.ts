@@ -364,11 +364,11 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           prompt: 'Turn this conversation into meeting notes with decisions, owners, and next tasks.'},
         {
           id: 'connect-chats',
-          label: 'Open chats',
+          label: 'Open hangouts',
           description: 'Continue conversations',
           icon: 'messages',
           kind: 'navigate',
-          href: '/connect/chats'},
+          href: '/connect'},
       ];
 
     case 'projects':

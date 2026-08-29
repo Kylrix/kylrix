@@ -1011,7 +1011,7 @@ export const ChatWindow = ({
                             await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), null as any).catch(() => null);
                             await LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), []).catch(() => null);
                           } catch {}
-                          router.push(`/connect/chats?c=${encodeURIComponent(newId)}`);
+                          onBack?.();
                         } else {
                           toast.success("Conversation permanently wiped");
                           try {
@@ -1020,7 +1020,7 @@ export const ChatWindow = ({
                             await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), null as any).catch(() => null);
                             await LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), []).catch(() => null);
                           } catch {}
-                          router.push('/connect/chats');
+                          onBack?.();
                         }
                         return;
                     }

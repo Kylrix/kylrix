@@ -38,6 +38,7 @@ import { EditProfileModal } from './EditProfileModal';
 import ReportUserDialog from './ReportUserDialog';
 import { ActorsListDrawer } from '../social/ActorsListDrawer';
 import type { Actor } from '../social/ActorsListDrawer';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useTokenOps } from '@/context/TokenOpsContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { toast } from 'react-hot-toast';
@@ -73,6 +74,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   const { user: currentUser } = useAuth();
   const { profile: myProfile, refreshProfile: refreshMyProfile } = useProfile();
   const { openAgenticDrawer } = useAgenticDrawer();
+  const { open: openUnified } = useUnifiedDrawer();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -606,7 +608,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                   <span>Edit Profile</span>
                 </button>
                 <button
-                  onClick={() => router.push(`/connect/chats?c=${currentUser?.$id}`)}
+                  onClick={() => openUnified('hangouts')}
                   className="flex-1 md:flex-none py-2.5 px-6 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/8 font-black text-sm transition-all flex items-center justify-center gap-2"
                 >
                   <MessageSquare size={15} />
@@ -631,7 +633,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                 {profile?.isContact !== false && (
                   <>
                     <button
-                      onClick={() => router.push(`/connect/chats?c=${targetUserId}`)}
+                      onClick={() => openUnified('hangouts')}
                       disabled={!currentUser}
                       className="flex-1 md:flex-none py-2.5 px-6 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/8 font-black text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
@@ -639,7 +641,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                       <span>Message</span>
                     </button>
                     <button
-                      onClick={() => router.push(`/connect/chats?c=${targetUserId}&startCall=1`)}
+                      onClick={() => openUnified('hangouts')}
                       disabled={!currentUser}
                       className="flex-1 md:flex-none py-2.5 px-6 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/8 font-black text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >

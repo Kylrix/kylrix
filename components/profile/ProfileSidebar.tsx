@@ -8,6 +8,7 @@ import { UsersService } from '@/lib/services/users';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityById } from '@/lib/identity-cache';
 import { useAuth } from '@/lib/auth';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getUserBadgesAction } from '@/lib/actions/sponsor-actions';
 import { BadgeChip } from '@/components/sponsor/SponsorBadges';
 import toast from 'react-hot-toast';
@@ -38,6 +39,7 @@ export function ProfileSidebar({
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  const { open: openUnified } = useUnifiedDrawer();
   const [profile, setProfile] = useState<any>(seed || null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     seed?.avatar?.startsWith?.('http') ? seed.avatar : null,
@@ -112,12 +114,7 @@ export function ProfileSidebar({
     if (onClose) onClose();
     if (isGroup) return;
     if (!uid) return;
-    if (isOwn) {
-      router.push('/connect/chats');
-      return;
-    }
-    if (conversationId) return;
-    router.push(`/connect/chats?userId=${encodeURIComponent(uid)}`);
+    openUnified('hangouts');
   };
 
   return (

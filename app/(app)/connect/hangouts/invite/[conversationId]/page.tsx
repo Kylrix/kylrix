@@ -16,7 +16,7 @@ import { Users, ShieldCheck, ArrowRight } from 'lucide-react';
 
 import { account } from '@/lib/appwrite/client';
 import { useAuth } from '@/lib/auth';
-import { useFAB } from '@/context/FABContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 type InvitePreview = {
   resourceType: string;
@@ -33,17 +33,14 @@ export default function HangoutInvitePage() {
   const router = useRouter();
   const conversationId = params.conversationId as string;
   const { user, isLoading } = useAuth();
-  const { setConfiguration, resetConfiguration } = useFAB();
+  const { open: openUnified } = useUnifiedDrawer();
 
   const [preview, setPreview] = useState<InvitePreview | null>(null);
   const [requestState, setRequestState] = useState<'idle' | 'loading' | 'pending' | 'joined' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Hide FAB on invite page
-    setConfiguration({ isVisible: false });
-    return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration]);
+  }, []);
 
   const buildAuthHeaders = async () => {
     const headers: Record<string, string> = {};
@@ -136,7 +133,7 @@ export default function HangoutInvitePage() {
 
       if (data.alreadyJoined) {
         setRequestState('joined');
-        router.push(`/connect/chats?c=${conversationId}`);
+        openUnified('hangouts', { initialConversationId: conversationId });
         return;
       }
 
@@ -204,8 +201,8 @@ export default function HangoutInvitePage() {
             ) : null}
 
             {requestState === 'joined' ? (
-              <Button fullWidth variant="contained" endIcon={<ArrowRight size={16} />} onClick={() => router.push(`/connect/chats?c=${conversationId}`)}>
-                Go to chat
+              <Button fullWidth variant="contained" endIcon={<ArrowRight size={16} />} onClick={() => openUnified('hangouts', { initialConversationId: conversationId })}>
+                Open chat
               </Button>
             ) : requestState === 'pending' ? (
               <Button fullWidth variant="outlined" disabled>

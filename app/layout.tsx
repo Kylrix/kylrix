@@ -97,7 +97,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 var hasPulse = document.documentElement.getAttribute('data-kylrix-pulse') === 'true';
                 var hasSession = document.cookie.indexOf('a_session_') !== -1;
                 if (hasPulse || hasSession) {
-                  var dest = '/connect/chats';
+                  var dest = '/app';
                   try {
                     var hist = localStorage.getItem('kylrix_ecosystem_state_tracker');
                     if (hist) {

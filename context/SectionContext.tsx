@@ -75,7 +75,6 @@ const DEFAULT_LAYOUTS: Record<string, PanelType[]> = {
   '/events': ['note', 'huddles', 'goals'],
   '/vault': ['note', 'totp', 'projects'],
   '/vault/totp': ['secrets', 'secret_chat'],
-  '/connect/chats': ['projects', 'huddles', 'note'],
   '/send': ['stash'],
 };
 

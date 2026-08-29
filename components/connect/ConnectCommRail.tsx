@@ -96,6 +96,8 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
   const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
   const [needsMasterPass, setNeedsMasterPass] = useState(false);
 
+  const { open: openUnified } = useUnifiedDrawer();
+
   const openItem = useCallback(
     (id: string) => {
       if (id === 'kylie_assistant_chat') {
@@ -106,9 +108,9 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
         onSelect(id);
         return;
       }
-      router.replace(`/connect/chats?c=${encodeURIComponent(id)}`, { scroll: false });
+      openUnified('hangouts', { initialConversationId: id });
     },
-    [onSelect, router, openAgenticDrawer],
+    [onSelect, openUnified, openAgenticDrawer],
   );
 
   useEffect(() => {

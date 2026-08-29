@@ -17,6 +17,8 @@ import { IdentityAvatar } from '@/components/IdentityBadge';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
 import { ChatService } from '@/lib/services/chat';
+import { realtime } from '@/lib/appwrite/client';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   peekChatsListMemory,
   peekThreadsListMemory,
@@ -128,6 +130,88 @@ export function HangoutsDrawer({
   useEffect(() => {
     void refreshChats();
   }, [refreshChats]);
+
+  // Realtime subscription for instant updates
+  useEffect(() => {
+    if (!user?.$id) return;
+    const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+    const convsTable = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
+    const msgsTable = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
+    const threadsTable = APPWRITE_CONFIG.TABLES.NOTE.THREADS;
+
+    const channel1 = `databases.${dbId}.collections.${convsTable}.documents`;
+    const channel2 = `databases.${dbId}.collections.${msgsTable}.documents`;
+    const channel3 = `databases.${APPWRITE_CONFIG.DATABASES.MAIN}.collections.${threadsTable}.documents`;
+
+    const unsub = realtime.subscribe([channel1, channel2, channel3], (event: any) => {
+      const payload = event.payload;
+      if (!payload) return;
+
+      // Check if event is a conversation update/create/delete
+      if (event.events?.some((e: string) => e.includes(`collections.${convsTable}.documents`))) {
+        if (event.events.some((e: string) => e.endsWith('.delete'))) {
+          const deletedId = payload.$id || payload.id;
+          startTransition(() => {
+            setSecureChats((prev) => {
+              const next = prev.filter((c: any) => (c.$id || c.id) !== deletedId);
+              void writeChatsListLocal(next);
+              return next;
+            });
+          });
+        } else {
+          startTransition(() => {
+            setSecureChats((prev) => {
+              const id = payload.$id || payload.id;
+              const idx = prev.findIndex((c: any) => (c.$id || c.id) === id);
+              let next: any[];
+              if (idx >= 0) {
+                next = [...prev];
+                next[idx] = { ...next[idx], ...payload };
+              } else {
+                next = [payload, ...prev];
+              }
+              next.sort((a, b) => new Date(b.lastMessageAt || b.updatedAt || b.createdAt || 0).getTime() - new Date(a.lastMessageAt || a.updatedAt || a.createdAt || 0).getTime());
+              void writeChatsListLocal(next);
+              return next;
+            });
+          });
+        }
+      }
+
+      // Check if event is a new message (update lastMessage preview)
+      if (event.events?.some((e: string) => e.includes(`collections.${msgsTable}.documents`))) {
+        const convId = payload.conversationId;
+        if (convId) {
+          startTransition(() => {
+            setSecureChats((prev) => {
+              const idx = prev.findIndex((c: any) => (c.$id || c.id) === convId);
+              if (idx >= 0) {
+                const updated = {
+                  ...prev[idx],
+                  lastMessageText: payload.content || prev[idx].lastMessageText,
+                  lastMessageAt: payload.$createdAt || payload.createdAt || new Date().toISOString(),
+                };
+                const next = [...prev];
+                next[idx] = updated;
+                next.sort((a, b) => new Date(b.lastMessageAt || b.updatedAt || b.createdAt || 0).getTime() - new Date(a.lastMessageAt || a.updatedAt || a.createdAt || 0).getTime());
+                void writeChatsListLocal(next);
+                return next;
+              }
+              return prev;
+            });
+          });
+        }
+      }
+    });
+
+    return () => {
+      try {
+        unsub();
+      } catch (e) {
+        console.warn('[HangoutsDrawer] Realtime unsubscribe error:', e);
+      }
+    };
+  }, [user?.$id]);
 
   // If opened in a real workspace without explicit initial conversation, spin up / fetch workspace discussion
   useEffect(() => {

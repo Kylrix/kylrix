@@ -34,7 +34,7 @@ const APP_PREFIXES = [
 ];
 
 export const LAST_ROUTE_COOKIE = 'kylrix_last_route';
-export const DEFAULT_AUTHENTICATED_ROUTE = '/connect/chats';
+export const DEFAULT_AUTHENTICATED_ROUTE = '/app';
 
 export function isPublicResumePath(path: string): boolean {
   if (!path || path === '/') return true;

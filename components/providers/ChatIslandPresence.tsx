@@ -4,6 +4,7 @@ import { Avatar, Badge, Box, Typography, alpha } from '@/lib/openbricks/primitiv
 import { AnimatePresence, motion } from 'framer-motion';
 import { Lock, MessageCircle, Video } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 export interface ChatIslandNotification {
   id: string;
@@ -31,6 +32,7 @@ interface ChatIslandPresenceProps {
  */
 export default function ChatIslandPresence({ notification, onDismiss }: ChatIslandPresenceProps) {
   const router = useRouter();
+  const { open: openUnified } = useUnifiedDrawer();
 
   return (
     <AnimatePresence>
@@ -67,7 +69,7 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                 pointerEvents: 'auto',
                 cursor: 'pointer'}}
               onClick={() => {
-                router.push(`/connect/chats?c=${notification.id}`);
+                openUnified('hangouts', { initialConversationId: notification.id });
                 onDismiss();
               }}
             >

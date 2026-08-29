@@ -39,8 +39,7 @@ export function CommObjectDetail({
 
   const handleClose = useCallback(() => {
     if (onClose) onClose();
-    else router.push('/connect/chats');
-  }, [onClose, router]);
+  }, [onClose]);
 
   // Instant mural — never wait on getNote / network before painting ChatWindow.
   // Resolve huddle/thread vs secure chat for any id (thread ids are thread notes, not conversations).

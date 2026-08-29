@@ -93,6 +93,10 @@ const EcosystemSendDrawer = dynamic(
   () => import('./EcosystemSendDrawer').then((m) => m.EcosystemSendDrawer),
   { ssr: false },
 );
+const HangoutsDrawer = dynamic(
+  () => import('../hangout/HangoutsDrawer').then((m) => m.HangoutsDrawer),
+  { ssr: false },
+);
 const TaskDetails = dynamic(() => import('../tasks/TaskDetails'), { ssr: false });
 const AgenticPanelContent = dynamic(
   () => import('./AgenticPanelContent').then((m) => m.AgenticPanelContent),
@@ -382,6 +386,17 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           projectId={drawerData?.projectId}
           resolveShareUrl={drawerData?.resolveShareUrl}
           onUpdate={drawerData?.onUpdate}
+        />
+      );
+    case 'hangouts':
+      return (
+        <HangoutsDrawer
+          mode={drawerData?.mode || 'browse'}
+          workspaceId={drawerData?.workspaceId}
+          workspaceTitle={drawerData?.workspaceTitle}
+          initialConversationId={drawerData?.initialConversationId || drawerData?.conversationId}
+          object={drawerData?.object}
+          onClose={onClose}
         />
       );
     case 'milestone-details':

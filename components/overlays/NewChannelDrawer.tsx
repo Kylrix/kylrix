@@ -63,12 +63,6 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
     const openConversation = useCallback(
         (id: string) => {
             onClose();
-            const onChatsPage = Boolean(pathname?.startsWith('/connect/chats'));
-            const desktop = typeof window !== 'undefined' && window.innerWidth >= 900;
-            if (desktop && onChatsPage) {
-                router.replace(`/connect/chats?c=${encodeURIComponent(id)}`, { scroll: false });
-                return;
-            }
             openCommObjectDetail({
                 conversationId: id,
                 kind: 'chat',
@@ -78,7 +72,7 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
                 closeOverlay,
             });
         },
-        [onClose, pathname, router, openSidebar, openOverlay, closeSidebar, closeOverlay],
+        [onClose, openSidebar, openOverlay, closeSidebar, closeOverlay],
     );
 
     const handleCreateChannel = async () => {

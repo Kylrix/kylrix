@@ -47,8 +47,6 @@ export function AppChromeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const mood =
-      pathname?.startsWith('/chat/') ||
-      pathname?.startsWith('/connect/chats/') ||
       pathname?.startsWith('/post/') ||
       pathname?.startsWith('/connect/post/') ||
       pathname?.startsWith('/moment/')

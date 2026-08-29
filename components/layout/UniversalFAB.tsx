@@ -52,9 +52,6 @@ export default function UniversalFAB() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   const isLandingPage = pathname === '/';
-  const isConnectChatsSurface = Boolean(
-    pathname === '/connect/chats' || pathname?.startsWith('/connect/chats/'),
-  );
 
   const isAppRoute = pathname && (
     isWorkspacesPath(pathname) ||
@@ -75,12 +72,9 @@ export default function UniversalFAB() {
   const mainColor = config.mainColor || '#6366F1';
   const onMainClick = config.onMainClick;
 
-  // Chats hide the bottom nav — sit FAB closer to the safe area like other no-nav screens.
   const fabBottom = isLandingPage
     ? FAB_BOTTOM.landing
-    : isConnectChatsSurface
-      ? 'calc(24px + env(safe-area-inset-bottom))'
-      : FAB_BOTTOM.app;
+    : FAB_BOTTOM.app;
 
   const anchorSx = {
     position: 'fixed' as const,

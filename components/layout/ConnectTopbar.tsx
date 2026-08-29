@@ -706,7 +706,7 @@ export default function ConnectTopbar({
         g: '/goals',
         q: '/forms',
         e: '/events',
-        h: '/connect/chats'};
+        h: 'hangouts'};
 
       const action = builtInActions[key];
       if (action) {
@@ -733,6 +733,9 @@ export default function ConnectTopbar({
           break;
         case 'agent':
           openAgenticFromTopbar();
+          break;
+        case 'hangouts':
+          openUnified('hangouts');
           break;
         default:
           break;
@@ -2965,6 +2968,9 @@ export default function ConnectTopbar({
               <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flexShrink: 0 }}>
                 {user ? (
                   <>
+                    <IconButton onClick={() => openUnified('hangouts')} sx={{ color: '#A855F7', bgcolor: '#0B0A09', border: '1px solid', borderColor: 'rgba(168, 85, 247, 0.35)', borderRadius: '14px', width: 44, height: 44, boxShadow: '0 8px 24px rgba(168, 85, 247, 0.25)', '&:hover': { bgcolor: '#1C1A18', transform: 'scale(1.05)' }, transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }} title="Hangouts & Chats">
+                      <MessageCircle size={20} strokeWidth={2.2} />
+                    </IconButton>
                     <IconButton onClick={openAgenticFromTopbar} sx={{ color: appAccent, bgcolor: '#0B0A09', border: '1px solid', borderColor: alpha(appAccent, 0.35), borderRadius: '14px', width: 44, height: 44, boxShadow: `0 8px 24px ${alpha(appAccent, 0.25)}`, '&:hover': { bgcolor: '#1C1A18', transform: 'scale(1.05)' }, transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
                       <Bot size={20} strokeWidth={2.2} />
                     </IconButton>
