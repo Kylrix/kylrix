@@ -104,6 +104,8 @@ Kylrix is engineered from first principles for collaborative co-building between
 
 ## Integrations & MCP Installation
 
+**→ Full agent wiring guide: [docs/integrations.md](docs/integrations.md)** (copy-paste prompt for any coding agent)
+
 Connect any AI client, CLI, or autonomous agent directly to Kylrix via the Model Context Protocol (MCP) and official Agent Skills.
 
 ### 1. Agent Skills Installation
@@ -123,7 +125,9 @@ npx skills add kylrix/kylrix/agents
 
 ### 2. Installing Kylrix MCP into Different Tools
 
-The Kylrix MCP server runs over Streamable HTTP and SSE at `https://www.kylrix.space/api/v1/mcp` (or `http://localhost:5003/api/v1/mcp` when self-hosting).
+The Kylrix MCP server runs over Streamable HTTP and SSE at **`https://www.kylrix.space/api/v1/mcp`**.
+
+Self-hosting your own instance? See [SELFHOST.md](SELFHOST.md).
 
 #### Claude Code
 ```bash
@@ -143,7 +147,7 @@ npx -y @smithery/cli install kylrix/kylrix --client cursor
 npx -y @smithery/cli install kylrix/kylrix --client windsurf
 ```
 
-#### Cursor (`.cursor/mcp.json` or Settings > Features > MCP)
+#### Cursor (copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) or Settings > Features > MCP)
 ```json
 {
   "mcpServers": {
@@ -175,7 +179,7 @@ npx -y @smithery/cli install kylrix/kylrix --client windsurf
 
 #### Windsurf, Goose, Cline & Continue
 Configure an HTTP or SSE MCP server pointing to the instance endpoint:
-- **Server URL**: `https://www.kylrix.space/api/v1/mcp` (or `http://localhost:5003/api/v1/mcp`)
+- **Server URL**: `https://www.kylrix.space/api/v1/mcp`
 - **Transport**: `http` (or `sse` via `/api/v1/mcp?transport=sse`)
 - **Header**: `Authorization: Bearer <YOUR_PAT_TOKEN>` (create tokens in **Settings > Developers**)
 

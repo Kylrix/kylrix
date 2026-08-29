@@ -114,6 +114,24 @@ export function sortPinnedThenCreatedAt<T extends SyncableRow>(
   });
 }
 
+/** Goals list order: earliest deadline first; no deadline falls back to most recently updated. */
+export function sortByDeadlineThenUpdatedAt<T extends SyncableRow & { dueDate?: Date | string | null }>(
+  rows: T[],
+): T[] {
+  return [...rows].sort((a, b) => {
+    const aDueMs = a.dueDate ? Date.parse(String(a.dueDate)) : NaN;
+    const bDueMs = b.dueDate ? Date.parse(String(b.dueDate)) : NaN;
+    const aHasDue = Number.isFinite(aDueMs);
+    const bHasDue = Number.isFinite(bDueMs);
+
+    if (aHasDue && bHasDue && aDueMs !== bDueMs) return aDueMs - bDueMs;
+    if (aHasDue && !bHasDue) return -1;
+    if (!aHasDue && bHasDue) return 1;
+
+    return getRowUpdatedAt(b) - getRowUpdatedAt(a);
+  });
+}
+
 /** Soft-pull cadence — REDUCED reads for 1000x rethink: rely on Realtime + engine acks.
  * No more 10s/5s polling spikes. Visible active 30s, idle 120s, min gap 15s. */
 const SYNC_PULL_IDLE_MS = 120_000;

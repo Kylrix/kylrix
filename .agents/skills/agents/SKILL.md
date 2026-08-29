@@ -9,6 +9,8 @@ description: >-
 
 # Autonomous Agents in Kylrix
 
+**Wire-in guide:** [docs/integrations.md](../../docs/integrations.md)
+
 ```bash
 npx skills add kylrix/kylrix/agents
 export KYLRIX_AGENT_KEY='kyl_pat_…'

@@ -4,7 +4,8 @@ import React from 'react';
 import { Box, Typography } from '@/lib/openbricks/primitives';
 import { Lock, File as FileIcon } from 'lucide-react';
 import { VoiceMessage } from './VoiceMessage';
-import { FormattedText } from '../common/FormattedText';
+import { ChatMarkdownContent } from '@/components/chat/ChatMarkdownContent';
+import { parseObjectBlocks } from '@/lib/note-object-secondary';
 import { StorageService } from '@/lib/services/storage';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import type { AttachmentMetadata } from '@/types/p2p';
@@ -130,7 +131,16 @@ export function ChatMessageContent({
         }
 
         const fileId = msg.attachments && msg.attachments[0];
-        if (!fileId) return <FormattedText text={displayedContent} linkPreviewsEnabled={linkPreviewsEnabled} />;
+        const hasObjectBlocks = parseObjectBlocks(displayedContent).length > 0;
+
+        if (!fileId || hasObjectBlocks) {
+            return (
+                <ChatMarkdownContent
+                    content={displayedContent}
+                    linkPreviewsEnabled={linkPreviewsEnabled}
+                />
+            );
+        }
 
         const bucketId = StorageService.getBucketForType(msg.type);
         const viewUrl = StorageService.getFileView(fileId, bucketId);

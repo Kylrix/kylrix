@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "kylrix": {
+      "type": "http",
+      "url": "https://www.kylrix.space/api/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer <YOUR_PAT_FROM_SETTINGS_DEVELOPERS>"
+      }
+    }
+  }
+}

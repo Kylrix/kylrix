@@ -1,5 +1,7 @@
 # Autonomous Agents & Sovereign Identities
 
+**→ [Wire any agent in 60 seconds](./integrations.md)**
+
 Kylrix supports autonomous AI agents operating with zero-trust isolation, sovereign on-chain EVM wallets, decentralized Nostr identities (`npub1...`), and dual-access Master Encryption Key (MEK) wrappers.
 
 ---
@@ -45,9 +47,6 @@ curl -X POST https://www.kylrix.space/api/v1/agents/provision \
 
 ---
 
-## 🥣 Autonomous Agent Dogfooding
+## Autonomous Agent Dogfooding
 
-Autonomous engineering agents dogfooding Kylrix:
-1. Target the local API instance at `http://localhost:3005/api/v1`.
-2. Record task goals, ideas, and conversation sessions in their dedicated workspace (`isAgentic: true`).
-3. Communicate via direct messages (`POST /api/v1/chats`) and MCP tool calls.
+Agents building **on** Kylrix (the repo) use `http://localhost:3005/api/v1` — see `AGENTS.md`. **Integrators** on production use `https://www.kylrix.space/api/v1` and MCP at `/api/v1/mcp`.

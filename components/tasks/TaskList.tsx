@@ -11,6 +11,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { toast } from 'react-hot-toast';
 
+import { sortByDeadlineThenUpdatedAt } from '@/lib/sync/local-copy-sync';
 import { EmptyStateAnomalyDetector } from '@/context/NeuralContext';
 
 export default function TaskList() {
@@ -78,8 +79,13 @@ export default function TaskList() {
   const activeTasks = tasks.filter(t => t.status !== 'done');
   const completedTasks = tasks.filter(t => t.status === 'done');
 
-  const pinnedTasks = activeTasks.filter(t => isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned));
-  const unpinnedTasks = activeTasks.filter(t => !isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned));
+  const pinnedTasks = sortByDeadlineThenUpdatedAt(
+    activeTasks.filter((t) => isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned)),
+  );
+  const unpinnedTasks = sortByDeadlineThenUpdatedAt(
+    activeTasks.filter((t) => !isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned)),
+  );
+  const sortedCompletedTasks = sortByDeadlineThenUpdatedAt(completedTasks);
 
   const rawTagOptions = getTagFilterOptions();
   const directTaskTags = Array.from(
@@ -305,7 +311,7 @@ export default function TaskList() {
                         </div>
 
                         <div className="grid gap-4 items-stretch opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500 [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
-                          {completedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
+                          {sortedCompletedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
                         </div>
                       </>
                     )}

@@ -13,7 +13,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { account } from '@/lib/appwrite';
 import { sha256 } from '@noble/hashes/sha2.js';
 import * as secp256k1 from '@noble/secp256k1';
-import { bytesToNpub, bytesToNsec, bytesToHex, hexToBytes, nsecToBytes } from '@/lib/nostr/crypto';
+import { bytesToNpub, bytesToNsec, bytesToHex, hexToBytes, nsecToBytes, normalizePrivateKeyBytes } from '@/lib/nostr/crypto';
 
 export interface NostrIdentity {
   id?: string;
@@ -24,6 +24,16 @@ export interface NostrIdentity {
   isDerived?: boolean;
   createdAt?: string;
   privateKeyBytes: Uint8Array;
+}
+
+function hydrateNostrIdentity(raw: NostrIdentity | null | undefined): NostrIdentity | null {
+  if (!raw) return null;
+  const privateKeyBytes =
+    normalizePrivateKeyBytes(raw.privateKeyBytes) ??
+    normalizePrivateKeyBytes(raw.nsec) ??
+    (raw.nsec?.startsWith('nsec') ? nsecToBytes(raw.nsec) : null);
+  if (!privateKeyBytes) return null;
+  return { ...raw, privateKeyBytes };
 }
 
 export function useNostrIdentity() {
@@ -43,12 +53,14 @@ export function useNostrIdentity() {
     // Hydrate cached active identity immediately on boot
     void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
       void LocalEngine.cacheGet<NostrIdentity>('nostr:active_identity').then((cached) => {
-        if (cached) setIdentity(cached);
+        const hydrated = hydrateNostrIdentity(cached);
+        if (hydrated) setIdentity(hydrated);
       });
     });
 
     const handleSync = (e: any) => {
-      if (e?.detail) setIdentity(e.detail);
+      const hydrated = hydrateNostrIdentity(e?.detail);
+      if (hydrated) setIdentity(hydrated);
     };
 
     window.addEventListener('kylrix:nostr-identity-synced', handleSync);
@@ -110,13 +122,14 @@ export function useNostrIdentity() {
 
         setIdentities(decryptedList);
         const active = decryptedList.find(i => i.isDefault) || decryptedList[0] || null;
-        setIdentity(active);
-        if (active) {
+        const hydratedActive = hydrateNostrIdentity(active);
+        setIdentity(hydratedActive);
+        if (hydratedActive) {
           void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
-            void LocalEngine.cacheSet('nostr:active_identity', active);
+            void LocalEngine.cacheSet('nostr:active_identity', hydratedActive);
           });
           if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: active }));
+            window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: hydratedActive }));
           }
         }
         setLoading(false);
@@ -147,15 +160,15 @@ export function useNostrIdentity() {
         jwt: jwtToken
       });
 
-      const newIdentity: NostrIdentity = {
+      const newIdentity = hydrateNostrIdentity({
         id: reg.id,
         npub,
         nsec,
         label: 'Default Kylrix Key',
         isDefault: true,
         isDerived: true,
-        privateKeyBytes: privKeyBytes
-      };
+        privateKeyBytes: privKeyBytes,
+      })!;
 
       setIdentity(newIdentity);
       setIdentities([newIdentity]);

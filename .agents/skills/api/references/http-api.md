@@ -1,8 +1,8 @@
 # HTTP API reference
 
-Install: `npx skills add kylrix/kylrix/api`
+Install: `npx skills add kylrix/kylrix/api` · Wire-in: [docs/integrations.md](../../docs/integrations.md)
 
-Base: `http://localhost:3005/api/v1` · prod `https://www.kylrix.space/api/v1`
+Base: `https://www.kylrix.space/api/v1` · MCP: `https://www.kylrix.space/api/v1/mcp` · Self-host: see `SELFHOST.md`
 
 ## Self-service
 | Method | Path |

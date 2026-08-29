@@ -160,28 +160,41 @@ export function CommObjectDetail({
 
 CommObjectDetail.displayName = 'CommObjectDetail';
 
+export function isCommChatOverlayContent(content: React.ReactNode): boolean {
+  if (!React.isValidElement(content)) return false;
+  const props = content.props as { conversationId?: string };
+  const type = content.type as { displayName?: string; name?: string };
+  return Boolean(
+    props?.conversationId &&
+      (type?.displayName === 'CommObjectDetail' || type?.name === 'CommObjectDetail'),
+  );
+}
+
 export function openCommObjectDetail(opts: {
   conversationId: string;
   kind?: CommKind;
   title?: string;
+  fullscreen?: boolean;
   openSidebar: (content: React.ReactNode, key?: string, options?: { hideHeader?: boolean }) => void;
   openOverlay: (content: React.ReactNode) => void;
   closeSidebar: () => void;
   closeOverlay: () => void;
 }) {
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+  const useFullscreen = Boolean(opts.fullscreen) || !isDesktop;
   const node = (
     <CommObjectDetail
       conversationId={opts.conversationId}
       kind={opts.kind}
       title={opts.title}
       embedded
-      onClose={isDesktop ? opts.closeSidebar : opts.closeOverlay}
+      onClose={useFullscreen ? opts.closeOverlay : opts.closeSidebar}
     />
   );
-  if (isDesktop) {
-    opts.openSidebar(node, opts.conversationId, { hideHeader: true });
-  } else {
+  if (useFullscreen) {
+    opts.closeSidebar();
     opts.openOverlay(node);
+    return;
   }
+  opts.openSidebar(node, opts.conversationId, { hideHeader: true });
 }

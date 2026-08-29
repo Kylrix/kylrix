@@ -49,6 +49,36 @@ export function nsecToBytes(nsec: string): Uint8Array {
   return new Uint8Array(bech32.fromWords(words));
 }
 
+/** Normalise private key material after IndexedDB / JSON cache round-trips. */
+export function normalizePrivateKeyBytes(
+  raw: Uint8Array | Record<string, number> | string | null | undefined,
+): Uint8Array | null {
+  if (!raw) return null;
+  if (raw instanceof Uint8Array) return raw.length === 32 ? raw : null;
+  if (typeof raw === 'string') {
+    try {
+      if (raw.startsWith('nsec')) return nsecToBytes(raw);
+      if (/^[0-9a-fA-F]{64}$/.test(raw)) return hexToBytes(raw);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof raw === 'object') {
+    try {
+      const values = Array.isArray(raw)
+        ? raw
+        : Object.keys(raw)
+            .sort((a, b) => Number(a) - Number(b))
+            .map((key) => (raw as Record<string, number>)[key]);
+      const arr = new Uint8Array(values as number[]);
+      return arr.length === 32 ? arr : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 
 // Helper to encrypt a master private key (32 bytes nsec) with a derived symmetric key (32 bytes)
 

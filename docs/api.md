@@ -1,94 +1,71 @@
 # Kylrix REST HTTP API
 
-The Kylrix HTTP API allows external agents, CLI tools, and integrations to read and write ecosystem objects using Personal Access Tokens (PATs) or OAuth 2.1 access tokens.
+External agents, mobile apps, CLI tools, and integrations use Personal Access Tokens (PATs) or OAuth 2.1 tokens.
+
+**→ [Wire any agent in 60 seconds](./integrations.md)** · MCP: [mcp.md](./mcp.md)
 
 ---
 
-## 🌐 Base URIs
+## Base URI
 
-- **Production**: `https://www.kylrix.space/api/v1`
-- **Local Dev / Dogfooding**: `http://localhost:3005/api/v1`
+**Production:** `https://www.kylrix.space/api/v1`
 
----
-
-## 🔑 Authentication
-
-Include your token as a Bearer token in the `Authorization` header:
+Self-hosted? See [SELFHOST.md](../SELFHOST.md).
 
 ```bash
-curl -H "Authorization: Bearer kyl_pat_YOUR_TOKEN" https://www.kylrix.space/api/v1/me
+export KYLRIX_PAT='kyl_pat_…'
+export KYLRIX_API_BASE='https://www.kylrix.space/api/v1'
 ```
 
 ---
 
-## 📋 Scopes Catalog
+## Authentication
 
-| Scope | Description |
-|---|---|
-| `profile:read` | Read user profile and identity details |
-| `notes:read` / `notes:write` | Read and write ideas & markdown notes |
-| `goals:read` / `goals:write` | Read and manage task items and goals |
-| `workspaces:read` / `workspaces:write` | Read and manage workspace projects |
-| `chats:read` / `chats:write` | Read conversations and send messages |
-| `events:read` / `events:write` | Calendar event management |
-| `forms:read` / `forms:write` | Dynamic forms management |
-| `flows:read` / `flows:write` | Workflow definitions and execution |
-| `agents:read` / `agents:write` | Agent sessions and mirror hooks |
-| `agents:provision` | Provision new autonomous AI agents |
-| `pats:read` / `pats:write` | Manage Personal Access Tokens |
+```bash
+curl -H "Authorization: Bearer $KYLRIX_PAT" https://www.kylrix.space/api/v1/me
+```
+
+Mint tokens: **Settings → Developers** on [kylrix.space](https://www.kylrix.space).
 
 ---
 
-## 📡 REST Endpoints
+## Scopes
 
-### Token Self-Service
-- `GET /api/v1/token` - Inspect active token, granted scopes, and scope catalog.
-- `GET /api/v1/token/scopes` - List full scope catalog.
-- `PATCH /api/v1/token/scopes` - Self-service scope update (replace scopes).
-- `POST /api/v1/token/scopes/grant` - Add new scopes to current token.
+| Scope | Description |
+|---|---|
+| `profile:read` | Profile and identity |
+| `notes:read` / `notes:write` | Ideas & markdown notes |
+| `goals:read` / `goals:write` | Goals & tasks |
+| `workspaces:read` / `workspaces:write` | Workspaces |
+| `chats:read` / `chats:write` | Conversations & messages |
+| `events:read` / `events:write` | Calendar |
+| `forms:read` / `forms:write` | Forms |
+| `flows:read` / `flows:write` | Workflows |
+| `agents:read` / `agents:write` | Agent sessions |
+| `agents:provision` | Provision autonomous agents |
+| `pats:read` / `pats:write` | Manage PATs |
 
-### User Profile
-- `GET /api/v1/me` - Authenticated actor info (userId, kind, scopes, patId).
+---
 
-### Ideas & Notes
-- `GET /api/v1/notes?workspaceId={id}&limit={n}` - List notes (workspace-scoped or personal).
-- `POST /api/v1/notes` - Create note (`{ title, content, workspaceId?, isPublic? }`).
-- `GET /api/v1/notes/:id` - Retrieve single note.
-- `PATCH /api/v1/notes/:id` - Update note (`{ title?, content?, isPublic? }`).
-- `DELETE /api/v1/notes/:id` - Delete note.
+## Endpoints (summary)
 
-### Goals & Tasks
-- `GET /api/v1/goals?workspaceId={id}&limit={n}` - List goals (workspace-scoped or personal).
-- `POST /api/v1/goals` - Create goal (`{ title, description?, status?, workspaceId? }`).
-- `GET /api/v1/goals/:id` - Retrieve single goal.
-- `PATCH /api/v1/goals/:id` - Update goal (`{ title?, description?, status? }`).
-- `DELETE /api/v1/goals/:id` - Delete goal.
+### Token self-service
+- `GET /token` · `GET|PATCH /token/scopes` · `POST /token/scopes/grant`
 
-### Workspaces (Projects)
-- `GET /api/v1/workspaces?limit={n}` - List workspaces.
-- `POST /api/v1/workspaces` - Create workspace (`{ title, summary?, visibility?, isAgentic? }`).
-- `GET /api/v1/workspaces/:id` - Retrieve workspace metadata.
-- `PATCH /api/v1/workspaces/:id` - Update workspace metadata.
-- `DELETE /api/v1/workspaces/:id` - Delete workspace.
-- `POST /api/v1/workspaces/:id/objects` - Attach object (`{ entityKind, entityId }`).
-- `GET /api/v1/workspaces/:id/collaborators` - List workspace members.
-- `POST /api/v1/workspaces/:id/collaborators` - Add member (`{ userId, permission }`).
+### Profile
+- `GET /me`
 
-### Direct Chats & Discussions
-- `GET /api/v1/chats?limit={n}` - List active chats.
-- `POST /api/v1/chats` - Start or find direct conversation (`{ participantId, initialMessage? }`).
-- `GET /api/v1/chats/:id` - Chat details.
-- `GET /api/v1/chats/:id/messages?limit={n}` - Message history.
-- `POST /api/v1/chats/:id/messages` - Send message (`{ content }`).
+### Notes
+- `GET /notes?workspaceId=&limit=` · `POST /notes` · `GET|PATCH|DELETE /notes/:id`
 
-### Events & Forms
-- `GET /api/v1/events?workspaceId={id}` - List calendar events.
-- `POST /api/v1/events` - Create event (`{ title, startTime, endTime, location?, workspaceId? }`).
-- `GET /api/v1/forms?workspaceId={id}` - List forms.
-- `POST /api/v1/forms` - Create form (`{ title, fields, workspaceId? }`).
+### Goals
+- `GET /goals?workspaceId=&status=&limit=` · `POST /goals` · `GET|PATCH|DELETE /goals/:id`
+- Fields: `title`, `description`, `status`, `priority`, `dueDate`, `tags`, `workspaceId` — see `lib/domain/goal-contract.ts`
 
-### Autonomous Agents
-- `POST /api/v1/agents/provision` - Register an autonomous agent and mint session keys.
-- `GET /api/v1/agents/sessions` - List agent runtime sessions.
-- `POST /api/v1/agents/harness` - Create CLI harness mirror session.
-- `POST /api/v1/agents/sessions/:id/mirror` - Append CLI prompt/tool call history.
+### Workspaces
+- `GET /workspaces` · `POST /workspaces` · `GET|PATCH|DELETE /workspaces/:id`
+- `GET|POST /workspaces/:id/collaborators` · `GET|POST /workspaces/:id/thread`
+
+### Chats, events, forms, flows, moments, threads, vault, tags, agents
+
+See [api/references/http-api.md](../api/references/http-api.md) for the full route table.

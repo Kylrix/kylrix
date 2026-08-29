@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NostrRelayPool, NostrEvent, signEvent } from '@/lib/nostr/nostr';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
-import { bytesToHex } from '@/lib/nostr/crypto';
+import { bytesToHex, normalizePrivateKeyBytes } from '@/lib/nostr/crypto';
 import * as secp256k1 from '@noble/secp256k1';
 import { getConnectFeedSettings, subscribeConnectFeedSettings, getNostrReadRelays, type ConnectFeedSettings } from '@/lib/connect/feed-settings';
 import { queueNostrProfileFetch } from '@/lib/nostr/metadata';
@@ -178,17 +178,25 @@ export function useNostrFeed() {
       }
 
       try {
+        const privBytes =
+          normalizePrivateKeyBytes(identity.privateKeyBytes) ??
+          normalizePrivateKeyBytes(identity.nsec);
+        if (!privBytes) {
+          toast.error('Identity key unavailable — unlock vault and try again');
+          return { success: false };
+        }
+
         const primaryTag = activeInterests[0] || 'sovereignengineering';
         const tags: string[][] = [['t', primaryTag], ['client', 'kylrix'], ...(extraTags || [])];
         const unsignedEvent = {
-          pubkey: bytesToHex(secp256k1.schnorr.getPublicKey(identity.privateKeyBytes)),
+          pubkey: bytesToHex(secp256k1.schnorr.getPublicKey(privBytes)),
           created_at: Math.floor(Date.now() / 1000),
           kind: 1,
           tags,
           content,
         };
 
-        const signed = signEvent(unsignedEvent, identity.privateKeyBytes);
+        const signed = signEvent(unsignedEvent, privBytes);
         await poolRef.current.publish(signed);
 
         setFeed((prev) => {

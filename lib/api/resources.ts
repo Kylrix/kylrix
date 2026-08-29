@@ -19,6 +19,12 @@ import {
   looksEncrypted,
   VAULT_ENCRYPTED_FIELDS,
 } from '@/lib/api/vault-crypto';
+import {
+  shapeGoal,
+  buildGoalCreateRow,
+  buildGoalUpdatePatch,
+  resolveWorkspaceId,
+} from '@/lib/domain/goal-contract';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
 const NOTES = APPWRITE_CONFIG.TABLES.NOTE?.NOTES || APPWRITE_CONFIG.TABLES.NOTES;
@@ -52,19 +58,6 @@ function shapeNote(r: any) {
     id: r.$id,
     title: r.title || r.name || 'Untitled',
     content: r.content ?? r.body ?? null,
-    updatedAt: r.$updatedAt || r.updatedAt || null,
-    createdAt: r.$createdAt || r.createdAt || null,
-    isPublic: r.isPublic !== undefined ? Boolean(r.isPublic) : true,
-    isGuest: r.isGuest !== undefined ? Boolean(r.isGuest) : true,
-  };
-}
-
-function shapeGoal(r: any) {
-  return {
-    id: r.$id,
-    title: r.title || r.name || 'Untitled',
-    description: r.description ?? null,
-    status: r.status || null,
     updatedAt: r.$updatedAt || r.updatedAt || null,
     createdAt: r.$createdAt || r.createdAt || null,
     isPublic: r.isPublic !== undefined ? Boolean(r.isPublic) : true,
@@ -560,16 +553,27 @@ export const ApiResources = {
     return { id, deleted: true, trashed: true };
   },
 
-  async listGoals(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
+  async listGoals(
+    actor: ApiActor,
+    limit = 25,
+    opts?: { workspaceId?: string | null; status?: string | null },
+  ) {
     requireScope(actor, 'goals:read');
     const tables = createSystemTablesDB();
+    const cap = Math.min(100, Math.max(1, limit));
+    const statusFilter = opts?.status ? String(opts.status) : null;
+
+    const applyFilters = (rows: ReturnType<typeof shapeGoal>[]) => {
+      const filtered = statusFilter ? rows.filter((g) => g.status === statusFilter) : rows;
+      return filtered.slice(0, cap);
+    };
 
     if (opts?.workspaceId) {
       const wsId = opts.workspaceId;
       const goalIds = await getWorkspaceObjectIds(tables, wsId, 'goal');
 
       const seen = new Set<string>();
-      const rows: any[] = [];
+      const rows: ReturnType<typeof shapeGoal>[] = [];
 
       for (const gid of goalIds) {
         if (seen.has(gid)) continue;
@@ -582,23 +586,28 @@ export const ApiResources = {
         }
       }
 
-      return rows.slice(0, Math.min(100, Math.max(1, limit)));
+      return applyFilters(rows);
     }
 
     // Personal workspace: strictly exclude items belonging to ANY real workspace
     const linkedIds = await getAllLinkedWorkspaceObjectIds(tables, 'goal');
+    const queries = [
+      Query.equal('userId', actor.userId),
+      Query.orderDesc('$updatedAt'),
+      Query.limit(cap),
+    ];
+    if (statusFilter) queries.splice(1, 0, Query.equal('status', statusFilter));
+
     const res = await tables.listRows({
       databaseId: FLOW_DB,
       tableId: TASKS,
-      queries: [
-        Query.equal('userId', actor.userId),
-        Query.orderDesc('$updatedAt'),
-        Query.limit(Math.min(100, Math.max(1, limit))),
-      ],
+      queries,
     });
-    return res.rows
-      .filter((r: any) => !linkedIds.has(r.$id))
-      .map(shapeGoal);
+    return applyFilters(
+      res.rows
+        .filter((r: any) => !linkedIds.has(r.$id))
+        .map(shapeGoal),
+    );
   },
 
   async getGoal(actor: ApiActor, id: string) {
@@ -612,28 +621,21 @@ export const ApiResources = {
     requireScope(actor, 'goals:write');
     const title = String(body?.title || '').trim();
     if (!title) badRequest('title required');
-    const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
+    const wsId = resolveWorkspaceId(body);
     const tables = createSystemTablesDB();
     const goalId = ID.unique();
 
-    const isPublic = body?.isPublic !== undefined ? Boolean(body.isPublic) : true;
-    const isGuest = body?.isGuest !== undefined ? Boolean(body.isGuest) : (body?.isPublic !== undefined ? Boolean(body.isPublic) : true);
-
-    const cleanTags = body?.tags !== undefined ? await ensureTagsExist(tables, actor.userId, body.tags as any[]) : undefined;
+    const rowData = buildGoalCreateRow(actor.userId, body);
+    if (body?.tags !== undefined) {
+      const cleanTags = await ensureTagsExist(tables, actor.userId, body.tags as any[]);
+      if (cleanTags.length > 0) rowData.tags = cleanTags;
+    }
 
     const row = await tables.createRow({
       databaseId: FLOW_DB,
       tableId: TASKS,
       rowId: goalId,
-      data: {
-        title: title.slice(0, 255),
-        description: body?.description != null ? String(body.description) : (body?.summary != null ? String(body.summary) : ''),
-        status: String(body?.status || 'todo'),
-        tags: cleanTags && cleanTags.length > 0 ? cleanTags : undefined,
-        userId: actor.userId,
-        isPublic,
-        isGuest,
-      },
+      data: rowData as any,
       permissions: [
         Permission.read(Role.any()),
         Permission.update(Role.user(actor.userId)),
@@ -651,12 +653,7 @@ export const ApiResources = {
     requireScope(actor, 'goals:write');
     const tables = createSystemTablesDB();
     await assertOwnedGoal(tables, actor, id);
-    const patch: Record<string, unknown> = { updatedAt: new Date().toISOString() };
-    if (body.title !== undefined) patch.title = String(body.title).trim().slice(0, 255);
-    if (body.description !== undefined) patch.description = String(body.description);
-    if (body.status !== undefined) patch.status = String(body.status);
-    if (body.isPublic !== undefined) patch.isPublic = Boolean(body.isPublic);
-    if (body.isGuest !== undefined) patch.isGuest = Boolean(body.isGuest);
+    const patch = buildGoalUpdatePatch(body);
     if (body.tags !== undefined) {
       patch.tags = await ensureTagsExist(tables, actor.userId, body.tags as any[]);
     }

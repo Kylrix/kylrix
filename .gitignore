@@ -59,6 +59,7 @@ next-env.d.ts
 
 # local IDE / agent CLI junk
 .antigravitycli/
+.cursor/mcp.json
 
 # migrated cloud/Appwrite functions
 functions/**/node_modules/

@@ -1,6 +1,12 @@
 import { NextRequest } from 'next/server';
 import { resolveApiActor, type ApiActor } from '@/lib/api/guard';
 import { ApiResources } from '@/lib/api/resources';
+import {
+  GOAL_RECORD_JSON_SCHEMA,
+  MCP_GOAL_CREATE_INPUT,
+  MCP_GOAL_LIST_INPUT,
+  MCP_GOAL_UPDATE_INPUT,
+} from '@/lib/domain/goal-contract';
 
 export interface McpToolAnnotation {
   audience?: Array<'user' | 'assistant'>;
@@ -401,33 +407,17 @@ export const MCP_TOOLS: McpTool[] = [
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: true, priority: 0.6 },
   },
 
-  // ── 4. Goals & Tasks ──
+  // ── 4. Goals & Tasks (schemas from lib/domain/goal-contract.ts) ──
   {
     name: 'list_goals',
     description: 'List goals and task items, with optional status and workspace filtering.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        workspaceId: { type: 'string', description: 'Optional workspace ID filter' },
-        limit: { type: 'number', description: 'Maximum number of goals to return (default: 25)' },
-      },
-    },
+    inputSchema: MCP_GOAL_LIST_INPUT,
     outputSchema: {
       type: 'object',
       properties: {
         items: {
           type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              title: { type: 'string' },
-              description: { type: 'string', nullable: true },
-              status: { type: 'string' },
-              updatedAt: { type: 'string' },
-              createdAt: { type: 'string' },
-            },
-          },
+          items: GOAL_RECORD_JSON_SCHEMA,
         },
       },
     },
@@ -443,63 +433,21 @@ export const MCP_TOOLS: McpTool[] = [
       },
       required: ['id'],
     },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        title: { type: 'string' },
-        description: { type: 'string' },
-        status: { type: 'string' },
-      },
-    },
+    outputSchema: GOAL_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.9 },
   },
   {
     name: 'create_goal',
     description: 'Create a new goal or actionable task, optionally linked to a workspace.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        title: { type: 'string', description: 'Title of the goal' },
-        description: { type: 'string', description: 'Detailed description or acceptance criteria' },
-        status: { type: 'string', enum: ['todo', 'in_progress', 'done', 'blocked'], description: 'Initial status' },
-        priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'], description: 'Priority level' },
-        workspaceId: { type: 'string', description: 'Optional workspace ID to bind this goal to' },
-      },
-      required: ['title'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        title: { type: 'string' },
-        status: { type: 'string' },
-      },
-    },
+    inputSchema: MCP_GOAL_CREATE_INPUT,
+    outputSchema: GOAL_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.9 },
   },
   {
     name: 'update_goal',
-    description: 'Update the title, description, status, or priority of an existing goal.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'ID of the goal to update' },
-        title: { type: 'string', description: 'Updated title' },
-        description: { type: 'string', description: 'Updated description' },
-        status: { type: 'string', enum: ['todo', 'in_progress', 'done', 'blocked'], description: 'Updated status' },
-        priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'], description: 'Updated priority' },
-      },
-      required: ['id'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        title: { type: 'string' },
-        status: { type: 'string' },
-      },
-    },
+    description: 'Update the title, description, status, priority, due date, or pins on an existing goal.',
+    inputSchema: MCP_GOAL_UPDATE_INPUT,
+    outputSchema: GOAL_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.85 },
   },
   {
@@ -1355,8 +1303,13 @@ export async function executeMcpTool(actor: ApiActor, name: string, args: Record
       return ApiResources.deleteNote(actor, String(args.id));
 
     // Goals
-    case 'list_goals':
-      return ApiResources.listGoals(actor, args.limit || 25, { workspaceId: args.workspaceId || null });
+    case 'list_goals': {
+      const items = await ApiResources.listGoals(actor, args.limit || 25, {
+        workspaceId: args.workspaceId || null,
+        status: args.status || null,
+      });
+      return { items };
+    }
     case 'get_goal':
       return ApiResources.getGoal(actor, String(args.id));
     case 'create_goal':

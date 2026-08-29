@@ -3,61 +3,72 @@ name: mcp
 description: >-
   Connect AI tools, Claude Code, Cursor, and autonomous agents to Kylrix via the
   Model Context Protocol (MCP) server. Provides stateless JSON-RPC over Streamable HTTP
-  with tools for workspaces, notes, goals, and agent execution.
+  with full 1:1 parity for workspaces, notes, goals, calendar, forms, flows, chats, moments, and agent sessions.
 ---
 
 # Kylrix Model Context Protocol (MCP)
 
-Install the skill:
+**Start here:** [docs/integrations.md](../docs/integrations.md)
+
 ```bash
 npx skills add kylrix/kylrix/mcp
 ```
 
-## Quick Start: Connecting AI Clients
+## Endpoint
 
-### 1. Claude Code
+**Production:** `https://www.kylrix.space/api/v1/mcp`
+
+Self-hosted? See [SELFHOST.md](../SELFHOST.md).
+
+## Quick Start
+
+### Claude Code
 ```bash
-claude mcp add --transport http kylrix https://6a8f212e003d1f3518db.appwrite.run
+claude mcp add --transport http kylrix https://www.kylrix.space/api/v1/mcp \
+  --header "Authorization: Bearer <YOUR_PAT_TOKEN>"
 ```
 
-### 2. Cursor / Claude Desktop
-Add to your `mcp.json` or `claude_desktop_config.json`:
+### Cursor / Claude Desktop
+Copy [`.cursor/mcp.json.example`](../.cursor/mcp.json.example) → `.cursor/mcp.json` (do **not** commit tokens).
+
 ```json
 {
   "mcpServers": {
     "kylrix": {
-      "url": "https://6a8f212e003d1f3518db.appwrite.run"
-    }
-  }
-}
-```
-
-### 3. Optional Bearer Authentication
-When `MCP_AUTH_MODE=bearer` is enabled on the server, include the Authorization header:
-```json
-{
-  "mcpServers": {
-    "kylrix": {
-      "url": "https://6a8f212e003d1f3518db.appwrite.run",
+      "type": "http",
+      "url": "https://www.kylrix.space/api/v1/mcp",
       "headers": {
-        "Authorization": "Bearer <YOUR_SECRET_TOKEN>"
+        "Authorization": "Bearer <YOUR_PAT_TOKEN>"
       }
     }
   }
 }
 ```
 
+Mint PAT: **Settings → Developers** on [kylrix.space](https://www.kylrix.space). Reload IDE after saving.
+
 ## Available MCP Tools
 
-| Tool | Parameters | Description |
-|---|---|---|
-| `list_workspaces` | `limit: int = 25` | List all active human and agent workspaces |
-| `create_note` | `title: str, content: str, workspace_id: str` | Create a note/idea inside a workspace |
-| `list_notes` | `workspace_id: str, limit: int = 25` | List notes with optional workspace filter |
-| `create_goal` | `title: str, description: str, status: str` | Create a goal or task in Kylrix |
-| `list_goals` | `limit: int = 25` | List goals and task statuses |
+| Category | Tools |
+|---|---|
+| **Identity & Scopes** | `get_my_profile`, `get_token_info`, `list_available_scopes`, `refresh_token_scopes` |
+| **Workspaces** | `list_workspaces`, `get_workspace`, `create_workspace`, `update_workspace`, `delete_workspace`, `list_workspace_collaborators`, `add_workspace_collaborator` |
+| **Notes & Ideas** | `list_notes`, `get_note`, `create_note`, `update_note`, `delete_note` |
+| **Goals & Tasks** | `list_goals`, `get_goal`, `create_goal`, `update_goal`, `delete_goal` |
+| **Calendar & Events** | `list_events`, `get_event`, `create_event`, `update_event`, `delete_event` |
+| **Forms** | `list_forms`, `get_form`, `create_form`, `delete_form` |
+| **Chats** | `list_chats`, `get_chat`, `list_chat_messages`, `send_chat_message` |
+| **Flows** | `list_flows`, `get_flow`, `create_flow`, `delete_flow` |
+| **Tags** | `list_tags`, `create_tag`, `delete_tag` |
+| **Moments** | `list_moments`, `get_moment`, `create_moment`, `list_moment_comments`, `create_moment_comment` |
+| **Threads** | `list_thread_messages`, `create_thread_message` |
+| **Agent Sessions** | `list_agent_sessions`, `get_agent_session`, `create_agent_session` |
+| **Trash** | `list_trash`, `restore_trash`, `purge_trash` |
 
-## Architecture & Hosting
-- **Serverless MCP Engine**: Hosted directly on Appwrite Functions (`runtime: python-3.14`).
-- **Streamable HTTP Transport**: Implements both protocol `2025-06-18` (legacy handshake) and `2026-07-28` (stateless).
-- **Zero Infrastructure Friction**: Employs Appwrite Function dynamic credentials to query `passwordManagerDb` with zero key leakage.
+## Architecture
+
+- **Streamable HTTP & SSE**: Next.js (`/api/v1/mcp`).
+- **Unified with REST**: MCP → `ApiResources` (same as `/api/v1/*`).
+- **Auth**: `kyl_pat_…` PATs and OAuth 2.1 tokens.
+
+Full docs: [docs/mcp.md](../docs/mcp.md)

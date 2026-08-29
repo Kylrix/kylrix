@@ -61,7 +61,13 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
   if (a === 'goals' && !b) {
     if (method === 'GET') {
       const workspaceId = req.nextUrl.searchParams.get('workspaceId') || req.nextUrl.searchParams.get('projectId');
-      return jsonOk(await ApiResources.listGoals(actor, limit(), { workspaceId: workspaceId || null }));
+      const status = req.nextUrl.searchParams.get('status');
+      return jsonOk(
+        await ApiResources.listGoals(actor, limit(), {
+          workspaceId: workspaceId || null,
+          status: status || null,
+        }),
+      );
     }
     if (method === 'POST') return jsonOk(await ApiResources.createGoal(actor, await readBody(req)));
   }

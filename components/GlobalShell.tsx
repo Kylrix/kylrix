@@ -16,6 +16,7 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useTask } from '@/context/TaskContext';
 import { useLayout } from '@/context/LayoutContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { isCommChatOverlayContent } from '@/components/objects/CommObjectDetail';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useSidebar as useSidebarContext } from '@/components/ui/SidebarContext';
@@ -111,7 +112,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { showProUpgrade, closeProUpgrade } = useProUpgrade();
   const { taskDialogOpen } = useTask();
   const { secondarySidebar, closeSecondarySidebar } = useLayout();
-  const { isOpen: isOverlayOpen, closeOverlay } = useOverlay();
+  const { isOpen: isOverlayOpen, content: overlayContent, closeOverlay } = useOverlay();
   const { isOpen: isDynamicSidebarOpen, closeSidebar } = useDynamicSidebar();
   const { isCollapsed } = useSidebarContext();
   const rightRail = useRightRailOptional();
@@ -250,10 +251,10 @@ const isSpecificPostPage = useMemo(
               : 0,
             position: 'relative',
             zIndex: 1,
-            pb: isSpecificPostPage || isChatSurface ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
+            pb: isSpecificPostPage ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
             px: isProjectDetailPage
               ? { xs: 1, sm: 1, md: 2 }
-              : isNoteFullPageDetail || isChatSurface
+              : isNoteFullPageDetail
                 ? { xs: 0, sm: 0, md: 0 }
                 : { xs: 1.5, sm: 2, md: 2.5 },
             pointerEvents: 'auto',
@@ -313,8 +314,8 @@ const isSpecificPostPage = useMemo(
 
       <NativeSidebarBridge />
 
-      {/* Mobile only: edge-to-edge drawers. Desktop details → native right rail. */}
-      {!isDesktopShell && isOverlayOpen && <Overlay />}
+      {/* Mobile + fullscreen chat overlays (edge-to-edge). Desktop detail rail uses NativeSidebarBridge. */}
+      {isOverlayOpen && (!isDesktopShell || isCommChatOverlayContent(overlayContent)) && <Overlay />}
       {!isDesktopShell && <AppDynamicSidebarPortal />}
 
       {/* --- LAYER 2: OVERLAYS --- */}

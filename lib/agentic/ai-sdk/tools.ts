@@ -5,6 +5,10 @@
 
 import { tool } from 'ai';
 import { z } from 'zod';
+import {
+  goalCreateInputZod,
+  goalUpdateInputZod,
+} from '@/lib/domain/goal-contract';
 
 export interface ToolExecutionContext {
   userId?: string;
@@ -75,14 +79,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     create_goal: tool({
       description: 'Create a Goal/Task in Kylrix Flow to track deliverables, milestones, and actionable tasks.',
-      inputSchema: z.object({
-        title: z.string().describe('Title of the goal or task'),
-        status: z.enum(['todo', 'in_progress', 'done']).optional().describe('Status of the task'),
-        priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().describe('Priority level'),
-        dueDate: z.string().optional().describe('Due date in ISO format or string'),
-        description: z.string().optional().describe('Detailed task description'),
-        isAgentic: z.boolean().optional().describe('Set to true when created on behalf of agentic workflow'),
-      }),
+      inputSchema: goalCreateInputZod,
       execute: async (args) => {
         ctx?.onToolCallEmitted?.({ name: 'create_goal', args });
         return {
@@ -96,13 +93,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     update_goal: tool({
       description: 'Modify status, priority, title, or details of an existing Goal/Task.',
-      inputSchema: z.object({
-        id: z.string().describe('Goal/Task ID ($id)'),
-        title: z.string().optional().describe('New title'),
-        status: z.enum(['todo', 'in_progress', 'done']).optional().describe('Updated status'),
-        priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().describe('Updated priority'),
-        dueDate: z.string().optional().describe('Updated due date'),
-      }),
+      inputSchema: goalUpdateInputZod.extend({ id: z.string().describe('Goal/Task ID ($id)') }),
       execute: async (args) => {
         ctx?.onToolCallEmitted?.({ name: 'update_goal', args });
         return {

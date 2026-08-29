@@ -82,6 +82,11 @@ import {
     getReactionActorLabel
 } from './chat-message-utils';
 import { ChatDraftInput } from './ChatDraftInput';
+import {
+  composeChatMessageText,
+  parseChatAttachFile,
+  type ChatPendingObject,
+} from '@/lib/chat/pending-object';
 import { ChatMessageContent } from './ChatMessageContent';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -122,6 +127,7 @@ export const ChatWindow = ({
     const [messagesLoading, setMessagesLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [attachment, setAttachment] = useState<File | null>(null);
+    const [pendingObject, setPendingObject] = useState<ChatPendingObject | null>(null);
     const [isRecording, setIsRecording] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [attachAnchorEl, setAttachAnchorEl] = useState<null | HTMLElement>(null);
@@ -1115,7 +1121,7 @@ export const ChatWindow = ({
     };
 
     const handleSend = async (text: string) => {
-        if ((!text.trim() && !attachment) || !user || sending) return false;
+        if ((!text.trim() && !attachment && !pendingObject) || !user || sending) return false;
 
         // Ensure vault is unlocked before sending in an encrypted conversation
         if (conversation?.isEncrypted && !isUnlocked) {
@@ -1124,10 +1130,13 @@ export const ChatWindow = ({
         }
 
         const file = attachment;
+        const objectAttach = pendingObject;
+        const finalText = composeChatMessageText(text, objectAttach);
         const replyToId = replyingTo?.$id;
         const previousReplyingTo = replyingTo;
 
         setAttachment(null);
+        setPendingObject(null);
         setReplyingTo(null);
         setSending(true);
 
@@ -1146,7 +1155,7 @@ export const ChatWindow = ({
             $id: optimisticId,
             conversationId,
             senderId: user.$id,
-            content: text,
+            content: finalText,
             type,
             attachments: initialAttachments,
             $createdAt: new Date().toISOString(),
@@ -1187,13 +1196,13 @@ export const ChatWindow = ({
                     } as any);
                     threadId = ensured?.thread?.id || threadId;
                 } catch {}
-                const sent: any = await postThreadMessage({ threadId, content: text });
+                const sent: any = await postThreadMessage({ threadId, content: finalText });
                 const messageForState = {
                     $id: sent.id || sent.$id,
                     id: sent.id || sent.$id,
                     conversationId,
                     senderId: user.$id,
-                    content: text,
+                    content: finalText,
                     type,
                     attachments: actualAttachments,
                     $createdAt: sent.createdAt || sent.$createdAt || new Date().toISOString(),
@@ -1215,12 +1224,12 @@ export const ChatWindow = ({
                 actualAttachments = [uploaded.$id];
             }
 
-            const sentMessage = await ChatService.sendMessage(conversationId, user.$id, text, type, actualAttachments, replyToId);
+            const sentMessage = await ChatService.sendMessage(conversationId, user.$id, finalText, type, actualAttachments, replyToId);
 
             // Replace optimistic message with the real one (green SyncStatusDot)
             const messageForState = {
                 ...sentMessage,
-                content: text,
+                content: finalText,
                 status: 'sent',
             } as unknown as ChatMessage;
             startTransition(() => {
@@ -1233,6 +1242,7 @@ export const ChatWindow = ({
                 setMessages(prev => prev.map(m => m.$id === optimisticId ? ({ ...m, status: 'error' } as any) : m));
             });
             setAttachment(file);
+            setPendingObject(objectAttach);
             setReplyingTo(previousReplyingTo);
             return false;
         } finally {
@@ -2020,6 +2030,7 @@ export const ChatWindow = ({
                     <ChatDraftInput
                         key={conversationId}
                         attachment={attachment}
+                        pendingObject={pendingObject}
                         sending={sending}
                         isRecording={isRecording}
                         attachmentDisabled={!isProPlan}
@@ -2029,15 +2040,15 @@ export const ChatWindow = ({
                         isDirect={conversation?.type === 'direct'}
                         onAttach={() => {
                             openFileDrawer({
+                                title: 'Attach to chat',
                                 onSelectFile: (file: any) => {
-                                    const objectType = file.type || file.subType || (file.issuer ? 'totp' : file.secret ? 'vault' : 'file');
-                                    const title = file.name || file.title || file.label || file.issuer || 'Object';
-                                    const tag = `[${objectType}:${file.$id || file.id}:${title}]`;
-                                    handleSend(tag);
-                                }
+                                    const parsed = parseChatAttachFile(file);
+                                    if (parsed) setPendingObject(parsed);
+                                },
                             });
                         }}
                         onClearAttachment={() => setAttachment(null)}
+                        onClearPendingObject={() => setPendingObject(null)}
                         onUpgradeRequested={() => showUpgradeIsland('attach files/images/videos')}
                         onSend={handleSend}
                         onToggleRecording={toggleRecording}

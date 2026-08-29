@@ -111,7 +111,7 @@ export function UnifiedFileAttachmentDrawer() {
   const { tasks: localContextGoals } = useTask();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activeTab, setActiveTab] = useState<MainTab>('objects');
+  const [activeTab, setActiveTab] = useState<MainTab>('synced');
   const [activeSubTab, setActiveSubTab] = useState<ObjectSubTab>('goals');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -354,7 +354,7 @@ export function UnifiedFileAttachmentDrawer() {
 
   useEffect(() => {
     if (isOpen) {
-      setActiveTab('objects');
+      setActiveTab('synced');
       setSelectedFile(null);
       void loadLocalObjects();
       void loadSyncedMedia();

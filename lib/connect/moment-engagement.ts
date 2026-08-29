@@ -7,7 +7,7 @@ import { SocialService } from '@/lib/services/social';
 import { fetchNostrThread } from '@/lib/nostr/thread';
 import { signEvent, type NostrEvent } from '@/lib/nostr/nostr';
 import { NostrRelayPool } from '@/lib/nostr/nostr';
-import { bytesToHex } from '@/lib/nostr/crypto';
+import { bytesToHex, normalizePrivateKeyBytes } from '@/lib/nostr/crypto';
 import * as secp256k1 from '@noble/secp256k1';
 
 export type MomentSource = 'ecosystem' | 'nostr';
@@ -63,17 +63,6 @@ function mapNostrReply(event: NostrEvent): MomentComment {
     createdAt: event.created_at * 1000,
     raw: event,
   };
-}
-
-/** Normalise privateKeyBytes: plain Uint8Array or serialised object → Uint8Array */
-function toUint8Array(raw: any): Uint8Array | null {
-  if (!raw) return null;
-  if (raw instanceof Uint8Array) return raw.length === 32 ? raw : null;
-  if (typeof raw === 'object') {
-    const arr = new Uint8Array(Object.values(raw) as number[]);
-    return arr.length === 32 ? arr : null;
-  }
-  return null;
 }
 
 /** Build, sign and fire-and-forget a Nostr event to all relays. */
@@ -159,7 +148,7 @@ export async function createMomentComment(opts: {
 
     // If moment was synced to Nostr and vault is unlocked, dual-sync reply to Nostr
     if (opts.nostrId && opts.privateKeyBytes) {
-      const privBytes = toUint8Array(opts.privateKeyBytes);
+      const privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
       if (privBytes) {
         const tags: string[][] = [['e', opts.nostrId, '', 'root']];
         if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
@@ -173,7 +162,7 @@ export async function createMomentComment(opts: {
   }
 
   // Pure Nostr post: resolve private key
-  let privBytes = toUint8Array(opts.privateKeyBytes);
+  let privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
   if (!privBytes && opts.nsec) {
     try {
       const { nsecToBytes } = await import('@/lib/nostr/crypto');
@@ -218,7 +207,7 @@ export async function toggleMomentLike(opts: {
     );
 
     if (res.liked && opts.nostrId && opts.privateKeyBytes) {
-      const privBytes = toUint8Array(opts.privateKeyBytes);
+      const privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
       if (privBytes) {
         const tags: string[][] = [['e', opts.nostrId, '', 'root']];
         if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
@@ -231,7 +220,7 @@ export async function toggleMomentLike(opts: {
     return res;
   }
 
-  const privBytes = toUint8Array(opts.privateKeyBytes);
+  const privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
   if (!privBytes) throw new Error('Unlock vault to like on Nostr');
 
   const tags: string[][] = [['e', opts.id, '', 'root']];
@@ -263,7 +252,7 @@ export async function repostMoment(opts: {
     );
 
     if (opts.nostrId && opts.privateKeyBytes) {
-      const privBytes = toUint8Array(opts.privateKeyBytes);
+      const privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
       if (privBytes) {
         const tags: string[][] = [['e', opts.nostrId, '', 'root']];
         if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
@@ -276,7 +265,7 @@ export async function repostMoment(opts: {
     return { reposted: true };
   }
 
-  const privBytes = toUint8Array(opts.privateKeyBytes);
+  const privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
   if (!privBytes) throw new Error('Unlock vault to repost on Nostr');
 
   const tags: string[][] = [['e', opts.id, '', 'root']];

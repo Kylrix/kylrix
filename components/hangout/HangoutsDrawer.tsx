@@ -9,9 +9,11 @@ import {
   Loader2,
   Plus,
   Search,
-  ChevronLeft,
   X,
   Sparkles,
+  Maximize2,
+  Minimize2,
+  ChevronRight,
 } from 'lucide-react';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -55,6 +57,8 @@ export interface HangoutsDrawerProps {
   initialConversationId?: string;
   object?: ShareObject;
   onClose?: () => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 export function HangoutsDrawer({
@@ -64,6 +68,8 @@ export function HangoutsDrawer({
   initialConversationId,
   object,
   onClose,
+  isExpanded,
+  onToggleExpand,
 }: HangoutsDrawerProps) {
   const { user } = useAuth();
   const { activeWorkspace } = useWorkspace();
@@ -90,6 +96,7 @@ export function HangoutsDrawer({
         conversationId,
         kind,
         title,
+        fullscreen: true,
         openSidebar,
         openOverlay,
         closeSidebar,
@@ -364,64 +371,73 @@ export function HangoutsDrawer({
   };
 
   return (
-    <div className="flex h-full min-h-[460px] max-h-[85vh] md:max-h-none flex-col bg-[#0A0908] text-white select-none">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/[0.06] bg-[#0A0908] px-5 py-3.5 shrink-0">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.08] text-[#A855F7] shrink-0">
-            <MessageCircleMore size={16} />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-sm font-black font-clash text-white truncate m-0">
-              {mode === 'share' && object ? `Share "${object.title || 'Item'}"` : 'Hangouts & Chats'}
-            </h2>
-            <p className="text-[11px] font-bold text-white/40 font-satoshi truncate m-0">
-              {mode === 'share'
-                ? 'Select hangouts to share with'
-                : currentWorkspaceTitle
-                ? `${currentWorkspaceTitle} • Connect`
-                : 'Instant discussions and encrypted chats'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
+    <div className="flex h-full min-h-0 max-w-full flex-col overflow-hidden bg-[#161412] text-white select-none">
+      {/* Slim top controls */}
+      <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-4 py-2.5">
+        <span className="truncate text-[10px] font-mono font-bold uppercase tracking-wider text-[#A855F7]/80">
+          {mode === 'share' ? 'Share' : 'Hangouts'}
+        </span>
+        <div className="flex shrink-0 items-center gap-1">
           {mode === 'browse' && (
             <button
               type="button"
               onClick={() => setShowCreateChat(true)}
-              className="p-2 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-[#1C1A18] transition-colors"
-              title="New Hangout"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
+              title="New hangout"
             >
               <Plus size={15} />
+            </button>
+          )}
+          {onToggleExpand && (
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
+              title={isExpanded ? 'Dock drawer' : 'Expand'}
+            >
+              {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             </button>
           )}
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-[#161412] transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
             title="Close"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
       </div>
 
-      {/* Search & Tabs for Browse Mode */}
+      {/* Title */}
+      <div className="shrink-0 px-5 pt-3.5 pb-1">
+        <h2 className="m-0 truncate font-clash text-base font-black text-white">
+          {mode === 'share' && object ? `Share "${object.title || 'Item'}"` : 'Hangouts & Chats'}
+        </h2>
+        <p className="m-0 mt-1 truncate font-satoshi text-[11px] font-bold text-white/45">
+          {mode === 'share'
+            ? 'Pick hangouts to send this to'
+            : currentWorkspaceTitle
+              ? `${currentWorkspaceTitle} · Connect`
+              : 'Discussions and private chats'}
+        </p>
+      </div>
+
+      {/* Search & filter pills */}
       {mode === 'browse' && (
-        <div className="px-4 py-2.5 border-b border-white/[0.06] bg-[#161412]/50 space-y-2 shrink-0">
+        <div className="shrink-0 space-y-2.5 px-4 pb-3 pt-2">
           <div className="relative flex items-center">
-            <Search size={14} className="absolute left-3 text-white/35" />
+            <Search size={14} className="pointer-events-none absolute left-3.5 text-white/30" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search hangouts..."
-              className="w-full h-9 pl-9 pr-3 rounded-xl bg-[#0A0908] border border-white/[0.06] text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#A855F7]/50"
+              className="h-10 w-full rounded-2xl border border-white/[0.08] bg-[#0A0908] pl-9 pr-3 text-xs text-white placeholder:text-white/25 focus:border-[#A855F7]/50 focus:outline-none"
             />
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+          <div className="flex gap-0.5 rounded-2xl border border-white/[0.08] bg-[#0A0908] p-1">
             {(
               [
                 { id: 'all', label: 'All' },
@@ -434,10 +450,10 @@ export function HangoutsDrawer({
                 key={tab.id}
                 type="button"
                 onClick={() => setFilterTab(tab.id)}
-                className={`px-3 py-1 rounded-lg text-[11px] font-extrabold transition-all whitespace-nowrap ${
+                className={`min-w-0 flex-1 rounded-xl px-2 py-1.5 text-[11px] font-extrabold transition-all ${
                   filterTab === tab.id
-                    ? 'bg-[#A855F7] text-white shadow-[0_2px_8px_rgba(168,85,247,0.25)]'
-                    : 'text-white/40 hover:text-white hover:bg-white/5'
+                    ? 'bg-[#161412] text-white shadow-sm'
+                    : 'text-white/40 hover:text-white/70'
                 }`}
               >
                 {tab.label}
@@ -447,148 +463,162 @@ export function HangoutsDrawer({
         </div>
       )}
 
-      {/* Chats List */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 min-h-0 scrollbar-thin">
+      {/* Catalog */}
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pb-4">
         {initialLoading && filteredTargets.length === 0 ? (
-          <div className="space-y-2 py-2">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="grid grid-cols-1 gap-3 py-1">
+            {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="w-full flex items-center gap-3 rounded-2xl border border-white/[0.04] bg-[#161412]/50 p-2.5 animate-pulse"
+                className="animate-pulse rounded-[22px] border border-white/[0.06] bg-[#0A0908] p-4"
               >
-                <div className="h-10 w-10 shrink-0 rounded-2xl bg-white/[0.05]" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div className="h-3.5 w-1/3 rounded bg-white/[0.08]" />
-                  <div className="h-2.5 w-2/3 rounded bg-white/[0.04]" />
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 shrink-0 rounded-xl bg-white/[0.06]" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-3.5 w-2/5 rounded bg-white/[0.08]" />
+                    <div className="h-2.5 w-3/5 rounded bg-white/[0.04]" />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         ) : filteredTargets.length === 0 ? (
-          <div className="py-14 text-center space-y-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#161412] border border-white/[0.06] mx-auto grid place-items-center text-white/30">
+          <div className="flex flex-col items-center justify-center space-y-3 py-16 text-center">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl border border-white/[0.08] bg-[#0A0908] text-white/30">
               <MessageCircleMore size={20} />
             </div>
-            <p className="text-xs font-bold text-white/40 font-satoshi">
-              {searchQuery ? 'No matching hangouts found' : 'No hangouts found'}
+            <p className="m-0 font-satoshi text-xs font-bold text-white/40">
+              {searchQuery ? 'No matching hangouts' : 'No hangouts yet'}
             </p>
             {mode === 'browse' && (
               <button
                 type="button"
                 onClick={() => setShowCreateChat(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#A855F7] text-white hover:bg-[#9333ea] transition-all"
+                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl bg-[#A855F7] px-4 py-2.5 text-xs font-extrabold text-white transition-all hover:bg-[#9333ea]"
               >
                 <Plus size={14} />
-                <span>Start a Hangout</span>
+                <span>Start a hangout</span>
               </button>
             )}
           </div>
         ) : (
-          filteredTargets.map((target) => {
-            const isSelected = selected.has(target.id);
-            const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !isUnlocked;
+          <div className="grid grid-cols-1 gap-3">
+            {filteredTargets.map((target) => {
+              const isSelected = selected.has(target.id);
+              const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !isUnlocked;
+              const preview =
+                target.lastMessageText ||
+                (target.kind === 'secure'
+                  ? `${target.participants?.length || 2} members`
+                  : 'Resource discussion');
 
-            return (
-              <button
-                key={target.id}
-                type="button"
-                onClick={() => {
-                  if (mode === 'share') {
-                    toggleShareSelect(target.id, isSecureLocked);
-                  } else if (!isSecureLocked) {
-                    openConversation(
-                      target.id,
-                      target.kind === 'thread' ? 'thread' : 'chat',
-                      target.label,
-                    );
-                  }
-                }}
-                disabled={mode === 'share' && isSecureLocked}
-                className={`w-full flex items-center gap-3 rounded-2xl border p-2.5 text-left transition-all cursor-pointer ${
-                  isSecureLocked
-                    ? 'bg-[#161412]/60 border-white/[0.03] opacity-50 blur-[0.4px] cursor-not-allowed'
-                    : mode === 'share' && isSelected
-                    ? 'bg-[#1C1A18] border-[#A855F7]/50 shadow-[0_2px_10px_rgba(168,85,247,0.15)]'
-                    : 'bg-[#161412] border-white/[0.05] hover:border-white/15 hover:bg-[#1A1816]'
-                }`}
-              >
-                {/* Avatar */}
-                <div className="h-10 w-10 shrink-0 rounded-2xl overflow-hidden border border-white/[0.08] bg-[#0A0908] flex items-center justify-center relative">
-                  {target.kind === 'secure' ? (
-                    <IdentityAvatar
-                      userId={target.participants?.find((p: string) => p !== user?.$id) || undefined}
-                      size={40}
-                      fallback={(target.label || '?').charAt(0).toUpperCase()}
-                    />
-                  ) : (
-                    <div className="h-10 w-10 grid place-items-center text-[#A855F7]">
-                      <MessageCircleMore size={16} />
+              return (
+                <button
+                  key={target.id}
+                  type="button"
+                  onClick={() => {
+                    if (mode === 'share') {
+                      toggleShareSelect(target.id, isSecureLocked);
+                    } else if (!isSecureLocked) {
+                      openConversation(
+                        target.id,
+                        target.kind === 'thread' ? 'thread' : 'chat',
+                        target.label,
+                      );
+                    }
+                  }}
+                  disabled={mode === 'share' && isSecureLocked}
+                  className={`flex w-full max-w-full cursor-pointer flex-col justify-between gap-3 rounded-[22px] border p-4 text-left transition-all ${
+                    isSecureLocked
+                      ? 'cursor-not-allowed border-white/[0.04] bg-[#0A0908]/60 opacity-50'
+                      : mode === 'share' && isSelected
+                        ? 'border-[#A855F7]/45 bg-[#0A0908] shadow-[0_2px_12px_rgba(168,85,247,0.12)]'
+                        : 'border-white/10 bg-[#0A0908] hover:border-[#A855F7]/35 hover:bg-[#10100E]'
+                  }`}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#A855F7]/20 bg-[#A855F7]/10">
+                      {target.kind === 'secure' ? (
+                        <IdentityAvatar
+                          userId={target.participants?.find((p: string) => p !== user?.$id) || undefined}
+                          size={40}
+                          fallback={(target.label || '?').charAt(0).toUpperCase()}
+                        />
+                      ) : (
+                        <MessageCircleMore size={18} className="text-[#A855F7]" />
+                      )}
+                      {target.isWorkspace && (
+                        <div className="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-full border border-[#0A0908] bg-[#A855F7]">
+                          <Sparkles size={8} className="text-white" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {target.isWorkspace && (
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#A855F7] border border-[#0A0908] grid place-items-center">
-                      <Sparkles size={8} className="text-white" />
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <h4 className="m-0 min-w-0 flex-1 truncate font-clash text-xs font-bold text-white">
+                          {target.label}
+                        </h4>
+                        {target.isEncrypted && <Lock size={11} className="shrink-0 text-[#F59E0B]" />}
+                      </div>
+                      <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                        {target.isWorkspace && (
+                          <span className="shrink-0 rounded border border-[#A855F7]/20 bg-[#A855F7]/15 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-[#c084fc]">
+                            Workspace
+                          </span>
+                        )}
+                        {target.kind === 'thread' && (
+                          <span className="shrink-0 rounded border border-white/10 bg-white/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white/50">
+                            Thread
+                          </span>
+                        )}
+                        <p className="m-0 min-w-0 flex-1 truncate font-satoshi text-[11px] text-white/40">
+                          {preview}
+                          {isSecureLocked ? ' · vault locked' : ''}
+                        </p>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                {/* Info */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-bold font-satoshi text-white truncate m-0">
-                      {target.label}
-                    </p>
-                    {target.isEncrypted && <Lock size={11} className="text-[#F59E0B] shrink-0" />}
-                    {target.isWorkspace && (
-                      <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md bg-[#A855F7]/15 text-[#c084fc] border border-[#A855F7]/25 shrink-0">
-                        Workspace
-                      </span>
+                  <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[11px] font-mono text-[#A855F7]">
+                    <span>
+                      {mode === 'share'
+                        ? isSelected
+                          ? 'Selected'
+                          : 'Tap to select'
+                        : isSecureLocked
+                          ? 'Unlock vault to open'
+                          : 'Open chat'}
+                    </span>
+                    {mode === 'share' ? (
+                      <div
+                        className={`flex h-5 w-5 items-center justify-center rounded-md border ${
+                          isSelected
+                            ? 'border-[#A855F7] bg-[#A855F7] text-white'
+                            : 'border-white/20 text-transparent'
+                        }`}
+                      >
+                        <Check size={12} strokeWidth={3} />
+                      </div>
+                    ) : (
+                      <ChevronRight size={12} />
                     )}
-                    {target.kind === 'thread' && (
-                      <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md bg-white/10 text-white/50 shrink-0">
-                        Thread
-                      </span>
-                    )}
                   </div>
-                  <p className="text-[11px] text-white/40 font-satoshi truncate m-0 mt-0.5">
-                    {target.lastMessageText ||
-                      (target.kind === 'secure'
-                        ? `${target.participants?.length || 2} members`
-                        : 'Resource discussion')}
-                    {isSecureLocked ? ' • vault locked' : ''}
-                  </p>
-                </div>
-
-                {/* Action Indicator */}
-                {mode === 'share' ? (
-                  <div
-                    className={`h-5 w-5 rounded-lg border flex items-center justify-center shrink-0 ${
-                      isSelected
-                        ? 'bg-[#A855F7] border-[#A855F7] text-white'
-                        : 'border-white/20 text-transparent'
-                    }`}
-                  >
-                    <Check size={12} strokeWidth={3} />
-                  </div>
-                ) : (
-                  <div className="text-white/30 shrink-0">
-                    <ChevronLeft size={14} className="rotate-180" />
-                  </div>
-                )}
-              </button>
-            );
-          })
+                </button>
+              );
+            })}
+          </div>
         )}
       </div>
 
-      {/* Share Send Footer */}
+      {/* Share footer */}
       {mode === 'share' && (
-        <div className="shrink-0 border-t border-white/[0.06] bg-[#0A0908] p-4">
+        <div className="shrink-0 border-t border-white/5 bg-[#161412] px-5 py-3 md:py-3.5">
           <button
             type="button"
             onClick={handleShareSend}
             disabled={sending || selected.size === 0}
-            className="w-full h-11 rounded-xl bg-[#A855F7] text-white font-extrabold text-xs inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(168,85,247,0.3)] transition-all"
+            className="inline-flex h-11 min-h-[46px] w-full items-center justify-center gap-2 rounded-2xl bg-[#A855F7] text-xs font-extrabold text-white transition-all disabled:cursor-not-allowed disabled:opacity-40"
           >
             {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} strokeWidth={2.5} />}
             {sending
@@ -600,7 +630,6 @@ export function HangoutsDrawer({
         </div>
       )}
 
-      {/* Create Chat Modal */}
       {showCreateChat && (
         <ChatCreateDrawer
           open={showCreateChat}

@@ -4,9 +4,12 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Paperclip, Mic, Square, Send, Loader2, X } from 'lucide-react';
 import { PresenceService } from '@/lib/services/presence';
 import { toast } from 'react-hot-toast';
+import type { ChatPendingObject } from '@/lib/chat/pending-object';
+import { ChatObjectPreview } from '@/components/chat/ChatObjectPreview';
 
 type Props = {
   attachment: File | null;
+  pendingObject?: ChatPendingObject | null;
   sending: boolean;
   isRecording: boolean;
   enableMentions?: boolean;
@@ -17,6 +20,7 @@ type Props = {
   onSend: (text: string) => Promise<boolean>;
   onToggleRecording: () => void;
   onClearAttachment?: () => void;
+  onClearPendingObject?: () => void;
   typingUsers: string[];
   conversationId: string;
   typingTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
@@ -30,6 +34,7 @@ type Props = {
  */
 export const ChatDraftInput = React.memo(function ChatDraftInput({
   attachment,
+  pendingObject = null,
   sending,
   isRecording,
   onAttach,
@@ -38,6 +43,7 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
   onSend,
   onToggleRecording,
   onClearAttachment,
+  onClearPendingObject,
   typingUsers,
   conversationId,
   typingTimeoutRef,
@@ -47,7 +53,7 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
   const [draft, setDraft] = useState('');
   const textRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const canSend = Boolean(draft.trim() || attachment) && !sending;
+  const canSend = Boolean(draft.trim() || attachment || pendingObject) && !sending;
 
   const submitDraft = useCallback(async () => {
     if (!canSend && !isRecording) return;
@@ -160,6 +166,10 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
         <p className="m-0 px-3 text-[10px] font-bold uppercase tracking-wider text-white/35 font-mono">
           {typingLabel}
         </p>
+      ) : null}
+
+      {pendingObject ? (
+        <ChatObjectPreview payload={pendingObject.payload} onRemove={onClearPendingObject} />
       ) : null}
 
       {attachment ? (

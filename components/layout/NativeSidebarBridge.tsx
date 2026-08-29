@@ -16,6 +16,7 @@ import {
   UnifiedDrawerBody,
   unifiedDrawerWidth,
 } from '@/components/overlays/UnifiedDrawerBody';
+import { isCommChatOverlayContent } from '@/components/objects/CommObjectDetail';
 import { AgenticPanelContent } from '@/components/overlays/AgenticPanelContent';
 import { useSelection } from '@/context/SelectionContext';
 import { UniversalSelectionActions } from '@/components/selection/UniversalSelectionActions';
@@ -244,6 +245,14 @@ export function NativeSidebarBridge() {
       }
 
       if (overlay.isOpen && overlay.content) {
+        if (isCommChatOverlayContent(overlay.content)) {
+          const owned = lastKeyRef.current;
+          if (owned && owned !== 'agentic') {
+            lastKeyRef.current = null;
+            closeRef.current(owned);
+          }
+          return;
+        }
         if (lastKeyRef.current !== 'overlay') {
           lastKeyRef.current = 'overlay';
           lastOverlayContentRef.current = overlay.content;

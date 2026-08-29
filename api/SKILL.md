@@ -11,11 +11,15 @@ description: >-
 
 # Kylrix HTTP API (PAT)
 
+**Wire-in guide:** [docs/integrations.md](../docs/integrations.md)
+
 ```bash
 npx skills add kylrix/kylrix/api
 export KYLRIX_PAT='kyl_pat_…'
-export BASE="${KYLRIX_API_BASE:-http://localhost:3005/api/v1}"
+export BASE="${KYLRIX_API_BASE:-https://www.kylrix.space/api/v1}"
 ```
+
+MCP and REST share `ApiResources` — prefer MCP for IDE agents, REST for scripts. Same PAT, same scopes.
 
 ## Honest parity
 
