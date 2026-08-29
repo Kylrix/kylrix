@@ -13,12 +13,12 @@ import {
   Sparkles,
   Maximize2,
   Minimize2,
-  ChevronRight,
 } from 'lucide-react';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
 import { ChatService } from '@/lib/services/chat';
+import { UsersService } from '@/lib/services/users';
 import { realtime } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
@@ -40,6 +40,12 @@ import {
   shouldRunEmptyEscapeHatch,
   markEmptyEscapeHatchRan,
 } from '@/lib/sync/local-copy-sync';
+import {
+  formatConversationListTime,
+  resolveConversationListLabel,
+  resolveDirectChatPeerId,
+} from '@/lib/chat/conversation-list-label';
+import { getCachedIdentityById, resolveIdentityById, seedIdentityCache } from '@/lib/identity-cache';
 
 export type ShareObject = {
   id: string;
@@ -86,6 +92,7 @@ export function HangoutsDrawer({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'direct' | 'group' | 'thread'>('all');
   const [showCreateChat, setShowCreateChat] = useState(false);
+  const [identityHydrationTick, setIdentityHydrationTick] = useState(0);
 
   const isUnlocked = ecosystemSecurity.status.isUnlocked;
 
@@ -267,22 +274,63 @@ export function HangoutsDrawer({
     };
   }, [mode, currentWorkspaceId, currentWorkspaceTitle, initialConversationId, user?.$id, refreshChats]);
 
+  // Resolve peer display names when stored title is the generic "Direct Chat" placeholder
+  useEffect(() => {
+    if (!user?.$id || !secureChats.length) return;
+    const peerIds = new Set<string>();
+    for (const c of secureChats) {
+      if (c.type === 'group' || c.type === 'channel') continue;
+      const peerId = resolveDirectChatPeerId(c.participants, user.$id);
+      if (peerId && !getCachedIdentityById(peerId)) peerIds.add(peerId);
+    }
+    if (!peerIds.size) return;
+    let cancelled = false;
+    void (async () => {
+      await Promise.all(
+        [...peerIds].slice(0, 24).map(async (peerId) => {
+          const identity = await resolveIdentityById(peerId, () => UsersService.getProfileById(peerId));
+          if (identity) seedIdentityCache(identity);
+        }),
+      );
+      if (!cancelled) setIdentityHydrationTick((n) => n + 1);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [secureChats, user?.$id]);
+
   const allTargets = useMemo(() => {
-    const secure = secureChats.map((c: any) => ({
-      id: c.$id || c.id,
-      label: c.name || c.title || (c.type === 'group' ? 'Hangout' : 'Chat'),
-      kind: 'secure' as const,
-      type: c.type || 'direct',
-      raw: c,
-      isEncrypted: !!c.isEncrypted,
-      participants: c.participants || [],
-      lastMessageText: c.lastMessageText || '',
-      lastMessageAt: c.lastMessageAt || c.updatedAt || c.createdAt,
-      isWorkspace: !!c.isWorkspace,
-    }));
+    void identityHydrationTick;
+    const secure = secureChats.map((c: any) => {
+      const resolved = resolveConversationListLabel({
+        conversation: c,
+        currentUserId: user?.$id,
+        workspaceTitle: currentWorkspaceTitle,
+      });
+      return {
+        id: c.$id || c.id,
+        label: resolved.label,
+        otherUserId: resolved.otherUserId,
+        isSelf: resolved.isSelf,
+        kind: 'secure' as const,
+        type: c.type || 'direct',
+        raw: c,
+        isEncrypted: !!c.isEncrypted,
+        participants: c.participants || [],
+        lastMessageText: c.lastMessageText || '',
+        lastMessageAt: c.lastMessageAt || c.updatedAt || c.createdAt,
+        isWorkspace: !!c.isWorkspace,
+      };
+    });
     const discuss = threads.map((t: any) => ({
       id: t.$id || t.id,
-      label: t.title || t.name || t.lastMessageText || 'Thread',
+      label:
+        t.title ||
+        t.name ||
+        (t.lastMessageText && String(t.lastMessageText).slice(0, 48)) ||
+        'Thread',
+      otherUserId: undefined as string | undefined,
+      isSelf: false,
       kind: 'thread' as const,
       type: 'thread',
       raw: t,
@@ -292,8 +340,11 @@ export function HangoutsDrawer({
       lastMessageAt: t.lastMessageAt || t.updatedAt || t.createdAt,
       isWorkspace: false,
     }));
-    return [...secure, ...discuss];
-  }, [secureChats, threads]);
+    return [...secure, ...discuss].sort(
+      (a, b) =>
+        new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime(),
+    );
+  }, [secureChats, threads, user?.$id, currentWorkspaceTitle, identityHydrationTick]);
 
   const filteredTargets = useMemo(() => {
     return allTargets.filter((t) => {
@@ -463,28 +514,23 @@ export function HangoutsDrawer({
         </div>
       )}
 
-      {/* Catalog */}
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pb-4">
+      {/* Conversation list — messenger rows (not catalog action tiles) */}
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {initialLoading && filteredTargets.length === 0 ? (
-          <div className="grid grid-cols-1 gap-3 py-1">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="animate-pulse rounded-[22px] border border-white/[0.06] bg-[#0A0908] p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 shrink-0 rounded-xl bg-white/[0.06]" />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="h-3.5 w-2/5 rounded bg-white/[0.08]" />
-                    <div className="h-2.5 w-3/5 rounded bg-white/[0.04]" />
-                  </div>
+          <div className="space-y-0 py-1">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex animate-pulse items-center gap-3 px-4 py-3">
+                <div className="h-12 w-12 shrink-0 rounded-full bg-white/[0.06]" />
+                <div className="min-w-0 flex-1 space-y-2 border-b border-white/[0.06] pb-3">
+                  <div className="h-3.5 w-2/5 rounded bg-white/[0.08]" />
+                  <div className="h-2.5 w-3/5 rounded bg-white/[0.04]" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredTargets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center space-y-3 py-16 text-center">
-            <div className="grid h-11 w-11 place-items-center rounded-2xl border border-white/[0.08] bg-[#0A0908] text-white/30">
+          <div className="flex flex-col items-center justify-center space-y-3 px-4 py-16 text-center">
+            <div className="grid h-11 w-11 place-items-center rounded-full border border-white/[0.08] bg-[#0A0908] text-white/30">
               <MessageCircleMore size={20} />
             </div>
             <p className="m-0 font-satoshi text-xs font-bold text-white/40">
@@ -502,15 +548,23 @@ export function HangoutsDrawer({
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3">
+          <div>
             {filteredTargets.map((target) => {
               const isSelected = selected.has(target.id);
               const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !isUnlocked;
               const preview =
                 target.lastMessageText ||
                 (target.kind === 'secure'
-                  ? `${target.participants?.length || 2} members`
+                  ? target.type === 'group'
+                    ? `${target.participants?.length || 2} members`
+                    : 'No messages yet'
                   : 'Resource discussion');
+              const avatarUserId =
+                target.otherUserId ||
+                (target.kind === 'secure'
+                  ? target.participants?.find((p: string) => p !== user?.$id)
+                  : undefined);
+              const timeLabel = formatConversationListTime(target.lastMessageAt);
 
               return (
                 <button
@@ -528,82 +582,62 @@ export function HangoutsDrawer({
                     }
                   }}
                   disabled={mode === 'share' && isSecureLocked}
-                  className={`flex w-full max-w-full cursor-pointer flex-col justify-between gap-3 rounded-[22px] border p-4 text-left transition-all ${
+                  className={`flex w-full max-w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                     isSecureLocked
-                      ? 'cursor-not-allowed border-white/[0.04] bg-[#0A0908]/60 opacity-50'
-                      : mode === 'share' && isSelected
-                        ? 'border-[#A855F7]/45 bg-[#0A0908] shadow-[0_2px_12px_rgba(168,85,247,0.12)]'
-                        : 'border-white/10 bg-[#0A0908] hover:border-[#A855F7]/35 hover:bg-[#10100E]'
-                  }`}
+                      ? 'cursor-not-allowed opacity-45'
+                      : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
+                  } ${mode === 'share' && isSelected ? 'bg-[#A855F7]/10' : ''}`}
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#A855F7]/20 bg-[#A855F7]/10">
-                      {target.kind === 'secure' ? (
-                        <IdentityAvatar
-                          userId={target.participants?.find((p: string) => p !== user?.$id) || undefined}
-                          size={40}
-                          fallback={(target.label || '?').charAt(0).toUpperCase()}
-                        />
-                      ) : (
-                        <MessageCircleMore size={18} className="text-[#A855F7]" />
-                      )}
-                      {target.isWorkspace && (
-                        <div className="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-full border border-[#0A0908] bg-[#A855F7]">
-                          <Sparkles size={8} className="text-white" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <h4 className="m-0 min-w-0 flex-1 truncate font-clash text-xs font-bold text-white">
-                          {target.label}
-                        </h4>
-                        {target.isEncrypted && <Lock size={11} className="shrink-0 text-[#F59E0B]" />}
-                      </div>
-                      <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
-                        {target.isWorkspace && (
-                          <span className="shrink-0 rounded border border-[#A855F7]/20 bg-[#A855F7]/15 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-[#c084fc]">
-                            Workspace
-                          </span>
-                        )}
-                        {target.kind === 'thread' && (
-                          <span className="shrink-0 rounded border border-white/10 bg-white/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white/50">
-                            Thread
-                          </span>
-                        )}
-                        <p className="m-0 min-w-0 flex-1 truncate font-satoshi text-[11px] text-white/40">
-                          {preview}
-                          {isSecureLocked ? ' · vault locked' : ''}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[11px] font-mono text-[#A855F7]">
-                    <span>
-                      {mode === 'share'
-                        ? isSelected
-                          ? 'Selected'
-                          : 'Tap to select'
-                        : isSecureLocked
-                          ? 'Unlock vault to open'
-                          : 'Open chat'}
-                    </span>
-                    {mode === 'share' ? (
-                      <div
-                        className={`flex h-5 w-5 items-center justify-center rounded-md border ${
-                          isSelected
-                            ? 'border-[#A855F7] bg-[#A855F7] text-white'
-                            : 'border-white/20 text-transparent'
-                        }`}
-                      >
-                        <Check size={12} strokeWidth={3} />
-                      </div>
+                  <div className="relative shrink-0">
+                    {target.kind === 'secure' ? (
+                      <IdentityAvatar
+                        userId={avatarUserId}
+                        size={48}
+                        fallback={(target.label || '?').charAt(0).toUpperCase()}
+                      />
                     ) : (
-                      <ChevronRight size={12} />
+                      <div className="grid h-12 w-12 place-items-center rounded-full bg-[#0A0908] border border-white/[0.08] text-[#A855F7]">
+                        <MessageCircleMore size={20} />
+                      </div>
+                    )}
+                    {target.isWorkspace && (
+                      <div className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-[#161412] bg-[#A855F7]">
+                        <Sparkles size={8} className="text-white" />
+                      </div>
                     )}
                   </div>
+
+                  <div className="min-w-0 flex-1 border-b border-white/[0.06] pb-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <span className="truncate text-[15px] font-semibold leading-tight text-white">
+                          {target.label}
+                        </span>
+                        {target.isEncrypted && (
+                          <Lock size={12} className="shrink-0 text-[#F59E0B]" aria-hidden />
+                        )}
+                      </div>
+                      {timeLabel ? (
+                        <span className="shrink-0 text-[11px] text-white/35">{timeLabel}</span>
+                      ) : null}
+                    </div>
+                    <p className="m-0 mt-0.5 truncate text-[13px] leading-snug text-white/45">
+                      {preview}
+                      {isSecureLocked ? ' · vault locked' : ''}
+                    </p>
+                  </div>
+
+                  {mode === 'share' && (
+                    <div
+                      className={`mb-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                        isSelected
+                          ? 'border-[#A855F7] bg-[#A855F7] text-white'
+                          : 'border-white/25 text-transparent'
+                      }`}
+                    >
+                      <Check size={12} strokeWidth={3} />
+                    </div>
+                  )}
                 </button>
               );
             })}

@@ -149,6 +149,12 @@ Drawer top action bars must follow a strict 3-slot button order:
 - **Anti-Packing Bottom Drawer Pattern**: Instead of cramming full details, nested controls, or massive forms onto the page, each compact tile acts as a high-contrast gateway that opens into a dedicated bottom drawer (`60dvh`) upon click. This prevents pages from becoming crowded while keeping navigation lightning-fast.
 - **Default Card Blueprint**: This is the official canonical card blueprint across the entire product.
 
+### 🚫 When NOT to Use Catalog Action Tiles (Strict Exclusions):
+- **Messenger / chat lists** (Hangouts, DMs, Telegram/WhatsApp-style threads): Use flat conversation rows — avatar, name, preview, timestamp. **No** hairline bottom CTA footers (`Open chat`, `Tap to select` as a tile footer). The row itself is the tap target.
+- **Notification / activity feeds**, **search result rows**, **picker lists** (single-tap selection): Same — compact rows, not gateway cards.
+- **Catalog tiles are for “open another surface”** (agent catalog, workspace picker, settings hub, create flows). If tapping the row **is** the action (open chat, select item), use a **row**, not a card with a separated action footer.
+- **Never label a direct chat** with the stored placeholder `Direct Chat` when a peer identity exists — resolve the display name from the other participant (identity cache / profile).
+
 ```tsx
 <div
   onClick={handleOpenDrawer}
@@ -194,7 +200,7 @@ Drawer top action bars must follow a strict 3-slot button order:
 
 | Feature | Old (SaaS-y / Clunky) | OpenBricks 4.0 (Tactile & Clean) |
 |---|---|---|
-| **Multi-Item Cards** | Inconsistent padding / random heights | Standardized `rounded-[22px]` tiles with hairline bottom CTAs |
+| **Multi-Item Cards** | Inconsistent padding / random heights | Standardized `rounded-[22px]` tiles with hairline bottom CTAs — **not** for chat/messenger lists (use flat rows) |
 | **Access Picker** | Sub-drawer popup inside bottom drawer | Inline segmented toggle (`Public` / `Private`) |
 | **Drawer Height** | Dynamic / content-based varying height | Fixed 60% viewport height (`60dvh`) |
 | **Drag Handles** | Centered floating pill drag handles | Thin 1px outline edge (`rgba(255,255,255,0.08)`) |
