@@ -24,7 +24,11 @@ import {
   buildGoalCreateRow,
   buildGoalUpdatePatch,
   resolveWorkspaceId,
+  shapeEventDetail,
+  shapeEventListItem,
+  shapeMoment,
   shapeNote,
+  shapeTag,
   shapeWorkspace,
 } from '@/sdk/contracts';
 
@@ -53,22 +57,6 @@ function forbidden(message: string): never {
   (err as any).status = 403;
   (err as any).code = 'forbidden';
   throw err;
-}
-
-function shapeMoment(r: any) {
-  return {
-    id: r.$id,
-    source: 'ecosystem' as const,
-    caption: r.caption || null,
-    content: r.caption || null,
-    type: r.type || null,
-    momentKind: r.momentKind || null,
-    sourceId: r.sourceId || null,
-    fileId: r.fileId || null,
-    userId: r.userId || null,
-    createdAt: r.$createdAt || r.createdAt || null,
-    isPublic: !!r.isPublic,
-  };
 }
 
 async function assertOwnedNote(tables: ReturnType<typeof createSystemTablesDB>, actor: ApiActor, id: string) {
@@ -1308,13 +1296,7 @@ export const ApiResources = {
           .getRow({ databaseId: FLOW_DB, tableId: 'events', rowId: eid })
           .catch(() => null)) as any;
         if (row && (row.userId === actor.userId || row.isPublic || row.isGuest)) {
-          rows.push({
-            id: row.$id,
-            title: row.title || row.name || 'Untitled',
-            startsAt: row.startsAt || row.startAt || null,
-            endsAt: row.endsAt || row.endAt || null,
-            updatedAt: row.$updatedAt || null,
-          });
+          rows.push(shapeEventListItem(row));
         }
       }
       return rows.slice(0, Math.min(100, Math.max(1, limit)));
@@ -1332,13 +1314,7 @@ export const ApiResources = {
     });
     return res.rows
       .filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id))
-      .map((r: any) => ({
-        id: r.$id,
-        title: r.title || r.name || 'Untitled',
-        startsAt: r.startsAt || r.startAt || null,
-        endsAt: r.endsAt || r.endAt || null,
-        updatedAt: r.$updatedAt || null,
-      }));
+      .map((r: any) => shapeEventListItem(r));
   },
 
   async listForms(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
@@ -1836,15 +1812,7 @@ export const ApiResources = {
       .getRow({ databaseId: FLOW_DB, tableId: 'events', rowId: id })
       .catch(() => null)) as any;
     if (!row || row.userId !== actor.userId) notFound('Event not found');
-    return {
-      id: row.$id,
-      title: row.title || 'Untitled',
-      description: row.description || null,
-      startTime: row.startTime || null,
-      endTime: row.endTime || null,
-      location: row.location || null,
-      isPublic: !!row.isPublic,
-    };
+    return shapeEventDetail(row);
   },
 
   async createEvent(actor: ApiActor, body: Record<string, unknown>) {
@@ -3531,24 +3499,7 @@ export const ApiResources = {
         Query.limit(Math.min(200, Math.max(1, limit))),
       ],
     });
-    return res.rows.map((r: any) => {
-      let color = r.color || null;
-      let description = '';
-      if (r.metadata) {
-        try {
-          const parsed = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata;
-          if (parsed.color) color = parsed.color;
-          if (parsed.description) description = parsed.description;
-        } catch {}
-      }
-      return {
-        id: r.$id,
-        name: r.name || r.label || r.$id,
-        color,
-        description,
-        usageCount: r.usageCount || 0,
-      };
-    });
+    return res.rows.map((r: any) => shapeTag(r));
   },
 
   async createTag(actor: ApiActor, body: Record<string, unknown>) {
@@ -3568,23 +3519,7 @@ export const ApiResources = {
       .catch(() => ({ rows: [] as any[] }));
 
     if (existing.rows && existing.rows.length > 0) {
-      const row = existing.rows[0];
-      let color = row.color || null;
-      let description = '';
-      if (row.metadata) {
-        try {
-          const parsed = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
-          if (parsed.color) color = parsed.color;
-          if (parsed.description) description = parsed.description;
-        } catch {}
-      }
-      return {
-        id: row.$id,
-        name: row.name,
-        color,
-        description,
-        usageCount: row.usageCount || 0,
-      };
+      return shapeTag(existing.rows[0]);
     }
 
     const color = typeof body.color === 'string' ? body.color : '#A855F7';
@@ -3607,13 +3542,7 @@ export const ApiResources = {
       permissions: [Permission.read(Role.any()), Permission.update(Role.user(actor.userId))],
     });
 
-    return {
-      id: created.$id,
-      name: created.name,
-      color,
-      description,
-      usageCount: 0,
-    };
+    return shapeTag(created);
   },
 
   async deleteTag(actor: ApiActor, id: string) {
