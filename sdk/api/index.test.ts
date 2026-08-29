@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildApiPath, createApiModulePaths } from './index';
+import { API_V1_SEGMENTS, isWorkspaceSegment, workspaceIdParam } from './routes';
 
 describe('api helpers', () => {
   it('builds clean api paths', () => {
@@ -22,5 +23,15 @@ describe('api helpers', () => {
     const paths = createApiModulePaths('/api');
     expect(paths.connect.messages).toBe('/api/connect/messages');
     expect(paths.forward.send).toBe('/api/forward/send');
+  });
+
+  it('exposes REST dispatch segment constants', () => {
+    expect(API_V1_SEGMENTS.notes).toBe('notes');
+    expect(isWorkspaceSegment('workspaces')).toBe(true);
+    expect(isWorkspaceSegment('projects')).toBe(true);
+    expect(isWorkspaceSegment('notes')).toBe(false);
+    const params = new URLSearchParams('workspaceId=ws1');
+    expect(workspaceIdParam(params)).toBe('ws1');
+    expect(workspaceIdParam(new URLSearchParams('projectId=p1'))).toBe('p1');
   });
 });

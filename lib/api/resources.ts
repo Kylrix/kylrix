@@ -51,6 +51,7 @@ import {
   shapeTrashGoalItem,
   shapeTrashNoteItem,
   shapeTrashVaultItem,
+  shapeVaultItem,
   shapeWorkspace,
   shapeWorkspaceCollaborator,
 } from '@/sdk/contracts';
@@ -2005,33 +2006,11 @@ export const ApiResources = {
           ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes)
           : {};
 
-        const rawName = unsealed.name ?? r.name ?? '';
-        const name = looksEncrypted(rawName) && !mekBytes ? 'Protected Secret' : (rawName || 'Untitled');
-        const username = unsealed.username !== undefined ? unsealed.username : (looksEncrypted(r.username) && !mekBytes ? null : r.username ?? null);
-        const url = unsealed.url !== undefined ? unsealed.url : (looksEncrypted(r.url) && !mekBytes ? null : r.url ?? null);
-
-        return {
-          id: r.$id,
-          name,
-          itemType: r.itemType || 'login',
-          url,
-          username,
-          folderId: r.folderId || null,
-          isFavorite: !!r.isFavorite,
-          isPinned: !!r.isPinned,
-          tags: Array.isArray(r.tags) ? r.tags : [],
-          updatedAt: r.$updatedAt || r.updatedAt || null,
-          createdAt: r.$createdAt || r.createdAt || null,
-          hasSecret: !!(r.password || r.cardNumber),
-          ...(unsealed.password ? { secret: unsealed.password, password: unsealed.password } : {}),
-          ...(unsealed.notes ? { notes: unsealed.notes } : {}),
-          ...(unsealed.customFields ? { customFields: unsealed.customFields } : {}),
-          ...(unsealed.cardNumber ? { cardNumber: unsealed.cardNumber } : {}),
-          ...(unsealed.cardholderName ? { cardholderName: unsealed.cardholderName } : {}),
-          ...(unsealed.cardExpiry ? { cardExpiry: unsealed.cardExpiry } : {}),
-          ...(unsealed.cardCVV ? { cardCVV: unsealed.cardCVV } : {}),
-          ...(unsealed.cardPIN ? { cardPIN: unsealed.cardPIN } : {}),
-        };
+        return shapeVaultItem(r, {
+          unsealed,
+          hasMek: !!mekBytes,
+          looksEncrypted,
+        });
       }),
     );
   },
@@ -2058,33 +2037,11 @@ export const ApiResources = {
       ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes)
       : {};
 
-    const rawName = unsealed.name ?? r.name ?? '';
-    const name = looksEncrypted(rawName) && !mekBytes ? 'Protected Secret' : (rawName || 'Untitled');
-    const username = unsealed.username !== undefined ? unsealed.username : (looksEncrypted(r.username) && !mekBytes ? null : r.username ?? null);
-    const url = unsealed.url !== undefined ? unsealed.url : (looksEncrypted(r.url) && !mekBytes ? null : r.url ?? null);
-
-    return {
-      id: r.$id,
-      name,
-      itemType: r.itemType || 'login',
-      url,
-      username,
-      folderId: r.folderId || null,
-      isFavorite: !!r.isFavorite,
-      isPinned: !!r.isPinned,
-      tags: Array.isArray(r.tags) ? r.tags : [],
-      updatedAt: r.$updatedAt || r.updatedAt || null,
-      createdAt: r.$createdAt || r.createdAt || null,
-      hasSecret: !!(r.password || r.cardNumber),
-      ...(unsealed.password ? { secret: unsealed.password, password: unsealed.password } : {}),
-      ...(unsealed.notes ? { notes: unsealed.notes } : {}),
-      ...(unsealed.customFields ? { customFields: unsealed.customFields } : {}),
-      ...(unsealed.cardNumber ? { cardNumber: unsealed.cardNumber } : {}),
-      ...(unsealed.cardholderName ? { cardholderName: unsealed.cardholderName } : {}),
-      ...(unsealed.cardExpiry ? { cardExpiry: unsealed.cardExpiry } : {}),
-      ...(unsealed.cardCVV ? { cardCVV: unsealed.cardCVV } : {}),
-      ...(unsealed.cardPIN ? { cardPIN: unsealed.cardPIN } : {}),
-    };
+    return shapeVaultItem(r, {
+      unsealed,
+      hasMek: !!mekBytes,
+      looksEncrypted,
+    });
   },
 
   async createVaultItem(
