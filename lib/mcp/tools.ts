@@ -87,30 +87,9 @@ import {
   TOKEN_REFRESH_JSON_SCHEMA,
   WORKSPACE_RECORD_JSON_SCHEMA,
 } from '@/sdk/contracts';
+import type { McpTool } from '@/lib/mcp/types';
 
-export interface McpToolAnnotation {
-  audience?: Array<'user' | 'assistant'>;
-  readOnly?: boolean;
-  idempotent?: boolean;
-  destructive?: boolean;
-  priority?: number;
-}
-
-export interface McpTool {
-  name: string;
-  description: string;
-  inputSchema: {
-    type: 'object';
-    properties: Record<string, any>;
-    required?: readonly string[];
-  };
-  outputSchema?: {
-    type: 'object';
-    properties?: Record<string, any>;
-    description?: string;
-  };
-  annotations?: McpToolAnnotation;
-}
+export type { McpTool, McpToolAnnotation } from '@/lib/mcp/types';
 
 export const MCP_TOOLS: McpTool[] = [
   // ── 1. Profile / Authentication ──

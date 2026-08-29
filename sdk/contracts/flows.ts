@@ -25,6 +25,16 @@ export function resolveFlowCreateFields(body: Record<string, unknown>) {
   };
 }
 
+export function shapeFlowInstallListItem(row: Record<string, unknown>) {
+  const r = row as any;
+  return {
+    id: String(r.$id || r.id),
+    flowId: r.flowId || r.workflowId || null,
+    scopeKey: r.scopeKey || null,
+    createdAt: r.$createdAt || r.createdAt || null,
+  };
+}
+
 export function shapeFlowListItem(row: Record<string, unknown>) {
   const r = row as any;
   let steps = r.steps;

@@ -1,5 +1,48 @@
 import { MCP_ID_INPUT, mcpItemsOutput } from './common';
 
+export interface ThreadRecord {
+  id: string;
+  scopeKey: string;
+  parentKind: string;
+  parentId: string;
+  channel: string;
+  ownerId: string;
+  title: string | null;
+  status: string;
+  messageCount: number;
+  lastMessageAt: string | null;
+  lastMessagePreview: string | null;
+  lastMessageUserId: string | null;
+  isEncrypted: boolean;
+  isPublic: boolean;
+  legacyNoteId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export function shapeThread(row: Record<string, unknown>): ThreadRecord {
+  const r = row as any;
+  return {
+    id: String(r.$id || r.id),
+    scopeKey: r.scopeKey,
+    parentKind: r.parentKind,
+    parentId: r.parentId,
+    channel: r.channel,
+    ownerId: r.ownerId,
+    title: r.title || null,
+    status: (r.status as string) || 'active',
+    messageCount: Number(r.messageCount || 0),
+    lastMessageAt: r.lastMessageAt || null,
+    lastMessagePreview: r.lastMessagePreview || null,
+    lastMessageUserId: r.lastMessageUserId || null,
+    isEncrypted: !!r.isEncrypted,
+    isPublic: !!r.isPublic,
+    legacyNoteId: r.legacyNoteId || null,
+    createdAt: r.$createdAt || r.createdAt || null,
+    updatedAt: r.$updatedAt || r.updatedAt || null,
+  };
+}
+
 export interface ThreadMessageRecord {
   id: string;
   threadId: string;

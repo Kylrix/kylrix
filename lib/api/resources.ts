@@ -31,6 +31,7 @@ import {
   shapeChatMessage,
   shapeEventDetail,
   shapeEventListItem,
+  shapeFlowInstallListItem,
   shapeFlowListItem,
   resolveFlowCreateFields,
   shapeFormDetail,
@@ -42,6 +43,9 @@ import {
   shapeNote,
   shapeProfile,
   shapeTag,
+  shapeTokenMe,
+  shapeTokenRefreshResult,
+  shapeTokenScopeCatalog,
   shapeTrashEventItem,
   shapeTrashFormItem,
   shapeTrashGoalItem,
@@ -752,27 +756,14 @@ export const ApiResources = {
 
   async tokenMe(actor: ApiActor) {
     if (actor.kind !== 'pat' || !actor.patId) {
-      return {
-        auth: actor.kind,
-        userId: actor.userId,
-        scopes: actor.scopes,
-        patId: null,
-        note: 'Session/OAuth tokens have no PAT row; use a kyl_pat_ token for self-service.',
-      };
+      return shapeTokenMe(actor);
     }
     const pat = await PatService.getOwned({ patId: actor.patId, userId: actor.userId });
-    return {
-      auth: 'pat',
-      userId: actor.userId,
-      patId: actor.patId,
-      scopes: actor.scopes,
-      pat,
-      catalog: listScopeCatalog(),
-    };
+    return shapeTokenMe(actor, { pat, catalog: listScopeCatalog() });
   },
 
   async tokenScopeCatalog(_actor: ApiActor) {
-    return { scopes: listScopeCatalog() };
+    return shapeTokenScopeCatalog(listScopeCatalog());
   },
 
   /**
@@ -807,11 +798,7 @@ export const ApiResources = {
       scopes,
       mode: body.mode === 'grant' || mode === 'grant' ? 'grant' : 'replace',
     });
-    return {
-      pat,
-      scopes: pat.scopes,
-      hint: 'New scopes apply on the next request with this same token (no re-mint).',
-    };
+    return shapeTokenRefreshResult(pat, 'New scopes apply on the next request with this same token (no re-mint).');
   },
 
   async listPats(actor: ApiActor) {
@@ -1960,12 +1947,7 @@ export const ApiResources = {
     requireScope(actor, 'flows:read');
     const { FlowInstallService } = await import('@/lib/services/flow-installs');
     const rows = await FlowInstallService.listForInstaller(actor.userId);
-    return rows.map((r: any) => ({
-      id: r.$id,
-      flowId: r.flowId || r.workflowId || null,
-      scopeKey: r.scopeKey || null,
-      createdAt: r.$createdAt || r.createdAt || null,
-    }));
+    return rows.map((r: any) => shapeFlowInstallListItem(r));
   },
 
   async listVaultItems(

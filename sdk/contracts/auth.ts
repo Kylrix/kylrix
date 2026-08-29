@@ -21,6 +21,41 @@ export function shapeProfile(actor: {
   };
 }
 
+export function shapeTokenMe(
+  actor: { kind: string; userId: string; scopes: string[]; patId?: string | null },
+  opts?: { pat?: unknown; catalog?: readonly unknown[] },
+) {
+  if (actor.kind !== 'pat' || !actor.patId) {
+    return {
+      auth: actor.kind,
+      userId: actor.userId,
+      scopes: actor.scopes,
+      patId: null,
+      note: 'Session/OAuth tokens have no PAT row; use a kyl_pat_ token for self-service.',
+    };
+  }
+  return {
+    auth: 'pat' as const,
+    userId: actor.userId,
+    patId: actor.patId,
+    scopes: actor.scopes,
+    pat: opts?.pat ?? null,
+    catalog: opts?.catalog ?? [],
+  };
+}
+
+export function shapeTokenScopeCatalog(scopes: readonly unknown[]) {
+  return { scopes };
+}
+
+export function shapeTokenRefreshResult(pat: { scopes: string[] }, hint: string) {
+  return {
+    pat,
+    scopes: pat.scopes,
+    hint,
+  };
+}
+
 export const PROFILE_RECORD_JSON_SCHEMA = {
   type: 'object',
   properties: {

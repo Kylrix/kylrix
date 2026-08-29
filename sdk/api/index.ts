@@ -7,6 +7,18 @@ export interface ApiModulePaths {
   goals: string;
   notes: string;
   workspaces: string;
+  projects: string;
+  flows: string;
+  events: string;
+  forms: string;
+  tags: string;
+  trash: string;
+  moments: string;
+  chats: string;
+  agents: string;
+  threads: string;
+  vault: string;
+  pats: string;
   connect: {
     messages: string;
     reactions: string;
@@ -14,6 +26,9 @@ export interface ApiModulePaths {
     repair: string;
   };
   token: {
+    root: string;
+    scopes: string;
+    scopesGrant: string;
     operations: string;
   };
   forward: {
@@ -43,6 +58,18 @@ export function createApiModulePaths(basePath = KYLRIX_API_V1_BASE): ApiModulePa
     goals: buildApiPath(basePath, 'goals'),
     notes: buildApiPath(basePath, 'notes'),
     workspaces: buildApiPath(basePath, 'workspaces'),
+    projects: buildApiPath(basePath, 'projects'),
+    flows: buildApiPath(basePath, 'flows'),
+    events: buildApiPath(basePath, 'events'),
+    forms: buildApiPath(basePath, 'forms'),
+    tags: buildApiPath(basePath, 'tags'),
+    trash: buildApiPath(basePath, 'trash'),
+    moments: buildApiPath(basePath, 'moments'),
+    chats: buildApiPath(basePath, 'chats'),
+    agents: buildApiPath(basePath, 'agents'),
+    threads: buildApiPath(basePath, 'threads'),
+    vault: buildApiPath(basePath, 'vault'),
+    pats: buildApiPath(basePath, 'pats'),
     connect: {
       messages: buildApiPath(basePath, 'connect', 'messages'),
       reactions: buildApiPath(basePath, 'connect', 'message-reactions'),
@@ -50,6 +77,9 @@ export function createApiModulePaths(basePath = KYLRIX_API_V1_BASE): ApiModulePa
       repair: buildApiPath(basePath, 'connect', 'repair'),
     },
     token: {
+      root: buildApiPath(basePath, 'token'),
+      scopes: buildApiPath(basePath, 'token', 'scopes'),
+      scopesGrant: buildApiPath(basePath, 'token', 'scopes', 'grant'),
       operations: 'in-code-secure-op',
     },
     forward: {

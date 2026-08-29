@@ -7,7 +7,7 @@ import { MCP_TOOLS } from '@/lib/mcp/tools';
 
 export { executeMcpTool } from '@/lib/mcp/dispatch';
 export { MCP_TOOLS } from '@/lib/mcp/tools';
-export type { McpTool, McpToolAnnotation } from '@/lib/mcp/tools';
+export type { McpTool, McpToolAnnotation } from '@/lib/mcp/types';
 
 const MCP_PUBLIC_METHODS = new Set([
   'initialize',

@@ -20,7 +20,7 @@ import {
   THREAD_CHANNEL_GENERAL,
   type ThreadParentKind,
 } from '@/lib/threads/types';
-import { shapeLegacyThreadComment, shapeThreadMessage } from '@/sdk/contracts';
+import { shapeLegacyThreadComment, shapeThread, shapeThreadMessage } from '@/sdk/contracts';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
 const THREADS = APPWRITE_CONFIG.TABLES.NOTE.THREADS || 'threads';
@@ -44,28 +44,6 @@ function ownerPerms(userId: string, extraReadUserIds: string[] = []) {
     if (id && id !== userId) perms.push(Permission.read(Role.user(id)));
   }
   return perms;
-}
-
-function shapeThread(r: any) {
-  return {
-    id: r.$id,
-    scopeKey: r.scopeKey,
-    parentKind: r.parentKind as ThreadParentKind,
-    parentId: r.parentId,
-    channel: r.channel,
-    ownerId: r.ownerId,
-    title: r.title || null,
-    status: (r.status as string) || 'active',
-    messageCount: Number(r.messageCount || 0),
-    lastMessageAt: r.lastMessageAt || null,
-    lastMessagePreview: r.lastMessagePreview || null,
-    lastMessageUserId: r.lastMessageUserId || null,
-    isEncrypted: !!r.isEncrypted,
-    isPublic: !!r.isPublic,
-    legacyNoteId: r.legacyNoteId || null,
-    createdAt: r.$createdAt || r.createdAt || null,
-    updatedAt: r.$updatedAt || r.updatedAt || null,
-  };
 }
 
 async function stampPrimaryThreadId(
