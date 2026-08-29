@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useTransition, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useTransition, useMemo, useCallback, useRef } from 'react';
 import {
   Send,
   Lock,
@@ -29,7 +29,9 @@ import {
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import type { PublicResourceType } from '@/lib/share/resource-types';
 import toast from 'react-hot-toast';
-import { ChatWindow } from '@/components/chat/ChatWindow';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { openCommObjectDetail } from '@/components/objects/CommObjectDetail';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ChatCreateDrawer } from '@/components/objects/ChatCreateDrawer';
 import {
@@ -65,7 +67,10 @@ export function HangoutsDrawer({
 }: HangoutsDrawerProps) {
   const { user } = useAuth();
   const { activeWorkspace } = useWorkspace();
+  const { openOverlay, closeOverlay } = useOverlay();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
   const [, startTransition] = useTransition();
+  const openedInitialRef = useRef(false);
 
   const [secureChats, setSecureChats] = useState<any[]>(() => peekChatsListMemory());
   const [threads, setThreads] = useState<any[]>(() => peekThreadsListMemory());
@@ -76,11 +81,23 @@ export function HangoutsDrawer({
   const [filterTab, setFilterTab] = useState<'all' | 'direct' | 'group' | 'thread'>('all');
   const [showCreateChat, setShowCreateChat] = useState(false);
 
-  // Active chat window inside drawer
-  const [activeConvId, setActiveConvId] = useState<string | null>(initialConversationId || null);
-  const [loadingWorkspaceChat, setLoadingWorkspaceChat] = useState(false);
-
   const isUnlocked = ecosystemSecurity.status.isUnlocked;
+
+  const openConversation = useCallback(
+    (conversationId: string, kind: 'chat' | 'thread' = 'chat', title?: string) => {
+      onClose?.();
+      openCommObjectDetail({
+        conversationId,
+        kind,
+        title,
+        openSidebar,
+        openOverlay,
+        closeSidebar,
+        closeOverlay,
+      });
+    },
+    [onClose, openSidebar, openOverlay, closeSidebar, closeOverlay],
+  );
 
   const currentWorkspaceId = propWorkspaceId || (!activeWorkspace?.isPersonal ? activeWorkspace?.id : undefined);
   const currentWorkspaceTitle = propWorkspaceTitle || (!activeWorkspace?.isPersonal ? (activeWorkspace?.title || (activeWorkspace as any)?.name) : undefined);
@@ -213,34 +230,35 @@ export function HangoutsDrawer({
     };
   }, [user?.$id]);
 
-  // If opened in a real workspace without explicit initial conversation, spin up / fetch workspace discussion
+  // Deep-link: open fullscreen chat and close the hangouts list drawer
   useEffect(() => {
-    if (mode === 'browse' && currentWorkspaceId && !initialConversationId && !activeConvId && user?.$id) {
-      let cancelled = false;
-      setLoadingWorkspaceChat(true);
-      void (async () => {
-        try {
-          const conv = await ChatService.getOrCreateWorkspaceConversation(
-            currentWorkspaceId,
-            currentWorkspaceTitle,
-            user.$id,
-          );
-          if (!cancelled && conv?.$id) {
-            startTransition(() => {
-              setActiveConvId(conv.$id);
-            });
-          }
-        } catch (err: any) {
-          console.warn('[HangoutsDrawer] Failed to get/create workspace discussion:', err);
-        } finally {
-          if (!cancelled) setLoadingWorkspaceChat(false);
+    if (openedInitialRef.current || mode !== 'browse' || !initialConversationId) return;
+    openedInitialRef.current = true;
+    openConversation(initialConversationId, 'chat');
+  }, [mode, initialConversationId, openConversation]);
+
+  // Ensure workspace discussion exists in the list without auto-opening it
+  useEffect(() => {
+    if (mode !== 'browse' || !currentWorkspaceId || initialConversationId || !user?.$id) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const conv = await ChatService.getOrCreateWorkspaceConversation(
+          currentWorkspaceId,
+          currentWorkspaceTitle,
+          user.$id,
+        );
+        if (!cancelled && conv?.$id) {
+          void refreshChats();
         }
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }
-  }, [mode, currentWorkspaceId, currentWorkspaceTitle, initialConversationId, user?.$id]);
+      } catch (err: any) {
+        console.warn('[HangoutsDrawer] Failed to get/create workspace discussion:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, currentWorkspaceId, currentWorkspaceTitle, initialConversationId, user?.$id, refreshChats]);
 
   const allTargets = useMemo(() => {
     const secure = secureChats.map((c: any) => ({
@@ -344,34 +362,6 @@ export function HangoutsDrawer({
       setSending(false);
     }
   };
-
-  // If actively viewing a conversation window
-  if (activeConvId) {
-    return (
-      <div className="flex h-full min-h-[500px] flex-col bg-[#0A0908] text-white select-none">
-        <ChatWindow
-          conversationId={activeConvId}
-          layout="fill"
-          onBack={() => {
-            // When navigating back from chat window:
-            // return to the hangouts drawer list so they can explore other chats!
-            setActiveConvId(null);
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (loadingWorkspaceChat) {
-    return (
-      <div className="flex h-[400px] w-full flex-col items-center justify-center gap-3 bg-[#0A0908] text-white">
-        <Loader2 size={24} className="animate-spin text-[#A855F7]" />
-        <p className="text-xs font-bold font-satoshi text-white/50">
-          Opening {currentWorkspaceTitle || 'Workspace'} Discussion...
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-full min-h-[460px] max-h-[85vh] md:max-h-none flex-col bg-[#0A0908] text-white select-none">
@@ -505,10 +495,12 @@ export function HangoutsDrawer({
                 onClick={() => {
                   if (mode === 'share') {
                     toggleShareSelect(target.id, isSecureLocked);
-                  } else {
-                    if (!isSecureLocked) {
-                      setActiveConvId(target.id);
-                    }
+                  } else if (!isSecureLocked) {
+                    openConversation(
+                      target.id,
+                      target.kind === 'thread' ? 'thread' : 'chat',
+                      target.label,
+                    );
                   }
                 }}
                 disabled={mode === 'share' && isSecureLocked}

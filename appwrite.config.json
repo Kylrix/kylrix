@@ -4308,6 +4308,19 @@
                         "contextId"
                     ],
                     "orders": []
+                },
+                {
+                    "key": "idx_workspace_context_pair_uq",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "contextType",
+                        "contextId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
                 }
             ]
         },

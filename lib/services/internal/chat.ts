@@ -29,6 +29,38 @@ function buildReactionPermissions(userId: string, recipientIds: string[]) {
     ...recipientIds.map((participantId: any) => Permission.read(Role.user(participantId)))];
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  const err = error as { code?: number; message?: string; type?: string };
+  const message = String(err?.message || err?.type || '').toLowerCase();
+  return err?.code === 409 || message.includes('unique') || message.includes('duplicate') || message.includes('already exists');
+}
+
+export async function findWorkspaceConversationInternal(workspaceId: string) {
+  if (!workspaceId) return null;
+  const { databases } = createSystemClient();
+  try {
+    const existing = await databases.listRows(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [
+      Query.equal('contextType', 'workspace'),
+      Query.equal('contextId', workspaceId),
+      Query.limit(1),
+    ]);
+    if (existing.rows?.length) return JSON.parse(JSON.stringify(existing.rows[0]));
+  } catch {
+    /* non-fatal */
+  }
+  try {
+    const legacy = await databases.listRows(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [
+      Query.equal('isWorkspace', true),
+      Query.equal('contextId', workspaceId),
+      Query.limit(1),
+    ]);
+    if (legacy.rows?.length) return JSON.parse(JSON.stringify(legacy.rows[0]));
+  } catch {
+    /* non-fatal */
+  }
+  return null;
+}
+
 function buildReactionDocumentId(userId: string, messageId: string) {
   return createHash('sha256')
     .update(`${userId}:${messageId}`)
@@ -1046,6 +1078,12 @@ export async function createConversationTransactionalInternal(payload: {
   }
   const uniqueParticipants = Array.from(new Set((payload.participants || []).map((v) => String(v || '').trim()).filter(Boolean)));
   if (!uniqueParticipants.includes(verifiedActorId!)) uniqueParticipants.unshift(verifiedActorId!);
+
+  if (payload.contextType === 'workspace' && payload.contextId) {
+    const existingWorkspace = await findWorkspaceConversationInternal(payload.contextId);
+    if (existingWorkspace) return existingWorkspace;
+  }
+
   const now = new Date().toISOString();
   const convId = ID.unique();
   const convData: Record<string, unknown> = {
@@ -1081,7 +1119,9 @@ export async function createConversationTransactionalInternal(payload: {
   // Pre-assign epoch row ID so key_mapping rows can reference it within the same transaction
   const epochRowId = ID.unique();
 
-  const result = await withSystemTransaction(async (txId) => {
+  let result: any;
+  try {
+    result = await withSystemTransaction(async (txId) => {
     const tables: any = createSystemTablesDB();
     // Stage conversation
     await tables.createRow({ databaseId: CHAT_DB_ID, tableId: CONVERSATIONS_TABLE_ID, rowId: convId, data: convData, permissions: convPerms, transactionId: txId });
@@ -1108,6 +1148,13 @@ export async function createConversationTransactionalInternal(payload: {
     }
     return { $id: convId, ...convData } as any;
   }, { ttl: 60 });
+  } catch (error) {
+    if (payload.contextType === 'workspace' && payload.contextId && isUniqueConstraintError(error)) {
+      const existingWorkspace = await findWorkspaceConversationInternal(payload.contextId);
+      if (existingWorkspace) return existingWorkspace;
+    }
+    throw error;
+  }
 
   // Fetch back via system to return canonical row
   const { databases } = createSystemClient();

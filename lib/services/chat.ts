@@ -48,6 +48,39 @@ let conversationsFetchInflight: {
     promise: Promise<{ total: number; rows: any[]; authoritative: boolean }>;
 } | null = null;
 const conversationRosterCache = new Map<string, any>();
+const workspaceConversationInflight = new Map<string, Promise<any>>();
+
+function isUniqueConstraintError(error: unknown): boolean {
+    const err = error as { code?: number; message?: string; type?: string };
+    const message = String(err?.message || err?.type || '').toLowerCase();
+    return err?.code === 409 || message.includes('unique') || message.includes('duplicate') || message.includes('already exists');
+}
+
+async function findWorkspaceConversation(workspaceId: string) {
+    try {
+        const existing = await tablesDB.listRows(DB_ID, CONV_TABLE, [
+            Query.equal('contextType', 'workspace'),
+            Query.equal('contextId', workspaceId),
+            Query.limit(1),
+        ]);
+        if (existing.rows?.length) return existing.rows[0];
+    } catch {
+        // Non-fatal, try fallback
+    }
+
+    try {
+        const legacy = await tablesDB.listRows(DB_ID, CONV_TABLE, [
+            Query.equal('isWorkspace', true),
+            Query.equal('contextId', workspaceId),
+            Query.limit(1),
+        ]);
+        if (legacy.rows?.length) return legacy.rows[0];
+    } catch {
+        /* non-fatal */
+    }
+
+    return null;
+}
 const conversationRosterListeners = new Set<(rows: any[]) => void>();
 
 function invalidateConversationsListCache(userId?: string) {
@@ -1075,54 +1108,51 @@ export const ChatService = {
         const user = creatorId ? { $id: creatorId } : await getCurrentUser();
         if (!user?.$id) throw new Error('User required');
 
-        // 1. Search for existing conversation with contextType: 'workspace' and contextId: workspaceId
-        try {
-            const existing = await tablesDB.listRows(DB_ID, CONV_TABLE, [
-                Query.equal('contextType', 'workspace'),
-                Query.equal('contextId', workspaceId),
-                Query.limit(1),
-            ]);
-            if (existing.rows && existing.rows.length > 0) {
-                return existing.rows[0];
+        const inflight = workspaceConversationInflight.get(workspaceId);
+        if (inflight) return inflight;
+
+        const promise = (async () => {
+            const existing = await findWorkspaceConversation(workspaceId);
+            if (existing) return existing;
+
+            const { createConversationTransactionalAction } = await import('@/lib/actions/chat');
+            const tokenRes = await account.createJWT().catch(() => null);
+            const jwt = tokenRes?.jwt || undefined;
+            const convName = `${workspaceTitle || 'Workspace'} Discussion`;
+
+            try {
+                const newConv = await createConversationTransactionalAction({
+                    participants: [user.$id],
+                    type: 'group',
+                    name: convName,
+                    isEncrypted: false,
+                    encryptionVersion: '1.0',
+                    jwt,
+                    isWorkspace: true,
+                    contextType: 'workspace',
+                    contextId: workspaceId,
+                    isPublic: true,
+                });
+                rememberConversationRoster([newConv]);
+                return newConv;
+            } catch (err) {
+                if (isUniqueConstraintError(err)) {
+                    const retry = await findWorkspaceConversation(workspaceId);
+                    if (retry) {
+                        rememberConversationRoster([retry]);
+                        return retry;
+                    }
+                }
+                throw err;
             }
-        } catch {
-            // Non-fatal, try fallback
+        })();
+
+        workspaceConversationInflight.set(workspaceId, promise);
+        try {
+            return await promise;
+        } finally {
+            workspaceConversationInflight.delete(workspaceId);
         }
-
-        // 2. Also probe with isWorkspace: true and contextId
-        try {
-            const existing2 = await tablesDB.listRows(DB_ID, CONV_TABLE, [
-                Query.equal('isWorkspace', true),
-                Query.equal('contextId', workspaceId),
-                Query.limit(1),
-            ]);
-            if (existing2.rows && existing2.rows.length > 0) {
-                return existing2.rows[0];
-            }
-        } catch {}
-
-        // 3. Create a new workspace discussion conversation
-        const { createConversationTransactionalAction } = await import('@/lib/actions/chat');
-        const tokenRes = await account.createJWT().catch(() => null);
-        const jwt = tokenRes?.jwt || undefined;
-
-        const convName = `${workspaceTitle || 'Workspace'} Discussion`;
-        const newConv = await createConversationTransactionalAction({
-            participants: [user.$id],
-            type: 'group',
-            name: convName,
-            isEncrypted: false,
-            encryptionVersion: '1.0',
-            jwt,
-            isWorkspace: true,
-            contextType: 'workspace',
-            contextId: workspaceId,
-            isPublic: true,
-        });
-
-        // Remember roster locally
-        rememberConversationRoster([newConv]);
-        return newConv;
     },
 
     async createConversation(participants: string[], type: 'direct' | 'group' = 'direct', name?: string, opts?: { encrypted?: boolean }) {
