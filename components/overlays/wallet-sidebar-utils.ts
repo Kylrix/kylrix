@@ -107,8 +107,3 @@ export function ledgerRowKey(row: Record<string, unknown>, index: number): strin
 }
 
 
-
-/** Same shortened form as on-chain addresses (Appwrite user id). */
-export function shortenUserId(id: string) {
-    return shortenAddress(id);
-}

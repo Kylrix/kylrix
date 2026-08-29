@@ -1,6 +1,68 @@
-import { MCP_LIMIT_INPUT, MCP_SUCCESS_OUTPUT, mcpItemsOutput } from './common';
+import { mcpItemsOutput } from './common';
 
 export const TRASH_KINDS = ['note', 'goal', 'form', 'event'] as const;
+export type TrashKind = (typeof TRASH_KINDS)[number];
+
+function trashTimestamps(row: Record<string, unknown>) {
+  const r = row as any;
+  const ts = r.$updatedAt || r.updatedAt || null;
+  return { updatedAt: ts, deletedAt: ts };
+}
+
+export function shapeTrashNoteItem(row: Record<string, unknown>) {
+  const r = row as any;
+  return {
+    id: String(r.$id || r.id),
+    kind: 'note' as const,
+    title: r.title || 'Untitled note',
+    summary: r.summary || (r.content ? String(r.content).slice(0, 140) : ''),
+    ...trashTimestamps(row),
+  };
+}
+
+export function shapeTrashGoalItem(row: Record<string, unknown>) {
+  const r = row as any;
+  return {
+    id: String(r.$id || r.id),
+    kind: 'goal' as const,
+    title: r.title || 'Untitled goal',
+    status: r.status || 'trash',
+    ...trashTimestamps(row),
+  };
+}
+
+export function shapeTrashVaultItem(row: Record<string, unknown>) {
+  const r = row as any;
+  return {
+    id: String(r.$id || r.id),
+    kind: 'vault' as const,
+    title: r.name || 'Untitled secret',
+    itemType: r.itemType || 'login',
+    username: r.username || null,
+    url: r.url || null,
+    ...trashTimestamps(row),
+  };
+}
+
+export function shapeTrashEventItem(row: Record<string, unknown>) {
+  const r = row as any;
+  return {
+    id: String(r.$id || r.id),
+    kind: 'event' as const,
+    title: r.title || r.name || 'Untitled event',
+    ...trashTimestamps(row),
+  };
+}
+
+export function shapeTrashFormItem(row: Record<string, unknown>) {
+  const r = row as any;
+  return {
+    id: String(r.$id || r.id),
+    kind: 'form' as const,
+    title: r.title || r.name || 'Untitled form',
+    ...trashTimestamps(row),
+  };
+}
 
 const TRASH_ITEM_SCHEMA = {
   type: 'object',

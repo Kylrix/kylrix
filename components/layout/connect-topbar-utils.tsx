@@ -146,8 +146,3 @@ export function highlightElement(el: HTMLElement) {
 
 export const BRAND_INDIGO = '#6366F1';
 
-export function shortenUserId(fullId?: string | null) {
-  if (!fullId) return null;
-  return fullId.length > 12 ? `${fullId.slice(0, 6)}...${fullId.slice(-6)}` : fullId;
-}
-

@@ -1,5 +1,42 @@
 import { MCP_ID_INPUT, MCP_LIMIT_INPUT, mcpItemsOutput } from './common';
 
+export function shapeAgentSessionListItem(row: Record<string, unknown>) {
+  const r = row as any;
+  return {
+    id: String(r.$id || r.id),
+    title: r.context || r.title || null,
+    harness: r.harness || null,
+    status: r.status || null,
+    isPublic: !!r.isPublic,
+    isPinned: !!r.isPinned,
+    seen: !!r.seen,
+    updatedAt: r.$updatedAt || r.updatedAt || null,
+    createdAt: r.$createdAt || r.createdAt || null,
+  };
+}
+
+export function shapeAgentSessionDetail(row: Record<string, unknown>) {
+  const r = row as any;
+  let history: unknown[] = [];
+  try {
+    history = JSON.parse(r.chatHistory || '[]');
+  } catch {
+    history = [];
+  }
+  return {
+    id: String(r.$id || r.id),
+    title: r.context || r.title || null,
+    harness: r.harness || null,
+    context: r.context || null,
+    status: r.status || null,
+    isPublic: !!r.isPublic,
+    isPinned: !!r.isPinned,
+    history,
+    events: history,
+    updatedAt: r.$updatedAt || null,
+  };
+}
+
 const AGENT_SESSION_LIST_ITEM_SCHEMA = {
   type: 'object',
   properties: {

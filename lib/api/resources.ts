@@ -24,6 +24,8 @@ import {
   buildGoalCreateRow,
   buildGoalUpdatePatch,
   resolveWorkspaceId,
+  shapeAgentSessionDetail,
+  shapeAgentSessionListItem,
   shapeChatDetail,
   shapeChatListItem,
   shapeChatMessage,
@@ -35,6 +37,11 @@ import {
   shapeNote,
   shapeProfile,
   shapeTag,
+  shapeTrashEventItem,
+  shapeTrashFormItem,
+  shapeTrashGoalItem,
+  shapeTrashNoteItem,
+  shapeTrashVaultItem,
   shapeWorkspace,
 } from '@/sdk/contracts';
 
@@ -1373,15 +1380,7 @@ export const ApiResources = {
           .getRow({ databaseId: FLOW_DB, tableId: 'agentic_sessions', rowId: sid })
           .catch(() => null)) as any;
         if (row && (row.userId === actor.userId || row.isPublic || row.isGuest)) {
-          rows.push({
-            id: row.$id,
-            harness: row.harness || null,
-            isPublic: !!row.isPublic,
-            isPinned: !!row.isPinned,
-            seen: !!row.seen,
-            updatedAt: row.$updatedAt || null,
-            createdAt: row.$createdAt || null,
-          });
+          rows.push(shapeAgentSessionListItem(row));
         }
       }
       return rows.slice(0, Math.min(100, Math.max(1, limit)));
@@ -1404,15 +1403,7 @@ export const ApiResources = {
     });
     return res.rows
       .filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id))
-      .map((r: any) => ({
-        id: r.$id,
-        harness: r.harness || null,
-        isPublic: !!r.isPublic,
-        isPinned: !!r.isPinned,
-        seen: !!r.seen,
-        updatedAt: r.$updatedAt || null,
-        createdAt: r.$createdAt || null,
-      }));
+      .map((r: any) => shapeAgentSessionListItem(r));
   },
 
   async createHarnessSession(actor: ApiActor, body: Record<string, unknown>) {
@@ -2725,14 +2716,7 @@ export const ApiResources = {
         ],
       }).catch(() => ({ rows: [] as any[] }));
       for (const r of notesRes.rows) {
-        items.push({
-          id: r.$id,
-          kind: 'note',
-          title: r.title || 'Untitled note',
-          summary: r.summary || (r.content ? String(r.content).slice(0, 140) : ''),
-          updatedAt: r.$updatedAt || r.updatedAt || null,
-          deletedAt: r.$updatedAt || r.updatedAt || null,
-        });
+        items.push(shapeTrashNoteItem(r));
       }
     }
 
@@ -2749,14 +2733,7 @@ export const ApiResources = {
         ],
       }).catch(() => ({ rows: [] as any[] }));
       for (const r of tasksRes.rows) {
-        items.push({
-          id: r.$id,
-          kind: 'goal',
-          title: r.title || 'Untitled goal',
-          status: r.status || 'trash',
-          updatedAt: r.$updatedAt || r.updatedAt || null,
-          deletedAt: r.$updatedAt || r.updatedAt || null,
-        });
+        items.push(shapeTrashGoalItem(r));
       }
     }
 
@@ -2773,16 +2750,7 @@ export const ApiResources = {
         ],
       }).catch(() => ({ rows: [] as any[] }));
       for (const r of vaultRes.rows) {
-        items.push({
-          id: r.$id,
-          kind: 'vault',
-          title: r.name || 'Untitled secret',
-          itemType: r.itemType || 'login',
-          username: r.username || null,
-          url: r.url || null,
-          updatedAt: r.$updatedAt || r.updatedAt || null,
-          deletedAt: r.$updatedAt || r.updatedAt || null,
-        });
+        items.push(shapeTrashVaultItem(r));
       }
     }
 
@@ -2799,13 +2767,7 @@ export const ApiResources = {
         ],
       }).catch(() => ({ rows: [] as any[] }));
       for (const r of eventRes.rows) {
-        items.push({
-          id: r.$id,
-          kind: 'event',
-          title: r.title || r.name || 'Untitled event',
-          updatedAt: r.$updatedAt || r.updatedAt || null,
-          deletedAt: r.$updatedAt || r.updatedAt || null,
-        });
+        items.push(shapeTrashEventItem(r));
       }
     }
 
@@ -2822,13 +2784,7 @@ export const ApiResources = {
         ],
       }).catch(() => ({ rows: [] as any[] }));
       for (const r of formRes.rows) {
-        items.push({
-          id: r.$id,
-          kind: 'form',
-          title: r.title || r.name || 'Untitled form',
-          updatedAt: r.$updatedAt || r.updatedAt || null,
-          deletedAt: r.$updatedAt || r.updatedAt || null,
-        });
+        items.push(shapeTrashFormItem(r));
       }
     }
 
@@ -3546,21 +3502,7 @@ export const ApiResources = {
       .catch(() => null)) as any;
     if (!row || row.userId !== actor.userId) notFound('Session not found');
     if (row.harness) requireScope(actor, 'agents:harness');
-    let history: unknown[] = [];
-    try {
-      history = JSON.parse(row.chatHistory || '[]');
-    } catch {
-      history = [];
-    }
-    return {
-      id: row.$id,
-      harness: row.harness || null,
-      context: row.context || null,
-      isPublic: !!row.isPublic,
-      isPinned: !!row.isPinned,
-      history,
-      updatedAt: row.$updatedAt || null,
-    };
+    return shapeAgentSessionDetail(row);
   },
 
   async deleteAgentSession(actor: ApiActor, id: string) {

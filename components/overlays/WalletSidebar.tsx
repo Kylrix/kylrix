@@ -53,8 +53,8 @@ import {
     describeLedgerRow,
     formatLedgerWhen,
     ledgerRowKey,
-    shortenUserId,
 } from './wallet-sidebar-utils';
+import { shortenUserId } from '@/sdk/identity';
 import { PinnedNetworkIconSolana } from './PinnedNetworkIconSolana';
 import { WALLET_SURFACE as SURFACE, WALLET_HIGHLIGHT as HIGHLIGHT, WALLET_EDGE as EDGE, WALLET_MUTED as MUTED, WALLET_ACCENT as ACCENT } from './wallet-theme';
 import { WalletSignConfirmation } from './WalletSignConfirmation';
