@@ -547,26 +547,45 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
     });
   }, [installedFlows]);
 
+  const contextValue = useMemo(
+    () => ({
+      events,
+      suggestions,
+      bufferEvent,
+      dismissSuggestion,
+      compileContextForAI,
+      isRecording,
+      currentWorkflow,
+      savedWorkflows,
+      installedFlows,
+      startRecording,
+      stopRecording,
+      clearSavedWorkflows,
+      updateWorkflow,
+      getFlowsForNiche,
+      refreshInstalledFlows,
+    }),
+    [
+      events,
+      suggestions,
+      bufferEvent,
+      dismissSuggestion,
+      compileContextForAI,
+      isRecording,
+      currentWorkflow,
+      savedWorkflows,
+      installedFlows,
+      startRecording,
+      stopRecording,
+      clearSavedWorkflows,
+      updateWorkflow,
+      getFlowsForNiche,
+      refreshInstalledFlows,
+    ],
+  );
+
   return (
-    <LocalContext.Provider
-      value={{
-        events,
-        suggestions,
-        bufferEvent,
-        dismissSuggestion,
-        compileContextForAI,
-        isRecording,
-        currentWorkflow,
-        savedWorkflows,
-        installedFlows,
-        startRecording,
-        stopRecording,
-        clearSavedWorkflows,
-        updateWorkflow,
-        getFlowsForNiche,
-        refreshInstalledFlows,
-      }}
-    >
+    <LocalContext.Provider value={contextValue}>
       {children}
     </LocalContext.Provider>
   );

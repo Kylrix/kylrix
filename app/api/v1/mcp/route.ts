@@ -1,16 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleMcpRpc } from '@/lib/mcp/handler';
 import { createSseStream } from '@/lib/mcp/sse';
+import { EdgeShieldError } from '@/lib/api/edge-shield';
+import { MAX_API_BODY_BYTES } from '@/lib/api/guard';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+
+function mcpShieldResponse(err: EdgeShieldError) {
+  return NextResponse.json(
+    {
+      jsonrpc: '2.0',
+      id: null,
+      error: {
+        code: -32029,
+        message: err.message,
+        data: { reason: err.reason, retry_after: err.retryAfterSec },
+      },
+    },
+    {
+      status: 429,
+      headers: { 'Retry-After': String(err.retryAfterSec) },
+    },
+  );
+}
 
 export async function GET(req: NextRequest) {
   const acceptHeader = req.headers.get('accept') || '';
   const isSse = acceptHeader.includes('text/event-stream') || req.nextUrl.searchParams.get('transport') === 'sse';
 
   if (isSse) {
-    return createSseStream(req, '/api/v1/mcp');
+    try {
+      return createSseStream(req, '/api/v1/mcp');
+    } catch (err) {
+      if (err instanceof EdgeShieldError) return mcpShieldResponse(err);
+      throw err;
+    }
   }
 
   // If accessed via regular browser GET, return discovery info
@@ -31,13 +56,32 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const cl = Number(req.headers.get('content-length') || 0);
+    if (cl > MAX_API_BODY_BYTES) {
+      return NextResponse.json(
+        {
+          jsonrpc: '2.0',
+          id: null,
+          error: { code: -32602, message: 'Payload too large (maximum 256 KB)' },
+        },
+        { status: 413 },
+      );
+    }
+
     const body = await req.json();
     const result = await handleMcpRpc(req, body);
-    if (result === null) {
-      return new Response(null, { status: 204 });
+    const httpStatus = result.httpStatus ?? (result.body === null ? 204 : 200);
+    if (result.body === null) {
+      return new Response(null, { status: httpStatus });
     }
-    return NextResponse.json(result);
+    const headers: Record<string, string> = {};
+    if (httpStatus === 429) {
+      const retry = (result.body?.error?.data?.retry_after as number) || 60;
+      headers['Retry-After'] = String(retry);
+    }
+    return NextResponse.json(result.body, { status: httpStatus, headers });
   } catch (err: any) {
+    if (err instanceof EdgeShieldError) return mcpShieldResponse(err);
     return NextResponse.json(
       {
         jsonrpc: '2.0',
@@ -47,7 +91,7 @@ export async function POST(req: NextRequest) {
           message: err?.message || 'Parse error / Invalid JSON-RPC payload',
         },
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 }
@@ -58,7 +102,7 @@ export async function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': '*',
+      'Access-Control-Allow-Headers': 'Authorization, Content-Type, Accept',
     },
   });
 }

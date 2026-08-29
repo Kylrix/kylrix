@@ -89,6 +89,9 @@ const DEFAULTS: ConnectFeedSettings = {
 
 const LOCAL_KEY = 'kylrix_connect_feed_settings_v1';
 const PREFS_KEY = 'connectFeedSettings';
+const REMOTE_SYNC_TTL_MS = 60_000;
+let remoteSyncInFlight: Promise<void> | null = null;
+let lastRemoteSyncAt = 0;
 
 function normalizeNostrConfig(raw: any): NostrSettingsConfig {
   if (!raw || typeof raw !== 'object') return { ...NOSTR_CONFIG_DEFAULTS };
@@ -152,31 +155,64 @@ function normalize(raw: any): ConnectFeedSettings {
   };
 }
 
+async function broadcastFeedSettingsIfChanged(normalizedRemote: ConnectFeedSettings) {
+  const current = (await LocalEngine.cacheGet<any>(LOCAL_KEY).catch(() => null)) as ConnectFeedSettings | null;
+  const prev = current ? normalize(current) : null;
+  const changed =
+    !prev ||
+    prev.topics.join('|') !== normalizedRemote.topics.join('|') ||
+    prev.interests.join('|') !== normalizedRemote.interests.join('|') ||
+    prev.showNostr !== normalizedRemote.showNostr ||
+    prev.showEcosystem !== normalizedRemote.showEcosystem ||
+    prev.showReplies !== normalizedRemote.showReplies ||
+    prev.showLikes !== normalizedRemote.showLikes ||
+    prev.compactMode !== normalizedRemote.compactMode ||
+    prev.autoPreviewMedia !== normalizedRemote.autoPreviewMedia ||
+    prev.dataSaverMode !== normalizedRemote.dataSaverMode ||
+    prev.autoPlayMedia !== normalizedRemote.autoPlayMedia;
+  if (!changed) return;
+  await LocalEngine.cacheSet(LOCAL_KEY, normalizedRemote);
+  if (typeof window !== 'undefined') {
+    (window as any).__KylrixConnectFeedSettings = normalizedRemote;
+    window.dispatchEvent(new CustomEvent('kylrix-connect-feed-settings', { detail: normalizedRemote }));
+  }
+}
+
+function scheduleRemoteFeedSettingsSync() {
+  const now = Date.now();
+  if (now - lastRemoteSyncAt < REMOTE_SYNC_TTL_MS) return;
+  if (remoteSyncInFlight) return;
+  lastRemoteSyncAt = now;
+  remoteSyncInFlight = (async () => {
+    try {
+      const user = await account.get().catch(() => null as any);
+      const prefsRaw = (user as any)?.prefs?.[PREFS_KEY];
+      if (prefsRaw) {
+        const parsed = typeof prefsRaw === 'string' ? JSON.parse(prefsRaw) : prefsRaw;
+        await broadcastFeedSettingsIfChanged(normalize(parsed));
+      }
+    } catch {
+      /* quiet */
+    } finally {
+      remoteSyncInFlight = null;
+    }
+  })();
+}
+
 export async function getConnectFeedSettings(): Promise<ConnectFeedSettings> {
   let localResult: ConnectFeedSettings | null = null;
   try {
     const local = await LocalEngine.cacheGet<any>(LOCAL_KEY).catch(() => null);
     if (local) {
       localResult = normalize(local);
+      if (typeof window !== 'undefined') {
+        (window as any).__KylrixConnectFeedSettings = localResult;
+      }
     }
   } catch {}
 
-  // Asynchronously fetch latest remote user preferences to keep multiple devices fresh
-  void (async () => {
-    try {
-      const user = await account.get().catch(() => null as any);
-      const prefsRaw = (user as any)?.prefs?.[PREFS_KEY];
-      if (prefsRaw) {
-        const parsed = typeof prefsRaw === 'string' ? JSON.parse(prefsRaw) : prefsRaw;
-        const normalizedRemote = normalize(parsed);
-        await LocalEngine.cacheSet(LOCAL_KEY, normalizedRemote);
-        if (typeof window !== 'undefined') {
-          (window as any).__KylrixConnectFeedSettings = normalizedRemote;
-          window.dispatchEvent(new CustomEvent('kylrix-connect-feed-settings', { detail: normalizedRemote }));
-        }
-      }
-    } catch {}
-  })();
+  // One background sync per minute max — not one account.get per caller.
+  scheduleRemoteFeedSettingsSync();
 
   if (localResult) return localResult;
 

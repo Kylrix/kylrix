@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode, useMemo } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { calculateAdaptiveInterests } from '@/lib/ecosystem/intelligence-topics';
@@ -109,15 +109,23 @@ export function ContextIntelligenceProvider({ children }: { children: ReactNode 
     }
   }, [recordInteraction]);
 
+  const trendingTopics = useMemo(
+    () => Array.from(new Set(interactions.map((i) => i.topic))).slice(0, 10),
+    [interactions],
+  );
+
+  const value = useMemo<ContextIntelligenceState>(
+    () => ({
+      activeSessionId,
+      trendingTopics,
+      recordInteraction,
+      syncCrossObjectContext,
+    }),
+    [activeSessionId, trendingTopics, recordInteraction, syncCrossObjectContext],
+  );
+
   return (
-    <ContextIntelligenceContext.Provider
-      value={{
-        activeSessionId,
-        trendingTopics: Array.from(new Set(interactions.map((i) => i.topic))).slice(0, 10),
-        recordInteraction,
-        syncCrossObjectContext,
-      }}
-    >
+    <ContextIntelligenceContext.Provider value={value}>
       {children}
     </ContextIntelligenceContext.Provider>
   );

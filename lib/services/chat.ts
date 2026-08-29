@@ -331,6 +331,7 @@ async function callMessageCreateApi(
         type: payload.type as string,
         attachments: payload.attachments as string[],
         replyTo: payload.replyTo as string,
+        isBookmark: payload.isBookmark as boolean | undefined,
         jwt: jwt as any});
 }
 
@@ -1359,7 +1360,8 @@ export const ChatService = {
         attachments: string[] = [], 
         replyTo?: string,
         metadata?: any,
-        permissionSyncAuth?: { jwt?: string; cookie?: string }
+        permissionSyncAuth?: { jwt?: string; cookie?: string },
+        options?: { isBookmark?: boolean },
     ) {
         let conversation: any = null;
 
@@ -1421,7 +1423,9 @@ export const ChatService = {
             content: finalContent,
             type,
             attachments,
-            replyTo}, permissionSyncAuth);
+            replyTo,
+            isBookmark: options?.isBookmark,
+        }, permissionSyncAuth);
 
         if (type === 'text') {
             notifyMessageStreak(conversation, senderId, conversationId).catch((error: any) => {

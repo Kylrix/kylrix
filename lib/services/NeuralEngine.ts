@@ -22,14 +22,15 @@ class NeuralEngineService {
   private anomalyLog: RenderAnomalyReport[] = [];
   private userPatterns = new Map<string, number>(); // pattern key -> count
   private isHealing = false;
+  private spineSubscribed = false;
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      this.initSpineSubscription();
-    }
+    // Do not auto-start SpineEngine — subscribe lazily on first telemetry write.
   }
 
-  private initSpineSubscription() {
+  private ensureSpineSubscription() {
+    if (this.spineSubscribed || typeof window === 'undefined') return;
+    this.spineSubscribed = true;
     SpineEngine.subscribe('neural.telemetry', (tick) => {
       this.processHeartbeat(tick);
     });
@@ -46,6 +47,7 @@ class NeuralEngineService {
 
   /** Record user navigation / feature usage pattern */
   public recordPattern(action: string, contextId?: string) {
+    this.ensureSpineSubscription();
     const key = contextId ? `${action}:${contextId}` : action;
     const current = this.userPatterns.get(key) || 0;
     this.userPatterns.set(key, current + 1);
@@ -59,6 +61,7 @@ class NeuralEngineService {
    * Called by EmptyStateAnomalyDetector when a UI view renders empty items unexpectedly.
    */
   public async reportEmptyStateAnomaly(report: RenderAnomalyReport): Promise<boolean> {
+    this.ensureSpineSubscription();
     console.warn(`[NeuralEngine] Empty state anomaly reported for ${report.componentName} on ${report.route}`, report);
     this.anomalyLog.push(report);
 

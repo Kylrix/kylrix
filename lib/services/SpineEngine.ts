@@ -31,6 +31,7 @@ class SpineEngineService {
   private subscribers = new Map<string, Set<SpineSubscriber>>();
   private timer: any = null;
   private isRunning = false;
+  private activityBumpTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -45,12 +46,21 @@ class SpineEngineService {
       this.reevaluateInterval();
     };
 
+    // Coalesce high-frequency pointer/scroll events — raw mousemove can fire 60–120×/s.
+    const bumpActivityThrottled = () => {
+      if (this.activityBumpTimer) return;
+      this.activityBumpTimer = setTimeout(() => {
+        this.activityBumpTimer = null;
+        bumpActivity();
+      }, 250);
+    };
+
     window.addEventListener('keydown', bumpActivity, { passive: true });
     window.addEventListener('input', bumpActivity, { passive: true });
-    window.addEventListener('mousemove', bumpActivity, { passive: true });
+    window.addEventListener('mousemove', bumpActivityThrottled, { passive: true });
     window.addEventListener('click', bumpActivity, { passive: true });
-    window.addEventListener('touchmove', bumpActivity, { passive: true });
-    window.addEventListener('scroll', bumpActivity, { passive: true });
+    window.addEventListener('touchmove', bumpActivityThrottled, { passive: true });
+    window.addEventListener('scroll', bumpActivityThrottled, { passive: true });
 
     document.addEventListener('visibilitychange', () => {
       this.reevaluateInterval();
@@ -108,9 +118,9 @@ class SpineEngineService {
     } else if (this.focusedResourceIntervalMs) {
       this.currentIntervalMs = Math.max(this.minIntervalMs, this.focusedResourceIntervalMs);
     } else if (this.activityIntensity >= 5.0) {
-      this.currentIntervalMs = 100; // Over-clock pulse for active editing
+      this.currentIntervalMs = 1000; // Avoid 10Hz global churn from over-clocking
     } else if (this.activityIntensity >= 2.0) {
-      this.currentIntervalMs = 300; // Active user pulse
+      this.currentIntervalMs = 500;
     } else if (idleSeconds < 10) {
       this.currentIntervalMs = 1000; // Standard pulse
     } else {

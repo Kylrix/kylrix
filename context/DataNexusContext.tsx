@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useRef, useCallback, useEffect, ReactNode, useState } from 'react';
+import React, { createContext, useContext, useRef, useCallback, useEffect, ReactNode, useState, useMemo } from 'react';
 import { NEXUS_INVALIDATE_EVENT } from '@/lib/ecosystem/nexus-bridge';
 import { getRxDB, migrateLocalStorageToRxDB } from '@/lib/webrtc/RxDBManager';
 
@@ -268,17 +268,31 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
         return LocalEngine.query<T>(key, fetcher, { ttl });
     }, []);
 
-    return (
-        <DataNexusContext.Provider value={{ 
-            getCachedData, 
+    const value = useMemo<DataNexusContextType>(
+        () => ({
+            getCachedData,
             getCachedDataAsync,
-            setCachedData, 
-            fetchOptimized, 
-            invalidate, 
+            setCachedData,
+            fetchOptimized,
+            invalidate,
             refreshInBackground,
             triggerBackgroundSync,
-            isRefreshing
-        }}>
+            isRefreshing,
+        }),
+        [
+            getCachedData,
+            getCachedDataAsync,
+            setCachedData,
+            fetchOptimized,
+            invalidate,
+            refreshInBackground,
+            triggerBackgroundSync,
+            isRefreshing,
+        ],
+    );
+
+    return (
+        <DataNexusContext.Provider value={value}>
             {children}
         </DataNexusContext.Provider>
     );

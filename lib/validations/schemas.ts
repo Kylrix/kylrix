@@ -79,7 +79,8 @@ export const ChatMessageSchema = z.object({
   content: z.string().min(1),
   type: z.string().default('text'),
   attachments: z.array(z.string()).optional(),
-  replyTo: z.string().optional()});
+  replyTo: z.string().optional(),
+  isBookmark: z.boolean().optional()});
 
 export const ReactionSchema = z.object({
   conversationId: IDSchema,

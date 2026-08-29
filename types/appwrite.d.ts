@@ -651,6 +651,7 @@ export type Messages = Models.Row & {
     isPinned: boolean | null;
     isVoice: boolean;
     metadata: string | null;
+    isBookmark: boolean;
 }
 
 export type Conversations = Models.Row & {

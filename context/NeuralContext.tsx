@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, ReactNode, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { NeuralEngine, RenderAnomalyReport } from '@/lib/services/NeuralEngine';
 
@@ -19,11 +19,14 @@ export function NeuralProvider({ children }: { children: ReactNode }) {
     NeuralEngine.recordPattern('navigate', pathname);
   }, [pathname]);
 
-  const value: NeuralContextType = {
-    recordPattern: (action, contextId) => NeuralEngine.recordPattern(action, contextId),
-    reportAnomaly: (report) => NeuralEngine.reportEmptyStateAnomaly(report),
-    getAnomalyHistory: () => NeuralEngine.getAnomalyHistory(),
-  };
+  const value = useMemo<NeuralContextType>(
+    () => ({
+      recordPattern: (action, contextId) => NeuralEngine.recordPattern(action, contextId),
+      reportAnomaly: (report) => NeuralEngine.reportEmptyStateAnomaly(report),
+      getAnomalyHistory: () => NeuralEngine.getAnomalyHistory(),
+    }),
+    [],
+  );
 
   return <NeuralContext.Provider value={value}>{children}</NeuralContext.Provider>;
 }

@@ -6,6 +6,7 @@ import {
   LAST_ROUTE_COOKIE,
 } from '@/lib/ecosystem/resume-route';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
+import { enforceApiIpShield } from '@/lib/api/edge-shield';
 
 /**
  * KYLRIX APPLICATION LAYER PROTECTION
@@ -144,21 +145,52 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // Skip static assets, API routes, RSC flight streams, and Next.js internals entirely — zero overhead
-  const isRSC =
-    request.headers.get('RSC') === '1' ||
-    request.headers.has('next-router-prefetch') ||
-    request.headers.has('next-router-state-tree') ||
-    searchParams.has('_rsc') ||
-    request.headers.get('accept')?.includes('text/x-component');
+  // Skip static assets — but protect public API/MCP surfaces from IP pounding.
+  if (
+    pathname.startsWith('/api/v1') ||
+    pathname === '/api/mcp' ||
+    pathname.startsWith('/api/mcp/')
+  ) {
+    const shield = enforceApiIpShield(request);
+    if (!shield.allowed) {
+      return NextResponse.json(
+        {
+          error: 'edge_rate_limited',
+          message: 'Too many API requests from this network. Retry shortly.',
+          retry_after: shield.retryAfterSec,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(shield.retryAfterSec),
+            'Cache-Control': 'no-store',
+          },
+        },
+      );
+    }
+    return NextResponse.next();
+  }
 
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/favicon') ||
-    pathname.includes('.') || // static files like .css, .js, .png
-    isRSC
+    pathname.includes('.') // static files like .css, .js, .png
   ) {
+    return NextResponse.next();
+  }
+
+  // Next.js RSC flight + Server Actions (GET or POST) — never throttle; throttling these
+  // breaks rendering and can trigger 429 → auto-reload loops during client churn.
+  const isRscFlight =
+    request.headers.get('RSC') === '1' ||
+    request.headers.has('next-router-prefetch') ||
+    request.headers.has('next-router-state-tree') ||
+    request.headers.has('Next-Action') ||
+    searchParams.has('_rsc') ||
+    request.headers.get('accept')?.includes('text/x-component');
+
+  if (isRscFlight) {
     return NextResponse.next();
   }
 

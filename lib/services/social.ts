@@ -994,6 +994,58 @@ export const SocialService = {
         return enriched;
     },
 
+    async getUserReplies(userId: string, currentUserId?: string) {
+        try {
+            const moments = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
+                Query.select(MOMENT_LIST_SELECT),
+                Query.equal('userId', userId),
+                Query.equal('momentKind', 'reply'),
+                Query.orderDesc('$createdAt'),
+                Query.limit(100),
+            ]);
+            const rows = moments.rows || [];
+            return rows.length
+                ? Promise.all(rows.map((m: any) => this.enrichMoment(m, currentUserId)))
+                : [];
+        } catch (error) {
+            console.error('[SocialService] getUserReplies error', error);
+            return [];
+        }
+    },
+
+    async getUserLikedMoments(userId: string, currentUserId?: string) {
+        try {
+            const interactions = await tablesDB.listRows(DB_ID, INTERACTIONS_TABLE, [
+                Query.select(INTERACTION_LIST_SELECT),
+                Query.equal('userId', userId),
+                Query.equal('emoji', 'like'),
+                Query.orderDesc('$createdAt'),
+                Query.limit(120),
+            ]);
+            const likedAt = new Map<string, string>();
+            const momentIds: string[] = [];
+            for (const row of interactions.rows || []) {
+                if (!row?.messageId || likedAt.has(row.messageId)) continue;
+                likedAt.set(row.messageId, row.createdAt || row.$createdAt || '');
+                momentIds.push(row.messageId);
+            }
+            if (!momentIds.length) return [];
+
+            const moments = await fetchRowsByIds(DB_ID, MOMENTS_TABLE, momentIds);
+            const enriched = await Promise.all(
+                moments.map((m: any) => this.enrichMoment(m, currentUserId)),
+            );
+            return enriched.sort((a: any, b: any) => {
+                const aTime = new Date(likedAt.get(a.$id) || a.$createdAt || 0).getTime();
+                const bTime = new Date(likedAt.get(b.$id) || b.$createdAt || 0).getTime();
+                return bTime - aTime;
+            });
+        } catch (error) {
+            console.error('[SocialService] getUserLikedMoments error', error);
+            return [];
+        }
+    },
+
     async getReplies(momentId: string, currentUserId?: string) {
         const cachedThread = getCachedMomentThread(momentId);
         if (cachedThread?.replies?.length) return cachedThread.replies;

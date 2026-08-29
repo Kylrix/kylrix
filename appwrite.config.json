@@ -3878,6 +3878,13 @@
                     "size": 16384,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isBookmark",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -3940,6 +3947,32 @@
                     "orders": [
                         "ASC",
                         "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_conv_bookmark_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_conv_bookmark_v2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId",
+                        "isBookmark",
+                        "$createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "DESC"
                     ]
                 }
             ]
@@ -4728,6 +4761,32 @@
                         "ASC",
                         "ASC"
                     ]
+                },
+                {
+                    "key": "idx_user_emoji_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_user_emoji_created_v2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "emoji",
+                        "$createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "DESC"
+                    ]
                 }
             ]
         },
@@ -4948,6 +5007,30 @@
                     "orders": [
                         "ASC",
                         "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_user_kind_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_user_created_v2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "$createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
                     ]
                 }
             ]

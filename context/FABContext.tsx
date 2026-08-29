@@ -37,7 +37,20 @@ export function FABProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<FABConfiguration>(DEFAULT_CONFIG);
 
   const setConfiguration = useCallback((newConfig: Partial<FABConfiguration>) => {
-    setConfig((prev) => ({ ...prev, ...newConfig }));
+    setConfig((prev) => {
+      const merged = { ...prev, ...newConfig };
+      if (
+        merged.isVisible === prev.isVisible &&
+        merged.mainColor === prev.mainColor &&
+        merged.mainIcon === prev.mainIcon &&
+        merged.onMainClick === prev.onMainClick &&
+        merged.suppressWorkflow === prev.suppressWorkflow &&
+        merged.actions === prev.actions
+      ) {
+        return prev;
+      }
+      return merged;
+    });
   }, []);
 
   const resetConfiguration = useCallback(() => {

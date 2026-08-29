@@ -374,19 +374,24 @@ export function useConnectMomentsFeed() {
     });
   }, []);
 
-  // Feed settings — local-first synced to live prefs, instant adapt, offline cached
+  // Feed settings — single hydrate + subscription (was duplicated across two effects).
   useEffect(() => {
     let cancelled = false;
+    let unsub: (() => void) | undefined;
     void (async () => {
       try {
         const { getConnectFeedSettings, subscribeConnectFeedSettings } = await import('@/lib/connect/feed-settings');
-        const s = await getConnectFeedSettings();
-        if (!cancelled) setFeedSettings(s);
-        const unsub = subscribeConnectFeedSettings((next) => { if (!cancelled) setFeedSettings(next); });
-        return unsub;
+        const settings = await getConnectFeedSettings().catch(() => null);
+        if (!cancelled && settings) setFeedSettings(settings);
+        unsub = subscribeConnectFeedSettings((next) => {
+          if (!cancelled) setFeedSettings(next);
+        });
       } catch {}
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
   }, []);
 
   // 1) Hydrate unified feed from LocalEngine first — enforce system-level sanitization & slot allocation
@@ -394,10 +399,6 @@ export function useConnectMomentsFeed() {
     let cancelled = false;
     void (async () => {
       try {
-        const { getConnectFeedSettings } = await import('@/lib/connect/feed-settings');
-        const settings = await getConnectFeedSettings().catch(() => null);
-        if (!cancelled && settings) setFeedSettings(settings);
-
         const [cached, ecoCached] = await Promise.all([
           LocalEngine.cacheGet<UnifiedFeedItem[]>(UNIFIED_CACHE).catch(() => null),
           LocalEngine.cacheGet<any[]>('f_moments_list').catch(() => null),
@@ -428,6 +429,8 @@ export function useConnectMomentsFeed() {
           memoryEco = ecoCached;
           setEcosystemMoments(ecoCached);
           if (!Array.isArray(cached) || !cached.length) {
+            const { getConnectFeedSettings } = await import('@/lib/connect/feed-settings');
+            const settings = await getConnectFeedSettings().catch(() => null);
             const built = buildItems(ecoCached, [], {}, { replyCount: {}, likeCount: {} }, settings || undefined);
             if (built.length) {
               memoryUnified = built;

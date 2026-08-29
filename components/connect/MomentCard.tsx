@@ -63,7 +63,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   const [reposted, setReposted] = useState(false);
   const [zaps, setZaps] = useState(item.zapsCount || 0);
   const [busy, setBusy] = useState(false);
-  const [feedSettings, setFeedSettings] = useState<any>(null);
+  const [bookmarkBusy, setBookmarkBusy] = useState(false);
 
   // Sync state if item updates from live stream
   React.useEffect(() => {
@@ -80,19 +80,21 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   const preview = truncateMomentBody(bodyText || '');
   const isNostr = item.source === 'nostr';
 
-  // Respect live settings — auto-preview off → hide media, auto-play off → never autoplay
+  // Feed settings are hydrated once by the connect feed hooks — avoid N× getConnectFeedSettings per card grid.
+  const [feedSettings, setFeedSettings] = React.useState<any>(() =>
+    typeof window !== 'undefined' ? (window as any).__KylrixConnectFeedSettings ?? null : null,
+  );
   React.useEffect(() => {
     let cancelled = false;
-    void (async () => {
-      try {
-        const { getConnectFeedSettings, subscribeConnectFeedSettings } = await import('@/lib/connect/feed-settings');
-        const s = await getConnectFeedSettings();
-        if (!cancelled) setFeedSettings(s);
-        const unsub = subscribeConnectFeedSettings((next) => { if (!cancelled) setFeedSettings(next); });
-        return unsub;
-      } catch {}
-    })();
-    return () => { cancelled = true; };
+    const onSettings = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!cancelled && detail) setFeedSettings(detail);
+    };
+    window.addEventListener('kylrix-connect-feed-settings', onSettings as any);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('kylrix-connect-feed-settings', onSettings as any);
+    };
   }, []);
   const _autoPreview = feedSettings ? (feedSettings as any).autoPreviewMedia !== false : true;
   const _autoPlay = feedSettings ? !!(feedSettings as any).autoPlayMedia : false;
@@ -239,12 +241,46 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     try {
       const url =
         item.source === 'nostr'
-          ? `${window.location.origin}/moment/nostr_${momentId}`
+          ? `${window.location.origin}/connect/post/nostr_${momentId}`
           : buildPublicResourceUrl('moment', momentId);
       await navigator.clipboard.writeText(url);
       toast.success('Link copied');
     } catch {
       /* ignore */
+    }
+  };
+
+  const onBookmark = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!momentId || bookmarkBusy) return;
+    if (!user?.$id) {
+      toast.error('Sign in to bookmark');
+      return;
+    }
+    setBookmarkBusy(true);
+    try {
+      const { bookmarkToSelfChat } = await import('@/lib/chat/bookmark-to-self-chat');
+      const url =
+        item.source === 'nostr'
+          ? `${window.location.origin}/connect/post/nostr_${momentId}`
+          : buildPublicResourceUrl('moment', momentId);
+      const title = preview
+        ? `Moment — ${preview.slice(0, 80)}`
+        : `Moment by ${item.authorName.replace(/^@/, '')}`;
+      await bookmarkToSelfChat({
+        userId: user.$id,
+        kind: 'moment',
+        objectId: momentId,
+        title,
+        url,
+        snippet: preview && preview.length > 80 ? preview : undefined,
+      });
+      toast.success('Saved to your personal chat');
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not save bookmark');
+    } finally {
+      setBookmarkBusy(false);
     }
   };
 
@@ -314,19 +350,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
       {
         label: 'Save to Bookmarks',
         icon: <Bookmark size={16} />,
-        onClick: async () => {
-          if (!momentId) return;
-          try {
-            const { LocalEngine } = await import('@/lib/services/LocalEngine');
-            const currentBookmarks = (await LocalEngine.cacheGet<string[]>('kylrix:bookmarks')) || [];
-            if (!currentBookmarks.includes(momentId)) {
-              await LocalEngine.cacheSet('kylrix:bookmarks', [...currentBookmarks, momentId]);
-            }
-            toast.success('Saved to bookmarks');
-          } catch {
-            toast.error('Could not bookmark');
-          }
-        },
+        onClick: () => { void onBookmark(); },
       },
       {
         label: `View ${item.authorName.replace(/^@/, '')}'s Profile`,
@@ -375,9 +399,9 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
           open();
         }
       }}
-      className="w-full max-w-full min-w-[280px] sm:min-w-[320px] h-full flex flex-col justify-between text-left rounded-[22px] bg-[#161412] border border-[#34322F] hover:border-[#3C3A38] hover:bg-[#1C1A18] transition-all duration-200 hover:-translate-y-px cursor-pointer focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
+      className="w-full max-w-full min-w-[280px] sm:min-w-[320px] h-full flex flex-col text-left rounded-[22px] bg-[#161412] border border-white/[0.08] hover:border-white/[0.12] hover:bg-[#1C1A18] transition-all duration-200 hover:-translate-y-px cursor-pointer focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
     >
-      <div className="flex gap-3 p-4 min-w-0 max-w-full">
+      <div className="flex gap-3 p-4 min-w-0 max-w-full flex-1">
         <button
           type="button"
           onClick={openProfilePreview}
@@ -457,115 +481,96 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
               ))}
             </div>
           ) : null}
+        </div>
+      </div>
 
-          <div
-            className="mt-3 flex items-center justify-between max-w-md text-white/40"
-            onClick={(e) => e.stopPropagation()}
+      <div
+        className="px-4 pb-4 pt-0 shrink-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="grid grid-cols-6 gap-0.5 rounded-2xl border border-white/[0.08] bg-[#0A0908] p-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              open();
+            }}
+            className="group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl text-white/75 hover:text-[#60A5FA] hover:bg-white/[0.04] transition-colors"
+            aria-label="Comments"
           >
-            {/* Replies */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                open();
-              }}
-              className="group inline-flex items-center gap-1.5 text-[13px] font-semibold hover:text-[#1D9BF0] transition-colors"
-              aria-label="Comments"
-            >
-              <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
-                <MessageCircle size={16} />
-              </span>
-              <span className="text-xs font-mono">{(item.repliesCount || 0) > 0 ? item.repliesCount : ''}</span>
-            </button>
+            <MessageCircle size={17} strokeWidth={2.25} />
+            <span className="text-[10px] font-mono font-bold tabular-nums text-white/55 group-hover:text-inherit min-h-[12px]">
+              {(item.repliesCount || 0) > 0 ? item.repliesCount : ''}
+            </span>
+          </button>
 
-            {/* Reposts (Pulse) */}
-            <button
-              type="button"
-              disabled={busy || reposted}
-              className={`group inline-flex items-center gap-1.5 text-[13px] font-semibold transition-colors ${
-                reposted ? 'text-[#00BA7C]' : 'hover:text-[#00BA7C]'
-              }`}
-              aria-label="Repost"
-              onClick={onRepost}
-            >
-              <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
-                <Repeat2 size={16} className={reposted ? 'text-[#00BA7C]' : ''} />
-              </span>
-              <span className="text-xs font-mono">{reposts > 0 ? reposts : ''}</span>
-            </button>
+          <button
+            type="button"
+            disabled={busy || reposted}
+            className={`group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl transition-colors ${
+              reposted
+                ? 'text-[#34D399] bg-white/[0.03]'
+                : 'text-white/75 hover:text-[#34D399] hover:bg-white/[0.04]'
+            }`}
+            aria-label="Repost"
+            onClick={onRepost}
+          >
+            <Repeat2 size={17} strokeWidth={2.25} />
+            <span className="text-[10px] font-mono font-bold tabular-nums text-white/55 group-hover:text-inherit min-h-[12px]">
+              {reposts > 0 ? reposts : ''}
+            </span>
+          </button>
 
-            {/* Zaps (Nostr Lightning / Ecosystem Rix) */}
-            <button
-              type="button"
-              className="group inline-flex items-center gap-1.5 text-[13px] font-semibold hover:text-[#F59E0B] transition-colors"
-              aria-label="Zap"
-              onClick={onZap}
-            >
-              <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
-                <Zap size={16} className={zaps > 0 ? 'text-[#F59E0B] fill-[#F59E0B]' : ''} />
-              </span>
-              <span className="text-xs font-mono">{zaps > 0 ? zaps : ''}</span>
-            </button>
+          <button
+            type="button"
+            className="group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl text-white/75 hover:text-[#F59E0B] hover:bg-white/[0.04] transition-colors"
+            aria-label="Zap"
+            onClick={onZap}
+          >
+            <Zap size={17} strokeWidth={2.25} className={zaps > 0 ? 'fill-[#F59E0B] text-[#F59E0B]' : ''} />
+            <span className="text-[10px] font-mono font-bold tabular-nums text-white/55 group-hover:text-inherit min-h-[12px]">
+              {zaps > 0 ? zaps : ''}
+            </span>
+          </button>
 
-            {/* Likes / Reactions */}
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onLike}
-              className={`group inline-flex items-center gap-1.5 text-[13px] font-semibold transition-colors ${
-                liked ? 'text-[#F91880]' : 'hover:text-[#F91880]'
-              }`}
-              aria-label="Like"
-            >
-              <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
-                <Heart size={16} className={liked ? 'fill-[#F91880]' : ''} />
-              </span>
-              <span className="text-xs font-mono">{likes > 0 ? likes : ''}</span>
-            </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onLike}
+            className={`group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl transition-colors ${
+              liked
+                ? 'text-[#F472B6] bg-white/[0.03]'
+                : 'text-white/75 hover:text-[#F472B6] hover:bg-white/[0.04]'
+            }`}
+            aria-label="Like"
+          >
+            <Heart size={17} strokeWidth={2.25} className={liked ? 'fill-[#F472B6]' : ''} />
+            <span className="text-[10px] font-mono font-bold tabular-nums text-white/55 group-hover:text-inherit min-h-[12px]">
+              {likes > 0 ? likes : ''}
+            </span>
+          </button>
 
-            {/* Bookmark (Send to self/unencrypted chat) */}
-            <button
-              type="button"
-              onClick={async (e) => {
-                e.stopPropagation();
-                if (!momentId) return;
-                try {
-                  const _url = item.source === 'nostr'
-                    ? `${window.location.origin}/connect/post/nostr_${momentId}`
-                    : buildPublicResourceUrl('moment', momentId);
-                  const { LocalEngine } = await import('@/lib/services/LocalEngine');
-                  const currentBookmarks = (await LocalEngine.cacheGet<string[]>('kylrix:bookmarks')) || [];
-                  if (!currentBookmarks.includes(momentId)) {
-                    await LocalEngine.cacheSet('kylrix:bookmarks', [...currentBookmarks, momentId]);
-                  }
-                  toast.success('Saved to your notes & bookmarks');
-                } catch {
-                  toast.error('Could not bookmark');
-                }
-              }}
-              className="group inline-flex items-center gap-1.5 text-[13px] font-semibold hover:text-[#F59E0B] transition-colors"
-              aria-label="Bookmark"
-              title="Save to bookmarks"
-            >
-              <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
-                </svg>
-              </span>
-            </button>
+          <button
+            type="button"
+            disabled={bookmarkBusy}
+            onClick={onBookmark}
+            className="group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl text-white/75 hover:text-[#F59E0B] hover:bg-white/[0.04] transition-colors disabled:opacity-40"
+            aria-label="Bookmark"
+            title="Save to your personal chat"
+          >
+            <Bookmark size={17} strokeWidth={2.25} />
+            <span className="text-[10px] font-mono font-bold min-h-[12px]" aria-hidden />
+          </button>
 
-            {/* Share */}
-            <button
-              type="button"
-              onClick={onShare}
-              className="group inline-flex items-center gap-1.5 text-[13px] font-semibold hover:text-[#1D9BF0] transition-colors"
-              aria-label="Share"
-            >
-              <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
-                <Share size={16} />
-              </span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onShare}
+            className="group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl text-white/75 hover:text-[#60A5FA] hover:bg-white/[0.04] transition-colors"
+            aria-label="Share"
+          >
+            <Share size={17} strokeWidth={2.25} />
+            <span className="text-[10px] font-mono font-bold min-h-[12px]" aria-hidden />
+          </button>
         </div>
       </div>
     </article>

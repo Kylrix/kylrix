@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PatService } from '@/lib/services/pats';
 import { enforceApiRateLimits, RateLimitError, type ApiRateLimits } from '@/lib/api/rate-limits';
+import {
+  assertShieldAllowed,
+  EdgeShieldError,
+  enforceApiAnonShield,
+  enforcePatBurstShield,
+} from '@/lib/api/edge-shield';
 import { assertScope, type PatScope } from '@/lib/api/scopes';
 import { getActor } from '@/lib/actions/secure-ops';
 import { looksLikeJwt, verifyOAuthAccessToken } from '@/lib/oauth2/verify-access-token';
+
+export const MAX_API_BODY_BYTES = 256_000;
 
 export type ApiActor = {
   userId: string;
@@ -28,6 +36,7 @@ function extractBearer(req: NextRequest): string | null {
 export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
   const bearer = extractBearer(req);
   if (!bearer) {
+    assertShieldAllowed(enforceApiAnonShield(req));
     const err = new Error('Missing Authorization Bearer token');
     (err as any).status = 401;
     (err as any).code = 'unauthorized';
@@ -43,11 +52,13 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
   ) {
     const verified = await PatService.verifyBearer(bearer);
     if (!verified) {
+      assertShieldAllowed(enforceApiAnonShield(req));
       const err = new Error('Invalid or revoked personal access token');
       (err as any).status = 401;
       (err as any).code = 'invalid_pat';
       throw err;
     }
+    assertShieldAllowed(enforcePatBurstShield(verified.pat.$id));
     const { limits } = await enforceApiRateLimits({
       userId: verified.userId,
       patId: verified.pat.$id,
@@ -73,9 +84,11 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
   if (looksLikeJwt(bearer)) {
     const oauth = await verifyOAuthAccessToken(bearer);
     if (oauth) {
+      const oauthPatKey = `oauth_${(oauth.clientId || 'client').slice(0, 28)}`;
+      assertShieldAllowed(enforcePatBurstShield(oauthPatKey));
       const { limits } = await enforceApiRateLimits({
         userId: oauth.userId,
-        patId: `oauth_${(oauth.clientId || 'client').slice(0, 28)}`,
+        patId: oauthPatKey,
       });
       return {
         userId: oauth.userId,
@@ -90,14 +103,17 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
   // Session JWT path (for future clients) — still rate-limited via synthetic pat bucket id
   const actor = await getActor(bearer).catch(() => null);
   if (!actor?.$id) {
+    assertShieldAllowed(enforceApiAnonShield(req));
     const err = new Error('Invalid credentials');
     (err as any).status = 401;
     (err as any).code = 'unauthorized';
     throw err;
   }
+  const sessionPatKey = `sess_${actor.$id}`.slice(0, 36);
+  assertShieldAllowed(enforcePatBurstShield(sessionPatKey));
   const { limits } = await enforceApiRateLimits({
     userId: actor.$id,
-    patId: `sess_${actor.$id}`.slice(0, 36),
+    patId: sessionPatKey,
   });
   return {
     userId: actor.$id,
@@ -145,6 +161,18 @@ export function jsonErr(err: unknown) {
       { status: 429, headers }
     );
   }
+  if (e instanceof EdgeShieldError || e?.code === 'edge_rate_limited') {
+    headers['Retry-After'] = String(e.retryAfterSec || 60);
+    return NextResponse.json(
+      {
+        error: 'edge_rate_limited',
+        message: e?.message || 'Too many requests.',
+        reason: e?.reason || 'burst',
+        tier: e?.tier || 'edge',
+      },
+      { status: 429, headers },
+    );
+  }
   return NextResponse.json(
     {
       ok: false,
@@ -164,7 +192,7 @@ export async function withApiGuard(
   try {
     // Hard method / size gates
     const cl = Number(req.headers.get('content-length') || 0);
-    if (cl > 256_000) {
+    if (cl > MAX_API_BODY_BYTES) {
       const err = new Error('Payload too large (maximum 256 KB)');
       (err as any).status = 413;
       throw err;

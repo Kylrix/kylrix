@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, ReactNode, useState, useCallback, useEffect } from 'react';
+import React, { createContext, ReactNode, useState, useCallback, useEffect, useMemo } from 'react';
 import { SecurityEngine, KeychainEntry } from '@/lib/services/SecurityEngine';
 import { useAuth } from '@/context/auth/AuthContext';
 
@@ -87,15 +87,18 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     });
   }, [user?.$id, syncKeychainLocal]);
 
-  const value: SecurityContextType = {
-    isUnlocked,
-    enterObservationMode,
-    exitObservationMode,
-    unlockVault,
-    lockVault,
-    getKeychain,
-    syncKeychainLocal,
-  };
+  const value = useMemo<SecurityContextType>(
+    () => ({
+      isUnlocked,
+      enterObservationMode,
+      exitObservationMode,
+      unlockVault,
+      lockVault,
+      getKeychain,
+      syncKeychainLocal,
+    }),
+    [isUnlocked, enterObservationMode, exitObservationMode, unlockVault, lockVault, getKeychain, syncKeychainLocal],
+  );
 
   return <SecurityContext.Provider value={value}>{children}</SecurityContext.Provider>;
 }

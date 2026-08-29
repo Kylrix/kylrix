@@ -206,6 +206,7 @@ export async function createMessageInternal(payload: {
   type: string;
   attachments?: string[];
   replyTo?: string;
+  isBookmark?: boolean;
   jwt?: string;
   actorId?: string;
 }) {
@@ -247,6 +248,7 @@ export async function createMessageInternal(payload: {
       replyTo: payload.replyTo || null,
       readBy: [payload.senderId],
       isVoice: payload.type === 'voice' || payload.content?.startsWith('__voice_note__:'),
+      isBookmark: Boolean(payload.isBookmark),
       createdAt: now,
       updatedAt: now},
     buildMessagePermissions(payload.senderId, recipientIds));

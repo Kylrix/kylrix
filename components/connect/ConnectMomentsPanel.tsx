@@ -1,39 +1,79 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Sparkles, Sliders, RefreshCw, Search } from 'lucide-react';
+import { Bookmark, Heart, MessageCircle, Sliders, Sparkles } from 'lucide-react';
 import { MomentCard } from '@/components/connect/MomentCard';
 import { useConnectMomentsFeed } from '@/components/connect/useConnectMomentsFeed';
 import { ConnectFeedSettingsPanel } from '@/components/connect/ConnectFeedSettingsPanel';
+import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
-import { requestSmartLocalRefresh } from '@/lib/sync/local-soft-refresh';
+import { useConnectPersonalTab } from '@/hooks/useConnectPersonalTab';
+
+export type ConnectTab = 'moments' | 'replies' | 'likes' | 'bookmarks';
+
+const TABS: { id: ConnectTab; label: string }[] = [
+  { id: 'moments', label: 'Moments' },
+  { id: 'replies', label: 'Replies' },
+  { id: 'likes', label: 'Likes' },
+  { id: 'bookmarks', label: 'Bookmarks' },
+];
+
+const TAB_META: Record<
+  ConnectTab,
+  { title: string; emptyTitle: string; emptyBody: string; icon: React.ReactNode }
+> = {
+  moments: {
+    title: 'Moments',
+    emptyTitle: 'No moments yet',
+    emptyBody: 'Share an update to kick off the feed.',
+    icon: <Sparkles size={24} className="text-[#F59E0B]/70" />,
+  },
+  replies: {
+    title: 'Replies',
+    emptyTitle: 'No replies yet',
+    emptyBody: 'Your replies on Kylrix and Nostr will show up here.',
+    icon: <MessageCircle size={24} className="text-[#6366F1]/70" />,
+  },
+  likes: {
+    title: 'Likes',
+    emptyTitle: 'No likes yet',
+    emptyBody: 'Posts you like across Kylrix and Nostr appear here.',
+    icon: <Heart size={24} className="text-rose-400/80" />,
+  },
+  bookmarks: {
+    title: 'Bookmarks',
+    emptyTitle: 'Nothing saved yet',
+    emptyBody: 'Bookmark moments to find them here — saved to your personal chat.',
+    icon: <Bookmark size={24} className="text-[#F59E0B]/70" />,
+  },
+};
 
 interface ConnectMomentsPanelProps {
   onCreateMoment?: () => void;
 }
 
 export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps) {
-  const { items, total, loading, refreshing, hasMore, loadMore, refresh } =
-    useConnectMomentsFeed();
+  const [tab, setTab] = useState<ConnectTab>('moments');
+  const momentsFeed = useConnectMomentsFeed();
+  const repliesFeed = useConnectPersonalTab('replies', tab === 'replies');
+  const likesFeed = useConnectPersonalTab('likes', tab === 'likes');
+  const bookmarksFeed = useConnectPersonalTab('bookmarks', tab === 'bookmarks');
+
+  const activeFeed =
+    tab === 'moments'
+      ? momentsFeed
+      : tab === 'replies'
+        ? repliesFeed
+        : tab === 'likes'
+          ? likesFeed
+          : bookmarksFeed;
+
+  const { items, total, loading, hasMore, loadMore } = activeFeed;
+  const meta = TAB_META[tab];
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const [spinning, setSpinning] = useState(false);
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
-
-  const handleSmartReload = async () => {
-    setSpinning(true);
-    try {
-      await requestSmartLocalRefresh({
-        scope: 'moments',
-        onLocalRefresh: () => refresh(),
-        onRemoteFetch: () => refresh(),
-        ephemeralItems: items,
-      });
-    } finally {
-      setTimeout(() => setSpinning(false), 350);
-    }
-  };
 
   const onIntersect = useCallback(
     (entries: IntersectionObserverEntry[]) => {
@@ -52,63 +92,64 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
     });
     io.observe(el);
     return () => io.disconnect();
-  }, [onIntersect, hasMore, items.length]);
+  }, [onIntersect, hasMore, items.length, tab]);
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto min-w-0 overflow-x-hidden">
-      <header className="flex items-center justify-between gap-4 px-1 min-w-0">
-        <div className="min-w-0">
-          <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight font-clash truncate">
-            Moments
-          </h1>
-          <p className="text-white/45 text-xs font-semibold mt-1 font-satoshi">
-            <span className="font-mono font-bold text-[#F59E0B]">{total}</span> updates
-          </p>
+    <div className="flex flex-col gap-5 w-full max-w-2xl mx-auto min-w-0 overflow-x-hidden">
+      <header className="flex flex-col gap-4 px-1 min-w-0">
+        <div className="flex items-center justify-between gap-4 min-w-0">
+          <div className="min-w-0">
+            <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight font-clash truncate">
+              {meta.title}
+            </h1>
+            <p className="text-white/45 text-xs font-semibold mt-1 font-satoshi">
+              <span className="font-mono font-bold text-[#F59E0B]">{total}</span>{' '}
+              {tab === 'moments' ? 'updates' : tab === 'bookmarks' ? 'saved' : 'items'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <HangoutTabTrigger />
+            <button
+              type="button"
+              onClick={() => {
+                const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+                const node = <ConnectFeedSettingsPanel onClose={isDesktop ? closeSidebar : closeOverlay} />;
+                if (isDesktop) openSidebar(node, 'connect-feed-settings', { hideHeader: true });
+                else openOverlay(node);
+              }}
+              className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-white/[0.08] flex items-center justify-center hover:border-white/15 hover:bg-white/[0.05] transition-colors"
+              aria-label="Feed settings"
+              title="Feed settings"
+            >
+              <Sliders size={16} className="text-white/80" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(
-                  new CustomEvent('kylrix:open-topbar-search', {
-                    detail: { mode: 'feed', placeholder: 'Search feed moments, topics, and authors...' }
-                  })
-                );
-              }
-            }}
-            className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center hover:border-amber-400/40 hover:bg-white/5 transition-colors group"
-            aria-label="Feed search"
-            title="Search feed moments"
-          >
-            <Search size={16} className="text-white group-hover:text-[#F59E0B] transition-colors" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
-              const node = <ConnectFeedSettingsPanel onClose={isDesktop ? closeSidebar : closeOverlay} />;
-              if (isDesktop) openSidebar(node, 'connect-feed-settings', { hideHeader: true });
-              else openOverlay(node);
-            }}
-            className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center hover:border-white/15 hover:bg-white/5 transition-colors"
-            aria-label="Live feed settings"
-          >
-            <Sliders size={16} className="text-white" />
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSmartReload()}
-            disabled={spinning || refreshing}
-            className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center disabled:opacity-40 hover:border-white/15 transition-colors"
-            aria-label="Refresh moments"
-          >
-            <RefreshCw
-              size={16}
-              className={spinning || refreshing ? 'text-[#F59E0B] animate-spin' : 'text-white'}
-            />
-          </button>
-        </div>
+
+        <nav
+          className="p-1 rounded-2xl bg-[#0A0908] border border-white/[0.08] flex gap-1 overflow-x-auto scrollbar-none"
+          aria-label="Connect feed tabs"
+        >
+          {TABS.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                aria-current={active ? 'page' : undefined}
+                className={[
+                  'flex-1 min-w-[4.5rem] px-3 py-2.5 rounded-xl text-[11px] sm:text-xs font-extrabold font-satoshi transition-colors whitespace-nowrap',
+                  active
+                    ? 'bg-[#161412] text-white border border-white/[0.08] shadow-sm'
+                    : 'text-white/45 hover:text-white/75 border border-transparent',
+                ].join(' ')}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </nav>
       </header>
 
       {loading ? (
@@ -123,13 +164,11 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center rounded-[22px] bg-[#161412] border border-dashed border-[#34322F] px-4">
           <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center mb-4">
-            <Sparkles size={24} className="text-[#F59E0B]/70" />
+            {meta.icon}
           </div>
-          <h4 className="text-white font-black text-lg font-clash mb-1">No moments yet</h4>
-          <p className="text-white/45 text-xs max-w-xs mb-5 font-satoshi">
-            Share an update to kick off the feed.
-          </p>
-          {onCreateMoment ? (
+          <h4 className="text-white font-black text-lg font-clash mb-1">{meta.emptyTitle}</h4>
+          <p className="text-white/45 text-xs max-w-xs mb-5 font-satoshi">{meta.emptyBody}</p>
+          {tab === 'moments' && onCreateMoment ? (
             <button
               type="button"
               onClick={onCreateMoment}
@@ -147,13 +186,15 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
           {items.map((item) => (
             <MomentCard key={item.id} item={item} />
           ))}
-          <div
-            ref={sentinelRef}
-            className="h-12 w-full flex items-center justify-center py-4"
-            aria-hidden
-          >
-            <span className="w-5 h-5 rounded-full border-2 border-white/10 border-t-[#F59E0B] animate-spin" />
-          </div>
+          {hasMore ? (
+            <div
+              ref={sentinelRef}
+              className="h-12 w-full flex items-center justify-center py-4 col-span-full"
+              aria-hidden
+            >
+              <span className="w-5 h-5 rounded-full border-2 border-white/10 border-t-[#F59E0B] animate-spin" />
+            </div>
+          ) : null}
         </div>
       )}
     </div>

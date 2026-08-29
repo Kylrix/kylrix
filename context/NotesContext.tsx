@@ -633,6 +633,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   /** Compose-lifecycle only. Dot green/amber is engine.ack / markPending — never here. */
   const registerComposeSession = useCallback((noteId: string) => {
     if (!noteId) return;
+    if (activeComposeNoteIdsRef.current.has(noteId)) return;
     activeComposeNoteIdsRef.current.add(noteId);
     markComposeDraft(noteId);
     setUnpersistedComposeDraftIds((prev) => {
@@ -645,6 +646,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const unregisterComposeSession = useCallback((noteId: string) => {
     if (!noteId) return;
+    if (!activeComposeNoteIdsRef.current.has(noteId)) return;
     activeComposeNoteIdsRef.current.delete(noteId);
     markComposePersisted(noteId);
     setUnpersistedComposeDraftIds((prev) => {
