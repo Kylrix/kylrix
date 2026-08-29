@@ -25,6 +25,7 @@ import {
   buildGoalUpdatePatch,
   resolveWorkspaceId,
   shapeNote,
+  shapeWorkspace,
 } from '@/sdk/contracts';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
@@ -1131,17 +1132,9 @@ export const ApiResources = {
       ],
     });
 
-    const ownedList = ownedRes.rows.map((r: any) => ({
-      id: r.$id,
-      title: r.title || r.name || 'Untitled',
-      summary: r.summary || r.description || null,
-      visibility: r.visibility || null,
-      isAgentic: Boolean(r.isAgentic),
-      isShared: false,
-      role: 'owner',
-      updatedAt: r.$updatedAt || r.updatedAt || null,
-      createdAt: r.$createdAt || r.createdAt || null,
-    }));
+    const ownedList = ownedRes.rows.map((r: any) =>
+      shapeWorkspace(r, { isShared: false, role: 'owner' }),
+    );
 
     // 2. Workspaces where user/agent is a collaborator
     const collabRes = await tables.listRows({
@@ -1162,17 +1155,9 @@ export const ApiResources = {
         .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: c.resourceId })
         .catch(() => null)) as any;
       if (ws) {
-        sharedList.push({
-          id: ws.$id,
-          title: ws.title || ws.name || 'Untitled',
-          summary: ws.summary || ws.description || null,
-          visibility: ws.visibility || null,
-          isAgentic: Boolean(ws.isAgentic),
-          isShared: true,
-          role: c.permission || 'writer',
-          updatedAt: ws.$updatedAt || ws.updatedAt || null,
-          createdAt: ws.$createdAt || ws.createdAt || null,
-        });
+        sharedList.push(
+          shapeWorkspace(ws, { isShared: true, role: c.permission || 'writer' }),
+        );
       }
     }
 
@@ -1206,17 +1191,7 @@ export const ApiResources = {
       role = collabRes.rows[0]?.permission || 'viewer';
     }
 
-    return {
-      id: row.$id,
-      title: row.title || row.name || 'Untitled',
-      summary: row.summary || row.description || null,
-      visibility: row.visibility || null,
-      isAgentic: Boolean(row.isAgentic),
-      isShared: isCollab,
-      role,
-      updatedAt: row.$updatedAt || row.updatedAt || null,
-      createdAt: row.$createdAt || row.createdAt || null,
-    };
+    return shapeWorkspace(row, { isShared: isCollab, role });
   },
 
   async addWorkspaceCollaborator(actor: ApiActor, workspaceId: string, body: Record<string, unknown>) {
@@ -1805,13 +1780,7 @@ export const ApiResources = {
         Permission.read(Role.user(actor.userId)),
       ],
     });
-    return {
-      id: (row as any).$id,
-      title: (row as any).title,
-      summary: (row as any).summary || null,
-      visibility: (row as any).visibility || null,
-      isAgentic: Boolean((row as any).isAgentic),
-    };
+    return shapeWorkspace(row as Record<string, unknown>);
   },
 
   async updateWorkspace(actor: ApiActor, id: string, body: Record<string, unknown>) {
@@ -1831,12 +1800,7 @@ export const ApiResources = {
       rowId: id,
       data: patch as any,
     });
-    return {
-      id: (row as any).$id,
-      title: (row as any).title,
-      summary: (row as any).summary || null,
-      visibility: (row as any).visibility || null,
-    };
+    return shapeWorkspace(row as Record<string, unknown>);
   },
 
   async deleteWorkspace(actor: ApiActor, id: string) {

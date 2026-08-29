@@ -36,9 +36,7 @@ export function toLocalDateInputString(date: Date | string | null | undefined): 
 }
 
 // Convenience accessor for profile picture id
-export function getUserProfilePicId(user: any): string | null {
-  return getUserField<string>(user, 'avatar') || getUserField<string>(user, 'profilePicId');
-}
+export { getUserProfilePicId } from '@/sdk/identity';
 
 // Convenience accessor for auth method
 

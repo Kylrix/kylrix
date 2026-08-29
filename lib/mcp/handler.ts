@@ -15,7 +15,17 @@ import {
   MCP_NOTE_LIST_INPUT,
   MCP_NOTE_LIST_OUTPUT,
   MCP_NOTE_UPDATE_INPUT,
+  MCP_WORKSPACE_COLLABORATOR_ADD_INPUT,
+  MCP_WORKSPACE_COLLABORATORS_LIST_INPUT,
+  MCP_WORKSPACE_COLLABORATORS_LIST_OUTPUT,
+  MCP_WORKSPACE_CREATE_INPUT,
+  MCP_WORKSPACE_DELETE_INPUT,
+  MCP_WORKSPACE_GET_INPUT,
+  MCP_WORKSPACE_LIST_INPUT,
+  MCP_WORKSPACE_LIST_OUTPUT,
+  MCP_WORKSPACE_UPDATE_INPUT,
   NOTE_RECORD_JSON_SCHEMA,
+  WORKSPACE_RECORD_JSON_SCHEMA,
 } from '@/sdk/contracts';
 
 export interface McpToolAnnotation {
@@ -125,172 +135,54 @@ export const MCP_TOOLS: McpTool[] = [
     annotations: { audience: ['user', 'assistant'], readOnly: false, idempotent: true, priority: 0.9 },
   },
 
-  // ── 2. Workspaces ──
+  // ── 2. Workspaces (schemas from sdk/contracts/workspaces.ts) ──
   {
     name: 'list_workspaces',
     description: 'List all active human and agent workspaces accessible to the authenticated actor.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Maximum number of workspaces to return (default: 25, max: 100)' },
-      },
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              title: { type: 'string' },
-              summary: { type: 'string', nullable: true },
-              visibility: { type: 'string' },
-              isAgentic: { type: 'boolean' },
-              createdAt: { type: 'string' },
-              updatedAt: { type: 'string' },
-            },
-          },
-        },
-      },
-    },
+    inputSchema: MCP_WORKSPACE_LIST_INPUT,
+    outputSchema: MCP_WORKSPACE_LIST_OUTPUT,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.9 },
   },
   {
     name: 'get_workspace',
     description: 'Retrieve detailed metadata and linked status for a specific workspace.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'Unique workspace ID' },
-      },
-      required: ['id'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        title: { type: 'string' },
-        summary: { type: 'string', nullable: true },
-        visibility: { type: 'string' },
-        isAgentic: { type: 'boolean' },
-      },
-    },
+    inputSchema: MCP_WORKSPACE_GET_INPUT,
+    outputSchema: WORKSPACE_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.8 },
   },
   {
     name: 'create_workspace',
     description: 'Create a new project or agent workspace.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        title: { type: 'string', description: 'Title or name of the workspace' },
-        summary: { type: 'string', description: 'Optional description or summary of workspace objectives' },
-        visibility: { type: 'string', enum: ['private', 'public', 'team'], description: 'Workspace visibility level' },
-        isAgentic: { type: 'boolean', description: 'Set to true for autonomous agentic workspaces' },
-      },
-      required: ['title'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        title: { type: 'string' },
-        summary: { type: 'string' },
-        visibility: { type: 'string' },
-        isAgentic: { type: 'boolean' },
-      },
-    },
+    inputSchema: MCP_WORKSPACE_CREATE_INPUT,
+    outputSchema: WORKSPACE_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.8 },
   },
   {
     name: 'update_workspace',
     description: 'Update the title, summary, or visibility of an existing workspace.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'ID of the workspace to modify' },
-        title: { type: 'string', description: 'New workspace title' },
-        summary: { type: 'string', description: 'Updated workspace description' },
-        visibility: { type: 'string', enum: ['private', 'public', 'team'], description: 'Updated visibility' },
-      },
-      required: ['id'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        title: { type: 'string' },
-        summary: { type: 'string' },
-        visibility: { type: 'string' },
-      },
-    },
+    inputSchema: MCP_WORKSPACE_UPDATE_INPUT,
+    outputSchema: WORKSPACE_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.7 },
   },
   {
     name: 'delete_workspace',
     description: 'Delete a workspace and cascade its internal links.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'ID of the workspace to delete' },
-      },
-      required: ['id'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-      },
-    },
+    inputSchema: MCP_WORKSPACE_DELETE_INPUT,
+    outputSchema: MCP_SUCCESS_OUTPUT,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: true, priority: 0.5 },
   },
   {
     name: 'list_workspace_collaborators',
     description: 'List team members and collaborators attached to a workspace.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        workspaceId: { type: 'string', description: 'Target workspace ID' },
-      },
-      required: ['workspaceId'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              userId: { type: 'string' },
-              role: { type: 'string' },
-            },
-          },
-        },
-      },
-    },
+    inputSchema: MCP_WORKSPACE_COLLABORATORS_LIST_INPUT,
+    outputSchema: MCP_WORKSPACE_COLLABORATORS_LIST_OUTPUT,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.6 },
   },
   {
     name: 'add_workspace_collaborator',
     description: 'Invite or add a user or agent as a collaborator on a workspace.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        workspaceId: { type: 'string', description: 'Target workspace ID' },
-        userId: { type: 'string', description: 'User ID or agent account ID to add' },
-        role: { type: 'string', enum: ['editor', 'viewer', 'admin'], description: 'Assigned collaborator role' },
-      },
-      required: ['workspaceId', 'userId'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-      },
-    },
+    inputSchema: MCP_WORKSPACE_COLLABORATOR_ADD_INPUT,
+    outputSchema: MCP_SUCCESS_OUTPUT,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.6 },
   },
 

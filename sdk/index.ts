@@ -1,6 +1,7 @@
 export * from './api';
 export * from './contracts';
 export * from './design';
+export * from './identity';
 export * from './appwrite';
 export * from './topbar';
 export * from './ecosystem';

@@ -7,33 +7,13 @@ import { useAuth } from '@/lib/auth';
 import { UserPresenceState } from '@/lib/services/presence';
 
 import { getCachedIdentityById, resolveIdentityById, subscribeIdentityCache } from '@/lib/identity-cache';
+import { computeIdentityFlags, type IdentitySignals } from '@/sdk/identity';
+
+export type { IdentitySignals };
+export { computeIdentityFlags };
 
 const RING_COLORS = ['#6366F1', '#34D399', '#D8B4FE', '#FBBF24', '#F472B6'];
 const RING_GRADIENT = `conic-gradient(from 180deg, ${RING_COLORS.join(', ')}, #6366F1)`;
-
-const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
-
-export interface IdentitySignals {
-  createdAt?: string | null;
-  lastUsernameEdit?: string | null;
-  profilePicId?: string | null;
-  username?: string | null;
-  bio?: string | null;
-  tier?: string | null;
-  publicKey?: string | null;
-  emailVerified?: boolean | null;
-}
-
-export function computeIdentityFlags(signals: IdentitySignals) {
-  const createdAt = signals.createdAt ? new Date(signals.createdAt).getTime() : NaN;
-  const lastUsernameEdit = signals.lastUsernameEdit ? new Date(signals.lastUsernameEdit).getTime() : NaN;
-  const hasAge = Number.isFinite(createdAt) ? Date.now() - createdAt >= THIRTY_DAYS : false;
-  const hasStableUsername = !Number.isFinite(lastUsernameEdit) || Date.now() - lastUsernameEdit >= THIRTY_DAYS;
-  const hasCoreProfile = Boolean(signals.username?.trim() && signals.bio?.trim() && signals.profilePicId);
-  const verified = hasAge && hasStableUsername && hasCoreProfile;
-  const pro = String(signals.tier || '').toUpperCase() === 'PRO';
-  return { verified, pro };
-}
 
 // Thread-safe in-memory cache for user profiles fetched from the server SDK
 
