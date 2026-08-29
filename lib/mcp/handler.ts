@@ -8,6 +8,14 @@ import {
   MCP_GOAL_CREATE_INPUT,
   MCP_GOAL_LIST_INPUT,
   MCP_GOAL_UPDATE_INPUT,
+  MCP_SUCCESS_OUTPUT,
+  MCP_NOTE_CREATE_INPUT,
+  MCP_NOTE_DELETE_INPUT,
+  MCP_NOTE_GET_INPUT,
+  MCP_NOTE_LIST_INPUT,
+  MCP_NOTE_LIST_OUTPUT,
+  MCP_NOTE_UPDATE_INPUT,
+  NOTE_RECORD_JSON_SCHEMA,
 } from '@/sdk/contracts';
 
 export interface McpToolAnnotation {
@@ -286,126 +294,40 @@ export const MCP_TOOLS: McpTool[] = [
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.6 },
   },
 
-  // ── 3. Notes & Ideas ──
+  // ── 3. Notes & Ideas (schemas from sdk/contracts/notes.ts) ──
   {
     name: 'list_notes',
     description: 'List notes and ideas, with optional workspace filtering.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        workspaceId: { type: 'string', description: 'Optional workspace ID filter' },
-        limit: { type: 'number', description: 'Maximum number of notes to return (default: 25)' },
-      },
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              title: { type: 'string' },
-              content: { type: 'string', nullable: true },
-              updatedAt: { type: 'string' },
-              createdAt: { type: 'string' },
-              isPublic: { type: 'boolean' },
-            },
-          },
-        },
-      },
-    },
+    inputSchema: MCP_NOTE_LIST_INPUT,
+    outputSchema: MCP_NOTE_LIST_OUTPUT,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.95 },
   },
   {
     name: 'get_note',
     description: 'Retrieve full markdown content, title, tags, and metadata for a specific note.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'Note ID to retrieve' },
-      },
-      required: ['id'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        title: { type: 'string' },
-        content: { type: 'string' },
-        updatedAt: { type: 'string' },
-        createdAt: { type: 'string' },
-        isPublic: { type: 'boolean' },
-      },
-    },
+    inputSchema: MCP_NOTE_GET_INPUT,
+    outputSchema: NOTE_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.9 },
   },
   {
     name: 'create_note',
     description: 'Create a new markdown note or idea, optionally linking it to a workspace.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        title: { type: 'string', description: 'Title of the note' },
-        content: { type: 'string', description: 'Markdown body content' },
-        workspaceId: { type: 'string', description: 'Optional workspace ID to bind this note to' },
-        isPublic: { type: 'boolean', description: 'Whether the note is accessible via public share link' },
-        tags: { type: 'array', items: { type: 'string' }, description: 'Optional list of tag names' },
-      },
-      required: ['title'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        title: { type: 'string' },
-        content: { type: 'string' },
-        isPublic: { type: 'boolean' },
-      },
-    },
+    inputSchema: MCP_NOTE_CREATE_INPUT,
+    outputSchema: NOTE_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.9 },
   },
   {
     name: 'update_note',
     description: 'Update the title, content, or visibility of an existing note.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'ID of the note to update' },
-        title: { type: 'string', description: 'Updated note title' },
-        content: { type: 'string', description: 'Updated markdown content' },
-        isPublic: { type: 'boolean', description: 'Public share status' },
-        tags: { type: 'array', items: { type: 'string' }, description: 'Updated list of tag names' },
-      },
-      required: ['id'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        title: { type: 'string' },
-        content: { type: 'string' },
-      },
-    },
+    inputSchema: MCP_NOTE_UPDATE_INPUT,
+    outputSchema: NOTE_RECORD_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.85 },
   },
   {
     name: 'delete_note',
     description: 'Move a note to trash or delete it.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'ID of the note to delete' },
-      },
-      required: ['id'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-      },
-    },
+    inputSchema: MCP_NOTE_DELETE_INPUT,
+    outputSchema: MCP_SUCCESS_OUTPUT,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: true, priority: 0.6 },
   },
 

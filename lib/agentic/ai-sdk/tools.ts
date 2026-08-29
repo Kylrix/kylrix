@@ -8,6 +8,8 @@ import { z } from 'zod';
 import {
   goalCreateInputZod,
   goalUpdateInputZod,
+  noteCreateInputZod,
+  noteUpdateInputZod,
 } from '@/sdk/contracts';
 
 export interface ToolExecutionContext {
@@ -24,8 +26,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
     create_note: tool({
       description:
         'Create a new Idea/Note in Kylrix. System assigns userId and ID. Emits create_note toolCall for UI live-sync.',
-      inputSchema: z.object({
-        title: z.string().describe('Title of the idea or note'),
+      inputSchema: noteCreateInputZod.extend({
         content: z.string().describe('Full markdown content of the note'),
         tags: z.array(z.string()).optional().describe('Optional tags for indexing and organization'),
         isPublic: z.boolean().optional().describe('Whether the note is publicly accessible'),
@@ -43,8 +44,7 @@ export function getKylrixAiTools(ctx?: ToolExecutionContext) {
 
     update_note: tool({
       description: 'Update an existing Idea/Note by its ID with new title, content, or tags.',
-      inputSchema: z.object({
-        id: z.string().describe('Target Note ID ($id)'),
+      inputSchema: noteUpdateInputZod.extend({
         title: z.string().optional().describe('Updated title'),
         content: z.string().optional().describe('Updated markdown content'),
         tags: z.array(z.string()).optional().describe('Updated tags'),

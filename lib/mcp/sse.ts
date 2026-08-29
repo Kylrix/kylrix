@@ -7,6 +7,9 @@ import {
   EdgeShieldError,
 } from '@/lib/api/edge-shield';
 import { MAX_API_BODY_BYTES } from '@/lib/api/guard';
+import { apiV1Path } from '@/sdk/api';
+
+export const MCP_SSE_ENDPOINT = apiV1Path('mcp');
 
 type SseSession = {
   id: string;
@@ -42,7 +45,7 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
-export function createSseStream(req: NextRequest, endpointPrefix = '/api/v1/mcp'): Response {
+export function createSseStream(req: NextRequest, endpointPrefix = MCP_SSE_ENDPOINT): Response {
   assertShieldAllowed(enforceMcpSseOpenShield(req));
   const clientIp = getClientIp(req);
   const ipSessions = sessionsPerIp.get(clientIp);

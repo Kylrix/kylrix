@@ -24,6 +24,7 @@ import {
   buildGoalCreateRow,
   buildGoalUpdatePatch,
   resolveWorkspaceId,
+  shapeNote,
 } from '@/sdk/contracts';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
@@ -51,18 +52,6 @@ function forbidden(message: string): never {
   (err as any).status = 403;
   (err as any).code = 'forbidden';
   throw err;
-}
-
-function shapeNote(r: any) {
-  return {
-    id: r.$id,
-    title: r.title || r.name || 'Untitled',
-    content: r.content ?? r.body ?? null,
-    updatedAt: r.$updatedAt || r.updatedAt || null,
-    createdAt: r.$createdAt || r.createdAt || null,
-    isPublic: r.isPublic !== undefined ? Boolean(r.isPublic) : true,
-    isGuest: r.isGuest !== undefined ? Boolean(r.isGuest) : true,
-  };
 }
 
 function shapeMoment(r: any) {

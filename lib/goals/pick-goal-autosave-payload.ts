@@ -4,6 +4,7 @@
 
 import type { Task } from '@/types';
 import { clampNoteTitle } from '@/constants/noteTitle';
+import { buildSourceNoteTags } from '@/sdk/crosslinks';
 
 function emptyToNull(value: unknown): string | null {
   if (value == null) return null;
@@ -14,8 +15,9 @@ function emptyToNull(value: unknown): string | null {
 export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
   const tags = [...(task.labels || [])];
   (task.linkedNotes || []).forEach((noteId) => {
-    const tag = `source:kylrixnote:${noteId}`;
-    if (!tags.includes(tag)) tags.push(tag);
+    buildSourceNoteTags([noteId]).forEach((tag) => {
+      if (!tags.includes(tag)) tags.push(tag);
+    });
   });
   if (task.projectId && task.projectId !== 'inbox') {
     const projectTag = `project:${task.projectId}`;

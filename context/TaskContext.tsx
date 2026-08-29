@@ -14,6 +14,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { getAllTags } from '@/lib/appwrite';
 import type { Tags } from '@/types/appwrite';
+import { parseSourceNoteIdsFromTags } from '@/sdk/crosslinks';
 import {
   Task,
   Project,
@@ -144,8 +145,7 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
   const projectTag = raw.tags?.find((t: string) => t.startsWith('project:'));
   const projectId = projectTag ? projectTag.split(':')[1] : 'inbox';
   const userLabels = raw.tags?.filter((t: string) => !t.startsWith('project:') && !t.startsWith('source:')) || [];
-  const linkedNotes = raw.tags?.filter((t: string) => t.startsWith('source:kylrixnote:'))
-                                .map((t: string) => t.split(':')[2]) || [];
+  const linkedNotes = parseSourceNoteIdsFromTags(raw.tags || []);
   const comments = Array.isArray(raw.comments)
     ? raw.comments.map((entry: any) => parseCommentEntry(entry))
     : [];

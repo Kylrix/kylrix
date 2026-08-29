@@ -3,6 +3,7 @@ import { handleMcpRpc } from '@/lib/mcp/handler';
 import { createSseStream } from '@/lib/mcp/sse';
 import { EdgeShieldError } from '@/lib/api/edge-shield';
 import { MAX_API_BODY_BYTES } from '@/lib/api/guard';
+import { MCP_SSE_ENDPOINT } from '@/lib/mcp/sse';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   if (isSse) {
     try {
-      return createSseStream(req, '/api/v1/mcp');
+      return createSseStream(req, MCP_SSE_ENDPOINT);
     } catch (err) {
       if (err instanceof EdgeShieldError) return mcpShieldResponse(err);
       throw err;
@@ -48,8 +49,8 @@ export async function GET(req: NextRequest) {
     iconUrl: 'https://www.kylrix.space/apple-touch-icon.png',
     protocol: '2024-11-05',
     endpoints: {
-      sse: '/api/v1/mcp?transport=sse',
-      http: '/api/v1/mcp',
+      sse: `${MCP_SSE_ENDPOINT}?transport=sse`,
+      http: MCP_SSE_ENDPOINT,
     },
   });
 }

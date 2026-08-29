@@ -7,6 +7,7 @@ import {
 } from '@/lib/ecosystem/resume-route';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
 import { enforceApiIpShield } from '@/lib/api/edge-shield';
+import { KYLRIX_API_V1_BASE } from '@/sdk/api';
 
 /**
  * KYLRIX APPLICATION LAYER PROTECTION
@@ -147,7 +148,7 @@ export function middleware(request: NextRequest) {
 
   // Skip static assets — but protect public API/MCP surfaces from IP pounding.
   if (
-    pathname.startsWith('/api/v1') ||
+    pathname.startsWith(KYLRIX_API_V1_BASE) ||
     pathname === '/api/mcp' ||
     pathname.startsWith('/api/mcp/')
   ) {

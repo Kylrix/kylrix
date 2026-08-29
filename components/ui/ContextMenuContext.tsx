@@ -28,8 +28,7 @@ import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { isFlowPath } from '@/lib/routing/app-paths';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { ContextMenuPanel } from '@/components/ui/ContextMenu';
-
-type KylrixApp = 'root' | 'accounts' | 'kylrix' | 'vault' | 'flow' | 'note' | 'connect';
+import type { KylrixApp } from '@/sdk/design';
 
 interface ContextMenuItem {
   label: string;
