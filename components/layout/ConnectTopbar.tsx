@@ -171,13 +171,20 @@ export default function ConnectTopbar({
   useEffect(() => {
     if (!searchOpen) return;
     const uid = user?.$id || 'guest';
-    import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+    import('@/lib/data').then(({ readLocalTagRows }) => {
+      readLocalTagRows(uid === 'guest' ? null : uid)
+        .then((tagsData) => {
+          if (tagsData.length) setLocalTags(tagsData);
+        })
+        .catch(() => {});
       Promise.all([
-        LocalEngine.cacheGet<any[]>(`f_tags_list_${uid}`).catch(() => []),
-        LocalEngine.cacheGet<any[]>(`trash_all_${uid}`).catch(() => []),
-        LocalEngine.cacheGet<any[]>(`f_forms_${uid}`).catch(() => []),
-      ]).then(([tagsData, trashData, formsData]) => {
-        if (Array.isArray(tagsData)) setLocalTags(tagsData);
+        import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
+          LocalEngine.cacheGet<any[]>(`trash_all_${uid}`).catch(() => []),
+        ),
+        import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
+          LocalEngine.cacheGet<any[]>(`f_forms_${uid}`).catch(() => []),
+        ),
+      ]).then(([trashData, formsData]) => {
         if (Array.isArray(trashData)) setLocalTrash(trashData);
         if (Array.isArray(formsData)) setLocalForms(formsData);
       });

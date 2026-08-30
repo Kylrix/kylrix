@@ -162,4 +162,26 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
       tableId,
       rowId});
   }
+
+  async incrementRowColumn(
+    input: {
+      databaseId: string;
+      tableId: string;
+      rowId: string;
+      column: string;
+      value?: number;
+      max?: number;
+    },
+    options?: { jwt?: string; forceSystem?: boolean }
+  ): Promise<void> {
+    const tables = await this.getClientTables(options?.jwt, options?.forceSystem);
+    await (tables as any).incrementRowColumn({
+      databaseId: input.databaseId,
+      tableId: input.tableId,
+      rowId: input.rowId,
+      column: input.column,
+      value: input.value ?? 1,
+      max: input.max,
+    });
+  }
 }

@@ -1,5 +1,5 @@
 import { Permission, Query, Role } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { systemTables } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getVerifiedProEntitlementForUser } from '@/lib/services/internal/subscription-entitlement';
 import { BillingUiTier } from '@/lib/subscription/tier-resolution';
@@ -75,7 +75,7 @@ async function bumpCounter(opts: {
   type: 'per_minute' | 'per_day';
   resetAt: number;
 }) {
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   try {
     await tables.incrementRowColumn({
       databaseId: DB,
@@ -96,7 +96,7 @@ async function bumpCounter(opts: {
 }
 
 async function ensurePatRateRow(patId: string, userId: string) {
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const existing = await tables.listRows({
     databaseId: DB,
     tableId: PAT_RATE,
@@ -134,7 +134,7 @@ async function ensurePatRateRow(patId: string, userId: string) {
 }
 
 async function ensureUserRateRow(userId: string) {
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const existing = await tables.listRows({
     databaseId: DB,
     tableId: USER_RATE,
@@ -175,7 +175,7 @@ async function rollAndBump(opts: {
   row: any;
   limits: { tier: BillingUiTier; perMinute: number; perDay: number };
 }): Promise<{ remainingMinute: number; remainingDay: number; resetMinuteEpoch: number; resetDayEpoch: number }> {
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const now = new Date();
   const mKey = minuteKey(now);
   const dKey = dayKey(now);

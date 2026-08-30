@@ -151,7 +151,7 @@ let cachedSystemTablesDB: TablesDB | null = null;
 
 /**
  * Creates a server-side TablesDB instance with system executor privileges.
- * Used for chat and shared system data access.
+ * @deprecated Use `systemTables()` from `@/lib/data` in application code.
  */
 export function createSystemTablesDB() {
   if (cachedSystemTablesDB) {

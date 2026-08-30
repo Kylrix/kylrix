@@ -13,6 +13,7 @@ import { sendKylrixEmailNotification } from '@/lib/email-notifications';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { getAllTags } from '@/lib/appwrite';
+import { tagsCacheKey } from '@/lib/data';
 import type { Tags } from '@/types/appwrite';
 import { parseSourceNoteIdsFromTags } from '@/sdk/crosslinks';
 import {
@@ -846,7 +847,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       type: 'SET_ECOSYSTEM_TAGS',
       payload: [tag, ...state.ecosystemTags.filter(t => t.name !== tag.name && t.$id !== tag.$id)]});
     if (typeof window !== 'undefined' && state.userId) {
-      const tagsKey = `f_tags_${state.userId}`;
+      const tagsKey = tagsCacheKey(state.userId);
       const updated = [tag, ...state.ecosystemTags.filter(t => t.name !== tag.name && t.$id !== tag.$id)];
       void setCachedData(tagsKey, { rows: updated, total: updated.length });
     }
@@ -854,7 +855,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   const refreshEcosystemTags = useCallback(async () => {
     const uid = state.userId || flowWarmOwnerRef.current || 'guest';
-    const tagsKey = `f_tags_${uid}`;
+    const tagsKey = tagsCacheKey(uid);
     const COLD_START_TTL = 1000 * 60 * 60 * 24 * 7;
     try {
       const cached = await getCachedDataAsync<any>(tagsKey, COLD_START_TTL);

@@ -61,4 +61,16 @@ export interface DatabasePort {
     rowId: string,
     options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<void>;
+
+  incrementRowColumn?(
+    input: {
+      databaseId: string;
+      tableId: string;
+      rowId: string;
+      column: string;
+      value?: number;
+      max?: number;
+    },
+    options?: { jwt?: string; forceSystem?: boolean }
+  ): Promise<void>;
 }

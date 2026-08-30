@@ -1,5 +1,5 @@
 import { ID, Permission, Query, Role } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { systemTables, type SystemTablesPort } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import type { ApiActor } from '@/lib/api/guard';
 import { requireScope } from '@/lib/api/guard';
@@ -85,7 +85,7 @@ function forbidden(message: string): never {
   throw err;
 }
 
-async function assertOwnedNote(tables: ReturnType<typeof createSystemTablesDB>, actor: ApiActor, id: string) {
+async function assertOwnedNote(tables: SystemTablesPort, actor: ApiActor, id: string) {
   const row = (await tables
     .getRow({ databaseId: DB, tableId: NOTES, rowId: id })
     .catch(() => null)) as any;
@@ -93,7 +93,7 @@ async function assertOwnedNote(tables: ReturnType<typeof createSystemTablesDB>, 
   return row;
 }
 
-async function assertOwnedGoal(tables: ReturnType<typeof createSystemTablesDB>, actor: ApiActor, id: string) {
+async function assertOwnedGoal(tables: SystemTablesPort, actor: ApiActor, id: string) {
   const row = (await tables
     .getRow({ databaseId: FLOW_DB, tableId: TASKS, rowId: id })
     .catch(() => null)) as any;
@@ -105,7 +105,7 @@ const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
 const PROJECT_OBJECTS = 'project_objects';
 
 async function linkObjectToWorkspace(
-  tables: ReturnType<typeof createSystemTablesDB>,
+  tables: SystemTablesPort,
   projectId: string,
   entityKind: 'note' | 'goal' | 'form' | 'event' | 'credential' | 'totp' | 'agent_session' | 'secret',
   entityId: string,
@@ -148,7 +148,7 @@ async function linkObjectToWorkspace(
 }
 
 async function unlinkObjectFromWorkspace(
-  tables: ReturnType<typeof createSystemTablesDB>,
+  tables: SystemTablesPort,
   entityKind: string,
   entityId: string
 ) {
@@ -177,7 +177,7 @@ async function unlinkObjectFromWorkspace(
 const TAGS_TABLE = APPWRITE_CONFIG.TABLES.TAGS || APPWRITE_CONFIG.TABLES.NOTE.TAGS || '67ff06280034908cf08a';
 
 async function ensureTagsExist(
-  tables: ReturnType<typeof createSystemTablesDB>,
+  tables: SystemTablesPort,
   userId: string,
   rawTags: unknown[],
 ): Promise<string[]> {
@@ -250,7 +250,7 @@ async function ensureTagsExist(
 }
 
 async function getWorkspaceObjectIds(
-  tables: ReturnType<typeof createSystemTablesDB>,
+  tables: SystemTablesPort,
   projectId: string,
   entityKind?: string
 ): Promise<string[]> {
@@ -269,7 +269,7 @@ async function getWorkspaceObjectIds(
 }
 
 async function getAllLinkedWorkspaceObjectIds(
-  tables: ReturnType<typeof createSystemTablesDB>,
+  tables: SystemTablesPort,
   entityKind: string
 ): Promise<Set<string>> {
   try {
@@ -399,7 +399,7 @@ export const ApiResources = {
 
   async listNotes(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
     requireScope(actor, 'notes:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const { isExcludedNote, ideaListExclusionQueries } = await import('@/lib/appwrite/note');
 
     if (opts?.workspaceId) {
@@ -442,7 +442,7 @@ export const ApiResources = {
 
   async getNote(actor: ApiActor, id: string) {
     requireScope(actor, 'notes:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = await assertOwnedNote(tables, actor, id);
     return shapeNote(row);
   },
@@ -452,7 +452,7 @@ export const ApiResources = {
     const title = clampNoteTitle(String(body?.title || '').trim() || 'Untitled', 'Untitled');
     const content = body?.content != null ? String(body.content) : '';
     const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const now = new Date().toISOString();
     const noteId = ID.unique();
 
@@ -508,7 +508,7 @@ export const ApiResources = {
 
   async updateNote(actor: ApiActor, id: string, body: Record<string, unknown>) {
     requireScope(actor, 'notes:write');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     await assertOwnedNote(tables, actor, id);
 
     const patch: Record<string, unknown> = {
@@ -536,7 +536,7 @@ export const ApiResources = {
 
   async deleteNote(actor: ApiActor, id: string) {
     requireScope(actor, 'notes:write');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     await assertOwnedNote(tables, actor, id);
     await tables.updateRow({
       databaseId: DB,
@@ -558,7 +558,7 @@ export const ApiResources = {
     opts?: { workspaceId?: string | null; status?: string | null },
   ) {
     requireScope(actor, 'goals:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const cap = Math.min(100, Math.max(1, limit));
     const statusFilter = opts?.status ? String(opts.status) : null;
 
@@ -611,7 +611,7 @@ export const ApiResources = {
 
   async getGoal(actor: ApiActor, id: string) {
     requireScope(actor, 'goals:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = await assertOwnedGoal(tables, actor, id);
     return shapeGoal(row);
   },
@@ -621,7 +621,7 @@ export const ApiResources = {
     const title = String(body?.title || '').trim();
     if (!title) badRequest('title required');
     const wsId = resolveWorkspaceId(body);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const goalId = ID.unique();
 
     const rowData = buildGoalCreateRow(actor.userId, body);
@@ -650,7 +650,7 @@ export const ApiResources = {
 
   async updateGoal(actor: ApiActor, id: string, body: Record<string, unknown>) {
     requireScope(actor, 'goals:write');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     await assertOwnedGoal(tables, actor, id);
     const patch = buildGoalUpdatePatch(body);
     if (body.tags !== undefined) {
@@ -667,7 +667,7 @@ export const ApiResources = {
 
   async deleteGoal(actor: ApiActor, id: string) {
     requireScope(actor, 'goals:write');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     await assertOwnedGoal(tables, actor, id);
     await tables.updateRow({
       databaseId: FLOW_DB,
@@ -686,7 +686,7 @@ export const ApiResources = {
 
   async listFlows(actor: ApiActor, limit = 25) {
     requireScope(actor, 'flows:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: FLOW_DB,
       tableId: WORKFLOWS,
@@ -856,7 +856,7 @@ export const ApiResources = {
       (err as any).status = 400;
       throw err;
     }
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const now = new Date().toISOString();
 
     // 1. Check if agent already exists in agents table
@@ -1103,7 +1103,7 @@ export const ApiResources = {
 
   async listWorkspaces(actor: ApiActor, limit = 25) {
     requireScope(actor, 'workspaces:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     
     // 1. Owned workspaces
     const ownedRes = await tables.listRows({
@@ -1150,7 +1150,7 @@ export const ApiResources = {
 
   async getWorkspace(actor: ApiActor, id: string) {
     requireScope(actor, 'workspaces:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = (await tables
       .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: id })
       .catch(() => null)) as any;
@@ -1188,7 +1188,7 @@ export const ApiResources = {
       badRequest('permission must be read, write, or admin');
     }
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const FLOW_DATABASE_ID = FLOW_DB;
     const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
     const now = new Date().toISOString();
@@ -1255,7 +1255,7 @@ export const ApiResources = {
   async listWorkspaceCollaborators(actor: ApiActor, workspaceId: string) {
     requireScope(actor, 'workspaces:read');
     await this.getWorkspace(actor, workspaceId);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: FLOW_DB,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
@@ -1270,7 +1270,7 @@ export const ApiResources = {
 
   async listEvents(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
     requireScope(actor, 'events:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
 
     if (opts?.workspaceId) {
       const wsId = opts.workspaceId;
@@ -1308,7 +1308,7 @@ export const ApiResources = {
 
   async listForms(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
     requireScope(actor, 'forms:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
 
     if (opts?.workspaceId) {
       const wsId = opts.workspaceId;
@@ -1346,7 +1346,7 @@ export const ApiResources = {
 
   async listAgentSessions(actor: ApiActor, limit = 25, opts?: { harness?: string | null; workspaceId?: string | null }) {
     requireScope(actor, 'agents:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
 
     if (opts?.workspaceId) {
       const wsId = opts.workspaceId;
@@ -1397,7 +1397,7 @@ export const ApiResources = {
       .slice(0, 64);
     if (!harness) badRequest('harness required (e.g. claude-code, codex)');
     const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const now = new Date().toISOString();
     const sessionId = ID.unique();
     const title = String(body.title || `[${harness}] mirror`).slice(0, 200);
@@ -1446,7 +1446,7 @@ export const ApiResources = {
   async appendHarnessMirror(actor: ApiActor, sessionId: string, body: Record<string, unknown>) {
     requireScope(actor, 'agents:harness');
     requireScope(actor, 'agents:write');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = (await tables
       .getRow({ databaseId: FLOW_DB, tableId: 'agentic_sessions', rowId: sessionId })
       .catch(() => null)) as any;
@@ -1487,7 +1487,7 @@ export const ApiResources = {
     requireScope(actor, 'chats:write');
     const participantId = String(body.participantId || body.recipientId || body.userId || '').trim();
     if (!participantId) badRequest('participantId or recipientId required');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
     const convTable = APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS || APPWRITE_CONFIG.TABLES.CHAT?.CONVERSATIONS || 'conversations';
 
@@ -1562,7 +1562,7 @@ export const ApiResources = {
 
   async listChats(actor: ApiActor, limit = 25) {
     requireScope(actor, 'chats:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
     const convTable =
       APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS ||
@@ -1581,7 +1581,7 @@ export const ApiResources = {
 
   async getChat(actor: ApiActor, id: string) {
     requireScope(actor, 'chats:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const convTable =
       APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS || 'conversations';
     const row = (await tables
@@ -1596,7 +1596,7 @@ export const ApiResources = {
   async listChatMessages(actor: ApiActor, conversationId: string, limit = 50) {
     requireScope(actor, 'chats:read');
     const chat = await this.getChat(actor, conversationId);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const msgTable = APPWRITE_CONFIG.TABLES.CONNECT?.MESSAGES || 'messages';
     const res = await tables.listRows({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
@@ -1624,7 +1624,7 @@ export const ApiResources = {
     }
     const content = String(body.content ?? body.text ?? '').trim();
     if (!content) badRequest('content required');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const msgTable = APPWRITE_CONFIG.TABLES.CONNECT?.MESSAGES || 'messages';
     const now = new Date().toISOString();
     const row = await tables.createRow({
@@ -1670,7 +1670,7 @@ export const ApiResources = {
     const title = String(body.title || '').trim();
     if (!title) badRequest('title required');
     const now = new Date().toISOString();
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const visibility = String(body.visibility || 'private');
     const row = await tables.createRow({
       databaseId: FLOW_DB,
@@ -1698,7 +1698,7 @@ export const ApiResources = {
   async updateWorkspace(actor: ApiActor, id: string, body: Record<string, unknown>) {
     requireScope(actor, 'workspaces:write');
     await this.getWorkspace(actor, id);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const patch: Record<string, unknown> = { updatedAt: new Date().toISOString() };
     if (body.title !== undefined) patch.title = String(body.title).trim().slice(0, 255);
     if (body.summary !== undefined) patch.summary = String(body.summary);
@@ -1718,7 +1718,7 @@ export const ApiResources = {
   async deleteWorkspace(actor: ApiActor, id: string) {
     requireScope(actor, 'workspaces:write');
     await this.getWorkspace(actor, id);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: id });
     return { id, deleted: true };
   },
@@ -1743,7 +1743,7 @@ export const ApiResources = {
 
   async getEvent(actor: ApiActor, id: string) {
     requireScope(actor, 'events:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = (await tables
       .getRow({ databaseId: FLOW_DB, tableId: 'events', rowId: id })
       .catch(() => null)) as any;
@@ -1763,7 +1763,7 @@ export const ApiResources = {
       body.endTime != null
         ? String(body.endTime)
         : new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString();
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
 
     let calendarId = body.calendarId != null ? String(body.calendarId) : '';
     if (!calendarId) {
@@ -1828,7 +1828,7 @@ export const ApiResources = {
   async updateEvent(actor: ApiActor, id: string, body: Record<string, unknown>) {
     requireScope(actor, 'events:write');
     await this.getEvent(actor, id);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const patch: Record<string, unknown> = {};
     for (const k of ['title', 'description', 'startTime', 'endTime', 'location', 'status', 'visibility'] as const) {
       if (body[k] !== undefined) patch[k] = body[k] == null ? null : String(body[k]);
@@ -1841,7 +1841,7 @@ export const ApiResources = {
   async deleteEvent(actor: ApiActor, id: string) {
     requireScope(actor, 'events:write');
     await this.getEvent(actor, id);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     await tables.updateRow({
       databaseId: FLOW_DB,
       tableId: 'events',
@@ -1857,7 +1857,7 @@ export const ApiResources = {
 
   async getForm(actor: ApiActor, id: string) {
     requireScope(actor, 'forms:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = (await tables
       .getRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id })
       .catch(() => null)) as any;
@@ -1869,7 +1869,7 @@ export const ApiResources = {
     requireScope(actor, 'forms:write');
     const title = String(body.title || '').trim();
     if (!title) badRequest('title required');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = await tables.createRow({
       databaseId: FLOW_DB,
       tableId: 'forms',
@@ -1896,7 +1896,7 @@ export const ApiResources = {
   async updateForm(actor: ApiActor, id: string, body: Record<string, unknown>) {
     requireScope(actor, 'forms:write');
     await this.getForm(actor, id);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const patch: Record<string, unknown> = {};
     if (body.title !== undefined) patch.title = String(body.title).trim().slice(0, 255);
     if (body.description !== undefined) patch.description = String(body.description);
@@ -1912,7 +1912,7 @@ export const ApiResources = {
   async deleteForm(actor: ApiActor, id: string) {
     requireScope(actor, 'forms:write');
     await this.getForm(actor, id);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     await tables.updateRow({
       databaseId: FLOW_DB,
       tableId: 'forms',
@@ -1959,7 +1959,7 @@ export const ApiResources = {
     opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
   ) {
     requireScope(actor, 'vault:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
     const lim = Math.min(100, Math.max(1, limit));
 
@@ -2023,7 +2023,7 @@ export const ApiResources = {
     opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
   ) {
     requireScope(actor, 'vault:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const r = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
@@ -2055,7 +2055,7 @@ export const ApiResources = {
     const name = String(body.name || body.title || '').trim();
     if (!name) badRequest('name required');
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const wsId = (body.workspaceId || body.projectId || opts?.workspaceId) as string | undefined;
     const agId = (body.agentId || opts?.agentId) as string | undefined;
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, {
@@ -2183,7 +2183,7 @@ export const ApiResources = {
     opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
   ) {
     requireScope(actor, 'vault:write');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
@@ -2269,7 +2269,7 @@ export const ApiResources = {
 
   async deleteVaultItem(actor: ApiActor, id: string) {
     requireScope(actor, 'vault:write');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
@@ -2301,7 +2301,7 @@ export const ApiResources = {
     opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
   ) {
     requireScope(actor, 'vault:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const lim = Math.min(100, Math.max(1, limit));
     const wsId = opts?.workspaceId;
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
@@ -2364,7 +2364,7 @@ export const ApiResources = {
     opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
   ) {
     requireScope(actor, 'vault:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const r = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
@@ -2396,7 +2396,7 @@ export const ApiResources = {
     const secretKey = String(body.secretKey || body.secret || '').trim();
     if (!secretKey) badRequest('secretKey required');
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const wsId = (body.workspaceId || body.projectId || opts?.workspaceId) as string | undefined;
     const agId = (body.agentId || opts?.agentId) as string | undefined;
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, {
@@ -2495,7 +2495,7 @@ export const ApiResources = {
     opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
   ) {
     requireScope(actor, 'vault:write');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
@@ -2569,7 +2569,7 @@ export const ApiResources = {
 
   async deleteTotpSecret(actor: ApiActor, id: string) {
     requireScope(actor, 'vault:write');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
@@ -2598,7 +2598,7 @@ export const ApiResources = {
     if (!actor.scopes.includes('trash:read') && !actor.scopes.includes('notes:read') && !actor.scopes.includes('vault:read')) {
       requireScope(actor, 'trash:read');
     }
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const targetKind = opts?.kind ? String(opts.kind).toLowerCase() : null;
     const items: any[] = [];
     const lim = Math.min(100, Math.max(1, limit));
@@ -2699,7 +2699,7 @@ export const ApiResources = {
     const id = String(body.id || body.resourceId || '').trim();
     if (!id) badRequest('id required');
     const kind = String(body.kind || body.type || 'note').toLowerCase();
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const now = new Date().toISOString();
 
     if (kind === 'vault' || kind === 'secret' || kind === 'credential') {
@@ -2760,7 +2760,7 @@ export const ApiResources = {
     const id = String(body.id || body.resourceId || '').trim();
     if (!id) badRequest('id required');
     const kind = String(body.kind || body.type || 'note').toLowerCase();
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
 
     if (kind === 'vault' || kind === 'secret' || kind === 'credential') {
       await tables.deleteRow({
@@ -2796,7 +2796,7 @@ export const ApiResources = {
 
   async listMoments(actor: ApiActor, limit = 25, opts?: { mine?: boolean }) {
     requireScope(actor, 'moments:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const momentsTable = APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS || 'moments';
     const queries: any[] = [
       Query.orderDesc('$createdAt'),
@@ -2990,7 +2990,7 @@ export const ApiResources = {
       };
     }
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
@@ -3017,7 +3017,7 @@ export const ApiResources = {
     }
 
     await this.getMoment(actor, id);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
       tableId: APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS || 'moments',
@@ -3047,7 +3047,7 @@ export const ApiResources = {
     if (!content) badRequest('content required');
     await this.getMoment(actor, id);
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const now = new Date().toISOString();
     const metadata = JSON.stringify({ type: 'reply', sourceId: id });
     const row = await tables.createRow({
@@ -3084,7 +3084,7 @@ export const ApiResources = {
     requireScope(actor, 'moments:write');
     const content = String(body.content ?? body.caption ?? body.text ?? '').trim();
     if (!content) badRequest('content required');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const now = new Date().toISOString();
     const metadata = JSON.stringify({ type: 'post' });
     const row = await tables.createRow({
@@ -3195,7 +3195,7 @@ export const ApiResources = {
   async getWorkspaceThread(actor: ApiActor, workspaceId: string) {
     requireScope(actor, 'chats:read');
     requireScope(actor, 'workspaces:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const project = (await tables
       .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: workspaceId })
       .catch(() => null)) as any;
@@ -3262,7 +3262,7 @@ export const ApiResources = {
   async ensureNoteDiscussion(actor: ApiActor, noteId: string) {
     requireScope(actor, 'chats:write');
     requireScope(actor, 'notes:read');
-    await assertOwnedNote(createSystemTablesDB(), actor, noteId);
+    await assertOwnedNote(systemTables(), actor, noteId);
     const { ThreadService } = await import('@/lib/services/threads');
     return ThreadService.getOrCreate({
       parentKind: 'note',
@@ -3276,7 +3276,7 @@ export const ApiResources = {
   async ensureGoalDiscussion(actor: ApiActor, goalId: string) {
     requireScope(actor, 'chats:write');
     requireScope(actor, 'goals:read');
-    await assertOwnedGoal(createSystemTablesDB(), actor, goalId);
+    await assertOwnedGoal(systemTables(), actor, goalId);
     const { ThreadService } = await import('@/lib/services/threads');
     return ThreadService.getOrCreate({
       parentKind: 'goal',
@@ -3289,7 +3289,7 @@ export const ApiResources = {
 
   async listTags(actor: ApiActor, limit = 50) {
     requireScope(actor, 'tags:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: DB,
       tableId: TAGS_TABLE,
@@ -3305,7 +3305,7 @@ export const ApiResources = {
     requireScope(actor, 'tags:write');
     const name = String(body.name || '').trim();
     if (!name) badRequest('Tag name is required');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const now = new Date().toISOString();
     const nameLower = name.toLowerCase();
 
@@ -3349,7 +3349,7 @@ export const ApiResources = {
       forbidden('Autonomous agents cannot delete user tags. Tag deletion requires human owner authorization.');
     }
     requireScope(actor, 'tags:write');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     await tables.deleteRow({
       databaseId: DB,
       tableId: TAGS_TABLE,
@@ -3360,7 +3360,7 @@ export const ApiResources = {
 
   async listObjects(actor: ApiActor, limit = 50) {
     requireScope(actor, 'objects:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: FLOW_DB,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects',
@@ -3382,7 +3382,7 @@ export const ApiResources = {
 
   async getAgentSession(actor: ApiActor, id: string) {
     requireScope(actor, 'agents:read');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = (await tables
       .getRow({ databaseId: FLOW_DB, tableId: 'agentic_sessions', rowId: id })
       .catch(() => null)) as any;
@@ -3394,7 +3394,7 @@ export const ApiResources = {
   async deleteAgentSession(actor: ApiActor, id: string) {
     requireScope(actor, 'agents:write');
     await this.getAgentSession(actor, id);
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'agentic_sessions', rowId: id });
     return { id, deleted: true };
   },

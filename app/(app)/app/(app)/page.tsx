@@ -187,11 +187,12 @@ export default function IdeasPage() {
         const userId = snap?.$id || (typeof window !== 'undefined' ? (localStorage.getItem('kylrix_last_logged_in_user_acc_default') ? JSON.parse(localStorage.getItem('kylrix_last_logged_in_user_acc_default') || '{}').$id : null) : null) || 'guest';
 
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { tagsCacheKey } = await import('@/lib/data');
         const [cachedIdeas, cachedNotesList, cachedInitial, cachedTags] = await Promise.all([
           LocalEngine.cacheGet<{ rows?: any[] } | any[]>(`f_ideas_${userId}`).catch(() => null),
           LocalEngine.cacheGet<any[]>(`f_notes_list_${userId}`).catch(() => null),
           LocalEngine.cacheGet<{ notes?: any[]; rows?: any[] } | any[]>(`initial_notes_${userId}`).catch(() => null),
-          LocalEngine.cacheGet<any>(`f_tags_${userId}`).catch(() => null),
+          LocalEngine.cacheGet<any>(tagsCacheKey(userId)).catch(() => null),
         ]);
 
         const rawRows =

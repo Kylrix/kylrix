@@ -806,17 +806,6 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
 
 
 
-async function getLocalTagRows(userId: string | null | undefined): Promise<any[]> {
-  if (!userId || typeof window === 'undefined') return [];
-  try {
-    const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const cached = await LocalEngine.cacheGet<{ rows?: any[] } | any[]>(`f_tags_${userId}`);
-    if (Array.isArray(cached)) return cached;
-    if (cached?.rows && Array.isArray(cached.rows)) return cached.rows;
-  } catch {}
-  return [];
-}
-
 export async function createTag(data: Partial<Tags & { $id?: string; isPublic?: boolean; isGuest?: boolean }>, jwt?: string) {
   const rawName = data.name?.trim();
   if (!rawName) throw new Error("Tag name is required");
@@ -826,12 +815,11 @@ export async function createTag(data: Partial<Tags & { $id?: string; isPublic?: 
   if (typeof window !== 'undefined') {
     const user = await getCurrentUser();
     const userId = user?.$id || null;
+    const { readLocalTagRows, findLocalTagByName } = await import('@/lib/data/local/tags');
 
     try {
-      const localRows = await getLocalTagRows(userId);
-      const match = localRows.find(
-        (t: any) => (t.nameLower && t.nameLower === nameLower) || (t.name && t.name.toLowerCase() === nameLower)
-      );
+      const localRows = await readLocalTagRows(userId);
+      const match = findLocalTagByName(localRows, rawName);
       if (match) {
         return hydrateTagMetadata(match as unknown as Tags);
       }
@@ -882,8 +870,8 @@ export async function createTag(data: Partial<Tags & { $id?: string; isPublic?: 
   }
 
   // 2. Server-side path
-  const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
-  const tables = createSystemTablesDB();
+  const { systemTables } = await import('@/lib/data');
+  const tables = systemTables();
   const { getActor } = await import('@/lib/actions/secure-ops/shared');
   const actor = await getActor(jwt).catch(() => null);
   const userId = actor?.$id;
@@ -2405,25 +2393,25 @@ async function getCurrentPublicNoteDecryptionKey(noteId: string): Promise<string
 export async function validatePublicNoteAccess(noteId: string): Promise<Notes | null> {
   try {
     if (typeof window === 'undefined') {
-      const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
-      const tables = createSystemTablesDB();
+      const { systemTables } = await import('@/lib/data');
+      const tables = systemTables();
       
-      const doc = await tables.getRow(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_TABLE_ID_NOTES,
-        noteId
-      ) as any;
+      const doc = await tables.getRow({
+        databaseId: APPWRITE_DATABASE_ID,
+        tableId: APPWRITE_TABLE_ID_NOTES,
+        rowId: noteId,
+      }) as any;
       
       // Safety check: isPublic or isGuest MUST be true
       if (doc && (doc.isPublic === true || doc.isGuest === true)) {
         hydrateVirtualAttributes(doc);
         try {
           const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-          const pivot = await tables.listRows(
-            APPWRITE_DATABASE_ID,
-            noteTagsTable,
-            [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any
-          );
+          const pivot = await tables.listRows({
+            databaseId: APPWRITE_DATABASE_ID,
+            tableId: noteTagsTable,
+            queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any,
+          });
           if (pivot.rows.length) {
             const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
             doc.tags = tags;

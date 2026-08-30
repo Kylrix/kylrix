@@ -36,36 +36,21 @@ export function TagSelectorDrawer() {
 
     void (async () => {
       try {
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { readLocalTagRows, writeLocalTagRows } = await import('@/lib/data');
         const { account } = await import('@/lib/appwrite/client');
         const user = await account.get().catch(() => null);
         const uid = user?.$id || 'guest';
-        
-        const [c1, c2] = await Promise.all([
-          LocalEngine.cacheGet<any>(`f_tags_${uid}`),
-          LocalEngine.cacheGet<any>(`f_user_tags_${uid}`),
-        ]);
-        
-        const found =
-          c1?.rows && Array.isArray(c1.rows) && c1.rows.length > 0
-            ? c1.rows
-            : Array.isArray(c1) && c1.length > 0
-              ? c1
-              : c2?.rows && Array.isArray(c2.rows) && c2.rows.length > 0
-                ? c2.rows
-                : Array.isArray(c2) && c2.length > 0
-                  ? c2
-                  : [];
-                  
+
+        const found = await readLocalTagRows(uid === 'guest' ? null : uid);
         if (found.length > 0) {
           setDirectLocalTags(found);
-        } else {
+        } else if (uid !== 'guest') {
           const { getAllTags, listTags } = await import('@/lib/appwrite');
           const res = await getAllTags().catch(() => listTags());
           const rows = Array.isArray(res) ? res : (Array.isArray(res?.rows) ? res.rows : []);
           if (rows.length > 0) {
             setDirectLocalTags(rows);
-            await LocalEngine.cacheSet(`f_tags_${uid}`, { rows, total: rows.length });
+            await writeLocalTagRows(uid, rows);
           }
         }
       } catch {}
