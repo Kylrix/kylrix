@@ -44,8 +44,7 @@ thread `isThread` / `isChat` notes + `comments` remain readable when `threads.le
 
 - `lib/services/threads.ts` — `ThreadService`
 - `lib/threads/types.ts` — kinds, `buildThreadScopeKey`
-- PAT: `POST /threads` ensure · `GET /threads` · `GET|POST /threads/:id/messages`
-- Shortcuts: `POST /notes/:id/discussion`, `POST /goals/:id/discussion`, `GET|POST /workspaces/:id/thread`
+- PAT: `GET /threads?parent_kind=&parent_id=` · `POST /threads` ensure · `GET|POST /threads/:id/messages`
 
 ## Do not
 

@@ -50,21 +50,22 @@ Mint tokens: **Settings → Developers** on [kylrix.space](https://www.kylrix.sp
 ## Endpoints (summary)
 
 ### Token self-service
-- `GET /token` · `GET|PATCH /token/scopes` · `POST /token/scopes/grant`
+- `GET /token` · `GET|PATCH /token/scopes` · `POST /token/scopes` (`mode: grant`)
 
 ### Profile
 - `GET /me`
 
 ### Notes
-- `GET /notes?workspaceId=&limit=` · `POST /notes` · `GET|PATCH|DELETE /notes/:id`
+- `GET /notes?workspace_id=&limit=` · `POST /notes` · `GET|PATCH|DELETE /notes/:id`
 
 ### Goals
-- `GET /goals?workspaceId=&status=&limit=` · `POST /goals` · `GET|PATCH|DELETE /goals/:id`
+- `GET /goals?workspace_id=&status=&limit=` · `POST /goals` · `GET|PATCH|DELETE /goals/:id`
 - Fields: `title`, `description`, `status`, `priority`, `dueDate`, `tags`, `workspaceId` — see `sdk/contracts/goals.ts`
 
 ### Workspaces
 - `GET /workspaces` · `POST /workspaces` · `GET|PATCH|DELETE /workspaces/:id`
-- `GET|POST /workspaces/:id/collaborators` · `GET|POST /workspaces/:id/thread`
+- `GET|POST /workspaces/:id/collaborators`
+- Discussions: `GET /threads?parent_kind=workspace&parent_id=:id` · `POST /threads`
 
 ### Chats, events, forms, flows, moments, threads, vault, tags, agents
 

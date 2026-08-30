@@ -9,7 +9,6 @@ export interface ApiModulePaths {
   notes: string;
   workspaces: string;
   projects: string;
-  flows: string;
   events: string;
   forms: string;
   tags: string;
@@ -29,8 +28,12 @@ export interface ApiModulePaths {
   token: {
     root: string;
     scopes: string;
-    scopesGrant: string;
     operations: string;
+  };
+  flows: {
+    root: string;
+    installations: string;
+    flowInstallations: (flowId: string) => string;
   };
   forward: {
     conversations: string;
@@ -60,7 +63,12 @@ export function createApiModulePaths(basePath = KYLRIX_API_V1_BASE): ApiModulePa
     notes: buildApiPath(basePath, 'notes'),
     workspaces: buildApiPath(basePath, 'workspaces'),
     projects: buildApiPath(basePath, 'projects'),
-    flows: buildApiPath(basePath, 'flows'),
+    flows: {
+      root: buildApiPath(basePath, 'flows'),
+      installations: buildApiPath(basePath, 'flows', 'installations'),
+      flowInstallations: (flowId: string) =>
+        buildApiPath(basePath, 'flows', flowId, 'installations'),
+    },
     events: buildApiPath(basePath, 'events'),
     forms: buildApiPath(basePath, 'forms'),
     tags: buildApiPath(basePath, 'tags'),
@@ -80,7 +88,6 @@ export function createApiModulePaths(basePath = KYLRIX_API_V1_BASE): ApiModulePa
     token: {
       root: buildApiPath(basePath, 'token'),
       scopes: buildApiPath(basePath, 'token', 'scopes'),
-      scopesGrant: buildApiPath(basePath, 'token', 'scopes', 'grant'),
       operations: 'in-code-secure-op',
     },
     forward: {

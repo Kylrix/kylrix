@@ -115,6 +115,45 @@ const THREAD_MESSAGE_SCHEMA = {
   },
 } as const;
 
+export const MCP_THREAD_LIST_INPUT = {
+  type: 'object',
+  properties: {
+    parent_kind: {
+      type: 'string',
+      description: 'Parent object type: workspace, note, goal, …',
+    },
+    parent_id: { type: 'string', description: 'Parent object ID' },
+    limit: { type: 'number', description: 'Max threads to return (default: 25)' },
+  },
+} as const;
+export const MCP_THREAD_LIST_OUTPUT = mcpItemsOutput({
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    parentKind: { type: 'string' },
+    parentId: { type: 'string' },
+    title: { type: 'string' },
+  },
+});
+export const MCP_THREAD_ENSURE_INPUT = {
+  type: 'object',
+  properties: {
+    parent_kind: { type: 'string', description: 'Parent object type' },
+    parent_id: { type: 'string', description: 'Parent object ID' },
+    channel: { type: 'string', description: 'Thread channel (default: discuss)' },
+    title: { type: 'string', description: 'Optional thread title' },
+  },
+  required: ['parent_kind', 'parent_id'],
+} as const;
+export const THREAD_RECORD_JSON_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    parentKind: { type: 'string' },
+    parentId: { type: 'string' },
+  },
+} as const;
+
 export const MCP_THREAD_MESSAGES_LIST_INPUT = {
   type: 'object',
   properties: {

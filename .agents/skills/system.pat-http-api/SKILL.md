@@ -41,19 +41,19 @@ Verify: lookup `tokenPrefix` → compare hash → status/expiry → rate limit �
 
 ## Public HTTP surface
 
-Self-service (any valid PAT): `GET /token`, `GET|PATCH /token/scopes`, `POST /token/scopes/grant`.
+Self-service (any valid PAT): `GET /token`, `GET|PATCH|POST /token/scopes` (`mode: grant` on POST).
 
-REST resources: notes, goals, workspaces (+ `/thread`), events, forms, flows/install,
-feeds, moments (+ comments), threads (plaintext), chats (E2EE meta / plaintext send when open),
+REST resources: notes, goals, workspaces, events, forms, flows/:id/installations,
+feeds, moments (+ comments), threads (unified plaintext), chats (E2EE meta / plaintext send when open),
 vault metadata, tags, objects, agents/harness. **No** `/tools/execute` (410).
 
 Intentional gaps: E2EE send, Nostr signing, vault secrets, WebRTC.
 
 ## Limits (Rolling 1m / 24h)
 
-- **Free**: 10 req / min · 100 req / day
-- **Pro**: 50 req / min · 500 req / day
-- **Teams**: 100 req / min · 1,000 req / day
+- **Free**: 12 req / min · 300 req / day
+- **Pro**: 60 req / min · 2,500 req / day
+- **Teams**: 120 req / min · 5,000 req / day (2× Pro)
 - **Payload cap**: ~256 KB per request
 
 ## Surfaces

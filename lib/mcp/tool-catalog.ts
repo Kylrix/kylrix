@@ -58,6 +58,9 @@ import {
   MCP_TAG_DELETE_INPUT,
   MCP_TAG_LIST_INPUT,
   MCP_TAG_LIST_OUTPUT,
+  MCP_THREAD_ENSURE_INPUT,
+  MCP_THREAD_LIST_INPUT,
+  MCP_THREAD_LIST_OUTPUT,
   MCP_THREAD_MESSAGE_CREATE_INPUT,
   MCP_THREAD_MESSAGES_LIST_INPUT,
   MCP_THREAD_MESSAGES_LIST_OUTPUT,
@@ -83,6 +86,7 @@ import {
   SCOPE_CATALOG_JSON_SCHEMA,
   TAG_RECORD_JSON_SCHEMA,
   THREAD_MESSAGE_JSON_SCHEMA,
+  THREAD_RECORD_JSON_SCHEMA,
   TOKEN_INFO_JSON_SCHEMA,
   TOKEN_REFRESH_JSON_SCHEMA,
   WORKSPACE_RECORD_JSON_SCHEMA,
@@ -435,6 +439,20 @@ export const MCP_TOOL_ENTRIES: McpTool[] = [
   },
 
   // ── 11. Discussion Threads ──
+  {
+    name: 'list_threads',
+    description: 'List discussion threads, optionally filtered by parent object (workspace, note, goal).',
+    inputSchema: MCP_THREAD_LIST_INPUT,
+    outputSchema: MCP_THREAD_LIST_OUTPUT,
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.78 },
+  },
+  {
+    name: 'ensure_thread',
+    description: 'Get or create the discussion thread for a parent object (workspace, note, goal).',
+    inputSchema: MCP_THREAD_ENSURE_INPUT,
+    outputSchema: THREAD_RECORD_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.8 },
+  },
   {
     name: 'list_thread_messages',
     description: 'List messages in an object discussion thread.',

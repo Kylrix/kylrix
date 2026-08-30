@@ -3,6 +3,7 @@ import { jsonOk, type ApiActor } from '@/lib/api/guard';
 import { ApiResources } from '@/lib/api/resources';
 import { API_V1_SEGMENTS as S, API_V1_SUBSEGMENTS as SUB, isWorkspaceSegment, workspaceIdParam } from '@/sdk/api/routes';
 import { createV1DispatchContext } from '@/lib/api/v1/context';
+import { resolveTokenScopeMode, threadMessageFilter, threadParentFilter } from '@/lib/api/v1/query';
 
 export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiActor) {
   const ctx = createV1DispatchContext(req, parts, actor);
@@ -18,12 +19,13 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
   if (a === S.token && !b && method === 'GET') return jsonOk(await ApiResources.tokenMe(actor));
   if (a === S.token && b === SUB.scopes && !c) {
     if (method === 'GET') return jsonOk(await ApiResources.tokenScopeCatalog(actor));
-    if (method === 'PATCH' || method === 'PUT' || method === 'POST') {
+    if (method === 'PATCH' || method === 'PUT') {
       return jsonOk(await ApiResources.tokenUpdateScopes(actor, await readBody(), 'replace'));
     }
-  }
-  if (a === S.token && b === SUB.scopes && c === SUB.grant && (method === 'POST' || method === 'PATCH')) {
-    return jsonOk(await ApiResources.tokenUpdateScopes(actor, await readBody(), 'grant'));
+    if (method === 'POST') {
+      const body = await readBody();
+      return jsonOk(await ApiResources.tokenUpdateScopes(actor, body, resolveTokenScopeMode(body, method)));
+    }
   }
 
   // PATs
@@ -78,19 +80,18 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     if (method === 'GET') return jsonOk(await ApiResources.listFlows(actor, limit()));
     if (method === 'POST') return jsonOk(await ApiResources.createFlow(actor, await readBody()));
   }
-  if (a === S.flows && b && !c && b !== SUB.installs && b !== SUB.install) {
+  if (a === S.flows && b && !c && b !== SUB.installations) {
     if (method === 'GET') return jsonOk(await ApiResources.getFlow(actor, b));
     if (method === 'DELETE') return jsonOk(await ApiResources.deleteFlow(actor, b));
   }
   if (a === S.flows && b && c === SUB.publish && method === 'POST') {
     return jsonOk(await ApiResources.publishFlow(actor, b, await readBody()));
   }
-  if (a === S.flows && b === SUB.installs && !c) {
-    if (method === 'GET') return jsonOk(await ApiResources.listFlowInstalls(actor));
-    if (method === 'POST') return jsonOk(await ApiResources.installFlow(actor, await readBody()));
+  if (a === S.flows && b === SUB.installations && !c && method === 'GET') {
+    return jsonOk(await ApiResources.listFlowInstalls(actor));
   }
-  if (a === S.flows && b === SUB.install && !c && method === 'POST') {
-    return jsonOk(await ApiResources.installFlow(actor, await readBody()));
+  if (a === S.flows && b && c === SUB.installations && method === 'POST') {
+    return jsonOk(await ApiResources.installFlow(actor, b, await readBody()));
   }
 
   // Workspaces
@@ -160,14 +161,11 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     }
   }
 
-  // Threads (canonical threads + thread_messages tables)
+  // Threads — canonical discussion substrate (workspace, note, goal, …)
   if (a === S.threads && !b) {
     if (method === 'GET') {
-      const parentKind = params.get('parentKind') || undefined;
-      const parentId = params.get('parentId') || undefined;
-      return jsonOk(
-        await ApiResources.listThreads(actor, limit(), { parentKind, parentId }),
-      );
+      const parent = threadParentFilter(params);
+      return jsonOk(await ApiResources.listThreads(actor, limit(), parent));
     }
     if (method === 'POST') {
       return jsonOk(await ApiResources.ensureThread(actor, await readBody()));
@@ -177,26 +175,15 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     return jsonOk(await ApiResources.getThread(actor, b));
   }
   if (a === S.threads && b && c === SUB.messages && !d) {
+    const msgFilter = threadMessageFilter(params);
     if (method === 'GET') {
       return jsonOk(
-        await ApiResources.listThreadMessages(actor, b, limit(), {
-          rootMessageId: params.get('rootMessageId') || undefined,
-          parentMessageId: params.get('parentMessageId') || undefined,
-          topLevelOnly: params.get('topLevel') === '1',
-        }),
+        await ApiResources.listThreadMessages(actor, b, limit(), msgFilter),
       );
     }
     if (method === 'POST') {
       return jsonOk(await ApiResources.createThreadMessage(actor, b, await readBody()));
     }
-  }
-
-  // Idea / goal discussion ensure shortcuts
-  if (a === S.notes && b && c === SUB.discussion && !d && method === 'POST') {
-    return jsonOk(await ApiResources.ensureNoteDiscussion(actor, b));
-  }
-  if (a === S.goals && b && c === SUB.discussion && !d && method === 'POST') {
-    return jsonOk(await ApiResources.ensureGoalDiscussion(actor, b));
   }
 
   // Agents
@@ -370,23 +357,6 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     }
     if (method === 'POST') {
       return jsonOk(await ApiResources.createMomentComment(actor, b, await readBody()));
-    }
-  }
-
-  // Workspace discussion thread shortcut
-  if (isWorkspaceSegment(a) && b && c === 'thread' && !d) {
-    if (method === 'GET') return jsonOk(await ApiResources.getWorkspaceThread(actor, b));
-    if (method === 'POST') {
-      return jsonOk(await ApiResources.replyWorkspaceThread(actor, b, await readBody()));
-    }
-  }
-  if (isWorkspaceSegment(a) && b && c === 'thread' && d === SUB.messages) {
-    if (method === 'GET') {
-      const pack = await ApiResources.getWorkspaceThread(actor, b);
-      return jsonOk((pack as any).messages || []);
-    }
-    if (method === 'POST') {
-      return jsonOk(await ApiResources.replyWorkspaceThread(actor, b, await readBody()));
     }
   }
 

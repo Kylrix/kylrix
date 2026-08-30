@@ -19,23 +19,29 @@ export type ApiRateLimits = {
 };
 
 /**
- * Tier limits:
- * - Free: 10 req / min, 100 req / day
- * - Pro: 50 req / min, 500 req / day
- * - Teams (or Org/Lifetime): 100 req / min, 1,000 req / day
+ * Tier limits (rolling 1-minute burst + 24-hour account ceiling):
+ *
+ * Chokepoint analysis:
+ * - **Minute window** — protects the VPS from burst abuse; kept modest across tiers.
+ * - **Daily window** — what blocks MCP/agent loops (many calls per turn); Pro/Teams get
+ *   the larger relative bump. Teams = exactly 2× Pro on both windows.
+ *
+ * - Free:  12 req/min · 300 req/day  (~25 agent turns/day at ~12 calls each)
+ * - Pro:   60 req/min · 2,500 req/day
+ * - Teams: 120 req/min · 5,000 req/day
  */
 export async function resolveApiRateLimits(userId: string): Promise<{ tier: BillingUiTier; perMinute: number; perDay: number }> {
   try {
     const entitlement = await getVerifiedProEntitlementForUser(userId);
     const tier = entitlement.uiTier;
     if (tier === 'TEAMS' || tier === 'ORG' || tier === 'LIFETIME') {
-      return { tier, perMinute: 100, perDay: 1000 };
+      return { tier, perMinute: 120, perDay: 5000 };
     }
     if (tier === 'PRO') {
-      return { tier, perMinute: 50, perDay: 500 };
+      return { tier, perMinute: 60, perDay: 2500 };
     }
   } catch {}
-  return { tier: 'FREE', perMinute: 10, perDay: 100 };
+  return { tier: 'FREE', perMinute: 12, perDay: 300 };
 }
 
 function minuteKey(d = new Date()) {

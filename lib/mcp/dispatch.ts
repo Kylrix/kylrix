@@ -110,6 +110,20 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
     ),
   create_thread_message: (actor, args) =>
     ApiResources.createThreadMessage(actor, String(args.threadId), { content: args.content }),
+  list_threads: async (actor, args) =>
+    mcpListResult(
+      await ApiResources.listThreads(actor, args.limit || 25, {
+        parentKind: args.parent_kind || args.parentKind,
+        parentId: args.parent_id || args.parentId,
+      }),
+    ),
+  ensure_thread: (actor, args) =>
+    ApiResources.ensureThread(actor, {
+      parent_kind: args.parent_kind || args.parentKind,
+      parent_id: args.parent_id || args.parentId,
+      channel: args.channel,
+      title: args.title,
+    }),
 
   list_agent_sessions: async (actor, args) =>
     mcpListResult(

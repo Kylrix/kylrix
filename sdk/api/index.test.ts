@@ -12,9 +12,11 @@ describe('api helpers', () => {
     expect(paths.me).toBe('/api/v1/me');
     expect(paths.mcp).toBe('/api/v1/mcp');
     expect(paths.goals).toBe('/api/v1/goals');
-    expect(paths.flows).toBe('/api/v1/flows');
+    expect(paths.flows.root).toBe('/api/v1/flows');
+    expect(paths.flows.installations).toBe('/api/v1/flows/installations');
+    expect(paths.flows.flowInstallations('flow1')).toBe('/api/v1/flows/flow1/installations');
     expect(paths.token.root).toBe('/api/v1/token');
-    expect(paths.token.scopesGrant).toBe('/api/v1/token/scopes/grant');
+    expect(paths.token.scopes).toBe('/api/v1/token/scopes');
     expect(paths.connect.messages).toBe('/api/v1/connect/messages');
     expect(paths.forward.send).toBe('/api/v1/forward/send');
   });

@@ -3,6 +3,7 @@ import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import type { ApiActor } from '@/lib/api/guard';
 import { requireScope } from '@/lib/api/guard';
+import { resolveParentRef } from '@/lib/api/v1/query';
 import { listScopeCatalog, type PatScope } from '@/lib/api/scopes';
 import { PatService } from '@/lib/services/pats';
 import { clampNoteTitle } from '@/constants/noteTitle';
@@ -1925,13 +1926,13 @@ export const ApiResources = {
     return { id, deleted: true, trashed: true };
   },
 
-  async installFlow(actor: ApiActor, body: Record<string, unknown>) {
+  async installFlow(actor: ApiActor, flowId: string, body: Record<string, unknown> = {}) {
     requireScope(actor, 'flows:install');
-    const flowId = String(body.flowId || body.id || '').trim();
-    if (!flowId) badRequest('flowId required');
+    const id = String(flowId || body.flowId || body.id || '').trim();
+    if (!id) badRequest('flow id required in URL path');
     const { FlowInstallService } = await import('@/lib/services/flow-installs');
     const result = await FlowInstallService.install({
-      flowId,
+      flowId: id,
       installerId: actor.userId,
       scope: (body.scope as any) || { type: 'user' },
       grants: (body.grants as any) || null,
@@ -3126,9 +3127,8 @@ export const ApiResources = {
 
   async ensureThread(actor: ApiActor, body: Record<string, unknown>) {
     requireScope(actor, 'chats:write');
-    const parentKind = String(body.parentKind || '').trim();
-    const parentId = String(body.parentId || '').trim();
-    if (!parentKind || !parentId) badRequest('parentKind and parentId required');
+    const { parentKind, parentId } = resolveParentRef(body);
+    if (!parentKind || !parentId) badRequest('parent_kind and parent_id required');
     const { ThreadService } = await import('@/lib/services/threads');
     const result = await ThreadService.getOrCreate({
       parentKind,

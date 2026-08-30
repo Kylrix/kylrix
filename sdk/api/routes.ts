@@ -32,19 +32,17 @@ export const API_V1_SUBSEGMENTS = {
   members: 'members',
   objects: 'objects',
   attach: 'attach',
-  discussion: 'discussion',
   sessions: 'sessions',
   harness: 'harness',
   items: 'items',
   restore: 'restore',
   purge: 'purge',
-  installs: 'installs',
-  install: 'install',
   publish: 'publish',
   keys: 'keys',
   provision: 'provision',
   identity: 'identity',
   mirror: 'mirror',
+  installations: 'installations',
 } as const;
 
 export function isWorkspaceSegment(segment?: string) {
@@ -52,5 +50,10 @@ export function isWorkspaceSegment(segment?: string) {
 }
 
 export function workspaceIdParam(params: URLSearchParams) {
-  return params.get('workspaceId') || params.get('projectId');
+  return (
+    params.get('workspace_id') ||
+    params.get('workspaceId') ||
+    params.get('project_id') ||
+    params.get('projectId')
+  );
 }
