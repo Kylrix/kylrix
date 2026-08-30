@@ -52,6 +52,7 @@ import {
   shapeTrashNoteItem,
   shapeTrashVaultItem,
   shapeVaultItem,
+  shapeTotpSecret,
   shapeWorkspace,
   shapeWorkspaceCollaborator,
 } from '@/sdk/contracts';
@@ -2347,27 +2348,11 @@ export const ApiResources = {
           ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes)
           : {};
 
-        const rawIssuer = unsealed.issuer ?? r.issuer ?? '';
-        const issuer = looksEncrypted(rawIssuer) && !mekBytes ? 'Encrypted Code' : (rawIssuer || 'Smart Code');
-        const accountName = unsealed.accountName !== undefined ? unsealed.accountName : (looksEncrypted(r.accountName) && !mekBytes ? null : r.accountName ?? null);
-        const url = unsealed.url !== undefined ? unsealed.url : (looksEncrypted(r.url) && !mekBytes ? null : r.url ?? null);
-
-        return {
-          id: r.$id,
-          issuer,
-          accountName,
-          url,
-          algorithm: r.algorithm || 'SHA1',
-          digits: r.digits || 6,
-          period: r.period || 30,
-          folderId: r.folderId || null,
-          isFavorite: !!r.isFavorite,
-          tags: Array.isArray(r.tags) ? r.tags : [],
-          updatedAt: r.$updatedAt || r.updatedAt || null,
-          createdAt: r.$createdAt || r.createdAt || null,
-          hasSecret: !!r.secretKey,
-          ...(unsealed.secretKey ? { secretKey: unsealed.secretKey } : {}),
-        };
+        return shapeTotpSecret(r, {
+          unsealed,
+          hasMek: !!mekBytes,
+          looksEncrypted,
+        });
       }),
     );
   },
@@ -2394,27 +2379,11 @@ export const ApiResources = {
       ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes)
       : {};
 
-    const rawIssuer = unsealed.issuer ?? r.issuer ?? '';
-    const issuer = looksEncrypted(rawIssuer) && !mekBytes ? 'Encrypted Code' : (rawIssuer || 'Smart Code');
-    const accountName = unsealed.accountName !== undefined ? unsealed.accountName : (looksEncrypted(r.accountName) && !mekBytes ? null : r.accountName ?? null);
-    const url = unsealed.url !== undefined ? unsealed.url : (looksEncrypted(r.url) && !mekBytes ? null : r.url ?? null);
-
-    return {
-      id: r.$id,
-      issuer,
-      accountName,
-      url,
-      algorithm: r.algorithm || 'SHA1',
-      digits: r.digits || 6,
-      period: r.period || 30,
-      folderId: r.folderId || null,
-      isFavorite: !!r.isFavorite,
-      tags: Array.isArray(r.tags) ? r.tags : [],
-      updatedAt: r.$updatedAt || r.updatedAt || null,
-      createdAt: r.$createdAt || r.createdAt || null,
-      hasSecret: !!r.secretKey,
-      ...(unsealed.secretKey ? { secretKey: unsealed.secretKey } : {}),
-    };
+    return shapeTotpSecret(r, {
+      unsealed,
+      hasMek: !!mekBytes,
+      looksEncrypted,
+    });
   },
 
   async createTotpSecret(

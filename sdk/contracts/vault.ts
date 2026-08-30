@@ -88,3 +88,74 @@ export function shapeVaultItem(
     ...(unsealed.cardPIN ? { cardPIN: unsealed.cardPIN } : {}),
   };
 }
+
+export interface TotpUnsealedFields {
+  issuer?: string;
+  accountName?: string | null;
+  url?: string | null;
+  secretKey?: string;
+}
+
+export interface TotpSecretRecord {
+  id: string;
+  issuer: string;
+  accountName: string | null;
+  url: string | null;
+  algorithm: string;
+  digits: number;
+  period: number;
+  folderId: string | null;
+  isFavorite: boolean;
+  tags: string[];
+  updatedAt: string | null;
+  createdAt: string | null;
+  hasSecret: boolean;
+  secretKey?: string;
+}
+
+export function shapeTotpSecret(
+  row: Record<string, unknown>,
+  opts: {
+    unsealed?: TotpUnsealedFields;
+    hasMek?: boolean;
+    looksEncrypted?: (value: unknown) => boolean;
+  } = {},
+): TotpSecretRecord {
+  const r = row as any;
+  const unsealed = opts.unsealed || {};
+  const hasMek = !!opts.hasMek;
+  const isEncryptedValue = opts.looksEncrypted || (() => false);
+
+  const rawIssuer = unsealed.issuer ?? r.issuer ?? '';
+  const issuer =
+    isEncryptedValue(rawIssuer) && !hasMek ? 'Encrypted Code' : String(rawIssuer || 'Smart Code');
+  const accountName =
+    unsealed.accountName !== undefined
+      ? unsealed.accountName
+      : isEncryptedValue(r.accountName) && !hasMek
+        ? null
+        : (r.accountName ?? null);
+  const url =
+    unsealed.url !== undefined
+      ? unsealed.url
+      : isEncryptedValue(r.url) && !hasMek
+        ? null
+        : (r.url ?? null);
+
+  return {
+    id: String(r.$id || r.id),
+    issuer,
+    accountName,
+    url,
+    algorithm: r.algorithm || 'SHA1',
+    digits: r.digits || 6,
+    period: r.period || 30,
+    folderId: r.folderId || null,
+    isFavorite: !!r.isFavorite,
+    tags: Array.isArray(r.tags) ? r.tags : [],
+    updatedAt: r.$updatedAt || r.updatedAt || null,
+    createdAt: r.$createdAt || r.createdAt || null,
+    hasSecret: !!r.secretKey,
+    ...(unsealed.secretKey ? { secretKey: unsealed.secretKey } : {}),
+  };
+}

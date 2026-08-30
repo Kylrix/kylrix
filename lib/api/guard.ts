@@ -26,6 +26,24 @@ export type ApiActor = {
   rateLimits?: ApiRateLimits;
 };
 
+function applyRateLimitHeaders(headers: Headers, limits: ApiRateLimits) {
+  headers.set('X-RateLimit-Limit-Minute', String(limits.perMinute));
+  headers.set('X-RateLimit-Remaining-Minute', String(limits.remainingMinute));
+  headers.set('X-RateLimit-Limit-Day', String(limits.perDay));
+  headers.set('X-RateLimit-Remaining-Day', String(limits.remainingDay));
+  headers.set('X-RateLimit-Reset-Minute', String(limits.resetMinuteEpoch));
+  headers.set('X-RateLimit-Reset-Day', String(limits.resetDayEpoch));
+
+  // IETF draft rate limit headers (minute window is primary for client backoff)
+  headers.set('RateLimit-Policy', `${limits.perMinute};w=60, ${limits.perDay};w=86400`);
+  headers.set('RateLimit-Limit', String(limits.perMinute));
+  headers.set('RateLimit-Remaining', String(limits.remainingMinute));
+  headers.set(
+    'RateLimit-Reset',
+    String(Math.max(1, limits.resetMinuteEpoch - Math.floor(Date.now() / 1000))),
+  );
+}
+
 function extractBearer(req: NextRequest): string | null {
   const h = req.headers.get('authorization') || req.headers.get('Authorization');
   if (!h) return null;
@@ -135,12 +153,7 @@ export function requireScope(actor: ApiActor, scope: PatScope) {
 export function jsonOk(data: unknown, init?: ResponseInit, actor?: ApiActor) {
   const headers = new Headers(init?.headers);
   if (actor?.rateLimits) {
-    headers.set('X-RateLimit-Limit-Minute', String(actor.rateLimits.perMinute));
-    headers.set('X-RateLimit-Remaining-Minute', String(actor.rateLimits.remainingMinute));
-    headers.set('X-RateLimit-Limit-Day', String(actor.rateLimits.perDay));
-    headers.set('X-RateLimit-Remaining-Day', String(actor.rateLimits.remainingDay));
-    headers.set('X-RateLimit-Reset-Minute', String(actor.rateLimits.resetMinuteEpoch));
-    headers.set('X-RateLimit-Reset-Day', String(actor.rateLimits.resetDayEpoch));
+    applyRateLimitHeaders(headers, actor.rateLimits);
   }
   return NextResponse.json({ ok: true, data }, { status: 200, ...init, headers });
 }
@@ -150,7 +163,10 @@ export function jsonErr(err: unknown) {
   const status = typeof e?.status === 'number' ? e.status : 500;
   const headers: Record<string, string> = {};
   if (e instanceof RateLimitError || e?.code === 'rate_limit_exceeded') {
-    headers['Retry-After'] = String(e.retryAfterSec || 60);
+    const retryAfter = String(e.retryAfterSec || 60);
+    headers['Retry-After'] = retryAfter;
+    headers['RateLimit-Remaining'] = '0';
+    headers['RateLimit-Reset'] = retryAfter;
     return NextResponse.json(
       {
         error: e?.code || 'rate_limit_exceeded',
@@ -200,12 +216,7 @@ export async function withApiGuard(
     const actor = await resolveApiActor(req);
     const res = await handler(actor);
     if (actor.rateLimits) {
-      res.headers.set('X-RateLimit-Limit-Minute', String(actor.rateLimits.perMinute));
-      res.headers.set('X-RateLimit-Remaining-Minute', String(actor.rateLimits.remainingMinute));
-      res.headers.set('X-RateLimit-Limit-Day', String(actor.rateLimits.perDay));
-      res.headers.set('X-RateLimit-Remaining-Day', String(actor.rateLimits.remainingDay));
-      res.headers.set('X-RateLimit-Reset-Minute', String(actor.rateLimits.resetMinuteEpoch));
-      res.headers.set('X-RateLimit-Reset-Day', String(actor.rateLimits.resetDayEpoch));
+      applyRateLimitHeaders(res.headers, actor.rateLimits);
     }
     return res;
   } catch (err) {
