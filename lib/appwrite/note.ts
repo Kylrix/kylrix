@@ -806,19 +806,30 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
 
 
 
-export async function createTag(data: Partial<Tags & { isPublic?: boolean; isGuest?: boolean }>, jwt?: string) {
+async function getLocalTagRows(userId: string | null | undefined): Promise<any[]> {
+  if (!userId || typeof window === 'undefined') return [];
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const cached = await LocalEngine.cacheGet<{ rows?: any[] } | any[]>(`f_tags_${userId}`);
+    if (Array.isArray(cached)) return cached;
+    if (cached?.rows && Array.isArray(cached.rows)) return cached.rows;
+  } catch {}
+  return [];
+}
+
+export async function createTag(data: Partial<Tags & { $id?: string; isPublic?: boolean; isGuest?: boolean }>, jwt?: string) {
   const rawName = data.name?.trim();
   if (!rawName) throw new Error("Tag name is required");
   const nameLower = rawName.toLowerCase();
 
-  // 1. Client-side path: check if tag already exists in local/server tags
+  // 1. Client-side path: local cache first, sync to Appwrite in background
   if (typeof window !== 'undefined') {
-    const { createRow } = await import('@/lib/actions/client-ops');
-    
+    const user = await getCurrentUser();
+    const userId = user?.$id || null;
+
     try {
-      const { listTags } = await import('@/lib/appwrite/note');
-      const existingList = await listTags().catch(() => ({ rows: [] as any[] }));
-      const match = (existingList?.rows || []).find(
+      const localRows = await getLocalTagRows(userId);
+      const match = localRows.find(
         (t: any) => (t.nameLower && t.nameLower === nameLower) || (t.name && t.name.toLowerCase() === nameLower)
       );
       if (match) {
@@ -827,22 +838,47 @@ export async function createTag(data: Partial<Tags & { isPublic?: boolean; isGue
     } catch {}
 
     const metadata = { color: data.color || '#A855F7', description: data.description || '' };
+    const tagId = data.$id || ID.unique();
+    const now = new Date().toISOString();
     const payload = {
+      $id: tagId,
       name: rawName,
       nameLower,
       metadata: JSON.stringify(metadata),
       isPublic: !!data.isPublic,
       isGuest: !!data.isGuest,
-      usageCount: 0
+      usageCount: 0,
     };
 
-    const doc = await createRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, payload);
-    try {
-      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
-      if (doc?.$id) autonomicSyncEngine.markPending(doc.$id);
-    } catch {}
+    const optimistic = hydrateTagMetadata({
+      $id: tagId,
+      name: rawName,
+      nameLower,
+      userId,
+      metadata: JSON.stringify(metadata),
+      usageCount: 0,
+      $createdAt: now,
+      $updatedAt: now,
+      color: metadata.color,
+      description: metadata.description,
+    } as unknown as Tags);
+
+    void (async () => {
+      try {
+        const { createRow } = await import('@/lib/actions/client-ops');
+        const doc = await createRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, payload);
+        try {
+          const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+          if (doc?.$id) autonomicSyncEngine.markPending(doc.$id);
+        } catch {}
+        invalidateCache('list:tags');
+      } catch (err) {
+        console.warn('[createTag] background sync failed:', err);
+      }
+    })();
+
     invalidateCache('list:tags');
-    return hydrateTagMetadata(doc as unknown as Tags);
+    return optimistic;
   }
 
   // 2. Server-side path

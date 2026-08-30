@@ -5,7 +5,6 @@ import {
   Box, 
   Typography, 
   Stack, 
-  CircularProgress, 
   IconButton,
   Drawer,
   useTheme,
@@ -65,7 +64,6 @@ export function NewTagDrawer() {
   const onSuccess = drawerData?.onSuccess as (() => void) | undefined;
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -119,11 +117,9 @@ export function NewTagDrawer() {
     }
   }, [isOpen, editingTag]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const persistTag = (opts?: { morphToDetail?: boolean }) => {
     if (!user?.$id || !formData.name.trim()) return;
 
-    setIsSaving(true);
     setError(null);
 
     const tagName = formData.name.trim();
@@ -141,78 +137,43 @@ export function NewTagDrawer() {
 
     pushLiveTag(liveTag);
 
-    try {
-      if (editingTag) {
-        await updateTag(editingTag.$id, {
-          name: tagName,
-          description: formData.description.trim(),
-          color: formData.color});
-      } else {
-        await createTag({
-          name: tagName,
-          description: formData.description.trim(),
-          color: formData.color});
-      }
-      
-      if (!editingTag && typeof window !== 'undefined') {
-        localStorage.removeItem('kylrix:draft:tag');
-      }
-      if (onSuccess) onSuccess();
-      close();
-    } catch (err: any) {
-      setError(err instanceof Error ? err.message : 'Failed to save tag');
-    } finally {
-      setIsSaving(false);
+    if (!editingTag && typeof window !== 'undefined') {
+      localStorage.removeItem('kylrix:draft:tag');
     }
+    if (onSuccess) onSuccess();
+
+    if (opts?.morphToDetail) {
+      setActiveDetail({ type: 'tag', id: tagId, data: liveTag });
+    }
+    close();
+
+    void (async () => {
+      try {
+        if (editingTag) {
+          await updateTag(editingTag.$id, {
+            name: tagName,
+            description: formData.description.trim(),
+            color: formData.color});
+        } else {
+          await createTag({
+            $id: tagId,
+            name: tagName,
+            description: formData.description.trim(),
+            color: formData.color});
+        }
+      } catch (err: any) {
+        console.warn('[NewTagDrawer] background tag sync failed:', err);
+      }
+    })();
   };
 
-  const handleMorphToDetail = async () => {
-    if (!user?.$id || !formData.name.trim()) return;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    persistTag();
+  };
 
-    setIsSaving(true);
-    setError(null);
-
-    const tagName = formData.name.trim();
-    const tagId = editingTag ? editingTag.$id : ID.unique();
-    const now = new Date().toISOString();
-    const liveTag: Tags = {
-      $id: tagId,
-      name: tagName,
-      nameLower: tagName.toLowerCase(),
-      description: formData.description.trim(),
-      color: formData.color,
-      userId: user.$id,
-      $createdAt: editingTag?.$createdAt || now,
-      $updatedAt: now} as any;
-
-    pushLiveTag(liveTag);
-
-    try {
-      let savedTag: any;
-      if (editingTag) {
-        savedTag = await updateTag(editingTag.$id, {
-          name: tagName,
-          description: formData.description.trim(),
-          color: formData.color});
-      } else {
-        savedTag = await createTag({
-          name: tagName,
-          description: formData.description.trim(),
-          color: formData.color});
-      }
-      
-      if (!editingTag && typeof window !== 'undefined') {
-        localStorage.removeItem('kylrix:draft:tag');
-      }
-      if (onSuccess) onSuccess();
-      const targetTag = savedTag || liveTag;
-      setActiveDetail({ type: 'tag', id: targetTag.$id || targetTag.id || tagName, data: targetTag });
-      close();
-    } catch (err: any) {
-      setError(err instanceof Error ? err.message : 'Failed to save tag');
-    } finally {
-      setIsSaving(false);
-    }
+  const handleMorphToDetail = () => {
+    persistTag({ morphToDetail: true });
   };
 
   const fontDisplay = 'var(--font-clash)';
@@ -452,14 +413,10 @@ export function NewTagDrawer() {
           <Box sx={{ mt: 'auto', pt: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             <button
               type="submit"
-              disabled={isSaving || !formData.name.trim()}
+              disabled={!formData.name.trim()}
               className="w-full py-3.5 px-4 rounded-2xl bg-[#A855F7] hover:bg-[#9333EA] disabled:opacity-40 disabled:hover:bg-[#A855F7] text-white font-bold text-sm tracking-wide transition-all shadow-[0_4px_16px_rgba(168,85,247,0.3)] flex items-center justify-center gap-2 cursor-pointer"
             >
-              {isSaving ? (
-                <CircularProgress size={18} color="inherit" />
-              ) : (
-                <span>{editingTag ? 'Update Tag' : 'Create Tag'}</span>
-              )}
+              <span>{editingTag ? 'Update Tag' : 'Create Tag'}</span>
             </button>
 
             <button
