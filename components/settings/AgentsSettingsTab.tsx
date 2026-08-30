@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Bot, 
-  Sparkles, 
   Plus, 
   Key, 
   Radio, 
@@ -27,21 +26,12 @@ export function AgentsSettingsTab() {
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
 
-  // Custom User Agents
   const [customAgents, setCustomAgents] = useState<AgentRecord[]>([]);
   const [_loadingAgents, setLoadingAgents] = useState(true);
-
-  // Default Agent Setting (Kylie or Custom Agent)
   const [defaultAgentId, setDefaultAgentId] = useState<string>('kylie');
-
-  // Selected Agent for Action Drawer
   const [selectedAgentForAction, setSelectedAgentForAction] = useState<any | null>(null);
-
-  // Custom Provider / BYOK State
   const [hasByok, setHasByok] = useState(false);
   const [_byokLoading, setByokLoading] = useState(true);
-
-  // Compute Balance State
   const [computeState, setComputeState] = useState<{
     balance: number;
     maxBalance: number;
@@ -50,7 +40,6 @@ export function AgentsSettingsTab() {
   } | null>(null);
   const [_loadingCompute, setLoadingCompute] = useState(true);
 
-  // Drawer helper (Desktop Right Sidebar / Mobile Bottom Sheet)
   const openAgentDrawer = useCallback((mode: AgentDrawerMode) => {
     const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
     const close = isDesktop ? closeSidebar : closeOverlay;
@@ -67,7 +56,6 @@ export function AgentsSettingsTab() {
     }
   }, [openSidebar, closeSidebar, openOverlay, closeOverlay]);
 
-  // Load custom agents with LocalEngine
   const loadAgents = useCallback(async () => {
     if (!user?.$id) {
       setLoadingAgents(false);
@@ -96,7 +84,6 @@ export function AgentsSettingsTab() {
     loadAgents();
   }, [loadAgents]);
 
-  // Load default agent choice from LocalEngine
   useEffect(() => {
     void LocalEngine.cacheGet<string>('kylrix_default_agent_id').then((saved) => {
       if (saved) setDefaultAgentId(saved);
@@ -108,7 +95,6 @@ export function AgentsSettingsTab() {
     void LocalEngine.cacheSet('kylrix_default_agent_id', id);
   };
 
-  // Check BYOK Key
   useEffect(() => {
     if (!user?.$id) {
       setByokLoading(false);
@@ -138,7 +124,6 @@ export function AgentsSettingsTab() {
         id
       );
 
-      // Clean up agent profile in background
       try {
         await tablesDB.deleteRow(
           APPWRITE_CONFIG.DATABASES.CHAT,
@@ -157,7 +142,6 @@ export function AgentsSettingsTab() {
     }
   };
 
-  // Fetch compute credits
   const loadComputeBalance = useCallback(async () => {
     try {
       setLoadingCompute(true);
@@ -169,7 +153,7 @@ export function AgentsSettingsTab() {
         setComputeState(res);
       }
     } catch {
-      // Non-blocking fail-safe
+      // Non-blocking
     } finally {
       setLoadingCompute(false);
     }
@@ -181,41 +165,57 @@ export function AgentsSettingsTab() {
     }
   }, [user?.$id, loadComputeBalance]);
 
-  // Find active default agent display info (Kylie vs Custom agent)
   const activeCustomAgent = customAgents.find((a) => a.$id === defaultAgentId);
   const activeDefaultName = activeCustomAgent
     ? JSON.parse(activeCustomAgent.config || '{}').name || 'Custom Agent'
     : 'Kylie';
   const activeDefaultRole = activeCustomAgent
-    ? JSON.parse(activeCustomAgent.config || '{}').role || 'Custom user partner'
-    : 'Primary Ecosystem Partner';
+    ? JSON.parse(activeCustomAgent.config || '{}').role || 'Custom assistant'
+    : 'Default assistant';
   const isCustomDefault = !!activeCustomAgent;
 
   return (
     <div className="space-y-6 font-satoshi">
-      {/* ── Section 1: Default Agent Partner & Quick Launchbar ── */}
+      {/* Agent keys */}
       <div className="p-6 bg-[#161412] border border-white/10 rounded-[28px] shadow-2xl space-y-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <Key size={16} className="text-[#818cf8] shrink-0" />
+              <h3 className="text-white font-black text-base font-clash m-0">Agent keys</h3>
+            </div>
+            <p className="text-white/50 text-sm m-0 max-w-xl leading-relaxed">
+              For autonomous agents that run in their own workspace. The agent uses this key once to provision itself and mint its own token.
+            </p>
+            <p className="text-white/35 text-xs m-0">
+              For IDE tools or scripts on <span className="text-white/50">your</span> workspace, use a PAT in Developers instead.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => openAgentDrawer({ type: 'manage_provisioning_keys' })}
+            className="h-10 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0"
+          >
+            <Plus size={13} />
+            <span>Mint agent key</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Default assistant */}
+      <div className="p-5 bg-[#161412] border border-white/10 rounded-[22px] space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-mono m-0">Default assistant</p>
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-2xl bg-[#F59E0B]/12 border border-[#F59E0B]/30 text-[#F59E0B] flex items-center justify-center text-xl shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/12 border border-[#F59E0B]/30 text-[#F59E0B] flex items-center justify-center text-lg shrink-0">
               {isCustomDefault ? '🤖' : '✨'}
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-white font-black text-base font-clash m-0 truncate">
-                  {activeDefaultName}
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#F59E0B]/15 text-[#F59E0B] font-bold border border-[#F59E0B]/20">
-                  Active Default
-                </span>
-              </div>
-              <p className="text-white/50 text-xs font-semibold m-0 mt-0.5 truncate">
-                {activeDefaultRole}
-              </p>
+              <h4 className="text-white font-bold text-sm m-0 truncate">{activeDefaultName}</h4>
+              <p className="text-white/40 text-xs m-0 mt-0.5 truncate">{activeDefaultRole}</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() =>
@@ -226,12 +226,11 @@ export function AgentsSettingsTab() {
                   customAgents,
                 })
               }
-              className="h-9 px-3.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
             >
-              <Radio size={13} className="text-[#F59E0B]" />
-              <span>Switch Partner</span>
+              <Radio size={13} />
+              <span>Change</span>
             </button>
-
             <button
               type="button"
               onClick={() =>
@@ -240,40 +239,19 @@ export function AgentsSettingsTab() {
                   onCreated: () => void loadAgents(),
                 })
               }
-              className="h-9 px-3.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Plus size={13} />
-              <span>New Agent</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => openAgentDrawer({ type: 'manage_provisioning_keys' })}
-              className="h-9 px-3.5 rounded-xl bg-[#161412] hover:bg-white/[0.06] border border-white/10 text-white/90 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Key size={13} className="text-[#818cf8]" />
-              <span>Provisioning Keys</span>
+              <span>New agent</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── Section 2: Agent Ecosystem Catalogs & Controls (Canonical OpenBricks 4.0 Gateway Grid) ── */}
+      {/* More */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-white font-black text-lg tracking-tight leading-tight flex items-center gap-2 font-mono m-0">
-              <Sparkles size={18} className="text-[#6366F1]" />
-              <span>Agents & Integrations</span>
-            </h3>
-            <p className="text-white/40 text-xs font-semibold mt-0.5 m-0">
-              Autonomous personas, system specialists, terminal skills, and LLM compute.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {/* Card 1: Custom Autonomous Agents */}
+        <h3 className="text-white/40 text-xs font-bold uppercase tracking-wider font-mono m-0">More</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div
             onClick={() =>
               openAgentDrawer({
@@ -289,35 +267,20 @@ export function AgentsSettingsTab() {
                 onDeleteAgent: (id, name) => handleDeleteCustomAgent(undefined, id, name),
               })
             }
-            className="p-4 bg-[#161412] border border-white/10 hover:border-[#6366F1]/40 hover:bg-[#1C1A18] rounded-[22px] shadow-xl flex flex-col justify-between gap-3.5 transition-all duration-200 cursor-pointer group"
+            className="p-4 bg-[#161412] border border-white/10 hover:border-[#6366F1]/40 hover:bg-[#1C1A18] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0 border border-[#6366F1]/20">
-                <Bot size={18} />
+              <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0 border border-[#6366F1]/20">
+                <Bot size={16} />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-[#818CF8] transition-colors">
-                    Custom Agents
-                  </h4>
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#6366F1]/15 text-[#818cf8] font-bold border border-[#6366F1]/20">
-                    {customAgents.length} Active
-                  </span>
-                </div>
-                <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">
-                  {customAgents.length > 0
-                    ? `${customAgents.length} autonomous agent${customAgents.length > 1 ? 's' : ''} configured`
-                    : 'Build custom subagents with PATs'}
-                </p>
+              <div className="min-w-0">
+                <h4 className="text-white font-bold text-xs m-0">Custom agents</h4>
+                <p className="text-white/40 text-[11px] m-0">{customAgents.length} configured</p>
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-[#818CF8] border-t border-white/10 pt-2">
-              <span>View & Manage Catalog</span>
-              <ChevronRight size={12} />
-            </div>
+            <ChevronRight size={14} className="text-white/30 group-hover:text-[#818CF8]" />
           </div>
 
-          {/* Card 2: Internal System Specialists */}
           <div
             onClick={() =>
               openAgentDrawer({
@@ -325,77 +288,36 @@ export function AgentsSettingsTab() {
                 onSelectAgent: (sa) => setSelectedAgentForAction(sa),
               })
             }
-            className="p-4 bg-[#161412] border border-white/10 hover:border-[#F59E0B]/40 hover:bg-[#1C1A18] rounded-[22px] shadow-xl flex flex-col justify-between gap-3.5 transition-all duration-200 cursor-pointer group"
+            className="p-4 bg-[#161412] border border-white/10 hover:border-[#F59E0B]/40 hover:bg-[#1C1A18] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center text-lg shrink-0 border border-[#F59E0B]/20">
+              <div className="w-9 h-9 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center shrink-0 border border-[#F59E0B]/20">
                 ✨
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-[#F59E0B] transition-colors">
-                    System Specialists
-                  </h4>
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#F59E0B]/15 text-[#F59E0B] font-bold border border-[#F59E0B]/20">
-                    {SYSTEM_AGENTS.length} Core
-                  </span>
-                </div>
-                <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">
-                  Kylie, Sidekick, Flow, Meta Crafter
-                </p>
+              <div className="min-w-0">
+                <h4 className="text-white font-bold text-xs m-0">Built-in agents</h4>
+                <p className="text-white/40 text-[11px] m-0">{SYSTEM_AGENTS.length} included</p>
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-[#F59E0B] border-t border-white/10 pt-2">
-              <span>Inspect Personas & Prompts</span>
-              <ChevronRight size={12} />
-            </div>
+            <ChevronRight size={14} className="text-white/30 group-hover:text-[#F59E0B]" />
           </div>
 
-          {/* Card 3: Provisioning Keys (APK) */}
-          <div
-            onClick={() => openAgentDrawer({ type: 'manage_provisioning_keys' })}
-            className="p-4 bg-[#161412] border border-white/10 hover:border-[#6366F1]/40 hover:bg-[#1C1A18] rounded-[22px] shadow-xl flex flex-col justify-between gap-3.5 transition-all duration-200 cursor-pointer group"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0 border border-[#6366F1]/20">
-                <Key size={18} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-[#818CF8] transition-colors">
-                  Provisioning Keys (APK)
-                </h4>
-                <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">Root keys for CLI subagents</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-[#818CF8] border-t border-white/10 pt-2">
-              <span>Manage Security Keys</span>
-              <ChevronRight size={12} />
-            </div>
-          </div>
-
-          {/* Card 4: CLI Skill Integration */}
           <div
             onClick={() => openAgentDrawer({ type: 'manage_cli_skill' })}
-            className="p-4 bg-[#161412] border border-white/10 hover:border-white/25 hover:bg-[#1C1A18] rounded-[22px] shadow-xl flex flex-col justify-between gap-3.5 transition-all duration-200 cursor-pointer group"
+            className="p-4 bg-[#161412] border border-white/10 hover:border-white/25 hover:bg-[#1C1A18] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-white/5 text-white/70 flex items-center justify-center shrink-0 border border-white/10">
-                <Terminal size={18} />
+              <div className="w-9 h-9 rounded-xl bg-white/5 text-white/70 flex items-center justify-center shrink-0 border border-white/10">
+                <Terminal size={16} />
               </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-white transition-colors">
-                  Agent Skill & CLI
-                </h4>
-                <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">npx skills add kylrix/kylrix --skill agents</p>
+              <div className="min-w-0">
+                <h4 className="text-white font-bold text-xs m-0">Terminal setup</h4>
+                <p className="text-white/40 text-[11px] m-0">Skills & env exports</p>
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-white/50 border-t border-white/10 pt-2">
-              <span>View Terminal Setup</span>
-              <ChevronRight size={12} />
-            </div>
+            <ChevronRight size={14} className="text-white/30 group-hover:text-white/60" />
           </div>
 
-          {/* Card 5: Compute & BYOK */}
           <div
             onClick={() =>
               openAgentDrawer({
@@ -414,30 +336,22 @@ export function AgentsSettingsTab() {
                 },
               })
             }
-            className="p-4 bg-[#161412] border border-white/10 hover:border-emerald-500/40 hover:bg-[#1C1A18] rounded-[22px] shadow-xl flex flex-col justify-between gap-3.5 transition-all duration-200 cursor-pointer group"
+            className="p-4 bg-[#161412] border border-white/10 hover:border-emerald-500/40 hover:bg-[#1C1A18] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
-                <Zap size={18} />
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                <Zap size={16} />
               </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-emerald-400 transition-colors">
-                  Compute & BYOK
-                </h4>
-                <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">
-                  {hasByok ? 'BYOK Active (Unlimited)' : 'Shared Daily Pool'}
-                </p>
+              <div className="min-w-0">
+                <h4 className="text-white font-bold text-xs m-0">Gemini API key</h4>
+                <p className="text-white/40 text-[11px] m-0">{hasByok ? 'Private key active' : 'Shared daily pool'}</p>
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400 border-t border-white/10 pt-2">
-              <span>Configure Gemini Key</span>
-              <ChevronRight size={12} />
-            </div>
+            <ChevronRight size={14} className="text-white/30 group-hover:text-emerald-400" />
           </div>
         </div>
       </div>
 
-      {/* Agent Actions & Profile Drawer */}
       {selectedAgentForAction && (
         <AgentActionDrawer
           open={Boolean(selectedAgentForAction)}

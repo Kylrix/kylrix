@@ -95,20 +95,26 @@ Contract: `ota.yaml` · schema: `appwrite.config.json`
 
 Humans and agents share the same workspace. MCP for IDE tool loops; REST for scripts, mobile, and CI.
 
+**Choose auth**
+
+| Token | Use when |
+|---|---|
+| **PAT** (`kyl_pat_…`) | The agent acts in **your** workspace (IDE tools, scripts, MCP on your behalf). Mint in **Settings → Developers**. |
+| **Agent key** (`kyl_apk_…`) | The agent gets **its own** workspace — it provisions itself and mints its own PAT. Mint in **Settings → Smart Agents → Agent keys**. |
+
 | Surface | Use when |
 |---|---|
 | **MCP** | IDE agents (Cursor, Claude, Windsurf, Codex, …) |
 | **REST API** (`/api/v1`) | Scripts, mobile apps, CI, custom backends |
-| **Agent runtime** | Autonomous agents with provisioning keys |
 
 **Steps**
 
-1. **Mint a PAT** — [kylrix.space](https://www.kylrix.space) → Settings → Developers (`kyl_pat_…`)
+1. **Mint a token** — PAT (your workspace) or agent key (agent workspace); see table above
 2. **Install skills**
    ```bash
    npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
    ```
-3. **Connect MCP** (pick your client)
+3. **Connect MCP** (IDE only — uses your PAT)
    ```bash
    npx -y @smithery/cli install kylrix/kylrix --client cursor
    ```

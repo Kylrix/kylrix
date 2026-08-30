@@ -357,9 +357,9 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
               {mode.type === 'create_custom' && 'Agent Crafter'}
               {mode.type === 'edit_custom' && 'Edit Custom Agent'}
               {mode.type === 'select_default' && 'Select Default Partner'}
-              {mode.type === 'manage_provisioning_keys' && (isCreatingApkKey ? 'Mint Provisioning Key' : 'Security Keys')}
-              {mode.type === 'manage_byok' && 'Compute & BYOK'}
-              {mode.type === 'manage_cli_skill' && 'CLI Skill & Integration'}
+              {mode.type === 'manage_provisioning_keys' && (isCreatingApkKey ? 'New key' : 'Agent keys')}
+              {mode.type === 'manage_byok' && 'Gemini API key'}
+              {mode.type === 'manage_cli_skill' && 'Terminal setup'}
             </p>
             <h2 className="text-sm font-black font-clash text-white m-0 leading-tight mt-0.5">
               {mode.type === 'list_custom' && 'Custom Agents Catalog'}
@@ -368,9 +368,9 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
               {mode.type === 'create_custom' && 'Create Custom Agent'}
               {mode.type === 'edit_custom' && name}
               {mode.type === 'select_default' && 'Active Agent Partner'}
-              {mode.type === 'manage_provisioning_keys' && (isCreatingApkKey ? 'New Provisioning Key' : 'Agent Provisioning Keys')}
-              {mode.type === 'manage_byok' && 'Google Gemini BYOK'}
-              {mode.type === 'manage_cli_skill' && 'Terminal Skill Integration'}
+              {mode.type === 'manage_provisioning_keys' && (isCreatingApkKey ? 'Mint agent key' : 'Agent keys')}
+              {mode.type === 'manage_byok' && 'Gemini API key'}
+              {mode.type === 'manage_cli_skill' && 'Terminal setup'}
             </h2>
           </div>
         </div>
@@ -940,7 +940,7 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                 <div className="p-4 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/30 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-[#818cf8] flex items-center gap-1.5 font-mono">
-                      <Check size={13} /> Provisioning Key Generated (Shown Once)
+                      <Check size={13} /> Agent key created (shown once)
                     </span>
                     <button
                       type="button"
@@ -960,7 +960,7 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                     {newlyCreatedApk}
                   </code>
                   <p className="text-xs text-white/60 m-0 leading-relaxed">
-                    Copy and export this key as <code className="text-[#818cf8] font-mono">KYLRIX_AGENT_KEY</code> in your agent terminal. It will not be shown again.
+                    Export as <code className="text-[#818cf8] font-mono">KYLRIX_AGENT_KEY</code> in your terminal. It will not be shown again.
                   </p>
                 </div>
               </div>
@@ -969,16 +969,13 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
               <div className="space-y-4">
                 <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
                   <div>
-                    <label className="text-xs font-bold text-white uppercase tracking-wider font-mono block mb-1">
-                      Key Name / Environment <span className="text-[#6366F1]">*</span>
+                    <label className="text-xs font-bold text-white block mb-2">
+                      Name <span className="text-[#6366F1]">*</span>
                     </label>
-                    <p className="text-xs text-white/50 m-0 mb-3">
-                      Assign a clear label to identify which external agent or device will use this key.
-                    </p>
                     <input
                       value={newApkName}
                       onChange={(e) => setNewApkName(e.target.value)}
-                      placeholder="e.g. Cursor Local Agent, CI Pipeline, Home Server"
+                      placeholder="e.g. Cursor agent, CI bot"
                       autoFocus
                       className="w-full h-11 rounded-xl bg-[#161412] border border-white/[0.08] px-3.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] transition-colors"
                       onKeyDown={(e) => {
@@ -991,38 +988,20 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2">
-                  <div className="flex items-center gap-2 text-white font-bold text-xs">
-                    <ShieldCheck size={15} className="text-[#6366F1]" />
-                    <span>Granted Scope & Permissions</span>
-                  </div>
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#818cf8] font-bold">
-                      agents:provision
-                    </span>
-                  </div>
-                  <p className="text-xs text-white/40 m-0 pt-1 leading-relaxed">
-                    Zero-trust root permission. Allows external agent daemons to authenticate, declare identities, and request scoped runtime session PATs. Does not grant direct access to your notes or vault.
-                  </p>
-                </div>
+                <p className="text-xs text-white/45 m-0">
+                  Scope: <code className="font-mono text-[#818cf8]">agents:provision</code> — registers the agent and mints its own workspace token. Does not access your notes or vault.
+                </p>
               </div>
             ) : (
               /* STATE 3: Active Keys List & Zero-Trust Architecture Info */
-              <div className="space-y-6">
-                <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2">
-                  <div className="flex items-center gap-2 text-white font-bold text-xs">
-                    <ShieldCheck size={15} className="text-[#6366F1]" />
-                    <span>Zero-Trust Provisioning Architecture</span>
-                  </div>
-                  <p className="text-xs text-white/50 m-0 leading-relaxed">
-                    Agent Provisioning Keys (<code className="text-[#818cf8] font-mono">kyl_apk_…</code>) only have permission to register agent identities and mint scoped Agentic PATs. They cannot access your notes or vault.
-                  </p>
-                </div>
+              <div className="space-y-4">
+                <p className="text-xs text-white/50 m-0 leading-relaxed">
+                  Keys start with <code className="font-mono text-[#818cf8]">kyl_apk_</code>. Each key lets one autonomous agent provision its own workspace and mint its own PAT.
+                </p>
 
-                {/* Active Provisioning Keys List */}
                 <div className="space-y-2.5">
                   <h4 className="text-xs font-bold text-white/40 uppercase tracking-wider font-mono m-0">
-                    Active Provisioning Keys
+                    Active keys
                   </h4>
 
                   {loadingApk ? (
@@ -1031,7 +1010,7 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                     </div>
                   ) : apkList.length === 0 ? (
                     <div className="p-6 rounded-2xl bg-[#0A0908] border border-white/5 text-center text-xs text-white/40">
-                      No active provisioning keys. Click below to generate one.
+                      No agent keys yet.
                     </div>
                   ) : (
                     apkList.map((apk) => (
@@ -1174,11 +1153,9 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
         {mode.type === 'manage_cli_skill' && (
           <div className="space-y-4">
             <div className="p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
-              <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
-                Agent Skill CLI Installation
-              </span>
-              <p className="text-xs text-white/50 leading-relaxed m-0">
-                Install MCP, REST API, and agent skills in one command:
+              <span className="text-xs font-bold text-white block">Install skills</span>
+              <p className="text-xs text-white/50 m-0">
+                MCP, REST API, and agent runtime docs in one install:
               </p>
               <div className="p-3 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-between gap-2">
                 <code className="text-xs font-mono text-[#818CF8] truncate select-all">
@@ -1199,9 +1176,7 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
 
             <div className="p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
-                  Shell Environment Variables
-                </span>
+                <span className="text-xs font-bold text-white block">Shell exports</span>
                 <button
                   type="button"
                   onClick={async () => {
@@ -1215,10 +1190,9 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                   <span>Copy All</span>
                 </button>
               </div>
-              <p className="text-xs text-white/50 leading-relaxed m-0">
-                Set your agent provisioning key in your local shell to allow headless agents to authenticate:
+              <p className="text-xs text-white/50 m-0">
+                After minting an agent key above, export it in your terminal:
               </p>
-              
               <div className="space-y-2 max-w-full overflow-hidden">
                 {/* Var 1: KYLRIX_AGENT_KEY */}
                 <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-between gap-2 min-w-0">
@@ -1256,26 +1230,9 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                   </button>
                 </div>
               </div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2.5">
-              <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
-                Agent Capability Matrix
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono text-white/60">
-                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.04]">
-                  ✓ Zero-Trust MEK Encryption
-                </div>
-                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.04]">
-                  ✓ Nostr Sovereign Profiles
-                </div>
-                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.04]">
-                  ✓ Agentic PAT Sub-tokens
-                </div>
-                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.04]">
-                  ✓ Autonomous Workspace Scopes
-                </div>
-              </div>
+              <p className="text-xs text-white/35 m-0">
+                For tools on your personal workspace, use a PAT from Developers instead of an agent key.
+              </p>
             </div>
           </div>
         )}
@@ -1364,7 +1321,7 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                 className="flex-1 h-10 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40 shadow-lg shadow-[#6366F1]/10"
               >
                 {creatingApk ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
-                <span>Generate Key</span>
+                <span>Mint agent key</span>
               </button>
             </div>
           ) : (
@@ -1377,7 +1334,7 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
               className="w-full h-10 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg shadow-[#6366F1]/10"
             >
               <Plus size={14} />
-              <span>Generate Provisioning Key</span>
+              <span>Mint agent key</span>
             </button>
           )}
         </div>
