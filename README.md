@@ -2,7 +2,11 @@
   <img src="public/logo.svg" width="120" alt="Kylrix Logo">
 </p>
 
-<h1 align="center">Notes, tasks, vault, chat, and agents — one workspace.</h1>
+<h1 align="center">Build, ship and think in one living agentic workspace.</h1>
+
+<p align="center">
+  <strong>Your workflow becomes a living, scalable system that compounds daily leverage over time.</strong>
+</p>
 
 <p align="center">
   Open source · Self-hostable · Local-first · Optional encryption
