@@ -93,7 +93,7 @@ Contract: `ota.yaml` · schema: `appwrite.config.json`
 
 ## Humans & agents
 
-Humans and agents share the same workspace. **MCP** fits IDE tool loops; **REST** fits scripts, mobile, and CI — most installs include both.
+Humans and agents share the same workspace. MCP for IDE tool loops; REST for scripts, mobile, and CI.
 
 | Surface | Use when |
 |---|---|
@@ -101,27 +101,20 @@ Humans and agents share the same workspace. **MCP** fits IDE tool loops; **REST*
 | **REST API** (`/api/v1`) | Scripts, mobile apps, CI, custom backends |
 | **Agent runtime** | Autonomous agents with provisioning keys |
 
-**Mint a token:** [kylrix.space](https://www.kylrix.space) → Settings → Developers → PAT (`kyl_pat_…`)
+**Steps**
 
-**Connect MCP** (pick your client):
+1. **Mint a PAT** — [kylrix.space](https://www.kylrix.space) → Settings → Developers (`kyl_pat_…`)
+2. **Install skills**
+   ```bash
+   npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
+   ```
+3. **Connect MCP** (pick your client)
+   ```bash
+   npx -y @smithery/cli install kylrix/kylrix --client cursor
+   ```
+4. **Set endpoint** — `https://www.kylrix.space/api/v1/mcp` (self-hosted: your host + `/api/v1/mcp`, see [SELFHOST.md](SELFHOST.md))
 
-```bash
-npx -y @smithery/cli install kylrix/kylrix --client cursor
-npx -y @smithery/cli install kylrix/kylrix --client claude
-npx -y @smithery/cli install kylrix/kylrix --client windsurf
-npx -y @smithery/cli install kylrix/kylrix --client codex
-npx -y @smithery/cli install kylrix/kylrix --client antigravity
-```
-
-**Install agent skills** (MCP + REST + agents — one command):
-
-```bash
-npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
-```
-
-Endpoint: `https://www.kylrix.space/api/v1/mcp` · self-hosted: swap host for yours (see [SELFHOST.md](SELFHOST.md))
-
-More wiring detail: [docs/integrations.md](docs/integrations.md)
+Wiring reference: [docs/integrations.md](docs/integrations.md)
 
 ---
 
