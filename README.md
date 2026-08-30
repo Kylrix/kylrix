@@ -99,8 +99,8 @@ Humans and agents share the same workspace. MCP for IDE tool loops; REST for scr
 
 | Token | Use when |
 |---|---|
-| **PAT** (`kyl_pat_…`) | The agent acts in **your** workspace (IDE tools, scripts, MCP on your behalf). Mint in **Settings → Developers**. |
-| **Agent key** (`kyl_apk_…`) | The agent gets **its own** workspace — it provisions itself and mints its own PAT. Mint in **Settings → Smart Agents → Agent keys**. |
+| **PAT** (`kyl_pat_…`) | The agent acts in **your** workspace (IDE tools, scripts, MCP on your behalf). [Settings → Developers](https://www.kylrix.space/settings?tab=developers) |
+| **Agent key** (`kyl_apk_…`) | The agent gets **its own** workspace — it provisions itself and mints its own PAT. [Settings → Smart Agents](https://www.kylrix.space/settings?tab=agents) |
 
 | Surface | Use when |
 |---|---|
@@ -109,7 +109,7 @@ Humans and agents share the same workspace. MCP for IDE tool loops; REST for scr
 
 **Steps**
 
-1. **Mint a token** — PAT (your workspace) or agent key (agent workspace); see table above
+1. **Mint a token** — [PAT](https://www.kylrix.space/settings?tab=developers) (your workspace) or [agent key](https://www.kylrix.space/settings?tab=agents) (agent workspace)
 2. **Install skills**
    ```bash
    npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
