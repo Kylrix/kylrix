@@ -114,11 +114,10 @@ Humans and agents share the same workspace. MCP for IDE tool loops; REST for scr
    ```bash
    npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
    ```
-3. **Connect MCP** (IDE only — uses your PAT)
+3. **Connect MCP** (IDE only — uses your PAT; Smithery wires the official endpoint)
    ```bash
    npx -y @smithery/cli install kylrix/kylrix --client cursor
    ```
-4. **Set endpoint** — `https://www.kylrix.space/api/v1/mcp` (self-hosted: your host + `/api/v1/mcp`, see [SELFHOST.md](SELFHOST.md))
 
 Wiring reference: [docs/integrations.md](docs/integrations.md)
 
