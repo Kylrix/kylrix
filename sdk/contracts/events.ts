@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MCP_ID_INPUT, MCP_SUCCESS_OUTPUT, MCP_WORKSPACE_LIMIT_INPUT, mcpItemsOutput } from './common';
+import { MCP_ID_INPUT, MCP_WORKSPACE_LIMIT_INPUT, mcpItemsOutput } from './common';
 
 export const eventCreateInputZod = z.object({
   title: z.string().min(1),

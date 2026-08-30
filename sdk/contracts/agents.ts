@@ -1,4 +1,4 @@
-import { MCP_ID_INPUT, MCP_LIMIT_INPUT, mcpItemsOutput } from './common';
+import { MCP_ID_INPUT, mcpItemsOutput } from './common';
 
 export function shapeAgentSessionListItem(row: Record<string, unknown>) {
   const r = row as any;

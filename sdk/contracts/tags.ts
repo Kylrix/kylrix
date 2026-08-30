@@ -1,4 +1,4 @@
-import { MCP_ID_INPUT, MCP_LIMIT_INPUT, MCP_SUCCESS_OUTPUT, mcpItemsOutput } from './common';
+import { MCP_ID_INPUT, MCP_LIMIT_INPUT, mcpItemsOutput } from './common';
 
 const TAG_LIST_ITEM_SCHEMA = {
   type: 'object',

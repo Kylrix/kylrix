@@ -1,4 +1,4 @@
-import { MCP_ID_INPUT, mcpItemsOutput } from './common';
+import { mcpItemsOutput } from './common';
 
 export interface ThreadRecord {
   id: string;
