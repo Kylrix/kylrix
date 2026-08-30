@@ -32,6 +32,7 @@ export const API_V1_SUBSEGMENTS = {
   members: 'members',
   objects: 'objects',
   attach: 'attach',
+  projects: 'projects',
   sessions: 'sessions',
   harness: 'harness',
   items: 'items',

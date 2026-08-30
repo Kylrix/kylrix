@@ -3,6 +3,7 @@ export * from './auth';
 export * from './goals';
 export * from './notes';
 export * from './workspaces';
+export * from './projects';
 export * from './agentic';
 export * from './events';
 export * from './forms';

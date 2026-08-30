@@ -16,6 +16,7 @@ interface EcosystemToolDefinition {
   featureId?: string;
   domain:
     | 'workspace'
+    | 'project'
     | 'idea'
     | 'goal'
     | 'vault'
@@ -152,6 +153,113 @@ function registerCoreTools() {
       const doc = await ProjectsService.createProject(params as any);
       return { success: true, data: doc };
     }});
+
+  // 1b. Workspace sub-projects (nested projects)
+  toolRegistry.register({
+    id: 'project.list',
+    domain: 'project',
+    action: 'read',
+    name: 'List Workspace Projects',
+    description: 'List nested projects inside a workspace.',
+    parameters: {
+      workspaceId: { type: 'string', description: 'Parent workspace ID', required: true },
+    },
+    execute: async (params) => {
+      const { ProjectsService } = await import('@/lib/appwrite/projects');
+      const rows = await ProjectsService.listSubProjects(String(params.workspaceId));
+      return { success: true, data: rows };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'project.create',
+    domain: 'project',
+    action: 'create',
+    name: 'Create Workspace Project',
+    description: 'Create a nested project inside a workspace.',
+    parameters: {
+      workspaceId: { type: 'string', description: 'Parent workspace ID', required: true },
+      title: { type: 'string', description: 'Project title', required: true },
+      summary: { type: 'string', description: 'Project summary' },
+      visibility: { type: 'string', description: 'private | public | team' },
+    },
+    execute: async (params) => {
+      const { ProjectsService } = await import('@/lib/appwrite/projects');
+      const doc = await ProjectsService.createProject({
+        title: String(params.title),
+        summary: params.summary ? String(params.summary) : '',
+        visibility: (params.visibility as any) || 'private',
+        kind: 'project',
+        parentProjectId: String(params.workspaceId),
+      } as any);
+      return { success: true, data: doc };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'project.read',
+    domain: 'project',
+    action: 'read',
+    name: 'Read Workspace Project',
+    description: 'Get a nested project inside a workspace.',
+    parameters: {
+      workspaceId: { type: 'string', description: 'Parent workspace ID', required: true },
+      projectId: { type: 'string', description: 'Sub-project ID', required: true },
+    },
+    execute: async (params) => {
+      const { ProjectsService } = await import('@/lib/appwrite/projects');
+      const { getParentProjectId, isSubProjectRecord } = await import('@/lib/projects/sub-projects');
+      const doc = await ProjectsService.getProject(String(params.projectId));
+      if (!doc || !isSubProjectRecord(doc)) {
+        return { success: false, error: 'Project not found' };
+      }
+      if (getParentProjectId(doc) !== String(params.workspaceId)) {
+        return { success: false, error: 'Project not found in workspace' };
+      }
+      return { success: true, data: doc };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'project.update',
+    domain: 'project',
+    action: 'update',
+    name: 'Update Workspace Project',
+    description: 'Update a nested project inside a workspace.',
+    parameters: {
+      workspaceId: { type: 'string', description: 'Parent workspace ID', required: true },
+      projectId: { type: 'string', description: 'Sub-project ID', required: true },
+      title: { type: 'string', description: 'Updated title' },
+      summary: { type: 'string', description: 'Updated summary' },
+      visibility: { type: 'string', description: 'private | public | team' },
+    },
+    execute: async (params) => {
+      const { ProjectsService } = await import('@/lib/appwrite/projects');
+      const read = await toolRegistry.executeTool('project.read', params);
+      if (!read.success) return read;
+      const doc = await ProjectsService.updateProject(String(params.projectId), params as any);
+      return { success: true, data: doc };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'project.delete',
+    domain: 'project',
+    action: 'delete',
+    name: 'Delete Workspace Project',
+    description: 'Delete a nested project from a workspace.',
+    parameters: {
+      workspaceId: { type: 'string', description: 'Parent workspace ID', required: true },
+      projectId: { type: 'string', description: 'Sub-project ID', required: true },
+    },
+    execute: async (params) => {
+      const { ProjectsService } = await import('@/lib/appwrite/projects');
+      const read = await toolRegistry.executeTool('project.read', params);
+      if (!read.success) return read;
+      await ProjectsService.deleteProject(String(params.projectId));
+      return { success: true, data: { deletedId: params.projectId } };
+    },
+  });
 
   toolRegistry.register({
     id: 'workspace.read',

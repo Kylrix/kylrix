@@ -32,10 +32,20 @@ export function tierMeetsFeature(
 
 export const TOOL_FEATURE_MAP: Record<string, FeatureId> = {
   'developer.pat.create': 'oauth_provider',
+  'project.list': 'projects',
+  'project.create': 'projects',
+  'project.read': 'projects',
+  'project.update': 'projects',
+  'project.delete': 'projects',
 };
 
 export const MCP_TOOL_FEATURE_MAP: Record<string, FeatureId> = {
   add_workspace_collaborator: 'projects',
+  list_workspace_projects: 'projects',
+  get_workspace_project: 'projects',
+  create_workspace_project: 'projects',
+  update_workspace_project: 'projects',
+  delete_workspace_project: 'projects',
   create_flow: 'ai',
   delete_flow: 'ai',
   create_agent_session: 'ai',

@@ -94,6 +94,19 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     return jsonOk(await ApiResources.installFlow(actor, b, await readBody()));
   }
 
+  // Workspace sub-projects (nested projects under a workspace)
+  if (isWorkspaceSegment(a) && b && c === SUB.projects && !d) {
+    if (method === 'GET') return jsonOk(await ApiResources.listWorkspaceProjects(actor, b, limit()));
+    if (method === 'POST') return jsonOk(await ApiResources.createWorkspaceProject(actor, b, await readBody()));
+  }
+  if (isWorkspaceSegment(a) && b && c === SUB.projects && d && !parts[4]) {
+    if (method === 'GET') return jsonOk(await ApiResources.getWorkspaceProject(actor, b, d));
+    if (method === 'PATCH' || method === 'PUT') {
+      return jsonOk(await ApiResources.updateWorkspaceProject(actor, b, d, await readBody()));
+    }
+    if (method === 'DELETE') return jsonOk(await ApiResources.deleteWorkspaceProject(actor, b, d));
+  }
+
   // Workspaces
   if (isWorkspaceSegment(a) && !b) {
     if (method === 'GET') return jsonOk(await ApiResources.listWorkspaces(actor, limit()));

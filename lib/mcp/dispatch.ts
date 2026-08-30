@@ -28,6 +28,24 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
   add_workspace_collaborator: (actor, args) =>
     ApiResources.addWorkspaceCollaborator(actor, String(args.workspaceId), args),
 
+  list_workspace_projects: async (actor, args) =>
+    mcpListResult(
+      await ApiResources.listWorkspaceProjects(actor, String(args.workspaceId), args.limit || 25),
+    ),
+  get_workspace_project: (actor, args) =>
+    ApiResources.getWorkspaceProject(actor, String(args.workspaceId), String(args.projectId)),
+  create_workspace_project: (actor, args) =>
+    ApiResources.createWorkspaceProject(actor, String(args.workspaceId), args),
+  update_workspace_project: (actor, args) =>
+    ApiResources.updateWorkspaceProject(
+      actor,
+      String(args.workspaceId),
+      String(args.projectId),
+      args,
+    ),
+  delete_workspace_project: (actor, args) =>
+    ApiResources.deleteWorkspaceProject(actor, String(args.workspaceId), String(args.projectId)),
+
   list_notes: async (actor, args) =>
     mcpListResult(
       await ApiResources.listNotes(actor, args.limit || 25, { workspaceId: args.workspaceId || null }),

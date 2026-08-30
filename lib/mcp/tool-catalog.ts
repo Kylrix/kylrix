@@ -79,6 +79,13 @@ import {
   MCP_WORKSPACE_LIST_INPUT,
   MCP_WORKSPACE_LIST_OUTPUT,
   MCP_WORKSPACE_UPDATE_INPUT,
+  MCP_WORKSPACE_PROJECT_CREATE_INPUT,
+  MCP_WORKSPACE_PROJECT_DELETE_INPUT,
+  MCP_WORKSPACE_PROJECT_GET_INPUT,
+  MCP_WORKSPACE_PROJECT_LIST_INPUT,
+  MCP_WORKSPACE_PROJECT_LIST_OUTPUT,
+  MCP_WORKSPACE_PROJECT_UPDATE_INPUT,
+  WORKSPACE_PROJECT_RECORD_JSON_SCHEMA,
   MOMENT_COMMENT_JSON_SCHEMA,
   MOMENT_RECORD_JSON_SCHEMA,
   NOTE_RECORD_JSON_SCHEMA,
@@ -175,6 +182,43 @@ export const MCP_TOOL_ENTRIES: McpTool[] = [
     inputSchema: MCP_WORKSPACE_COLLABORATOR_ADD_INPUT,
     outputSchema: MCP_SUCCESS_OUTPUT,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.6 },
+  },
+
+  // ── 2b. Workspace sub-projects (Teams) ──
+  {
+    name: 'list_workspace_projects',
+    description: 'List nested projects inside a workspace. Requires Teams plan.',
+    inputSchema: MCP_WORKSPACE_PROJECT_LIST_INPUT,
+    outputSchema: MCP_WORKSPACE_PROJECT_LIST_OUTPUT,
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.75 },
+  },
+  {
+    name: 'get_workspace_project',
+    description: 'Get a nested project by ID within a workspace.',
+    inputSchema: MCP_WORKSPACE_PROJECT_GET_INPUT,
+    outputSchema: WORKSPACE_PROJECT_RECORD_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.7 },
+  },
+  {
+    name: 'create_workspace_project',
+    description: 'Create a nested project inside a workspace. Requires Teams plan.',
+    inputSchema: MCP_WORKSPACE_PROJECT_CREATE_INPUT,
+    outputSchema: WORKSPACE_PROJECT_RECORD_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.7 },
+  },
+  {
+    name: 'update_workspace_project',
+    description: 'Update a nested project inside a workspace.',
+    inputSchema: MCP_WORKSPACE_PROJECT_UPDATE_INPUT,
+    outputSchema: WORKSPACE_PROJECT_RECORD_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.65 },
+  },
+  {
+    name: 'delete_workspace_project',
+    description: 'Delete a nested project from a workspace.',
+    inputSchema: MCP_WORKSPACE_PROJECT_DELETE_INPUT,
+    outputSchema: MCP_SUCCESS_OUTPUT,
+    annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: true, priority: 0.55 },
   },
 
   // ── 3. Notes & Ideas (schemas from sdk/contracts/notes.ts) ──
