@@ -1,3 +1,6 @@
+/** MCP server semantic version (initialize + discovery GET). */
+export const KYLRIX_MCP_VERSION = '1.0.1';
+
 export interface McpToolAnnotation {
   audience?: Array<'user' | 'assistant'>;
   readOnly?: boolean;

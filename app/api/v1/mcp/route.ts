@@ -4,6 +4,7 @@ import { createSseStream } from '@/lib/mcp/sse';
 import { EdgeShieldError } from '@/lib/api/edge-shield';
 import { MAX_API_BODY_BYTES } from '@/lib/api/guard';
 import { MCP_SSE_ENDPOINT } from '@/lib/mcp/sse';
+import { KYLRIX_MCP_VERSION } from '@/lib/mcp/types';
 import { getProductName, getProductSiteUrl } from '@/lib/config/product';
 
 export const dynamic = 'force-dynamic';
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
     name: getProductName().toLowerCase().replace(/\s+/g, '-'),
     displayName: getProductName(),
     description: `${getProductName()} Model Context Protocol (MCP) Server — Connect agents and LLMs to sovereign workspaces, notes, goals, calendar events, forms, flows, chats, and vault objects.`,
-    version: '1.0.0',
+    version: KYLRIX_MCP_VERSION,
     homepage: getProductSiteUrl(),
     iconUrl: `${getProductSiteUrl()}/apple-touch-icon.png`,
     protocol: '2024-11-05',
