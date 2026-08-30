@@ -4,6 +4,7 @@ import { RateLimitError } from '@/lib/api/rate-limits';
 import { EdgeShieldError, assertShieldAllowed, enforceMcpPublicShield } from '@/lib/api/edge-shield';
 import { executeMcpTool } from '@/lib/mcp/dispatch';
 import { MCP_TOOLS } from '@/lib/mcp/tools';
+import { getProductName, getProductSiteUrl } from '@/lib/config/product';
 
 export { executeMcpTool } from '@/lib/mcp/dispatch';
 export { MCP_TOOLS } from '@/lib/mcp/tools';
@@ -85,12 +86,12 @@ export async function handleMcpRpc(req: NextRequest, rpcPayload: any): Promise<M
             prompts: { listChanged: false },
           },
           serverInfo: {
-            name: 'kylrix',
-            displayName: 'Kylrix',
+            name: getProductName().toLowerCase().replace(/\s+/g, '-'),
+            displayName: getProductName(),
             description: 'Sovereign, local-first agentic workspace MCP server',
             version: '1.0.0',
-            homepage: 'https://www.kylrix.space',
-            iconUrl: 'https://www.kylrix.space/apple-touch-icon.png',
+            homepage: getProductSiteUrl(),
+            iconUrl: `${getProductSiteUrl()}/apple-touch-icon.png`,
           },
         },
       },

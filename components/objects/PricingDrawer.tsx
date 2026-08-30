@@ -28,8 +28,33 @@ import { account } from '@/lib/appwrite/client';
 import { createBillingCheckoutSessionAction } from '@/lib/actions/billing/billing';
 import { recordPaymentIntentAction } from '@/lib/actions/billing/payment-intent';
 import { calculateTotalSubscriptionPrice, getBundledFreeMonths, getYearlyDiscountedPrice, getYearlyListPrice } from '@/lib/subscription/ppp';
+import { getPublicProductName } from '@/lib/config/product-client';
+import { DEFAULT_PRO_FEATURES, DEFAULT_TEAMS_FEATURES } from '@/lib/tools/features';
 
 const CHECKOUT_CACHE_KEY = 'kylrix_pricing_checkout_v1';
+
+const PRO_FEATURE_ICONS: Record<string, typeof Sparkles> = {
+  'suite.ideas': Lightbulb,
+  'suite.goals': CheckSquare,
+  'suite.vault': Key,
+  'suite.forms': FileText,
+  'suite.events': Calendar,
+  'suite.workspaces': Layers,
+  'suite.collaboration': Share2,
+  'suite.chat': MessageSquare,
+  'suite.moments': ShieldCheck,
+  'suite.storage': Folder,
+  'suite.ai': Bot,
+  'suite.graph': Sparkles,
+  'suite.audio': Mic,
+  'suite.sharing': Share2,
+};
+
+const TEAMS_FEATURE_ICONS: Record<string, typeof Users> = {
+  'suite.team_workspace': Layers,
+  'suite.hangouts': MessageSquare,
+  'suite.team_calls': Users,
+};
 
 type PendingCheckout = {
   planId: string;
@@ -175,34 +200,27 @@ export function PricingDrawer({
     void proceedToBlockBee(planId, months, 'US');
   };
 
-  const proFeatures = [
-    { icon: Lightbulb, text: 'Unlimited ideas & notes' },
-    { icon: CheckSquare, text: 'Unlimited tasks & goals' },
-    { icon: Key, text: 'Unlimited passwords & vaults' },
-    { icon: FileText, text: 'Unlimited forms & responses' },
-    { icon: Calendar, text: 'Unlimited events & calendar sync' },
-    { icon: Layers, text: 'Unlimited workspaces & collaboration' },
-    { icon: MessageSquare, text: 'Private chats & Hangouts' },
-    { icon: ShieldCheck, text: 'Moments & feeds' },
-    { icon: Folder, text: 'Cloud file storage & attachments' },
-    { icon: Bot, text: 'Intelligent AI Sidekick & Agents' },
-    { icon: Sparkles, text: 'Neural graph exploration' },
-    { icon: Mic, text: 'Audio messages & voice notes' },
-    { icon: Share2, text: 'Direct link sharing & duplication' },
-  ];
+  const productName = getPublicProductName();
 
-  const teamsFeatures = [
-    { icon: Users, text: 'All Pro features for multiple team members' },
-    { icon: Layers, text: 'Shared team workspaces & permissions' },
-    { icon: Lightbulb, text: 'Unlimited shared ideas & notes' },
-    { icon: CheckSquare, text: 'Unlimited team goals & tracking' },
-    { icon: Key, text: 'Unlimited shared vaults & credentials' },
-    { icon: FileText, text: 'Unlimited team forms & workflows' },
-    { icon: Folder, text: 'Team cloud file storage & asset sharing' },
-    { icon: Bot, text: 'Shared AI agents & automated tooling' },
-    { icon: MessageSquare, text: 'Team discussion channels & Hangouts' },
-    { icon: Share2, text: 'Custom team access controls' },
-  ];
+  const proFeatures = useMemo(
+    () =>
+      DEFAULT_PRO_FEATURES.map((feature) => ({
+        icon: PRO_FEATURE_ICONS[feature.id] || Sparkles,
+        text: feature.label,
+      })),
+    [],
+  );
+
+  const teamsFeatures = useMemo(
+    () => [
+      { icon: Users, text: `All Pro features for multiple team members` },
+      ...DEFAULT_TEAMS_FEATURES.map((feature) => ({
+        icon: TEAMS_FEATURE_ICONS[feature.id] || Users,
+        text: feature.label,
+      })),
+    ],
+    [],
+  );
 
   const currentFeatures = selectedTier === 'PRO' ? proFeatures : teamsFeatures;
 
@@ -213,8 +231,8 @@ export function PricingDrawer({
         <div className="min-w-0">
           <h2 className="text-white font-black text-xl font-clash tracking-tight truncate">
             {isGiftMode
-              ? `Gift Kylrix ${selectedTier === 'PRO' ? 'Pro' : 'Teams'}`
-              : `Kylrix ${selectedTier === 'PRO' ? 'Pro' : 'Teams'}`}
+              ? `Gift ${productName} ${selectedTier === 'PRO' ? 'Pro' : 'Teams'}`
+              : `${productName} ${selectedTier === 'PRO' ? 'Pro' : 'Teams'}`}
           </h2>
           <p className="text-white/50 text-xs font-satoshi truncate">
             {isGiftMode

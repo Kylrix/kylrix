@@ -1,7 +1,9 @@
 /**
  * ppp.ts - Fixed Global Pricing (Formerly PPP)
- * Base: USD = 1.0
+ * Base: USD = 1.0 — amounts read from env when pricing tiers are configured.
  */
+
+import { getProMonthlyPriceUsd, getTeamsMonthlyPriceUsd } from '@/lib/config/product';
 
 export type SubscriptionTier = 'PRO' | 'TEAMS';
 export type PaymentMethod = 'CRYPTO' | 'CARD';
@@ -13,24 +15,30 @@ export interface RegionConfig {
   name: string;
 }
 
-const GLOBAL_SUBSCRIPTION_CONFIG = {
-  tier_multipliers: {
-    pro: 1.0,        // Base reference
-    teams: 5.0,      // 5x Pro price flat rate ($50)
-  },
-  base_pro_price: 10, // Fixed Pro price in USD
-  card_surcharge_multiplier: 1.0, // Fixed price for all methods
-  default_multiplier: 1.0
-};
+function getGlobalSubscriptionConfig() {
+  const baseProPrice = getProMonthlyPriceUsd();
+  const teamsPrice = getTeamsMonthlyPriceUsd();
+  const teamsMultiplier = baseProPrice > 0 ? teamsPrice / baseProPrice : 5;
+  return {
+    tier_multipliers: {
+      pro: 1.0,
+      teams: teamsMultiplier,
+    },
+    base_pro_price: baseProPrice,
+    card_surcharge_multiplier: 1.0,
+    default_multiplier: 1.0,
+  };
+}
 
 export const PPP_DATA: Record<string, RegionConfig> = {
   "DEFAULT": { multiplier: 1.0, currency: "USD", symbol: "$", name: "Global" }
 };
 
 function getTierMonthlyPrice(tier: SubscriptionTier | string): number {
-  const baseProPrice = GLOBAL_SUBSCRIPTION_CONFIG.base_pro_price;
+  const config = getGlobalSubscriptionConfig();
+  const baseProPrice = config.base_pro_price;
   if (String(tier).toUpperCase().startsWith('TEAMS')) {
-    return baseProPrice * GLOBAL_SUBSCRIPTION_CONFIG.tier_multipliers.teams;
+    return baseProPrice * config.tier_multipliers.teams;
   }
   return baseProPrice;
 }
@@ -57,7 +65,7 @@ export function calculateTotalSubscriptionPrice(
   method: PaymentMethod = 'CRYPTO'): number {
   const monthly = getTierMonthlyPrice(tier);
   const paymentMultiplier =
-    method === 'CARD' ? GLOBAL_SUBSCRIPTION_CONFIG.card_surcharge_multiplier : 1.0;
+    method === 'CARD' ? getGlobalSubscriptionConfig().card_surcharge_multiplier : 1.0;
   const unitPrice = monthly * paymentMultiplier;
 
   if (months >= 12) {

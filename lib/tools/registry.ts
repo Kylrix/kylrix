@@ -12,6 +12,8 @@ interface ToolParameterSpec {
 
 interface EcosystemToolDefinition {
   id: string;
+  /** Capability gate — defaults to TOOL_FEATURE_MAP[id] when pricing tiers are enabled. */
+  featureId?: string;
   domain:
     | 'workspace'
     | 'idea'
@@ -68,12 +70,37 @@ class ToolRegistry {
       return { success: false, error: `Tool "${id}" not found in registry.` };
     }
     try {
+      const gateError = await enforceToolFeatureGate(tool, context);
+      if (gateError) {
+        return { success: false, error: gateError };
+      }
       const sanitizedParams = tool.isSecure ? redactPIIAndSensitiveFields(params) : params;
       return await tool.execute(sanitizedParams, context);
     } catch (err: any) {
       console.error(`[ToolRegistry] Error executing ${id}:`, err);
       return { success: false, error: err?.message || 'Tool execution failed.' };
     }
+  }
+}
+
+async function enforceToolFeatureGate(
+  tool: EcosystemToolDefinition,
+  context?: Record<string, any>,
+): Promise<string | null> {
+  const userId = context?.userId || context?.actorUserId;
+  if (!userId || context?.skipFeatureGate) return null;
+
+  const { featureIdForTool } = await import('@/lib/tools/features');
+  const { assertActorFeatureAccess } = await import('@/lib/tools/gate');
+
+  const featureId = tool.featureId || featureIdForTool(tool.id);
+  if (!featureId) return null;
+
+  try {
+    await assertActorFeatureAccess(String(userId), featureId);
+    return null;
+  } catch (err: any) {
+    return err?.message || 'Feature requires an upgrade.';
   }
 }
 
@@ -766,5 +793,5 @@ function registerCoreTools() {
 // Self-register core tools on module evaluation
 registerCoreTools();
 
-export { toolRegistry };
+export { toolRegistry, redactPIIAndSensitiveFields };
 export type { EcosystemToolDefinition, ToolParameterSpec };

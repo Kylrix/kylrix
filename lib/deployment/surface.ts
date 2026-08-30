@@ -3,14 +3,10 @@
  * Cloud and self-hosted builds read the same helpers; callers never branch on env vars directly.
  */
 
+import { parseEnvFlag } from '@/lib/config/env-flags';
+import { isPricingTiersEnabled } from '@/lib/config/product';
 
-const TRUTHY = new Set(['true', '1', 'yes', 'on']);
-
-function parseEnvFlag(value: string | undefined | null): boolean {
-  return TRUTHY.has(String(value ?? '').trim().toLowerCase());
-}
-
-/** Server/runtime flag — set `SELFHOSTED=true` on self-hosted installs. */
+/** Server/runtime flag — legacy self-hosted installs may set `SELFHOSTED=true`. */
 function readSelfHostedEnv(): boolean {
   return parseEnvFlag(process.env.SELFHOSTED);
 }
@@ -20,19 +16,23 @@ function readSelfHostedClientEnv(): boolean {
   return parseEnvFlag(process.env.NEXT_PUBLIC_SELFHOSTED);
 }
 
+function readPricingTiersClientEnv(): boolean {
+  return parseEnvFlag(process.env.NEXT_PUBLIC_PRICING_TIERS_ENABLED);
+}
+
 export function isSelfHostedDeployment(): boolean {
   if (typeof window === 'undefined') {
-    return readSelfHostedEnv();
+    if (readSelfHostedEnv()) return true;
+    return !isPricingTiersEnabled();
   }
-  return readSelfHostedClientEnv() || readSelfHostedEnv();
+  if (readSelfHostedClientEnv()) return true;
+  return !readPricingTiersClientEnv();
 }
 
-
-function isCloudDeployment(): boolean {
-  return !isSelfHostedDeployment();
-}
-
-/** Commerce/checkout remains a cloud-only surface. */
+/** Commerce/checkout + tier paywalls — enabled for cloud deployments with pricing tiers on. */
 export function isBillingCommerceEnabled(): boolean {
-  return isCloudDeployment();
+  if (typeof window === 'undefined') {
+    return isPricingTiersEnabled() && !readSelfHostedEnv();
+  }
+  return readPricingTiersClientEnv() && !readSelfHostedClientEnv();
 }

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono, Outfit, Space_Grotesk } from 'next/font/google';
+import { getProductName, getProductSiteUrl } from '@/lib/config/product';
 import './globals.css';
 import './chrome.css';
 import './lists.css';
@@ -27,11 +28,14 @@ const spaceGrotesk = Space_Grotesk({
 
 import GlobalShell from '@/components/GlobalShell';
 
+const productName = getProductName();
+const productSiteUrl = getProductSiteUrl();
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.kylrix.space'),
+  metadataBase: new URL(productSiteUrl),
   title: {
-    default: 'Build, ship and think in one living agentic workspace. — Kylrix',
-    template: '%s · Kylrix'},
+    default: `Build, ship and think in one living agentic workspace. — ${productName}`,
+    template: `%s · ${productName}`},
   description: 'Your workflow becomes a living, scalable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
   keywords: ['agentic workspace', 'local-first', 'PAT', 'OAuth2', 'WebRTC', 'offline-first', 'productivity system'],
   icons: {
@@ -40,8 +44,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://www.kylrix.space',
-    siteName: 'Kylrix',
+    url: productSiteUrl,
+    siteName: productName,
     title: 'Build, ship and think in one living agentic workspace.',
     description: 'Your workflow becomes a living, scalable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
     images: [
@@ -53,7 +57,7 @@ export const metadata: Metadata = {
     ]},
   twitter: {
     card: 'summary_large_image',
-    title: 'Build, ship and think in one living agentic workspace. — Kylrix',
+    title: `Build, ship and think in one living agentic workspace. — ${productName}`,
     description: 'Your workflow becomes a living, scalable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
     images: ['/opengraph-image']},
   other: {

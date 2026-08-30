@@ -4,6 +4,7 @@ import { createSseStream } from '@/lib/mcp/sse';
 import { EdgeShieldError } from '@/lib/api/edge-shield';
 import { MAX_API_BODY_BYTES } from '@/lib/api/guard';
 import { MCP_SSE_ENDPOINT } from '@/lib/mcp/sse';
+import { getProductName, getProductSiteUrl } from '@/lib/config/product';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -41,12 +42,12 @@ export async function GET(req: NextRequest) {
 
   // If accessed via regular browser GET, return discovery info
   return NextResponse.json({
-    name: 'kylrix',
-    displayName: 'Kylrix',
-    description: 'Kylrix Model Context Protocol (MCP) Server — Connect agents and LLMs to sovereign workspaces, notes, goals, calendar events, forms, flows, chats, and vault objects.',
+    name: getProductName().toLowerCase().replace(/\s+/g, '-'),
+    displayName: getProductName(),
+    description: `${getProductName()} Model Context Protocol (MCP) Server — Connect agents and LLMs to sovereign workspaces, notes, goals, calendar events, forms, flows, chats, and vault objects.`,
     version: '1.0.0',
-    homepage: 'https://www.kylrix.space',
-    iconUrl: 'https://www.kylrix.space/apple-touch-icon.png',
+    homepage: getProductSiteUrl(),
+    iconUrl: `${getProductSiteUrl()}/apple-touch-icon.png`,
     protocol: '2024-11-05',
     endpoints: {
       sse: `${MCP_SSE_ENDPOINT}?transport=sse`,

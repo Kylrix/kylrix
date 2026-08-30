@@ -2,6 +2,7 @@ import { ImageResponse } from 'next/og';
 import { events as eventApi } from '@/lib/kylrixflow';
 import { renderKylrixShareCard } from '@/lib/og/share-card';
 import { resolveOwnerForOg } from '@/lib/og/resolve-avatar';
+import { getProductName } from '@/lib/config/product';
 
 export const runtime = 'nodejs';
 export const size = {
@@ -17,11 +18,12 @@ export default async function Image({
 }) {
   const { eventId } = await params;
 
+  const productName = getProductName();
   let title = 'Scheduled Event';
-  let description = 'Coordinate scheduled events, RSVPs, and live moments on Kylrix.';
+  let description = `Coordinate scheduled events, RSVPs, and live moments on ${productName}.`;
   let dateText = '';
   let locationText = '';
-  let ownerName = 'Kylrix';
+  let ownerName = productName;
   let ownerAvatarDataUrl: string | null = null;
 
   try {

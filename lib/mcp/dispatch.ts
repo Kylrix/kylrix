@@ -1,6 +1,8 @@
 import { ApiResources } from '@/lib/api/resources';
 import type { ApiActor } from '@/lib/api/guard';
 import { mcpListResult } from '@/sdk/contracts';
+import { assertActorFeatureAccess } from '@/lib/tools/gate';
+import { featureIdForMcpTool } from '@/lib/tools/mcp-features';
 
 type McpToolHandler = (actor: ApiActor, args: Record<string, any>) => Promise<any>;
 
@@ -150,5 +152,11 @@ export async function executeMcpTool(
 ): Promise<any> {
   const handler = mcpToolHandlers[name];
   if (!handler) throw new Error(`Unknown MCP tool: ${name}`);
+
+  const featureId = featureIdForMcpTool(name);
+  if (featureId && actor.userId) {
+    await assertActorFeatureAccess(actor.userId, featureId);
+  }
+
   return handler(actor, args);
 }

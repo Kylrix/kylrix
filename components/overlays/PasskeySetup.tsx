@@ -26,7 +26,7 @@ import {
   VisibilityOff as VisibilityOffIcon,
   CheckCircle as CheckCircleIcon} from '@/lib/openbricks/icons';
 import { Fingerprint, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { getPublicProductName } from '@/lib/config/product-client';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 export interface PasskeySetupPanelProps {
@@ -162,7 +162,7 @@ export function PasskeySetupPanel({
       const registrationOptions: any = {
         challenge: challengeBase64,
         rp: {
-          name: "Kylrix",
+          name: getPublicProductName(),
           id: rpId},
         user: {
           id: arrayBufferToBase64(userIdBytes.buffer as ArrayBuffer),

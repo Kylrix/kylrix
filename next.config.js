@@ -8,6 +8,11 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_SELFHOSTED: process.env.SELFHOSTED === 'true' ? 'true' : 'false',
+    NEXT_PUBLIC_PRODUCT_NAME: process.env.PRODUCT_NAME || 'Kylrix',
+    NEXT_PUBLIC_PRICING_TIERS_ENABLED:
+      (process.env.PRICING_TIERS_ENABLED ?? process.env.ENABLE_PRICING_TIERS) === 'true'
+        ? 'true'
+        : 'false',
   },
   // Standalone output produces a self-contained server in .next/standalone
   // Required for efficient Docker deployments (no node_modules in final image)

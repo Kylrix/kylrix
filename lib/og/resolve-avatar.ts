@@ -1,8 +1,4 @@
-/**
- * OG helpers — resolve profile images to data URLs so ImageResponse never
- * depends on public Appwrite view URLs (those often 401 and 500 the whole card).
- */
-
+import { getProductName } from '@/lib/config/product';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 export async function resolveProfileAvatarDataUrl(
@@ -29,25 +25,26 @@ export async function resolveOwnerForOg(userId: string | null | undefined): Prom
   ownerAvatarDataUrl: string | null;
 }> {
   const id = String(userId || '').trim();
+  const fallbackOwner = getProductName();
   if (!id) {
-    return { ownerName: 'Kylrix', ownerAvatarDataUrl: null };
+    return { ownerName: fallbackOwner, ownerAvatarDataUrl: null };
   }
   try {
     const { UsersService } = await import('@/lib/services/users');
     const profile = await UsersService.getProfileById(id);
     if (!profile) {
-      return { ownerName: 'Kylrix', ownerAvatarDataUrl: null };
+      return { ownerName: fallbackOwner, ownerAvatarDataUrl: null };
     }
     const ownerName =
       profile.displayName ||
       profile.name ||
       (profile.username ? `@${profile.username}` : null) ||
-      'Kylrix';
+      fallbackOwner;
     const ownerAvatarDataUrl = await resolveProfileAvatarDataUrl(
       profile.avatar || profile.profilePicId || null
     );
     return { ownerName, ownerAvatarDataUrl };
   } catch {
-    return { ownerName: 'Kylrix', ownerAvatarDataUrl: null };
+    return { ownerName: fallbackOwner, ownerAvatarDataUrl: null };
   }
 }

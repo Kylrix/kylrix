@@ -108,7 +108,7 @@ export function renderKylrixShareCard({
   const compactChips = chips.filter(Boolean).slice(0, 3);
   const hasPreview = Boolean(previewImageDataUrl);
   const shortDesc = clampText(description, 90);
-  const displayOwner = ownerName || 'Kylrix';
+  const displayOwner = ownerName || productLabel;
   const initial = displayOwner.replace(/^@/, '').slice(0, 1).toUpperCase() || 'K';
 
   return (

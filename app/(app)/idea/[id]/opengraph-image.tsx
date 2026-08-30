@@ -3,6 +3,7 @@ import { validatePublicNoteAccess } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { renderKylrixShareCard } from '@/lib/og/share-card';
 import { resolveOwnerForOg } from '@/lib/og/resolve-avatar';
+import { getProductName } from '@/lib/config/product';
 
 export const alt = 'Kylrix Shared Note';
 export const size = { width: 1200, height: 630 };
@@ -107,13 +108,14 @@ export default async function SharedNoteOGImage({
 }) {
   const { id } = await params;
 
+  const productName = getProductName();
   let noteTitle = 'Shared Note';
-  let noteDesc = 'View this secure shared note on Kylrix.';
+  let noteDesc = `View this secure shared note on ${productName}.`;
   let isEncrypted = false;
   let dateText = '';
   let tags: string[] = [];
   let previewImageDataUrl: string | null = null;
-  let ownerName = 'Kylrix';
+  let ownerName = productName;
   let ownerAvatarDataUrl: string | null = null;
 
   try {
