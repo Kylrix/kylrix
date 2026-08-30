@@ -27,6 +27,7 @@ import {
   CheckCircle as CheckCircleIcon} from '@/lib/openbricks/icons';
 import { Fingerprint, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { getPublicProductName } from '@/lib/config/product-client';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 export interface PasskeySetupPanelProps {

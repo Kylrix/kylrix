@@ -21,7 +21,7 @@ export class CryptoPaymentProvider implements PaymentProvider {
     return this.inner.verifyTransaction(transactionId);
   }
 
-  handleWebhook(payload: unknown, signature?: string) {
-    return this.inner.handleWebhook?.(payload, signature);
+  async handleWebhook(payload: unknown, signature?: string) {
+    await this.inner.handleWebhook?.(payload, signature);
   }
 }

@@ -793,5 +793,5 @@ function registerCoreTools() {
 // Self-register core tools on module evaluation
 registerCoreTools();
 
-export { toolRegistry, redactPIIAndSensitiveFields };
+export { toolRegistry };
 export type { EcosystemToolDefinition, ToolParameterSpec };

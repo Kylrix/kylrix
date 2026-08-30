@@ -72,7 +72,9 @@ function adapterToProvider(adapter: BillingProviderAdapter, method?: PaymentMeth
       giftDetails,
       options,
     ) {
-      const baseAmount = calculateSubscriptionPrice(planId, countryCode, paymentMethod, months);
+      const pricingMethod =
+        paymentMethod === PaymentMethod.CRYPTO ? ('CRYPTO' as const) : ('CARD' as const);
+      const baseAmount = calculateSubscriptionPrice(planId, countryCode, pricingMethod, months);
       const amountUsd =
         typeof options?.adjustedAmountUsd === 'number' ? options.adjustedAmountUsd : baseAmount;
       const urls = buildCheckoutUrls(userId, planId, months, giftDetails, options);
