@@ -1,6 +1,8 @@
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { resolveBillingNotifyUrl, resolveBillingSuccessUrl } from '@/lib/billing/callback-urls';
+import { registerForkBillingProviders } from '@/lib/billing/register-fork-providers';
 import {
+  registerBillingAdapter,
   resolveBillingAdapterForMethod,
   resolveCryptoBillingAdapter} from '@/lib/billing/providers/registry';
 import type {
@@ -56,9 +58,10 @@ function buildCheckoutUrls(
   return { notifyUrl: notify.toString(), redirectUrl: redirect.toString() };
 }
 
-function adapterToProvider(adapter: BillingProviderAdapter): PaymentProvider {
+function adapterToProvider(adapter: BillingProviderAdapter, method?: PaymentMethod): PaymentProvider {
+  const paymentMethod = method ?? adapter.method;
   return {
-    name: adapter.method,
+    name: paymentMethod,
     adapterId: adapter.id,
     async createCheckoutSession(
       planId,
@@ -69,7 +72,7 @@ function adapterToProvider(adapter: BillingProviderAdapter): PaymentProvider {
       giftDetails,
       options,
     ) {
-      const baseAmount = calculateSubscriptionPrice(planId, countryCode, adapter.method, months);
+      const baseAmount = calculateSubscriptionPrice(planId, countryCode, paymentMethod, months);
       const amountUsd =
         typeof options?.adjustedAmountUsd === 'number' ? options.adjustedAmountUsd : baseAmount;
       const urls = buildCheckoutUrls(userId, planId, months, giftDetails, options);
@@ -125,7 +128,19 @@ export const billingManager = new BillingManager();
 
 /** Register env-selected adapters. Call once at module load. */
 export function registerDefaultBillingProviders(): void {
+  registerForkBillingProviders();
   billingManager.registerProvider(adapterToProvider(resolveCryptoBillingAdapter()));
+}
+
+export { adapterToProvider };
+
+/** Fork helper — register a custom adapter and expose it on a payment method bucket. */
+export function registerForkPaymentMethod(
+  adapter: BillingProviderAdapter,
+  method: PaymentMethod = PaymentMethod.CRYPTO,
+): void {
+  registerBillingAdapter(adapter);
+  billingManager.registerProvider(adapterToProvider(adapter, method));
 }
 
 registerDefaultBillingProviders();

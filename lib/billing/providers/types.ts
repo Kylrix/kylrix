@@ -22,7 +22,7 @@ export type CheckoutSession = {
   id: string;
   url: string;
   provider: PaymentMethod;
-  /** Concrete adapter id, e.g. blockbee, stripe, stub */
+  /** Concrete adapter id — upstream ships blockbee and stub only. */
   adapterId: string;
 };
 

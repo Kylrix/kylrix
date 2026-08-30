@@ -13,5 +13,6 @@ export {
   listBillingAdapters,
   listEnabledPaymentMethods,
   isPaymentMethodEnabled,
+  registerBillingAdapter,
   resolveBillingAdapterForMethod,
   resolveCryptoBillingAdapter} from './registry';

@@ -1,8 +1,15 @@
 /**
- * Billing provider registry — select adapters via env without hardcoding BlockBee.
+ * Billing provider registry — env-selected adapters, zero bundled processor SDKs.
  *
- * BILLING_CRYPTO_PROVIDER=blockbee|stub  (default: blockbee when BLOCKBEE_API set, else stub)
- * BILLING_ENABLED_METHODS=CRYPTO          (comma-separated PaymentMethod ids)
+ * Upstream ships only:
+ *   - blockbee  (hosted crypto checkout via fetch — no npm package)
+ *   - stub      (no processor; for AGPL self-host / local dev)
+ *
+ * Forks that need another processor (Stripe, BTCPay, etc.) must:
+ *   1. Add their own npm dependency in the fork (not in upstream).
+ *   2. Implement BillingProviderAdapter in the fork.
+ *   3. Register it via registerBillingAdapter() from register-fork-providers.ts.
+ *   4. Point BILLING_CRYPTO_PROVIDER (or a new method) at the adapter id.
  */
 
 import { parseEnvCsv } from '@/lib/config/env-flags';
@@ -11,15 +18,30 @@ import { BlockBeeBillingAdapter } from '@/lib/billing/providers/blockbee';
 import { StubBillingAdapter } from '@/lib/billing/providers/stub';
 import { PaymentMethod } from '@/lib/billing/types';
 
-const ADAPTERS: BillingProviderAdapter[] = [
+const BUILTIN_ADAPTERS: BillingProviderAdapter[] = [
   new BlockBeeBillingAdapter(),
   new StubBillingAdapter(),
 ];
 
-const adapterById = new Map(ADAPTERS.map((a) => [a.id, a]));
+const adapterById = new Map<string, BillingProviderAdapter>(
+  BUILTIN_ADAPTERS.map((adapter) => [adapter.id, adapter]),
+);
+
+/** Fork-registered adapters (never populated in upstream). */
+const forkAdapters: BillingProviderAdapter[] = [];
+
+export function registerBillingAdapter(adapter: BillingProviderAdapter): void {
+  const id = adapter.id.trim().toLowerCase();
+  if (!id) throw new Error('Billing adapter id is required');
+  if (adapterById.has(id)) {
+    throw new Error(`Billing adapter "${id}" is already registered`);
+  }
+  adapterById.set(id, adapter);
+  forkAdapters.push(adapter);
+}
 
 export function listBillingAdapters(): BillingProviderAdapter[] {
-  return [...ADAPTERS];
+  return [...BUILTIN_ADAPTERS, ...forkAdapters];
 }
 
 export function getBillingAdapter(adapterId: string): BillingProviderAdapter | undefined {
@@ -32,7 +54,9 @@ export function resolveCryptoBillingAdapter(): BillingProviderAdapter {
     const adapter = getBillingAdapter(explicit);
     if (!adapter) {
       throw new Error(
-        `Unknown BILLING_CRYPTO_PROVIDER="${explicit}". Available: ${ADAPTERS.map((a) => a.id).join(', ')}`,
+        `Unknown BILLING_CRYPTO_PROVIDER="${explicit}". Registered: ${listBillingAdapters()
+          .map((a) => a.id)
+          .join(', ')}`,
       );
     }
     if (!adapter.isConfigured()) {
@@ -51,7 +75,9 @@ export function resolveBillingAdapterForMethod(method: PaymentMethod): BillingPr
   if (normalized === PaymentMethod.CRYPTO) {
     return resolveCryptoBillingAdapter();
   }
-  throw new Error(`No billing adapter registered for payment method: ${method}`);
+  throw new Error(
+    `No built-in billing adapter for payment method "${method}". Forks must register one via registerBillingAdapter().`,
+  );
 }
 
 export function listEnabledPaymentMethods(): PaymentMethod[] {
