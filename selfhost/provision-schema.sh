@@ -33,13 +33,19 @@ ENV_FILE="${PROJECT_DIR}/.env"
 
 # ── Load environment ────────────────────────────────────────────────────────
 if [ -f "$ENV_FILE" ]; then
-    set -a
-    # shellcheck disable=SC1090
-    source "$ENV_FILE"
-    set +a
+    while IFS= read -r line || [ -n "$line" ]; do
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            val="${BASH_REMATCH[2]}"
+            val="${val%\"}"; val="${val#\"}"
+            val="${val%\'}"; val="${val#\'}"
+            export "$key=$val"
+        fi
+    done < "$ENV_FILE"
 fi
 
-ENDPOINT="${NEXT_PUBLIC_APPWRITE_ENDPOINT:-${APPWRITE_ENDPOINT:-${APPWRITE_API:-}}}"
+ENDPOINT="${NEXT_PUBLIC_APPWRITE_ENDPOINT:-${APPWRITE_ENDPOINT:-}}"
 PROJECT="${APPWRITE_PROJECT_ID:-}"
 API_KEY="${APPWRITE_API_KEY:-${APPWRITE_API:-}}"
 
@@ -104,10 +110,9 @@ echo ""
 
 # ── Test connection ─────────────────────────────────────────────────────────
 info "Testing Appwrite connection..."
-HTTP_CODE=$(api GET "/health/version")
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${ENDPOINT%/v1}/v1/health/version" 2>/dev/null || echo "000")
 if [ "$HTTP_CODE" != "200" ]; then
     fail "Cannot reach Appwrite at ${ENDPOINT} (HTTP ${HTTP_CODE})"
-    fail "Response: ${RESPONSE_BODY}"
     exit 1
 fi
 ok "Appwrite is reachable"

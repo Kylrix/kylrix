@@ -49,6 +49,7 @@ services:
       - NEXT_PUBLIC_APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
       - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
       - APPWRITE_API=${APPWRITE_API_KEY}
+      - APPWRITE_DOMAIN=${APPWRITE_DOMAIN:-localhost}
       - NEXT_PUBLIC_DOMAIN=${DOMAIN:-localhost}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:5003}
       - NEXT_PUBLIC_APP_URI=${NEXT_PUBLIC_APP_URI:-http://localhost:5003}
@@ -80,9 +81,11 @@ services:
       - appwrite_config:/storage/config
     environment:
       - _APP_ENV=production
+      - _APP_WORKER_PER_CORE=6
       - _APP_LOCALE=en
       - _APP_CONSOLE_WHITELIST_ROOT=enabled
-      - _APP_CONSOLE_WHITELIST_EMAILS=
+      - _APP_CONSOLE_WHITELIST_EMAILS=${SELFHOST_ADMIN_EMAIL:-}
+      - _APP_CONSOLE_HOSTNAMES=${APPWRITE_DOMAIN:-localhost}
       - _APP_SYSTEM_EMAIL_NAME=Kylrix
       - _APP_SYSTEM_EMAIL_ADDRESS=noreply@${DOMAIN:-localhost}
       - _APP_OPTIONS_ABUSE=disabled
@@ -90,7 +93,9 @@ services:
       - _APP_OPENSSL_KEY_V1=${APPWRITE_OPENSSL_KEY:?Set APPWRITE_OPENSSL_KEY in .env}
       - _APP_DOMAIN=${APPWRITE_DOMAIN:-localhost}
       - _APP_DOMAIN_TARGET=${APPWRITE_DOMAIN:-localhost}
+      - _APP_MIGRATION_HOST=${APPWRITE_MIGRATION_HOST:-appwrite.local}
       - _APP_DOMAIN_FUNCTIONS=${APPWRITE_FUNCTIONS_DOMAIN:-functions.localhost}
+      - _APP_DB_ADAPTER=mariadb
       - _APP_REDIS_HOST=redis
       - _APP_REDIS_PORT=6379
       - _APP_DB_HOST=mariadb
@@ -120,7 +125,9 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - kylrix-net
+      kylrix-net:
+        aliases:
+          - appwrite.local
 
   # ── MariaDB — Appwrite's database ────────────────────────────────────────
   mariadb:

@@ -386,7 +386,7 @@ export function AgentsSettingsTab() {
                 <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-white transition-colors">
                   Agent Skill & CLI
                 </h4>
-                <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">npx skills add kylrix/agents</p>
+                <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">npx skills add kylrix/kylrix --skill agents</p>
               </div>
             </div>
             <div className="flex items-center justify-between text-[11px] font-mono text-white/50 border-t border-white/10 pt-2">

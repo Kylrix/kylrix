@@ -12,7 +12,7 @@ description: >-
 **Wire-in guide:** [docs/integrations.md](../docs/integrations.md)
 
 ```bash
-npx skills add kylrix/kylrix/agents
+npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
 export KYLRIX_AGENT_KEY='kyl_pat_…'
 export BASE="${KYLRIX_API_BASE:-https://www.kylrix.space/api/v1}"
 ```

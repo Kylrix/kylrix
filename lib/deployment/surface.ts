@@ -22,11 +22,9 @@ function readPricingTiersClientEnv(): boolean {
 
 export function isSelfHostedDeployment(): boolean {
   if (typeof window === 'undefined') {
-    if (readSelfHostedEnv()) return true;
-    return !isPricingTiersEnabled();
+    return readSelfHostedEnv();
   }
-  if (readSelfHostedClientEnv()) return true;
-  return !readPricingTiersClientEnv();
+  return readSelfHostedClientEnv();
 }
 
 /** Commerce/checkout + tier paywalls — enabled for cloud deployments with pricing tiers on. */

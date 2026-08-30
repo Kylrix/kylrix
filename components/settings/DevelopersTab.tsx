@@ -5,6 +5,7 @@ import { Copy, KeyRound, BookOpen, AppWindow, Plus } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
+  KYLRIX_SKILLS_INSTALL,
   KYLRIX_API_SKILL_INSTALL,
   KYLRIX_OAUTH2_SKILL_INSTALL,
   KYLRIX_AGENTS_SKILL_INSTALL,
@@ -192,7 +193,13 @@ export function DevelopersTab() {
 
       <Section title="Agent skills">
         <SkillRow
-          title="HTTP API (CLI & scripts)"
+          title="Kylrix skills bundle (MCP + REST + agents)"
+          install={KYLRIX_SKILLS_INSTALL}
+          docsHref="/docs/integrations"
+          docsLabel="Integrations"
+        />
+        <SkillRow
+          title="HTTP API only"
           install={KYLRIX_API_SKILL_INSTALL}
           docsHref="/docs/api"
           docsLabel="API docs"
@@ -204,7 +211,7 @@ export function DevelopersTab() {
           docsLabel="OAuth docs"
         />
         <SkillRow
-          title="Autonomous Agents & Agent Keys"
+          title="Autonomous agents only"
           install={KYLRIX_AGENTS_SKILL_INSTALL}
           docsHref="/docs/agents"
           docsLabel="Agent docs"

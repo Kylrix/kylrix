@@ -1,5 +1,6 @@
 import { Client, Account, Databases, Messaging, Storage, Users, TablesDB, Teams, Functions } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { configureInternalAppwriteClient } from '@/lib/appwrite/internal-headers';
 import {
   experimental_taintUniqueValue,
   experimental_taintObjectReference} from 'react';
@@ -75,10 +76,12 @@ export function createSystemClient() {
     console.error('[System Client] APPWRITE_API environment variable is missing.');
   }
 
-  client
-    .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-    .setProject(APPWRITE_CONFIG.PROJECT_ID)
-    .setKey(apiKey || '');
+  configureInternalAppwriteClient(
+    client
+      .setEndpoint(APPWRITE_CONFIG.SERVER_ENDPOINT)
+      .setProject(APPWRITE_CONFIG.PROJECT_ID)
+      .setKey(apiKey || '')
+  );
 
   cachedSystemClient = {
     client,
@@ -205,10 +208,12 @@ export function createAdminClient(actorEmail: string) {
     throw new Error('Forbidden: Unauthorized admin operation.');
   }
 
-  const client = new Client()
-    .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-    .setProject(APPWRITE_CONFIG.PROJECT_ID)
-    .setKey(apiKey);
+  const client = configureInternalAppwriteClient(
+    new Client()
+      .setEndpoint(APPWRITE_CONFIG.SERVER_ENDPOINT)
+      .setProject(APPWRITE_CONFIG.PROJECT_ID)
+      .setKey(apiKey)
+  );
 
   const adminClient = {
     client,
@@ -248,10 +253,12 @@ export function createAdminTablesDB(actorEmail: string) {
     throw new Error('Forbidden: Unauthorized admin operation.');
   }
 
-  const client = new Client()
-    .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-    .setProject(APPWRITE_CONFIG.PROJECT_ID)
-    .setKey(apiKey);
+  const client = configureInternalAppwriteClient(
+    new Client()
+      .setEndpoint(APPWRITE_CONFIG.SERVER_ENDPOINT)
+      .setProject(APPWRITE_CONFIG.PROJECT_ID)
+      .setKey(apiKey)
+  );
 
   const adminTablesDB = new TablesDB(client);
 

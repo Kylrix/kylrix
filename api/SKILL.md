@@ -14,7 +14,7 @@ description: >-
 **Wire-in guide:** [docs/integrations.md](../docs/integrations.md)
 
 ```bash
-npx skills add kylrix/kylrix/api
+npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
 export KYLRIX_PAT='kyl_pat_…'
 export BASE="${KYLRIX_API_BASE:-https://www.kylrix.space/api/v1}"
 ```
@@ -27,7 +27,7 @@ MCP and REST share `ApiResources` — prefer MCP for IDE agents, REST for script
 |---------|---------|-------|
 | Ideas (notes) | Full CRUD | ✅ |
 | Goals | Full CRUD | ✅ |
-| Workspaces | Full CRUD | ✅ |
+| Workspaces | Full CRUD + nested projects | ✅ |
 | Discussions | `GET/POST /threads?parent_kind=&parent_id=` | ✅ Unified thread model |
 | Feeds | GET `/feeds?source=ecosystem\|nostr\|all` | ✅ |
 | Moments | List/get/create + comments | ✅ Internal comments; Nostr view-only |
@@ -48,7 +48,7 @@ curl -sS -X POST "$BASE/token/scopes" \
 ## Routes (summary)
 
 `/me` · `/token` · `/token/scopes` · `/pats`  
-`/notes` · `/goals` · `/workspaces` · `/events` · `/forms`  
+`/notes` · `/goals` · `/workspaces` · `/projects` · `/workspaces/:id/projects` · `/events` · `/forms`  
 `/flows` · `/flows/installations` · `/flows/:id/installations`  
 `/feeds` · `/moments` · `/moments/:id` · `/moments/:id/comments`  
 `/threads` · `/threads/:id` · `/threads/:id/messages`  

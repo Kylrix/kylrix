@@ -11,7 +11,7 @@ description: >-
 **Start here:** [docs/integrations.md](../docs/integrations.md)
 
 ```bash
-npx skills add kylrix/kylrix/mcp
+npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
 ```
 
 ## Endpoint

@@ -4,7 +4,7 @@ description: >-
   Integrate Sign in with Kylrix via Appwrite OAuth 2.1 / OIDC. Discovery URL,
   confidential vs public clients, authorization code + PKCE, token exchange,
   scopes, and calling /api/v1 with the access token. Install with:
-  npx skills add kylrix/kylrix/oauth2
+  npx skills add kylrix/kylrix --skill oauth2
 ---
 
 # Sign in with Kylrix (OAuth2 agent skill)
@@ -18,13 +18,13 @@ Consent screen: https://www.kylrix.space/oauth/consent
 ## Install
 
 ```bash
-npx skills add kylrix/kylrix/oauth2
+npx skills add kylrix/kylrix --skill oauth2
 ```
 
 For HTTP API + personal access tokens (CLI / scripts), use the other skill instead:
 
 ```bash
-npx skills add kylrix/kylrix/api
+npx skills add kylrix/kylrix --skill api
 ```
 
 ## Discovery (integrators only)

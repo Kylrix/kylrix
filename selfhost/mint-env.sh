@@ -19,15 +19,21 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 if [ -f "$ENV_FILE" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  source "$ENV_FILE"
-  set +a
+  while IFS= read -r line || [ -n "$line" ]; do
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      key="${BASH_REMATCH[1]}"
+      val="${BASH_REMATCH[2]}"
+      val="${val%\"}"; val="${val#\"}"
+      val="${val%\'}"; val="${val#\'}"
+      export "$key=$val"
+    fi
+  done < "$ENV_FILE"
 fi
 
 APP_PORT="${APP_PORT:-5003}"
 APPWRITE_PORT="${APPWRITE_PORT:-8080}"
-DOMAIN="${DOMAIN:-localhost}"
+DOMAIN="${KYLRIX_DOMAIN:-${DOMAIN:-localhost}}"
 PUBLIC_APPWRITE_ENDPOINT="${NEXT_PUBLIC_APPWRITE_ENDPOINT:-http://localhost:${APPWRITE_PORT}/v1}"
 PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-http://localhost:${APP_PORT}}"
 
@@ -66,7 +72,7 @@ else
   upsert_env "APPWRITE_IMAGE" "${APPWRITE_IMAGE:-appwrite/appwrite:1.9.6}"
 fi
 
-if [ -z "${APPWRITE_PROJECT_ID:-}" ]; then
+if [ -z "${APPWRITE_PROJECT_ID:-}" ] || [ "${KYLRIX_FORCE_LOCAL_PROJECT_ID:-}" = "1" ]; then
   upsert_env "APPWRITE_PROJECT_ID" "kylrix-$(gen_secret 4)"
   upsert_env "NEXT_PUBLIC_APPWRITE_PROJECT_ID" "$(grep '^APPWRITE_PROJECT_ID=' "$ENV_FILE" | cut -d= -f2-)"
 fi

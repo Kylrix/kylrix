@@ -2,10 +2,18 @@ import { KYLRIX_API_V1_BASE } from '@/sdk/api';
 
 /** Shared public install / docs constants for Developers + docs pages */
 
-export const KYLRIX_API_SKILL_INSTALL = 'npx skills add kylrix/kylrix/api';
-export const KYLRIX_OAUTH2_SKILL_INSTALL = 'npx skills add kylrix/kylrix/oauth2';
-export const KYLRIX_AGENTS_SKILL_INSTALL = 'npx skills add kylrix/kylrix/agents';
-export const KYLRIX_MCP_SKILL_INSTALL = 'npx skills add kylrix/kylrix/mcp';
+/** Core bundle: MCP + REST + autonomous agents (personal and agentic work). */
+export const KYLRIX_SKILLS_INSTALL =
+  'npx skills add kylrix/kylrix --skill mcp --skill api --skill agents';
+
+/** All published skills in this repo (includes oauth2). */
+export const KYLRIX_SKILLS_INSTALL_ALL =
+  "npx skills add kylrix/kylrix --skill '*' -y";
+
+export const KYLRIX_MCP_SKILL_INSTALL = 'npx skills add kylrix/kylrix --skill mcp';
+export const KYLRIX_API_SKILL_INSTALL = 'npx skills add kylrix/kylrix --skill api';
+export const KYLRIX_AGENTS_SKILL_INSTALL = 'npx skills add kylrix/kylrix --skill agents';
+export const KYLRIX_OAUTH2_SKILL_INSTALL = 'npx skills add kylrix/kylrix --skill oauth2';
 
 export const KYLRIX_API_BASE_PROD = `https://www.kylrix.space${KYLRIX_API_V1_BASE}`;
 export const KYLRIX_DOCS_API = 'https://github.com/Kylrix/kylrix/blob/master/docs/api.md';

@@ -207,13 +207,17 @@ class MasterPassCrypto {
     return true;
   }
 
-  // Unlock vault with master password
+  // Unlock vault with master password (existing vault only — use setupVault for first-time setup)
   async unlock(
     masterPassword: string,
     userId: string,
     isFirstTime: boolean = false): Promise<boolean> {
+    if (isFirstTime) {
+      await this.setupVault(masterPassword, userId);
+      return true;
+    }
+
     try {
-      // 1. Try to unlock via Keychain (New Architecture)
       const keychainSuccess = await this.unlockWithKeychain(
         masterPassword,
         userId
@@ -252,50 +256,6 @@ class MasterPassCrypto {
         return true;
       }
 
-      // 2. If first time setup, create new keychain entry
-      if (isFirstTime) {
-          // CRITICAL GUARD: Ensure we don't overwrite an existing vault
-          const { AppwriteService } = await import("./appwrite");
-          const existingEntries = await AppwriteService.listKeychainEntries(userId);
-          const hasExisting = existingEntries.some((e: any) => e.type === 'password');
-          
-          if (hasExisting) {
-              logError("[MasterPass] Refusing to initialize: Vault already exists for this user.");
-              // Throw specific error that UI can catch
-              throw new Error("VAULT_ALREADY_EXISTS");
-          }
-
-        // Generate a random MEK for new users
-        this.masterKey = await this.generateRandomMEK();
-
-        // Create keychain entry immediately
-        await this.createKeychainEntry(this.masterKey, masterPassword, userId);
-
-        // Trigger password sync silently for first-time masterpass configuration
-        try {
-          const { account } = await import("./appwrite/client");
-          const userPrefs = await account.getPrefs().catch(() => ({})) as any;
-          const masterpassForLoginEnabled = userPrefs?.masterpass_for_login_enabled !== false;
-
-          if (masterpassForLoginEnabled) {
-            const { syncMasterpassToAccountPassword } = await import("./actions/client-ops");
-            syncMasterpassToAccountPassword(userId, masterPassword)
-              .then(() => console.log('[Vault] Silently synchronized masterpass to account password on first-time setup.'))
-              .catch((err: any) => console.error('[Vault] Masterpass first-time sync failed:', err));
-          }
-        } catch (e) {
-          console.warn('[Vault] Failed to trigger first-time masterpass auth sync:', e);
-        }
-
-        // Sync with EcosystemSecurity for identity logic
-        const rawMek = await crypto.subtle.exportKey("raw", this.masterKey!);
-        await ecosystemSecurity.importMasterKey(rawMek);
-
-        this.markAsUnlocked();
-        await this.syncToServiceWorker();
-        return true;
-      }
-
       return false;
     } catch (error: unknown) {
       if ((error as Error).message === 'VAULT_ALREADY_EXISTS') {
@@ -304,6 +264,27 @@ class MasterPassCrypto {
       logError("Failed to unlock vault", error as Error);
       return false;
     }
+  }
+
+  /** First-time vault setup: creates encrypted keychain entry and unlocks in memory. */
+  async setupVault(masterPassword: string, userId: string): Promise<void> {
+    const { AppwriteService } = await import("./appwrite");
+    const existingEntries = await AppwriteService.listKeychainEntries(userId);
+    const hasExisting = existingEntries.some((e: any) => e.type === 'password');
+
+    if (hasExisting) {
+      logError("[MasterPass] Refusing to initialize: Vault already exists for this user.");
+      throw new Error("VAULT_ALREADY_EXISTS");
+    }
+
+    this.masterKey = await this.generateRandomMEK();
+    await this.createKeychainEntry(this.masterKey, masterPassword, userId);
+
+    const rawMek = await crypto.subtle.exportKey("raw", this.masterKey!);
+    await ecosystemSecurity.importMasterKey(rawMek);
+
+    this.markAsUnlocked();
+    await this.syncToServiceWorker();
   }
 
   // Change master password (re-wrap MEK)

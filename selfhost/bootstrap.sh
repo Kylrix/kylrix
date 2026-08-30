@@ -10,9 +10,9 @@ set -euo pipefail
 RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
 BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 
-ok()   { echo -e "  ${GREEN}✓${RESET} $1"; }
-info() { echo -e "  ${CYAN}▸${RESET} $1"; }
-warn() { echo -e "  ${YELLOW}⚠${RESET} $1"; }
+ok()   { echo -e "  ${GREEN}✓${RESET} $1" >&2; }
+info() { echo -e "  ${CYAN}▸${RESET} $1" >&2; }
+warn() { echo -e "  ${YELLOW}⚠${RESET} $1" >&2; }
 fail() { echo -e "  ${RED}✗${RESET} $1" >&2; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,8 +30,16 @@ fi
 
 load_env() {
   set -a
-  # shellcheck disable=SC1090
-  source "$ENV_FILE"
+  while IFS= read -r line || [ -n "$line" ]; do
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      key="${BASH_REMATCH[1]}"
+      val="${BASH_REMATCH[2]}"
+      val="${val%\"}"; val="${val#\"}"
+      val="${val%\'}"; val="${val#\'}"
+      export "$key=$val"
+    fi
+  done < "$ENV_FILE"
   set +a
 }
 
@@ -47,6 +55,7 @@ ADMIN_EMAIL="${SELFHOST_ADMIN_EMAIL:-admin@${DOMAIN}}"
 ADMIN_PASSWORD="${SELFHOST_ADMIN_PASSWORD:-}"
 ADMIN_NAME="${SELFHOST_ADMIN_NAME:-Kylrix Admin}"
 COOKIE_JAR="$(mktemp)"
+CONSOLE_JWT=""
 trap 'rm -f "$COOKIE_JAR"' EXIT
 
 if [ -z "$PROJECT_ID" ]; then
@@ -59,8 +68,9 @@ if [ -n "${APPWRITE_API_KEY:-}" ] && [ -n "${APPWRITE_API:-}" ]; then
   HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
     -H "X-Appwrite-Project: ${PROJECT_ID}" \
     -H "X-Appwrite-Key: ${APPWRITE_API_KEY}" \
-    "${ENDPOINT}/health/version")
+    "${ENDPOINT}/users?limit=1")
   if [ "$HTTP_CODE" = "200" ]; then
+    ensure_kylrix_app_user
     ok "Existing Appwrite project + API key verified"
     exit 0
   fi
@@ -85,6 +95,22 @@ api() {
     -b "$COOKIE_JAR" -c "$COOKIE_JAR" \
     -H "Content-Type: application/json" \
     -H "X-Appwrite-Project: ${CONSOLE_PROJECT_ID}" \
+    "$@" \
+    "${ENDPOINT}${path}"
+}
+
+api_admin() {
+  local method="$1"
+  local path="$2"
+  shift 2
+  if [ -z "$CONSOLE_JWT" ]; then
+    fail "Console JWT missing — cannot perform admin API call to ${path}"
+    exit 1
+  fi
+  curl -sS -X "$method" \
+    -H "Content-Type: application/json" \
+    -H "X-Appwrite-Project: ${CONSOLE_PROJECT_ID}" \
+    -H "X-Appwrite-JWT: ${CONSOLE_JWT}" \
     "$@" \
     "${ENDPOINT}${path}"
 }
@@ -133,6 +159,17 @@ ensure_admin_session() {
     exit 1
   fi
   ok "Authenticated Appwrite admin session"
+}
+
+ensure_console_jwt() {
+  local jwt_body
+  jwt_body=$(api POST "/account/jwts")
+  CONSOLE_JWT=$(echo "$jwt_body" | jq -r '.jwt // empty')
+  if [ -z "$CONSOLE_JWT" ]; then
+    fail "Failed to mint console JWT for admin APIs: ${jwt_body}"
+    exit 1
+  fi
+  ok "Minted console JWT for project admin APIs"
 }
 
 ensure_team_id() {
@@ -186,10 +223,10 @@ ensure_project() {
 
 create_api_key() {
   local scopes_json key_body secret
-  scopes_json='["sessions.write","users.read","users.write","teams.read","teams.write","databases.read","databases.write","collections.read","collections.write","attributes.read","attributes.write","indexes.read","indexes.write","documents.read","documents.write","files.read","files.write","buckets.read","buckets.write","functions.read","functions.write","execution.read","execution.write","locale.read","avatars.read","health.read","providers.read","providers.write","messages.read","messages.write","topics.read","topics.write","subscribers.read","subscribers.write","targets.read","targets.write","rules.read","rules.write","migrations.read","migrations.write","vcs.read","vcs.write","assistant.read"]'
+  scopes_json='["sessions.write","users.read","users.write","teams.read","teams.write","databases.read","databases.write","tables.read","tables.write","columns.read","columns.write","indexes.read","indexes.write","rows.read","rows.write","collections.read","collections.write","attributes.read","attributes.write","documents.read","documents.write","files.read","files.write","buckets.read","buckets.write","functions.read","functions.write","executions.read","executions.write","locale.read","avatars.read","health.read","providers.read","providers.write","messages.read","messages.write","topics.read","topics.write","subscribers.read","subscribers.write","targets.read","targets.write","rules.read","rules.write","migrations.read","migrations.write","vcs.read","vcs.write","assistant.read"]'
 
   key_body=$(api POST "/projects/${PROJECT_ID}/keys" \
-    -d "{\"name\":\"Kylrix Server\",\"scopes\":${scopes_json}}")
+    -d "{\"keyId\":\"unique()\",\"name\":\"Kylrix Server\",\"scopes\":${scopes_json}}")
 
   secret=$(echo "$key_body" | jq -r '.secret // empty')
   if [ -z "$secret" ]; then
@@ -205,7 +242,7 @@ create_api_key() {
 register_platform() {
   local body
   body=$(api POST "/projects/${PROJECT_ID}/platforms" \
-    -d "{\"name\":\"Kylrix Web\",\"type\":\"web\",\"hostname\":\"${DOMAIN}\"}" || true)
+    -d "{\"platformId\":\"unique()\",\"name\":\"Kylrix Web\",\"type\":\"web\",\"hostname\":\"${DOMAIN}\"}" || true)
 
   if echo "$body" | jq -e '.["$id"]' >/dev/null 2>&1; then
     ok "Registered web platform ${DOMAIN}"
@@ -213,6 +250,39 @@ register_platform() {
     ok "Web platform ${DOMAIN} already registered"
   else
     warn "Platform registration response: ${body}"
+  fi
+}
+
+ensure_kylrix_app_user() {
+  if [ -z "${APPWRITE_API_KEY:-}" ]; then
+    warn "APPWRITE_API_KEY missing — skipping Kylrix app user provisioning"
+    return 0
+  fi
+
+  info "Ensuring Kylrix app login user (${ADMIN_EMAIL})..."
+
+  local list_body create_body
+  list_body=$(curl -sS \
+    -H "X-Appwrite-Project: ${PROJECT_ID}" \
+    -H "X-Appwrite-Key: ${APPWRITE_API_KEY}" \
+    "${ENDPOINT}/users?queries%5B0%5D=equal(%22email%22,%5B%22${ADMIN_EMAIL}%22%5D)&limit=1")
+
+  if echo "$list_body" | jq -e '.total > 0' >/dev/null 2>&1; then
+    ok "Kylrix app user ${ADMIN_EMAIL} already exists"
+    return 0
+  fi
+
+  create_body=$(curl -sS -X POST \
+    -H "X-Appwrite-Project: ${PROJECT_ID}" \
+    -H "X-Appwrite-Key: ${APPWRITE_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "{\"userId\":\"unique()\",\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\",\"name\":\"${ADMIN_NAME}\"}" \
+    "${ENDPOINT}/users")
+
+  if echo "$create_body" | jq -e '.email' >/dev/null 2>&1; then
+    ok "Created Kylrix app user ${ADMIN_EMAIL}"
+  else
+    warn "Could not create Kylrix app user: ${create_body}"
   fi
 }
 
@@ -229,6 +299,8 @@ TEAM_ID="$(ensure_team_id)"
 ensure_project "$TEAM_ID"
 create_api_key
 register_platform
+load_env
+ensure_kylrix_app_user
 
 upsert_env "NEXT_PUBLIC_APPWRITE_PROJECT_ID" "$PROJECT_ID"
 upsert_env "NEXT_PUBLIC_APPWRITE_ENDPOINT" "${NEXT_PUBLIC_APPWRITE_ENDPOINT:-http://localhost:${APPWRITE_PORT}/v1}"

@@ -3,7 +3,7 @@
 Install into Claude Code, Cursor, Codex, and other agents:
 
 ```bash
-npx skills add kylrix/kylrix/oauth2
+npx skills add kylrix/kylrix --skill oauth2
 ```
 
 See [SKILL.md](./SKILL.md) for Sign in with Kylrix (OAuth 2.1 / OIDC) integration.

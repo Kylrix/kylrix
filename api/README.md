@@ -3,7 +3,7 @@
 Install into Claude Code, Cursor, Codex, and other agents:
 
 ```bash
-npx skills add kylrix/kylrix/api
+npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
 ```
 
 See [SKILL.md](./SKILL.md) for full HTTP API + PAT documentation.

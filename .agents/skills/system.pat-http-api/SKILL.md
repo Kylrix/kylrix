@@ -4,7 +4,7 @@ description: >-
   Personal Access Tokens, /api/v1 HTTP API, rate buckets (pat_rate_state /
   api_user_rate_state), scopes catalog, Developers settings tab. Use when
   changing PAT, public API, or developer tooling. Public agent skill lives at
-  api/ (npx skills add kylrix/kylrix/api) and .agents/skills/api/.
+  api/ (npx skills add kylrix/kylrix --skill mcp --skill api --skill agents) and .agents/skills/api/.
 ---
 
 # PAT + HTTP API
@@ -12,7 +12,7 @@ description: >-
 ## Public agent skill (installable)
 
 ```bash
-npx skills add kylrix/kylrix/api
+npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
 ```
 
 Canonical docs for external agents: `api/SKILL.md` (mirrored at `.agents/skills/api/SKILL.md`).

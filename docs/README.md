@@ -23,11 +23,10 @@ Developer docs for **integrators** — mobile apps, agents, and custom clients o
 ## Agent Skills
 
 ```bash
-npx skills add kylrix/kylrix/mcp
-npx skills add kylrix/kylrix/api
-npx skills add kylrix/kylrix/agents
-npx skills add kylrix/kylrix/oauth2
+npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
 ```
+
+Optional OAuth integrators: add `--skill oauth2` or use `--skill '*' -y` for everything.
 
 ---
 

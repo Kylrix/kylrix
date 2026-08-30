@@ -1,38 +1,45 @@
 # Wire Any Agent Into Kylrix
 
-For **integrators** building apps, mobile clients, or agent workflows on Kylrix — not for hacking on the Kylrix repo itself. Self-hosters: see [SELFHOST.md](../SELFHOST.md).
-
-Copy this to your coding agent:
-
-> **Wire me into Kylrix.** Install skills `kylrix/kylrix/mcp`, `kylrix/kylrix/api`, and `kylrix/kylrix/agents`. Mint a PAT in **Settings → Developers** on [kylrix.space](https://www.kylrix.space) (`kyl_pat_…`). Add MCP to `.cursor/mcp.json` (copy `.cursor/mcp.json.example`, paste token, never commit secrets). Set `KYLRIX_PAT` and `KYLRIX_API_BASE=https://www.kylrix.space/api/v1`. Verify `GET /me` and MCP `list_workspaces`. Prefer **MCP** for IDE agents; **REST** for mobile/scripts.
+For **integrators** — mobile apps, scripts, IDE agents, and autonomous agents on Kylrix. Self-hosters: [SELFHOST.md](../SELFHOST.md).
 
 ---
 
-## 1. Install Agent Skills
+## Install skills (one command)
 
 ```bash
-npx skills add kylrix/kylrix/mcp
-npx skills add kylrix/kylrix/api
-npx skills add kylrix/kylrix/agents
+npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
 ```
 
-| Skill | When to use |
-|-------|-------------|
-| `mcp` | Cursor, Claude Desktop, Claude Code — native tool calls |
-| `api` | Mobile apps, shell scripts, CI, custom backends — REST + PAT |
-| `agents` | Autonomous agents — provision keys, workspaces, `~/.kylrix/agents/` |
+Optional — all skills including OAuth:
+
+```bash
+npx skills add kylrix/kylrix --skill '*' -y
+```
+
+| Skill | Covers |
+|-------|--------|
+| `mcp` | IDE tool calls (Cursor, Claude, Windsurf, Codex, …) |
+| `api` | REST `/api/v1` — scripts, mobile, CI, backends |
+| `agents` | Provisioning keys, harness sessions, `~/.kylrix/agents/` |
+| `oauth2` | Sign in with Kylrix for third-party apps (optional) |
+
+**Personal work** (notes, goals, vault) and **agentic work** (sessions, harness) share the same workspace. Most people install all three; REST stays relevant even when you use MCP day-to-day.
+
+Copy-paste prompt for your coding agent:
+
+> Install Kylrix skills: `npx skills add kylrix/kylrix --skill mcp --skill api --skill agents`. Mint a PAT at **Settings → Developers** (`kyl_pat_…`). Connect MCP via Smithery or `.cursor/mcp.json`. Set `KYLRIX_PAT` and `KYLRIX_API_BASE=https://www.kylrix.space/api/v1`. Verify `GET /me`. Use MCP in the IDE; use REST for scripts and mobile.
 
 ---
 
-## 2. Mint a Token
+## Mint a token
 
-On **[kylrix.space](https://www.kylrix.space)** → **Settings → Developers** → Create PAT (`kyl_pat_…`). Grant scopes you need (`goals:read`, `notes:write`, `workspaces:read`, `chats:write`, etc.).
+**[kylrix.space](https://www.kylrix.space)** → **Settings → Developers** → Create PAT.
 
-**Autonomous agents:** `POST https://www.kylrix.space/api/v1/agents/provision` with an Agent Provisioning Key. Store `agentToken` in `~/.kylrix/agents/<name>.json` — never in git.
+**Autonomous agents:** `POST /api/v1/agents/provision` with an Agent Provisioning Key. Store `agentToken` in `~/.kylrix/agents/<name>.json` — never in git.
 
 ---
 
-## 3. Production Endpoints
+## Endpoints
 
 ```bash
 export KYLRIX_PAT='kyl_pat_…'
@@ -47,45 +54,26 @@ export KYLRIX_API_BASE='https://www.kylrix.space/api/v1'
 
 ---
 
-## 4. Connect MCP (Recommended for IDE Agents)
-
-Copy [`.cursor/mcp.json.example`](../.cursor/mcp.json.example) → `.cursor/mcp.json`, paste your PAT, reload the IDE.
-
-```json
-{
-  "mcpServers": {
-    "kylrix": {
-      "type": "http",
-      "url": "https://www.kylrix.space/api/v1/mcp",
-      "headers": {
-        "Authorization": "Bearer <YOUR_PAT_TOKEN>"
-      }
-    }
-  }
-}
-```
-
-### Claude Code
-
-```bash
-claude mcp add --transport http kylrix https://www.kylrix.space/api/v1/mcp \
-  --header "Authorization: Bearer <YOUR_PAT_TOKEN>"
-```
-
-### Smithery (one command)
+## Connect MCP
 
 ```bash
 npx -y @smithery/cli install kylrix/kylrix --client cursor
+npx -y @smithery/cli install kylrix/kylrix --client claude
+npx -y @smithery/cli install kylrix/kylrix --client windsurf
+npx -y @smithery/cli install kylrix/kylrix --client codex
+npx -y @smithery/cli install kylrix/kylrix --client antigravity
 ```
+
+Or copy [`.cursor/mcp.json.example`](../.cursor/mcp.json.example) → `.cursor/mcp.json`, paste your PAT, reload IDE.
 
 ---
 
-## 5. Verify
+## Verify
 
 ```bash
 curl -sS -H "Authorization: Bearer $KYLRIX_PAT" "$KYLRIX_API_BASE/me" | jq .
 
-curl -sS -X POST "https://www.kylrix.space/api/v1/mcp" \
+curl -sS -X POST "$KYLRIX_API_BASE/mcp" \
   -H "Authorization: Bearer $KYLRIX_PAT" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_workspaces","arguments":{"limit":5}}}' \
@@ -94,27 +82,22 @@ curl -sS -X POST "https://www.kylrix.space/api/v1/mcp" \
 
 ---
 
-## 6. MCP vs REST
+## MCP vs REST
 
-Both call the same **`ApiResources`** in-process. Domain shapes (e.g. goals) live in **`sdk/contracts/goals.ts`**.
+Both hit the same **`ApiResources`** in-process.
 
 | | MCP | REST |
 |---|-----|------|
-| **Best for** | IDE agents, multi-step tool loops | Mobile apps, backends, CI |
+| **Best for** | IDE agents, multi-step tool loops | Mobile, backends, CI, shell scripts |
 | **Auth** | `Authorization: Bearer kyl_pat_…` | Same |
-| **Goals** | `list_goals` (`workspaceId`, `status`) | `GET /goals?workspaceId=&status=` |
+| **Workspaces** | `list_workspaces` | `GET /workspaces` or `GET /projects` |
+| **Nested projects** | `list_workspace_projects` | `GET /workspaces/:id/projects` |
 
 ---
 
-## 7. Self-Hosting
+## Further reading
 
-Running your own instance? See **[SELFHOST.md](../SELFHOST.md)** for Docker URLs and env setup. Production docs above use `kylrix.space`; swap the host for your deployment.
-
----
-
-## Further Reading
-
-- [MCP tools & transport](./mcp.md)
 - [REST routes & scopes](./api.md)
+- [MCP tools](./mcp.md)
 - [Autonomous agents](./agents.md)
 - [OAuth 2.1](./oauth2.md)

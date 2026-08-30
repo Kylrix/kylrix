@@ -47,6 +47,15 @@ docker compose down -v
 APPWRITE_UNSTABLE=true make up   # or set in .env before make up
 ```
 
+**In-place upgrade** (1.8+ → 1.9.6, preserves data):
+
+```bash
+make upgrade-appwrite
+make schema-push
+```
+
+Appwrite does **not** seamlessly jump 1.6 → 1.9 in one step on existing MariaDB data. Use `make upgrade-appwrite` for nearby versions; for 1.6.x dogfood stacks, prefer `make clean && make up && make schema-push`.
+
 ---
 
 ```bash

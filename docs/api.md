@@ -2,7 +2,7 @@
 
 External agents, mobile apps, CLI tools, and integrations use Personal Access Tokens (PATs) or OAuth 2.1 tokens.
 
-**→ [Wire any agent in 60 seconds](./integrations.md)** · MCP: [mcp.md](./mcp.md)
+**→ [Wire any agent](./integrations.md)** · MCP: [mcp.md](./mcp.md) · Full route table: [api/references/http-api.md](../api/references/http-api.md)
 
 ---
 
@@ -36,37 +36,46 @@ Mint tokens: **Settings → Developers** on [kylrix.space](https://www.kylrix.sp
 | `profile:read` | Profile and identity |
 | `notes:read` / `notes:write` | Ideas & markdown notes |
 | `goals:read` / `goals:write` | Goals & tasks |
-| `workspaces:read` / `workspaces:write` | Workspaces |
-| `chats:read` / `chats:write` | Conversations & messages |
+| `workspaces:read` / `workspaces:write` | Workspaces & nested projects |
+| `chats:read` / `chats:write` | Conversations, threads, messages |
 | `events:read` / `events:write` | Calendar |
 | `forms:read` / `forms:write` | Forms |
-| `flows:read` / `flows:write` | Workflows |
-| `agents:read` / `agents:write` | Agent sessions |
-| `agents:provision` | Provision autonomous agents |
+| `flows:read` / `flows:write` / `flows:install` | Workflows |
+| `vault:read` / `vault:write` | Vault metadata (not plaintext secrets without unlock) |
+| `moments:read` / `moments:write` | Moments & feeds |
+| `tags:read` / `tags:write` | Tags |
+| `objects:read` / `objects:write` | Object links |
+| `trash:read` / `trash:write` | Trash restore / purge |
+| `agents:read` / `agents:write` / `agents:harness` / `agents:provision` | Agent sessions |
 | `pats:read` / `pats:write` | Manage PATs |
+| `tools:execute` | Run tools (restricted) |
 
 ---
 
 ## Endpoints (summary)
 
-### Token self-service
+### Token & PAT self-service
 - `GET /token` · `GET|PATCH /token/scopes` · `POST /token/scopes` (`mode: grant`)
+- `GET /pats` · `POST /pats` · `DELETE /pats/:id`
 
 ### Profile
 - `GET /me`
 
-### Notes
+### Notes & goals
 - `GET /notes?workspace_id=&limit=` · `POST /notes` · `GET|PATCH|DELETE /notes/:id`
-
-### Goals
 - `GET /goals?workspace_id=&status=&limit=` · `POST /goals` · `GET|PATCH|DELETE /goals/:id`
-- Fields: `title`, `description`, `status`, `priority`, `dueDate`, `tags`, `workspaceId` — see `sdk/contracts/goals.ts`
 
-### Workspaces
+### Workspaces & projects
 - `GET /workspaces` · `POST /workspaces` · `GET|PATCH|DELETE /workspaces/:id`
-- `GET|POST /workspaces/:id/collaborators`
+- `/projects` is an alias for `/workspaces`
+- `GET|POST /workspaces/:id/collaborators` · `POST /workspaces/:id/objects`
+- **Nested projects:** `GET|POST /workspaces/:workspaceId/projects` · `GET|PATCH|DELETE /workspaces/:workspaceId/projects/:projectId`
 - Discussions: `GET /threads?parent_kind=workspace&parent_id=:id` · `POST /threads`
 
-### Chats, events, forms, flows, moments, threads, vault, tags, agents
+### Events, forms, flows, feeds, moments, chats, vault, tags, trash, agents
 
 See [api/references/http-api.md](../api/references/http-api.md) for the full route table.
+
+MCP and REST share the same `ApiResources` layer — same PAT, same scopes. Prefer **MCP** in IDEs; use **REST** for mobile apps, CI, and scripts.
+
+Domain shapes: `sdk/contracts/` (e.g. `goals.ts`).

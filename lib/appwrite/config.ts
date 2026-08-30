@@ -1,5 +1,18 @@
+const DEFAULT_PUBLIC_ENDPOINT = 'https://api.kylrix.space/v1';
+
+function trimTrailingSlash(endpoint: string): string {
+    return endpoint.replace(/\/+$/, '');
+}
+
 export const APPWRITE_CONFIG = {
-    ENDPOINT: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://api.kylrix.space/v1',
+    /** Browser/client SDK endpoint (NEXT_PUBLIC). */
+    ENDPOINT: trimTrailingSlash(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || DEFAULT_PUBLIC_ENDPOINT),
+    /** Server-side SDK endpoint — prefers internal Docker hostname when set. */
+    SERVER_ENDPOINT: trimTrailingSlash(
+        process.env.APPWRITE_ENDPOINT ||
+        process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ||
+        DEFAULT_PUBLIC_ENDPOINT
+    ),
     PROJECT_ID: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '67fe9627001d97e37ef3',
     DATABASE_ID: 'passwordManagerDb', // Consolidated database survivor
     NOTE_DATABASE_ID: 'passwordManagerDb',

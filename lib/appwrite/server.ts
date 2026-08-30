@@ -1,5 +1,6 @@
 import { Client, Account } from 'node-appwrite';
 import { APPWRITE_CONFIG } from './config';
+import { configureInternalAppwriteClient } from './internal-headers';
 import { cache } from 'react';
 
 /**
@@ -11,10 +12,10 @@ import { cache } from 'react';
  * - Prioritizes explicit JWT for cross-environment reliability.
  */
 export const createServerClient = cache(async (jwt?: string) => {
-  const client = new Client();
+  const client = configureInternalAppwriteClient(new Client());
   
   // Use the primary ecosystem endpoint for session/JWT validation.
-  client.setEndpoint(APPWRITE_CONFIG.ENDPOINT);
+  client.setEndpoint(APPWRITE_CONFIG.SERVER_ENDPOINT);
   client.setProject(APPWRITE_CONFIG.PROJECT_ID);
 
   if (jwt && jwt.length > 32) {

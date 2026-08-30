@@ -23,6 +23,7 @@ import type { PatPublic } from '@/lib/services/pats';
 import { createPat, listPats, revokePat } from '@/lib/actions/client-ops';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { toast } from 'react-hot-toast';
+import { KYLRIX_SKILLS_INSTALL } from '@/lib/api/public';
 
 export type AgentDrawerMode = 
   | { type: 'list_custom'; customAgents: AgentRecord[]; defaultAgentId: string; onSelectAgent: (agent: any) => void; onCreateAgent: () => void; onDeleteAgent?: (id: string, name: string) => void }
@@ -1177,16 +1178,16 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                 Agent Skill CLI Installation
               </span>
               <p className="text-xs text-white/50 leading-relaxed m-0">
-                Install the official Kylrix autonomous agent skill into Cursor, Claude Code, Antigravity, or your custom CLI agent with one command:
+                Install MCP, REST API, and agent skills in one command:
               </p>
               <div className="p-3 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-between gap-2">
                 <code className="text-xs font-mono text-[#818CF8] truncate select-all">
-                  npx skills add kylrix/kylrix/agents
+                  {KYLRIX_SKILLS_INSTALL}
                 </code>
                 <button
                   type="button"
                   onClick={async () => {
-                    await navigator.clipboard.writeText('npx skills add kylrix/kylrix/agents');
+                    await navigator.clipboard.writeText(KYLRIX_SKILLS_INSTALL);
                     toast.success('Skill install command copied');
                   }}
                   className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"

@@ -3,7 +3,7 @@
 # Self-hosting management commands
 # ─────────────────────────────────────────────────────────────────────────────
 
-.PHONY: help setup mint bootstrap up down logs build restart status app-only clean backup update schema-push
+.PHONY: help setup mint bootstrap up down logs build restart status app-only clean backup update schema-push upgrade-appwrite install
 
 help: ## Show this help message
 	@echo ""
@@ -25,15 +25,19 @@ setup: ## Interactive setup wizard — generates .env with secure defaults
 mint: ## Mint non-interactive .env secrets + local project ID
 	@bash selfhost/mint-env.sh
 
+install: ## One-command self-host install (same as curl | bash selfhost.sh)
+	@bash selfhost.sh
+
 bootstrap: mint ## Start Appwrite infra and mint local project + API key
 	@$(COMPOSE_FULL) up -d mariadb redis appwrite
 	@bash selfhost/bootstrap.sh
 
-up: bootstrap ## Start full stack (infra bootstrap + Kylrix build)
+up: bootstrap ## Start full stack (infra bootstrap + Kylrix build + schema)
 	@$(COMPOSE_FULL) up -d --build kylrix
+	@bash selfhost/provision-schema.sh || echo "  ⚠ Schema provisioning did not finish — re-run: make schema-push"
 	@echo ""
 	@echo "  ✓ Kylrix is starting at http://localhost:$${APP_PORT:-5003}"
-	@echo "  ✓ Appwrite console at http://localhost:$${APPWRITE_PORT:-8080}"
+	@echo "  ✓ Appwrite API at http://localhost:$${APPWRITE_PORT:-8080}/v1"
 	@echo ""
 
 down: ## Stop all services
@@ -97,6 +101,9 @@ update: ## Pull latest images, rebuild, and restart
 
 schema-push: ## Provision Appwrite databases, tables, and storage buckets
 	@bash selfhost/provision-schema.sh
+
+upgrade-appwrite: mint ## Pull latest Appwrite image, migrate DB, restart stack
+	@bash selfhost/upgrade-appwrite.sh
 
 logs-kylrix: ## Follow logs for the Kylrix app only
 	$(COMPOSE_FULL) logs -f kylrix

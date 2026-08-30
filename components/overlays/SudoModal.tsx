@@ -12,13 +12,14 @@ import {
 } from "lucide-react";
 import Logo from "@/components/common/Logo";
 import { ecosystemSecurity } from "@/lib/ecosystem/security";
-import { AppwriteService, setMasterpassFlag } from "@/lib/appwrite";
+import { AppwriteService } from "@/lib/appwrite";
 import { useAuth } from "@/context/auth/AuthContext";
 import { unlockWithPasskey } from "@/lib/passkey";
 import { PasskeySetup } from "./PasskeySetup";
 import toast from "react-hot-toast";
 import { getAppTone, type KylrixApp } from "@/sdk/design";
 import { masterPassCrypto } from "@/lib/masterpass-crypto";
+import { initializeMasterPassVault } from "@/lib/vault/initialize-masterpass";
 import { useDrawerState } from "@/components/ui/DrawerStateContext";
 import { useAppwriteVault } from "@/context/appwrite-context";
 
@@ -488,21 +489,13 @@ export default function SudoModal({
         }
         setLoading(true);
         try {
-            const success = await masterPassCrypto.unlock(password, user.$id, true);
-            if (!success) {
-                toast.error("Could not initialize master password.");
-                return;
-            }
-            await setMasterpassFlag(user.$id, user.email);
-            
-            // Sync immediately with account password
-            const { syncMasterpassToAccountPasswordAction } = await import("@/lib/actions/secure-ops/misc");
-            await syncMasterpassToAccountPasswordAction({ userId: user.$id, masterpass: password });
+            await initializeMasterPassVault({
+                userId: user.$id,
+                email: user.email,
+                masterPassword: password,
+                name: user.name ?? undefined,
+            });
 
-            if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("kylrix:masterpass-updated"));
-            }
-            
             setHasMasterpass(true);
             toast.success("MasterPass configured.");
             handleSuccessWithSync();

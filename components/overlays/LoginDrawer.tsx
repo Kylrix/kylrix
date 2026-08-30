@@ -15,6 +15,7 @@ import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthS
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
 import { KYLRIX_AGENTS_SKILL_INSTALL } from '@/lib/api/public';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
+import { ensureMasterPassVaultConfigured } from '@/lib/vault/initialize-masterpass';
 import {
   isAuthPasswordlessModeEnabled,
   isEmailPasswordSignupEnabled,
@@ -135,28 +136,6 @@ export function LoginDrawer() {
     return () => clearTimeout(timer);
   }, [email, step, isSelfHosted, emailPasswordSignupEnabled]);
 
-  const completeNewUserVaultSetup = async (sessionUserId: string, emailTrimmed: string, pass: string) => {
-    try {
-      const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
-      const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
-      const { UsersService } = await import('@/lib/services/users');
-
-      await masterPassCrypto.unlock(pass, sessionUserId, true);
-      const pubKey = await ecosystemSecurity.syncIdentity(sessionUserId).catch(() => null);
-      const profile = await UsersService.ensureProfileForUser({
-        $id: sessionUserId,
-        email: emailTrimmed,
-        name: emailTrimmed.split('@')[0],
-      });
-      if (pubKey && profile) {
-        await UsersService.updateProfile(sessionUserId, { publicKey: pubKey });
-      }
-      toast.success('Vault secured with master password');
-    } catch (vaultErr) {
-      console.warn('Vault auto-initialization warning on signup:', vaultErr);
-    }
-  };
-
   const isInvalidCredentialsError = (err: unknown) => {
     const e = err as { code?: number; type?: string; message?: string };
     const msg = String(e?.message || '').toLowerCase();
@@ -217,19 +196,22 @@ export function LoginDrawer() {
         session = await account.createEmailPasswordSession(emailTrimmed, password);
       }
 
-      if (createdAccount) {
-        await completeNewUserVaultSetup(session.userId, emailTrimmed, password);
+      const vaultInput = {
+        userId: session.userId,
+        email: emailTrimmed,
+        masterPassword: password,
+        name: emailTrimmed.split('@')[0],
+      };
+
+      const vaultResult = await ensureMasterPassVaultConfigured(vaultInput);
+
+      if (createdAccount && vaultResult === 'initialized') {
+        toast.success('Account and vault created successfully!');
+      } else if (createdAccount) {
         toast.success('Account created successfully!');
+      } else if (vaultResult === 'initialized') {
+        toast.success('Logged in and vault configured successfully!');
       } else {
-        try {
-          const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
-          const unlockSuccess = await masterPassCrypto.unlock(password, session.userId, false);
-          if (unlockSuccess) {
-            toast.success('Vault unlocked automatically');
-          }
-        } catch (vaultErr) {
-          console.warn('Failed to auto-unlock vault with master password:', vaultErr);
-        }
         toast.success('Logged in successfully!');
       }
 

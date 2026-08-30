@@ -4,15 +4,13 @@ import { generateAuthenticationOptions, verifyAuthenticationResponse, verifyRegi
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_KEYCHAIN_ID } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { internalAppwriteFetchHeaders } from '@/lib/appwrite/internal-headers';
 import { Query, ID, Permission, Role } from 'node-appwrite';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
 import {
-  isAuthPasswordlessModeEnabled,
   isEmailPasswordSignupEnabled,
-  isEmailPasswordSigninEnabled,
-  isPasskeySignupEnabled,
   getAuthMethodPolicy,
 } from '@/lib/config/auth-methods';
 import { withSystemTransaction } from '@/lib/services/internal/transaction';
@@ -509,7 +507,7 @@ export async function getEnabledOAuthProvidersAction(): Promise<{
       return { success: true, providers: ['google', 'github'] };
     }
 
-    const endpoint = (process.env.APPWRITE_ENDPOINT || process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'http://127.0.0.1/v1').replace(/\/+$/, '');
+    const endpoint = APPWRITE_CONFIG.SERVER_ENDPOINT;
     const projectId = process.env.APPWRITE_PROJECT_ID || process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '';
     const apiKey = process.env.APPWRITE_API || '';
 
@@ -524,7 +522,9 @@ export async function getEnabledOAuthProvidersAction(): Promise<{
         const res = await fetch(testUrl, {
           method: 'GET',
           redirect: 'manual',
-          headers: apiKey ? { 'X-Appwrite-Key': apiKey } : {}
+          headers: {
+            ...(apiKey ? { 'X-Appwrite-Key': apiKey } : {}),
+            ...internalAppwriteFetchHeaders(endpoint)}
         });
 
         // If provider is configured in Appwrite, it redirects to the OAuth provider (301/302/307/308)

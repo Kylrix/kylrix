@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { ID, Query, type Users, Client as NodeAppwriteClient } from 'node-appwrite';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG, KYLRIX_AUTH_URI } from '@/lib/appwrite/config';
+import { configureInternalAppwriteClient } from '@/lib/appwrite/internal-headers';
 
 export type UnorganicEmailSource = 'flow' | 'connect' | 'note' | 'vault' | 'accounts';
 
@@ -147,10 +148,12 @@ function createSystemTablesClient() {
     console.error('[Unorganic Email API] APPWRITE_API environment variable is missing.');
   }
 
-  const client = new NodeAppwriteClient()
-    .setEndpoint(process.env.APPWRITE_ENDPOINT || APPWRITE_CONFIG.ENDPOINT)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT || process.env.APPWRITE_PROJECT || APPWRITE_CONFIG.PROJECT_ID)
-    .setKey(apiKey || '');
+  const client = configureInternalAppwriteClient(
+    new NodeAppwriteClient()
+      .setEndpoint(APPWRITE_CONFIG.SERVER_ENDPOINT)
+      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT || process.env.APPWRITE_PROJECT || APPWRITE_CONFIG.PROJECT_ID)
+      .setKey(apiKey || '')
+  );
 
   return new TablesDB(client as any);
 }
