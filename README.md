@@ -51,16 +51,15 @@ curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | 
 
 ## Develop
 
+```bash
+git clone https://github.com/Kylrix/kylrix.git
+cd kylrix
+```
+
 **Install Ota** (execution contract for this repo):
 
 ```bash
 curl -fsSL https://dist.ota.run/install.sh | sh
-```
-
-**Install agent skills** (MCP + REST + agents — one command):
-
-```bash
-npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
 ```
 
 **Run:**
@@ -95,6 +94,12 @@ npx -y @smithery/cli install kylrix/kylrix --client claude
 npx -y @smithery/cli install kylrix/kylrix --client windsurf
 npx -y @smithery/cli install kylrix/kylrix --client codex
 npx -y @smithery/cli install kylrix/kylrix --client antigravity
+```
+
+**Install agent skills** (MCP + REST + agents — one command):
+
+```bash
+npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
 ```
 
 Endpoint: `https://www.kylrix.space/api/v1/mcp` · self-hosted: swap host for yours (see [SELFHOST.md](SELFHOST.md))
