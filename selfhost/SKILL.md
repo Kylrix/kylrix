@@ -14,7 +14,20 @@ description: >-
 npx skills add kylrix/kylrix --skill selfhost
 ```
 
-## One command (defaults)
+## Configure (shell exports)
+
+Set what you need in the shell **before** install. Exports override minted values. Bootstrap-minted secrets (`APPWRITE_API_KEY`, existing `APPWRITE_PROJECT_ID`) are not overridden.
+
+```bash
+export SELFHOST_ADMIN_EMAIL=you@example.com
+export SELFHOST_ADMIN_PASSWORD='your-secure-password'
+# optional:
+# export KYLRIX_PORT=5003
+# export KYLRIX_APPWRITE_PORT=8080
+# export AUTH_EMAIL_PASSWORD_SIGNUP=true
+```
+
+## Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
@@ -25,84 +38,45 @@ curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | 
 | App | `http://localhost:5003` |
 | Appwrite API | `http://localhost:8080/v1` |
 
-Admin login is minted into `.env` unless you pass credentials in the same shell (see below).
+Without exports, admin login is auto-minted into `.env`.
 
-## Configure entirely via environment (no `.env` editing)
-
-Prefix the install command. Shell exports **override** minted values. Bootstrap-minted secrets (`APPWRITE_API_KEY`, project ID when already bootstrapped) are **immune**.
-
-```bash
-SELFHOST_ADMIN_EMAIL=you@example.com \
-SELFHOST_ADMIN_PASSWORD='your-secure-password' \
-KYLRIX_PORT=5003 \
-curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
-```
-
-Pipe form (same effect):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | \
-  SELFHOST_ADMIN_EMAIL=you@example.com \
-  SELFHOST_ADMIN_PASSWORD='your-secure-password' \
-  bash
-```
-
-### Common overrides
+### Common exports
 
 | Variable | Purpose |
 |----------|---------|
 | `SELFHOST_ADMIN_EMAIL` | First admin account email |
-| `SELFHOST_ADMIN_PASSWORD` | First admin password (vault masterpass defaults to same on signup) |
-| `SELFHOST_ADMIN_NAME` | Display name for bootstrap admin |
+| `SELFHOST_ADMIN_PASSWORD` | First admin password |
+| `SELFHOST_ADMIN_NAME` | Bootstrap admin display name |
 | `KYLRIX_PORT` | App port (default `5003`) |
 | `KYLRIX_APPWRITE_PORT` | Bundled Appwrite port (default `8080`) |
 | `KYLRIX_DOMAIN` | Public domain label (default `localhost`) |
-| `KYLRIX_DIR` | Install directory (default: repo you run from, else `~/kylrix-selfhost`) |
-| `KYLRIX_TAIL_LOGS=1` | Follow `kylrix` container logs after install |
-| `NEXT_PUBLIC_LOGGING_VERBOSE=true` | Verbose client logging |
+| `KYLRIX_DIR` | Install directory |
 | `AUTH_EMAIL_PASSWORD_SIGNUP` | Email/password signup (default `true` on self-host) |
 | `KYLRIX_SKIP_SCHEMA=1` | Skip schema push on re-run |
-| `KYLRIX_SKIP_GIT_PULL=1` | Skip `git pull` when updating an existing clone |
+| `KYLRIX_SKIP_GIT_PULL=1` | Skip `git pull` on update |
 
-SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, …) can be set the same way when provided in the shell.
+SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, …) — same `export` pattern.
 
-## Intelligent re-runs
+## Re-runs
 
-`selfhost.sh` detects:
-
-- Cloud dev config bleeding into bundled stack → remints local endpoints
-- Running container vs `.env` drift → rebuilds client bundle
-- Healthy Appwrite + verified API key → skips bootstrap
-- Stale shell `APPWRITE_PROJECT_ID` exports → reloads from minted `.env` before compose
-
-Re-run anytime to heal or upgrade:
+`selfhost.sh` detects cloud config bleed, container drift, and skips healthy bootstrap steps. Re-run anytime:
 
 ```bash
 ./selfhost.sh
 ```
 
-## Logs
-
-```bash
-docker compose logs -f kylrix
-# or one-shot tail after install:
-KYLRIX_TAIL_LOGS=1 ./selfhost.sh
-```
-
-## From a dev clone
+## Dev clone
 
 ```bash
 git clone https://github.com/Kylrix/kylrix.git && cd kylrix
-cp env.sample .env    # optional for cloud dev; selfhost.sh mints its own for bundled stack
+cp env.sample .env
 ./selfhost.sh
 ```
 
-Make targets: `make install` (same as `selfhost.sh`), `make schema-push`, `make logs`.
-
-## Connect agents after install
+## Agents on your instance
 
 ```bash
 npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
 ```
 
-Self-hosted MCP: `http://localhost:5003/api/v1/mcp` (swap host/port for your `KYLRIX_PORT`).
+Self-hosted MCP: `http://localhost:5003/api/v1/mcp`

@@ -37,40 +37,31 @@
 
 ## Self-host
 
-**Agent skill** (install once for operators / agents):
+**Agent skill:**
 
 ```bash
 npx skills add kylrix/kylrix --skill selfhost
 ```
 
-**One command** — bundled Appwrite + Kylrix, no cloud backend:
+**Configure** (optional — omit to auto-mint admin credentials into `.env`):
+
+```bash
+export SELFHOST_ADMIN_EMAIL=you@example.com
+export SELFHOST_ADMIN_PASSWORD='your-secure-password'
+```
+
+**Install** (bundled Appwrite + Kylrix, no cloud backend):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
-```
-
-**One command with your admin login** (no `.env` editing — set vars in the same shell):
-
-```bash
-SELFHOST_ADMIN_EMAIL=you@example.com \
-SELFHOST_ADMIN_PASSWORD='your-secure-password' \
-curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
-```
-
-**Tail logs after install:**
-
-```bash
-KYLRIX_TAIL_LOGS=1 curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
-# or later: docker compose logs -f kylrix
 ```
 
 | | Default |
 |---|---|
 | App | `http://localhost:5003` |
 | Appwrite API | `http://localhost:8080/v1` |
-| Admin login | your env vars above, or auto-minted in `.env` |
 
-More options: [SELFHOST.md](SELFHOST.md) · re-run `./selfhost.sh` anytime (detects drift, skips healthy steps).
+More: [SELFHOST.md](SELFHOST.md) · re-run `./selfhost.sh` anytime (detects drift, skips healthy steps).
 
 ---
 

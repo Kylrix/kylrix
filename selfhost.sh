@@ -178,10 +178,4 @@ if [ "${USER_SET_ADMIN_PASSWORD:-0}" = "1" ]; then
 else
   echo -e "Admin password:   ${CYAN}$(grep '^SELFHOST_ADMIN_PASSWORD=' .env | cut -d= -f2-)${NC}"
 fi
-echo -e "\n${DIM}Logs:    docker compose logs -f kylrix${NC}"
-echo -e "${DIM}         or re-run with KYLRIX_TAIL_LOGS=1${NC}\n"
-
-if [ "${KYLRIX_TAIL_LOGS:-}" = "1" ]; then
-  echo -e "${YELLOW}Tailing Kylrix logs (Ctrl+C to exit)...${NC}\n"
-  $COMPOSE_CMD logs -f kylrix
-fi
+echo ""
