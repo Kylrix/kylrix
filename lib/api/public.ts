@@ -14,6 +14,7 @@ export const KYLRIX_MCP_SKILL_INSTALL = 'npx skills add kylrix/kylrix --skill mc
 export const KYLRIX_API_SKILL_INSTALL = 'npx skills add kylrix/kylrix --skill api';
 export const KYLRIX_AGENTS_SKILL_INSTALL = 'npx skills add kylrix/kylrix --skill agents';
 export const KYLRIX_OAUTH2_SKILL_INSTALL = 'npx skills add kylrix/kylrix --skill oauth2';
+export const KYLRIX_SELFHOST_SKILL_INSTALL = 'npx skills add kylrix/kylrix --skill selfhost';
 
 export const KYLRIX_API_BASE_PROD = `https://www.kylrix.space${KYLRIX_API_V1_BASE}`;
 export const KYLRIX_DOCS_API = 'https://github.com/Kylrix/kylrix/blob/master/docs/api.md';

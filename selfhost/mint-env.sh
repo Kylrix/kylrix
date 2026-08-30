@@ -2,13 +2,17 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Kylrix — Mint self-host environment (non-interactive)
 # Generates local Appwrite project ID, secrets, and public endpoint URLs.
-# Safe to re-run: preserves existing APPWRITE_PROJECT_ID / API key when set.
+# Shell exports override planned values (see selfhost/env-overrides.sh).
+# Immune: APPWRITE_API_KEY, APPWRITE_PROJECT_ID (when already bootstrapped).
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="${PROJECT_DIR}/.env"
+
+# shellcheck source=env-overrides.sh
+source "${SCRIPT_DIR}/env-overrides.sh"
 
 gen_secret() {
   openssl rand -hex "${1:-32}" 2>/dev/null || head -c "${1:-32}" /dev/urandom | xxd -p | tr -d '\n'
@@ -17,6 +21,30 @@ gen_secret() {
 if [ ! -f "$ENV_FILE" ]; then
   cp "${PROJECT_DIR}/env.sample" "$ENV_FILE"
 fi
+
+capture_env_override APP_PORT
+capture_env_override APPWRITE_PORT
+capture_env_override KYLRIX_DOMAIN
+capture_env_override KYLRIX_APPWRITE_DOMAIN
+capture_env_override KYLRIX_PUBLIC_APP_URL
+capture_env_override KYLRIX_PUBLIC_APPWRITE_ENDPOINT
+capture_env_override SELFHOST_ADMIN_EMAIL
+capture_env_override SELFHOST_ADMIN_PASSWORD
+capture_env_override SELFHOST_ADMIN_NAME
+capture_env_override AUTH_EMAIL_PASSWORD_SIGNUP
+capture_env_override AUTH_PASSKEY_SIGNUP
+capture_env_override AUTH_PASSWORDLESS_MODE
+capture_env_override PRICING_TIERS_ENABLED
+capture_env_override PRODUCT_NAME
+capture_env_override APPWRITE_UNSTABLE
+capture_env_override NEXT_PUBLIC_LOGGING_VERBOSE
+capture_env_override SMTP_HOST
+capture_env_override SMTP_PORT
+capture_env_override SMTP_SECURE
+capture_env_override SMTP_USERNAME
+capture_env_override SMTP_PASSWORD
+capture_env_override SYSTEM_EMAIL
+capture_env_override SECURITY_EMAIL
 
 if [ -f "$ENV_FILE" ]; then
   while IFS= read -r line || [ -n "$line" ]; do
@@ -31,11 +59,16 @@ if [ -f "$ENV_FILE" ]; then
   done < "$ENV_FILE"
 fi
 
-APP_PORT="${APP_PORT:-5003}"
-APPWRITE_PORT="${APPWRITE_PORT:-8080}"
-DOMAIN="${KYLRIX_DOMAIN:-${DOMAIN:-localhost}}"
-PUBLIC_APPWRITE_ENDPOINT="${NEXT_PUBLIC_APPWRITE_ENDPOINT:-http://localhost:${APPWRITE_PORT}/v1}"
-PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-http://localhost:${APP_PORT}}"
+APP_PORT="$(apply_env_override APP_PORT 5003)"
+APPWRITE_PORT="$(apply_env_override APPWRITE_PORT 8080)"
+DOMAIN="$(apply_env_override KYLRIX_DOMAIN localhost)"
+APPWRITE_DOMAIN="$(apply_env_override KYLRIX_APPWRITE_DOMAIN localhost)"
+if has_env_override KYLRIX_PUBLIC_APPWRITE_ENDPOINT; then
+  PUBLIC_APPWRITE_ENDPOINT="$(apply_env_override KYLRIX_PUBLIC_APPWRITE_ENDPOINT "")"
+else
+  PUBLIC_APPWRITE_ENDPOINT="http://localhost:${APPWRITE_PORT}/v1"
+fi
+PUBLIC_APP_URL="$(apply_env_override KYLRIX_PUBLIC_APP_URL "http://localhost:${APP_PORT}")"
 
 upsert_env() {
   local key="$1"
@@ -50,7 +83,7 @@ upsert_env() {
 upsert_env "APP_PORT" "$APP_PORT"
 upsert_env "APPWRITE_PORT" "$APPWRITE_PORT"
 upsert_env "DOMAIN" "$DOMAIN"
-upsert_env "APPWRITE_DOMAIN" "${APPWRITE_DOMAIN:-$DOMAIN}"
+upsert_env "APPWRITE_DOMAIN" "$APPWRITE_DOMAIN"
 upsert_env "APPWRITE_FUNCTIONS_DOMAIN" "${APPWRITE_FUNCTIONS_DOMAIN:-functions.localhost}"
 upsert_env "APPWRITE_ENDPOINT" "http://appwrite/v1"
 upsert_env "NEXT_PUBLIC_APPWRITE_ENDPOINT" "$PUBLIC_APPWRITE_ENDPOINT"
@@ -59,12 +92,25 @@ upsert_env "NEXT_PUBLIC_APP_URI" "$PUBLIC_APP_URL"
 upsert_env "NEXT_PUBLIC_ORIGIN" "$PUBLIC_APP_URL"
 upsert_env "APP_URL" "$PUBLIC_APP_URL"
 upsert_env "SELFHOSTED" "true"
-upsert_env "AUTH_EMAIL_PASSWORD_SIGNUP" "true"
-upsert_env "AUTH_PASSKEY_SIGNUP" "${AUTH_PASSKEY_SIGNUP:-false}"
-upsert_env "AUTH_PASSWORDLESS_MODE" "${AUTH_PASSWORDLESS_MODE:-false}"
-upsert_env "PRICING_TIERS_ENABLED" "${PRICING_TIERS_ENABLED:-false}"
 
-if [ "${APPWRITE_UNSTABLE:-false}" = "true" ]; then
+AUTH_EMAIL_PASSWORD_SIGNUP="$(apply_env_override AUTH_EMAIL_PASSWORD_SIGNUP true)"
+AUTH_PASSKEY_SIGNUP="$(apply_env_override AUTH_PASSKEY_SIGNUP false)"
+AUTH_PASSWORDLESS_MODE="$(apply_env_override AUTH_PASSWORDLESS_MODE false)"
+PRICING_TIERS_ENABLED="$(apply_env_override PRICING_TIERS_ENABLED false)"
+PRODUCT_NAME="$(apply_env_override PRODUCT_NAME Kylrix)"
+
+upsert_env "AUTH_EMAIL_PASSWORD_SIGNUP" "$AUTH_EMAIL_PASSWORD_SIGNUP"
+upsert_env "AUTH_PASSKEY_SIGNUP" "$AUTH_PASSKEY_SIGNUP"
+upsert_env "AUTH_PASSWORDLESS_MODE" "$AUTH_PASSWORDLESS_MODE"
+upsert_env "PRICING_TIERS_ENABLED" "$PRICING_TIERS_ENABLED"
+upsert_env "PRODUCT_NAME" "$PRODUCT_NAME"
+
+if has_env_override NEXT_PUBLIC_LOGGING_VERBOSE; then
+  upsert_env "NEXT_PUBLIC_LOGGING_VERBOSE" "$(apply_env_override NEXT_PUBLIC_LOGGING_VERBOSE "")"
+fi
+
+APPWRITE_UNSTABLE="$(apply_env_override APPWRITE_UNSTABLE false)"
+if [ "$APPWRITE_UNSTABLE" = "true" ]; then
   upsert_env "APPWRITE_UNSTABLE" "true"
   upsert_env "APPWRITE_IMAGE" "appwrite/appwrite:2.0.0-rc.1"
 else
@@ -74,7 +120,11 @@ fi
 
 if [ -z "${APPWRITE_PROJECT_ID:-}" ] || [ "${KYLRIX_FORCE_LOCAL_PROJECT_ID:-}" = "1" ]; then
   upsert_env "APPWRITE_PROJECT_ID" "kylrix-$(gen_secret 4)"
-  upsert_env "NEXT_PUBLIC_APPWRITE_PROJECT_ID" "$(grep '^APPWRITE_PROJECT_ID=' "$ENV_FILE" | cut -d= -f2-)"
+fi
+
+LOCAL_PROJECT_ID="$(grep '^APPWRITE_PROJECT_ID=' "$ENV_FILE" | cut -d= -f2-)"
+if [ -n "$LOCAL_PROJECT_ID" ]; then
+  upsert_env "NEXT_PUBLIC_APPWRITE_PROJECT_ID" "$LOCAL_PROJECT_ID"
 fi
 
 if [ -z "${APPWRITE_OPENSSL_KEY:-}" ] || [ "${APPWRITE_OPENSSL_KEY}" = "your-secret-key-min-128-bits" ]; then
@@ -98,12 +148,25 @@ if [ -z "${ATTACHMENT_URL_SIGNING_SECRET:-}" ]; then
   upsert_env "ATTACHMENT_URL_SIGNING_SECRET" "$(gen_secret 32)"
 fi
 
-if [ -z "${SELFHOST_ADMIN_EMAIL:-}" ] || [ "${SELFHOST_ADMIN_EMAIL}" = "admin@localhost" ]; then
-  upsert_env "SELFHOST_ADMIN_EMAIL" "admin@example.com"
+ADMIN_EMAIL="$(apply_env_override SELFHOST_ADMIN_EMAIL "")"
+if [ -z "$ADMIN_EMAIL" ] || [ "$ADMIN_EMAIL" = "admin@localhost" ]; then
+  ADMIN_EMAIL="admin@example.com"
 fi
+upsert_env "SELFHOST_ADMIN_EMAIL" "$ADMIN_EMAIL"
 
-if [ -z "${SELFHOST_ADMIN_PASSWORD:-}" ]; then
-  upsert_env "SELFHOST_ADMIN_PASSWORD" "$(gen_secret 12)"
+ADMIN_PASSWORD="$(apply_env_override SELFHOST_ADMIN_PASSWORD "")"
+if [ -z "$ADMIN_PASSWORD" ]; then
+  ADMIN_PASSWORD="$(gen_secret 12)"
 fi
+upsert_env "SELFHOST_ADMIN_PASSWORD" "$ADMIN_PASSWORD"
+
+ADMIN_NAME="$(apply_env_override SELFHOST_ADMIN_NAME "Kylrix Admin")"
+upsert_env "SELFHOST_ADMIN_NAME" "$ADMIN_NAME"
+
+for smtp_key in SMTP_HOST SMTP_PORT SMTP_SECURE SMTP_USERNAME SMTP_PASSWORD SYSTEM_EMAIL SECURITY_EMAIL; do
+  if has_env_override "$smtp_key"; then
+    upsert_env "$smtp_key" "$(apply_env_override "$smtp_key" "")"
+  fi
+done
 
 echo "Minted self-host .env at ${ENV_FILE}"

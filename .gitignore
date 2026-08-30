@@ -27,6 +27,7 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.selfhost-config-stamp
 *.env*
 sqlite.json
 .ota/state/

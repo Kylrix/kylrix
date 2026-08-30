@@ -5,6 +5,11 @@
 
 .PHONY: help setup mint bootstrap up down logs build restart status app-only clean backup update schema-push upgrade-appwrite install
 
+# Compose reads shell exports before .env — load minted values in the same shell as compose.
+define WITH_ENV
+set -a && . ./selfhost/load-env.sh .env && set +a &&
+endef
+
 help: ## Show this help message
 	@echo ""
 	@echo "  Kylrix Self-Hosting"
@@ -33,7 +38,7 @@ bootstrap: mint ## Start Appwrite infra and mint local project + API key
 	@bash selfhost/bootstrap.sh
 
 up: bootstrap ## Start full stack (infra bootstrap + Kylrix build + schema)
-	@$(COMPOSE_FULL) up -d --build kylrix
+	@$(WITH_ENV) $(COMPOSE_FULL) up -d --build kylrix
 	@bash selfhost/provision-schema.sh || echo "  ⚠ Schema provisioning did not finish — re-run: make schema-push"
 	@echo ""
 	@echo "  ✓ Kylrix is starting at http://localhost:$${APP_PORT:-5003}"

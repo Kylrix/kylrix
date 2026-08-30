@@ -78,6 +78,7 @@ _Catalog covers 87 skills._
 | `system.sdk-consistency` | Keeps shared sdk/service contracts consistent across the single codebase. Use when editing `sdk/`, shared exports, or broad consumer callsites. |
 | `system.server-sdk-action` | Server Actions vs Admin SDK patterns for privileged TablesDB mutations. |
 | `system.tablesdb-row-cache` | Explains the read-through caching engine for TablesDB. Explains key hashing, cache eviction schedules, and coalescing concurrent inflight queries to prevent net |
+| `selfhost` | One-command bundled Docker self-host: `selfhost.sh`, env overrides, drift detection, local Appwrite bootstrap. |
 
 ## Connect / calls
 

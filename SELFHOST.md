@@ -6,16 +6,32 @@ Run a **fully isolated** Kylrix instance with bundled Appwrite, MariaDB, and Red
 
 ## Quick Start (1 command)
 
+**Agent skill:** `npx skills add kylrix/kylrix --skill selfhost`
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
 ```
+
+**With admin login in the same shell** (true one-click — no `.env` editing):
+
+```bash
+SELFHOST_ADMIN_EMAIL=you@example.com \
+SELFHOST_ADMIN_PASSWORD='your-secure-password' \
+curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
+```
+
+**Tail logs after install:** `KYLRIX_TAIL_LOGS=1` before the curl command, or `docker compose logs -f kylrix`.
 
 Defaults:
 - **Kylrix app:** `http://localhost:5003`
 - **Appwrite API:** `http://localhost:8080/v1` (lean stack — API only, no console container)
 - **Project + API key:** auto-minted into `.env`
 
-Admin credentials are written to `.env` as `SELFHOST_ADMIN_EMAIL` / `SELFHOST_ADMIN_PASSWORD`.
+Admin credentials are written to `.env` as `SELFHOST_ADMIN_EMAIL` / `SELFHOST_ADMIN_PASSWORD` (auto-generated unless you pass them in the shell as above).
+
+### Shell overrides
+
+`selfhost.sh` / `mint-env.sh` honor exports in the install shell. They override planned values except bootstrap-minted secrets (`APPWRITE_API_KEY`, existing `APPWRITE_PROJECT_ID`). See [selfhost/SKILL.md](selfhost/SKILL.md) for the full table (`KYLRIX_PORT`, `NEXT_PUBLIC_LOGGING_VERBOSE`, SMTP, auth flags, …).
 
 ## Authentication policy
 
