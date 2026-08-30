@@ -7,6 +7,7 @@ import { ProjectsService } from '@/lib/appwrite/projects';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
 import { getSessionProjectsList, projectObjectsKindCacheKey } from '@/lib/projects/projects-cache';
 import { normalizeProjectsList, warmProjectsList } from '@/lib/projects/warm-projects-list';
+import { isWorkspaceRecord } from '@/lib/projects/sub-projects';
 import type { ProjectObjects } from '@/types/appwrite';
 
 export interface WorkspaceItem {
@@ -84,6 +85,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const mapProjectRows = useCallback(
     (rows: unknown): WorkspaceItem[] =>
       normalizeProjectsList(rows)
+        .filter((p: any) => isWorkspaceRecord(p))
         .map((p: any) => {
           const id = String(p.$id || p.id || '').trim();
           const ownerId = p.ownerId || p.userId || '';
@@ -499,7 +501,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const created = await ProjectsService.createProject({
           title,
           summary: summary || '',
-          ownerId: userId});
+          ownerId: userId,
+          kind: 'workspace',
+          parentProjectId: null,
+        });
         const newItem: WorkspaceItem = {
           id: created.$id,
           title: created.title || title,

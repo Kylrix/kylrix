@@ -28,6 +28,7 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { listNotesByUser } from '@/lib/appwrite/note';
 import { tasks } from '@/lib/kylrixflow';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
+import { buildSubProjectCreatePayload } from '@/lib/projects/sub-projects';
 
 const SURFACE_ASH = '#161412';
 const VOID = '#0A0908';
@@ -47,6 +48,11 @@ export function NewProjectDrawer() {
 
   const template = drawerData?.template;
   const onSuccess = drawerData?.onCreated as ((project: any) => void) | undefined;
+  const isSubProject = Boolean(drawerData?.isSubProject);
+  const parentWorkspaceId = String(drawerData?.parentWorkspaceId || '').trim();
+  const pendingAttachment = drawerData?.pendingAttachment as
+    | { entityKind: string; entityId: string }
+    | undefined;
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -107,7 +113,7 @@ export function NewProjectDrawer() {
         'product-roadmap',
       ].includes(template?.id);
 
-      if (needsPicker && !preSelectedId) {
+      if (needsPicker && !preSelectedId && !isSubProject) {
         setStep(1);
         void fetchResources();
       } else {
@@ -121,7 +127,7 @@ export function NewProjectDrawer() {
         }
       }
     }
-  }, [isOpen, template, fetchResources, drawerData]);
+  }, [isOpen, template, fetchResources, drawerData, isSubProject]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -158,8 +164,19 @@ export function NewProjectDrawer() {
         isPublic: visibility === 'public',
         isGuest: visibility === 'public' ? isGuest : false,
         status: 'active',
+        ...(isSubProject && parentWorkspaceId
+          ? buildSubProjectCreatePayload(parentWorkspaceId)
+          : { kind: 'workspace' as const, parentProjectId: null }),
         metadata: JSON.stringify(metadata),
       } as any);
+
+      if (pendingAttachment?.entityId) {
+        await attachObjectToProject({
+          projectId: project.$id,
+          entityKind: pendingAttachment.entityKind,
+          entityId: pendingAttachment.entityId,
+        });
+      }
 
       if (selectedResourceId) {
         const resourceKind =
@@ -190,7 +207,7 @@ export function NewProjectDrawer() {
         }
       }
 
-      showSuccess('Workspace created');
+      showSuccess(isSubProject ? 'Project created' : 'Workspace created');
       void refreshWorkspaces();
       if (onSuccess) onSuccess(project);
       close();
@@ -262,7 +279,7 @@ export function NewProjectDrawer() {
               }}
               noWrap
             >
-              {template?.title || 'New Workspace'}
+              {isSubProject ? 'New Project' : template?.title || 'New Workspace'}
             </Typography>
             <Typography
               component="span"
@@ -274,7 +291,7 @@ export function NewProjectDrawer() {
               }}
               noWrap
             >
-              {step === 1 ? 'Select resource to link' : 'Set up workspace details'}
+              {step === 1 ? 'Select resource to link' : isSubProject ? 'Set up project details' : 'Set up workspace details'}
             </Typography>
           </Box>
         </Box>
@@ -413,14 +430,14 @@ export function NewProjectDrawer() {
                   letterSpacing: '0.06em',
                 }}
               >
-                Workspace Name
+                {isSubProject ? 'Project Name' : 'Workspace Name'}
               </Typography>
               <Box
                 component="input"
                 type="text"
                 value={title}
                 onChange={(e: any) => setTitle(e.target.value)}
-                placeholder="e.g. Q3 Roadmap, Design Studio"
+                placeholder={isSubProject ? 'e.g. Marketing, Q3 Launch' : 'e.g. Q3 Roadmap, Design Studio'}
                 autoFocus
                 sx={{
                   width: '100%',
@@ -461,7 +478,7 @@ export function NewProjectDrawer() {
                 rows={2}
                 value={summary}
                 onChange={(e: any) => setSummary(e.target.value)}
-                placeholder="What is this workspace about?"
+                placeholder={isSubProject ? 'What is this project about?' : 'What is this workspace about?'}
                 sx={{
                   width: '100%',
                   px: 2,
@@ -626,7 +643,7 @@ export function NewProjectDrawer() {
                 {loading ? (
                   <CircularProgress size={18} sx={{ color: '#fff' }} />
                 ) : (
-                  'Create Workspace'
+                  isSubProject ? 'Create Project' : 'Create Workspace'
                 )}
               </Button>
             </Stack>

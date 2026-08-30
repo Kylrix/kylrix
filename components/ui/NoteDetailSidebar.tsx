@@ -54,7 +54,8 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { exportToMarkdown, exportToPDF, exportToDOCX } from '@/lib/utils/export';
 import { useAuth } from '@/lib/auth';
-import { hasPaidKylrixPlan } from '@/lib/utils';
+import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
+import { userCanUseProjects } from '@/lib/projects/feature-gate-client';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
@@ -650,6 +651,24 @@ export function NoteDetailSidebar({
       setIsCreatingTaskFromNote(false);
     }
   }, [liveNote, updateLocalAndParentNote, showSuccess, showError, createTaskFromNote]);
+
+  const handleAddToProject = useCallback(() => {
+    setShowActionHub(false);
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      showError('Switch to a workspace first');
+      return;
+    }
+    if (!userCanUseProjects(getUserSubscriptionTier(user))) {
+      openProUpgrade('Projects');
+      return;
+    }
+    openUnified('add-to-project', {
+      entityKind: 'note',
+      entityId: liveNote.$id,
+      entityTitle: liveNote.title || 'Note',
+      workspaceId: activeWorkspace.id,
+    });
+  }, [activeWorkspace, user, liveNote, openUnified, openProUpgrade, showError]);
 
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isContextDrawerOpen, setIsContextDrawerOpen] = useState(false);
@@ -1578,6 +1597,15 @@ export function NoteDetailSidebar({
               >
                 <FolderKanban className="w-4 h-4" />
                 <span>Add to Workspace</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAddToProject}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs font-mono font-bold text-white hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <FolderKanban className="w-4 h-4" />
+                <span>Add to Project</span>
               </button>
 
               <button 

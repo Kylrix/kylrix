@@ -7,7 +7,7 @@ import { renderEmailTemplate } from '@/lib/email-renderer';
 import { ID } from 'node-appwrite';
 
 export interface PaymentIntentRecord {
-  tier: 'PRO' | 'TEAMS';
+  tier: string;
   months: number;
   planId: string;
   checkoutUrl?: string;
@@ -21,7 +21,7 @@ const INTENT_PREF_KEY = 'kylrix_pending_checkout_intent';
  * Persists a user's initiated payment intent to their Appwrite user preferences.
  */
 export async function recordPaymentIntentAction(input: {
-  tier: 'PRO' | 'TEAMS';
+  tier: string;
   months: number;
   planId: string;
   checkoutUrl?: string;

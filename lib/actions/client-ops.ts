@@ -9,6 +9,7 @@ import {
   listTagsSecure,
   grantPermissionSecure,
   createProjectSecure,
+  listSubProjectsForWorkspaceSecure,
   updateProjectSecure,
   deleteProjectSecure,
   addProjectCollaboratorSecure,
@@ -146,6 +147,11 @@ export async function grantPermission(input: any) {
 export async function createProject(data: any) {
   const jwt = await getJwt();
   return createProjectSecure(data, jwt);
+}
+
+export async function listSubProjectsForWorkspace(workspaceId: string) {
+  const jwt = await getJwt();
+  return listSubProjectsForWorkspaceSecure(workspaceId, jwt);
 }
 
 export async function updateProject(projectId: string, data: any, permissions?: string[]) {

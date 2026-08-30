@@ -907,6 +907,8 @@ export type Projects = Models.Row & {
     visibility: ProjectsVisibility;
     status: ProjectsStatus;
     metadata: string | null;
+    kind?: 'workspace' | 'project' | null;
+    parentProjectId?: string | null;
     createdAt: string | null;
     updatedAt: string | null;
     isPublic: boolean | null;

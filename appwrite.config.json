@@ -6992,6 +6992,27 @@
                     "size": 2048,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "parentProjectId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "kind",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "workspace",
+                    "format": "enum",
+                    "elements": [
+                        "workspace",
+                        "project"
+                    ]
                 }
             ],
             "indexes": [
@@ -7079,6 +7100,65 @@
                         "primaryThreadId"
                     ],
                     "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_projects_kind",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "kind"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_projects_owner_kind",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_projects_parent_kind",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "parentProjectId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_projects_owner_kind_v2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId",
+                        "kind"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_projects_parent_kind_v2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "parentProjectId",
+                        "kind"
+                    ],
+                    "orders": [
+                        "ASC",
                         "ASC"
                     ]
                 }

@@ -26,13 +26,21 @@ import { toast } from 'react-hot-toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { listPats, revokePat } from '@/lib/actions/client-ops';
 import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
+import { useSubProjects } from '@/hooks/useSubProjects';
+import { userCanUseProjects } from '@/lib/projects/feature-gate-client';
+import { getUserSubscriptionTier } from '@/lib/utils';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 
 export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => void } = {}) {
   const { activeWorkspace, refreshWorkspaces } = useWorkspace();
-  const { user: _user } = useAuth();
+  const { user } = useAuth();
   const { open: openDrawer } = useUnifiedDrawer();
+  const { openProUpgrade } = useProUpgrade();
 
   const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+  const { projects: subProjects, loading: loadingSubProjects, refetch: refetchSubProjects } = useSubProjects(
+    isCustomWorkspace ? activeWorkspace.id : null,
+  );
   const [_project, setProject] = useState<Projects | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -356,6 +364,71 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Projects (sub-projects under this workspace) */}
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-white/10 shadow-xl space-y-5">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-base md:text-lg font-black text-white font-clash m-0">Projects</h2>
+            <p className="text-xs text-white/40 mt-0.5 m-0">
+              Organize work inside &quot;{activeWorkspace.title}&quot; without cluttering your workspace list
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!userCanUseProjects(getUserSubscriptionTier(user))) {
+                openProUpgrade('Projects');
+                return;
+              }
+              openDrawer('new-project', {
+                isSubProject: true,
+                parentWorkspaceId: activeWorkspace.id,
+                onCreated: () => { void refetchSubProjects(); },
+              });
+            }}
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer shadow-md"
+          >
+            <Plus size={13} />
+            <span>New Project</span>
+          </button>
+        </div>
+
+        {loadingSubProjects ? (
+          <div className="py-6 flex justify-center text-white/40 text-xs">
+            <RefreshCw size={16} className="animate-spin text-[#6366F1] mr-2" /> Loading projects...
+          </div>
+        ) : subProjects.length === 0 ? (
+          <div className="p-6 rounded-2xl bg-[#0A0908] border border-dashed border-white/10 text-center">
+            <FolderKanban className="h-6 w-6 text-white/20 mx-auto mb-2" />
+            <p className="text-xs font-bold text-white/70 m-0">No projects yet</p>
+            <p className="text-xs text-white/40 mt-1 m-0">
+              Create a project to group notes, goals, and other items within this workspace.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {subProjects.map((p) => (
+              <div
+                key={p.$id}
+                className="flex items-center justify-between p-3.5 rounded-xl bg-[#0A0908] border border-white/10 gap-3"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center shrink-0">
+                    <FolderKanban size={14} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-white font-clash truncate">{p.title || 'Untitled Project'}</div>
+                    {p.summary ? (
+                      <div className="text-[10px] text-white/40 truncate mt-0.5">{p.summary}</div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Members & Collaborators */}

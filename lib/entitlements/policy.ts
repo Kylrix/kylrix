@@ -4,6 +4,7 @@
  */
 
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
+import { ledgerMeetsFeature } from '@/lib/config/pricing-plans';
 import {
   billingTierHasPaidAccess,
   normalizeBillingPrefsTier,
@@ -47,30 +48,20 @@ export function allowsCollaboratorSharing(tier: BillingUiTier | string, resource
   if (isSelfHostedDeployment()) {
     return true;
   }
-  const normalized = String(tier || 'FREE').toUpperCase();
   if (resourceType === 'project') {
-    return normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME';
+    return ledgerMeetsFeature(tier, 'projects');
   }
-  // Objects (notes, tasks, etc.) unlock for PRO and higher
-  return normalized === 'PRO' || normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME';
+  return ledgerMeetsFeature(tier, 'sharing');
 }
 
 export function getCollaboratorCap(tier: BillingUiTier | string, resourceType?: string): number {
   if (isSelfHostedDeployment()) {
     return Number.POSITIVE_INFINITY;
   }
-  const normalized = String(tier || 'FREE').toUpperCase();
   if (resourceType === 'project') {
-    if (normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME') {
-      return Number.POSITIVE_INFINITY;
-    }
-    return 0;
+    return ledgerMeetsFeature(tier, 'projects') ? Number.POSITIVE_INFINITY : 0;
   }
-  // Objects (notes, tasks, etc.) unlock unlimited for PRO and higher
-  if (normalized === 'PRO' || normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME') {
-    return Number.POSITIVE_INFINITY;
-  }
-  return 0;
+  return ledgerMeetsFeature(tier, 'sharing') ? Number.POSITIVE_INFINITY : 0;
 }
 
 export function getProjectCap(_tier: BillingUiTier | string): number {
@@ -78,16 +69,18 @@ export function getProjectCap(_tier: BillingUiTier | string): number {
 }
 
 
-export function allowsGroupHangouts(_tier: BillingUiTier | string): boolean {
-  return true;
+export function allowsGroupHangouts(tier: BillingUiTier | string): boolean {
+  if (isSelfHostedDeployment()) {
+    return true;
+  }
+  return ledgerMeetsFeature(tier, 'group_hangouts');
 }
 
 export function allowsGroupCalls(tier: BillingUiTier | string): boolean {
   if (isSelfHostedDeployment()) {
     return true;
   }
-  const normalized = String(tier || 'FREE').toUpperCase();
-  return normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME';
+  return ledgerMeetsFeature(tier, 'group_hangouts');
 }
 
 

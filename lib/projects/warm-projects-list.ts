@@ -4,6 +4,7 @@ import {
   getSessionProjectsList,
   setSessionProjectsList,
   PROJECTS_LIST_TTL} from '@/lib/projects/projects-cache';
+import { filterRootWorkspaceProjects } from '@/lib/projects/sub-projects';
 
 type NexusDeps = {
   userId: string;
@@ -30,11 +31,13 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
 
   const { LocalEngine } = await import('@/lib/services/LocalEngine');
   const cacheKey = `f_projects_list_${deps.userId}`;
-  const rows = normalizeProjectsList(
-    await LocalEngine.query(
-      cacheKey,
-      async () => (await ProjectsService.listProjects(true)).rows as any,
-      { ttl: PROJECTS_LIST_TTL, realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents` }
+  const rows = filterRootWorkspaceProjects(
+    normalizeProjectsList(
+      await LocalEngine.query(
+        cacheKey,
+        async () => (await ProjectsService.listProjects(true)).rows as any,
+        { ttl: PROJECTS_LIST_TTL, realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents` }
+      )
     )
   );
   setSessionProjectsList(rows, deps.userId);

@@ -139,6 +139,11 @@ export enum ProjectsStatus {
     ARCHIVED = "archived"
 }
 
+export enum ProjectsKind {
+    WORKSPACE = "workspace",
+    PROJECT = "project"
+}
+
 export enum CallSignalsType {
     OFFER = "offer",
     ANSWER = "answer",
@@ -1523,6 +1528,8 @@ export type ProjectsCreate = {
     "primaryThreadId"?: string | null;
     "isAgentic"?: boolean;
     "dek"?: string | null;
+    "parentProjectId"?: string | null;
+    "kind"?: ProjectsKind;
 }
 
 export type Projects = Models.Row & {
@@ -1541,6 +1548,8 @@ export type Projects = Models.Row & {
     "primaryThreadId"?: string | null;
     "isAgentic"?: boolean;
     "dek"?: string | null;
+    "parentProjectId"?: string | null;
+    "kind"?: ProjectsKind;
 }
 
 export type ProjectObjectsCreate = {
@@ -4278,6 +4287,8 @@ export type DatabaseTableMap = {
         "primaryThreadId"?: string | null;
         "isAgentic"?: boolean;
         "dek"?: string | null;
+        "parentProjectId"?: string | null;
+        "kind"?: ProjectsKind;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Projects>;
       get: (id: string) => Promise<Projects>;
       update: (id: string, data: Partial<{
@@ -4296,6 +4307,8 @@ export type DatabaseTableMap = {
         "primaryThreadId"?: string | null;
         "isAgentic"?: boolean;
         "dek"?: string | null;
+        "parentProjectId"?: string | null;
+        "kind"?: ProjectsKind;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Projects>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Projects>>(field: K, value: QueryableFieldValue<Projects, K>) => string; notEqual: <K extends QueryableKeys<Projects>>(field: K, value: QueryableFieldValue<Projects, K>) => string; lessThan: <K extends QueryableKeys<Projects>>(field: K, value: QueryableFieldValue<Projects, K>) => string; lessThanEqual: <K extends QueryableKeys<Projects>>(field: K, value: QueryableFieldValue<Projects, K>) => string; greaterThan: <K extends QueryableKeys<Projects>>(field: K, value: QueryableFieldValue<Projects, K>) => string; greaterThanEqual: <K extends QueryableKeys<Projects>>(field: K, value: QueryableFieldValue<Projects, K>) => string; contains: <K extends QueryableKeys<Projects>>(field: K, value: QueryableFieldValue<Projects, K>) => string; search: <K extends QueryableKeys<Projects>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Projects>>(field: K) => string; isNotNull: <K extends QueryableKeys<Projects>>(field: K) => string; startsWith: <K extends QueryableKeys<Projects>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Projects>>(field: K, value: string) => string; between: <K extends QueryableKeys<Projects>>(field: K, start: QueryableFieldValue<Projects, K>, end: QueryableFieldValue<Projects, K>) => string; select: <K extends keyof Projects>(fields: K[]) => string; orderAsc: <K extends keyof Projects>(field: K) => string; orderDesc: <K extends keyof Projects>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Projects[] }>;

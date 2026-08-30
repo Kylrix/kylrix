@@ -57,6 +57,8 @@ import {
   shapeWorkspace,
   shapeWorkspaceCollaborator,
 } from '@/sdk/contracts';
+import { filterRootWorkspaceProjects, isWorkspaceRecord } from '@/lib/projects/sub-projects';
+import { ownedWorkspaceListQueries } from '@/lib/projects/workspace-queries';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
 const NOTES = APPWRITE_CONFIG.TABLES.NOTE?.NOTES || APPWRITE_CONFIG.TABLES.NOTES;
@@ -920,6 +922,8 @@ export const ApiResources = {
           ownerId: actor.userId,
           visibility: 'private',
           status: 'active',
+          kind: 'workspace',
+          parentProjectId: null,
           isAgentic: true,
           isPublic: false,
           isGuest: false,
@@ -1110,13 +1114,13 @@ export const ApiResources = {
       databaseId: FLOW_DB,
       tableId: 'projects',
       queries: [
-        Query.equal('ownerId', actor.userId),
+        ...ownedWorkspaceListQueries(actor.userId),
         Query.orderDesc('$updatedAt'),
         Query.limit(Math.min(100, Math.max(1, limit))),
-      ],
+      ] as any,
     });
 
-    const ownedList = ownedRes.rows.map((r: any) =>
+    const ownedList = filterRootWorkspaceProjects(ownedRes.rows).map((r: any) =>
       shapeWorkspace(r, { isShared: false, role: 'owner' }),
     );
 
@@ -1138,7 +1142,7 @@ export const ApiResources = {
       const ws = (await tables
         .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: c.resourceId })
         .catch(() => null)) as any;
-      if (ws) {
+      if (ws && isWorkspaceRecord(ws)) {
         sharedList.push(
           shapeWorkspace(ws, { isShared: true, role: c.permission || 'writer' }),
         );
@@ -1155,6 +1159,7 @@ export const ApiResources = {
       .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: id })
       .catch(() => null)) as any;
     if (!row) notFound('Workspace not found');
+    if (!isWorkspaceRecord(row)) notFound('Workspace not found');
 
     let isCollab = false;
     let role = 'owner';
@@ -1682,6 +1687,8 @@ export const ApiResources = {
         ownerId: actor.userId,
         visibility,
         status: 'active',
+        kind: 'workspace',
+        parentProjectId: null,
         isPublic: visibility === 'public',
         isGuest: visibility === 'public',
         isAgentic: Boolean(body.isAgentic),

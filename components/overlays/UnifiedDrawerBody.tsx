@@ -54,8 +54,8 @@ const UnifiedFormContent = dynamic(
   () => import('../forms/UnifiedFormContent').then((m) => m.UnifiedFormContent),
   { ssr: false },
 );
-const TaskAddToProjectDrawerHost = dynamic(
-  () => import('./TaskAddToProjectDrawer').then((m) => m.TaskAddToProjectDrawerHost),
+const AddToProjectDrawerHost = dynamic(
+  () => import('./AddToProjectDrawer').then((m) => m.AddToProjectDrawerHost),
   { ssr: false },
 );
 const ResponseDetailDrawer = dynamic(
@@ -196,7 +196,8 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
         />
       );
     case 'task-add-to-project':
-      return <TaskAddToProjectDrawerHost />;
+    case 'add-to-project':
+      return <AddToProjectDrawerHost />;
     case 'delete-confirm':
       return (
         <div className="px-6 pb-6 pt-3 bg-[#161412] flex flex-col justify-between gap-5 select-none">

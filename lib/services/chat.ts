@@ -1223,7 +1223,7 @@ export const ChatService = {
             const currentUser = await getCurrentUser();
             const userTier = getUserSubscriptionTier(currentUser);
             if (!allowsGroupHangouts(userTier)) {
-                throw new Error('Creating hangouts (groups) is a TEAMS feature. Use resource discussions for collaboration, or upgrade to TEAMS for group chats.');
+                throw new Error('Creating hangouts (groups) requires a plan that includes group hangouts.');
             }
         }
 
@@ -1744,7 +1744,7 @@ export const ChatService = {
             const currentUser = await getCurrentUser();
             const userTier = getUserSubscriptionTier(currentUser);
             if (!allowsGroupHangouts(userTier)) {
-                throw new Error('Hangouts (groups) are a TEAMS feature. Use resource discussions for collaboration, or upgrade to TEAMS.');
+                throw new Error('Hangouts (groups) require a plan that includes group hangouts.');
             }
         }
         const requiresRotation = conv?.type === 'group' && String(conv?.encryptionVersion || '').toUpperCase() === 'T4';

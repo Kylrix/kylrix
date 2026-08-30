@@ -8,6 +8,7 @@ import {
   clearSessionProjectsList,
   clearSessionProjectDetail} from '@/lib/projects/projects-cache';
 import { invalidateCache } from '@/lib/ecosystem/nexus-fetcher';
+import { filterRootWorkspaceProjects } from '@/lib/projects/sub-projects';
 
 const DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const PROJECTS_COLLECTION_ID = 'projects';
@@ -31,15 +32,16 @@ export const ProjectsService = {
       },
       { ttl: force ? 0 : 30 * 60 * 1000, realtimeChannel: `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents` }
     ).then((res: any) => {
+      const normalize = (rows: any[]) => filterRootWorkspaceProjects(Array.isArray(rows) ? rows : []);
       // LocalEngine.query returns {rows} or raw array — normalize
-      if (Array.isArray(res)) return { rows: res };
-      if (res && Array.isArray(res.rows)) return res;
-      if (res && Array.isArray(res.data)) return { rows: res.data };
-      return res as { rows: any[] };
+      if (Array.isArray(res)) return { rows: normalize(res) };
+      if (res && Array.isArray(res.rows)) return { rows: normalize(res.rows) };
+      if (res && Array.isArray(res.data)) return { rows: normalize(res.data) };
+      return { rows: normalize(res?.rows || []) };
     }).catch(async () => {
       // Fallback to direct fetch if LocalEngine path fails (never double-read)
       const rows = await this.fetchRemoteProjects(force);
-      return { rows };
+      return { rows: filterRootWorkspaceProjects(rows) };
     });
   },
 
@@ -60,8 +62,18 @@ export const ProjectsService = {
       const { listProjectsWithCollaborationsSecure } = await import('@/lib/actions/secure-ops');
       result = await listProjectsWithCollaborationsSecure();
     }
-    return result;
+    return filterRootWorkspaceProjects(result);
   },
+
+  async listSubProjects(workspaceId: string) {
+    if (typeof window !== 'undefined') {
+      const { listSubProjectsForWorkspace } = await import('@/lib/actions/client-ops');
+      return listSubProjectsForWorkspace(workspaceId);
+    }
+    const { listSubProjectsForWorkspaceSecure } = await import('@/lib/actions/secure-ops');
+    return listSubProjectsForWorkspaceSecure(workspaceId);
+  },
+
   async getProject(projectId: string) {
     return  (databases as any).getRow(
       DATABASE_ID,

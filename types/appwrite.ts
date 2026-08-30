@@ -198,6 +198,8 @@ export type Projects = Models.Row & {
     visibility: 'private' | 'shared' | 'public';
     status: 'active' | 'paused' | 'archived' | 'completed' | 'on_hold';
     metadata: string | null;
+    kind?: 'workspace' | 'project' | null;
+    parentProjectId?: string | null;
     createdAt: string | null;
     updatedAt: string | null;
     isDeleted?: boolean;

@@ -1,11 +1,11 @@
 /**
  * ppp.ts - Fixed Global Pricing (Formerly PPP)
- * Base: USD = 1.0 — amounts read from env when pricing tiers are configured.
+ * Plan prices read from PRICING_PLAN_N_PRICE_USD when pricing tiers are configured.
  */
 
-import { getProMonthlyPriceUsd, getTeamsMonthlyPriceUsd } from '@/lib/config/product';
+import { getPricingPlanByLedger, getPricingPlans } from '@/lib/config/pricing-plans';
 
-export type SubscriptionTier = 'PRO' | 'TEAMS';
+export type SubscriptionTier = string;
 export type PaymentMethod = 'CRYPTO' | 'CARD';
 
 export interface RegionConfig {
@@ -15,32 +15,24 @@ export interface RegionConfig {
   name: string;
 }
 
-function getGlobalSubscriptionConfig() {
-  const baseProPrice = getProMonthlyPriceUsd();
-  const teamsPrice = getTeamsMonthlyPriceUsd();
-  const teamsMultiplier = baseProPrice > 0 ? teamsPrice / baseProPrice : 5;
-  return {
-    tier_multipliers: {
-      pro: 1.0,
-      teams: teamsMultiplier,
-    },
-    base_pro_price: baseProPrice,
-    card_surcharge_multiplier: 1.0,
-    default_multiplier: 1.0,
-  };
-}
-
 export const PPP_DATA: Record<string, RegionConfig> = {
-  "DEFAULT": { multiplier: 1.0, currency: "USD", symbol: "$", name: "Global" }
+  DEFAULT: { multiplier: 1.0, currency: 'USD', symbol: '$', name: 'Global' },
 };
 
+function resolvePlanPriceUsd(tier: SubscriptionTier | string): number {
+  const key = String(tier || '')
+    .trim()
+    .toUpperCase()
+    .replace(/_MONTH$/, '')
+    .replace(/_YEAR$/, '');
+  const plan = getPricingPlanByLedger(key);
+  if (plan) return plan.priceUsd;
+  const plans = getPricingPlans();
+  return plans[0]?.priceUsd ?? 0;
+}
+
 function getTierMonthlyPrice(tier: SubscriptionTier | string): number {
-  const config = getGlobalSubscriptionConfig();
-  const baseProPrice = config.base_pro_price;
-  if (String(tier).toUpperCase().startsWith('TEAMS')) {
-    return baseProPrice * config.tier_multipliers.teams;
-  }
-  return baseProPrice;
+  return resolvePlanPriceUsd(tier);
 }
 
 /** Full 12-month price before the yearly discount. */
@@ -62,10 +54,10 @@ export function getBundledFreeMonths(months: number): number {
 export function calculateTotalSubscriptionPrice(
   tier: SubscriptionTier | string,
   months: number,
-  method: PaymentMethod = 'CRYPTO'): number {
+  method: PaymentMethod = 'CRYPTO',
+): number {
   const monthly = getTierMonthlyPrice(tier);
-  const paymentMultiplier =
-    method === 'CARD' ? getGlobalSubscriptionConfig().card_surcharge_multiplier : 1.0;
+  const paymentMultiplier = method === 'CARD' ? 1.0 : 1.0;
   const unitPrice = monthly * paymentMultiplier;
 
   if (months >= 12) {
@@ -82,5 +74,5 @@ export const calculateSubscriptionPrice = (
   tier: SubscriptionTier | string,
   _countryCode: string,
   method: PaymentMethod,
-  months = 1): number => calculateTotalSubscriptionPrice(tier, months, method);
-
+  months = 1,
+): number => calculateTotalSubscriptionPrice(tier, months, method);

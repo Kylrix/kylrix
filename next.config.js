@@ -1,6 +1,15 @@
 const webpack = require('webpack');
 const path = require('path');
 
+function buildPublicPricingPlansJson() {
+  try {
+    const { serializePricingPlansForClient } = require('./lib/config/pricing-plans');
+    return serializePricingPlansForClient();
+  } catch {
+    return '[]';
+  }
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   turbopack: {
@@ -13,6 +22,7 @@ const nextConfig = {
       (process.env.PRICING_TIERS_ENABLED ?? process.env.ENABLE_PRICING_TIERS) === 'true'
         ? 'true'
         : 'false',
+    NEXT_PUBLIC_PRICING_PLANS_JSON: buildPublicPricingPlansJson(),
   },
   // Standalone output produces a self-contained server in .next/standalone
   // Required for efficient Docker deployments (no node_modules in final image)

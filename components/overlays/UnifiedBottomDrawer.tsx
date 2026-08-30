@@ -47,6 +47,8 @@ export function UnifiedBottomDrawer() {
     'security-confirm',
     'project-join-request-confirm',
     'access-control',
+    'add-to-project',
+    'task-add-to-project',
   ].includes(activeContent as string);
 
   return (

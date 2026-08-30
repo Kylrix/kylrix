@@ -1,6 +1,7 @@
 import { Permission, Query, Role } from 'node-appwrite';
 import { systemTables } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { ledgerMeetsFeature } from '@/lib/config/pricing-plans';
 import { getVerifiedProEntitlementForUser } from '@/lib/services/internal/subscription-entitlement';
 import { BillingUiTier } from '@/lib/subscription/tier-resolution';
 
@@ -34,10 +35,10 @@ export async function resolveApiRateLimits(userId: string): Promise<{ tier: Bill
   try {
     const entitlement = await getVerifiedProEntitlementForUser(userId);
     const tier = entitlement.uiTier;
-    if (tier === 'TEAMS' || tier === 'ORG' || tier === 'LIFETIME') {
+    if (ledgerMeetsFeature(tier, 'api_limits')) {
       return { tier, perMinute: 120, perDay: 5000 };
     }
-    if (tier === 'PRO') {
+    if (ledgerMeetsFeature(tier, 'ai') || ledgerMeetsFeature(tier, 'sharing')) {
       return { tier, perMinute: 60, perDay: 2500 };
     }
   } catch {}

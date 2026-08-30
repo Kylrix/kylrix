@@ -16,6 +16,8 @@ import { executeCascadeDeleteSecure } from '../cascade-delete';
 import {
   ProjectSchema
 } from '@/lib/validations/schemas';
+import { filterRootWorkspaceProjects, isWorkspaceRecord } from '@/lib/projects/sub-projects';
+import { ownedWorkspaceListQueries, subProjectsListQueries } from '@/lib/projects/workspace-queries';
 
 // Import interfaces / types from shared
 
@@ -106,17 +108,15 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
     tables.listRows({
         databaseId: CHAT_DATABASE_ID,
         tableId: 'projects',
-        queries: [
-          Query.equal('ownerId', actor.$id),
-          Query.notEqual('isTrash', true)
-        ]}),
+        queries: ownedWorkspaceListQueries(actor.$id) as any,
+    }),
     tables.listRows({
         databaseId: FLOW_DATABASE_ID,
         tableId: COLLABORATORS_TABLE,
         queries: [
           Query.equal('resourceType', 'project'),
           Query.equal('userId', actor.$id),
-        ] as any})
+        ] as any}),
   ]);
 
   const projectsListMap = new Map<string, any>();
@@ -143,6 +143,7 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
             queries: [Query.equal('$id', targetProjectIds)]});
 
         for (const proj of collaboratedProjectsRes.rows) {
+            if (!isWorkspaceRecord(proj)) continue;
             const collabRow = projectsToFetch.find(r => r.resourceId === proj.$id);
             if (collabRow) {
                 const isRealInvite = collabRow.status === 'pending' && collabRow.inviterId && collabRow.inviterId !== '';
@@ -160,7 +161,28 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
     }
   }
 
-  return Array.from(projectsListMap.values());
+  return filterRootWorkspaceProjects(Array.from(projectsListMap.values()));
+}
+
+export async function listSubProjectsForWorkspaceSecure(workspaceId: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const hasAccess = await verifyProjectPermission(workspaceId, actor.$id, 'viewer');
+  if (!hasAccess) {
+    throw new Error('Forbidden: Insufficient permissions to view projects in this workspace');
+  }
+
+  const tables = createSystemTablesDB();
+  const res = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'projects',
+    queries: subProjectsListQueries(workspaceId) as any,
+  });
+
+  return res.rows;
 }
 
 export async function createProjectSecure(data: any, jwt?: string) {
@@ -171,18 +193,33 @@ export async function createProjectSecure(data: any, jwt?: string) {
 
   // Rigorous runtime validation
   const validated = ProjectSchema.parse(data);
-
   const userTier = getUserSubscriptionTier(actor);
+  const kind = validated.kind ?? 'workspace';
+  const parentProjectId = validated.parentProjectId ?? null;
+
+  if (kind === 'project') {
+    if (!parentProjectId) {
+      throw new Error('parentProjectId is required when creating a project');
+    }
+    if (!allowsCollaboratorSharing(userTier, 'project')) {
+      throw new Error('Projects require a Teams plan. Upgrade to organize work inside workspaces.');
+    }
+    const canManageParent = await verifyProjectPermission(parentProjectId, actor.$id, 'editor');
+    if (!canManageParent) {
+      throw new Error('Forbidden: Cannot create a project in this workspace');
+    }
+  }
+
   const tables = createSystemTablesDB();
   const existingProjects = await tables.listRows({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
     queries: [
-      Query.equal('ownerId', actor.$id)
+      ...ownedWorkspaceListQueries(actor.$id),
     ] as any
   });
   const maxProjects = getProjectCap(userTier);
-  if (existingProjects.rows.length >= maxProjects) {
+  if (kind !== 'project' && existingProjects.rows.length >= maxProjects) {
     throw new Error(`Limit reached: ${userTier} plan is limited to ${maxProjects} project${maxProjects === 1 ? '' : 's'}. Upgrade to PRO or TEAMS to create more projects.`);
   }
 
@@ -194,6 +231,8 @@ export async function createProjectSecure(data: any, jwt?: string) {
     visibility,
     isPublic: validated.isPublic ?? visibility === 'public',
     isGuest: validated.isGuest ?? visibility === 'public',
+    kind,
+    parentProjectId: kind === 'project' ? parentProjectId : null,
     ownerId: actor.$id};
 
   const isCreateAllowed = await verifyResourcePermissionSecure({
@@ -607,7 +646,7 @@ export async function addObjectToProjectSecure(
     const { getUserSubscriptionTierServer } = await import('@/lib/services/internal/subscription-entitlement');
     const tier = await getUserSubscriptionTierServer(actor.$id);
     if (!allowsCollaboratorSharing(tier, 'project')) {
-      throw new Error('Sub-projects require a TEAMS subscription.');
+      throw new Error('Nested projects require a plan that includes Projects.');
     }
   }
 

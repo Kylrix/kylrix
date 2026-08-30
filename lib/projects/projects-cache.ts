@@ -1,4 +1,5 @@
 import type { Projects, ProjectObjects, Notes } from '@/types/appwrite';
+import { filterRootWorkspaceProjects } from '@/lib/projects/sub-projects';
 
 export const PROJECTS_LIST_TTL = 1000 * 60 * 30; // 30 min
 export const PROJECT_DETAIL_TTL = 1000 * 60 * 10; // 10 min
@@ -87,7 +88,7 @@ export function getSessionProjectsList(userId?: string): Projects[] | null {
 }
 
 export function setSessionProjectsList(rows: Projects[], userId?: string): void {
-  sessionProjectsList = { userId: userId || '', rows };
+  sessionProjectsList = { userId: userId || '', rows: filterRootWorkspaceProjects(rows) };
 }
 
 export function clearSessionProjectsList(): void {

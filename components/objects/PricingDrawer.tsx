@@ -3,22 +3,19 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   Sparkles,
-  ShieldCheck,
   X,
-  MessageSquare,
   Folder,
   Share2,
   Mic,
-  Lightbulb,
-  CheckSquare,
-  Key,
-  FileText,
-  Calendar,
-  Layers,
   Bot,
-  Users,
   ChevronUp,
   ChevronDown,
+  Pin,
+  Target,
+  MessageCircle,
+  KeyRound,
+  FileText,
+  Layers,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -29,43 +26,35 @@ import { createBillingCheckoutSessionAction } from '@/lib/actions/billing/billin
 import { recordPaymentIntentAction } from '@/lib/actions/billing/payment-intent';
 import { calculateTotalSubscriptionPrice, getBundledFreeMonths, getYearlyDiscountedPrice, getYearlyListPrice } from '@/lib/subscription/ppp';
 import { getPublicProductName } from '@/lib/config/product-client';
-import { DEFAULT_PRO_FEATURES, DEFAULT_TEAMS_FEATURES } from '@/lib/tools/features';
+import { getPublicPricingPlans, type PublicPricingPlan } from '@/lib/config/pricing-plans-client';
 
 const CHECKOUT_CACHE_KEY = 'kylrix_pricing_checkout_v1';
 
-const PRO_FEATURE_ICONS: Record<string, typeof Sparkles> = {
-  'suite.ideas': Lightbulb,
-  'suite.goals': CheckSquare,
-  'suite.vault': Key,
-  'suite.forms': FileText,
-  'suite.events': Calendar,
-  'suite.workspaces': Layers,
-  'suite.collaboration': Share2,
-  'suite.chat': MessageSquare,
-  'suite.moments': ShieldCheck,
-  'suite.storage': Folder,
-  'suite.ai': Bot,
-  'suite.graph': Sparkles,
-  'suite.audio': Mic,
-  'suite.sharing': Share2,
-};
-
-const TEAMS_FEATURE_ICONS: Record<string, typeof Users> = {
-  'suite.team_workspace': Layers,
-  'suite.hangouts': MessageSquare,
-  'suite.team_calls': Users,
+const FEATURE_ICONS: Record<string, typeof Sparkles> = {
+  ai: Bot,
+  voice: Mic,
+  file_upload: Folder,
+  sharing: Share2,
+  projects: Layers,
+  api_limits: Sparkles,
+  group_hangouts: MessageCircle,
+  pinned_notes: Pin,
+  milestones: Target,
+  discussions: MessageCircle,
+  oauth_provider: KeyRound,
+  article_mode: FileText,
 };
 
 type PendingCheckout = {
   planId: string;
   months: number;
   countryCode: string;
-  tier: 'PRO' | 'TEAMS';
+  ledgerKey: string;
 };
 
 interface PricingDrawerProps {
   onClose?: () => void;
-  initialTier?: 'PRO' | 'TEAMS';
+  initialTier?: string;
   featureHighlight?: string | null;
   giftRecipientId?: string | null;
   giftRecipientName?: string | null;
@@ -74,30 +63,46 @@ interface PricingDrawerProps {
 
 export function PricingDrawer({
   onClose,
-  initialTier = 'PRO',
+  initialTier,
   featureHighlight,
   giftRecipientId,
   giftRecipientName,
   isGift = false,
 }: PricingDrawerProps) {
+  const pricingPlans = useMemo(() => getPublicPricingPlans(), []);
+  const defaultLedger = pricingPlans[0]?.ledgerKey || 'PRO';
+
   const { isAuthenticated, user } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
   const [months, setMonths] = useState(1);
   const [monthsInput, setMonthsInput] = useState('1');
-  const [selectedTier, setSelectedTier] = useState<'PRO' | 'TEAMS'>(initialTier);
+  const [selectedLedger, setSelectedLedger] = useState(
+    initialTier?.toUpperCase() || defaultLedger,
+  );
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const resumeAttemptedRef = useRef(false);
 
   const isGiftMode = Boolean(isGift || giftRecipientId);
 
-  const yearlyListPrice = useMemo(() => getYearlyListPrice(selectedTier), [selectedTier]);
-  const yearlyDiscountedPrice = useMemo(() => getYearlyDiscountedPrice(selectedTier), [selectedTier]);
+  const selectedPlan = useMemo(
+    () => pricingPlans.find((p) => p.ledgerKey === selectedLedger) || pricingPlans[0],
+    [pricingPlans, selectedLedger],
+  );
+
+  const yearlyListPrice = useMemo(
+    () => getYearlyListPrice(selectedPlan?.ledgerKey || defaultLedger),
+    [selectedPlan, defaultLedger],
+  );
+  const yearlyDiscountedPrice = useMemo(
+    () => getYearlyDiscountedPrice(selectedPlan?.ledgerKey || defaultLedger),
+    [selectedPlan, defaultLedger],
+  );
   const freeMonthsIncluded = useMemo(() => getBundledFreeMonths(months), [months]);
   const isYearly = months >= 12;
 
   const totalPrice = useMemo(() => {
-    return calculateTotalSubscriptionPrice(selectedTier, months, 'CRYPTO');
-  }, [months, selectedTier]);
+    return calculateTotalSubscriptionPrice(selectedPlan?.ledgerKey || defaultLedger, months, 'CRYPTO');
+  }, [months, selectedPlan, defaultLedger]);
 
   const updateMonths = useCallback((newMonths: number) => {
     const clamped = Math.max(1, Math.min(24, newMonths));
@@ -144,7 +149,7 @@ export function PricingDrawer({
 
         // Record intent for smart reminder
         await recordPaymentIntentAction({
-          tier: selectedTier,
+          tier: selectedPlan?.ledgerKey || defaultLedger,
           months: checkoutMonths,
           planId,
           checkoutUrl: session.url,
@@ -163,7 +168,7 @@ export function PricingDrawer({
     } finally {
       setCheckoutLoading(false);
     }
-  }, [selectedTier, giftRecipientId, giftRecipientName]);
+  }, [selectedPlan, defaultLedger, giftRecipientId, giftRecipientName]);
 
   useEffect(() => {
     if (!user || resumeAttemptedRef.current) return;
@@ -175,7 +180,7 @@ export function PricingDrawer({
       const intent = JSON.parse(raw) as PendingCheckout;
       resumeAttemptedRef.current = true;
       if (intent.months) updateMonths(intent.months);
-      if (intent.tier) setSelectedTier(intent.tier);
+      if (intent.ledgerKey) setSelectedLedger(intent.ledgerKey);
       void proceedToCheckout(intent.planId, intent.months, intent.countryCode || 'US');
     } catch {
       sessionStorage.removeItem(CHECKOUT_CACHE_KEY);
@@ -183,14 +188,15 @@ export function PricingDrawer({
   }, [user, proceedToCheckout, updateMonths]);
 
   const handleSubscribe = () => {
-    const planId = months >= 12 ? `${selectedTier}_YEAR` : `${selectedTier}_MONTH`;
+    const ledger = selectedPlan?.ledgerKey || defaultLedger;
+    const planId = months >= 12 ? `${ledger}_YEAR` : `${ledger}_MONTH`;
 
     if (!isAuthenticated) {
       const intent: PendingCheckout = {
         planId,
         months,
         countryCode: 'US',
-        tier: selectedTier,
+        ledgerKey: ledger,
       };
       sessionStorage.setItem(CHECKOUT_CACHE_KEY, JSON.stringify(intent));
       openUnified('login');
@@ -202,27 +208,13 @@ export function PricingDrawer({
 
   const productName = getPublicProductName();
 
-  const proFeatures = useMemo(
-    () =>
-      DEFAULT_PRO_FEATURES.map((feature) => ({
-        icon: PRO_FEATURE_ICONS[feature.id] || Sparkles,
-        text: feature.label,
-      })),
-    [],
-  );
-
-  const teamsFeatures = useMemo(
-    () => [
-      { icon: Users, text: `All Pro features for multiple team members` },
-      ...DEFAULT_TEAMS_FEATURES.map((feature) => ({
-        icon: TEAMS_FEATURE_ICONS[feature.id] || Users,
-        text: feature.label,
-      })),
-    ],
-    [],
-  );
-
-  const currentFeatures = selectedTier === 'PRO' ? proFeatures : teamsFeatures;
+  const currentFeatures = useMemo(() => {
+    if (!selectedPlan) return [];
+    return selectedPlan.exclusiveFeatures.map((feature) => ({
+      icon: FEATURE_ICONS[feature.id] || Sparkles,
+      text: feature.label,
+    }));
+  }, [selectedPlan]);
 
   return (
     <div className="h-full flex flex-col bg-[#161412] text-white overflow-hidden select-none">
@@ -231,13 +223,13 @@ export function PricingDrawer({
         <div className="min-w-0">
           <h2 className="text-white font-black text-xl font-clash tracking-tight truncate">
             {isGiftMode
-              ? `Gift ${productName} ${selectedTier === 'PRO' ? 'Pro' : 'Teams'}`
-              : `${productName} ${selectedTier === 'PRO' ? 'Pro' : 'Teams'}`}
+              ? `Gift ${productName} ${selectedPlan?.name || 'Plan'}`
+              : `${productName} ${selectedPlan?.name || 'Plan'}`}
           </h2>
           <p className="text-white/50 text-xs font-satoshi truncate">
             {isGiftMode
               ? `Gifting full suite access to @${giftRecipientName || giftRecipientId}`
-              : 'Full private suite. All core features unlimited.'}
+              : selectedPlan?.description || 'Upgrade for capabilities not included on the free plan.'}
           </p>
         </div>
         {onClose && (
@@ -269,31 +261,25 @@ export function PricingDrawer({
           </div>
         )}
 
-        {/* Tier Selector */}
+        {pricingPlans.length > 1 && (
         <div className="flex justify-center">
           <div className="inline-flex p-1 bg-[#0A0908] border border-white/6 rounded-2xl w-full">
+            {pricingPlans.map((plan: PublicPricingPlan) => (
             <button
-              onClick={() => setSelectedTier('PRO')}
+              key={plan.ledgerKey}
+              onClick={() => setSelectedLedger(plan.ledgerKey)}
               className={`flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                selectedTier === 'PRO'
+                selectedLedger === plan.ledgerKey
                   ? 'bg-[#6366F1] text-white'
                   : 'text-white/60 hover:text-white'
               }`}
             >
-              Kylrix Pro
+              {plan.name}
             </button>
-            <button
-              onClick={() => setSelectedTier('TEAMS')}
-              className={`flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                selectedTier === 'TEAMS'
-                  ? 'bg-[#6366F1] text-white'
-                  : 'text-white/60 hover:text-white'
-              }`}
-            >
-              Kylrix Teams
-            </button>
+            ))}
           </div>
         </div>
+        )}
 
         {/* Duration Slider & Custom Number Stepper Well */}
         <div className="bg-[#0A0908] border border-white/6 rounded-2xl p-4 space-y-4">
@@ -376,7 +362,7 @@ export function PricingDrawer({
             {checkoutLoading
               ? 'Starting checkout…'
               : isGiftMode
-                ? `Gift ${selectedTier === 'PRO' ? 'Pro' : 'Teams'} · $${totalPrice.toFixed(2)}`
+                ? `Gift ${selectedPlan?.name || 'Plan'} · $${totalPrice.toFixed(2)}`
                 : 'Continue to Checkout'}
           </button>
         </div>
@@ -384,7 +370,7 @@ export function PricingDrawer({
         {/* Features List */}
         <div className="space-y-2.5">
           <span className="text-[10px] text-white/55 font-bold uppercase tracking-wider px-1">
-            Included Capabilities
+            Included Beyond Free
           </span>
           <div className="grid grid-cols-1 gap-2">
             {currentFeatures.map((feat, i) => (

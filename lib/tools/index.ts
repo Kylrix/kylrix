@@ -1,16 +1,19 @@
 export { toolRegistry, redactPIIAndSensitiveFields } from './registry';
 export type { EcosystemToolDefinition, ToolParameterSpec } from './registry';
 export {
-  DEFAULT_PRO_FEATURES,
-  DEFAULT_TEAMS_FEATURES,
+  FEATURE_CATALOG,
+  MCP_TOOL_FEATURE_MAP,
   TOOL_FEATURE_MAP,
+  featureIdForMcpTool,
   featureIdForTool,
   getFeatureLabel,
   getFeatureMinTier,
-  listPricingFeaturesForTier,
+  hasFreeTier,
+  listExclusiveFeaturesForPlan,
+  mcpToolRequiresFeatureGate,
   tierMeetsFeature,
 } from './features';
-export type { FeatureDefinition, FeatureId } from './features';
+export type { FeatureId } from './features';
 export {
   assertActorFeatureAccess,
   checkActorFeatureAccess,
@@ -19,8 +22,3 @@ export {
   userTierAllowsFeature,
   FEATURE_REQUIRES_UPGRADE_CODE,
 } from './gate';
-export {
-  MCP_TOOL_FEATURE_MAP,
-  featureIdForMcpTool,
-  mcpToolRequiresFeatureGate,
-} from './mcp-features';

@@ -246,7 +246,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
 
     if (resourceType === 'project' && !hasTeamsKylrixPlan(user, currentTier)) {
       toast.error('Project collaboration requires a Teams subscription on the project owner account.');
-      openProUpgrade('Project Collaboration');
+      openProUpgrade('Projects');
       return;
     }
 
@@ -254,7 +254,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
     const isPaid = hasPaidKylrixPlan(user) || currentTier === 'PRO' || currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
     if (!isPaid && collaboratorProfiles.length + selectedUsers.length >= 3) {
       toast.error(`Limit reached: Free plans are limited to 3 collaborators per resource. Upgrade to PRO to add more!`);
-      openProUpgrade(resourceType === 'project' ? 'Project Collaboration' : 'Collaborators');
+      openProUpgrade(resourceType === 'project' ? 'Projects' : 'Collaborators');
       return;
     }
 
