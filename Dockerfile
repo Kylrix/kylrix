@@ -35,9 +35,22 @@ COPY . .
 # ── Build-time arguments ──
 # These are used ONLY during `docker build` to patch hardcoded values
 # in the source copy. The original source files on disk are never touched.
-ARG NEXT_PUBLIC_APPWRITE_ENDPOINT="https://api.kylrix.space/v1"
-ARG NEXT_PUBLIC_APPWRITE_PROJECT_ID="67fe9627001d97e37ef3"
-ARG NEXT_PUBLIC_DOMAIN="kylrix.space"
+ARG NEXT_PUBLIC_APPWRITE_ENDPOINT="http://localhost:8080/v1"
+ARG NEXT_PUBLIC_APPWRITE_PROJECT_ID=""
+ARG NEXT_PUBLIC_DOMAIN="localhost"
+ARG SELFHOSTED="true"
+ARG AUTH_EMAIL_PASSWORD_SIGNUP="false"
+ARG AUTH_PASSKEY_SIGNUP="false"
+ARG AUTH_PASSWORDLESS_MODE="false"
+
+# Next.js inlines NEXT_PUBLIC_* only when present as ENV at build time.
+ENV NEXT_PUBLIC_APPWRITE_ENDPOINT=$NEXT_PUBLIC_APPWRITE_ENDPOINT
+ENV NEXT_PUBLIC_APPWRITE_PROJECT_ID=$NEXT_PUBLIC_APPWRITE_PROJECT_ID
+ENV NEXT_PUBLIC_DOMAIN=$NEXT_PUBLIC_DOMAIN
+ENV SELFHOSTED=$SELFHOSTED
+ENV AUTH_EMAIL_PASSWORD_SIGNUP=$AUTH_EMAIL_PASSWORD_SIGNUP
+ENV AUTH_PASSKEY_SIGNUP=$AUTH_PASSKEY_SIGNUP
+ENV AUTH_PASSWORDLESS_MODE=$AUTH_PASSWORDLESS_MODE
 
 # ── Surgical sed-patching of hardcoded config values ──
 # Patches are idempotent: if the value already matches, sed is a no-op.
@@ -52,12 +65,15 @@ RUN set -eux; \
     if [ "$NEXT_PUBLIC_APPWRITE_ENDPOINT" != "https://api.kylrix.space/v1" ]; then \
       sed -i "s|https://api.kylrix.space/v1|${NEXT_PUBLIC_APPWRITE_ENDPOINT}|g" \
         lib/appwrite/config.ts \
-        lib/appwrite/client.ts; \
+        lib/appwrite/client.ts \
+        app/layout.tsx \
+        components/ui/NoteCard.tsx; \
     fi; \
     # ── Patch Appwrite project ID ──
     if [ "$NEXT_PUBLIC_APPWRITE_PROJECT_ID" != "67fe9627001d97e37ef3" ]; then \
       sed -i "s|67fe9627001d97e37ef3|${NEXT_PUBLIC_APPWRITE_PROJECT_ID}|g" \
-        lib/appwrite/config.ts; \
+        lib/appwrite/config.ts \
+        components/ui/NoteCard.tsx; \
     fi; \
     # ── Patch domain ──
     if [ "$NEXT_PUBLIC_DOMAIN" != "kylrix.space" ]; then \

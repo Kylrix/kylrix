@@ -1,5 +1,11 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Kylrix — Self-Hosting Stack
+# Kylrix — Full Self-Hosting Stack
+# Includes: Kylrix App + Appwrite + MariaDB + Redis (+ optional Caddy HTTPS)
+#
+# Usage:
+#   ./selfhost.sh
+#   — or —
+#   make setup && make up && make bootstrap && make schema-push
 # ─────────────────────────────────────────────────────────────────────────────
 
 x-common: &common
@@ -17,30 +23,183 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_APPWRITE_ENDPOINT=${NEXT_PUBLIC_APPWRITE_ENDPOINT:-https://api.kylrix.space/v1}
-        - NEXT_PUBLIC_APPWRITE_PROJECT_ID=${NEXT_PUBLIC_APPWRITE_PROJECT_ID:-67fe9627001d97e37ef3}
+        - NEXT_PUBLIC_APPWRITE_ENDPOINT=${NEXT_PUBLIC_APPWRITE_ENDPOINT:-http://localhost:8080/v1}
+        - NEXT_PUBLIC_APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID:?Run selfhost bootstrap first — APPWRITE_PROJECT_ID missing}
         - NEXT_PUBLIC_DOMAIN=${DOMAIN:-localhost}
+        - SELFHOSTED=${SELFHOSTED:-true}
+        - AUTH_EMAIL_PASSWORD_SIGNUP=${AUTH_EMAIL_PASSWORD_SIGNUP:-true}
+        - AUTH_PASSKEY_SIGNUP=${AUTH_PASSKEY_SIGNUP:-false}
+        - AUTH_PASSWORDLESS_MODE=${AUTH_PASSWORDLESS_MODE:-false}
     container_name: kylrix-app
     <<: *common
     ports:
       - "${APP_PORT:-5003}:3000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_APPWRITE_ENDPOINT=${NEXT_PUBLIC_APPWRITE_ENDPOINT:-https://api.kylrix.space/v1}
-      - NEXT_PUBLIC_APPWRITE_PROJECT_ID=${NEXT_PUBLIC_APPWRITE_PROJECT_ID:-67fe9627001d97e37ef3}
+      - SELFHOSTED=true
+      - AUTH_EMAIL_PASSWORD_SIGNUP=${AUTH_EMAIL_PASSWORD_SIGNUP:-true}
+      - AUTH_PASSKEY_SIGNUP=${AUTH_PASSKEY_SIGNUP:-false}
+      - AUTH_PASSWORDLESS_MODE=${AUTH_PASSWORDLESS_MODE:-false}
+      - APPWRITE_ENDPOINT=http://appwrite/v1
+      - NEXT_PUBLIC_APPWRITE_ENDPOINT=${NEXT_PUBLIC_APPWRITE_ENDPOINT:-http://localhost:8080/v1}
+      - NEXT_PUBLIC_APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+      - APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID}
+      - APPWRITE_API=${APPWRITE_API_KEY}
       - NEXT_PUBLIC_DOMAIN=${DOMAIN:-localhost}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:5003}
+      - NEXT_PUBLIC_APP_URI=${NEXT_PUBLIC_APP_URI:-http://localhost:5003}
+      - NEXT_PUBLIC_ORIGIN=${NEXT_PUBLIC_APP_URI:-http://localhost:5003}
     healthcheck:
       test: ["CMD", "node", "-e", "const http=require('http');const r=http.request({hostname:'127.0.0.1',port:3000,path:'/api/health',timeout:3000},res=>{process.exit(res.statusCode===200?0:1)});r.on('error',()=>process.exit(1));r.end()"]
       interval: 15s
       timeout: 5s
-      start_period: 20s
+      start_period: 30s
+      retries: 3
+    depends_on:
+      appwrite:
+        condition: service_healthy
+    networks:
+      - kylrix-net
+
+  # ── Appwrite — Backend-as-a-Service ───────────────────────────────────────
+  appwrite:
+    image: ${APPWRITE_IMAGE:-appwrite/appwrite:1.9.6}
+    container_name: kylrix-appwrite
+    <<: *common
+    ports:
+      - "${APPWRITE_PORT:-8080}:80"
+    volumes:
+      - appwrite_uploads:/storage/uploads
+      - appwrite_cache:/storage/cache
+      - appwrite_certs:/storage/certificates
+      - appwrite_functions:/storage/functions
+      - appwrite_config:/storage/config
+    environment:
+      - _APP_ENV=production
+      - _APP_LOCALE=en
+      - _APP_CONSOLE_WHITELIST_ROOT=enabled
+      - _APP_CONSOLE_WHITELIST_EMAILS=
+      - _APP_SYSTEM_EMAIL_NAME=Kylrix
+      - _APP_SYSTEM_EMAIL_ADDRESS=noreply@${DOMAIN:-localhost}
+      - _APP_OPTIONS_ABUSE=disabled
+      - _APP_OPTIONS_FORCE_HTTPS=disabled
+      - _APP_OPENSSL_KEY_V1=${APPWRITE_OPENSSL_KEY:?Set APPWRITE_OPENSSL_KEY in .env}
+      - _APP_DOMAIN=${APPWRITE_DOMAIN:-localhost}
+      - _APP_DOMAIN_TARGET=${APPWRITE_DOMAIN:-localhost}
+      - _APP_DOMAIN_FUNCTIONS=${APPWRITE_FUNCTIONS_DOMAIN:-functions.localhost}
+      - _APP_REDIS_HOST=redis
+      - _APP_REDIS_PORT=6379
+      - _APP_DB_HOST=mariadb
+      - _APP_DB_PORT=3306
+      - _APP_DB_SCHEMA=appwrite
+      - _APP_DB_USER=${MARIADB_USER:-appwrite}
+      - _APP_DB_PASS=${MARIADB_PASSWORD:-appwrite-secret}
+      - _APP_DB_ROOT_PASS=${MARIADB_ROOT_PASSWORD:-rootsecret}
+      - _APP_USAGE_STATS=enabled
+      - _APP_STORAGE_LIMIT=536870912
+      - _APP_STORAGE_PREVIEW_LIMIT=20000000
+      - _APP_STORAGE_ANTIVIRUS=disabled
+      - _APP_SMTP_HOST=${SMTP_HOST:-}
+      - _APP_SMTP_PORT=${SMTP_PORT:-587}
+      - _APP_SMTP_SECURE=${SMTP_SECURE:-tls}
+      - _APP_SMTP_USERNAME=${SMTP_USERNAME:-}
+      - _APP_SMTP_PASSWORD=${SMTP_PASSWORD:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/v1/health/version"]
+      interval: 15s
+      timeout: 10s
+      start_period: 90s
+      retries: 8
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - kylrix-net
+
+  # ── MariaDB — Appwrite's database ────────────────────────────────────────
+  mariadb:
+    image: mariadb:10.11
+    container_name: kylrix-mariadb
+    <<: *common
+    command: >
+      --innodb-flush-log-at-trx-commit=2
+      --innodb-buffer-pool-size=256M
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --max-connections=200
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-rootsecret}
+      MARIADB_DATABASE: appwrite
+      MARIADB_USER: ${MARIADB_USER:-appwrite}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-appwrite-secret}
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    networks:
+      - kylrix-net
+
+  # ── Redis — Appwrite's cache & pub/sub ────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: kylrix-redis
+    <<: *common
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
       retries: 3
     networks:
       - kylrix-net
 
-# ── Network ──────────────────────────────────────────────────────────────────
+  # ── Caddy — Optional HTTPS reverse proxy (production domains) ─────────────
+  caddy:
+    profiles: ["production"]
+    image: caddy:2-alpine
+    container_name: kylrix-caddy
+    <<: *common
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./selfhost/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+      - APPWRITE_DOMAIN=${APPWRITE_DOMAIN:-localhost}
+    depends_on:
+      kylrix:
+        condition: service_healthy
+    networks:
+      - kylrix-net
+
+volumes:
+  caddy_data:
+  caddy_config:
+  appwrite_uploads:
+  appwrite_cache:
+  appwrite_certs:
+  appwrite_functions:
+  appwrite_config:
+  mariadb_data:
+  redis_data:
+
 networks:
   kylrix-net:
     driver: bridge

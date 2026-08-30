@@ -9,19 +9,21 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
-  # Override kylrix to remove Appwrite dependency and point to external endpoint
   kylrix:
     build:
       args:
-        - NEXT_PUBLIC_APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT:?Set APPWRITE_ENDPOINT in .env}
+        - NEXT_PUBLIC_APPWRITE_ENDPOINT=${NEXT_PUBLIC_APPWRITE_ENDPOINT:?Set NEXT_PUBLIC_APPWRITE_ENDPOINT in .env}
         - NEXT_PUBLIC_APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID:?Set APPWRITE_PROJECT_ID in .env}
         - NEXT_PUBLIC_DOMAIN=${DOMAIN:-localhost}
-    depends_on: {}  # Remove bundled Appwrite dependency
+    depends_on: {}
+    ports:
+      - "${APP_PORT:-5003}:3000"
 
-  # Disable bundled services (they're not needed)
   appwrite:
     profiles: ["disabled"]
   mariadb:
     profiles: ["disabled"]
   redis:
+    profiles: ["disabled"]
+  caddy:
     profiles: ["disabled"]

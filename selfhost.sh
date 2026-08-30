@@ -2,13 +2,16 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Kylrix — Autonomous 1-Command Self-Hosting Installer
 #
+# Spins up bundled Appwrite + MariaDB + Redis, mints a local project + API key,
+# provisions schema, and launches Kylrix on APP_PORT (default 5003).
+#
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
 #   — or —
 #   ./selfhost.sh
 # ─────────────────────────────────────────────────────────────────────────────
 
-set -e
+set -euo pipefail
 
 BOLD='\033[1m'
 CYAN='\033[0;36m'
@@ -26,18 +29,23 @@ echo " |_|\_\   |_|       |_| \_\ |_|   /_/\_\ "
 echo -e "${NC}"
 echo -e "${BOLD}Kylrix Autonomous Self-Hosting Installer${NC}\n"
 
-# 1. Dependency checks
 command -v docker >/dev/null 2>&1 || {
-  echo -e "${RED}Error: docker is not installed.${NC} Please install Docker first: https://docs.docker.com/engine/install/"
+  echo -e "${RED}Error: docker is not installed.${NC} https://docs.docker.com/engine/install/"
   exit 1
 }
 
 command -v git >/dev/null 2>&1 || {
-  echo -e "${RED}Error: git is not installed.${NC} Please install git."
+  echo -e "${RED}Error: git is not installed.${NC}"
   exit 1
 }
 
-# Check docker compose plugin
+for cmd in curl jq; do
+  command -v "$cmd" >/dev/null 2>&1 || {
+    echo -e "${RED}Error: ${cmd} is required for self-host bootstrap.${NC}"
+    exit 1
+  }
+done
+
 if docker compose version >/dev/null 2>&1; then
   COMPOSE_CMD="docker compose"
 elif command -v docker-compose >/dev/null 2>&1; then
@@ -49,11 +57,12 @@ fi
 
 INSTALL_DIR="${KYLRIX_DIR:-$HOME/kylrix-selfhost}"
 PORT="${KYLRIX_PORT:-5003}"
+APPWRITE_PORT="${KYLRIX_APPWRITE_PORT:-8080}"
 
 echo -e "Installing Kylrix into: ${CYAN}${INSTALL_DIR}${NC}"
-echo -e "Application port:      ${CYAN}${PORT}${NC}\n"
+echo -e "Application port:      ${CYAN}${PORT}${NC}"
+echo -e "Appwrite API port:     ${CYAN}${APPWRITE_PORT}${NC}\n"
 
-# 2. Clone or Update repository
 if [ -d "$INSTALL_DIR/.git" ]; then
   echo -e "${YELLOW}Updating existing installation...${NC}"
   cd "$INSTALL_DIR"
@@ -67,27 +76,33 @@ else
   cd "$INSTALL_DIR"
 fi
 
-# 3. Configure Environment
 if [ ! -f .env ]; then
-  echo -e "${YELLOW}Generating environment configuration (.env)...${NC}"
-  cat <<ENV_EOF > .env
-PORT=${PORT}
-NODE_ENV=production
-NEXT_TELEMETRY_DISABLED=1
-APP_PORT=${PORT}
-DOMAIN=localhost
-NEXT_PUBLIC_DOMAIN=localhost
-NEXT_PUBLIC_APPWRITE_ENDPOINT=https://api.kylrix.space/v1
-NEXT_PUBLIC_APPWRITE_PROJECT_ID=67fe9627001d97e37ef3
-ENV_EOF
+  cp env.sample .env
 fi
 
-# Ensure port mapping is configured
 export APP_PORT="${PORT}"
+export APPWRITE_PORT="${APPWRITE_PORT}"
+export APPWRITE_UNSTABLE="${KYLRIX_APPWRITE_UNSTABLE:-${APPWRITE_UNSTABLE:-false}}"
+bash selfhost/mint-env.sh
 
-# 4. Build & Start with Docker
-echo -e "\n${YELLOW}Building and launching container stack...${NC}"
-$COMPOSE_CMD -f docker-compose.yml up -d --build
+echo -e "\n${YELLOW}Starting Appwrite infrastructure (MariaDB, Redis, Appwrite)...${NC}"
+$COMPOSE_CMD up -d mariadb redis appwrite
 
-echo -e "\n${GREEN}${BOLD}✓ Kylrix is self-hosted and running!${NC}"
-echo -e "Access your instance at: ${CYAN}${BOLD}http://localhost:${PORT}${NC}\n"
+echo -e "\n${YELLOW}Bootstrapping local Appwrite project + API key...${NC}"
+bash selfhost/bootstrap.sh
+
+echo -e "\n${YELLOW}Building and launching Kylrix...${NC}"
+$COMPOSE_CMD up -d --build kylrix
+
+if [ "${KYLRIX_SKIP_SCHEMA:-}" != "1" ]; then
+  echo -e "\n${YELLOW}Provisioning Appwrite schema (tables, indexes, buckets)...${NC}"
+  bash selfhost/provision-schema.sh || {
+    echo -e "${YELLOW}Schema provisioning did not finish cleanly. Re-run: make schema-push${NC}"
+  }
+fi
+
+echo -e "\n${GREEN}${BOLD}✓ Kylrix is self-hosted on your machine${NC}"
+echo -e "App:              ${CYAN}${BOLD}http://localhost:${PORT}${NC}"
+echo -e "Appwrite API:     ${CYAN}http://localhost:${APPWRITE_PORT}/v1${NC}"
+echo -e "Project ID:       ${CYAN}$(grep '^APPWRITE_PROJECT_ID=' .env | cut -d= -f2-)${NC}\n"
+echo -e "${DIM}Admin credentials are in .env (SELFHOST_ADMIN_EMAIL / SELFHOST_ADMIN_PASSWORD)${NC}\n"

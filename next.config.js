@@ -17,6 +17,12 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_SELFHOSTED: process.env.SELFHOSTED === 'true' ? 'true' : 'false',
+    NEXT_PUBLIC_AUTH_EMAIL_PASSWORD_SIGNUP:
+      process.env.AUTH_EMAIL_PASSWORD_SIGNUP === 'true' ? 'true' : 'false',
+    NEXT_PUBLIC_AUTH_PASSKEY_SIGNUP:
+      process.env.AUTH_PASSKEY_SIGNUP === 'true' ? 'true' : 'false',
+    NEXT_PUBLIC_AUTH_PASSWORDLESS_MODE:
+      process.env.AUTH_PASSWORDLESS_MODE === 'true' ? 'true' : 'false',
     NEXT_PUBLIC_PRODUCT_NAME: process.env.PRODUCT_NAME || 'Kylrix',
     NEXT_PUBLIC_PRICING_TIERS_ENABLED:
       (process.env.PRICING_TIERS_ENABLED ?? process.env.ENABLE_PRICING_TIERS) === 'true'

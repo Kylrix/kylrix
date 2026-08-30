@@ -15,6 +15,12 @@ import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthS
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
 import { KYLRIX_AGENTS_SKILL_INSTALL } from '@/lib/api/public';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
+import {
+  isAuthPasswordlessModeEnabled,
+  isEmailPasswordSignupEnabled,
+  isEmailPasswordSigninEnabled,
+  isPasskeySignupEnabled,
+} from '@/lib/config/auth-methods';
 
 type LoginStep = 'initial' | 'email' | 'otp' | 'agent';
 
@@ -38,6 +44,10 @@ export function LoginDrawer() {
   const { setIsDrawerOpen } = useDrawerState();
   const isDesktop = useIsDesktop();
   const isSelfHosted = isSelfHostedDeployment();
+  const passwordlessMode = isAuthPasswordlessModeEnabled();
+  const emailPasswordSignupEnabled = isEmailPasswordSignupEnabled();
+  const emailPasswordSigninEnabled = isEmailPasswordSigninEnabled();
+  const passkeySignupEnabled = isPasskeySignupEnabled();
 
   const customTitle = drawerData?.title || 'Continue to Kylrix';
   const customSubtitle = drawerData?.subtitle;
@@ -61,6 +71,13 @@ export function LoginDrawer() {
   const [showPassword, setShowPassword] = useState(false);
   const [useOTPAlternative, setUseOTPAlternative] = useState(false);
   const [copiedSkill, setCopiedSkill] = useState(false);
+  const [authPolicy, setAuthPolicy] = useState({
+    isSelfHosted,
+    emailPasswordSignup: emailPasswordSignupEnabled,
+    emailPasswordSignin: emailPasswordSigninEnabled,
+    passkeySignup: passkeySignupEnabled,
+    passwordless: passwordlessMode,
+  });
 
   useEffect(() => {
     if (step !== 'email') {
@@ -86,13 +103,20 @@ export function LoginDrawer() {
     const timer = setTimeout(async () => {
       try {
         const res = await checkEmailAuthStatusAction(emailTrimmed);
-        if (res.success) {
+        if (res.success && 'exists' in res) {
           setUserExists(Boolean(res.exists));
+          setAuthPolicy({
+            isSelfHosted: Boolean(res.isSelfHosted),
+            emailPasswordSignup: Boolean(res.emailPasswordSignup),
+            emailPasswordSignin: Boolean(res.emailPasswordSignin),
+            passkeySignup: Boolean(res.passkeySignup),
+            passwordless: Boolean(res.passwordless),
+          });
           if (res.exists && res.hasMasterpass) {
             setHasMasterpass(true);
           } else {
             setHasMasterpass(false);
-            if (!isSelfHosted) {
+            if (!res.emailPasswordSignup && !res.isSelfHosted) {
               setUseOTPAlternative(false);
             }
           }
@@ -109,71 +133,49 @@ export function LoginDrawer() {
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [email, step, isSelfHosted]);
+  }, [email, step, isSelfHosted, emailPasswordSignupEnabled]);
 
-  const handleSelfHostedSignUp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const emailTrimmed = email.trim();
-    if (!emailTrimmed || !password) return;
-    if (password.length < 8) {
-      toast.error('Password must be at least 8 characters long');
-      return;
-    }
-    setLoading(true);
-    localStorage.setItem('kylrix_last_auth_method', 'password');
-    setLastUsedMethod('password');
-
+  const completeNewUserVaultSetup = async (sessionUserId: string, emailTrimmed: string, pass: string) => {
     try {
-      const signUpRes = await selfHostedSignUpAction({
+      const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+      const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+      const { UsersService } = await import('@/lib/services/users');
+
+      await masterPassCrypto.unlock(pass, sessionUserId, true);
+      const pubKey = await ecosystemSecurity.syncIdentity(sessionUserId).catch(() => null);
+      const profile = await UsersService.ensureProfileForUser({
+        $id: sessionUserId,
         email: emailTrimmed,
-        password,
-        name: emailTrimmed.split('@')[0]
+        name: emailTrimmed.split('@')[0],
       });
-
-      if (!signUpRes.success || !signUpRes.userId) {
-        throw new Error(signUpRes.error || 'Failed to create account');
+      if (pubKey && profile) {
+        await UsersService.updateProfile(sessionUserId, { publicKey: pubKey });
       }
-
-      // Establish Appwrite session
-      await account.deleteSession('current').catch(() => {});
-      invalidateCurrentUserCache();
-      const session: any = await account.createEmailPasswordSession(emailTrimmed, password);
-
-      // Initialize MasterPass vault, keychain, E2E identity and profile
-      try {
-        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
-        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
-        const { UsersService } = await import('@/lib/services/users');
-
-        await masterPassCrypto.unlock(password, session.userId, true);
-        const pubKey = await ecosystemSecurity.syncIdentity(session.userId).catch(() => null);
-        const profile = await UsersService.ensureProfileForUser({
-          $id: session.userId,
-          email: emailTrimmed,
-          name: emailTrimmed.split('@')[0]
-        });
-        if (pubKey && profile) {
-          await UsersService.updateProfile(session.userId, { publicKey: pubKey });
-        }
-        toast.success('Vault secured with master password');
-      } catch (vaultErr) {
-        console.warn('Vault auto-initialization warning on signup:', vaultErr);
-      }
-
-      toast.success('Account created successfully!');
-      await refreshUser(true);
-      close();
-    } catch (err: any) {
-      console.error('Self-hosted signup failed:', err);
-      toast.error(err.message || 'Signup failed');
-    } finally {
-      setLoading(false);
+      toast.success('Vault secured with master password');
+    } catch (vaultErr) {
+      console.warn('Vault auto-initialization warning on signup:', vaultErr);
     }
   };
 
-  const handlePasswordLogin = async (e?: React.FormEvent) => {
+  const isInvalidCredentialsError = (err: unknown) => {
+    const e = err as { code?: number; type?: string; message?: string };
+    const msg = String(e?.message || '').toLowerCase();
+    return (
+      e?.code === 401 ||
+      e?.type === 'user_invalid_credentials' ||
+      msg.includes('invalid credentials')
+    );
+  };
+
+  const handlePasswordSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!email || !password) return;
+    if (!emailPasswordSigninEnabled) {
+      toast.error('Password sign-in is disabled on this instance.');
+      return;
+    }
+    const emailTrimmed = email.trim();
+    if (!emailTrimmed || !password) return;
+
     setLoading(true);
     localStorage.setItem('kylrix_last_auth_method', 'password');
     setLastUsedMethod('password');
@@ -181,28 +183,61 @@ export function LoginDrawer() {
     try {
       await account.deleteSession('current').catch(() => {});
       invalidateCurrentUserCache();
-      const session: any = await account.createEmailPasswordSession(email, password);
+
+      let session: { userId: string };
+      let createdAccount = false;
 
       try {
-        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
-        const unlockSuccess = await masterPassCrypto.unlock(password, session.userId, false);
-        if (unlockSuccess) {
-          toast.success("Vault unlocked automatically");
+        session = await account.createEmailPasswordSession(emailTrimmed, password);
+      } catch (loginErr) {
+        if (isMfaRequiredError(loginErr)) {
+          setMfaLoginMethod('password');
+          setMfaDrawerOpen(true);
+          return;
         }
-      } catch (vaultErr) {
-        console.warn('Failed to auto-unlock vault with master password:', vaultErr);
+        if (!authPolicy.emailPasswordSignup) {
+          throw loginErr;
+        }
+        if (!isInvalidCredentialsError(loginErr)) {
+          throw loginErr;
+        }
+        if (password.length < 8) {
+          throw new Error('Password must be at least 8 characters to create an account.');
+        }
+
+        const signUpRes = await selfHostedSignUpAction({
+          email: emailTrimmed,
+          password,
+          name: emailTrimmed.split('@')[0],
+        });
+        if (!signUpRes.success || !signUpRes.userId) {
+          throw new Error(signUpRes.error || 'Failed to create account');
+        }
+        createdAccount = true;
+        session = await account.createEmailPasswordSession(emailTrimmed, password);
       }
 
-      toast.success('Logged in successfully!');
+      if (createdAccount) {
+        await completeNewUserVaultSetup(session.userId, emailTrimmed, password);
+        toast.success('Account created successfully!');
+      } else {
+        try {
+          const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+          const unlockSuccess = await masterPassCrypto.unlock(password, session.userId, false);
+          if (unlockSuccess) {
+            toast.success('Vault unlocked automatically');
+          }
+        } catch (vaultErr) {
+          console.warn('Failed to auto-unlock vault with master password:', vaultErr);
+        }
+        toast.success('Logged in successfully!');
+      }
+
       await refreshUser(true);
       close();
     } catch (err: any) {
-      if (isMfaRequiredError(err)) {
-        setMfaLoginMethod('password');
-        setMfaDrawerOpen(true);
-        return;
-      }
-      toast.error(err.message || 'Password login failed');
+      console.error('Email/password auth failed:', err);
+      toast.error(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -437,40 +472,45 @@ export function LoginDrawer() {
         );
 
       case 'email':
-        const isNewSelfHostedUser = isSelfHosted && userExists === false;
-        const showPasswordField = isSelfHosted 
-          ? !useOTPAlternative 
-          : (hasMasterpass && !useOTPAlternative);
+        const policy = authPolicy;
+        const isNewEmailPasswordUser = userExists === false && policy.emailPasswordSignup;
+        const canUsePasswordSignin =
+          userExists === true &&
+          policy.emailPasswordSignin &&
+          (hasMasterpass || policy.isSelfHosted);
+        const showPasswordOnSelfHostEmailStep =
+          policy.isSelfHosted &&
+          (policy.emailPasswordSignup || policy.emailPasswordSignin);
+        const showPasswordField =
+          !policy.passwordless &&
+          !useOTPAlternative &&
+          (showPasswordOnSelfHostEmailStep ||
+            isNewEmailPasswordUser ||
+            canUsePasswordSignin);
 
-        const submitHandler = isNewSelfHostedUser && showPasswordField
-          ? handleSelfHostedSignUp
-          : (showPasswordField ? handlePasswordLogin : handleSendOTP);
+        const submitHandler = showPasswordField ? handlePasswordSubmit : handleSendOTP;
 
         let buttonLabel = 'Send Login Code';
-        if (isSelfHosted) {
-          if (isNewSelfHostedUser) {
-            buttonLabel = showPasswordField ? 'Create Account' : 'Send Signup Code';
-          } else {
-            buttonLabel = showPasswordField ? 'Login with Password' : 'Send Login Code';
-          }
-        } else {
-          buttonLabel = showPasswordField ? 'Login with Password' : 'Send Login Code';
+        if (showPasswordField) {
+          buttonLabel = policy.emailPasswordSignup ? 'Sign in' : 'Login with Password';
         }
 
         let switchLabel = '';
-        if (isSelfHosted) {
-          if (isNewSelfHostedUser) {
-            switchLabel = useOTPAlternative ? 'Create account with Password instead' : 'Sign up with Email OTP instead';
-          } else {
-            switchLabel = useOTPAlternative ? 'Login with Password instead' : 'Login with Email OTP instead';
-          }
-        } else if (hasMasterpass) {
-          switchLabel = useOTPAlternative ? 'Use Password Login instead' : 'Login with Email OTP instead';
+        if (passwordlessMode) {
+          switchLabel = '';
+        } else if (isNewEmailPasswordUser) {
+          switchLabel = useOTPAlternative
+            ? 'Create account with Password instead'
+            : 'Sign up with Email OTP instead';
+        } else if (canUsePasswordSignin || showPasswordOnSelfHostEmailStep || hasMasterpass) {
+          switchLabel = useOTPAlternative
+            ? 'Login with Password instead'
+            : 'Login with Email OTP instead';
         }
 
-        const passwordPlaceholder = isNewSelfHostedUser
-          ? 'Create a password (min. 8 chars)'
-          : (isSelfHosted ? 'Enter your password' : 'Enter your master password');
+        const passwordPlaceholder = policy.emailPasswordSignup
+          ? 'Enter your password (min. 8 chars for new accounts)'
+          : (policy.isSelfHosted ? 'Enter your password' : 'Enter your master password');
 
         return (
           <form 
@@ -545,6 +585,12 @@ export function LoginDrawer() {
                   {switchLabel}
                 </button>
               </div>
+            )}
+
+            {userExists === false && policy.passkeySignup && (
+              <p className="text-center text-[10px] text-white/40 font-medium pt-1">
+                Passkey signup is enabled for this instance — enrollment UI wiring is next.
+              </p>
             )}
           </form>
         );

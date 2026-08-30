@@ -8,6 +8,13 @@ import { Query, ID, Permission, Role } from 'node-appwrite';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
+import {
+  isAuthPasswordlessModeEnabled,
+  isEmailPasswordSignupEnabled,
+  isEmailPasswordSigninEnabled,
+  isPasskeySignupEnabled,
+  getAuthMethodPolicy,
+} from '@/lib/config/auth-methods';
 import { withSystemTransaction } from '@/lib/services/internal/transaction';
 
 function getAppwriteSecret(): string {
@@ -257,9 +264,18 @@ export async function getPasskeyRegisterFallbackSeedAction(credentialId: string)
 /**
  * Checks if a user exists by email and if they have a master password.
  */
-export async function checkEmailAuthStatusAction(email: string) {
+export type EmailAuthStatusResult =
+  | ({
+      success: true;
+      exists: boolean;
+      hasMasterpass: boolean;
+      userId?: string;
+    } & ReturnType<typeof getAuthMethodPolicy>)
+  | { success: false; error: string };
+
+export async function checkEmailAuthStatusAction(email: string): Promise<EmailAuthStatusResult> {
   try {
-    const isSelfHosted = isSelfHostedDeployment();
+    const authPolicy = getAuthMethodPolicy();
     const systemClient = createSystemClient();
     const db = systemClient.databases;
 
@@ -270,7 +286,7 @@ export async function checkEmailAuthStatusAction(email: string) {
     ]);
 
     if (usersList.total === 0) {
-      return { success: true, exists: false, hasMasterpass: false, isSelfHosted };
+      return { success: true, exists: false, hasMasterpass: false, ...authPolicy };
     }
 
     const userId = usersList.users[0].$id;
@@ -296,7 +312,7 @@ export async function checkEmailAuthStatusAction(email: string) {
       console.warn('Error checking keychain table for authPass:', e);
     }
 
-    return { success: true, exists: true, hasMasterpass, userId, isSelfHosted };
+    return { success: true, exists: true, hasMasterpass, userId, ...authPolicy };
   } catch (error: any) {
     console.error('Error checking email auth status action:', error);
     return { success: false, error: error.message };
@@ -312,8 +328,8 @@ export async function selfHostedSignUpAction(payload: {
   name?: string;
 }) {
   try {
-    if (!isSelfHostedDeployment()) {
-      return { success: false, error: 'Self-hosted email/password signup is disabled in cloud deployments.' };
+    if (!isEmailPasswordSignupEnabled()) {
+      return { success: false, error: 'Email/password signup is disabled on this instance.' };
     }
 
     const email = (payload.email || '').trim().toLowerCase();

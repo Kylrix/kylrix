@@ -44,10 +44,17 @@
 curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
 ```
 
-#### Option 2: Docker Direct Pull
+#### Option 2: Docker (pre-built image or local build)
 ```bash
+# Pre-built image (when the registry package is public)
 docker pull ghcr.io/kylrix/kylrix:latest
 docker run -d -p 5003:3000 --name kylrix-app ghcr.io/kylrix/kylrix:latest
+```
+
+If `docker pull` fails with `unauthorized`, build from source instead:
+```bash
+docker build -t kylrix:local .
+docker run -d -p 5003:3000 --name kylrix-app kylrix:local
 ```
 
 #### Option 3: Docker Compose
@@ -60,7 +67,7 @@ docker compose up -d
 ```bash
 git clone https://github.com/Kylrix/kylrix.git
 cd kylrix
-cp .env.example .env
+cp env.sample .env
 pnpm install
 pnpm dev
 ```

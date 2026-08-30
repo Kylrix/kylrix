@@ -1,5 +1,5 @@
 import { Client, Account, Databases, Messaging, Storage, Users, TablesDB, Teams, Functions } from 'node-appwrite';
-import { PROJECT_ID, ENDPOINT } from '../generated/appwrite/constants';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   experimental_taintUniqueValue,
   experimental_taintObjectReference} from 'react';
@@ -76,8 +76,8 @@ export function createSystemClient() {
   }
 
   client
-    .setEndpoint(ENDPOINT)
-    .setProject(PROJECT_ID)
+    .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
+    .setProject(APPWRITE_CONFIG.PROJECT_ID)
     .setKey(apiKey || '');
 
   cachedSystemClient = {
@@ -206,8 +206,8 @@ export function createAdminClient(actorEmail: string) {
   }
 
   const client = new Client()
-    .setEndpoint(ENDPOINT)
-    .setProject(PROJECT_ID)
+    .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
+    .setProject(APPWRITE_CONFIG.PROJECT_ID)
     .setKey(apiKey);
 
   const adminClient = {
@@ -249,8 +249,8 @@ export function createAdminTablesDB(actorEmail: string) {
   }
 
   const client = new Client()
-    .setEndpoint(ENDPOINT)
-    .setProject(PROJECT_ID)
+    .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
+    .setProject(APPWRITE_CONFIG.PROJECT_ID)
     .setKey(apiKey);
 
   const adminTablesDB = new TablesDB(client);

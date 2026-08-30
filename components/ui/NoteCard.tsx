@@ -37,6 +37,7 @@ import { ObjectCard } from '@/components/objects/ObjectCard';
 import { ObjectCardMeta } from '@/components/objects/ObjectCardMeta';
 import { noteToCard } from '@/lib/objects/adapters';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 interface NoteCardProps {
   note: Notes;
@@ -170,7 +171,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           const url = payload.metadata?.fileUrl || payload.src || payload.url;
           if (url) return url;
           if (payload.childId && payload.bucketId) {
-            return `https://api.kylrix.space/v1/storage/buckets/${payload.bucketId}/files/${payload.childId}/view?project=67fe9627001d97e37ef3`;
+            return `${APPWRITE_CONFIG.ENDPOINT}/storage/buckets/${payload.bucketId}/files/${payload.childId}/view?project=${APPWRITE_CONFIG.PROJECT_ID}`;
           }
         }
       } catch {}
@@ -184,7 +185,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           if (parsed?.mimeType?.startsWith('image/') || parsed?.name?.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i)) {
             if (parsed.fileUrl) return parsed.fileUrl;
             if (parsed.$id && parsed.bucketId) {
-              return `https://api.kylrix.space/v1/storage/buckets/${parsed.bucketId}/files/${parsed.$id}/view?project=67fe9627001d97e37ef3`;
+              return `${APPWRITE_CONFIG.ENDPOINT}/storage/buckets/${parsed.bucketId}/files/${parsed.$id}/view?project=${APPWRITE_CONFIG.PROJECT_ID}`;
             }
           }
         } catch {}
