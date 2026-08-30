@@ -2,6 +2,8 @@
 
 > **Single-database, offline-first, agentic workspace.**
 > Next.js 16 · React 19 · TS · Appwrite · Tailwind 4 · RxDB · WebRTC · Argon2id
+>
+> **North star:** decade-scale anti-fragility — adapters are swappable; end state is code on a VPS + bare metal only. See `.agents/skills/kylrix/SKILL.md`.
 
 ---
 

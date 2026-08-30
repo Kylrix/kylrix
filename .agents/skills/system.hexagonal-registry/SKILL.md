@@ -7,7 +7,7 @@ description: Deep dive into the dynamic Dependency Injection (DI) registry in Ky
 
 Under a traditional architecture, code imports database drivers and SDKs directly. This tight coupling makes it very difficult to switch database backends, write clean unit tests, or run local mock environments without spawning live databases.
 
-We decouple these dependencies using the **Dependency Injection (DI) Registry** in `lib/core/di/registry.ts`.
+We decouple these dependencies using the **Dependency Injection (DI) Registry** in `lib/core/di/registry.ts`. North-star rationale: **`kylrix`** skill (anti-fragility, bare-metal end state).
 
 ## 1. Clean decoupling with Ports and Adapters
 

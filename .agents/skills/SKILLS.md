@@ -4,20 +4,22 @@
 
 Hard policy also lives in repo-root `AGENTS.md` (Table/Row terms, single DB `passwordManagerDb`, no new in-app `app/api` routes, pnpm only, `/flows` + `/workspaces` routing).
 
-_Catalog covers 86 skills._
+_Catalog covers 87 skills._
 
 ## How to pick a skill
 
 1. Guardrails → `kylrix-guardrails`
-2. Routes / nav → `system.routing-canonical`, `system.navigation-policy`
-3. Dead code / LOC → `system.dead-code-knip`
-4. Domain work → matching prefix (`security.*`, `note.*`, `call.*`, `billing.*`, …)
-5. Product “why” → `why.*` (rationale only; still follow implementation skills for code)
+2. Strategy / vendor / long-term stack → `kylrix`
+3. Routes / nav → `system.routing-canonical`, `system.navigation-policy`
+4. Dead code / LOC → `system.dead-code-knip`
+5. Domain work → matching prefix (`security.*`, `note.*`, `call.*`, `billing.*`, …)
+6. Product “why” → `why.*` (rationale only; still follow implementation skills for code)
 
 ## Start here
 
 | Skill | Helps with |
 |-------|------------|
+| `kylrix` | **North star:** anti-fragility, vendor independence, decade survivability, bare-metal end state. Read before architecture, backend, AI provider, or dependency decisions. |
 | `kylrix-guardrails` | Enforces Kylrix safety and architecture rules in the single Next.js codebase. Use before editing app logic, data flows, shared services, or cross-app UX. |
 | `architecture.local-first` | Paint local first, live copy as SoT, soft remote merge, auth late-binding. |
 | `architecture.security-session` | Unlock as RAM session, prompt on gated ops, no general browser enclave, client seal + server escalate. |
@@ -27,6 +29,7 @@ _Catalog covers 86 skills._
 
 | Skill | Helps with |
 |-------|------------|
+| `kylrix` | North-star anti-fragility: vendor-independent ports, bare-metal end state, decade rewrite path. |
 | `architecture.local-first` | Product-wide local-first invariants (no store names). |
 | `architecture.security-session` | Unlock session and trust-boundary invariants (no key/table names). |
 | `system.navigation-policy` | Enforces same-tab navigation and canonical route helpers. Use when editing links, redirects, shell transitions, or chrome active states. |

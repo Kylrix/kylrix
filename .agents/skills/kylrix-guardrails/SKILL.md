@@ -8,6 +8,7 @@ disable-model-invocation: true
 
 ## Rules
 
+0. Strategic / vendor / decade-scale decisions: read **`kylrix`** skill first (anti-fragility north star).
 1. Read `AGENTS.md` and `.agents/skills/SKILLS.md` first. Then open only the specific skill you need.
 2. Canonical app tree is this repo (`kylrix/`). Prefer `lib/sdk`, `lib/services`, and Server Actions over new surfaces.
 3. **No new in-app HTTP APIs** (`app/api/*`, `route.ts`) for product UI flows — use Server Actions / in-process helpers. **Exception:** public developer surface `app/api/v1/*` (PAT-authenticated; see `system.pat-http-api`).
@@ -23,3 +24,4 @@ disable-model-invocation: true
 13. Keep changes surgical. Do not expand scope into unrelated refactors.
 14. Dead code: Knip for unused files/exports (`system.dead-code-knip`); do not enable unused-vars in default `pnpm lint`.
 15. Local-first invariants: `architecture.local-first`. Unlock/trust boundaries: `architecture.security-session`. Product UI: `openbricks`.
+16. Data access: new domain code uses `@/lib/data` (`systemTables`, `q.*`) — not direct `createSystemTablesDB()` or Appwrite SDK in services (see `kylrix`, `system.hexagonal-registry`).
