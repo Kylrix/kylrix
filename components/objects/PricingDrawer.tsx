@@ -125,7 +125,7 @@ export function PricingDrawer({
     }
   };
 
-  const proceedToBlockBee = useCallback(async (planId: string, checkoutMonths: number, countryCode: string) => {
+  const proceedToCheckout = useCallback(async (planId: string, checkoutMonths: number, countryCode: string) => {
     setCheckoutLoading(true);
     try {
       const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => undefined);
@@ -176,11 +176,11 @@ export function PricingDrawer({
       resumeAttemptedRef.current = true;
       if (intent.months) updateMonths(intent.months);
       if (intent.tier) setSelectedTier(intent.tier);
-      void proceedToBlockBee(intent.planId, intent.months, intent.countryCode || 'US');
+      void proceedToCheckout(intent.planId, intent.months, intent.countryCode || 'US');
     } catch {
       sessionStorage.removeItem(CHECKOUT_CACHE_KEY);
     }
-  }, [user, proceedToBlockBee, updateMonths]);
+  }, [user, proceedToCheckout, updateMonths]);
 
   const handleSubscribe = () => {
     const planId = months >= 12 ? `${selectedTier}_YEAR` : `${selectedTier}_MONTH`;
@@ -197,7 +197,7 @@ export function PricingDrawer({
       return;
     }
 
-    void proceedToBlockBee(planId, months, 'US');
+    void proceedToCheckout(planId, months, 'US');
   };
 
   const productName = getPublicProductName();

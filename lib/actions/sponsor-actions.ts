@@ -1,8 +1,9 @@
 'use server';
 
 import { getAuthenticatedUserForBillingAction } from '@/lib/services/internal/billing';
-import { resolveBlockBeeNotifyBaseUrl, resolveBlockBeeRedirectBaseUrl } from '@/lib/billing/blockbee-urls';
-import { registerBlockBeePendingCheckout } from '@/lib/services/internal/blockbee-pending-checkout';
+import { resolveBillingNotifyUrl, resolveBillingSuccessUrl } from '@/lib/billing/callback-urls';
+import { registerPendingCheckoutWithAdapter } from '@/lib/billing/pending-checkout';
+import { resolveCryptoBillingAdapter } from '@/lib/billing/providers/registry';
 import { SponsorshipService } from '@/lib/services/sponsorship-service';
 import { BadgeTier, resolveBadgeForAmount } from '@/lib/types/badges';
 
@@ -36,52 +37,42 @@ export async function createSponsorshipCheckoutAction(input: {
   const user = await getAuthenticatedUserForBillingAction({ jwt }).catch(() => null);
   const userId = user?.$id || 'guest_sponsor';
 
-  const blockbeeApiKey = process.env.BLOCKBEE_API;
-  if (!blockbeeApiKey) {
-    throw new Error('BlockBee API is not configured on this instance.');
+  const adapter = resolveCryptoBillingAdapter();
+  if (adapter.id === 'stub') {
+    throw new Error('Sponsorship checkout requires a configured crypto billing provider (e.g. blockbee).');
   }
 
   const resolvedTier = tier || resolveBadgeForAmount(amountUsd)?.tier || 'custom';
   const planId = `SPONSOR_${resolvedTier.toUpperCase()}`;
 
-  const notifyUrl = new URL(resolveBlockBeeNotifyBaseUrl());
+  const notifyUrl = new URL(resolveBillingNotifyUrl());
   notifyUrl.searchParams.set('order_id', userId);
   notifyUrl.searchParams.set('plan_id', planId);
   notifyUrl.searchParams.set('is_sponsorship', '1');
   notifyUrl.searchParams.set('tier', resolvedTier);
 
-  const redirectUrl = new URL(resolveBlockBeeRedirectBaseUrl());
+  const redirectUrl = new URL(resolveBillingSuccessUrl());
   redirectUrl.searchParams.set('order_id', userId);
   redirectUrl.searchParams.set('sponsor', '1');
 
-  const queryParams: Record<string, string> = {
-    apikey: blockbeeApiKey,
-    value: amountUsd.toString(),
-    currency: 'USD',
-    redirect_url: redirectUrl.toString(),
-    notify_url: notifyUrl.toString(),
-    post: '1',
-  };
-
   const emailToUse = sponsorEmail || user?.email;
-  if (emailToUse) {
-    queryParams.customer_email = emailToUse;
-  }
 
-  const queryString = new URLSearchParams(queryParams).toString();
-  const response = await fetch(`https://api.blockbee.io/checkout/request/?${queryString}`);
-  const data = await response.json();
+  const session = await adapter.createCheckoutSession({
+    planId,
+    userId,
+    countryCode: 'US',
+    months: 1,
+    email: emailToUse,
+    amountUsd,
+    notifyUrl: notifyUrl.toString(),
+    redirectUrl: redirectUrl.toString(),
+  });
 
-  if (data.status !== 'success') {
-    const errMsg = data.error || data.message || 'Failed to initialize BlockBee payment';
-    throw new Error(`BlockBee Error: ${errMsg}`);
-  }
+  const paymentId = session.id;
 
-  const paymentId = String(data.payment_id || '').trim();
-
-  // Register in pending checkout so IPN can verify & fulfill
-  await registerBlockBeePendingCheckout({
+  await registerPendingCheckoutWithAdapter({
     paymentId,
+    providerAdapterId: adapter.id,
     payerUserId: userId,
     planId,
     months: 1,
@@ -103,7 +94,7 @@ export async function createSponsorshipCheckoutAction(input: {
   return {
     success: true,
     paymentId,
-    url: data.payment_url,
+    url: session.url,
   };
 }
 

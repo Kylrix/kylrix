@@ -1,22 +1,20 @@
 'use server';
 
 import { ID, Permission, Query, Role } from 'node-appwrite';
-import { billingManager } from '@/lib/billing/provider-factory';
-import { CryptoPaymentProvider } from '@/lib/billing/providers/crypto-provider';
+import { billingManager, resolveProviderAdapterId } from '@/lib/billing/provider-factory';
 import { PaymentMethod } from '@/lib/billing/types';
-import { registerBlockBeePendingCheckout } from '@/lib/services/internal/blockbee-pending-checkout';
+import { registerPendingCheckoutWithAdapter } from '@/lib/billing/pending-checkout';
+import { isPaymentMethodEnabled } from '@/lib/billing/providers/registry';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { notifySubscriptionActivated } from '@/lib/billing/subscription-notifications';
-import { resolveBlockBeeRedirectBaseUrl } from '@/lib/billing/blockbee-urls';
+import { resolveBillingSuccessUrl } from '@/lib/billing/callback-urls';
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
 import { getAuthenticatedUserForBillingAction } from '@/lib/services/internal/billing';
 import { getVerifiedProEntitlementForUser } from '@/lib/services/internal/subscription-entitlement';
 import { isBillingCommerceEnabled } from '@/lib/entitlements';
 import { applyProSubscriptionWindowToPrefs } from '@/lib/services/internal/subscription-prefs-merge';
-
-billingManager.registerProvider(new CryptoPaymentProvider());
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 const SUBSCRIPTIONS_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
@@ -105,9 +103,15 @@ export async function createBillingCheckoutSessionAction(input: {
   if (!user) throw new Error('Authentication required');
   if (!planId || !method) throw new Error('Missing parameters');
 
+  const paymentMethod = String(method).toUpperCase() as PaymentMethod;
+  if (!isPaymentMethodEnabled(paymentMethod)) {
+    throw new Error(`Payment method ${paymentMethod} is not enabled on this deployment`);
+  }
+
   const resolvedCountryCode = await resolveSecureCountryCode(user.$id, countryCode);
 
-  const provider = billingManager.getProvider(method as PaymentMethod);
+  const provider = billingManager.getProvider(paymentMethod);
+  const providerAdapterId = provider.adapterId || resolveProviderAdapterId(paymentMethod);
   const normalizedMonths = parsePositiveInteger(months, 1);
   const giftDetails = giftRecipientId
     ? {
@@ -217,7 +221,7 @@ export async function createBillingCheckoutSessionAction(input: {
 
       return {
         id: subscription.$id,
-        url: `${resolveBlockBeeRedirectBaseUrl()}?success=true`,
+        url: `${resolveBillingSuccessUrl()}?success=true`,
         provider: PaymentMethod.COUPON,
         couponApplied: true};
     }
@@ -255,7 +259,7 @@ export async function createBillingCheckoutSessionAction(input: {
         amountCents: Math.round(expectedAmountUsd * 100),
         amountUsd: `$${expectedAmountUsd.toFixed(2)}`,
         status: 'pending',
-        provider: String(method).toLowerCase() === 'stripe' ? 'stripe' : 'blockbee',
+        provider: providerAdapterId,
         couponId: couponRow?.$id || null,
         metadata: JSON.stringify({
           giftRecipientId: giftRecipientId || null,
@@ -270,17 +274,18 @@ export async function createBillingCheckoutSessionAction(input: {
   }
 
   if (
-    String(method).toUpperCase() === PaymentMethod.CRYPTO &&
+    paymentMethod === PaymentMethod.CRYPTO &&
     session?.id &&
-    session.provider === PaymentMethod.CRYPTO
+    providerAdapterId !== 'stub'
   ) {
     const expectedAmountUsd =
       typeof adjustedAmountUsd === 'number' && Number.isFinite(adjustedAmountUsd)
         ? adjustedAmountUsd
         : calculateSubscriptionPrice(String(planId), resolvedCountryCode, 'CRYPTO', normalizedMonths);
 
-    await registerBlockBeePendingCheckout({
+    await registerPendingCheckoutWithAdapter({
       paymentId: session.id,
+      providerAdapterId,
       payerUserId: user.$id,
       planId: String(planId),
       months: normalizedMonths,
@@ -290,7 +295,7 @@ export async function createBillingCheckoutSessionAction(input: {
       giftRecipientName: giftRecipientName || undefined,
       giftMessage: giftMessage || undefined,
       couponId: couponRow?.$id || undefined}).catch((err: any) => {
-      console.error('[Billing] BlockBee pending checkout registry failed', err);
+      console.error(`[Billing:${providerAdapterId}] Pending checkout registry failed`, err);
     });
   }
 
