@@ -54,7 +54,12 @@ export class EngagementAnalyzer {
     if (saveRate < 0.02) return 'low_save_rate';
     return 'none';
   }
+  private static cachedPulse: { data: { globalAvgVelocity: number; medianInteractionRatio: number }; ts: number } | null = null;
+
   private static async getSystemPulse() {
+    if (this.cachedPulse && Date.now() - this.cachedPulse.ts < 1000 * 60 * 10) {
+      return this.cachedPulse.data;
+    }
     try {
         const docs = await databases.listRows(
             'chat',
@@ -62,9 +67,11 @@ export class EngagementAnalyzer {
             []
         );
 
-        return {
+        const data = {
           globalAvgVelocity: docs.rows.find((d: any) => d.metricKey === 'global_avg_velocity')?.metricValue || 2.5,
           medianInteractionRatio: docs.rows.find((d: any) => d.metricKey === 'median_interaction_ratio')?.metricValue || 0.4};
+        this.cachedPulse = { data, ts: Date.now() };
+        return data;
     } catch {
         return { globalAvgVelocity: 2.5, medianInteractionRatio: 0.4 };
     }

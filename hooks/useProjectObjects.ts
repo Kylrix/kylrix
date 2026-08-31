@@ -65,6 +65,7 @@ export function useProjectObjects(
           if (cachedList.length > 0 && mountedRef.current) {
             setRows(cachedList);
             setLoading(false);
+            return;
           } else {
             if (mountedRef.current) {
               setRows([]);

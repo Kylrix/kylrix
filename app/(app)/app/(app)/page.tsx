@@ -64,9 +64,9 @@ export default function IdeasPage() {
     }
 
     try {
-      const { Query, Client, TablesDB } = await import('appwrite');
-      const { account, databases, getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
+      const { account, getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
       const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
 
       const user = (await account.get().catch(() => null)) || getCurrentUserSnapshot();
       if (!user?.$id) {
@@ -79,25 +79,37 @@ export default function IdeasPage() {
 
       const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
       const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+      const cacheKey = `f_ideas_${user.$id}`;
 
-      const client = new Client()
-        .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-        .setProject(APPWRITE_CONFIG.PROJECT_ID);
-      const tablesDB = new TablesDB(client);
+      const rows = await LocalEngine.query<any[]>(
+        cacheKey,
+        async () => {
+          const { Query, Client, TablesDB } = await import('appwrite');
+          const { databases } = await import('@/lib/appwrite/client');
+          const client = new Client()
+            .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
+            .setProject(APPWRITE_CONFIG.PROJECT_ID);
+          const tablesDB = new TablesDB(client);
 
-      const res = await tablesDB.listRows(dbId, tableId, [
-        Query.equal('userId', user.$id),
-        Query.limit(50),
-        Query.orderDesc('$updatedAt')
-      ]).catch(async () => {
-        return await (databases as any).listDocuments(dbId, tableId, [
-          Query.equal('userId', user.$id),
-          Query.limit(50),
-          Query.orderDesc('$updatedAt')
-        ]);
-      });
-
-      const rows = Array.isArray(res?.rows) ? res.rows : Array.isArray(res?.documents) ? res.documents : [];
+          const res = await tablesDB.listRows(dbId, tableId, [
+            Query.equal('userId', user.$id),
+            Query.limit(50),
+            Query.orderDesc('$updatedAt')
+          ]).catch(async () => {
+            return await (databases as any).listDocuments(dbId, tableId, [
+              Query.equal('userId', user.$id),
+              Query.limit(50),
+              Query.orderDesc('$updatedAt')
+            ]);
+          });
+          return Array.isArray(res?.rows) ? res.rows : Array.isArray(res?.documents) ? res.documents : [];
+        },
+        {
+          ttl: 1000 * 60 * 5,
+          realtimeChannel: `databases.${dbId}.collections.${tableId}.documents`,
+          force: !hasLocal
+        }
+      );
       const validRows = rows.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true');
 
       // Read local pins state directly from ResourcePinContext storage key
@@ -253,7 +265,9 @@ export default function IdeasPage() {
         setLoading(false);
       }
 
-      void fetchNotesBarebones(hasLocalCopy);
+      if (!hasLocalCopy) {
+        void fetchNotesBarebones(false);
+      }
     })();
   }, []);
 

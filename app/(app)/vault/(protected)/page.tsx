@@ -184,51 +184,66 @@ function DashboardPageContent() {
     }
 
     try {
-      const { TablesDB, Client, Query } = await import('appwrite');
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
       const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
 
-      const client = new Client()
-        .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-        .setProject(APPWRITE_CONFIG.PROJECT_ID);
+      if (!cursorToUse) {
+        const rows = await LocalEngine.query<Credentials[]>(
+          cacheKey,
+          async () => {
+            const { TablesDB, Client, Query } = await import('appwrite');
+            const client = new Client()
+              .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
+              .setProject(APPWRITE_CONFIG.PROJECT_ID);
+            const tablesDB = new TablesDB(client);
+            const res = await tablesDB.listRows(
+              APPWRITE_CONFIG.DATABASES.VAULT,
+              APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+              [
+                Query.equal('userId', activeUserId),
+                Query.limit(50),
+                Query.orderDesc('$updatedAt')
+              ]
+            );
+            return (Array.isArray(res?.rows) ? res.rows : []) as unknown as Credentials[];
+          },
+          {
+            ttl: 1000 * 60 * 5,
+            realtimeChannel: `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.collections.${APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS}.documents`
+          }
+        );
 
-      const tablesDB = new TablesDB(client);
-      const queryList = [
-        Query.equal('userId', activeUserId),
-        Query.limit(50),
-        Query.orderDesc('$updatedAt')
-      ];
+        setAllCredentials(rows);
+        setHasMore(rows.length === 50);
+        setNextCursor(rows.length === 50 && rows.length ? (rows[rows.length - 1] as any).$id : null);
+      } else {
+        const { TablesDB, Client, Query } = await import('appwrite');
+        const client = new Client()
+          .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
+          .setProject(APPWRITE_CONFIG.PROJECT_ID);
+        const tablesDB = new TablesDB(client);
+        const res = await tablesDB.listRows(
+          APPWRITE_CONFIG.DATABASES.VAULT,
+          APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+          [
+            Query.equal('userId', activeUserId),
+            Query.limit(50),
+            Query.orderDesc('$updatedAt'),
+            Query.cursorAfter(cursorToUse)
+          ]
+        );
+        const rows = Array.isArray(res?.rows) ? res.rows : [];
+        const batchHasMore = rows.length === 50;
+        const newCursor = batchHasMore && rows.length ? rows[rows.length - 1].$id : null;
+        setHasMore(batchHasMore);
+        setNextCursor(newCursor);
 
-      if (cursorToUse) {
-        queryList.push(Query.cursorAfter(cursorToUse));
-      }
-
-      const res = await tablesDB.listRows(
-        APPWRITE_CONFIG.DATABASES.VAULT,
-        APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
-        queryList
-      );
-
-      const rows = Array.isArray(res?.rows) ? res.rows : [];
-      const batchHasMore = rows.length === 50;
-      const newCursor = batchHasMore && rows.length ? rows[rows.length - 1].$id : null;
-
-      setHasMore(batchHasMore);
-      setNextCursor(newCursor);
-
-      if (cursorToUse) {
         setAllCredentials((prev) => {
           const existingIds = new Set(prev.map((c) => c.$id));
           const freshUnique = (rows as unknown as Credentials[]).filter((r: any) => !existingIds.has(r.$id));
           const updated = [...prev, ...freshUnique] as Credentials[];
-          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
-            void LocalEngine.cacheSet(cacheKey, updated);
-          });
+          void LocalEngine.cacheSet(cacheKey, updated);
           return updated;
-        });
-      } else {
-        setAllCredentials(rows as any);
-        void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
-          void LocalEngine.cacheSet(cacheKey, rows);
         });
       }
     } catch (error: unknown) {

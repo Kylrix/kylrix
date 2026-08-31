@@ -49,6 +49,21 @@ function pickBestSubscriptionRow(rows: SubscriptionRow[]): SubscriptionRow | nul
   })[0] || null;
 }
 
+const entitlementCache = new Map<string, {
+  data: {
+    active: boolean;
+    expiresAt: string | null;
+    source: SubscriptionEntitlementSource;
+    uiTier: BillingUiTier;
+  };
+  ts: number;
+}>();
+
+export function invalidateEntitlementCache(userId?: string) {
+  if (userId) entitlementCache.delete(userId);
+  else entitlementCache.clear();
+}
+
 /**
  * Trusted billing entitlement — merges subscription ledger + synced prefs and
  * always picks the highest active tier (TEAMS wins over PRO).
@@ -66,6 +81,11 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
       expiresAt: open.expiresAt,
       source: 'prefs_lifetime',
       uiTier: open.uiTier};
+  }
+
+  const cached = entitlementCache.get(userId);
+  if (cached && Date.now() - cached.ts < 1000 * 60 * 5) {
+    return cached.data;
   }
 
   const { databases, users } = createSystemClient();
@@ -130,11 +150,13 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
 
   const uiTier = maxBillingUiTier(ledgerTier, prefsTier);
   if (uiTier === 'FREE') {
-    return {
+    const res = {
       active: false,
       expiresAt: null,
-      source: 'none',
-      uiTier: 'FREE'};
+      source: 'none' as SubscriptionEntitlementSource,
+      uiTier: 'FREE' as BillingUiTier};
+    entitlementCache.set(userId, { data: res, ts: Date.now() });
+    return res;
   }
 
   const expiresAt = uiTier === prefsTier && prefsExpiresAt
@@ -145,11 +167,14 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
     ? prefsSource
     : ledgerSource;
 
-  return {
+  const result = {
     active: true,
     expiresAt,
-    source: source === 'none' ? 'prefs_sync' : source,
+    source: source === 'none' ? ('prefs_sync' as SubscriptionEntitlementSource) : source,
     uiTier};
+
+  entitlementCache.set(userId, { data: result, ts: Date.now() });
+  return result;
 }
 
 function tierRank(tier: BillingUiTier): number {

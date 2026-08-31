@@ -506,40 +506,34 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     let isCancelled = false;
     const cacheKey = `vault_totp_${activeUserId}`;
 
-    // Instant local copy read on mount
     (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const cached = await LocalEngine.cacheGet<any[]>(cacheKey);
-        if (cached && Array.isArray(cached) && cached.length > 0 && !isCancelled) {
-          setTotpCodes(cached as any);
-          setLoading(false);
-        }
-      } catch {}
-    })();
-
-    (async () => {
-      try {
-        const { TablesDB, Client, Query } = await import('appwrite');
         const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
 
-        const client = new Client()
-          .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-          .setProject(APPWRITE_CONFIG.PROJECT_ID);
-
-        const tablesDB = new TablesDB(client);
-        const res = await tablesDB.listRows(
-          APPWRITE_CONFIG.DATABASES.VAULT,
-          APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
-          [Query.equal('userId', activeUserId)]
+        const rows = await LocalEngine.query<any[]>(
+          cacheKey,
+          async () => {
+            const { TablesDB, Client, Query } = await import('appwrite');
+            const client = new Client()
+              .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
+              .setProject(APPWRITE_CONFIG.PROJECT_ID);
+            const tablesDB = new TablesDB(client);
+            const res = await tablesDB.listRows(
+              APPWRITE_CONFIG.DATABASES.VAULT,
+              APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+              [Query.equal('userId', activeUserId)]
+            );
+            return Array.isArray(res?.rows) ? res.rows : [];
+          },
+          {
+            ttl: 1000 * 60 * 5,
+            realtimeChannel: `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.collections.${APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS}.documents`
+          }
         );
 
-        if (!isCancelled && res?.rows) {
-          console.log(`[TOTP] Direct Client SDK listRows returned ${res.rows.length} TOTP codes for user: ${activeUserId}`);
-          setTotpCodes(res.rows as any);
-          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
-            void LocalEngine.cacheSet(cacheKey, res.rows);
-          });
+        if (!isCancelled) {
+          setTotpCodes(rows as any);
         }
       } catch (err: any) {
         console.error('[TOTP] Failed to load direct TOTP secrets:', err);

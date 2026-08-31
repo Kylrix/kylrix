@@ -61,6 +61,8 @@ export function useSharedWorkspaceEntities<T = any>(
           if (Array.isArray(cached) && cached.length > 0 && mountedRef.current) {
             setRows(cached);
             setLoading(false);
+            inFlightRef.current = false;
+            return;
           } else {
             if (mountedRef.current) {
               setRows([]);

@@ -408,11 +408,10 @@ export default function FlowsPage() {
 
   useEffect(() => {
     void refreshDrafts();
-    const iv = setInterval(() => { void refreshDrafts(); }, 1500);
     const onVis = () => { if (document.visibilityState === 'visible') void refreshDrafts(); };
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', onVis);
-    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis); };
+    return () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis); };
   }, [refreshDrafts]);
 
   const handleResumeDraft = useCallback(async (draft: import('@/lib/services/flow-drafts').FlowDraft) => {

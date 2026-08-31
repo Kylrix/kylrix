@@ -7322,6 +7322,17 @@
                         "ASC",
                         "ASC"
                     ]
+                },
+                {
+                    "key": "idx_po_entityId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "entityId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
                 }
             ]
         },

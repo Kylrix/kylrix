@@ -142,6 +142,11 @@ export enum ProjectsStatus {
     ARCHIVED = "archived"
 }
 
+export enum ProjectsKind {
+    WORKSPACE = "workspace",
+    PROJECT = "project"
+}
+
 export enum CallSignalsType {
     OFFER = "offer",
     ANSWER = "answer",
@@ -907,8 +912,6 @@ export type Projects = Models.Row & {
     visibility: ProjectsVisibility;
     status: ProjectsStatus;
     metadata: string | null;
-    kind?: 'workspace' | 'project' | null;
-    parentProjectId?: string | null;
     createdAt: string | null;
     updatedAt: string | null;
     isPublic: boolean | null;
@@ -918,6 +921,8 @@ export type Projects = Models.Row & {
     primaryThreadId: string | null;
     isAgentic: boolean;
     dek: string | null;
+    parentProjectId: string | null;
+    kind: ProjectsKind;
 }
 
 export type ProjectObjects = Models.Row & {

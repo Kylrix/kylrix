@@ -13,7 +13,6 @@ import {
   Key, 
   Plus, 
   Trash2, 
-  ShieldCheck, 
   ArrowLeft,
   ChevronRight
 } from 'lucide-react';

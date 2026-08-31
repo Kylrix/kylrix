@@ -35,6 +35,11 @@ function scheduleBatchFlush() {
   }, 2000);
 }
 
+/** Inflight query deduplication registry to coalesce simultaneous calls */
+const inflightQueries = new Map<string, Promise<any>>();
+/** Cooldown registry for background revalidations (cooldown: 2 minutes) */
+const backgroundRevalidationCooldowns = new Map<string, number>();
+
 export const LocalEngine = {
   /** Retrieve generic cached payload by key */
   async cacheGet<T = any>(id: string, maxAgeMs?: number): Promise<T | null> {
@@ -200,30 +205,57 @@ export const LocalEngine = {
     } catch { return () => {}; }
   },
 
-  /** Unified query: RxDB first, background Realtime + fetch if stale — UI never calls Appwrite directly */
-  async query<T>(cacheKey: string, fetcher: (jwt?: string) => Promise<T>, opts?: { ttl?: number; realtimeChannel?: string }): Promise<T> {
-    const cached = await this.cacheGet<T>(cacheKey, opts?.ttl);
+  /** Unified query: RxDB first, coalesced network fetch with revalidation throttle — UI never calls Appwrite directly */
+  async query<T>(cacheKey: string, fetcher: (jwt?: string) => Promise<T>, opts?: { ttl?: number; realtimeChannel?: string; force?: boolean }): Promise<T> {
+    const ttl = opts?.ttl ?? 1000 * 60 * 5; // 5 min default TTL
+    const cached = opts?.force ? null : await this.cacheGet<T>(cacheKey, ttl);
+
     if (cached) {
       if (opts?.realtimeChannel) void this.subscribeRealtime(opts.realtimeChannel);
-      // background refresh — failsafe: never wipe populated cache with empty fetch (workspace-introduced vault empty bug)
-      void (async () => {
-        try {
-          const jwt = await getFreshJWT();
-          const fresh = await fetcher(jwt);
-          if (JSON.stringify(fresh) === JSON.stringify(cached)) return;
-          const isFreshEmpty = Array.isArray(fresh) ? (fresh as any).length === 0 : (fresh as any)?.rows ? (fresh as any).rows.length === 0 : !fresh;
-          const isCachedPopulated = Array.isArray(cached) ? (cached as any).length > 0 : (cached as any)?.rows ? (cached as any).rows.length > 0 : !!cached;
-          if (isCachedPopulated && isFreshEmpty) return;
-          await this.cacheSet(cacheKey, fresh as any);
-        } catch {}
-      })();
+
+      // Throttled background revalidation: at most once every 3 minutes per cacheKey
+      const lastReval = backgroundRevalidationCooldowns.get(cacheKey) || 0;
+      const now = Date.now();
+      if (now - lastReval > 1000 * 60 * 3 && !inflightQueries.has(cacheKey)) {
+        backgroundRevalidationCooldowns.set(cacheKey, now);
+        const revalPromise = (async () => {
+          try {
+            const jwt = await getFreshJWT();
+            const fresh = await fetcher(jwt);
+            if (JSON.stringify(fresh) === JSON.stringify(cached)) return;
+            const isFreshEmpty = Array.isArray(fresh) ? (fresh as any).length === 0 : (fresh as any)?.rows ? (fresh as any).rows.length === 0 : !fresh;
+            const isCachedPopulated = Array.isArray(cached) ? (cached as any).length > 0 : (cached as any)?.rows ? (cached as any).rows.length > 0 : !!cached;
+            if (isCachedPopulated && isFreshEmpty) return;
+            await this.cacheSet(cacheKey, fresh as any);
+          } catch {} finally {
+            inflightQueries.delete(cacheKey);
+          }
+        })();
+        inflightQueries.set(cacheKey, revalPromise);
+      }
       return cached;
     }
-    const jwt = await getFreshJWT();
-    const fresh = await fetcher(jwt);
-    await this.cacheSet(cacheKey, fresh as any);
-    if (opts?.realtimeChannel) void this.subscribeRealtime(opts.realtimeChannel);
-    return fresh;
+
+    // Cache miss: coalesce concurrent inflight queries
+    if (inflightQueries.has(cacheKey)) {
+      return inflightQueries.get(cacheKey)!;
+    }
+
+    const queryPromise = (async () => {
+      try {
+        const jwt = await getFreshJWT();
+        const fresh = await fetcher(jwt);
+        await this.cacheSet(cacheKey, fresh as any);
+        backgroundRevalidationCooldowns.set(cacheKey, Date.now());
+        if (opts?.realtimeChannel) void this.subscribeRealtime(opts.realtimeChannel);
+        return fresh;
+      } finally {
+        inflightQueries.delete(cacheKey);
+      }
+    })();
+
+    inflightQueries.set(cacheKey, queryPromise);
+    return queryPromise;
   },
 
   /** Unified mutate: local optimistic + tiered sync — UI never calls secure-ops directly */
@@ -238,21 +270,45 @@ export const LocalEngine = {
   async fetch<T extends Models.Row>(kind: string, queries: string[] = [], opts?: { force?: boolean; cacheKey?: string; ttl?: number }): Promise<{ total: number; rows: T[] }> {
     const { unifiedRead } = await import('./unified-object-service');
     const cacheKey = opts?.cacheKey || `local:${kind}:${JSON.stringify(queries)}`;
+    const ttl = opts?.ttl ?? 1000 * 60 * 5;
+
     if (!opts?.force) {
-      const cached = await this.cacheGet<{ total: number; rows: T[] }>(cacheKey, opts?.ttl);
+      const cached = await this.cacheGet<{ total: number; rows: T[] }>(cacheKey, ttl);
       if (cached && Array.isArray((cached as any).rows) && (cached as any).rows.length) {
-        // background refresh — failsafe: don't overwrite populated cache with empty (vault starter bug)
-        void unifiedRead(kind, queries).then(fresh => {
-          const isFreshEmpty = (fresh as any)?.rows ? (fresh as any).rows.length === 0 : !fresh;
-          if (isFreshEmpty) return;
-          return this.cacheSet(cacheKey, fresh);
-        }).catch(()=>{});
+        const lastReval = backgroundRevalidationCooldowns.get(cacheKey) || 0;
+        const now = Date.now();
+        if (now - lastReval > 1000 * 60 * 3 && !inflightQueries.has(cacheKey)) {
+          backgroundRevalidationCooldowns.set(cacheKey, now);
+          const revalPromise = unifiedRead<T>(kind, queries).then(fresh => {
+            const isFreshEmpty = (fresh as any)?.rows ? (fresh as any).rows.length === 0 : !fresh;
+            if (isFreshEmpty) return;
+            return this.cacheSet(cacheKey, fresh);
+          }).catch(() => {}).finally(() => {
+            inflightQueries.delete(cacheKey);
+          });
+          inflightQueries.set(cacheKey, revalPromise);
+        }
         return cached;
       }
     }
-    const fresh = await unifiedRead<T>(kind, queries);
-    await this.cacheSet(cacheKey, fresh as any);
-    return fresh;
+
+    if (inflightQueries.has(cacheKey)) {
+      return inflightQueries.get(cacheKey)!;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        const fresh = await unifiedRead<T>(kind, queries);
+        await this.cacheSet(cacheKey, fresh as any);
+        backgroundRevalidationCooldowns.set(cacheKey, Date.now());
+        return fresh;
+      } finally {
+        inflightQueries.delete(cacheKey);
+      }
+    })();
+
+    inflightQueries.set(cacheKey, fetchPromise);
+    return fetchPromise;
   },
 
   async get<T extends Models.Row>(kind: string, id: string, opts?: { force?: boolean }): Promise<T | null> {

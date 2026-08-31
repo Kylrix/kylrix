@@ -135,8 +135,22 @@ function toPublic(row: PatRow): PatPublic {
   };
 }
 
+const verifiedPatCache = new Map<string, { data: { pat: PatRow; scopes: PatScope[]; userId: string }; ts: number }>();
+
 export const PatService = {
   toPublic,
+
+  invalidateVerificationCache(patId?: string) {
+    if (patId) {
+      for (const [key, val] of verifiedPatCache.entries()) {
+        if (val.data.pat.$id === patId) {
+          verifiedPatCache.delete(key);
+        }
+      }
+    } else {
+      verifiedPatCache.clear();
+    }
+  },
 
   async create(params: {
     userId: string;
@@ -269,6 +283,7 @@ export const PatService = {
       rowId: params.patId,
       data: { status: 'revoked', updatedAt: new Date().toISOString() },
     });
+    this.invalidateVerificationCache(params.patId);
     return { success: true };
   },
 
@@ -326,6 +341,7 @@ export const PatService = {
       },
     })) as unknown as PatRow;
 
+    this.invalidateVerificationCache(params.patId);
     return toPublic(updated);
   },
 
@@ -348,6 +364,14 @@ export const PatService = {
     const parsed = parsePatToken(rawToken);
     if (!parsed) return null;
 
+    const hash = hashToken(parsed.token);
+
+    // 1. Check in-memory verification cache (60s TTL)
+    const cached = verifiedPatCache.get(hash);
+    if (cached && Date.now() - cached.ts < 1000 * 60) {
+      return cached.data;
+    }
+
     const tables = createSystemTablesDB();
     const res = await tables.listRows({
       databaseId: DB,
@@ -361,27 +385,33 @@ export const PatService = {
     const row = res.rows[0] as unknown as PatRow | undefined;
     if (!row) return null;
 
-    const hash = hashToken(parsed.token);
     if (hash !== row.tokenHash) return null;
 
     if (row.expiresAt && new Date(row.expiresAt).getTime() < Date.now()) {
       return null;
     }
 
-    // Fire-and-forget lastUsedAt (best effort)
-    void tables
-      .updateRow({
-        databaseId: DB,
-        tableId: TABLE,
-        rowId: row.$id,
-        data: { lastUsedAt: new Date().toISOString() },
-      })
-      .catch(() => null);
+    // Fire-and-forget lastUsedAt (best effort, throttled)
+    const lastUsed = row.lastUsedAt ? new Date(row.lastUsedAt).getTime() : 0;
+    if (Date.now() - lastUsed > 1000 * 60 * 5) {
+      void tables
+        .updateRow({
+          databaseId: DB,
+          tableId: TABLE,
+          rowId: row.$id,
+          data: { lastUsedAt: new Date().toISOString() },
+        })
+        .catch(() => null);
+    }
 
-    return {
+    const result = {
       pat: row,
       scopes: normalizeScopes(row.scopes),
       userId: row.userId,
     };
+
+    verifiedPatCache.set(hash, { data: result, ts: Date.now() });
+
+    return result;
   },
 };
