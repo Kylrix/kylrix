@@ -23,6 +23,16 @@
   <a href="https://smithery.ai/servers/kylrix/kylrix"><img src="https://smithery.ai/badge/kylrix/kylrix" alt="smithery badge"></a>
 </p>
 
+## Contents
+
+- [Sponsor](#sponsor)
+- [Self-host](#self-host)
+- [Develop](#develop)
+- [Humans & agents](#humans--agents)
+- [Integrations](#integrations)
+- [What ships in the box](#what-ships-in-the-box)
+- [Feedback & security](#feedback--security)
+
 ---
 
 ## Sponsor
