@@ -23,6 +23,13 @@
   <a href="https://smithery.ai/servers/kylrix/kylrix"><img src="https://smithery.ai/badge/kylrix/kylrix" alt="smithery badge"></a>
 </p>
 
+## TL;DR
+
+- **Kylrix** — open-source, local-first workspace for notes, goals, workspaces, chat, vault, and agents.
+- **Use the cloud** — [kylrix.space](https://www.kylrix.space)
+- **Self-host** — `curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash` → app on `:5003`
+- **Wire an agent** — mint a [PAT](https://www.kylrix.space/settings?tab=developers) (your workspace) or [agent key](https://www.kylrix.space/settings?tab=agents) (its own workspace), then `npx skills add kylrix/kylrix --skill mcp --skill api --skill agents`
+
 ## Contents
 
 - [Sponsor](#sponsor)
