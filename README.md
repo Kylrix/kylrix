@@ -140,9 +140,12 @@ Wiring reference: [docs/integrations.md](docs/integrations.md)
 | Area | What |
 |---|---|
 | **Notes & ideas** | Linked notes, tags, sharing |
-| **Flow** | Goals, tasks, events, forms |
+| **Goals** | Goal tracking and focus sessions |
+| **Events** | Calendar and scheduling |
+| **Forms** | Build forms and collect responses |
+| **Flows** | Installable workflow plugins ([kylrix.space/flows](https://www.kylrix.space/flows)) |
 | **Workspaces** | Projects, collaborators, permissions |
-| **Connect** | DMs, threads, calls |
+| **Connect** | Chats, moments, group hangouts |
 | **Vault** | Client-encrypted credentials (optional) |
 | **Agents** | In-workspace sessions with tool parity to users |
 
