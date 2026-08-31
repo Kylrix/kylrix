@@ -22,13 +22,27 @@ Self-hosted? See [SELFHOST.md](../SELFHOST.md).
 
 ## Quick Start
 
-### Claude Code
+### Smithery (recommended)
+
+Mint a PAT at [Settings → Developers](https://www.kylrix.space/settings?tab=developers) (`kyl_pat_…`), then:
+
+```bash
+npx -y @smithery/cli install kylrix/kylrix --client cursor
+npx -y @smithery/cli install kylrix/kylrix --client claude
+npx -y @smithery/cli install kylrix/kylrix --client windsurf
+npx -y @smithery/cli install kylrix/kylrix --client codex
+npx -y @smithery/cli install kylrix/kylrix --client antigravity
+```
+
+Smithery wires the official endpoint. Add your PAT when prompted.
+
+### Claude Code (manual)
 ```bash
 claude mcp add --transport http kylrix https://www.kylrix.space/api/v1/mcp \
   --header "Authorization: Bearer <YOUR_PAT_TOKEN>"
 ```
 
-### Cursor / Claude Desktop
+### Cursor / Claude Desktop (manual)
 Copy [`.cursor/mcp.json.example`](../.cursor/mcp.json.example) → `.cursor/mcp.json` (do **not** commit tokens).
 
 ```json
