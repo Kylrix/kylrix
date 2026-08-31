@@ -30,16 +30,6 @@
 - **Self-host** — `curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash` → app on `:5003`
 - **Wire an agent** — mint a [PAT](https://www.kylrix.space/settings?tab=developers) (your workspace) or [agent key](https://www.kylrix.space/settings?tab=agents) (its own workspace), then `npx skills add kylrix/kylrix --skill mcp --skill api --skill agents`
 
-## Contents
-
-- [Sponsor](#sponsor)
-- [Self-host](#self-host)
-- [Develop](#develop)
-- [Humans & agents](#humans--agents)
-- [Integrations](#integrations)
-- [What ships in the box](#what-ships-in-the-box)
-- [Feedback & security](#feedback--security)
-
 ---
 
 ## Sponsor
