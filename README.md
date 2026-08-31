@@ -155,4 +155,4 @@ Local copy is the default source of truth; sync confirms in the background.
 
 ## Feedback & security
 
-[Unified feedback & security portal](https://www.kylrix.space/form/6a2a653f002b0f296958) · architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
+[Bug report form](https://www.kylrix.space/form/6a2a653f002b0f296958) · [ARCHITECTURE.md](ARCHITECTURE.md)
