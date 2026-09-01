@@ -23,7 +23,7 @@ import {
   Sparkles,
   Layers,
   Activity,
-  Zap,
+  RotateCw,
 } from 'lucide-react';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { isTopbarScrollAtTop } from '@/sdk/topbar';
@@ -32,6 +32,8 @@ import { account } from '@/lib/appwrite/client';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useLocalContext } from '@/lib/context-engine';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useNostrFeed } from '@/hooks/useNostrFeed';
+import { SocialService } from '@/lib/services/social';
 
 export type NotificationCategory = 'all' | 'replies' | 'likes' | 'follows' | 'system';
 
@@ -55,172 +57,6 @@ export interface KylrixNotification {
   source?: 'nostr' | 'kylrix' | 'system';
 }
 
-// Rich baseline ecosystem notifications across categories
-function getEcosystemBaselineNotifications(userId?: string): KylrixNotification[] {
-  const now = Date.now();
-  return [
-    // ── Replies (Nostr & Kylrix Moments) ─────────────────────────
-    {
-      id: 'notif_rep_1',
-      category: 'replies',
-      title: 'Elena replied to your moment',
-      message: '“The tactile OpenBricks 4.0 surfaces look extremely crisp. Great work on the dark wells!”',
-      time: '5m ago',
-      timestamp: now - 5 * 60 * 1000,
-      read: false,
-      accent: '#6366F1',
-      actionHref: '/connect',
-      actor: {
-        name: 'Elena Rostova',
-        username: 'elena',
-        isNostr: true,
-        npub: 'npub1elena899x9...',
-      },
-      source: 'nostr',
-    },
-    {
-      id: 'notif_rep_2',
-      category: 'replies',
-      title: 'Discussion response on "Shipping High-Leverage Systems"',
-      message: '“How are you handling the local-first sync conflicts in RxDB?”',
-      time: '35m ago',
-      timestamp: now - 35 * 60 * 1000,
-      read: false,
-      accent: '#6366F1',
-      actionHref: '/connect',
-      actor: {
-        name: 'Marcus Vance',
-        username: 'marcus_v',
-      },
-      source: 'kylrix',
-    },
-    {
-      id: 'notif_rep_3',
-      category: 'replies',
-      title: 'Thread response in "Decentralized Architecture"',
-      message: '“Merged the database read optimization patch. Performance score is at 100%.”',
-      time: '1h ago',
-      timestamp: now - 70 * 60 * 1000,
-      read: true,
-      accent: '#6366F1',
-      actionHref: '/app',
-      actor: {
-        name: 'Agent Hermes',
-        username: 'agent_hermes',
-      },
-      source: 'kylrix',
-    },
-
-    // ── Likes (Moments & Notes) ──────────────────────────────────
-    {
-      id: 'notif_like_1',
-      category: 'likes',
-      title: 'Reactions on your moment',
-      message: 'Satoshi Guild and 4 others reacted with 🔥 to your update.',
-      time: '18m ago',
-      timestamp: now - 18 * 60 * 1000,
-      read: false,
-      accent: '#EC4899',
-      actionHref: '/connect',
-      actor: {
-        name: 'Satoshi Guild',
-        username: 'satoshiguild',
-        isNostr: true,
-      },
-      source: 'nostr',
-    },
-    {
-      id: 'notif_like_2',
-      category: 'likes',
-      title: 'Liked your note "Encrypted Identity & Vault Proofs"',
-      message: 'Ayrton and 3 collaborators liked your note.',
-      time: '2h ago',
-      timestamp: now - 140 * 60 * 1000,
-      read: true,
-      accent: '#EC4899',
-      actionHref: '/app',
-      actor: {
-        name: 'Ayrton Senna',
-        username: 'ayrton',
-      },
-      source: 'kylrix',
-    },
-
-    // ── Follows & Social ─────────────────────────────────────────
-    {
-      id: 'notif_fol_1',
-      category: 'follows',
-      title: 'New follower on Nostr & Connect',
-      message: 'builder_0x followed your profile and subscribed to your feed.',
-      time: '50m ago',
-      timestamp: now - 50 * 60 * 1000,
-      read: false,
-      accent: '#8B5CF6',
-      actionHref: '/connect',
-      actor: {
-        name: '0xBuilder',
-        username: 'builder_0x',
-        isNostr: true,
-      },
-      source: 'nostr',
-    },
-    {
-      id: 'notif_fol_2',
-      category: 'follows',
-      title: 'Workspace collaborator connected',
-      message: 'Sarah Blake accepted your invite to workspace "Ecosystem Alpha".',
-      time: '3h ago',
-      timestamp: now - 190 * 60 * 1000,
-      read: true,
-      accent: '#8B5CF6',
-      actionHref: '/workspaces',
-      actor: {
-        name: 'Sarah Blake',
-        username: 'sarah_b',
-      },
-      source: 'kylrix',
-    },
-
-    // ── System & Workspace ───────────────────────────────────────
-    {
-      id: 'notif_sys_1',
-      category: 'system',
-      title: 'Workspace Synchronized',
-      message: 'Deterministic sync engine verified local copy integrity in 0ms.',
-      time: 'Just now',
-      timestamp: now - 2 * 60 * 1000,
-      read: false,
-      accent: '#10B981',
-      actionHref: '/app',
-      source: 'system',
-    },
-    {
-      id: 'notif_sys_2',
-      category: 'system',
-      title: 'WebMCP Browser Standard Active',
-      message: '16 workspace tools exposed to browser agents via navigator.modelContext.',
-      time: '1h ago',
-      timestamp: now - 60 * 60 * 1000,
-      read: false,
-      accent: '#10B981',
-      actionHref: '/settings?tab=developers',
-      source: 'system',
-    },
-    {
-      id: 'notif_sys_3',
-      category: 'system',
-      title: 'Secure Keychain Audited',
-      message: 'Local master credentials checked. Cryptographic integrity score 100%.',
-      time: '1d ago',
-      timestamp: now - 24 * 3600 * 1000,
-      read: true,
-      accent: '#F59E0B',
-      actionHref: '/vault',
-      source: 'system',
-    },
-  ];
-}
-
 interface NotificationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -239,19 +75,19 @@ export function NotificationDrawer({
   const router = useRouter();
   const { user } = useAuth();
   const { suggestions, dismissSuggestion } = useLocalContext();
+  const { feed: nostrFeed } = useNostrFeed();
   const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
   const [notifications, setNotifications] = useState<KylrixNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const isHydratedRef = useRef(false);
+  const [loading, setLoading] = useState(false);
 
-  // 1. Instant 0ms Warm Hydration from LocalEngine on Mount
+  const userId = user?.$id || 'guest';
+  const cacheKey = `kylrix_notifs_${userId}`;
+
+  // 1. Load persisted read/dismissed state from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const userId = user?.$id || 'guest';
-    const cacheKey = `kylrix_notifs_${userId}`;
-
-    // Read saved read/dismissed state
     try {
       const savedRead = window.localStorage.getItem(`kylrix_notif_read_${userId}`);
       if (savedRead) setReadIds(new Set(JSON.parse(savedRead)));
@@ -259,37 +95,82 @@ export function NotificationDrawer({
       const savedDismissed = window.localStorage.getItem(`kylrix_notif_dismissed_${userId}`);
       if (savedDismissed) setDismissedIds(new Set(JSON.parse(savedDismissed)));
     } catch {}
+  }, [userId]);
 
-    // Load from LocalEngine first (0ms)
+  // 2. Hydrate cached notifications from LocalEngine on mount (0ms)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     void (async () => {
       const cached = await LocalEngine.cacheGet<KylrixNotification[]>(cacheKey, 600_000).catch(() => null);
-      if (cached && cached.length > 0) {
+      if (Array.isArray(cached) && cached.length > 0) {
         setNotifications(cached);
-        isHydratedRef.current = true;
-      } else {
-        const fallback = getEcosystemBaselineNotifications(user?.$id);
-        setNotifications(fallback);
-        await LocalEngine.cacheSet(cacheKey, fallback).catch(() => {});
-        isHydratedRef.current = true;
       }
     })();
-  }, [user?.$id]);
+  }, [cacheKey]);
 
-  // 2. Dynamic Activity Harvester (Aggregates real moments, account logs, suggestions)
+  // 3. Harvest 100% REAL dynamic activity (Account sessions, moments, comments, Nostr, suggestions)
   const harvestRealActivity = useCallback(async () => {
     if (typeof window === 'undefined') return;
-    const userId = user?.$id || 'guest';
-    const cacheKey = `kylrix_notifs_${userId}`;
+    setLoading(true);
 
-    const items: KylrixNotification[] = [...getEcosystemBaselineNotifications(userId)];
-    const existingIds = new Set(items.map((i) => i.id));
+    try {
+      const items: KylrixNotification[] = [];
+      const seenIds = new Set<string>();
 
-    // A. Query real account session/security logs
-    if (user?.$id) {
+      // A. Real account security and session logs
+      if (user?.$id) {
+        try {
+          const logsRes = await account.listLogs().catch(() => ({ logs: [] }));
+          for (const log of logsRes.logs || []) {
+            const ts = new Date(log.time).getTime();
+            const diffMin = Math.max(1, Math.round((Date.now() - ts) / 60000));
+            const timeStr =
+              diffMin < 60
+                ? `${diffMin}m ago`
+                : diffMin < 1440
+                ? `${Math.floor(diffMin / 60)}h ago`
+                : `${Math.floor(diffMin / 1440)}d ago`;
+
+            let title = 'Account Session Active';
+            let message = `Signed in from ${log.countryName || 'Local Session'} via ${log.clientName || 'Web Browser'}.`;
+            let accent = '#10B981';
+
+            if (log.event?.includes('password') || log.event?.includes('mfa')) {
+              title = 'Security Credential Updated';
+              message = `Security settings updated for user from IP ${log.ip}.`;
+              accent = '#F59E0B';
+            }
+
+            const id = `log_${log.$id || ts}_${log.event}`;
+            if (!seenIds.has(id)) {
+              seenIds.add(id);
+              items.push({
+                id,
+                category: 'system',
+                title,
+                message,
+                time: timeStr,
+                timestamp: ts,
+                read: false,
+                accent,
+                actionHref: '/settings',
+                source: 'system',
+              });
+            }
+          }
+        } catch {}
+      }
+
+      // B. Real moments discussions and reactions from LocalEngine & SocialService
       try {
-        const logsRes = await account.listLogs().catch(() => ({ logs: [] }));
-        for (const log of logsRes.logs || []) {
-          const ts = new Date(log.time).getTime();
+        let moments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
+        if (!moments.length && user?.$id) {
+          const liveRes = await SocialService.getFeed(user.$id).catch(() => []);
+          moments = Array.isArray(liveRes) ? liveRes : (liveRes as any)?.rows || [];
+        }
+
+        for (const m of moments.slice(0, 20)) {
+          const ts = new Date(m.$createdAt || m.createdAt || Date.now()).getTime();
           const diffMin = Math.max(1, Math.round((Date.now() - ts) / 60000));
           const timeStr =
             diffMin < 60
@@ -298,100 +179,119 @@ export function NotificationDrawer({
               ? `${Math.floor(diffMin / 60)}h ago`
               : `${Math.floor(diffMin / 1440)}d ago`;
 
-          let title = 'Account Activity';
-          let message = `Authenticated from ${log.clientName || 'Browser'} (${log.ip || 'Local IP'})`;
-          let accent = '#10B981';
-
-          if (log.event?.includes('session.create') || log.event?.includes('sessions.create')) {
-            title = 'New Session Authenticated';
-            message = `Signed in from ${log.countryName || 'Local session'} via ${log.clientName || 'Browser'}.`;
-            accent = '#6366F1';
+          // Replies tab: moments with discussions
+          if (m.commentsCount && m.commentsCount > 0) {
+            const id = `rep_moment_${m.$id || m.id}`;
+            if (!seenIds.has(id)) {
+              seenIds.add(id);
+              items.push({
+                id,
+                category: 'replies',
+                title: `Discussion on "${(m.caption || m.content || 'Moment').slice(0, 45)}"`,
+                message: `${m.commentsCount} comments active on your moment.`,
+                time: timeStr,
+                timestamp: ts + 1000,
+                read: false,
+                accent: '#6366F1',
+                actionHref: `/connect/post/${m.$id || m.id}`,
+                actor: {
+                  name: m.userName || m.username || 'Community Member',
+                  username: m.username,
+                  isNostr: !!m.isNostr,
+                },
+                source: m.isNostr ? 'nostr' : 'kylrix',
+              });
+            }
           }
 
-          const id = `log_${log.$id || ts}_${log.event}`;
-          if (!existingIds.has(id)) {
-            existingIds.add(id);
-            items.push({
-              id,
-              category: 'system',
-              title,
-              message,
-              time: timeStr,
-              timestamp: ts,
-              read: false,
-              accent,
-              actionHref: '/settings',
-              source: 'system',
-            });
+          // Likes tab: moments with peer likes
+          if (m.likesCount && m.likesCount > 0) {
+            const id = `like_moment_${m.$id || m.id}`;
+            if (!seenIds.has(id)) {
+              seenIds.add(id);
+              items.push({
+                id,
+                category: 'likes',
+                title: 'Reactions on your post',
+                message: `${m.likesCount} people liked your moment "${(m.caption || m.content || '').slice(0, 45)}"`,
+                time: timeStr,
+                timestamp: ts + 500,
+                read: false,
+                accent: '#EC4899',
+                actionHref: `/connect/post/${m.$id || m.id}`,
+                source: m.isNostr ? 'nostr' : 'kylrix',
+              });
+            }
           }
         }
       } catch {}
-    }
 
-    // B. Harvest real moments / threads activity from LocalEngine
-    try {
-      const moments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
-      for (const m of moments.slice(0, 10)) {
-        const ts = new Date(m.$createdAt || m.createdAt || Date.now()).getTime();
-        const diffMin = Math.max(1, Math.round((Date.now() - ts) / 60000));
-        const timeStr =
-          diffMin < 60
-            ? `${diffMin}m ago`
-            : diffMin < 1440
-            ? `${Math.floor(diffMin / 60)}h ago`
-            : `${Math.floor(diffMin / 1440)}d ago`;
+      // C. Real Nostr reply events from active relays
+      if (Array.isArray(nostrFeed)) {
+        for (const event of nostrFeed.slice(0, 15)) {
+          const isReply = event.tags?.some((t: string[]) => t[0] === 'e');
+          if (isReply) {
+            const id = `nostr_rep_${event.id}`;
+            if (!seenIds.has(id)) {
+              seenIds.add(id);
+              const ts = (event.created_at || Date.now() / 1000) * 1000;
+              const diffMin = Math.max(1, Math.round((Date.now() - ts) / 60000));
+              const timeStr =
+                diffMin < 60
+                  ? `${diffMin}m ago`
+                  : diffMin < 1440
+                  ? `${Math.floor(diffMin / 60)}h ago`
+                  : `${Math.floor(diffMin / 1440)}d ago`;
 
-        if (m.commentsCount && m.commentsCount > 0) {
-          const id = `moment_rep_${m.$id || m.id}`;
-          if (!existingIds.has(id)) {
-            existingIds.add(id);
-            items.push({
-              id,
-              category: 'replies',
-              title: `Reply on "${(m.caption || m.content || 'Moment').slice(0, 45)}"`,
-              message: `${m.commentsCount} comments active on your moment.`,
-              time: timeStr,
-              timestamp: ts,
-              read: false,
-              accent: '#6366F1',
-              actionHref: `/connect/post/${m.$id || m.id}`,
-              actor: {
-                name: m.userName || m.username || 'Community Member',
-                username: m.username,
-                isNostr: !!m.isNostr,
-              },
-              source: m.isNostr ? 'nostr' : 'kylrix',
-            });
+              items.push({
+                id,
+                category: 'replies',
+                title: 'Nostr Relay Response',
+                message: (event.content || '').slice(0, 120),
+                time: timeStr,
+                timestamp: ts,
+                read: false,
+                accent: '#8B5CF6',
+                actionHref: `/connect/post/nostr_${event.id}`,
+                actor: {
+                  name: `npub…${event.pubkey.slice(-8)}`,
+                  isNostr: true,
+                },
+                source: 'nostr',
+              });
+            }
           }
         }
       }
-    } catch {}
 
-    // C. Merge context intelligence suggestions
-    for (const s of suggestions || []) {
-      const id = `sug_${s.id}`;
-      if (!existingIds.has(id)) {
-        existingIds.add(id);
-        items.push({
-          id,
-          category: 'system',
-          title: s.title,
-          message: s.description,
-          time: 'Active',
-          timestamp: Date.now(),
-          read: false,
-          accent: s.niche === 'intelligence' ? '#6366F1' : '#10B981',
-          actionHref: s.actionHref || '/app',
-          source: 'system',
-        });
+      // D. Context intelligence active pulses
+      for (const s of suggestions || []) {
+        const id = `sug_${s.id}`;
+        if (!seenIds.has(id)) {
+          seenIds.add(id);
+          items.push({
+            id,
+            category: 'system',
+            title: s.title,
+            message: s.description,
+            time: 'Active',
+            timestamp: Date.now(),
+            read: false,
+            accent: s.niche === 'intelligence' ? '#6366F1' : '#10B981',
+            actionHref: s.actionHref || '/app',
+            source: 'system',
+          });
+        }
       }
-    }
 
-    // Sort descending by recency and cap at 100 items
-    const sorted = items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 100);
-    setNotifications(sorted);
-    await LocalEngine.cacheSet(cacheKey, sorted).catch(() => {});
-  }, [user?.$id, suggestions]);
+      // Sort strictly by recency and cap at 100 items
+      const sorted = items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 100);
+      setNotifications(sorted);
+      await LocalEngine.cacheSet(cacheKey, sorted).catch(() => {});
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.$id, nostrFeed, suggestions, cacheKey]);
 
   useEffect(() => {
     if (isOpen) {
@@ -403,7 +303,6 @@ export function NotificationDrawer({
     setReadIds((prev) => {
       const next = new Set(prev).add(id);
       if (typeof window !== 'undefined') {
-        const userId = user?.$id || 'guest';
         window.localStorage.setItem(`kylrix_notif_read_${userId}`, JSON.stringify(Array.from(next)));
       }
       return next;
@@ -415,7 +314,6 @@ export function NotificationDrawer({
     const next = new Set([...Array.from(readIds), ...allIds]);
     setReadIds(next);
     if (typeof window !== 'undefined') {
-      const userId = user?.$id || 'guest';
       window.localStorage.setItem(`kylrix_notif_read_${userId}`, JSON.stringify(Array.from(next)));
     }
   };
@@ -425,7 +323,6 @@ export function NotificationDrawer({
     setDismissedIds((prev) => {
       const next = new Set(prev).add(id);
       if (typeof window !== 'undefined') {
-        const userId = user?.$id || 'guest';
         window.localStorage.setItem(`kylrix_notif_dismissed_${userId}`, JSON.stringify(Array.from(next)));
       }
       return next;
@@ -440,7 +337,6 @@ export function NotificationDrawer({
     const next = new Set([...Array.from(dismissedIds), ...allIds]);
     setDismissedIds(next);
     if (typeof window !== 'undefined') {
-      const userId = user?.$id || 'guest';
       window.localStorage.setItem(`kylrix_notif_dismissed_${userId}`, JSON.stringify(Array.from(next)));
     }
   };
@@ -453,7 +349,7 @@ export function NotificationDrawer({
     }
   };
 
-  // Process notifications with read/dismissed state
+  // Filter visible items with read and dismissed status
   const visibleNotifications = useMemo(() => {
     return notifications
       .filter((n) => !dismissedIds.has(n.id))
@@ -464,7 +360,7 @@ export function NotificationDrawer({
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   }, [notifications, dismissedIds, readIds]);
 
-  // Unread counts per category
+  // Category unread counters
   const unreadCounts = useMemo(() => {
     const counts = { all: 0, replies: 0, likes: 0, follows: 0, system: 0 };
     for (const n of visibleNotifications) {
@@ -478,7 +374,7 @@ export function NotificationDrawer({
     return counts;
   }, [visibleNotifications]);
 
-  // Filtered by active tab (Capped at 100 items)
+  // Tab items (capped at 100 for All)
   const filteredNotifications = useMemo(() => {
     let list = visibleNotifications;
     if (activeTab !== 'all') {
@@ -511,31 +407,17 @@ export function NotificationDrawer({
     }
   };
 
+  // OpenBricks 4.0 Tactile Content Structure (Single Continuous Ash Surface)
   const notificationBody = (
-    <Box sx={{ display: 'grid', gap: 1.75, minWidth: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-      {/* 1. Header Tile */}
-      <Box
-        sx={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 1.5,
-          px: 2,
-          py: 1.5,
-          borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.08)',
-          bgcolor: 'rgba(255,255,255,0.03)',
-          minWidth: 0,
-          boxSizing: 'border-box',
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+      {/* 1. Header Row */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
           <Box
             sx={{
-              width: 40,
-              height: 40,
-              borderRadius: '14px',
+              width: 36,
+              height: 36,
+              borderRadius: '12px',
               bgcolor: alpha(appAccent, 0.12),
               color: appAccent,
               border: `1px solid ${alpha(appAccent, 0.22)}`,
@@ -544,16 +426,16 @@ export function NotificationDrawer({
               flexShrink: 0,
             }}
           >
-            <Bell size={18} strokeWidth={2.5} />
+            <Bell size={17} strokeWidth={2.5} />
           </Box>
-          <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+          <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.2 }}>
             <Typography
               component="span"
               sx={{
                 color: 'white',
                 fontWeight: 900,
-                fontSize: '0.98rem',
-                lineHeight: 1.2,
+                fontSize: '0.94rem',
+                lineHeight: 1.25,
                 fontFamily: 'var(--font-clash)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -567,12 +449,13 @@ export function NotificationDrawer({
               sx={{
                 color: 'rgba(255,255,255,0.45)',
                 fontWeight: 700,
-                fontSize: '0.68rem',
+                fontSize: '0.66rem',
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
+                lineHeight: 1.2,
               }}
             >
-              {unreadCounts.all > 0 ? `${unreadCounts.all} unread items` : 'All caught up'}
+              {unreadCounts.all > 0 ? `${unreadCounts.all} unread updates` : 'All caught up'}
             </Typography>
           </Box>
         </Box>
@@ -584,13 +467,13 @@ export function NotificationDrawer({
               title="Mark all as read"
               size="small"
               sx={{
-                width: 32,
-                height: 32,
+                width: 30,
+                height: 30,
                 borderRadius: '999px',
                 color: 'rgba(255,255,255,0.6)',
-                bgcolor: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' },
+                bgcolor: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' },
               }}
             >
               <CheckCheck size={14} />
@@ -600,13 +483,13 @@ export function NotificationDrawer({
             onClick={onClose}
             size="small"
             sx={{
-              width: 32,
-              height: 32,
+              width: 30,
+              height: 30,
               borderRadius: '999px',
               color: 'rgba(255,255,255,0.6)',
-              bgcolor: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' },
+              bgcolor: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' },
             }}
           >
             <CloseIcon size={14} />
@@ -614,7 +497,7 @@ export function NotificationDrawer({
         </Box>
       </Box>
 
-      {/* 2. OpenBricks 4.0 Segmented Pill Tabs */}
+      {/* 2. OpenBricks 4.0 Segmented Category Pill Tabs */}
       <Box
         sx={{
           p: 0.5,
@@ -641,7 +524,7 @@ export function NotificationDrawer({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '4px',
-                padding: '8px 4px',
+                padding: '7px 3px',
                 borderRadius: '12px',
                 fontSize: '11px',
                 fontWeight: isActive ? 800 : 600,
@@ -663,7 +546,7 @@ export function NotificationDrawer({
               {count > 0 && (
                 <span
                   style={{
-                    padding: '1px 5px',
+                    padding: '1px 4.5px',
                     borderRadius: '999px',
                     fontSize: '9px',
                     fontWeight: 900,
@@ -680,13 +563,13 @@ export function NotificationDrawer({
         })}
       </Box>
 
-      {/* 3. Notifications List */}
+      {/* 3. Notifications List Column */}
       <Box
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 1,
-          maxHeight: isDesktop ? 'calc(100vh - 270px)' : '48vh',
+          gap: 0.85,
+          maxHeight: isDesktop ? 'calc(100vh - 230px)' : '46vh',
           overflowY: 'auto',
           overflowX: 'hidden',
           pr: 0.25,
@@ -701,9 +584,10 @@ export function NotificationDrawer({
               width: '100%',
               display: 'flex',
               alignItems: 'flex-start',
-              gap: 1.5,
-              p: 1.75,
-              borderRadius: '18px',
+              gap: 1.25,
+              px: 2,
+              py: 1.5,
+              borderRadius: '16px',
               bgcolor: notif.read ? 'rgba(255,255,255,0.015)' : '#1C1A18',
               border: '1px solid',
               borderColor: notif.read ? 'rgba(255,255,255,0.05)' : alpha(notif.accent, 0.22),
@@ -720,12 +604,12 @@ export function NotificationDrawer({
               },
             }}
           >
-            {/* Category Icon */}
-            <Box sx={{ position: 'relative', flexShrink: 0, mt: 0.25 }}>
+            {/* 1. Fixed Icon Slot */}
+            <Box sx={{ position: 'relative', flexShrink: 0, mt: 0.2 }}>
               <Box
                 sx={{
-                  width: 38,
-                  height: 38,
+                  width: 36,
+                  height: 36,
                   borderRadius: '12px',
                   bgcolor: alpha(notif.accent, 0.12),
                   color: notif.accent,
@@ -744,8 +628,8 @@ export function NotificationDrawer({
                     position: 'absolute',
                     bottom: -2,
                     right: -2,
-                    width: 14,
-                    height: 14,
+                    width: 13,
+                    height: 13,
                     borderRadius: '50%',
                     bgcolor: '#8B5CF6',
                     color: 'white',
@@ -761,15 +645,15 @@ export function NotificationDrawer({
               )}
             </Box>
 
-            {/* Stacked Content Column (Strict No-Wrap Truncation) */}
-            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
+            {/* 2. Structured Stacked Copy Column (ui.tailwind-fix standard) */}
+            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.3, pr: 0.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                 <Typography
                   component="span"
                   sx={{
                     color: notif.read ? 'rgba(255,255,255,0.85)' : 'white',
                     fontWeight: notif.read ? 700 : 800,
-                    fontSize: '0.86rem',
+                    fontSize: '0.84rem',
                     lineHeight: 1.25,
                   }}
                   noWrap
@@ -781,7 +665,7 @@ export function NotificationDrawer({
                   sx={{
                     color: 'rgba(255,255,255,0.38)',
                     fontWeight: 600,
-                    fontSize: '0.68rem',
+                    fontSize: '0.66rem',
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
                   }}
@@ -793,9 +677,9 @@ export function NotificationDrawer({
               <Typography
                 component="span"
                 sx={{
-                  color: notif.read ? 'rgba(255,255,255,0.48)' : 'rgba(255,255,255,0.72)',
+                  color: notif.read ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.72)',
                   fontWeight: 500,
-                  fontSize: '0.76rem',
+                  fontSize: '0.74rem',
                   lineHeight: 1.35,
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
@@ -807,8 +691,8 @@ export function NotificationDrawer({
               </Typography>
             </Box>
 
-            {/* Dismiss Action */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mt: 0.5 }}>
+            {/* 3. Dismiss & Right Action */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexShrink: 0, mt: 0.4 }}>
               <IconButton
                 size="small"
                 onClick={(e) => dismissNotification(notif.id, e)}
@@ -822,11 +706,12 @@ export function NotificationDrawer({
               >
                 <CloseIcon size={12} />
               </IconButton>
-              <ChevronRight size={15} style={{ color: 'rgba(255,255,255,0.25)' }} />
+              <ChevronRight size={14} style={{ color: 'rgba(255,255,255,0.22)' }} />
             </Box>
           </Box>
         ))}
 
+        {/* Clean Empty State */}
         {filteredNotifications.length === 0 && (
           <Box
             sx={{
@@ -840,8 +725,8 @@ export function NotificationDrawer({
           >
             <Box
               sx={{
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 borderRadius: '50%',
                 bgcolor: 'rgba(255,255,255,0.03)',
                 border: '1px solid rgba(255,255,255,0.06)',
@@ -851,23 +736,24 @@ export function NotificationDrawer({
               }}
             >
               {activeTab === 'replies' ? (
-                <MessageSquare size={20} />
+                <MessageSquare size={18} />
               ) : activeTab === 'likes' ? (
-                <Heart size={20} />
+                <Heart size={18} />
               ) : activeTab === 'follows' ? (
-                <UserPlus size={20} />
+                <UserPlus size={18} />
               ) : (
-                <Bell size={20} />
+                <Bell size={18} />
               )}
             </Box>
             <Typography
               component="span"
               sx={{
-                color: 'rgba(255,255,255,0.5)',
-                fontSize: '0.84rem',
+                color: 'rgba(255,255,255,0.45)',
+                fontSize: '0.82rem',
                 fontWeight: 800,
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
+                lineHeight: 1.2,
               }}
             >
               No {activeTab === 'all' ? '' : activeTab} updates
@@ -875,16 +761,16 @@ export function NotificationDrawer({
             <Typography
               component="span"
               sx={{
-                color: 'rgba(255,255,255,0.3)',
-                fontSize: '0.74rem',
-                maxWidth: 240,
-                lineHeight: 1.4,
+                color: 'rgba(255,255,255,0.28)',
+                fontSize: '0.72rem',
+                maxWidth: 220,
+                lineHeight: 1.35,
               }}
             >
               {activeTab === 'replies'
-                ? 'Discussion responses and comments from Nostr and Kylrix will appear here.'
+                ? 'Discussion responses and moment comments will appear here.'
                 : activeTab === 'likes'
-                ? 'Reactions on your moments and shared notes.'
+                ? 'Reactions on your moments and notes.'
                 : activeTab === 'follows'
                 ? 'New followers and workspace invitations.'
                 : 'You are completely caught up.'}
@@ -893,19 +779,19 @@ export function NotificationDrawer({
         )}
       </Box>
 
-      {/* 4. Footer */}
+      {/* 4. Lightweight Clean Footer */}
       {visibleNotifications.length > 0 && (
         <Box
           sx={{
-            pt: 1.25,
+            pt: 1,
             borderTop: '1px solid rgba(255, 255, 255, 0.06)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <Typography component="span" sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
-            {filteredNotifications.length} of {visibleNotifications.length} items
+          <Typography component="span" sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.38)', fontWeight: 600 }}>
+            {filteredNotifications.length} of {visibleNotifications.length} updates
           </Typography>
           <button
             onClick={clearAllNotifications}
@@ -913,7 +799,7 @@ export function NotificationDrawer({
             style={{
               background: 'none',
               border: 'none',
-              color: 'rgba(255,255,255,0.45)',
+              color: 'rgba(255,255,255,0.4)',
               fontSize: '11px',
               fontWeight: 700,
               fontFamily: 'inherit',
@@ -921,29 +807,29 @@ export function NotificationDrawer({
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              padding: '4px 8px',
-              borderRadius: '8px',
+              padding: '3px 6px',
+              borderRadius: '6px',
               transition: 'color 0.15s',
             }}
             onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
           >
             <Trash2 size={12} />
-            Clear all
+            Clear
           </button>
         </Box>
       )}
     </Box>
   );
 
-  // Desktop Rendering (Matching Profile Sidebar Layout)
+  // Desktop View (Matching Native Sidebar / Right Drawer)
   if (isDesktop) {
     if (nativeSidebar) {
       return (
         <NativeSidebarMount
           active={isOpen}
           sidebarKey="topbar-notifications"
-          width={420}
+          width={400}
           title="Notifications"
         >
           <Box sx={{ p: 2, overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
@@ -964,7 +850,7 @@ export function NotificationDrawer({
           sx: {
             bgcolor: '#161412',
             backgroundImage: 'none',
-            width: { xs: '100vw', sm: 420 },
+            width: { xs: '100vw', sm: 400 },
             maxWidth: '100vw',
             borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
             boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
@@ -973,38 +859,11 @@ export function NotificationDrawer({
             flexDirection: 'column',
             boxSizing: 'border-box',
             overflowX: 'hidden',
-            p: { xs: 2, sm: 2.75 },
+            p: { xs: 2, sm: 2.5 },
           },
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, minWidth: 0 }}>
-          <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
-            Notifications
-          </Typography>
-          <IconButton onClick={onClose} sx={{ color: 'rgba(255, 255, 255, 0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
-            <CloseIcon size={16} />
-          </IconButton>
-        </Box>
-
-        <Paper
-          elevation={0}
-          sx={{
-            width: '100%',
-            maxWidth: '100%',
-            borderRadius: '26px',
-            bgcolor: '#161412',
-            border: `1px solid ${alpha(appAccent, 0.22)}`,
-            overflow: 'hidden',
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            boxSizing: 'border-box',
-          }}
-        >
-          <Box sx={{ p: { xs: 1.5, sm: 2 }, overflowY: 'auto', overflowX: 'hidden', flex: 1, boxSizing: 'border-box' }}>
-            {notificationBody}
-          </Box>
-        </Paper>
+        {notificationBody}
       </Drawer>
     );
   }
@@ -1036,7 +895,7 @@ export function NotificationDrawer({
         sx={{
           px: { xs: 1.5, sm: 2.25, md: 4 },
           py: { xs: 1.5, sm: 2 },
-          maxHeight: '52vh',
+          maxHeight: '50vh',
           overflowY: 'auto',
           overflowX: 'hidden',
           width: '100%',
