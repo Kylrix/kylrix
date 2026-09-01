@@ -5,14 +5,14 @@
 
 import type { WebMcpToolDefinition } from './types';
 import {
-  createNoteClientSecure,
-  updateNoteClientSecure,
-  deleteNoteClientSecure,
-  createProjectClientSecure,
-  createEventClientSecure,
-  postThreadMessageClientSecure,
-  getOrCreateThreadClientSecure,
-  createRowClientSecure,
+  createNote,
+  updateNote,
+  deleteNote,
+  createProject,
+  createEvent,
+  postThreadMessage,
+  getOrCreateThread,
+  createRow,
 } from '@/lib/actions/client-ops';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -145,7 +145,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const content = String(args.content || '').trim();
       const tags = Array.isArray(args.tags) ? args.tags : [];
 
-      const created = await createNoteClientSecure({
+      const created = await createNote({
         title,
         content,
         tags,
@@ -223,7 +223,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       if (args.content !== undefined) payload.content = String(args.content);
       if (args.tags !== undefined) payload.tags = args.tags;
 
-      await updateNoteClientSecure(noteId, payload);
+      await updateNote(noteId, payload);
       return formatResult({ id: noteId, ...payload }, `Note '${noteId}' updated successfully.`);
     },
   },
@@ -241,7 +241,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const noteId = String(args.id);
-      await deleteNoteClientSecure(noteId);
+      await deleteNote(noteId);
       return formatResult({ id: noteId, deleted: true }, `Note '${noteId}' deleted.`);
     },
   },
@@ -305,7 +305,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const title = String(args.title).trim();
       const description = String(args.description || '').trim();
 
-      const created = await createRowClientSecure(
+      const created = await createRow(
         APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
         'goals',
         {
@@ -373,7 +373,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const name = String(args.name).trim();
-      const created = await createProjectClientSecure({
+      const created = await createProject({
         name,
         description: String(args.description || ''),
         isAgentic: Boolean(args.isAgentic),
@@ -460,7 +460,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const startAt = String(args.startAt);
       const endAt = args.endAt ? String(args.endAt) : startAt;
 
-      const created = await createEventClientSecure({
+      const created = await createEvent({
         title,
         startAt,
         endAt,
@@ -524,12 +524,21 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const scopeKey = String(args.scopeKey);
       const text = String(args.message).trim();
 
-      const thread = await getOrCreateThreadClientSecure(scopeKey);
+      const parts = scopeKey.includes(':') ? scopeKey.split(':') : ['resource', scopeKey];
+      const thread = await getOrCreateThread({
+        parentKind: parts[0] || 'resource',
+        parentId: parts[1] || parts[0],
+      });
+
       if (!thread || !thread.$id) {
         throw new Error(`Failed to access thread for scope '${scopeKey}'`);
       }
 
-      const post = await postThreadMessageClientSecure(thread.$id, text);
+      const post = await postThreadMessage({
+        threadId: thread.$id,
+        content: text,
+      });
+
       return formatResult(
         { threadId: thread.$id, messageId: post?.$id, text },
         `Message posted to thread "${scopeKey}".`
