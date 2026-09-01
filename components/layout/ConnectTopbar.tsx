@@ -88,6 +88,7 @@ import {
   type PageMatch,
 } from './connect-topbar-utils';
 import { SyncIndicator } from './SyncIndicator';
+import { NotificationDrawer } from './NotificationDrawer';
 
 interface ConnectTopbarProps {
   className?: string;
@@ -754,214 +755,14 @@ export default function ConnectTopbar({
   }, [handleCloseAll, openSearch, openAgenticFromTopbar, router]);
 
   const renderNotificationDrawer = () => {
-    if (!notificationsOpen) return null;
-
-    const content = (
-      <Box
-        onWheel={(event: React.WheelEvent) => {
-          if (isDesktop) return;
-          const node = event.currentTarget;
-          if (event.deltaY < 0 && isTopbarScrollAtTop(node as HTMLElement)) {
-            event.preventDefault();
-            handleCloseAll();
-          }
-        }}
-        sx={{ px: { xs: 2.25, md: 4 }, py: 1.25, maxHeight: isDesktop ? 'none' : '45vh', overflowY: isDesktop ? 'visible' : 'auto' }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            width: '100%',
-            borderRadius: '26px',
-            bgcolor: '#161412',
-            border: `1px solid ${alpha(appAccent, 0.22)}`,
-            overflow: 'hidden',
-          }}
-        >
-          <Box sx={{ p: 1.25, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, pt: 0.25 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
-                <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', color: appAccent, bgcolor: alpha(appAccent, 0.08), border: `1px solid ${alpha(appAccent, 0.18)}`, flexShrink: 0 }}>
-                  <Bell size={16} strokeWidth={2.5} />
-                </Box>
-                <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.2 }}>
-                  <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.92rem', lineHeight: 1.2, fontFamily: 'var(--font-clash)' }}>
-                    Notifications
-                  </Typography>
-                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.45)', fontWeight: 700, fontSize: '0.68rem', lineHeight: 1.3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    {suggestions.length + notifications.length ? `${suggestions.length + notifications.length} updates` : 'All caught up'}
-                  </Typography>
-                </Box>
-              </Box>
-              <IconButton onClick={() => setNotificationsOpen(false)} size="small" sx={{ width: 30, height: 30, borderRadius: '999px', color: alpha('#fff', 0.7), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' } }}>
-                ✕
-              </IconButton>
-            </Box>
-
-            <Box sx={{ display: 'grid', gap: 1, pr: 0.25 }}>
-              {suggestions.map(suggestion => (
-                <Box
-                  key={suggestion.id}
-                  component="button"
-                  onClick={() => {
-                    dismissSuggestion(suggestion.id);
-                    setNotifHint(null);
-                    handleCloseAll();
-                    if (suggestion.actionHref) router.push(suggestion.actionHref);
-                  }}
-                  sx={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                    px: 2.25,
-                    py: 1.5,
-                    borderRadius: '18px',
-                    bgcolor: '#1C1A18',
-                    border: '1px solid rgba(99,102,241,0.14)',
-                    color: 'white',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    '&:hover': { bgcolor: '#23211F', borderColor: 'rgba(99,102,241,0.28)', transform: 'translateY(-1px)' }
-                  }}
-                >
-                  <Box sx={{ width: 38, height: 38, borderRadius: '12px', bgcolor: 'rgba(99,102,241,0.12)', color: '#6366F1', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                    <Sparkles size={16} strokeWidth={2.2} />
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
-                    <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.25 }} noWrap>
-                      {suggestion.title}
-                    </Typography>
-                    <Typography component="span" sx={{ color: 'rgba(255,255,255,0.62)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.35 }}>
-                      {suggestion.description}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ flexShrink: 0, display: 'grid', placeItems: 'center', color: 'rgba(255,255,255,0.2)' }}>
-                    <ChevronRight size={16} />
-                  </Box>
-                </Box>
-              ))}
-
-              {notifications.map(notif => (
-                <Box
-                  key={notif.id}
-                  component="button"
-                  onClick={() => markNotificationRead(notif.id)}
-                  sx={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                    px: 2.25,
-                    py: 1.5,
-                    borderRadius: '18px',
-                    bgcolor: notif.read ? '#0B0A09' : '#1C1A18',
-                    border: '1px solid',
-                    borderColor: notif.read ? 'rgba(255,255,255,0.06)' : alpha(notif.accent, 0.14),
-                    color: 'white',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    '&:hover': { bgcolor: '#23211F', borderColor: alpha(notif.accent, 0.22) }
-                  }}
-                >
-                  <Box sx={{ width: 38, height: 38, borderRadius: '12px', bgcolor: alpha(notif.accent, 0.12), color: notif.accent, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                    <Activity size={16} strokeWidth={2.2} />
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
-                    <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.25 }} noWrap>
-                      {notif.title}
-                    </Typography>
-                    <Typography component="span" sx={{ color: 'rgba(255,255,255,0.62)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.35 }}>
-                      {notif.message}
-                    </Typography>
-                  </Box>
-                  <IconButton
-                    size="small"
-                    onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      dismissNotification(notif.id, e);
-                    }}
-                    sx={{ flexShrink: 0, width: 28, height: 28, color: 'rgba(255,255,255,0.25)', '&:hover': { color: '#EF4444', bgcolor: 'rgba(239,68,68,0.08)' } }}
-                  >
-                    <CloseIcon size={12} />
-                  </IconButton>
-                </Box>
-              ))}
-
-              {notifications.length === 0 && suggestions.length === 0 && (
-                <Box sx={{ py: 4, textAlign: 'center', display: 'grid', placeItems: 'center', gap: 1.25 }}>
-                  <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', display: 'grid', placeItems: 'center' }}>
-                    <Bell size={20} style={{ color: 'rgba(255,255,255,0.18)' } as any} />
-                  </Box>
-                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.2 }}>
-                    No new notifications
-                  </Typography>
-                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.28)', fontSize: '0.72rem', fontWeight: 600, lineHeight: 1.35 }}>
-                    You&apos;re all caught up
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          </Box>
-        </Paper>
-      </Box>
-    );
-
-    if (isDesktop) {
-      if (nativeSidebar) {
-        return (
-          <NativeSidebarMount
-            active={notificationsOpen}
-            sidebarKey="topbar-notifications"
-            width={420}
-            title="Notifications"
-          >
-            {content}
-          </NativeSidebarMount>
-        );
-      }
-      return (
-        <Drawer
-          anchor="right"
-          open={notificationsOpen}
-          onClose={() => setNotificationsOpen(false)}
-          keepMounted={false}
-          disablePortal={true}
-          slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-          PaperProps={{
-            sx: {
-              bgcolor: '#161412',
-              backgroundImage: 'none',
-              width: 420,
-              borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
-              boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
-              height: '100vh',
-              display: 'flex',
-              flexDirection: 'column'
-            }
-          }}
-        >
-          {content}
-        </Drawer>
-      );
-    }
-
     return (
-      <Box
-        data-kylrix-topbar-panel
-        sx={{
-          width: '100%',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '0 0 28px 28px',
-          bgcolor: '#161412',
-          overflow: 'hidden',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.35)'}}
-      >
-        {content}
-      </Box>
+      <NotificationDrawer
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        appAccent={appAccent}
+        isDesktop={isDesktop}
+        nativeSidebar={!!nativeSidebar}
+      />
     );
   };
 
