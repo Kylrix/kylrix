@@ -11,6 +11,7 @@ import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
+import { markMomentSeen } from '@/lib/connect/seen-moments';
 import toast from 'react-hot-toast';
 
 /** Fixed image band ≈ 3/4 of usable post content area (header+text+actions consume the rest). */
@@ -65,6 +66,8 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   const [busy, setBusy] = useState(false);
   const [bookmarkBusy, setBookmarkBusy] = useState(false);
 
+  const cardRef = React.useRef<HTMLDivElement | null>(null);
+
   // Sync state if item updates from live stream
   React.useEffect(() => {
     if (item.likesCount !== undefined) setLikes(item.likesCount);
@@ -72,6 +75,27 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     if (item.repostsCount !== undefined) setReposts(item.repostsCount);
     if (item.zapsCount !== undefined) setZaps(item.zapsCount);
   }, [item.likesCount, item.isLiked, item.repostsCount, item.zapsCount]);
+
+  // Track viewport presence and mark as seen after 1.2s
+  React.useEffect(() => {
+    const el = cardRef.current;
+    if (!el || !item.id) return;
+    let timer: NodeJS.Timeout | null = null;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        timer = setTimeout(() => {
+          markMomentSeen(item.id);
+        }, 1200);
+      } else if (timer) {
+        clearTimeout(timer);
+      }
+    }, { threshold: 0.35 });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      if (timer) clearTimeout(timer);
+    };
+  }, [item.id]);
 
   const { text: bodyText, images } = useMemo(
     () => extractPostImages(item.content || '', item.rawEvent?.tags),
@@ -389,6 +413,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
 
   return (
     <article
+      ref={cardRef}
       role="button"
       tabIndex={0}
       onClick={open}

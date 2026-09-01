@@ -43,6 +43,8 @@ export type ConnectFeedSettings = {
   showLikes: boolean;
   compactMode: boolean;
   autoPlayMedia: boolean;
+  hideSeen: boolean;
+  prioritizeFresh: boolean;
   nostrConfig: NostrSettingsConfig;
 };
 
@@ -84,6 +86,8 @@ const DEFAULTS: ConnectFeedSettings = {
   showLikes: true,
   compactMode: false,
   autoPlayMedia: false,
+  hideSeen: false,
+  prioritizeFresh: true,
   nostrConfig: NOSTR_CONFIG_DEFAULTS,
 };
 

@@ -10,6 +10,7 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getCachedNostrProfile, queueNostrProfileFetch } from '@/lib/nostr/metadata';
 import { parseInterestsWithWeights } from '@/lib/ecosystem/intelligence-topics';
+import { initSeenMoments, isMomentSeen, markMomentsSeen, resetSeenMoments } from '@/lib/connect/seen-moments';
 
 export interface UnifiedFeedItem {
   id: string;
@@ -27,6 +28,7 @@ export interface UnifiedFeedItem {
   zapsCount?: number;
   repostsCount?: number;
   isLiked?: boolean;
+  isSeen?: boolean;
   /** 0–100 quality rank; lower = worse; used for feed ordering. Default 50. */
   rank?: number;
 }
@@ -344,6 +346,27 @@ export function useConnectMomentsFeed() {
   const [visibleCount, setVisibleCount] = useState(() => (memoryUnified?.length ? Math.min(PAGE_SIZE, memoryUnified.length) : PAGE_SIZE));
   const [hydrated, setHydrated] = useState(() => !!memoryUnified?.length);
   const [refreshing, setRefreshing] = useState(false);
+  const [seenSet, setSeenSet] = useState<Set<string>>(new Set());
+
+  // Initialize and track seen posts in LocalEngine
+  useEffect(() => {
+    let mounted = true;
+    void initSeenMoments(user?.$id).then((set) => {
+      if (mounted) setSeenSet(new Set(set));
+    });
+
+    const onSeenChanged = () => {
+      void initSeenMoments(user?.$id).then((set) => {
+        if (mounted) setSeenSet(new Set(set));
+      });
+    };
+
+    window.addEventListener('kylrix:seen-moments-changed', onSeenChanged);
+    return () => {
+      mounted = false;
+      window.removeEventListener('kylrix:seen-moments-changed', onSeenChanged);
+    };
+  }, [user?.$id]);
 
   const displayRef = useRef(displayItems);
   const ecosystemRef = useRef(ecosystemMoments);
@@ -736,34 +759,67 @@ export function useConnectMomentsFeed() {
     }
   }, [user?.$id, refreshNostr]);
 
-  const hasMore = visibleCount < displayItems.length;
+  // Filter and sort items dynamically prioritizing fresh/unseen content
+  const filteredSortedItems = useMemo(() => {
+    let list = displayItems;
+    if (feedSettings?.hideSeen) {
+      list = list.filter((i) => !seenSet.has(i.id) || (user?.$id && i.rawEvent?.userId === user.$id));
+    } else if (feedSettings?.prioritizeFresh !== false) {
+      list = [...list].sort((a, b) => {
+        const aSeen = seenSet.has(a.id);
+        const bSeen = seenSet.has(b.id);
+        if (!aSeen && bSeen) return -1;
+        if (aSeen && !bSeen) return 1;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+    }
+    return list;
+  }, [displayItems, feedSettings?.hideSeen, feedSettings?.prioritizeFresh, seenSet, user?.$id]);
+
+  const hasMore = visibleCount < filteredSortedItems.length;
   const loadingMoreRef = useRef(false);
 
   const loadMore = useCallback(() => {
     if (!hasMore || loadingMoreRef.current) return;
     loadingMoreRef.current = true;
-    setVisibleCount((c) => Math.min(c + PAGE_SIZE, displayItems.length));
+    setVisibleCount((c) => Math.min(c + PAGE_SIZE, filteredSortedItems.length));
     // Release gate after paint so IntersectionObserver does not double-fire.
     requestAnimationFrame(() => {
       loadingMoreRef.current = false;
     });
-  }, [hasMore, displayItems.length]);
+  }, [hasMore, filteredSortedItems.length]);
 
   const items = useMemo(
-    () => displayItems.slice(0, visibleCount),
-    [displayItems, visibleCount],
+    () =>
+      filteredSortedItems.slice(0, visibleCount).map((item) => ({
+        ...item,
+        isSeen: seenSet.has(item.id),
+      })),
+    [filteredSortedItems, visibleCount, seenSet],
   );
+
+  const markAllSeen = useCallback(() => {
+    markMomentsSeen(displayItems.map((i) => i.id));
+  }, [displayItems]);
+
+  const resetSeen = useCallback(() => {
+    void resetSeenMoments(user?.$id);
+  }, [user?.$id]);
 
   // Skeletons only when we have zero local copy and nothing hydrated yet.
   const loading = !hydrated && displayItems.length === 0;
 
   return {
     items,
-    total: displayItems.length,
+    total: filteredSortedItems.length,
+    seenCount: seenSet.size,
+    unseenCount: Math.max(0, displayItems.length - seenSet.size),
     loading,
     refreshing,
     hasMore,
     loadMore,
     refresh,
+    markAllSeen,
+    resetSeen,
   };
 }
