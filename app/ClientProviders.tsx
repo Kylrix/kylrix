@@ -36,6 +36,9 @@ import { NeuralProvider } from '@/context/NeuralContext';
 
 const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
 
+import { WebMcpProvider } from '@/context/WebMcpContext';
+import { WebMcpInspectorDrawer } from '@/components/webmcp/WebMcpInspectorDrawer';
+
 interface ComposeProvidersProps {
   providers: Array<React.ComponentType<{ children: ReactNode }>>;
   children: ReactNode;
@@ -103,6 +106,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   SetupProvider,
   TrashPurgeProvider,
   PaymentReminderProvider,
+  WebMcpProvider,
 ];
 
 export function ClientProviders({ children }: { children: ReactNode }) {
@@ -111,6 +115,7 @@ export function ClientProviders({ children }: { children: ReactNode }) {
       <UniversalScrollRestoration />
       <ComposeProviders providers={rootProvidersList}>
         {children}
+        <WebMcpInspectorDrawer />
       </ComposeProviders>
       <ClientToaster />
     </>

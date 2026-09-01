@@ -111,6 +111,7 @@ Humans and agents share the same workspace. MCP for IDE tool loops; REST for scr
 
 | Surface | Use when |
 |---|---|
+| **WebMCP** (`navigator.modelContext`) | In-browser agents (Chrome, ChatGPT browser) with zero-config live session tools |
 | **MCP** | IDE agents (Cursor, Claude, Windsurf, Codex, …) |
 | **REST API** (`/api/v1`) | Scripts, mobile apps, CI, custom backends |
 
@@ -125,8 +126,9 @@ Humans and agents share the same workspace. MCP for IDE tool loops; REST for scr
    ```bash
    npx -y @smithery/cli install kylrix/kylrix --client cursor
    ```
+4. **Browser Agents (WebMCP)** — Open Kylrix in Chrome (with `#enable-webmcp-testing`) or ChatGPT in-app browser; tools are auto-discovered directly via `navigator.modelContext`.
 
-Wiring reference: [docs/integrations.md](docs/integrations.md)
+Wiring reference: [docs/integrations.md](docs/integrations.md) · [docs/webmcp.md](docs/webmcp.md)
 
 ---
 
@@ -134,7 +136,8 @@ Wiring reference: [docs/integrations.md](docs/integrations.md)
 
 | | Link |
 |---|---|
-| **MCP** | [Humans & agents](#humans--agents) above |
+| **WebMCP** (W3C in-browser) | [docs/webmcp.md](docs/webmcp.md) · `navigator.modelContext` |
+| **MCP** | [Humans & agents](#humans--agents) above · [docs/mcp.md](docs/mcp.md) |
 | **REST API** | [docs/api.md](docs/api.md) · `https://www.kylrix.space/api/v1` |
 | **Sign in with Kylrix** (OAuth 2.1) | [docs/oauth2.md](docs/oauth2.md) |
 | **SDK** | [`sdk/`](sdk/) in this repo |

@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Copy, KeyRound, BookOpen, AppWindow, Plus } from 'lucide-react';
+import { Copy, KeyRound, BookOpen, AppWindow, Plus, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { useWebMcpContext } from '@/context/WebMcpContext';
 import {
   KYLRIX_SKILLS_INSTALL,
   KYLRIX_API_SKILL_INSTALL,
@@ -102,6 +103,7 @@ function SkillRow({
 
 export function DevelopersTab() {
   const { open: openDrawer } = useUnifiedDrawer();
+  const { tools: webMcpTools, openInspector: openWebMcpInspector } = useWebMcpContext();
   const { currentTier } = useSubscription();
   const { openProUpgrade } = useProUpgrade();
   const isTeams = currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
@@ -216,6 +218,52 @@ export function DevelopersTab() {
           docsHref="/docs/agents"
           docsLabel="Agent docs"
         />
+      </Section>
+
+      <Section
+        title="WebMCP (Browser-Native Agent Tools)"
+        action={
+          <button
+            type="button"
+            onClick={openWebMcpInspector}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors"
+          >
+            <Terminal size={12} strokeWidth={2.5} />
+            Inspect tools ({webMcpTools.length})
+          </button>
+        }
+      >
+        <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <p className="text-xs font-bold text-white">W3C WebMCP Standard Active</p>
+            </div>
+            <Link
+              href="/docs/webmcp"
+              className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 hover:text-emerald-300 shrink-0"
+            >
+              <BookOpen size={12} />
+              WebMCP Docs
+            </Link>
+          </div>
+          <p className="text-xs text-white/50 leading-relaxed">
+            Visiting AI agents in Chrome (with <code className="text-emerald-300 font-mono">#enable-webmcp-testing</code>) or ChatGPT’s in-app browser automatically discover and invoke Kylrix tools directly in the browser with your active session permissions.
+          </p>
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={openWebMcpInspector}
+              className="flex-1 py-2 px-3 rounded-xl bg-[#1c1917] hover:bg-[#262626] border border-white/[0.08] text-xs font-mono text-emerald-400 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Terminal size={13} />
+              Open WebMCP Playground & Logs
+            </button>
+          </div>
+        </div>
       </Section>
 
       <Section
