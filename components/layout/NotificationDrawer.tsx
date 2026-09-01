@@ -9,6 +9,7 @@ import {
   Paper,
   alpha,
   Drawer,
+  Button,
 } from '@/lib/openbricks/primitives';
 import {
   Bell,
@@ -23,13 +24,19 @@ import {
   Sparkles,
   Layers,
   Activity,
-  Zap,
+  Key,
+  Globe,
+  Lock,
+  Compass,
 } from 'lucide-react';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { isTopbarScrollAtTop } from '@/sdk/topbar';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
+import { account } from '@/lib/appwrite/client';
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { IdentityAvatar } from '@/components/common/IdentityBadge';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { useLocalContext } from '@/lib/context-engine';
+import { useAuth } from '@/context/auth/AuthContext';
 
 export type NotificationCategory = 'all' | 'replies' | 'likes' | 'follows' | 'system';
 
@@ -48,175 +55,9 @@ export interface KylrixNotification {
     username?: string;
     avatarId?: string;
     isNostr?: boolean;
-    npub?: string;
   };
   source?: 'nostr' | 'kylrix' | 'system';
-  meta?: Record<string, any>;
 }
-
-// Default initial notifications across categories
-const DEFAULT_NOTIFICATIONS: KylrixNotification[] = [
-  // ── Replies (Moments, Nostr, Threads) ──────────────────────────
-  {
-    id: 'reply-1',
-    category: 'replies',
-    title: 'New reply to your moment',
-    message: '“The tactile OpenBricks 4.0 surfaces look extremely crisp. Great work on the dark wells!”',
-    time: '4m ago',
-    timestamp: Date.now() - 4 * 60 * 1000,
-    read: false,
-    accent: '#6366F1',
-    actionHref: '/connect',
-    actor: {
-      name: 'Elena Rostova',
-      username: 'elena',
-      isNostr: true,
-      npub: 'npub1elena899x9...',
-    },
-    source: 'nostr',
-  },
-  {
-    id: 'reply-2',
-    category: 'replies',
-    title: 'Reply on your moment "Shipping High-Leverage Systems"',
-    message: '“How are you handling the local-first conflicts in RxDB?”',
-    time: '28m ago',
-    timestamp: Date.now() - 28 * 60 * 1000,
-    read: false,
-    accent: '#6366F1',
-    actionHref: '/connect',
-    actor: {
-      name: 'Marcus Vance',
-      username: 'marcus_v',
-    },
-    source: 'kylrix',
-  },
-  {
-    id: 'reply-3',
-    category: 'replies',
-    title: 'Thread response in "Decentralized Architecture"',
-    message: '“Merged the database read optimization patch. Performance score is at 100%.”',
-    time: '1h ago',
-    timestamp: Date.now() - 65 * 60 * 1000,
-    read: true,
-    accent: '#6366F1',
-    actionHref: '/app',
-    actor: {
-      name: 'Agent Hermes',
-      username: 'agent_hermes',
-    },
-    source: 'kylrix',
-  },
-
-  // ── Likes (Moments & Notes) ───────────────────────────────────
-  {
-    id: 'like-1',
-    category: 'likes',
-    title: 'Liked your moment',
-    message: 'DevRel team and 3 others liked “WebMCP: W3C in-browser tools integration”.',
-    time: '15m ago',
-    timestamp: Date.now() - 15 * 60 * 1000,
-    read: false,
-    accent: '#EC4899',
-    actionHref: '/connect',
-    actor: {
-      name: 'Satoshi Guild',
-      username: 'satoshiguild',
-      isNostr: true,
-    },
-    source: 'nostr',
-  },
-  {
-    id: 'like-2',
-    category: 'likes',
-    title: 'Liked your note "Encrypted Identity & Vault Proofs"',
-    message: 'Ayrton and 5 other collaborators reacted with 🔥.',
-    time: '3h ago',
-    timestamp: Date.now() - 3 * 3600 * 1000,
-    read: true,
-    accent: '#EC4899',
-    actionHref: '/app',
-    actor: {
-      name: 'Ayrton Senna',
-      username: 'ayrton',
-    },
-    source: 'kylrix',
-  },
-
-  // ── Follows & Social ──────────────────────────────────────────
-  {
-    id: 'follow-1',
-    category: 'follows',
-    title: 'New follower on Nostr & Kylrix Connect',
-    message: 'builder_0x started following your public profile and moments feed.',
-    time: '45m ago',
-    timestamp: Date.now() - 45 * 60 * 1000,
-    read: false,
-    accent: '#8B5CF6',
-    actionHref: '/connect',
-    actor: {
-      name: '0xBuilder',
-      username: 'builder_0x',
-      isNostr: true,
-      npub: 'npub10xbuild992x...',
-    },
-    source: 'nostr',
-  },
-  {
-    id: 'follow-2',
-    category: 'follows',
-    title: 'Collaborator joined workspace',
-    message: 'Nath Favour added you to workspace "Ecosystem Alpha".',
-    time: '2h ago',
-    timestamp: Date.now() - 2 * 3600 * 1000,
-    read: true,
-    accent: '#8B5CF6',
-    actionHref: '/workspaces',
-    actor: {
-      name: 'Nath Favour',
-      username: 'nathfavour',
-    },
-    source: 'kylrix',
-  },
-
-  // ── System & Workspace ────────────────────────────────────────
-  {
-    id: 'sys-1',
-    category: 'system',
-    title: 'Workspace Sync Complete',
-    message: 'All local action workflows and workspace logs successfully synchronized with deterministic sync engine.',
-    time: 'Just now',
-    timestamp: Date.now() - 1 * 60 * 1000,
-    read: false,
-    accent: '#10B981',
-    actionHref: '/app',
-    source: 'system',
-  },
-  {
-    id: 'sys-2',
-    category: 'system',
-    title: 'WebMCP Browser Standard Active',
-    message: '16 workspace tools exposed to browser agents via navigator.modelContext.',
-    time: '1h ago',
-    timestamp: Date.now() - 60 * 60 * 1000,
-    read: false,
-    accent: '#10B981',
-    actionHref: '/settings?tab=developers',
-    source: 'system',
-  },
-  {
-    id: 'sys-3',
-    category: 'system',
-    title: 'Secure Keychain Audited',
-    message: 'Local master credentials checked. Cryptographic integrity score 100%.',
-    time: '1d ago',
-    timestamp: Date.now() - 24 * 3600 * 1000,
-    read: true,
-    accent: '#F59E0B',
-    actionHref: '/vault',
-    source: 'system',
-  },
-];
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -234,49 +75,203 @@ export function NotificationDrawer({
   nativeSidebar,
 }: NotificationDrawerProps) {
   const router = useRouter();
+  const { user } = useAuth();
+  const { suggestions, dismissSuggestion } = useLocalContext();
   const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
-  const [notifications, setNotifications] = useState<KylrixNotification[]>([]);
+  const [liveNotifications, setLiveNotifications] = useState<KylrixNotification[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
 
-  // Initialize notifications from cache / defaults
+  // Load read and dismissed IDs from localStorage
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const cached = window.localStorage.getItem('kylrix_notifications_v3');
-    if (cached) {
-      try {
-        setNotifications(JSON.parse(cached));
-        return;
-      } catch {}
-    }
-    setNotifications(DEFAULT_NOTIFICATIONS);
-  }, []);
+    if (typeof window === 'undefined' || !user?.$id) return;
+    try {
+      const savedRead = window.localStorage.getItem(`kylrix_notif_read_${user.$id}`);
+      if (savedRead) setReadIds(new Set(JSON.parse(savedRead)));
 
-  const saveNotifications = useCallback((updated: KylrixNotification[]) => {
-    setNotifications(updated);
-    if (typeof window !== 'undefined') {
+      const savedDismissed = window.localStorage.getItem(`kylrix_notif_dismissed_${user.$id}`);
+      if (savedDismissed) setDismissedIds(new Set(JSON.parse(savedDismissed)));
+    } catch {}
+  }, [user?.$id]);
+
+  // Fetch real account activity logs, moments, and discussions
+  const fetchLiveActivity = useCallback(async () => {
+    if (!user?.$id) return;
+    setLoading(true);
+    try {
+      const items: KylrixNotification[] = [];
+
+      // 1. Fetch real account session and security logs
       try {
-        window.localStorage.setItem('kylrix_notifications_v3', JSON.stringify(updated));
+        const logsRes = await account.listLogs();
+        for (const log of logsRes.logs || []) {
+          const ts = new Date(log.time).getTime();
+          const diffMin = Math.round((Date.now() - ts) / 60000);
+          const timeStr =
+            diffMin < 1
+              ? 'Just now'
+              : diffMin < 60
+              ? `${diffMin}m ago`
+              : diffMin < 1440
+              ? `${Math.floor(diffMin / 60)}h ago`
+              : `${Math.floor(diffMin / 1440)}d ago`;
+
+          let title = 'Account Activity';
+          let message = `Session accessed from ${log.clientName || 'Browser'} (${log.ip || 'Local IP'})`;
+          let category: KylrixNotification['category'] = 'system';
+          let accent = '#10B981';
+          let actionHref = '/settings';
+
+          if (log.event?.includes('session.create') || log.event?.includes('sessions.create')) {
+            title = 'New Session Authenticated';
+            message = `Signed in via ${log.clientName || 'Web client'} in ${log.countryName || 'Local session'}.`;
+            accent = '#6366F1';
+            actionHref = '/settings';
+          } else if (log.event?.includes('password') || log.event?.includes('mfa')) {
+            title = 'Security Credential Event';
+            message = `Security settings updated from IP ${log.ip}.`;
+            accent = '#F59E0B';
+            actionHref = '/vault';
+          }
+
+          items.push({
+            id: `log_${log.$id || ts}_${log.event}`,
+            category,
+            title,
+            message,
+            time: timeStr,
+            timestamp: ts,
+            read: false,
+            accent,
+            actionHref,
+            source: 'system',
+          });
+        }
+      } catch (err) {
+        console.warn('[NotificationDrawer] listLogs skipped:', err);
+      }
+
+      // 2. Fetch real user moments / threads activity from LocalEngine cache
+      try {
+        const moments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
+        for (const m of moments.slice(0, 15)) {
+          const ts = new Date(m.$createdAt || m.createdAt || Date.now()).getTime();
+          const diffMin = Math.round((Date.now() - ts) / 60000);
+          const timeStr =
+            diffMin < 1
+              ? 'Just now'
+              : diffMin < 60
+              ? `${diffMin}m ago`
+              : diffMin < 1440
+              ? `${Math.floor(diffMin / 60)}h ago`
+              : `${Math.floor(diffMin / 1440)}d ago`;
+
+          if (m.commentsCount && m.commentsCount > 0) {
+            items.push({
+              id: `moment_reply_${m.$id || m.id}`,
+              category: 'replies',
+              title: 'Moment Discussions Active',
+              message: `${m.commentsCount} comments on "${(m.caption || m.content || 'Moment').slice(0, 60)}"`,
+              time: timeStr,
+              timestamp: ts + 1000,
+              read: false,
+              accent: '#6366F1',
+              actionHref: `/connect/post/${m.$id || m.id}`,
+              actor: {
+                name: m.userName || m.username || 'Community Member',
+                username: m.username,
+                isNostr: !!m.isNostr,
+              },
+              source: m.isNostr ? 'nostr' : 'kylrix',
+            });
+          }
+
+          if (m.likesCount && m.likesCount > 0) {
+            items.push({
+              id: `moment_like_${m.$id || m.id}`,
+              category: 'likes',
+              title: 'Reactions on your post',
+              message: `${m.likesCount} people liked your moment "${(m.caption || m.content || '').slice(0, 50)}"`,
+              time: timeStr,
+              timestamp: ts + 500,
+              read: false,
+              accent: '#EC4899',
+              actionHref: `/connect/post/${m.$id || m.id}`,
+              source: m.isNostr ? 'nostr' : 'kylrix',
+            });
+          }
+        }
       } catch {}
+
+      // 3. Merge system suggestions from ContextIntelligence
+      for (const s of suggestions || []) {
+        items.push({
+          id: `suggestion_${s.id}`,
+          category: 'system',
+          title: s.title,
+          message: s.description,
+          time: 'Active',
+          timestamp: Date.now(),
+          read: false,
+          accent: s.niche === 'intelligence' ? '#6366F1' : '#10B981',
+          actionHref: s.actionHref || '/app',
+          source: 'system',
+        });
+      }
+
+      setLiveNotifications(items);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [user?.$id, suggestions]);
+
+  useEffect(() => {
+    if (isOpen) {
+      void fetchLiveActivity();
+    }
+  }, [isOpen, fetchLiveActivity]);
 
   const markNotificationRead = (id: string) => {
-    const updated = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
-    saveNotifications(updated);
+    setReadIds((prev) => {
+      const next = new Set(prev).add(id);
+      if (typeof window !== 'undefined' && user?.$id) {
+        window.localStorage.setItem(`kylrix_notif_read_${user.$id}`, JSON.stringify(Array.from(next)));
+      }
+      return next;
+    });
   };
 
   const markAllRead = () => {
-    const updated = notifications.map((n) => ({ ...n, read: true }));
-    saveNotifications(updated);
+    const allIds = liveNotifications.map((n) => n.id);
+    const next = new Set([...Array.from(readIds), ...allIds]);
+    setReadIds(next);
+    if (typeof window !== 'undefined' && user?.$id) {
+      window.localStorage.setItem(`kylrix_notif_read_${user.$id}`, JSON.stringify(Array.from(next)));
+    }
   };
 
   const dismissNotification = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updated = notifications.filter((n) => n.id !== id);
-    saveNotifications(updated);
+    setDismissedIds((prev) => {
+      const next = new Set(prev).add(id);
+      if (typeof window !== 'undefined' && user?.$id) {
+        window.localStorage.setItem(`kylrix_notif_dismissed_${user.$id}`, JSON.stringify(Array.from(next)));
+      }
+      return next;
+    });
+    if (id.startsWith('suggestion_')) {
+      dismissSuggestion(id.replace('suggestion_', ''));
+    }
   };
 
   const clearAllNotifications = () => {
-    saveNotifications([]);
+    const allIds = liveNotifications.map((n) => n.id);
+    const next = new Set([...Array.from(dismissedIds), ...allIds]);
+    setDismissedIds(next);
+    if (typeof window !== 'undefined' && user?.$id) {
+      window.localStorage.setItem(`kylrix_notif_dismissed_${user.$id}`, JSON.stringify(Array.from(next)));
+    }
   };
 
   const handleNotificationClick = (notif: KylrixNotification) => {
@@ -287,16 +282,21 @@ export function NotificationDrawer({
     }
   };
 
-  // Category counts and unread counts
+  // Process live notifications with read and dismissed status
+  const visibleNotifications = useMemo(() => {
+    return liveNotifications
+      .filter((n) => !dismissedIds.has(n.id))
+      .map((n) => ({
+        ...n,
+        read: readIds.has(n.id),
+      }))
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  }, [liveNotifications, dismissedIds, readIds]);
+
+  // Unread counts per category
   const unreadCounts = useMemo(() => {
-    const counts = {
-      all: 0,
-      replies: 0,
-      likes: 0,
-      follows: 0,
-      system: 0,
-    };
-    for (const n of notifications) {
+    const counts = { all: 0, replies: 0, likes: 0, follows: 0, system: 0 };
+    for (const n of visibleNotifications) {
       if (!n.read) {
         counts.all++;
         if (counts[n.category] !== undefined) {
@@ -305,20 +305,26 @@ export function NotificationDrawer({
       }
     }
     return counts;
-  }, [notifications]);
+  }, [visibleNotifications]);
 
-  // Filtered notifications sorted by timestamp descending, capped at 100 items
+  // Filtered by active tab, capped at 100 items
   const filteredNotifications = useMemo(() => {
-    let items = notifications;
+    let list = visibleNotifications;
     if (activeTab !== 'all') {
-      items = items.filter((n) => n.category === activeTab);
+      list = list.filter((n) => n.category === activeTab);
     }
-    return items
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-      .slice(0, 100);
-  }, [notifications, activeTab]);
+    return list.slice(0, 100);
+  }, [visibleNotifications, activeTab]);
 
   if (!isOpen) return null;
+
+  const tabs: Array<{ id: NotificationCategory; label: string; icon: React.ReactNode }> = [
+    { id: 'all', label: 'All', icon: <Layers size={13} /> },
+    { id: 'replies', label: 'Replies', icon: <MessageSquare size={13} /> },
+    { id: 'likes', label: 'Likes', icon: <Heart size={13} /> },
+    { id: 'follows', label: 'Follows', icon: <UserPlus size={13} /> },
+    { id: 'system', label: 'System', icon: <ShieldCheck size={13} /> },
+  ];
 
   const renderCategoryIcon = (category: KylrixNotification['category'], accent: string) => {
     switch (category) {
@@ -334,465 +340,444 @@ export function NotificationDrawer({
     }
   };
 
-  const tabs: Array<{ id: NotificationCategory; label: string; icon: React.ReactNode }> = [
-    { id: 'all', label: 'All', icon: <Layers size={13} /> },
-    { id: 'replies', label: 'Replies', icon: <MessageSquare size={13} /> },
-    { id: 'likes', label: 'Likes', icon: <Heart size={13} /> },
-    { id: 'follows', label: 'Follows', icon: <UserPlus size={13} /> },
-    { id: 'system', label: 'System', icon: <ShieldCheck size={13} /> },
-  ];
-
-  const content = (
-    <Box
-      onWheel={(event: React.WheelEvent) => {
-        if (isDesktop) return;
-        const node = event.currentTarget;
-        if (event.deltaY < 0 && isTopbarScrollAtTop(node as HTMLElement)) {
-          event.preventDefault();
-          onClose();
-        }
-      }}
-      sx={{
-        px: { xs: 2, md: 3 },
-        py: 1.5,
-        maxHeight: isDesktop ? '100vh' : '82vh',
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1.5,
-      }}
-    >
-      <Paper
-        elevation={0}
+  const notificationBody = (
+    <Box sx={{ display: 'grid', gap: 1.75, minWidth: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+      {/* 1. Header & Quick Controls */}
+      <Box
         sx={{
           width: '100%',
-          borderRadius: '24px',
-          bgcolor: '#161412',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1.5,
+          px: 2,
+          py: 1.5,
+          borderRadius: '20px',
+          border: '1px solid rgba(255,255,255,0.08)',
+          bgcolor: 'rgba(255,255,255,0.03)',
+          minWidth: 0,
+          boxSizing: 'border-box',
         }}
       >
-        {/* Header */}
-        <Box sx={{ p: 2, pb: 1.5, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-              <Box
-                sx={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: '12px',
-                  display: 'grid',
-                  placeItems: 'center',
-                  color: appAccent,
-                  bgcolor: alpha(appAccent, 0.1),
-                  border: `1px solid ${alpha(appAccent, 0.2)}`,
-                  flexShrink: 0,
-                }}
-              >
-                <Bell size={18} strokeWidth={2.5} />
-              </Box>
-              <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.2 }}>
-                <Typography
-                  component="span"
-                  sx={{
-                    color: 'white',
-                    fontWeight: 900,
-                    fontSize: '0.98rem',
-                    lineHeight: 1.2,
-                    fontFamily: 'var(--font-clash)',
-                  }}
-                >
-                  Activity & Notifications
-                </Typography>
-                <Typography
-                  component="span"
-                  sx={{
-                    color: 'rgba(255,255,255,0.45)',
-                    fontWeight: 700,
-                    fontSize: '0.68rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  {unreadCounts.all > 0 ? `${unreadCounts.all} unread updates` : 'All caught up'}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {notifications.length > 0 && (
-                <IconButton
-                  onClick={markAllRead}
-                  title="Mark all as read"
-                  size="small"
-                  sx={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: '999px',
-                    color: 'rgba(255,255,255,0.6)',
-                    bgcolor: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' },
-                  }}
-                >
-                  <CheckCheck size={14} />
-                </IconButton>
-              )}
-              <IconButton
-                onClick={onClose}
-                size="small"
-                sx={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: '999px',
-                  color: alpha('#fff', 0.7),
-                  bgcolor: alpha('#fff', 0.05),
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  flexShrink: 0,
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' },
-                }}
-              >
-                <CloseIcon size={14} />
-              </IconButton>
-            </Box>
-          </Box>
-
-          {/* Segmented Category Pill Tabs (OpenBricks 4.0 Standard) */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
           <Box
             sx={{
-              mt: 2,
-              p: 0.5,
-              borderRadius: '16px',
-              bgcolor: '#0A0908',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              width: 40,
+              height: 40,
+              borderRadius: '14px',
+              bgcolor: alpha(appAccent, 0.12),
+              color: appAccent,
+              border: `1px solid ${alpha(appAccent, 0.22)}`,
               display: 'grid',
-              gridTemplateColumns: 'repeat(5, 1fr)',
-              gap: 0.5,
+              placeItems: 'center',
+              flexShrink: 0,
             }}
           >
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              const count = unreadCounts[tab.id] || 0;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  type="button"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    padding: '7px 4px',
-                    borderRadius: '12px',
-                    fontSize: '11px',
-                    fontWeight: isActive ? 800 : 600,
-                    fontFamily: 'inherit',
-                    color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.5)',
-                    backgroundColor: isActive ? '#1F1D1A' : 'transparent',
-                    border: isActive ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.4)' : 'none',
-                    minWidth: 0,
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', opacity: isActive ? 1 : 0.7 }}>
-                    {tab.icon}
-                  </span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {tab.label}
-                  </span>
-                  {count > 0 && (
-                    <span
-                      style={{
-                        padding: '1px 5px',
-                        borderRadius: '999px',
-                        fontSize: '9px',
-                        fontWeight: 900,
-                        backgroundColor: isActive ? appAccent : 'rgba(255,255,255,0.15)',
-                        color: '#FFFFFF',
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            <Bell size={18} strokeWidth={2.5} />
+          </Box>
+          <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+            <Typography
+              component="span"
+              sx={{
+                color: 'white',
+                fontWeight: 900,
+                fontSize: '0.98rem',
+                lineHeight: 1.2,
+                fontFamily: 'var(--font-clash)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Activity & Notifications
+            </Typography>
+            <Typography
+              component="span"
+              sx={{
+                color: 'rgba(255,255,255,0.45)',
+                fontWeight: 700,
+                fontSize: '0.68rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}
+            >
+              {unreadCounts.all > 0 ? `${unreadCounts.all} unread items` : 'All caught up'}
+            </Typography>
           </Box>
         </Box>
 
-        {/* Notifications List Well */}
-        <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1, maxHeight: isDesktop ? 'calc(100vh - 180px)' : '55vh', overflowY: 'auto' }}>
-          {filteredNotifications.map((notif) => (
-            <Box
-              key={notif.id}
-              component="button"
-              onClick={() => handleNotificationClick(notif)}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          {visibleNotifications.length > 0 && (
+            <IconButton
+              onClick={markAllRead}
+              title="Mark all as read"
+              size="small"
               sx={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 1.5,
-                p: 1.75,
-                borderRadius: '18px',
-                bgcolor: notif.read ? '#0E0D0C' : '#1C1A18',
-                border: '1px solid',
-                borderColor: notif.read ? 'rgba(255,255,255,0.05)' : alpha(notif.accent, 0.22),
-                color: 'white',
-                textAlign: 'left',
-                cursor: 'pointer',
-                transition: 'all 0.18s ease',
-                '&:hover': {
-                  bgcolor: '#242220',
-                  borderColor: alpha(notif.accent, 0.35),
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-                },
+                width: 32,
+                height: 32,
+                borderRadius: '999px',
+                color: 'rgba(255,255,255,0.6)',
+                bgcolor: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' },
               }}
             >
-              {/* Avatar or Category Icon */}
-              <Box sx={{ position: 'relative', flexShrink: 0, mt: 0.25 }}>
-                {notif.actor?.username ? (
-                  <IdentityAvatar
-                    username={notif.actor.username}
-                    displayName={notif.actor.name}
-                    size={38}
-                  />
-                ) : (
-                  <Box
-                    sx={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: '12px',
-                      bgcolor: alpha(notif.accent, 0.12),
-                      color: notif.accent,
-                      display: 'grid',
-                      placeItems: 'center',
-                    }}
-                  >
-                    {renderCategoryIcon(notif.category, notif.accent)}
-                  </Box>
-                )}
-
-                {/* Source Badge (Nostr / Kylrix) */}
-                {notif.source === 'nostr' && (
-                  <Box
-                    title="Nostr event"
-                    sx={{
-                      position: 'absolute',
-                      bottom: -2,
-                      right: -2,
-                      width: 15,
-                      height: 15,
-                      borderRadius: '50%',
-                      bgcolor: '#8B5CF6',
-                      color: 'white',
-                      fontSize: '8px',
-                      fontWeight: 900,
-                      display: 'grid',
-                      placeItems: 'center',
-                      border: '1.5px solid #161412',
-                    }}
-                  >
-                    ⚡
-                  </Box>
-                )}
-              </Box>
-
-              {/* Stacked Content Column (Strict No-Wrap Truncation) */}
-              <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.4 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                  <Typography
-                    component="span"
-                    sx={{
-                      color: notif.read ? 'rgba(255,255,255,0.85)' : 'white',
-                      fontWeight: notif.read ? 700 : 800,
-                      fontSize: '0.86rem',
-                      lineHeight: 1.25,
-                    }}
-                    noWrap
-                  >
-                    {notif.actor?.name ? `${notif.actor.name} · ${notif.title}` : notif.title}
-                  </Typography>
-                  <Typography
-                    component="span"
-                    sx={{
-                      color: 'rgba(255,255,255,0.38)',
-                      fontWeight: 600,
-                      fontSize: '0.68rem',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {notif.time}
-                  </Typography>
-                </Box>
-
-                <Typography
-                  component="span"
-                  sx={{
-                    color: notif.read ? 'rgba(255,255,255,0.48)' : 'rgba(255,255,255,0.72)',
-                    fontWeight: 500,
-                    fontSize: '0.76rem',
-                    lineHeight: 1.35,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {notif.message}
-                </Typography>
-              </Box>
-
-              {/* Dismiss / Action icon */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mt: 0.5 }}>
-                <IconButton
-                  size="small"
-                  onClick={(e) => dismissNotification(notif.id, e)}
-                  title="Dismiss"
-                  sx={{
-                    width: 24,
-                    height: 24,
-                    color: 'rgba(255,255,255,0.2)',
-                    '&:hover': { color: '#EF4444', bgcolor: 'rgba(239,68,68,0.1)' },
-                  }}
-                >
-                  <CloseIcon size={12} />
-                </IconButton>
-                <ChevronRight size={15} style={{ color: 'rgba(255,255,255,0.25)' }} />
-              </Box>
-            </Box>
-          ))}
-
-          {/* Empty State */}
-          {filteredNotifications.length === 0 && (
-            <Box
-              sx={{
-                py: 6,
-                px: 3,
-                textAlign: 'center',
-                display: 'grid',
-                placeItems: 'center',
-                gap: 1.5,
-              }}
-            >
-              <Box
-                sx={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: '50%',
-                  bgcolor: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  display: 'grid',
-                  placeItems: 'center',
-                  color: 'rgba(255,255,255,0.2)',
-                }}
-              >
-                {activeTab === 'replies' ? (
-                  <MessageSquare size={22} />
-                ) : activeTab === 'likes' ? (
-                  <Heart size={22} />
-                ) : activeTab === 'follows' ? (
-                  <UserPlus size={22} />
-                ) : (
-                  <Bell size={22} />
-                )}
-              </Box>
-              <Typography
-                component="span"
-                sx={{
-                  color: 'rgba(255,255,255,0.5)',
-                  fontSize: '0.86rem',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                No {activeTab === 'all' ? '' : activeTab} notifications
-              </Typography>
-              <Typography
-                component="span"
-                sx={{
-                  color: 'rgba(255,255,255,0.3)',
-                  fontSize: '0.74rem',
-                  maxWidth: 240,
-                  lineHeight: 1.4,
-                }}
-              >
-                {activeTab === 'replies'
-                  ? 'Replies and moment comments from Nostr and Kylrix will show up here.'
-                  : activeTab === 'likes'
-                  ? 'Reactions and likes on your shared moments and notes.'
-                  : activeTab === 'follows'
-                  ? 'New followers and workspace invitations.'
-                  : 'You are completely caught up on all activity.'}
-              </Typography>
-            </Box>
+              <CheckCheck size={14} />
+            </IconButton>
           )}
-        </Box>
-
-        {/* Footer Actions */}
-        {notifications.length > 0 && (
-          <Box
+          <IconButton
+            onClick={onClose}
+            size="small"
             sx={{
-              p: 1.5,
-              px: 2,
-              borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              bgcolor: '#121110',
+              width: 32,
+              height: 32,
+              borderRadius: '999px',
+              color: 'rgba(255,255,255,0.6)',
+              bgcolor: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' },
             }}
           >
-            <Typography component="span" sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
-              Showing {filteredNotifications.length} of {notifications.length} updates
-            </Typography>
+            <CloseIcon size={14} />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* 2. OpenBricks 4.0 Segmented Pill Tabs */}
+      <Box
+        sx={{
+          p: 0.5,
+          borderRadius: '16px',
+          bgcolor: '#0A0908',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          gap: 0.5,
+          width: '100%',
+          boxSizing: 'border-box',
+        }}
+      >
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const count = unreadCounts[tab.id] || 0;
+          return (
             <button
-              onClick={clearAllNotifications}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               type="button"
               style={{
-                background: 'none',
-                border: 'none',
-                color: 'rgba(255,255,255,0.45)',
-                fontSize: '11px',
-                fontWeight: 700,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '4px',
-                padding: '4px 8px',
-                borderRadius: '8px',
-                transition: 'color 0.15s',
+                padding: '8px 4px',
+                borderRadius: '12px',
+                fontSize: '11px',
+                fontWeight: isActive ? 800 : 600,
+                fontFamily: 'inherit',
+                color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.45)',
+                backgroundColor: isActive ? '#1F1D1A' : 'transparent',
+                border: isActive ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                minWidth: 0,
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
             >
-              <Trash2 size={12} />
-              Clear all
+              <span style={{ display: 'flex', alignItems: 'center', opacity: isActive ? 1 : 0.7 }}>
+                {tab.icon}
+              </span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {tab.label}
+              </span>
+              {count > 0 && (
+                <span
+                  style={{
+                    padding: '1px 5px',
+                    borderRadius: '999px',
+                    fontSize: '9px',
+                    fontWeight: 900,
+                    backgroundColor: isActive ? appAccent : 'rgba(255,255,255,0.15)',
+                    color: '#FFFFFF',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {count}
+                </span>
+              )}
             </button>
+          );
+        })}
+      </Box>
+
+      {/* 3. Notifications List */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1,
+          maxHeight: isDesktop ? 'calc(100vh - 270px)' : '48vh',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          pr: 0.25,
+        }}
+      >
+        {filteredNotifications.map((notif) => (
+          <Box
+            key={notif.id}
+            component="button"
+            onClick={() => handleNotificationClick(notif)}
+            sx={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 1.5,
+              p: 1.75,
+              borderRadius: '18px',
+              bgcolor: notif.read ? 'rgba(255,255,255,0.015)' : '#1C1A18',
+              border: '1px solid',
+              borderColor: notif.read ? 'rgba(255,255,255,0.05)' : alpha(notif.accent, 0.22),
+              color: 'white',
+              textAlign: 'left',
+              cursor: 'pointer',
+              transition: 'all 0.18s ease',
+              minWidth: 0,
+              boxSizing: 'border-box',
+              '&:hover': {
+                bgcolor: '#242220',
+                borderColor: alpha(notif.accent, 0.35),
+                transform: 'translateY(-1px)',
+              },
+            }}
+          >
+            {/* Category Icon / Avatar */}
+            <Box sx={{ position: 'relative', flexShrink: 0, mt: 0.25 }}>
+              <Box
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: '12px',
+                  bgcolor: alpha(notif.accent, 0.12),
+                  color: notif.accent,
+                  border: `1px solid ${alpha(notif.accent, 0.2)}`,
+                  display: 'grid',
+                  placeItems: 'center',
+                }}
+              >
+                {renderCategoryIcon(notif.category, notif.accent)}
+              </Box>
+
+              {notif.source === 'nostr' && (
+                <Box
+                  title="Nostr event"
+                  sx={{
+                    position: 'absolute',
+                    bottom: -2,
+                    right: -2,
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    bgcolor: '#8B5CF6',
+                    color: 'white',
+                    fontSize: '7px',
+                    fontWeight: 900,
+                    display: 'grid',
+                    placeItems: 'center',
+                    border: '1.5px solid #161412',
+                  }}
+                >
+                  ⚡
+                </Box>
+              )}
+            </Box>
+
+            {/* Stacked Content Column (Strict No-Wrap Truncation) */}
+            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                <Typography
+                  component="span"
+                  sx={{
+                    color: notif.read ? 'rgba(255,255,255,0.85)' : 'white',
+                    fontWeight: notif.read ? 700 : 800,
+                    fontSize: '0.86rem',
+                    lineHeight: 1.25,
+                  }}
+                  noWrap
+                >
+                  {notif.actor?.name ? `${notif.actor.name} · ${notif.title}` : notif.title}
+                </Typography>
+                <Typography
+                  component="span"
+                  sx={{
+                    color: 'rgba(255,255,255,0.38)',
+                    fontWeight: 600,
+                    fontSize: '0.68rem',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                  }}
+                >
+                  {notif.time}
+                </Typography>
+              </Box>
+
+              <Typography
+                component="span"
+                sx={{
+                  color: notif.read ? 'rgba(255,255,255,0.48)' : 'rgba(255,255,255,0.72)',
+                  fontWeight: 500,
+                  fontSize: '0.76rem',
+                  lineHeight: 1.35,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {notif.message}
+              </Typography>
+            </Box>
+
+            {/* Dismiss Action */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mt: 0.5 }}>
+              <IconButton
+                size="small"
+                onClick={(e) => dismissNotification(notif.id, e)}
+                title="Dismiss"
+                sx={{
+                  width: 24,
+                  height: 24,
+                  color: 'rgba(255,255,255,0.2)',
+                  '&:hover': { color: '#EF4444', bgcolor: 'rgba(239,68,68,0.1)' },
+                }}
+              >
+                <CloseIcon size={12} />
+              </IconButton>
+              <ChevronRight size={15} style={{ color: 'rgba(255,255,255,0.25)' }} />
+            </Box>
+          </Box>
+        ))}
+
+        {filteredNotifications.length === 0 && (
+          <Box
+            sx={{
+              py: 5,
+              px: 3,
+              textAlign: 'center',
+              display: 'grid',
+              placeItems: 'center',
+              gap: 1.25,
+            }}
+          >
+            <Box
+              sx={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                bgcolor: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                display: 'grid',
+                placeItems: 'center',
+                color: 'rgba(255,255,255,0.2)',
+              }}
+            >
+              {activeTab === 'replies' ? (
+                <MessageSquare size={20} />
+              ) : activeTab === 'likes' ? (
+                <Heart size={20} />
+              ) : activeTab === 'follows' ? (
+                <UserPlus size={20} />
+              ) : (
+                <Bell size={20} />
+              )}
+            </Box>
+            <Typography
+              component="span"
+              sx={{
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: '0.84rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}
+            >
+              No {activeTab === 'all' ? '' : activeTab} updates
+            </Typography>
+            <Typography
+              component="span"
+              sx={{
+                color: 'rgba(255,255,255,0.3)',
+                fontSize: '0.74rem',
+                maxWidth: 240,
+                lineHeight: 1.4,
+              }}
+            >
+              {activeTab === 'replies'
+                ? 'Discussion responses and comments from Nostr and Kylrix will appear here.'
+                : activeTab === 'likes'
+                ? 'Reactions on your moments and shared notes.'
+                : activeTab === 'follows'
+                ? 'New followers and workspace invitations.'
+                : 'You are completely caught up.'}
+            </Typography>
           </Box>
         )}
-      </Paper>
+      </Box>
+
+      {/* 4. Footer */}
+      {visibleNotifications.length > 0 && (
+        <Box
+          sx={{
+            pt: 1.25,
+            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Typography component="span" sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
+            {filteredNotifications.length} of {visibleNotifications.length} items
+          </Typography>
+          <button
+            onClick={clearAllNotifications}
+            type="button"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'rgba(255,255,255,0.45)',
+              fontSize: '11px',
+              fontWeight: 700,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              borderRadius: '8px',
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#EF4444')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+          >
+            <Trash2 size={12} />
+            Clear all
+          </button>
+        </Box>
+      )}
     </Box>
   );
 
+  // Desktop Rendering (Matching Profile Sidebar Layout)
   if (isDesktop) {
     if (nativeSidebar) {
       return (
         <NativeSidebarMount
           active={isOpen}
           sidebarKey="topbar-notifications"
-          width={440}
+          width={420}
           title="Notifications"
         >
-          {content}
+          <Box sx={{ p: 2, overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+            {notificationBody}
+          </Box>
         </NativeSidebarMount>
       );
     }
@@ -808,41 +793,102 @@ export function NotificationDrawer({
           sx: {
             bgcolor: '#161412',
             backgroundImage: 'none',
-            width: 440,
-            borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
+            width: { xs: '100vw', sm: 420 },
+            maxWidth: '100vw',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
             boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
             height: '100vh',
-            borderRadius: 0,
-            p: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            boxSizing: 'border-box',
+            overflowX: 'hidden',
+            p: { xs: 2, sm: 2.75 },
           },
         }}
       >
-        {content}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, minWidth: 0 }}>
+          <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
+            Notifications
+          </Typography>
+          <IconButton onClick={onClose} sx={{ color: 'rgba(255, 255, 255, 0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+            <CloseIcon size={16} />
+          </IconButton>
+        </Box>
+
+        <Paper
+          elevation={0}
+          sx={{
+            width: '100%',
+            maxWidth: '100%',
+            borderRadius: '26px',
+            bgcolor: '#161412',
+            border: `1px solid ${alpha(appAccent, 0.22)}`,
+            overflow: 'hidden',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            boxSizing: 'border-box',
+          }}
+        >
+          <Box sx={{ p: { xs: 1.5, sm: 2 }, overflowY: 'auto', overflowX: 'hidden', flex: 1, boxSizing: 'border-box' }}>
+            {notificationBody}
+          </Box>
+        </Paper>
       </Drawer>
     );
   }
 
+  // Mobile Topbar Dropdown Panel (Exact Matching `renderProfilePanel` standard)
   return (
-    <Drawer
-      anchor="top"
-      open={isOpen}
-      onClose={onClose}
-      keepMounted={false}
-      disablePortal={true}
-      slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-      PaperProps={{
-        sx: {
-          bgcolor: '#161412',
-          backgroundImage: 'none',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '0 0 28px 28px',
-          boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
-          overflow: 'hidden',
-          p: 0,
-        },
+    <Box
+      data-kylrix-topbar-panel
+      sx={{
+        width: '100%',
+        maxWidth: '100vw',
+        boxSizing: 'border-box',
+        borderTop: '1px solid rgba(255,255,255,0.05)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '0 0 28px 28px',
+        bgcolor: '#161412',
+        overflow: 'hidden',
+        boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
       }}
     >
-      {content}
-    </Drawer>
+      <Box
+        onWheel={(event: React.WheelEvent) => {
+          const node = event.currentTarget;
+          if (event.deltaY < 0 && isTopbarScrollAtTop(node as HTMLElement)) {
+            event.preventDefault();
+            onClose();
+          }
+        }}
+        sx={{
+          px: { xs: 1.5, sm: 2.25, md: 4 },
+          py: { xs: 1.5, sm: 2 },
+          maxHeight: '52vh',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: '100%',
+            maxWidth: '100%',
+            borderRadius: '24px',
+            bgcolor: '#161412',
+            border: '1px solid rgba(255,255,255,0.08)',
+            overflow: 'hidden',
+            p: { xs: 1.5, sm: 2 },
+            boxSizing: 'border-box',
+          }}
+        >
+          {notificationBody}
+        </Paper>
+      </Box>
+    </Box>
   );
 }
