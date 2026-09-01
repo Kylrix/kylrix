@@ -126,7 +126,15 @@ Humans and agents share the same workspace. MCP for IDE tool loops; REST for scr
    ```bash
    npx -y @smithery/cli install kylrix/kylrix --client cursor
    ```
-4. **Browser Agents (WebMCP)** — Open Kylrix in Chrome (with `#enable-webmcp-testing`) or ChatGPT in-app browser; tools are auto-discovered directly via `navigator.modelContext`.
+4. **Browser Agents (WebMCP)** — Auto-exposed via `navigator.modelContext` with zero config in your live session:
+   ```javascript
+   await navigator.modelContext.executeTool('kylrix_create_note', {
+     title: 'Agent Note',
+     content: 'Created via in-browser modelContext',
+     tags: ['webmcp']
+   });
+   ```
+   *Test:* Enable `chrome://flags/#enable-webmcp-testing` in Chrome, browse via ChatGPT, or click the **WebMCP** badge in [Settings → Developers](https://www.kylrix.space/settings?tab=developers).
 
 Wiring reference: [docs/integrations.md](docs/integrations.md) · [docs/webmcp.md](docs/webmcp.md)
 
