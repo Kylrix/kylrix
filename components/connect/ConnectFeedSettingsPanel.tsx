@@ -290,13 +290,6 @@ export function ConnectFeedSettingsPanel({
           <Toggle label="Show likes" desc="Include like counts" value={settings.showLikes} onToggle={() => patch({ showLikes: !settings.showLikes })} />
         </section>
 
-        {/* Freshness & Seen History */}
-        <section className="space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5"><Sparkles size={12} className="text-emerald-400" /> Freshness & Seen History</h3>
-          <Toggle label="Prioritize fresh unread" desc="Float brand-new and unread moments to the top" value={settings.prioritizeFresh !== false} onToggle={() => patch({ prioritizeFresh: !(settings.prioritizeFresh !== false) })} />
-          <Toggle label="Hide already seen" desc="Filter out moments you have already scrolled past or read" value={settings.hideSeen} onToggle={() => patch({ hideSeen: !settings.hideSeen })} />
-        </section>
-
         {/* Dedicated Nostr Section */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">

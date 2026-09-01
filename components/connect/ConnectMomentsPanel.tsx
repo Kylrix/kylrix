@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Bookmark, Heart, MessageCircle, Sliders, Sparkles, RotateCw, CheckCheck, EyeOff, Flame } from 'lucide-react';
+import { Bookmark, Heart, MessageCircle, Sliders, Sparkles } from 'lucide-react';
 import { MomentCard } from '@/components/connect/MomentCard';
 import { useConnectMomentsFeed } from '@/components/connect/useConnectMomentsFeed';
 import { ConnectFeedSettingsPanel } from '@/components/connect/ConnectFeedSettingsPanel';
@@ -150,55 +150,6 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
             );
           })}
         </nav>
-
-        {tab === 'moments' && (
-          <div className="flex items-center justify-between gap-2 px-1 py-0.5 text-xs text-white/50">
-            <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-bold text-[10px] uppercase tracking-wider border border-emerald-500/20">
-                <Sparkles size={10} />
-                {momentsFeed.unseenCount > 0 ? `${momentsFeed.unseenCount} fresh` : 'caught up'}
-              </span>
-              {momentsFeed.seenCount > 0 && (
-                <span className="text-[10px] text-white/35 font-mono">
-                  ({momentsFeed.seenCount} seen)
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              {momentsFeed.seenCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => momentsFeed.resetSeen()}
-                  className="px-2 py-1 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white text-[11px] font-semibold transition-colors"
-                  title="Show all posts again"
-                >
-                  Reset seen
-                </button>
-              )}
-              {momentsFeed.unseenCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => momentsFeed.markAllSeen()}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white text-[11px] font-semibold transition-colors"
-                  title="Mark all current moments as seen"
-                >
-                  <CheckCheck size={12} />
-                  Mark all seen
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => momentsFeed.refresh()}
-                disabled={momentsFeed.refreshing}
-                className="p-1 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white transition-colors disabled:opacity-40"
-                title="Fetch latest moments"
-              >
-                <RotateCw size={13} className={momentsFeed.refreshing ? 'animate-spin text-[#F59E0B]' : ''} />
-              </button>
-            </div>
-          </div>
-        )}
       </header>
 
       {loading ? (
