@@ -71,21 +71,94 @@ export function useNostrIdentity() {
   }, []);
 
   const loadOrMintIdentity = useCallback(async () => {
-    if (!user?.$id) return null;
-    
     setLoading(true);
     try {
-      // 1. Retrieve master key from volatile RAM
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+
+      // ── Branch A: Offline / Guest / Standalone Mode (No Logged-In User) ────
+      if (!user?.$id) {
+        const cachedGuest = await LocalEngine.cacheGet<NostrIdentity>('nostr:guest_identity').catch(() => null);
+        const hydratedGuest = hydrateNostrIdentity(cachedGuest);
+        if (hydratedGuest) {
+          setIdentity(hydratedGuest);
+          setIdentities([hydratedGuest]);
+          setLoading(false);
+          return hydratedGuest;
+        }
+
+        // Mint fresh autonomous guest Nostr keypair
+        const privKeyBytes = secp256k1.utils.randomPrivateKey();
+        const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
+        const npub = bytesToNpub(pubKeyBytes);
+        const nsec = bytesToNsec(privKeyBytes);
+
+        const newGuestIdentity = hydrateNostrIdentity({
+          id: `guest_${npub.slice(0, 16)}`,
+          npub,
+          nsec,
+          label: 'Offline / Guest Key',
+          isDefault: true,
+          isDerived: false,
+          createdAt: new Date().toISOString(),
+          privateKeyBytes: privKeyBytes,
+        })!;
+
+        setIdentity(newGuestIdentity);
+        setIdentities([newGuestIdentity]);
+        void LocalEngine.cacheSet('nostr:guest_identity', newGuestIdentity).catch(() => {});
+        void LocalEngine.cacheSet('nostr:active_identity', newGuestIdentity).catch(() => {});
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: newGuestIdentity }));
+        }
+        setLoading(false);
+        return newGuestIdentity;
+      }
+
+      // ── Branch B: Logged-in User — Check MasterPass MEK ─────────────────────
       const masterKey = ecosystemSecurity.getMasterKey();
       if (!masterKey) {
         setIsVaultLocked(true);
+        // User is logged in but hasn't unlocked vault yet: check local offline identity
+        const userOfflineKey = `nostr:identities_user_${user.$id}`;
+        const cachedUserOffline = await LocalEngine.cacheGet<NostrIdentity>(userOfflineKey).catch(() => null);
+        const hydratedUserOffline = hydrateNostrIdentity(cachedUserOffline);
+        if (hydratedUserOffline) {
+          setIdentity(hydratedUserOffline);
+          setIdentities([hydratedUserOffline]);
+          setLoading(false);
+          return hydratedUserOffline;
+        }
+
+        // Autonomously mint an offline identity for this user until vault is configured/unlocked
+        const privKeyBytes = secp256k1.utils.randomPrivateKey();
+        const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
+        const npub = bytesToNpub(pubKeyBytes);
+        const nsec = bytesToNsec(privKeyBytes);
+
+        const offlineUserIdentity = hydrateNostrIdentity({
+          id: `offline_${npub.slice(0, 16)}`,
+          npub,
+          nsec,
+          label: 'Offline Profile Key',
+          isDefault: true,
+          isDerived: false,
+          createdAt: new Date().toISOString(),
+          privateKeyBytes: privKeyBytes,
+        })!;
+
+        setIdentity(offlineUserIdentity);
+        setIdentities([offlineUserIdentity]);
+        void LocalEngine.cacheSet(userOfflineKey, offlineUserIdentity).catch(() => {});
+        void LocalEngine.cacheSet('nostr:active_identity', offlineUserIdentity).catch(() => {});
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: offlineUserIdentity }));
+        }
         setLoading(false);
-        return null;
+        return offlineUserIdentity;
       }
 
       setIsVaultLocked(false);
 
-      const { LocalEngine } = await import('@/lib/services/LocalEngine');
       const localEncryptedCacheKey = `nostr:identities_encrypted_${user.$id}`;
       
       // Load current local offline encrypted cache first

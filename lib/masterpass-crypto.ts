@@ -266,15 +266,17 @@ class MasterPassCrypto {
     }
   }
 
-  /** First-time vault setup: creates encrypted keychain entry and unlocks in memory. */
+  /** First-time vault setup: creates encrypted keychain entry and unlocks in memory (offline-first). */
   async setupVault(masterPassword: string, userId: string): Promise<void> {
-    const { AppwriteService } = await import("./appwrite");
-    const existingEntries = await AppwriteService.listKeychainEntries(userId);
-    const hasExisting = existingEntries.some((e: any) => e.type === 'password');
-
-    if (hasExisting) {
-      logError("[MasterPass] Refusing to initialize: Vault already exists for this user.");
-      throw new Error("VAULT_ALREADY_EXISTS");
+    try {
+      const { SecurityEnclave } = await import('@/lib/security/enclave');
+      const localEntries = (await SecurityEnclave.getKeychain(userId).catch(() => [])) || [];
+      if (localEntries.some((e: any) => e.type === 'password' && !e.isPending)) {
+        logError("[MasterPass] Refusing to initialize: Vault already exists for this user.");
+        throw new Error("VAULT_ALREADY_EXISTS");
+      }
+    } catch (e: any) {
+      if (e.message === 'VAULT_ALREADY_EXISTS') throw e;
     }
 
     this.masterKey = await this.generateRandomMEK();
@@ -633,26 +635,19 @@ class MasterPassCrypto {
 
       const wrappedKeyBase64 = btoa(String.fromCharCode(...combined));
       const saltBase64 = btoa(String.fromCharCode(...salt));
+      const paramsJson = JSON.stringify(useArgon ? {
+        memory: MasterPassCrypto.ARGON2_MEMORY,
+        iterations: MasterPassCrypto.ARGON2_ITERATIONS,
+        parallelism: MasterPassCrypto.ARGON2_PARALLELISM,
+        algo: "Argon2id"
+      } : {
+        iterations: MasterPassCrypto.PBKDF2_ITERATIONS,
+        algo: "SHA-256"
+      });
 
-      // CRITICAL: Clean up existing entries to prevent metadata bloat
-      const existing = await AppwriteService.listKeychainEntries(userId);
-      const passwordEntries = existing.filter((k: any) => k.type === 'password');
-      
-      // If we are creating a PENDING entry, delete any existing PENDING ones first
-      if (isPending) {
-          const pendingEntries = passwordEntries.filter((e: any) => e.isPending);
-          for (const pe of pendingEntries) {
-              await AppwriteService.deleteKeychainEntry(pe.$id);
-          }
-      } else {
-          // If we are creating a STABLE entry (finalizing), delete the legacy row
-          const stableEntries = passwordEntries.filter((e: any) => !e.isPending);
-          for (const se of stableEntries) {
-              await AppwriteService.deleteKeychainEntry(se.$id);
-          }
-      }
-
-      return await AppwriteService.createKeychainEntry({
+      const localEntry = {
+        $id: `keychain_${userId}_password`,
+        id: `keychain_${userId}_password`,
         userId,
         type: 'password',
         credentialId: null,
@@ -660,18 +655,62 @@ class MasterPassCrypto {
         salt: saltBase64,
         isArgon: useArgon,
         isPending: isPending,
-        params: JSON.stringify(useArgon ? {
-          memory: MasterPassCrypto.ARGON2_MEMORY,
-          iterations: MasterPassCrypto.ARGON2_ITERATIONS,
-          parallelism: MasterPassCrypto.ARGON2_PARALLELISM,
-          algo: "Argon2id"
-        } : {
-          iterations: MasterPassCrypto.PBKDF2_ITERATIONS,
-          algo: "SHA-256"
-        }),
+        params: paramsJson,
         isBackup: false,
-        authPass: false
-      });
+        authPass: false,
+        $createdAt: new Date().toISOString(),
+      };
+
+      // Instantly persist in local SecurityEnclave & LocalEngine
+      try {
+        const { SecurityEnclave } = await import('@/lib/security/enclave');
+        await SecurityEnclave.setKeychain(userId, [localEntry]);
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        await LocalEngine.cacheSet(`f_keychain_${userId}`, [localEntry]);
+      } catch {}
+
+      // Opportunistic background sync to Appwrite
+      try {
+        const existing = await AppwriteService.listKeychainEntries(userId).catch(() => []);
+        const passwordEntries = existing.filter((k: any) => k.type === 'password');
+        
+        if (isPending) {
+          const pendingEntries = passwordEntries.filter((e: any) => e.isPending);
+          for (const pe of pendingEntries) {
+            await AppwriteService.deleteKeychainEntry(pe.$id).catch(() => {});
+          }
+        } else {
+          const stableEntries = passwordEntries.filter((e: any) => !e.isPending);
+          for (const se of stableEntries) {
+            await AppwriteService.deleteKeychainEntry(se.$id).catch(() => {});
+          }
+        }
+
+        const remote = await AppwriteService.createKeychainEntry({
+          userId,
+          type: 'password',
+          credentialId: null,
+          wrappedKey: wrappedKeyBase64,
+          salt: saltBase64,
+          isArgon: useArgon,
+          isPending: isPending,
+          params: paramsJson,
+          isBackup: false,
+          authPass: false
+        }).catch(() => null);
+
+        if (remote) {
+          try {
+            const { SecurityEnclave } = await import('@/lib/security/enclave');
+            await SecurityEnclave.setKeychain(userId, [remote]);
+          } catch {}
+          return remote;
+        }
+      } catch {
+        // Offline or backend unavailable — local entry remains valid
+      }
+
+      return localEntry;
 
     } catch (error: unknown) {
       logError("Failed to create keychain entry", error as Error);
