@@ -7,9 +7,7 @@ import {
   FileText as NotesIcon,
   Target as GoalsIcon,
   Lock as VaultIcon,
-  GitFork as FlowIcon,
-  Users as MomentsIcon,
-  MessageCircleMore as HangoutIcon,
+  Settings as SettingsIcon,
   Share2 as ShareIcon,
   MoreVertical as MoreIcon,
   Heart as HeartIcon,
@@ -23,18 +21,16 @@ import { useSidebar } from '@/components/ui/SidebarContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { executeInstantShare } from '@/lib/share/instant-share';
 
-type NavId = 'note' | 'goal' | 'vault' | 'connect' | 'moments' | 'hangout' | 'flow';
+type NavId = 'note' | 'goal' | 'vault' | 'settings';
 
-/** Same order + accents as UnifiedBottomBar: ideas → goals → vault → connect → flows */
+/** Same order + accents as UnifiedBottomBar: ideas → goals → vault → settings */
 const NAV_COLORS: Record<NavId, string> = {
   note: '#EC4899',
   goal: '#A855F7',
   vault: '#10B981',
-  connect: '#F59E0B',
-  moments: '#F59E0B',
-  hangout: '#F59E0B',
-  flow: '#A855F7',
+  settings: '#6366F1',
 };
+
 
 
 import { useWorkspace } from '@/context/WorkspaceContext';
@@ -104,30 +100,16 @@ export function UnifiedLeftSidebar() {
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
     if (pathname?.startsWith('/vault')) return 'vault';
-    // Desktop split: /connect → moments, /connect/chats (+ chat) → hangout
-    if (pathname?.startsWith('/connect/chats') || pathname?.startsWith('/connect/chat')) return 'hangout';
-    if (pathname?.startsWith('/connect')) return 'moments';
-    if (isFlowPath(pathname)) return 'flow';
+    if (pathname?.startsWith('/settings')) return 'settings';
     return null;
   };
 
   const handleNavChange = (navId: NavId) => {
-    if (navId === 'hangout') {
-      openUnified('hangouts');
-      return;
-    }
-    if (navId === 'moments' || navId === 'connect') {
-      openUnified('moments');
-      return;
-    }
     const routes: Record<NavId, string> = {
       note: '/app',
       goal: '/goals',
       vault: '/vault',
-      connect: '/app',
-      moments: '/app',
-      hangout: '/app',
-      flow: '/flows',
+      settings: '/settings',
     };
     navPush(routes[navId] || '/app');
   };
@@ -142,10 +124,9 @@ export function UnifiedLeftSidebar() {
     { id: 'note', label: 'Ideas', icon: NotesIcon },
     { id: 'goal', label: 'Goals', icon: GoalsIcon },
     { id: 'vault', label: 'Vault', icon: VaultIcon },
-    { id: 'moments', label: 'Moments', icon: MomentsIcon },
-    { id: 'hangout', label: 'Hangout', icon: HangoutIcon },
-    { id: 'flow', label: 'Flows', icon: FlowIcon },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
+
 
   return (
     <Box

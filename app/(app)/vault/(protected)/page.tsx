@@ -24,6 +24,8 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
+
 
 
 function useIsDesktop() {
@@ -488,9 +490,11 @@ function DashboardPageContent() {
               </div>
 
               <div className="flex items-center gap-2">
+                <FlowTabTrigger />
                 <MomentTabTrigger />
                 <HangoutTabTrigger />
               </div>
+
 
             </div>
 

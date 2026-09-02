@@ -33,6 +33,8 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
+
 
 
 export default function FormsDashboard() {
@@ -314,9 +316,11 @@ export default function FormsDashboard() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
+                        <FlowTabTrigger />
                         <MomentTabTrigger />
                         <HangoutTabTrigger />
                         <button 
+
 
                             type="button"
                             onClick={handleCreate}

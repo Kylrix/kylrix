@@ -9,6 +9,7 @@ import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { useAuth } from '@/context/auth/AuthContext';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 
 export default function GoalsPage() {
   const router = useRouter();
@@ -46,9 +47,11 @@ export default function GoalsPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <FlowTabTrigger />
               <MomentTabTrigger />
               <HangoutTabTrigger />
               <button
+
                 type="button"
                 onClick={handleOpenCreate}
                 className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#A855F7] text-white hover:bg-[#9333ea] active:scale-95 transition-all shadow-[0_4px_14px_rgba(168,85,247,0.3)] select-none shrink-0"

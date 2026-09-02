@@ -13,6 +13,8 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import Link from 'next/link';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
+
 
 
 const TAG_COLOR_MAP: Record<string, string> = {
@@ -482,9 +484,11 @@ export default function IdeasPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <FlowTabTrigger />
               <MomentTabTrigger />
               <HangoutTabTrigger />
               <button
+
 
                 type="button"
                 onClick={openCreateNote}

@@ -7,19 +7,18 @@ import {
   FileText as NotesIcon,
   Target as GoalsIcon,
   Lock as VaultIcon,
-  GitFork as FlowIcon,
-  Users as ConnectIcon} from 'lucide-react';
+  Settings as SettingsIcon,
+} from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
-import { isFlowPath } from '@/lib/routing/app-paths';
 
 /**
  * Persistent unified bottom bar.
- * Order: idea → goal → vault → connect → flows
+ * Order: ideas → goals → vault → settings
  */
 export function UnifiedBottomBar() {
   const pathname = usePathname();
@@ -32,8 +31,7 @@ export function UnifiedBottomBar() {
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
     if (pathname?.startsWith('/vault')) return 'vault';
-    if (isFlowPath(pathname)) return 'flow';
-    if (pathname?.startsWith('/connect')) return 'connect';
+    if (pathname?.startsWith('/settings')) return 'settings';
     return null;
   }, [pathname]);
 
@@ -43,10 +41,8 @@ export function UnifiedBottomBar() {
         return '#10B981';
       case 'goal':
         return '#A855F7';
-      case 'flow':
-        return '#A855F7';
-      case 'connect':
-        return '#F59E0B';
+      case 'settings':
+        return '#6366F1';
       case 'note':
       default:
         return '#EC4899';
@@ -57,8 +53,7 @@ export function UnifiedBottomBar() {
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
     if (pathname?.startsWith('/vault')) return 'vault';
-    if (pathname?.startsWith('/connect')) return 'connect';
-    if (isFlowPath(pathname)) return 'flow';
+    if (pathname?.startsWith('/settings')) return 'settings';
     return null;
   }, [pathname]);
 
@@ -66,9 +61,9 @@ export function UnifiedBottomBar() {
     { key: 'note', route: '/app', icon: NotesIcon, label: 'Notes' },
     { key: 'goal', route: '/goals', icon: GoalsIcon, label: 'Goals' },
     { key: 'vault', route: '/vault', icon: VaultIcon, label: 'Vault' },
-    { key: 'connect', route: '/connect', icon: ConnectIcon, label: 'Connect' },
-    { key: 'flow', route: '/flows', icon: FlowIcon, label: 'Flows' },
+    { key: 'settings', route: '/settings', icon: SettingsIcon, label: 'Settings' },
   ];
+
 
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/app\/notes\/[^/]+$/));
   const isSpecificPostPage = Boolean(pathname?.match(/^\/connect\/post\/[^/]+$/));
@@ -112,15 +107,11 @@ export function UnifiedBottomBar() {
                 key={item.key}
                 href={item.route}
                 onClick={(e) => {
-                  if (item.key === 'connect') {
-                    e.preventDefault();
-                    openUnified('moments');
-                    return;
-                  }
                   if (pathname === item.route) {
                     e.preventDefault();
                   }
                 }}
+
                 className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group"
 
                 style={{

@@ -44,7 +44,12 @@ const MomentsDrawer = dynamic(
   () => import('./connect/MomentsDrawer').then((m) => m.MomentsDrawer),
   { ssr: false },
 );
+const FlowsDrawer = dynamic(
+  () => import('./flows/FlowsDrawer').then((m) => m.FlowsDrawer),
+  { ssr: false },
+);
 const ChatCreateDrawer = dynamic(
+
 
   () => import('@/components/objects/ChatCreateDrawer').then((m) => m.ChatCreateDrawer),
   { ssr: false },
@@ -332,7 +337,11 @@ const isSpecificPostPage = useMemo(
       {unifiedDrawerActive === 'moments' && (
         <MomentsDrawer onClose={() => closeUnified()} />
       )}
+      {unifiedDrawerActive === 'flows' && (
+        <FlowsDrawer onClose={() => closeUnified()} />
+      )}
       {isDesktopShell && unifiedDrawerActive === 'new-chat' && (
+
 
         <ChatCreateDrawer open onClose={() => closeUnified()} />
       )}

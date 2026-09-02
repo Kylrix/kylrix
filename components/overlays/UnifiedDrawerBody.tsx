@@ -105,7 +105,12 @@ const MomentsDrawer = dynamic(
   () => import('../connect/MomentsDrawer').then((m) => m.MomentsDrawer),
   { ssr: false },
 );
+const FlowsDrawer = dynamic(
+  () => import('../flows/FlowsDrawer').then((m) => m.FlowsDrawer),
+  { ssr: false },
+);
 const TaskDetails = dynamic(() => import('../tasks/TaskDetails'), { ssr: false });
+
 
 const AgenticPanelContent = dynamic(
   () => import('./AgenticPanelContent').then((m) => m.AgenticPanelContent),
@@ -416,7 +421,15 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           initialTab={drawerData?.initialTab}
         />
       );
+    case 'flows':
+      return (
+        <FlowsDrawer
+          onClose={onClose}
+          initialTab={drawerData?.initialTab}
+        />
+      );
     case 'milestone-details':
+
 
       return <TaskDetails taskId={drawerData?.taskId} onBack={onClose} />;
     case 'profile-preview':
