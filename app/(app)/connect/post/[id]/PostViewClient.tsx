@@ -601,19 +601,35 @@ export function PostViewClient({
 
         {/* Reply composer — shown for posts and replies, not reactions/reposts */}
         {!isReaction && !isRepost && (
-          <div className="flex gap-2 min-w-0 max-w-full">
-            <input
+          <div className="flex gap-2 items-end min-w-0 max-w-full">
+            <textarea
               value={replyContent}
-              onChange={e => setReplyContent(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void sendReply(); } }}
+              onChange={e => {
+                setReplyContent(e.target.value);
+                const target = e.target;
+                target.style.height = 'auto';
+                target.style.height = `${Math.min(target.scrollHeight, 140)}px`;
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  void sendReply();
+                }
+              }}
+              rows={1}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              data-gramm="false"
               placeholder={source === 'nostr' && isVaultLocked ? 'Unlock vault to reply…' : 'Write a reply…'}
-              className="min-w-0 flex-1 rounded-xl bg-[#161412] border border-[#34322F] px-4 py-2.5 text-sm outline-none focus:border-white/20"
+              className="min-w-0 flex-1 rounded-xl bg-[#161412] border border-[#34322F] px-4 py-2.5 text-sm outline-none focus:border-white/20 resize-none max-h-[140px] leading-relaxed text-white font-satoshi"
             />
             {source === 'nostr' && isVaultLocked ? (
               <button
                 type="button"
                 onClick={() => void unlockAndLoad()}
-                className="shrink-0 rounded-xl bg-[#F59E0B]/15 text-[#F59E0B] font-bold text-sm px-3 inline-flex items-center gap-1.5 border border-[#F59E0B]/30"
+                className="shrink-0 h-[42px] rounded-xl bg-[#F59E0B]/15 text-[#F59E0B] font-bold text-sm px-3 inline-flex items-center gap-1.5 border border-[#F59E0B]/30"
               >
                 <Lock size={14} /> Unlock
               </button>
@@ -622,7 +638,7 @@ export function PostViewClient({
                 type="button"
                 disabled={busy || !replyContent.trim() || (source === 'ecosystem' && !user)}
                 onClick={() => void sendReply()}
-                className="shrink-0 rounded-xl bg-[#F59E0B] text-black font-bold text-sm px-4 disabled:opacity-40"
+                className="shrink-0 h-[42px] rounded-xl bg-[#F59E0B] text-black font-bold text-sm px-4 disabled:opacity-40 transition-opacity"
               >
                 Reply
               </button>
