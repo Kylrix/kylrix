@@ -467,13 +467,13 @@ function DashboardPageContent() {
           <div>
             {/* Tab Switcher */}
             <div className="px-4 md:px-12 mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 sm:gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none">
+              <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#161412] border border-white/[0.08] rounded-2xl w-fit select-none shadow-md">
                 <button
                   onClick={() => setActiveTab('secrets')}
                   className={`flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'secrets'
                       ? 'bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)]'
-                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                      : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
                   }`}
                   title="Secrets"
                   aria-label="Secrets"
@@ -486,7 +486,7 @@ function DashboardPageContent() {
                   className={`flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'totp'
                       ? 'bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)]'
-                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                      : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
                   }`}
                   title="TOTP"
                   aria-label="TOTP"
@@ -495,6 +495,7 @@ function DashboardPageContent() {
                   <span className="hidden sm:inline">TOTP</span>
                 </button>
               </div>
+
 
 
               <div className="flex items-center gap-2">
