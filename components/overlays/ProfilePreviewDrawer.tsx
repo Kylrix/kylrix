@@ -582,104 +582,129 @@ export function ProfilePreviewDrawer({
             };
 
             return (
-              <div
+              <article
                 key={item.id}
                 role="button"
                 tabIndex={0}
                 onClick={openItem}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openItem(); } }}
-                className="rounded-2xl bg-[#0F0E0D] border border-white/[0.06] p-4 space-y-3 hover:border-white/[0.15] hover:bg-[#141210] transition-all cursor-pointer"
+                className="w-full max-w-full min-w-0 flex flex-col text-left rounded-[22px] bg-[#0A0908] border border-white/[0.08] hover:border-white/[0.14] hover:bg-[#12100E] transition-all duration-200 cursor-pointer overflow-hidden"
               >
                 {/* Repost Header Indicator */}
                 {item.isRepost && (
-                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#10B981] font-semibold pb-1 border-b border-white/[0.04]">
-                    <Repeat2 size={13} className="text-[#10B981]" />
+                  <div className="flex items-center gap-1.5 px-4 pt-3 pb-0 text-[12px] font-mono text-[#34D399] font-semibold">
+                    <Repeat2 size={13} className="text-[#34D399]" />
                     <span>{displayName} reposted</span>
                   </div>
                 )}
 
                 {/* Like / Reaction Header Indicator */}
                 {item.kind === 7 && (
-                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#EC4899] font-semibold pb-1 border-b border-white/[0.04]">
+                  <div className="flex items-center gap-1.5 px-4 pt-3 pb-0 text-[12px] font-mono text-[#EC4899] font-semibold">
                     <Heart size={13} fill="currentColor" className="text-[#EC4899]" />
-                    <span>{displayName} reacted {item.reactionEmoji || '❤️'}</span>
+                    <span>{displayName} liked</span>
                   </div>
                 )}
 
                 {/* Zap Header Indicator */}
                 {item.kind === 9735 && (
-                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#F59E0B] font-semibold pb-1 border-b border-white/[0.04]">
+                  <div className="flex items-center gap-1.5 px-4 pt-3 pb-0 text-[12px] font-mono text-[#F59E0B] font-semibold">
                     <Zap size={13} fill="currentColor" className="text-[#F59E0B]" />
-                    <span>Lightning Zap</span>
+                    <span>{displayName} zapped</span>
                   </div>
                 )}
 
-                {/* Author Info Row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-full bg-[#1C1A18] border border-white/[0.08] flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden text-white/70">
-                      {authorAvatar ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={authorAvatar} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        (authorName || '?').slice(0, 2).toUpperCase()
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white font-satoshi truncate">
-                          {authorName}
-                        </span>
-                        {authorHandle && (
-                          <span className="text-[10px] text-white/40 font-mono truncate">
-                            {authorHandle.startsWith('@') ? authorHandle : `@${authorHandle}`}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono text-white/40 shrink-0">
-                    {formatRelative(item.createdAt)}
-                  </span>
-                </div>
-
-                {/* Clean Content Body */}
-                {item.content ? (
-                  <p className="text-xs leading-relaxed text-white/90 font-satoshi whitespace-pre-wrap break-words m-0">
-                    {truncateMomentBody(item.content)}
-                  </p>
-                ) : item.kind === 7 ? (
-                  <p className="text-xs text-white/50 font-mono m-0 italic">
-                    Reacted to note #{item.targetId.slice(0, 8)}…
-                  </p>
-                ) : null}
-
-                {/* Image Media Grid */}
-                {item.images.length > 0 && (
-                  <div className={`grid gap-1.5 rounded-xl overflow-hidden max-h-48 ${item.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                    {item.images.slice(0, 2).map((img, i) => (
+                {/* Main Card Content */}
+                <div className="flex gap-3 p-4 min-w-0 max-w-full flex-1">
+                  <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black border border-white/[0.08] overflow-hidden bg-[#161412] text-white/70">
+                    {authorAvatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img key={i} src={img} alt="" className="w-full h-36 object-cover rounded-lg" />
-                    ))}
+                      <img src={authorAvatar} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      (authorName || '?').slice(0, 2).toUpperCase()
+                    )}
                   </div>
-                )}
 
-                {/* Bottom Action Strip */}
-                <div className="flex items-center gap-4 pt-1 text-white/30 text-[11px] font-mono">
-                  <span className="flex items-center gap-1 hover:text-white/70 transition-colors">
-                    <MessageCircle size={13} />
-                  </span>
-                  <span className="flex items-center gap-1 hover:text-[#10B981] transition-colors">
-                    <Repeat2 size={13} />
-                  </span>
-                  <span className="flex items-center gap-1 hover:text-[#EC4899] transition-colors">
-                    <Heart size={13} />
-                  </span>
-                  <span className="flex items-center gap-1 hover:text-white/70 transition-colors ml-auto">
-                    <Share2 size={12} />
-                  </span>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[15px] font-extrabold text-white font-satoshi truncate">
+                        {authorName.replace(/^@/, '')}
+                      </span>
+                      {authorHandle && (
+                        <span className="text-[13px] text-white/40 font-medium truncate min-w-0">
+                          {authorHandle.startsWith('@') ? authorHandle : `@${authorHandle}`}
+                        </span>
+                      )}
+                      <span className="text-white/25 text-[13px] shrink-0">·</span>
+                      <time className="text-[13px] text-white/40 font-medium tabular-nums shrink-0">
+                        {formatRelative(item.createdAt)}
+                      </time>
+                      <span className="ml-auto shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#161412] border border-white/[0.06] text-[10px] font-bold uppercase tracking-wider text-white/45">
+                        <Globe size={11} className="text-[#F59E0B]" />
+                        Nostr
+                      </span>
+                    </div>
+
+                    {item.content ? (
+                      <p className="mt-1.5 text-[14px] sm:text-[15px] leading-relaxed text-white/[0.88] font-satoshi whitespace-pre-wrap break-words [overflow-wrap:anywhere] m-0 max-w-full">
+                        {truncateMomentBody(item.content)}
+                      </p>
+                    ) : item.kind === 7 ? (
+                      <p className="mt-1.5 text-[14px] text-white/60 font-satoshi italic m-0">
+                        Reacted {item.reactionEmoji || '❤️'} to note #{item.targetId.slice(0, 8)}…
+                      </p>
+                    ) : null}
+
+                    {/* Image Media Grid */}
+                    {item.images.length > 0 && (
+                      <div className={`mt-3 w-full max-w-full h-[160px] rounded-xl overflow-hidden border border-white/[0.06] bg-[#000] grid ${item.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 gap-0.5'} relative`}>
+                        {item.images.slice(0, 2).map((img, i) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={i} src={img} alt="" className="w-full h-full max-w-full object-cover" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+
+                {/* Bottom Interaction Strip */}
+                <div className="px-4 pb-3.5 pt-0 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="grid grid-cols-4 gap-0.5 rounded-2xl border border-white/[0.08] bg-[#161412] p-1">
+                    <button
+                      type="button"
+                      onClick={openItem}
+                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#60A5FA] hover:bg-white/[0.04] transition-colors"
+                      title="Reply"
+                    >
+                      <MessageCircle size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openItem}
+                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#34D399] hover:bg-white/[0.04] transition-colors"
+                      title="Repost"
+                    >
+                      <Repeat2 size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openItem}
+                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#EC4899] hover:bg-white/[0.04] transition-colors"
+                      title="Like"
+                    >
+                      <Heart size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openItem}
+                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#F59E0B] hover:bg-white/[0.04] transition-colors"
+                      title="Zap"
+                    >
+                      <Zap size={15} />
+                    </button>
+                  </div>
+                </div>
+              </article>
             );
           })}
         </div>
