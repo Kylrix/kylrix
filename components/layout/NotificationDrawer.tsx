@@ -789,8 +789,8 @@ export function NotificationDrawer({
           display: 'flex',
           flexDirection: 'column',
           gap: 1.25,
-          flex: 1,
-          minHeight: 0,
+          maxHeight: isDesktop ? 'calc(100vh - 270px)' : 'calc(60dvh - 180px)',
+          minHeight: '120px',
           overflowY: 'auto',
           overflowX: 'hidden',
           overscrollBehavior: 'contain',
@@ -957,28 +957,20 @@ export function NotificationDrawer({
                 height: 48,
                 borderRadius: '50%',
                 bgcolor: 'rgba(255,255,255,0.04)',
+                color: 'rgba(255,255,255,0.4)',
                 border: '1px solid rgba(255,255,255,0.08)',
                 display: 'grid',
                 placeItems: 'center',
-                color: 'rgba(255,255,255,0.3)',
               }}
             >
-              {activeTab === 'replies' ? (
-                <MessageSquare size={20} />
-              ) : activeTab === 'likes' ? (
-                <Heart size={20} />
-              ) : activeTab === 'follows' ? (
-                <UserPlus size={20} />
-              ) : (
-                <Bell size={20} />
-              )}
+              {renderCategoryIcon(activeTab === 'all' ? 'system' : activeTab)}
             </Box>
             <Typography
               component="span"
               sx={{
-                color: 'rgba(255,255,255,0.5)',
-                fontSize: '0.86rem',
+                color: 'rgba(255,255,255,0.7)',
                 fontWeight: 800,
+                fontSize: '0.86rem',
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
                 lineHeight: 1.2,
@@ -1131,7 +1123,7 @@ export function NotificationDrawer({
             boxSizing: 'border-box',
           }}
         >
-          <Box sx={{ p: { xs: 1.5, sm: 2.25 }, overflowY: 'auto', overflowX: 'hidden', flex: 1, boxSizing: 'border-box' }}>
+          <Box sx={{ p: { xs: 1.5, sm: 2.25 }, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
             {notificationBody}
           </Box>
         </Paper>
@@ -1156,19 +1148,12 @@ export function NotificationDrawer({
       }}
     >
       <Box
-        onWheel={(event: React.WheelEvent) => {
-          const node = event.currentTarget;
-          if (event.deltaY < 0 && isTopbarScrollAtTop(node as HTMLElement)) {
-            event.preventDefault();
-            onClose();
-          }
-        }}
         sx={{
           px: { xs: 1.5, sm: 2.25, md: 4 },
           py: { xs: 1.5, sm: 2 },
           maxHeight: '60dvh',
-          overflowY: 'auto',
-          overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
           width: '100%',
           maxWidth: '100%',
           boxSizing: 'border-box',
@@ -1186,7 +1171,7 @@ export function NotificationDrawer({
             boxSizing: 'border-box',
           }}
         >
-          <Box sx={{ p: { xs: 1.5, sm: 2.25 }, overflowX: 'hidden', boxSizing: 'border-box' }}>
+          <Box sx={{ p: { xs: 1.5, sm: 2.25 }, boxSizing: 'border-box' }}>
             {notificationBody}
           </Box>
         </Paper>
