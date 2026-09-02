@@ -15,6 +15,7 @@ import {
   Bell,
   MessageSquare,
   Heart,
+  Zap,
   UserPlus,
   ShieldCheck,
   CheckCheck,
@@ -39,11 +40,11 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { openMomentObjectDetail } from '@/components/objects/MomentObjectDetail';
 
-export type NotificationCategory = 'all' | 'replies' | 'likes' | 'follows' | 'system';
+export type NotificationCategory = 'all' | 'replies' | 'likes' | 'zaps' | 'follows' | 'system';
 
 export interface KylrixNotification {
   id: string;
-  category: 'replies' | 'likes' | 'follows' | 'system';
+  category: 'replies' | 'likes' | 'zaps' | 'follows' | 'system';
   title: string;
   message: string;
   time: string;
@@ -388,7 +389,7 @@ export function NotificationDrawer({
 
               itemsMap.set(notifId, {
                 id: notifId,
-                category: 'likes',
+                category: 'zaps',
                 title: `⚡ Lightning Zap received!`,
                 message: `${authorDisplayName} sent you a Lightning Zap on Nostr.`,
                 time: timeStr,
@@ -531,7 +532,7 @@ export function NotificationDrawer({
 
   // Category unread counters
   const unreadCounts = useMemo(() => {
-    const counts = { all: 0, replies: 0, likes: 0, follows: 0, system: 0 };
+    const counts = { all: 0, replies: 0, likes: 0, zaps: 0, follows: 0, system: 0 };
     for (const n of visibleNotifications) {
       if (!n.read) {
         counts.all++;
@@ -558,6 +559,7 @@ export function NotificationDrawer({
     { id: 'all', label: 'All', icon: <Bell size={13} /> },
     { id: 'replies', label: 'Replies', icon: <MessageSquare size={13} /> },
     { id: 'likes', label: 'Likes', icon: <Heart size={13} /> },
+    { id: 'zaps', label: 'Zaps', icon: <Zap size={13} /> },
     { id: 'follows', label: 'Follows', icon: <UserPlus size={13} /> },
     { id: 'system', label: 'System', icon: <ShieldCheck size={13} /> },
   ];
@@ -568,6 +570,8 @@ export function NotificationDrawer({
         return <MessageSquare size={17} strokeWidth={2.4} />;
       case 'likes':
         return <Heart size={17} strokeWidth={2.4} />;
+      case 'zaps':
+        return <Zap size={17} strokeWidth={2.4} />;
       case 'follows':
         return <UserPlus size={17} strokeWidth={2.4} />;
       case 'system':
@@ -995,6 +999,8 @@ export function NotificationDrawer({
                 ? 'Nostr replies and moment discussions will appear here.'
                 : activeTab === 'likes'
                 ? 'Likes and reactions on your posts.'
+                : activeTab === 'zaps'
+                ? 'Lightning zaps sent to you on Nostr.'
                 : activeTab === 'follows'
                 ? 'New followers and workspace invites.'
                 : 'All caught up across ecosystem and Nostr relays.'}
@@ -1160,7 +1166,7 @@ export function NotificationDrawer({
         sx={{
           px: { xs: 1.5, sm: 2.25, md: 4 },
           py: { xs: 1.5, sm: 2 },
-          maxHeight: '82dvh',
+          maxHeight: '60dvh',
           overflowY: 'auto',
           overflowX: 'hidden',
           width: '100%',

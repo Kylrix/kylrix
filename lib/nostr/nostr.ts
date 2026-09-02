@@ -36,11 +36,20 @@ export function signEvent(event: Omit<NostrEvent, "id" | "sig">, privateKey: Uin
     sig: bytesToHex(sigBytes)};
 }
 
+const verifiedEventCache = new Set<string>();
+
 function verifyEvent(event: NostrEvent): boolean {
+  if (!event || !event.id || !event.sig || !event.pubkey) return false;
+  if (verifiedEventCache.has(event.id)) return true;
   try {
     const id = getEventHash(event);
     if (id !== event.id) return false;
-    return secp256k1.schnorr.verify(hexToBytes(event.sig), hexToBytes(id), hexToBytes(event.pubkey));
+    const ok = secp256k1.schnorr.verify(hexToBytes(event.sig), hexToBytes(id), hexToBytes(event.pubkey));
+    if (ok) {
+      if (verifiedEventCache.size > 2000) verifiedEventCache.clear();
+      verifiedEventCache.add(event.id);
+    }
+    return ok;
   } catch {
     return false;
   }
