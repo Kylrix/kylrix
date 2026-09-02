@@ -150,19 +150,183 @@ function createProxiedDatabases(client: Client) {
     }}) as unknown as Databases;
 }
 
+const serverRowCache = new Map<string, { row: any; at: number }>();
+const serverRowInflight = new Map<string, Promise<any>>();
+const serverListCache = new Map<string, { result: any; at: number }>();
+const serverListInflight = new Map<string, Promise<any>>();
+
+const SERVER_ROW_TTL_MS = 30_000;
+const SERVER_LIST_TTL_MS = 15_000;
+
+export function invalidateServerRowCache(databaseId: string, tableId: string, rowId?: string) {
+  if (rowId) {
+    serverRowCache.delete(`${databaseId}:${tableId}:${rowId}`);
+  }
+  const prefix = `${databaseId}:${tableId}`;
+  for (const k of serverListCache.keys()) {
+    if (k.startsWith(prefix)) {
+      serverListCache.delete(k);
+    }
+  }
+}
+
 let cachedSystemTablesDB: TablesDB | null = null;
 
 /**
- * Creates a server-side TablesDB instance with system executor privileges.
- * @deprecated Use `systemTables()` from `@/lib/data` in application code.
+ * Creates a server-side TablesDB instance with system executor privileges,
+ * hardened with read-through caching and request coalescing to protect the Appwrite read budget.
  */
-export function createSystemTablesDB() {
+export function createSystemTablesDB(): TablesDB {
   if (cachedSystemTablesDB) {
     return cachedSystemTablesDB;
   }
 
   const { client } = createSystemClient();
-  cachedSystemTablesDB = new TablesDB(client);
+  const rawTablesDB = new TablesDB(client);
+
+  const proxied = new Proxy(rawTablesDB, {
+    get(target, prop, receiver) {
+      if (prop === 'getRow') {
+        return async (...args: any[]) => {
+          let databaseId = '';
+          let tableId = '';
+          let rowId = '';
+          let queries: any[] | undefined;
+
+          if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+            databaseId = args[0].databaseId;
+            tableId = args[0].tableId;
+            rowId = args[0].rowId;
+            queries = args[0].queries;
+          } else {
+            [databaseId, tableId, rowId, queries] = args;
+          }
+
+          if (!databaseId || !tableId || !rowId) {
+            return (target as any).getRow(...args);
+          }
+
+          const cacheKey = `${databaseId}:${tableId}:${rowId}`;
+          const now = Date.now();
+          const hit = serverRowCache.get(cacheKey);
+          if (hit && now - hit.at < SERVER_ROW_TTL_MS) {
+            return JSON.parse(JSON.stringify(hit.row));
+          }
+
+          const pending = serverRowInflight.get(cacheKey);
+          if (pending) {
+            return await pending;
+          }
+
+          const fetcher = async () => {
+            const row = await (target as any).getRow(...args);
+            if (row) {
+              serverRowCache.set(cacheKey, { row, at: Date.now() });
+            }
+            return row;
+          };
+
+          const task = fetcher().finally(() => {
+            serverRowInflight.delete(cacheKey);
+          });
+          serverRowInflight.set(cacheKey, task);
+          return await task;
+        };
+      }
+
+      if (prop === 'listRows') {
+        return async (...args: any[]) => {
+          let databaseId = '';
+          let tableId = '';
+          let queries: any[] | undefined;
+
+          if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+            databaseId = args[0].databaseId;
+            tableId = args[0].tableId;
+            queries = args[0].queries;
+          } else {
+            [databaseId, tableId, queries] = args;
+          }
+
+          if (!databaseId || !tableId) {
+            return (target as any).listRows(...args);
+          }
+
+          const queryKey = queries && queries.length ? JSON.stringify(queries) : 'all';
+          const cacheKey = `${databaseId}:${tableId}:${queryKey}`;
+          const now = Date.now();
+          const hit = serverListCache.get(cacheKey);
+          if (hit && now - hit.at < SERVER_LIST_TTL_MS) {
+            return JSON.parse(JSON.stringify(hit.result));
+          }
+
+          const pending = serverListInflight.get(cacheKey);
+          if (pending) {
+            return await pending;
+          }
+
+          const fetcher = async () => {
+            const result = await (target as any).listRows(...args);
+            if (result) {
+              serverListCache.set(cacheKey, { result, at: Date.now() });
+            }
+            return result;
+          };
+
+          const task = fetcher().finally(() => {
+            serverListInflight.delete(cacheKey);
+          });
+          serverListInflight.set(cacheKey, task);
+          return await task;
+        };
+      }
+
+      if (prop === 'updateRow') {
+        return async (...args: any[]) => {
+          let databaseId = '';
+          let tableId = '';
+          let rowId = '';
+          if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+            databaseId = args[0].databaseId;
+            tableId = args[0].tableId;
+            rowId = args[0].rowId;
+          } else {
+            [databaseId, tableId, rowId] = args;
+          }
+          const res = await (target as any).updateRow(...args);
+          if (databaseId && tableId) {
+            invalidateServerRowCache(databaseId, tableId, rowId);
+          }
+          return res;
+        };
+      }
+
+      if (prop === 'deleteRow') {
+        return async (...args: any[]) => {
+          let databaseId = '';
+          let tableId = '';
+          let rowId = '';
+          if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+            databaseId = args[0].databaseId;
+            tableId = args[0].tableId;
+            rowId = args[0].rowId;
+          } else {
+            [databaseId, tableId, rowId] = args;
+          }
+          const res = await (target as any).deleteRow(...args);
+          if (databaseId && tableId) {
+            invalidateServerRowCache(databaseId, tableId, rowId);
+          }
+          return res;
+        };
+      }
+
+      const val = Reflect.get(target, prop, receiver);
+      return typeof val === 'function' ? val.bind(target) : val;
+    },
+  }) as unknown as TablesDB;
+
+  cachedSystemTablesDB = proxied;
 
   try {
     experimental_taintObjectReference(

@@ -17,9 +17,9 @@ import { Registry } from '@/lib/core/di/registry';
  */
 
 // Short-lived in-memory cache for row reads during permission checks.
-// Prevents duplicate database fetches within a short timeframe (e.g. 5 seconds).
+// Prevents duplicate database fetches within a short timeframe (30 seconds).
 export const rowCache = new Map<string, { row: any; timestamp: number }>();
-const CACHE_TTL_MS = 5000; // 5 seconds
+const CACHE_TTL_MS = 30000; // 30 seconds
 
 
 /** 
@@ -368,27 +368,43 @@ export interface PermissionChangeInput {
 }
 
 
+const getRowInflight = new Map<string, Promise<any>>();
+
 export async function getRowCached(params: { databaseId: string; tableId: string; rowId: string }) {
   const cacheKey = `${params.databaseId}:${params.tableId}:${params.rowId}`;
   const now = Date.now();
   const cached = rowCache.get(cacheKey);
   if (cached && (now - cached.timestamp < CACHE_TTL_MS)) {
-    return cached.row;
+    return cached.row ? { ...cached.row } : null;
   }
-  const db = Registry.getDatabase();
-  const row = await db.getRow<any>(params.databaseId, params.tableId, params.rowId, { forceSystem: true });
-  if (row) {
-    // Prune expired entries to keep memory low
-    if (rowCache.size > 100) {
-      for (const [key, val] of rowCache.entries()) {
-        if (now - val.timestamp > CACHE_TTL_MS) {
-          rowCache.delete(key);
+  const pending = getRowInflight.get(cacheKey);
+  if (pending) {
+    return await pending;
+  }
+
+  const fetcher = async () => {
+    const db = Registry.getDatabase();
+    const row = await db.getRow<any>(params.databaseId, params.tableId, params.rowId, { forceSystem: true });
+    if (row) {
+      // Prune expired entries to keep memory low
+      if (rowCache.size > 200) {
+        const cur = Date.now();
+        for (const [key, val] of rowCache.entries()) {
+          if (cur - val.timestamp > CACHE_TTL_MS) {
+            rowCache.delete(key);
+          }
         }
       }
+      rowCache.set(cacheKey, { row, timestamp: Date.now() });
     }
-    rowCache.set(cacheKey, { row, timestamp: now });
-  }
-  return row;
+    return row;
+  };
+
+  const task = fetcher().finally(() => {
+    getRowInflight.delete(cacheKey);
+  });
+  getRowInflight.set(cacheKey, task);
+  return await task;
 }
 
 export async function getActor(jwt?: string) {
