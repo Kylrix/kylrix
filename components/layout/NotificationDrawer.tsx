@@ -147,11 +147,39 @@ export function NotificationDrawer({
     let cancelled = false;
 
     void (async () => {
-      const cached = await LocalEngine.cacheGet<KylrixNotification[]>(cacheKey, 600_000).catch(() => null);
-      if (Array.isArray(cached) && !cancelled) {
+      // Check primary partition cache first
+      let cached = await LocalEngine.cacheGet<KylrixNotification[]>(cacheKey).catch(() => null);
+      
+      // Fallback 1: Generic user notification cache
+      if (!Array.isArray(cached) || cached.length === 0) {
+        cached = await LocalEngine.cacheGet<KylrixNotification[]>(`kylrix_activity_notifications_${userId}`).catch(() => null);
+      }
+
+      // Fallback 2: General notification cache
+      if (!Array.isArray(cached) || cached.length === 0) {
+        cached = await LocalEngine.cacheGet<KylrixNotification[]>('kylrix_activity_notifications_global').catch(() => null);
+      }
+
+      // Fallback 3: Convert raw activity logs from LocalEngine if available
+      if (!Array.isArray(cached) || cached.length === 0) {
+        const rawLogs = await LocalEngine.cacheGet<any[]>(`f_notifications_${userId}`).catch(() => null);
+        if (Array.isArray(rawLogs) && rawLogs.length > 0) {
+          cached = rawLogs.map((log: any) => ({
+            id: log.$id || log.id || `notif_${Math.random()}`,
+            category: (log.targetType === 'moment' ? 'replies' : 'system') as any,
+            title: log.action || 'Activity Notification',
+            message: log.details || 'New activity on your account.',
+            time: formatTimeAgo(new Date(log.$createdAt || log.createdAt || Date.now()).getTime()),
+            timestamp: new Date(log.$createdAt || log.createdAt || Date.now()).getTime(),
+            read: false,
+            accent: '#6366F1',
+            source: 'system' as const,
+          }));
+        }
+      }
+
+      if (Array.isArray(cached) && cached.length > 0 && !cancelled) {
         setNotifications(cached);
-      } else if (!cancelled) {
-        setNotifications([]);
       }
 
       const localGlobalFollows = (await LocalEngine.cacheGet<string[]>('kylrix:follows')) || [];
@@ -476,6 +504,7 @@ export function NotificationDrawer({
               .slice(0, 100);
             setNotifications(finalSorted);
             void LocalEngine.cacheSet(cacheKey, finalSorted);
+            void LocalEngine.cacheSet(`kylrix_activity_notifications_${userId}`, finalSorted);
             setSyncing(false);
             isHarvestingRef.current = false;
           }, 1500);
@@ -489,13 +518,14 @@ export function NotificationDrawer({
         .slice(0, 100);
       setNotifications(sorted);
       await LocalEngine.cacheSet(cacheKey, sorted).catch(() => {});
+      await LocalEngine.cacheSet(`kylrix_activity_notifications_${userId}`, sorted).catch(() => {});
     } finally {
       if (!userPubkeyHex) {
         setSyncing(false);
         isHarvestingRef.current = false;
       }
     }
-  }, [user?.$id, userPubkeyHex, cacheKey]);
+  }, [user?.$id, userPubkeyHex, cacheKey, userId]);
 
   useEffect(() => {
     if (isOpen) {

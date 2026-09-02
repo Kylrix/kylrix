@@ -65,21 +65,45 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return safeLogs.filter(log => !parseMetadata(log.details).read).length;
   }, []);
 
+  const localCacheKey = useMemo(() => user?.$id ? `f_notifications_${user.$id}` : 'f_notifications_guest', [user?.$id]);
+
+  // 1. Instant 0ms LocalEngine Hydration
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let active = true;
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = await LocalEngine.cacheGet<ActivityLog[]>(localCacheKey).catch(() => null);
+        if (active && Array.isArray(cached) && cached.length > 0) {
+          setNotifications(cached);
+          setUnreadCount(calculateUnread(cached));
+          setIsLoading(false);
+        }
+      } catch {}
+    })();
+    return () => { active = false; };
+  }, [localCacheKey, calculateUnread]);
+
   const fetchNotifications = useCallback(async () => {
-    if (!isAuthenticated || !user?.$id) return;
+    if (!isAuthenticated || !user?.$id) {
+      setIsLoading(false);
+      return;
+    }
     
-    setIsLoading(true);
     try {
       const res = await listActivityLogs() as any;
       const logs = (Array.isArray(res?.rows) ? res.rows : Array.isArray(res) ? res : []) as unknown as ActivityLog[];
       setNotifications(logs);
       setUnreadCount(calculateUnread(logs));
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      void LocalEngine.cacheSet(localCacheKey, logs).catch(() => {});
     } catch (error: any) {
-      console.error('Failed to fetch notifications:', error);
+      console.warn('Failed to fetch notifications remotely:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, user?.$id, calculateUnread]);
+  }, [isAuthenticated, user?.$id, calculateUnread, localCacheKey]);
 
   useEffect(() => {
     fetchNotifications();
@@ -99,12 +123,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const isDelete = response.events.some(e => e.includes('.delete'));
 
       if (isCreate) {
-        setNotifications(prev => [payload, ...prev]);
+        setNotifications(prev => {
+          const next = [payload, ...prev];
+          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+            void LocalEngine.cacheSet(localCacheKey, next).catch(() => {});
+          });
+          return next;
+        });
         if (!parseMetadata(payload.details).read) {
           setUnreadCount(prev => prev + 1);
         }
         
-        if (Notification.permission === 'granted') {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           new Notification(`Kylrix ${payload.targetType}`, {
             body: payload.action,
             icon: '/logo.svg'
@@ -114,12 +144,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         setNotifications(prev => {
           const updated = prev.map(n => n.$id === payload.$id ? payload : n);
           setUnreadCount(calculateUnread(updated));
+          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+            void LocalEngine.cacheSet(localCacheKey, updated).catch(() => {});
+          });
           return updated;
         });
       } else if (isDelete) {
         setNotifications(prev => {
           const filtered = prev.filter(n => n.$id !== payload.$id);
           setUnreadCount(calculateUnread(filtered));
+          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+            void LocalEngine.cacheSet(localCacheKey, filtered).catch(() => {});
+          });
           return filtered;
         });
       }
