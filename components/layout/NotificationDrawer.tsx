@@ -259,8 +259,8 @@ export function NotificationDrawer({
           poolRef.current.subscribe(subId, [
             {
               '#p': [userPubkeyHex],
-              kinds: [1, 6, 7, 9735],
-              limit: 60,
+              kinds: [1, 3, 6, 7, 9735],
+              limit: 80,
             },
           ]);
 
@@ -302,6 +302,22 @@ export function NotificationDrawer({
                 read: false,
                 accent: '#8B5CF6',
                 actionHref: `/moment/nostr_${targetId}`,
+                actor: actorMetadata,
+                source: 'nostr',
+              });
+            } else if (event.kind === 3) {
+              // Follow / Contact list update
+              const notifId = `nostr_follow_${event.pubkey}`;
+              itemsMap.set(notifId, {
+                id: notifId,
+                category: 'follows',
+                title: `${authorDisplayName} followed you`,
+                message: `Started following your Nostr profile.`,
+                time: timeStr,
+                timestamp: ts,
+                read: false,
+                accent: '#3B82F6',
+                actionHref: `/connect`,
                 actor: actorMetadata,
                 source: 'nostr',
               });
@@ -479,7 +495,18 @@ export function NotificationDrawer({
       return;
     }
 
-    if (notif.actionHref) {
+    if (notif.category === 'follows' && notif.actor) {
+      openUnifiedDrawer('profile-preview', {
+        userId: notif.actor.userId,
+        username: notif.actor.username || notif.actor.name,
+        name: notif.actor.name,
+        avatar: notif.actor.avatar,
+        npub: notif.actor.npub,
+        pubkey: notif.actor.pubkey,
+        source: notif.actor.isNostr ? 'nostr' : 'ecosystem',
+      });
+      return;
+    }
       if (notif.actionHref.startsWith('/moment/')) {
         const rawId = notif.actionHref.replace('/moment/', '');
         const isNostr = rawId.startsWith('nostr_') || notif.source === 'nostr';
