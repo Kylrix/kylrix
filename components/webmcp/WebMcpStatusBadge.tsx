@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useWebMcpContext } from '@/context/WebMcpContext';
-import { Terminal, CheckCircle2 } from 'lucide-react';
+import { Terminal } from 'lucide-react';
 
 export function WebMcpStatusBadge({ className = '' }: { className?: string }) {
   const { isInitialized, tools, toggleInspector } = useWebMcpContext();

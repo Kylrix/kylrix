@@ -47,7 +47,6 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { useToast } from '@/components/ui/Toast';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { AppwriteService } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import { useProUpgrade } from '@/context/ProUpgradeContext';

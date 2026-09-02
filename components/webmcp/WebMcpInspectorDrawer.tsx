@@ -6,16 +6,13 @@ import {
   X,
   Play,
   Terminal,
-  Code2,
   Activity,
   Copy,
   Check,
   Trash2,
-  ExternalLink,
   Layers,
   Sparkles,
   Info,
-  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { WebMcpToolDefinition } from '@/lib/webmcp/types';
@@ -63,7 +60,7 @@ export function WebMcpInspectorDrawer() {
       let parsed = {};
       try {
         parsed = JSON.parse(inputArgs || '{}');
-      } catch (err: any) {
+      } catch (_err: any) {
         toast.error('Invalid JSON arguments');
         setExecuting(false);
         return;
@@ -413,7 +410,7 @@ export function WebMcpInspectorDrawer() {
               <div className="space-y-2">
                 <h5 className="font-semibold text-white font-mono">2. Testing in ChatGPT In-App Browser</h5>
                 <p className="text-neutral-400">
-                  Open Kylrix directly inside ChatGPT's browsing environment. ChatGPT natively queries <code className="text-emerald-300">navigator.modelContext.listTools()</code> and can invoke tools on behalf of the user with their active session permissions.
+                  Open Kylrix directly inside ChatGPT&apos;s browsing environment. ChatGPT natively queries <code className="text-emerald-300">navigator.modelContext.listTools()</code> and can invoke tools on behalf of the user with their active session permissions.
                 </p>
               </div>
 

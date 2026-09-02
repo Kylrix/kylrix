@@ -30,7 +30,6 @@ import {
   X as CloseIcon,
   Bell,
   Sparkles,
-  Activity,
   ChevronRight,
   Keyboard,
   Target,
@@ -221,7 +220,7 @@ export default function ConnectTopbar({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
 
-  const { suggestions, dismissSuggestion } = useLocalContext();
+  const { suggestions } = useLocalContext();
 
   // Watch for new intelligence pulses (suggestions) to show in Dynamic Island
   useEffect(() => {
@@ -241,23 +240,6 @@ export default function ConnectTopbar({
       }
     }
   }, [suggestions, notifHint, dismissedHintId]);
-
-  const [notifications, setNotifications] = useState([
-    { id: 'notif-1', title: 'Workspace Sync Complete', message: 'All local action workflows and workspace logs successfully synchronized.', time: 'Just now', read: false, accent: '#10B981' },
-    { id: 'notif-2', title: 'Workflows Negations Active', message: 'Action chain engine generated valid inversions for 3 private notes.', time: '2 hours ago', read: false, accent: '#6366F1' },
-    { id: 'notif-3', title: 'Secure Keychain Audited', message: 'Local master credentials checked. Integrity score 100%.', time: '1 day ago', read: true, accent: '#F59E0B' }
-  ]);
-
-  const markNotificationRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-
-  const dismissNotification = (id: string, event: any) => {
-    event.stopPropagation();
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const unreadNotifCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
   const appAccent = getAppColor(activeApp);
@@ -2757,14 +2739,14 @@ export default function ConnectTopbar({
                     bgcolor: notificationsOpen ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)',
                     border: '1px solid',
                     borderColor: notificationsOpen ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.08)',
-                    color: (unreadNotifCount > 0 || suggestions.length > 0) ? '#6366F1' : 'rgba(255,255,255,0.6)',
+                    color: (suggestions.length > 0 || notifHint) ? '#6366F1' : 'rgba(255,255,255,0.6)',
                     position: 'relative',
                     flexShrink: 0,
                     '&:hover': { bgcolor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' }
                   }}
                 >
                   <Bell size={18} strokeWidth={2.2} />
-                  {(unreadNotifCount > 0 || suggestions.length > 0 || notifHint) && (
+                  {(suggestions.length > 0 || notifHint) && (
                     <Box sx={{ position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: '50%', bgcolor: '#EC4899', border: '1.5px solid #000' }} />
                   )}
                 </IconButton>

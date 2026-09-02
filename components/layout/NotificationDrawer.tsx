@@ -22,9 +22,6 @@ import {
   Trash2,
   X as CloseIcon,
   RotateCw,
-  Zap,
-  RadioTower,
-  Repeat2,
 } from 'lucide-react';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { isTopbarScrollAtTop } from '@/sdk/topbar';
@@ -36,7 +33,6 @@ import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { NostrRelayPool, type NostrEvent } from '@/lib/nostr/nostr';
 import { npubToBytes, bytesToHex, bytesToNpub, hexToBytes } from '@/lib/nostr/crypto';
 import { queueNostrProfileFetch, getCachedNostrProfile } from '@/lib/nostr/metadata';
-import { SocialService } from '@/lib/services/social';
 import { getNostrReadRelays } from '@/lib/connect/feed-settings';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -56,11 +52,14 @@ export interface KylrixNotification {
   accent: string;
   actionHref?: string;
   actor?: {
+    userId?: string;
     name: string;
     username?: string;
+    avatar?: string;
     avatarId?: string;
     isNostr?: boolean;
     npub?: string;
+    pubkey?: string;
   };
   source?: 'nostr' | 'kylrix' | 'system';
 }
@@ -935,7 +934,7 @@ export function NotificationDrawer({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mt: 0.4 }}>
               <IconButton
                 size="small"
-                onClick={(e) => dismissNotification(notif.id, e)}
+                onClick={(e: React.MouseEvent) => dismissNotification(notif.id, e)}
                 title="Dismiss"
                 sx={{
                   width: 26,

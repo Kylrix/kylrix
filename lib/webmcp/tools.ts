@@ -15,6 +15,7 @@ import {
   createRow,
 } from '@/lib/actions/client-ops';
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import { tablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { Query } from 'appwrite';
 
@@ -90,13 +91,16 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
         Query.limit(limit),
       ];
 
-      const res = await LocalEngine.query<any>({
-        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-        tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-        cacheKey: `webmcp_notes_${limit}`,
-        queries,
-        ttlMs: 60_000,
-      });
+      const res = await LocalEngine.query<any>(
+        `webmcp_notes_${limit}`,
+        () =>
+          tablesDB.listRows(
+            APPWRITE_CONFIG.DATABASES.NOTE,
+            APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+            queries,
+          ),
+        { ttl: 60_000 },
+      ).catch(() => ({ rows: [] }));
 
       let items = res?.rows || [];
       if (args.query) {
@@ -175,13 +179,11 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const noteId = String(args.id);
-      const res = await LocalEngine.fetch<any>({
-        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-        tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-        rowId: noteId,
-        cacheKey: `webmcp_note_${noteId}`,
-        ttlMs: 60_000,
-      });
+      const res = await tablesDB.getRow(
+        APPWRITE_CONFIG.DATABASES.NOTE,
+        APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+        noteId,
+      ).catch(() => null);
 
       if (!res) {
         throw new Error(`Note '${noteId}' not found.`);
@@ -266,13 +268,16 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const limit = Number(args.limit) || 25;
       const queries = [Query.orderDesc('$createdAt'), Query.limit(limit)];
 
-      const res = await LocalEngine.query<any>({
-        databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-        tableId: 'goals',
-        cacheKey: `webmcp_goals_${limit}`,
-        queries,
-        ttlMs: 60_000,
-      }).catch(() => ({ rows: [] }));
+      const res = await LocalEngine.query<any>(
+        `webmcp_goals_${limit}`,
+        () =>
+          tablesDB.listRows(
+            APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
+            'goals',
+            queries,
+          ),
+        { ttl: 60_000 },
+      ).catch(() => ({ rows: [] }));
 
       const items = (res?.rows || []).map((g: any) => ({
         id: g.$id,
@@ -338,13 +343,16 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const limit = Number(args.limit) || 25;
-      const res = await LocalEngine.query<any>({
-        databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-        tableId: APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.PROJECTS,
-        cacheKey: `webmcp_workspaces_${limit}`,
-        queries: [Query.orderDesc('$createdAt'), Query.limit(limit)],
-        ttlMs: 60_000,
-      }).catch(() => ({ rows: [] }));
+      const res = await LocalEngine.query<any>(
+        `webmcp_workspaces_${limit}`,
+        () =>
+          tablesDB.listRows(
+            APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
+            'projects',
+            [Query.orderDesc('$createdAt'), Query.limit(limit)],
+          ),
+        { ttl: 60_000 },
+      ).catch(() => ({ rows: [] }));
 
       const workspaces = (res?.rows || []).map((w: any) => ({
         id: w.$id,
@@ -420,13 +428,16 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const limit = Number(args.limit) || 25;
-      const res = await LocalEngine.query<any>({
-        databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-        tableId: 'events',
-        cacheKey: `webmcp_events_${limit}`,
-        queries: [Query.orderAsc('startAt'), Query.limit(limit)],
-        ttlMs: 60_000,
-      }).catch(() => ({ rows: [] }));
+      const res = await LocalEngine.query<any>(
+        `webmcp_events_${limit}`,
+        () =>
+          tablesDB.listRows(
+            APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
+            'events',
+            [Query.orderAsc('startAt'), Query.limit(limit)],
+          ),
+        { ttl: 60_000 },
+      ).catch(() => ({ rows: [] }));
 
       const events = (res?.rows || []).map((e: any) => ({
         id: e.$id,
@@ -484,13 +495,16 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const limit = Number(args.limit) || 25;
-      const res = await LocalEngine.query<any>({
-        databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-        tableId: 'workflows',
-        cacheKey: `webmcp_flows_${limit}`,
-        queries: [Query.orderDesc('$createdAt'), Query.limit(limit)],
-        ttlMs: 60_000,
-      }).catch(() => ({ rows: [] }));
+      const res = await LocalEngine.query<any>(
+        `webmcp_flows_${limit}`,
+        () =>
+          tablesDB.listRows(
+            APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
+            'workflows',
+            [Query.orderDesc('$createdAt'), Query.limit(limit)],
+          ),
+        { ttl: 60_000 },
+      ).catch(() => ({ rows: [] }));
 
       const flows = (res?.rows || []).map((f: any) => ({
         id: f.$id,
@@ -525,22 +539,24 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const text = String(args.message).trim();
 
       const parts = scopeKey.includes(':') ? scopeKey.split(':') : ['resource', scopeKey];
-      const thread = await getOrCreateThread({
+      const res = await getOrCreateThread({
         parentKind: parts[0] || 'resource',
         parentId: parts[1] || parts[0],
       });
+      const thread = res?.thread;
+      const threadId = thread?.id || (thread as any)?.$id;
 
-      if (!thread || !thread.$id) {
+      if (!threadId) {
         throw new Error(`Failed to access thread for scope '${scopeKey}'`);
       }
 
       const post = await postThreadMessage({
-        threadId: thread.$id,
+        threadId,
         content: text,
       });
 
       return formatResult(
-        { threadId: thread.$id, messageId: post?.$id, text },
+        { threadId, messageId: (post as any)?.$id || (post as any)?.id, text },
         `Message posted to thread "${scopeKey}".`
       );
     },
