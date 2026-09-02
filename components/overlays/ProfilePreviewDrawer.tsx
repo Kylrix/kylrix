@@ -66,7 +66,7 @@ export function ProfilePreviewDrawer({
   bio,
   source = 'ecosystem'
 }: ProfilePreviewDrawerProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'nostr-activity'>('overview');
   const router = useRouter();
   const [resolvedNpub, setResolvedNpub] = useState<string | null>(initialNpub || null);
@@ -227,7 +227,7 @@ export function ProfilePreviewDrawer({
   const displayHandle = resolvedProfile.username || username || (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : '');
 
   return (
-    <div className={`flex flex-col bg-[#161412] text-white transition-all duration-300 ${isExpanded ? 'h-[92dvh]' : 'max-h-[85dvh]'}`}>
+    <div className={`flex flex-col bg-[#161412] text-white transition-all duration-300 w-full ${isExpanded ? 'h-[100dvh] max-h-[100dvh] rounded-none' : 'h-[60dvh] max-h-[60dvh] mt-auto rounded-t-[28px] border-t border-white/[0.08] shadow-[0_-24px_60px_rgba(0,0,0,0.85)]'}`}>
       {/* Top Action Bar */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] shrink-0 bg-[#161412]">
         <div className="flex items-center gap-2">

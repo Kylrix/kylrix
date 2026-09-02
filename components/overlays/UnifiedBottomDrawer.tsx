@@ -38,7 +38,7 @@ export function UnifiedBottomDrawer() {
     />
   );
 
-  const isFullscreenMobile = ['pricing', 'tags', 'trash'].includes(activeContent as string);
+  const isFullscreenMobile = ['pricing', 'tags', 'trash', 'profile-preview'].includes(activeContent as string);
   const isCompactBottomDrawer = [
     'share-context',
     'share-note',
