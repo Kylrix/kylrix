@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Radio } from 'lucide-react';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { MomentsDrawer } from '@/components/connect/MomentsDrawer';
 import {
@@ -54,7 +54,7 @@ export function MomentTabTrigger({
         className={`relative inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-[#1C1A18] hover:border-white/15 active:scale-95 transition-all select-none cursor-pointer ${className}`}
         title="Moments & Feed"
       >
-        <Sparkles size={16} className="text-[#F59E0B]" />
+        <Radio size={16} className="text-[#F59E0B]" />
         <span>Moments</span>
       </button>
     );
@@ -68,7 +68,7 @@ export function MomentTabTrigger({
       title="Moments & Feed"
       aria-label="Moments"
     >
-      <Sparkles size={16} className="text-[#F59E0B] group-hover:text-white" />
+      <Radio size={16} className="text-[#F59E0B] group-hover:text-white" />
     </button>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Fab,
@@ -46,7 +46,8 @@ export default function UniversalFAB() {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
   const [_isProcessing, setIsProcessing] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const {} = useLocalContext();
 
   const theme = useTheme();
@@ -64,7 +65,15 @@ export default function UniversalFAB() {
           maxScroll = el.scrollTop;
         }
       });
-      setIsScrolled(maxScroll > 200);
+      if (maxScroll > 180) {
+        setIsScrolling(true);
+        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = setTimeout(() => {
+          setIsScrolling(false);
+        }, 2500);
+      } else {
+        setIsScrolling(false);
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -73,10 +82,11 @@ export default function UniversalFAB() {
     return () => {
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('scroll', handleScroll, { capture: true });
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     };
   }, [pathname]);
 
-  const scrollToTop = React.useCallback(() => {
+  const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
     document.body.scrollTo({ top: 0, behavior: 'smooth' });
@@ -86,7 +96,13 @@ export default function UniversalFAB() {
         el.scrollTo({ top: 0, behavior: 'smooth' });
       }
     });
+    setIsScrolling(false);
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('kylrix:refresh-feed'));
+    }
   }, []);
+
 
   const isLandingPage = pathname === '/';
 
@@ -371,33 +387,39 @@ export default function UniversalFAB() {
     );
   }
 
+  const chevronUpIcon = (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m18 15-6-6-6 6"/>
+    </svg>
+  );
+
   if (onMainClick) {
     return (
       <Box sx={anchorSx}>
         <Zoom in>
           <Fab
-            onClick={isScrolled ? scrollToTop : onMainClick}
-            aria-label={isScrolled ? 'Back to top' : 'Add'}
-            title={isScrolled ? 'Back to top' : 'Add'}
+            onClick={isScrolling ? scrollToTop : onMainClick}
+            aria-label={isScrolling ? 'Back to top' : 'Add'}
+            title={isScrolling ? 'Back to top' : 'Add'}
             sx={{
               ...childPointerEvents,
               width: 56,
               height: 56,
-              bgcolor: isScrolled ? '#0A0908' : mainColor,
-              color: isScrolled ? '#FFFFFF' : '#000',
+              bgcolor: isScrolling ? '#10B981' : mainColor,
+              color: '#000000',
               borderRadius: '16px',
-              border: isScrolled ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid rgba(0,0,0,0.12)',
-              boxShadow: isScrolled ? '0 10px 30px rgba(0,0,0,0.6)' : '0 8px 24px rgba(0,0,0,0.45)',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease',
+              border: isScrolling ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(0,0,0,0.12)',
+              boxShadow: isScrolling ? '0 10px 34px rgba(16, 185, 129, 0.45)' : '0 8px 24px rgba(0,0,0,0.45)',
+              transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
               '&:hover': {
-                bgcolor: isScrolled ? '#161412' : mainColor,
+                bgcolor: isScrolling ? '#10B981' : mainColor,
                 transform: 'translateY(-2px)',
-                boxShadow: '0 10px 28px rgba(0,0,0,0.5)',
+                boxShadow: isScrolling ? '0 12px 38px rgba(16, 185, 129, 0.55)' : '0 10px 28px rgba(0,0,0,0.5)',
               },
               '&:active': { transform: 'scale(0.96)' },
             }}
           >
-            {isScrolled ? <ArrowUp size={24} strokeWidth={2.5} /> : (mainIcon || <Plus size={26} strokeWidth={2.5} />)}
+            {isScrolling ? chevronUpIcon : (mainIcon || <Plus size={26} strokeWidth={2.5} />)}
           </Fab>
         </Zoom>
       </Box>
@@ -489,23 +511,23 @@ export default function UniversalFAB() {
           onClick={() => {
             if (isExpanded) {
               setIsExpanded(false);
-            } else if (isScrolled) {
+            } else if (isScrolling) {
               scrollToTop();
             } else {
               setIsExpanded((open) => !open);
             }
           }}
-          aria-label={isExpanded ? 'Close actions' : isScrolled ? 'Back to top' : 'Open actions'}
-          title={isExpanded ? 'Close actions' : isScrolled ? 'Back to top' : 'Open actions'}
+          aria-label={isExpanded ? 'Close actions' : isScrolling ? 'Back to top' : 'Open actions'}
+          title={isExpanded ? 'Close actions' : isScrolling ? 'Back to top' : 'Open actions'}
           sx={{
             ...childPointerEvents,
             width: 64,
             height: 64,
-            bgcolor: isExpanded ? 'rgba(255, 255, 255, 0.08)' : isScrolled ? '#0A0908' : mainColor,
-            color: isExpanded || isScrolled ? '#fff' : '#000',
+            bgcolor: isExpanded ? 'rgba(255, 255, 255, 0.08)' : isScrolling ? '#10B981' : mainColor,
+            color: isExpanded ? '#fff' : '#000',
             borderRadius: '20px',
-            border: isExpanded || isScrolled ? '1px solid rgba(255, 255, 255, 0.18)' : 'none',
-            boxShadow: isExpanded || isScrolled ? '0 12px 40px rgba(0,0,0,0.55)' : `0 10px 34px ${alpha(mainColor, 0.45)}`,
+            border: isExpanded ? '1px solid rgba(255, 255, 255, 0.18)' : isScrolling ? '1px solid rgba(16, 185, 129, 0.3)' : 'none',
+            boxShadow: isExpanded ? '0 12px 40px rgba(0,0,0,0.55)' : isScrolling ? '0 12px 40px rgba(16, 185, 129, 0.55)' : `0 10px 34px ${alpha(mainColor, 0.45)}`,
             transform: isExpanded ? 'rotate(0deg)' : 'none',
             transition: 'all 0.38s cubic-bezier(0.34, 1.56, 0.64, 1)',
             '&:active': { transform: 'scale(0.94)' }}}
@@ -519,8 +541,8 @@ export default function UniversalFAB() {
           >
             {isExpanded ? (
               <X size={28} strokeWidth={2} />
-            ) : isScrolled ? (
-              <ArrowUp size={28} strokeWidth={2.5} />
+            ) : isScrolling ? (
+              chevronUpIcon
             ) : (
               mainIcon || <Plus size={28} strokeWidth={2} />
             )}
