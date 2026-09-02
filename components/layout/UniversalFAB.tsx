@@ -9,8 +9,9 @@ import {
   Zoom,
   alpha,
   useMediaQuery,
-  useTheme} from '@/lib/openbricks/primitives';
-import { Plus, X, Trash2, Pin, CheckSquare, ArrowUp } from 'lucide-react';
+  useTheme,
+} from '@/lib/openbricks/primitives';
+import { Plus, X, Trash2, Pin, CheckSquare } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { useSelection } from '@/context/SelectionContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';

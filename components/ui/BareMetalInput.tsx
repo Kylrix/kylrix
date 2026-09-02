@@ -69,8 +69,8 @@ export function BareMetalInput({
   maxLength,
   'aria-label': ariaLabel,
   forwardedRef,
-}: BaseProps & { forwardedRef?: React.Ref<HTMLInputElement & HTMLTextAreaElement> }) {
-  const innerRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
+}: BaseProps & { forwardedRef?: React.Ref<HTMLInputElement> | React.Ref<HTMLTextAreaElement> | React.Ref<any> }) {
+  const innerRef = useRef<any>(null);
   const _ref = (forwardedRef as React.MutableRefObject<any>) || innerRef;
   void _ref;
   // if forwardedRef is provided as object ref, sync it

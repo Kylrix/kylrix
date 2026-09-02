@@ -4,7 +4,6 @@ import React, { useEffect, useState, use } from 'react';
 import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ArrowLeft } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
-import { useDataNexus } from '@/context/DataNexusContext';
 import { secureUploadFile, createthreadNoteChat } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
@@ -19,7 +18,6 @@ import toast from 'react-hot-toast';
 
 export default function PublicFormPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = use(params);
-    const { fetchOptimized } = useDataNexus();
     const [form, setForm] = useState<Forms | null>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);

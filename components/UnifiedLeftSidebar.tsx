@@ -42,7 +42,6 @@ const NAV_COLORS: Record<NavId, string> = {
 
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ChevronDown as WorkspaceChevronIcon, Plus as PlusIcon, Check as CheckIcon, Bot as BotIcon, ChevronRight as ChevronRightIcon } from 'lucide-react';
-import { isFlowPath } from '@/lib/routing/app-paths';
 
 export function UnifiedLeftSidebar() {
   const pathname = usePathname();

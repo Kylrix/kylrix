@@ -28,12 +28,10 @@ import { BUILTIN_FLOWS } from '@/lib/flows/builtins';
 import type { DiscoverFlow, FlowPublisher } from '@/lib/flows/types';
 import {
   installFlowLocal,
-  isFlowInstalled,
   listInstalledFlowIds,
   uninstallFlowLocal,
 } from '@/lib/flows/installed';
 import { installFlow } from '@/lib/actions/client-ops';
-import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import toast from 'react-hot-toast';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import {
@@ -174,12 +172,12 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
 
   const loadCommunity = useCallback(async () => {
     try {
-      const rows = await listDiscoverFlowsAction();
-      setCommunity(rows);
+      const res = await listDiscoverFlowsAction();
+      setCommunity(res?.data || []);
     } catch {
       try {
-        const rows = await listWorkflowsAction();
-        setCommunity(rows);
+        const res = await listWorkflowsAction();
+        setCommunity(res?.data || []);
       } catch {}
     }
   }, []);
@@ -188,21 +186,7 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
     loadCommunity();
   }, [loadCommunity]);
 
-  const builtins: DiscoverFlow[] = useMemo(
-    () =>
-      BUILTIN_FLOWS.map((b) => ({
-        id: b.id,
-        name: b.name,
-        description: b.description,
-        publisher: { handle: '@kylrix', verified: 'kylrix' },
-        steps: b.steps,
-        source: 'builtin',
-        preInstalled: b.preInstalled,
-        createdAt: 0,
-        published: true,
-      })),
-    [],
-  );
+  const builtins: DiscoverFlow[] = useMemo(() => BUILTIN_FLOWS, []);
 
   const communityFlows: DiscoverFlow[] = useMemo(
     () =>
@@ -212,8 +196,11 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
         description: wf.description || '',
         publisher: communityPublisher(wf),
         steps: Array.isArray(wf.steps) ? wf.steps : [],
-        source: 'community',
-        createdAt: new Date(wf.$createdAt || wf.createdAt || Date.now()).getTime(),
+        source: 'community' as const,
+        niche: (wf.niche || 'workspace') as any,
+        isPublic: wf.isPublic ?? true,
+        isAnonymized: wf.isAnonymized ?? false,
+        createdAt: wf.$createdAt || wf.createdAt || '',
         published: true,
       })),
     [community],
@@ -243,10 +230,10 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
   const list = tab === 'discover' ? discoverList : installedList;
 
   const performInstall = useCallback((flow: DiscoverFlow) => {
-    installFlowLocal(flow);
+    installFlowLocal(flow.id);
     setInstalledIds((prev) => (prev.includes(flow.id) ? prev : [...prev, flow.id]));
     toast.success(`Installed "${flow.name}"`);
-    installFlow(flow.id).catch(() => {});
+    installFlow({ flowId: flow.id }).catch(() => {});
   }, []);
 
   const openInstallConfirmation = useCallback(
@@ -292,10 +279,10 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
             if (isDesktop && native) native.close('flow-detail');
             else closeOverlay();
           }}
-          onRunPrompt={(f) => {
+          onOpenPrompt={() => {
             if (isDesktop && native) native.close('flow-detail');
             else closeOverlay();
-            setPromptFlow(f);
+            setPromptFlow(flow);
           }}
           onDeleteYours={
             isOwner
@@ -352,7 +339,7 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
     toast.success('Draft removed');
   };
 
-  const handleResumeDraft = (draft: any) => {
+  const handleResumeDraft = (_draft: any) => {
     setShowCreate(true);
   };
 
@@ -445,8 +432,8 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
                     <Workflow size={16} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-white truncate">{d.title || 'Untitled'}</p>
-                    <p className="text-[11px] text-white/35 truncate">{d.niche} · {d.steps.length} steps{d.ready ? ' · ready' : ''}</p>
+                    <p className="text-sm font-bold text-white truncate">{d.name || (d as any).title || 'Untitled'}</p>
+                    <p className="text-[11px] text-white/35 truncate">{d.niche} · {d.steps.length} steps{(d as any).ready ? ' · ready' : ''}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button type="button" onClick={() => void handleResumeDraft(d)} className="px-3 py-1.5 rounded-lg bg-[#A855F7] text-white text-[11px] font-extrabold cursor-pointer">Resume</button>
@@ -536,7 +523,7 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
       {showCreate && (
         <CreateFlowDrawer
           onClose={() => setShowCreate(false)}
-          onSaved={() => {
+          onCreated={(_wf) => {
             setShowCreate(false);
             loadCommunity();
           }}

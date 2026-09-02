@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   ExternalLink, 
@@ -18,12 +18,8 @@ import {
   ShieldCheck,
   UserPlus,
   UserCheck,
-  Radio,
   Sparkles,
   Link as LinkIcon,
-  Twitter,
-  Github,
-  Send,
   Flame,
   KeyRound
 } from 'lucide-react';
@@ -277,7 +273,7 @@ export function UnifiedProfileView({
   // 1. Derive Keys from Identity or User Prefs
   useEffect(() => {
     if (isOwnProfile) {
-      const ownKey = identity?.publicKey || user?.prefs?.nostrPubkey || user?.prefs?.nostrNpub || user?.prefs?.npub;
+      const ownKey = identity?.npub || user?.prefs?.nostrPubkey || user?.prefs?.nostrNpub || user?.prefs?.npub;
       if (ownKey) {
         if (ownKey.startsWith('npub')) {
           setResolvedNpub(ownKey);
@@ -320,17 +316,18 @@ export function UnifiedProfileView({
           // Instant Identity cache hit
           const cachedIdentity = getCachedIdentityById(uid);
           if (cachedIdentity && !cancelled) {
-            const storedNpub = cachedIdentity.nostrNpub || cachedIdentity.npub || (cachedIdentity.publicKey?.startsWith('npub') ? cachedIdentity.publicKey : undefined);
-            const storedPubkey = cachedIdentity.nostrPubkey || cachedIdentity.pubkey || (cachedIdentity.publicKey && !cachedIdentity.publicKey.startsWith('npub') ? cachedIdentity.publicKey : undefined);
+            const storedNpub = (cachedIdentity as any).nostrNpub || (cachedIdentity as any).npub || (cachedIdentity.publicKey?.startsWith('npub') ? cachedIdentity.publicKey : undefined);
+            const storedPubkey = (cachedIdentity as any).nostrPubkey || (cachedIdentity as any).pubkey || (cachedIdentity.publicKey && !cachedIdentity.publicKey.startsWith('npub') ? cachedIdentity.publicKey : undefined);
             if (storedNpub && !resolvedNpub) setResolvedNpub(storedNpub);
             if (storedPubkey && !resolvedPubkey) setResolvedPubkey(storedPubkey);
             setResolvedProfile(prev => ({
-              name: prev.name || cachedIdentity.displayName || cachedIdentity.name,
-              username: prev.username || cachedIdentity.username,
-              avatar: prev.avatar || cachedIdentity.avatar || cachedIdentity.avatarUrl,
-              bio: prev.bio || cachedIdentity.bio,
-              links: prev.links?.length ? prev.links : cachedIdentity.links || [],
-              createdAt: prev.createdAt || cachedIdentity.createdAt,
+              ...prev,
+              name: (prev.name || cachedIdentity.displayName || (cachedIdentity as any).name) || undefined,
+              username: (prev.username || cachedIdentity.username) || undefined,
+              avatar: (prev.avatar || cachedIdentity.avatar || (cachedIdentity as any).avatarUrl) || undefined,
+              bio: (prev.bio || cachedIdentity.bio) || undefined,
+              links: prev.links?.length ? prev.links : (cachedIdentity as any).links || [],
+              createdAt: (prev.createdAt || (cachedIdentity as any).createdAt) || undefined,
             }));
           }
 
@@ -450,10 +447,13 @@ export function UnifiedProfileView({
       if (targetUid) {
         try {
           const { SocialService } = await import('@/lib/services/social');
-          const res = await SocialService.getFollowers(targetUid).catch(() => null);
-          if (!cancelled && res) {
-            if (typeof res.followers === 'number') setKylrixFollowersCount(res.followers);
-            if (typeof res.following === 'number') setKylrixFollowingCount(res.following);
+          const [followers, following] = await Promise.all([
+            SocialService.getFollowers(targetUid).catch(() => []),
+            SocialService.getFollowing(targetUid).catch(() => []),
+          ]);
+          if (!cancelled) {
+            setKylrixFollowersCount(Array.isArray(followers) ? followers.length : 0);
+            setKylrixFollowingCount(Array.isArray(following) ? following.length : 0);
           }
         } catch {}
       }
@@ -617,9 +617,10 @@ export function UnifiedProfileView({
     ? (nostrMeta.displayName || nostrMeta.name || resolvedProfile.name || name || 'Nostr User')
     : (resolvedProfile.name || name || username || (resolvedNpub ? `Nostr ${resolvedNpub.slice(0, 10)}…` : 'Kylrix User'));
 
+  const rawUsername = resolvedProfile.username || username;
   const activeHandle = isNostrMode
     ? (nostrMeta.nip05 || (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''))
-    : (resolvedProfile.username || username ? `@${(resolvedProfile.username || username).replace(/^@/, '')}` : (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''));
+    : (rawUsername ? `@${rawUsername.replace(/^@/, '')}` : (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''));
 
   const activeBio = isNostrMode
     ? (nostrMeta.about || resolvedProfile.bio || bio || '')
@@ -662,7 +663,7 @@ export function UnifiedProfileView({
     const parentIdsToFetch = Array.from(new Set(
       unpackedReplies
         .map(r => r.targetId)
-        .filter(id => id && id !== r.id && !parentEvents[id])
+        .filter((id): id is string => Boolean(id) && !parentEvents[id as string])
     ));
 
     if (!parentIdsToFetch.length) return;
@@ -1202,8 +1203,15 @@ export function UnifiedProfileView({
                         <button
                           type="button"
                           onClick={async () => {
-                            const ok = await repostMoment(post.targetId, post.authorPubkey);
-                            if (ok) toast.success('Reposted');
+                            const res = await repostMoment({
+                              source: 'nostr',
+                              id: post.targetId,
+                              rootPubkey: post.authorPubkey,
+                              privateKeyBytes: identity?.privateKeyBytes,
+                              nsec: identity?.nsec,
+                              userId: user?.$id,
+                            }).catch(() => ({ reposted: false }));
+                            if (res.reposted) toast.success('Reposted');
                           }}
                           className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors cursor-pointer"
                         >
@@ -1214,8 +1222,15 @@ export function UnifiedProfileView({
                         <button
                           type="button"
                           onClick={async () => {
-                            const ok = await toggleMomentLike(post.targetId, post.authorPubkey, false);
-                            if (ok) toast.success('Liked');
+                            const res = await toggleMomentLike({
+                              source: 'nostr',
+                              id: post.targetId,
+                              rootPubkey: post.authorPubkey,
+                              privateKeyBytes: identity?.privateKeyBytes,
+                              nsec: identity?.nsec,
+                              userId: user?.$id,
+                            }).catch(() => ({ liked: false }));
+                            if (res.liked) toast.success('Liked');
                           }}
                           className="flex items-center gap-1.5 hover:text-pink-400 transition-colors cursor-pointer"
                         >
@@ -1250,16 +1265,9 @@ export function UnifiedProfileView({
       {/* Edit Profile Modal */}
       {isEditModalOpen && (
         <EditProfileModal
-          isOpen={isEditModalOpen}
+          open={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
-          onProfileUpdated={(updated) => {
-            setResolvedProfile(prev => ({
-              ...prev,
-              name: updated.name || prev.name,
-              avatar: updated.avatar || prev.avatar,
-              bio: updated.bio || prev.bio,
-            }));
-            if (updated.avatar) setResolvedAvatarUrl(updated.avatar);
+          onUpdate={() => {
             setIsEditModalOpen(false);
           }}
         />

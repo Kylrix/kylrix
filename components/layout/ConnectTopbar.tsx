@@ -712,7 +712,7 @@ export default function ConnectTopbar({
         f: 'search',
         k: 'agent',
         s: 'apps',
-        m: 'profile',
+        u: 'profile',
         p: '/app',
         n: '/app',
         t: '/tags',
@@ -721,7 +721,8 @@ export default function ConnectTopbar({
         q: '/forms',
         e: '/events',
         h: 'hangouts',
-        m: 'moments'};
+        m: 'moments',
+      };
 
       const action = builtInActions[key];
       if (action) {

@@ -122,7 +122,7 @@ function resolveCollaboratorRole(note: Notes, userId: string): 'write-collab' | 
 export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClientProps) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { getCachedData, setCachedData, invalidate } = useDataNexus();
+  const { setCachedData, invalidate } = useDataNexus();
 
   const [access, setAccess] = useState<AccessResult>({ role: 'loading' });
   const [_isRefreshing, _setIsRefreshing] = useState(false);
@@ -130,7 +130,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
   const CACHE_KEY = useMemo(() => `idea_page_note_${noteId}`, [noteId]);
 
   // ── Permission Resolution ─────────────────────────────────────────────────
-  const resolveAccess = useCallback(async (forceRefresh = false): Promise<void> => {
+  const resolveAccess = useCallback(async (_forceRefresh = false): Promise<void> => {
     if (authLoading) return;
 
     try {

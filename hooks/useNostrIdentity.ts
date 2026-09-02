@@ -87,7 +87,7 @@ export function useNostrIdentity() {
         }
 
         // Mint fresh autonomous guest Nostr keypair
-        const privKeyBytes = secp256k1.utils.randomPrivateKey();
+        const privKeyBytes = secp256k1.utils.randomSecretKey();
         const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
         const npub = bytesToNpub(pubKeyBytes);
         const nsec = bytesToNsec(privKeyBytes);
@@ -130,7 +130,7 @@ export function useNostrIdentity() {
         }
 
         // Autonomously mint an offline identity for this user until vault is configured/unlocked
-        const privKeyBytes = secp256k1.utils.randomPrivateKey();
+        const privKeyBytes = secp256k1.utils.randomSecretKey();
         const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
         const npub = bytesToNpub(pubKeyBytes);
         const nsec = bytesToNsec(privKeyBytes);

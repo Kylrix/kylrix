@@ -31,7 +31,7 @@ import { getNote, getNotePublicState, toggleNoteVisibility } from '@/lib/appwrit
 import { createNote, updateNote, attachObject } from '@/lib/actions/client-ops';
 import type { Notes } from '@/types/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { serializeObjectBlock, parseObjectBlocks } from '@/lib/note-object-secondary';
+import { serializeObjectBlock } from '@/lib/note-object-secondary';
 import type { ParsedObjectBlock } from '@/lib/note-object-secondary';
 import { useNotes } from '@/context/NotesContext';
 import { BareMetalInput } from '@/components/ui/BareMetalInput';
@@ -1279,7 +1279,7 @@ export default function CreateNoteForm({
               autoFocus
               enableLocalEngine={false}
               onValueChange={handleContentChange}
-              onPaste={(e) => {
+              onPaste={(_e) => {
                 isPastedRef.current = true;
                 if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
                 pasteTimerRef.current = setTimeout(() => {

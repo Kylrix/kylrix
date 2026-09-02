@@ -47,6 +47,7 @@ type Props = {
   onInstall?: () => void;
   onUninstall?: () => void;
   onOpenPrompt?: () => void;
+  onDeleteYours?: () => void | Promise<void>;
 };
 
 export function FlowDetailDrawer({
@@ -59,6 +60,7 @@ export function FlowDetailDrawer({
   onInstall,
   onUninstall,
   onOpenPrompt,
+  onDeleteYours: _onDeleteYours,
 }: Props) {
   const [local, setLocal] = useState(flow);
   const [installed, setInstalled] = useState(!!initialInstalled);

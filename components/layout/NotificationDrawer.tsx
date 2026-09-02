@@ -657,8 +657,7 @@ export function NotificationDrawer({
           const followedPubkeys = storedFollows.filter((k) => /^[0-9a-f]{64}$/i.test(k));
           const tags = followedPubkeys.map((pk) => ['p', pk]);
           const { signEvent } = await import('@/lib/nostr/nostr');
-          const { hexToBytes } = await import('@/lib/nostr/crypto');
-          if (identity.secretKey) {
+          if (identity.privateKeyBytes) {
             const ev = signEvent(
               {
                 kind: 3,
@@ -667,7 +666,7 @@ export function NotificationDrawer({
                 tags,
                 content: '',
               },
-              hexToBytes(identity.secretKey)
+              identity.privateKeyBytes
             );
             await activePool.publish(ev);
           }
