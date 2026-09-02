@@ -155,11 +155,22 @@ export function NotificationDrawer({
         itemsMap.set(n.id, n);
       }
 
-      // A. Real Appwrite Security & Session Logs
+      // A. Real Appwrite Security & Session Logs (Cached)
       if (user?.$id) {
         try {
-          const logsRes = await account.listLogs().catch(() => ({ logs: [] }));
-          for (const log of logsRes.logs || []) {
+          const now = Date.now();
+          const cachedLogs = await LocalEngine.cacheGet<{ logs: any[]; at: number }>('kylrix_session_logs_cache').catch(() => null);
+          let logs: any[] = [];
+          if (cachedLogs && now - cachedLogs.at < 15 * 60 * 1000) {
+            logs = cachedLogs.logs || [];
+          } else {
+            const logsRes = await account.listLogs().catch(() => ({ logs: [] }));
+            logs = logsRes.logs || [];
+            if (logs.length) {
+              void LocalEngine.cacheSet('kylrix_session_logs_cache', { logs, at: now }).catch(() => {});
+            }
+          }
+          for (const log of logs) {
             const ts = new Date(log.time).getTime();
             const timeStr = formatTimeAgo(ts);
 
@@ -190,13 +201,12 @@ export function NotificationDrawer({
         } catch {}
       }
 
-      // B. Real Moments Discussions & Reactions
+      // B. Real Moments Discussions & Reactions from Local Engine (0 network round-trips)
       try {
-        let moments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
-        if (!moments.length && user?.$id) {
-          const liveRes = await SocialService.getFeed(user.$id).catch(() => []);
-          moments = Array.isArray(liveRes) ? liveRes : (liveRes as any)?.rows || [];
-        }
+        const moments =
+          (await LocalEngine.cacheGet<any[]>('f_unified_moments_feed')) ||
+          (await LocalEngine.cacheGet<any[]>('f_moments_list')) ||
+          [];
 
         for (const m of moments.slice(0, 30)) {
           const ts = new Date(m.$createdAt || m.createdAt || Date.now()).getTime();

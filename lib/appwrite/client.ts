@@ -107,25 +107,60 @@ const databasesProxy = new Proxy(originalDatabases, {
                 const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
                 const jwt = await getJwt();
                 const { updateRowSecure } = await import('@/lib/actions/secure-ops');
-                return await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
+                const res = await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
+                const { invalidateTablesDbRowCache } = await import('@/lib/ecosystem/tablesdb-row-cache');
+                invalidateTablesDbRowCache({ databaseId, tableId, rowId });
+                return res;
             };
         }
         if (prop === 'listRows' || prop === 'listRows' || prop === 'listDocuments' || prop === 'listDocuments') {
             return async (...args: any[]) => {
-                // Reads via client SDK only — high frequency, uses row ACL (read) + isPublic/isGuest columns
-                // Databases (legacy) uses listDocuments/getDocument, TablesDB uses listRows/getRow — handle both
-                const t: any = target as any;
-                if (typeof t.listRows === 'function') return await t.listRows(...args);
-                if (typeof t.listDocuments === 'function') return await t.listDocuments(...args);
-                throw new Error('listRows/listDocuments not available on Databases client');
+                let dbId: string = '';
+                let tblId: string = '';
+                let q: any[] | undefined;
+                if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+                    dbId = args[0].databaseId;
+                    tblId = args[0].tableId;
+                    q = args[0].queries;
+                } else {
+                    [dbId, tblId, q] = args;
+                }
+                const fetcher = async () => {
+                    const t: any = target as any;
+                    if (typeof t.listRows === 'function') return await t.listRows(...args);
+                    if (typeof t.listDocuments === 'function') return await t.listDocuments(...args);
+                    throw new Error('listRows/listDocuments not available on Databases client');
+                };
+                if (dbId && tblId) {
+                    const { getTablesDbListCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
+                    return getTablesDbListCached({ databaseId: dbId, tableId: tblId, queries: q }, fetcher);
+                }
+                return fetcher();
             };
         }
         if (prop === 'getRow' || prop === 'getRow' || prop === 'getDocument' || prop === 'getDocument') {
             return async (...args: any[]) => {
-                const t: any = target as any;
-                if (typeof t.getRow === 'function') return await t.getRow(...args);
-                if (typeof t.getDocument === 'function') return await t.getDocument(...args);
-                throw new Error('getRow/getDocument not available on Databases client');
+                let dbId: string = '';
+                let tblId: string = '';
+                let rId: string = '';
+                if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+                    dbId = args[0].databaseId;
+                    tblId = args[0].tableId;
+                    rId = args[0].rowId;
+                } else {
+                    [dbId, tblId, rId] = args;
+                }
+                const fetcher = async () => {
+                    const t: any = target as any;
+                    if (typeof t.getRow === 'function') return await t.getRow(...args);
+                    if (typeof t.getDocument === 'function') return await t.getDocument(...args);
+                    throw new Error('getRow/getDocument not available on Databases client');
+                };
+                if (dbId && tblId && rId) {
+                    const { getTablesDbRowCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
+                    return getTablesDbRowCached({ databaseId: dbId, tableId: tblId, rowId: rId }, fetcher);
+                }
+                return fetcher();
             };
         }
         if (prop === 'deleteRow' || prop === 'deleteRow') {
@@ -133,7 +168,10 @@ const databasesProxy = new Proxy(originalDatabases, {
                 const { databaseId, tableId, rowId } = parseDatabasesDeleteArgs(args);
                 const jwt = await getJwt();
                 const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
-                return await deleteRowSecure(databaseId, tableId, rowId, jwt);
+                const res = await deleteRowSecure(databaseId, tableId, rowId, jwt);
+                const { invalidateTablesDbRowCache } = await import('@/lib/ecosystem/tablesdb-row-cache');
+                invalidateTablesDbRowCache({ databaseId, tableId, rowId });
+                return res;
             };
         }
         const val = Reflect.get(target, prop, receiver);
@@ -160,23 +198,60 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
                 const { databaseId, tableId, rowId, data, permissions } = parseTablesDBArgs(args);
                 const jwt = await getJwt();
                 const { updateRowSecure } = await import('@/lib/actions/secure-ops');
-                return await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
+                const res = await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
+                const { invalidateTablesDbRowCache } = await import('@/lib/ecosystem/tablesdb-row-cache');
+                invalidateTablesDbRowCache({ databaseId, tableId, rowId });
+                return res;
             };
         }
         if (prop === 'listRows' || prop === 'listDocuments') {
             return async (...args: any[]) => {
-                const t: any = target as any;
-                if (typeof t.listRows === 'function') return await t.listRows(...args);
-                if (typeof t.listDocuments === 'function') return await t.listDocuments(...args);
-                throw new Error('listRows/listDocuments not available on TablesDB client');
+                let dbId: string = '';
+                let tblId: string = '';
+                let q: any[] | undefined;
+                if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+                    dbId = args[0].databaseId;
+                    tblId = args[0].tableId;
+                    q = args[0].queries;
+                } else {
+                    [dbId, tblId, q] = args;
+                }
+                const fetcher = async () => {
+                    const t: any = target as any;
+                    if (typeof t.listRows === 'function') return await t.listRows(...args);
+                    if (typeof t.listDocuments === 'function') return await t.listDocuments(...args);
+                    throw new Error('listRows/listDocuments not available on TablesDB client');
+                };
+                if (dbId && tblId) {
+                    const { getTablesDbListCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
+                    return getTablesDbListCached({ databaseId: dbId, tableId: tblId, queries: q }, fetcher);
+                }
+                return fetcher();
             };
         }
         if (prop === 'getRow' || prop === 'getDocument') {
             return async (...args: any[]) => {
-                const t: any = target as any;
-                if (typeof t.getRow === 'function') return await t.getRow(...args);
-                if (typeof t.getDocument === 'function') return await t.getDocument(...args);
-                throw new Error('getRow/getDocument not available on TablesDB client');
+                let dbId: string = '';
+                let tblId: string = '';
+                let rId: string = '';
+                if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+                    dbId = args[0].databaseId;
+                    tblId = args[0].tableId;
+                    rId = args[0].rowId;
+                } else {
+                    [dbId, tblId, rId] = args;
+                }
+                const fetcher = async () => {
+                    const t: any = target as any;
+                    if (typeof t.getRow === 'function') return await t.getRow(...args);
+                    if (typeof t.getDocument === 'function') return await t.getDocument(...args);
+                    throw new Error('getRow/getDocument not available on TablesDB client');
+                };
+                if (dbId && tblId && rId) {
+                    const { getTablesDbRowCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
+                    return getTablesDbRowCached({ databaseId: dbId, tableId: tblId, rowId: rId }, fetcher);
+                }
+                return fetcher();
             };
         }
         if (prop === 'deleteRow') {
@@ -184,7 +259,10 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
                 const { databaseId, tableId, rowId } = parseTablesDBDeleteArgs(args);
                 const jwt = await getJwt();
                 const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
-                return await deleteRowSecure(databaseId, tableId, rowId, jwt);
+                const res = await deleteRowSecure(databaseId, tableId, rowId, jwt);
+                const { invalidateTablesDbRowCache } = await import('@/lib/ecosystem/tablesdb-row-cache');
+                invalidateTablesDbRowCache({ databaseId, tableId, rowId });
+                return res;
             };
         }
         const val = Reflect.get(target, prop, receiver);

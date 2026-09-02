@@ -508,15 +508,11 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
     if (typeof window !== 'undefined') {
       window.addEventListener('kylrix:flows-changed', handleChanged);
     }
-    const interval = setInterval(() => {
-      void refreshInstalledFlows();
-    }, 15000);
 
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('kylrix:flows-changed', handleChanged);
       }
-      clearInterval(interval);
     };
   }, [refreshInstalledFlows]);
 

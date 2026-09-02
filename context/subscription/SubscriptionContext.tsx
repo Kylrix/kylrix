@@ -195,14 +195,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [hydrateSubscriptionState]);
 
   useEffect(() => {
-    if (!user?.$id) return;
-    const interval = setInterval(() => {
-      void hydrateSubscriptionState(false); // Passive refresh
-    }, 45000); // 45s refresh loop for tokens/wallets/entitlement
-    return () => clearInterval(interval);
-  }, [user?.$id, hydrateSubscriptionState]);
-
-  useEffect(() => {
     const handler = () => {
       void hydrateSubscriptionState(true); // Force refresh on ledger events
     };

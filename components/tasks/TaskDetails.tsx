@@ -214,6 +214,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
         if (!threadId || !active) return;
         const rows = await listThreadMessages(threadId, { limit: 200 });
         if (!active) return;
+        const { UsersService } = await import('@/lib/services/users');
         const msgs = await Promise.all(
           rows.map(async (row: any) => {
             let senderName = 'Collaborator';
@@ -222,9 +223,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               senderName = user.name || 'You';
             } else {
               try {
-                const profile = await AppwriteService.getProfile(row.userId);
+                const profile = await UsersService.getProfileById(row.userId);
                 if (profile) {
-                    senderName = profile.name || 'Collaborator';
+                    senderName = profile.name || profile.displayName || 'Collaborator';
                     senderAvatar = profile.avatar || profile.profilePicId || null;
                 }
               } catch {}
@@ -249,10 +250,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     };
 
     loadDiscussionComments();
-    const poll = setInterval(loadDiscussionComments, 8000);
     return () => {
       active = false;
-      clearInterval(poll);
     };
   }, [discussionNoteId, task?.id, task?.discussionId, task?.title, user, (task as any)?.primaryThreadId]);
 

@@ -62,52 +62,79 @@ const fetchRowsByIds = async (databaseId: string, tableId: string, ids: string[]
     }
 };
 
+const interactionCountsCache = new Map<string, { stats: { likes: number; replies: number; pulses: number }; at: number }>();
+const interactionCountsInflight = new Map<string, Promise<{ likes: number; replies: number; pulses: number }>>();
+const COUNTS_TTL_MS = 60 * 1000;
+
 export const SocialService = {
-    async getInteractionCounts(momentId: string) {
-        try {
-            const interactions = await tablesDB.listRows(DB_ID, INTERACTIONS_TABLE, [
-                Query.equal('messageId', momentId),
-                Query.select(INTERACTION_LIST_SELECT),
-                Query.limit(100)
-            ]);
+    async getInteractionCounts(momentId: string): Promise<{ likes: number; replies: number; pulses: number }> {
+        if (!momentId) return { likes: 0, replies: 0, pulses: 0 };
 
-            const likes = interactions.rows.filter((i: any) => i.emoji === 'like').length;
+        const hit = interactionCountsCache.get(momentId);
+        if (hit && Date.now() - hit.at < COUNTS_TTL_MS) {
+            return { ...hit.stats };
+        }
 
-            const related = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
-                Query.equal('sourceId', momentId),
-                Query.select(MOMENT_LIST_SELECT),
-                Query.limit(200)
-            ]).catch(() => ({ rows: [] as any[] }));
+        const pending = interactionCountsInflight.get(momentId);
+        if (pending) {
+            return await pending;
+        }
 
-            let replies = 0;
-            let pulses = 0;
-
-            for (const m of related.rows || []) {
-                const kind = getMomentKind(m);
-                if (kind === 'reply') replies += 1;
-                if (kind === 'pulse') pulses += 1;
-            }
-
-            if (!related.rows?.length) {
-                const legacy = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
-                    Query.select(MOMENT_LIST_SELECT),
-                    Query.orderDesc('$createdAt'),
+        const fetcher = async () => {
+            try {
+                const interactions = await tablesDB.listRows(DB_ID, INTERACTIONS_TABLE, [
+                    Query.equal('messageId', momentId),
+                    Query.select(INTERACTION_LIST_SELECT),
                     Query.limit(100)
+                ]);
+
+                const likes = interactions.rows.filter((i: any) => i.emoji === 'like').length;
+
+                const related = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
+                    Query.equal('sourceId', momentId),
+                    Query.select(MOMENT_LIST_SELECT),
+                    Query.limit(200)
                 ]).catch(() => ({ rows: [] as any[] }));
 
-                for (const m of legacy.rows || []) {
+                let replies = 0;
+                let pulses = 0;
+
+                for (const m of related.rows || []) {
                     const kind = getMomentKind(m);
-                    const sourceId = getMomentSourceId(m);
-                    if (sourceId !== momentId) continue;
                     if (kind === 'reply') replies += 1;
                     if (kind === 'pulse') pulses += 1;
                 }
-            }
 
-            return { likes, replies, pulses };
-        } catch (_e) {
-            return { likes: 0, replies: 0, pulses: 0 };
-        }
+                if (!related.rows?.length) {
+                    const legacy = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
+                        Query.select(MOMENT_LIST_SELECT),
+                        Query.orderDesc('$createdAt'),
+                        Query.limit(100)
+                    ]).catch(() => ({ rows: [] as any[] }));
+
+                    for (const m of legacy.rows || []) {
+                        const kind = getMomentKind(m);
+                        const sourceId = getMomentSourceId(m);
+                        if (sourceId !== momentId) continue;
+                        if (kind === 'reply') replies += 1;
+                        if (kind === 'pulse') pulses += 1;
+                    }
+                }
+
+                const stats = { likes, replies, pulses };
+                interactionCountsCache.set(momentId, { stats, at: Date.now() });
+                return stats;
+            } catch (_e) {
+                return { likes: 0, replies: 0, pulses: 0 };
+            }
+        };
+
+        const task = fetcher().finally(() => {
+            interactionCountsInflight.delete(momentId);
+        });
+
+        interactionCountsInflight.set(momentId, task);
+        return await task;
     },
 
     // Lightweight helpers to list interactions or pulses without bloat

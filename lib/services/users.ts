@@ -291,9 +291,20 @@ export const UsersService = {
     },
 
     async getProfile(username: string) {
+        if (!username) return null;
+        const normalized = username.replace(/^@/, '').toLowerCase().trim();
+        const hit = profileRowCache.get(normalized);
+        if (hit && Date.now() - hit.at < PROFILE_ROW_TTL_MS) {
+            return hit.row ? { ...hit.row } : null;
+        }
+
         try {
             const { getProfileByUsernameSecure } = await import('@/lib/actions/secure-ops');
-            return await getProfileByUsernameSecure(username);
+            const row = await getProfileByUsernameSecure(username);
+            if (row) {
+                rememberProfileRow(row, normalized);
+            }
+            return row;
         } catch (error) {
             console.warn('[UsersService] Get profile by username failed:', error);
             return null;
