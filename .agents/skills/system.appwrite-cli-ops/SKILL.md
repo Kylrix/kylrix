@@ -208,31 +208,39 @@ appwrite tables-db create-boolean-column \
   --key enabled --required false
 ```
 
-### 3. Indexes
+### 3. Indexes & Composite Indexes (CRITICAL SYNTAX)
 
+> [!WARNING]
+> #### 🛑 Composite Index Syntax Pitfall
+> In Appwrite CLI, composite indexes MUST specify all columns separated by spaces in `--columns`, and MUST provide matching order directions 1-to-1 in `--orders`.
+> If `--orders` is omitted or does not match column count, CLI may only register the first column or fail to build a valid composite key.
+
+**Two-Column Composite Index (Key / Filter + Sort):**
 ```bash
-appwrite tables-db create-index \
-  --database-id passwordManagerDb --table-id <table-id> \
-  --key idx_<name> --type key \
-  --columns col1 col2 --orders ASC DESC
-
-appwrite tables-db create-index \
-  --database-id passwordManagerDb --table-id <table-id> \
-  --key idx_<name>_uq --type unique \
-  --columns col1 col2 col3 --orders ASC ASC ASC
+appwrite tablesdb create-index \
+  --database-id passwordManagerDb \
+  --table-id <table-id> \
+  --key idx_<name> \
+  --type key \
+  --columns col1 col2 \
+  --orders ASC DESC
 ```
 
-Index columns that are queried together. Unique indexes need clean data first.
-
-### 4. Verify → pull → generate
-
+**Three-Column Composite Unique Index (Deduplication / Scopes):**
 ```bash
-appwrite tables-db list-columns --database-id passwordManagerDb --table-id <table-id>
-appwrite tables-db list-indexes --database-id passwordManagerDb --table-id <table-id>
-# wait until status=available
-appwrite pull tables
-appwrite generate --language typescript
+appwrite tablesdb create-index \
+  --database-id passwordManagerDb \
+  --table-id <table-id> \
+  --key idx_<name>_uq \
+  --type unique \
+  --columns col1 col2 col3 \
+  --orders ASC ASC ASC
 ```
+
+**Index Rules:**
+1. Index columns that are queried together (`Query.equal('col1', x)` + `Query.orderDesc('col2')`).
+2. Order in `--columns` matters: equality filtered columns come first, followed by range/order columns.
+3. Check status with `list-indexes`: wait until `status` transitions from `processing` to `available`.
 
 ---
 
