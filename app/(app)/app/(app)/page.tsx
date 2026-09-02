@@ -1,6 +1,9 @@
 'use client';
 
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tag, X, ChevronRight, Plus, FileText, FileSpreadsheet } from 'lucide-react';
+
+
 
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { useNotes } from '@/context/NotesContext';
