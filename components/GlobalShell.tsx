@@ -40,7 +40,12 @@ const MomentComposerDrawer = dynamic(
   () => import('./overlays/MomentComposerDrawer').then((m) => m.MomentComposerDrawer),
   { ssr: false },
 );
+const MomentsDrawer = dynamic(
+  () => import('./connect/MomentsDrawer').then((m) => m.MomentsDrawer),
+  { ssr: false },
+);
 const ChatCreateDrawer = dynamic(
+
   () => import('@/components/objects/ChatCreateDrawer').then((m) => m.ChatCreateDrawer),
   { ssr: false },
 );
@@ -324,7 +329,11 @@ const isSpecificPostPage = useMemo(
       {unifiedDrawerActive === 'moment-composer' && (
         <MomentComposerDrawer onClose={() => closeUnified()} />
       )}
+      {unifiedDrawerActive === 'moments' && (
+        <MomentsDrawer onClose={() => closeUnified()} />
+      )}
       {isDesktopShell && unifiedDrawerActive === 'new-chat' && (
+
         <ChatCreateDrawer open onClose={() => closeUnified()} />
       )}
       {showProUpgrade && <ProUpgradeDrawer />}

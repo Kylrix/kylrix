@@ -8,6 +8,7 @@ import { MultiSectionContainer } from '@/context/SectionContext';
 import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { useAuth } from '@/context/auth/AuthContext';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
+import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
 
 export default function GoalsPage() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function GoalsPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <MomentTabTrigger />
               <HangoutTabTrigger />
               <button
                 type="button"
@@ -56,6 +58,7 @@ export default function GoalsPage() {
               </button>
             </div>
           </div>
+
 
           <MultiSectionContainer panels={['forms', 'huddles', 'projects']}>
             <TaskList />

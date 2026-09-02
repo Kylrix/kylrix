@@ -116,17 +116,22 @@ export function UnifiedLeftSidebar() {
       openUnified('hangouts');
       return;
     }
+    if (navId === 'moments' || navId === 'connect') {
+      openUnified('moments');
+      return;
+    }
     const routes: Record<NavId, string> = {
       note: '/app',
       goal: '/goals',
       vault: '/vault',
-      connect: '/connect',
-      moments: '/connect',
-      hangout: '/connect',
+      connect: '/app',
+      moments: '/app',
+      hangout: '/app',
       flow: '/flows',
     };
     navPush(routes[navId] || '/app');
   };
+
 
 
   if (pathname?.startsWith('/accounts')) return null;

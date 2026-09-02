@@ -23,6 +23,8 @@ import { TOTPPageContent } from './totp/page';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
+import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -486,8 +488,10 @@ function DashboardPageContent() {
               </div>
 
               <div className="flex items-center gap-2">
+                <MomentTabTrigger />
                 <HangoutTabTrigger />
               </div>
+
             </div>
 
             {activeTab === 'secrets' ? (

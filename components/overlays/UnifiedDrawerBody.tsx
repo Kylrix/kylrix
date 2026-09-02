@@ -101,7 +101,12 @@ const HangoutsDrawer = dynamic(
   () => import('../hangout/HangoutsDrawer').then((m) => m.HangoutsDrawer),
   { ssr: false },
 );
+const MomentsDrawer = dynamic(
+  () => import('../connect/MomentsDrawer').then((m) => m.MomentsDrawer),
+  { ssr: false },
+);
 const TaskDetails = dynamic(() => import('../tasks/TaskDetails'), { ssr: false });
+
 const AgenticPanelContent = dynamic(
   () => import('./AgenticPanelContent').then((m) => m.AgenticPanelContent),
   { ssr: false },
@@ -404,7 +409,15 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           onClose={onClose}
         />
       );
+    case 'moments':
+      return (
+        <MomentsDrawer
+          onClose={onClose}
+          initialTab={drawerData?.initialTab}
+        />
+      );
     case 'milestone-details':
+
       return <TaskDetails taskId={drawerData?.taskId} onBack={onClose} />;
     case 'profile-preview':
       return (

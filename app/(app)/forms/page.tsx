@@ -32,6 +32,8 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
+import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+
 
 export default function FormsDashboard() {
     const { user } = useAuth();
@@ -312,8 +314,10 @@ export default function FormsDashboard() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
+                        <MomentTabTrigger />
                         <HangoutTabTrigger />
                         <button 
+
                             type="button"
                             onClick={handleCreate}
                             className="flex items-center gap-2 px-5 py-2.5 font-extrabold rounded-2xl bg-[#6366F1] hover:bg-[#5254D8] text-white font-satoshi transition-all shadow-[0_4px_16px_rgba(99,102,241,0.3)] cursor-pointer text-sm"

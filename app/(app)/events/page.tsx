@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import EventList from '@/components/events/EventList';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
+import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
 
 export default function EventsPage() {
   const router = useRouter();
@@ -31,9 +32,11 @@ export default function EventsPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <MomentTabTrigger />
               <HangoutTabTrigger />
             </div>
           </div>
+
 
           <EventList />
         </div>

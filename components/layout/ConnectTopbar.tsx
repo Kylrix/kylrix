@@ -711,7 +711,8 @@ export default function ConnectTopbar({
         g: '/goals',
         q: '/forms',
         e: '/events',
-        h: 'hangouts'};
+        h: 'hangouts',
+        m: 'moments'};
 
       const action = builtInActions[key];
       if (action) {
@@ -742,10 +743,14 @@ export default function ConnectTopbar({
         case 'hangouts':
           openUnified('hangouts');
           break;
+        case 'moments':
+          openUnified('moments');
+          break;
         default:
           break;
       }
     };
+
 
     window.addEventListener('keydown', handleGlobalShortcuts, true);
     return () => window.removeEventListener('keydown', handleGlobalShortcuts, true);

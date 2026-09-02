@@ -12,6 +12,8 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 
 import Link from 'next/link';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
+import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+
 
 const TAG_COLOR_MAP: Record<string, string> = {
   Personal: '#3B82F6',
@@ -480,8 +482,10 @@ export default function IdeasPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <MomentTabTrigger />
               <HangoutTabTrigger />
               <button
+
                 type="button"
                 onClick={openCreateNote}
                 className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#EC4899] text-white hover:bg-[#db2777] active:scale-95 transition-all shadow-[0_4px_14px_rgba(236,72,153,0.3)] select-none shrink-0"

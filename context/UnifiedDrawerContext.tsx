@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'share-context' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'add-to-project' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'agent-create' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'pricing' | 'tags' | 'trash' | 'project-invite' | 'form' | 'form-response-detail' | 'sanitize' | 'agentic-preview' | 'project-settings' | 'project-visibility' | 'project-auto-sweep' | 'project-join-request-confirm' | 'moment-composer' | 'access-control' | 'milestone-details' | 'ecosystem-send' | 'hangouts' | 'profile-preview' | 'zap' | 'reaction-detail';
+type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'share-context' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'add-to-project' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'agent-create' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'pricing' | 'tags' | 'trash' | 'project-invite' | 'form' | 'form-response-detail' | 'sanitize' | 'agentic-preview' | 'project-settings' | 'project-visibility' | 'project-auto-sweep' | 'project-join-request-confirm' | 'moment-composer' | 'access-control' | 'milestone-details' | 'ecosystem-send' | 'hangouts' | 'moments' | 'profile-preview' | 'zap' | 'reaction-detail';
 
 export type { DrawerContent };
 

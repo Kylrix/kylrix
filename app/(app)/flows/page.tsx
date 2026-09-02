@@ -41,6 +41,8 @@ import {
   isFlowConfirmPromptEnabled,
 } from '@/components/flows/FlowInstallConfirmDrawer';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
+import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+
 
 
 
@@ -480,8 +482,10 @@ export default function FlowsPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <MomentTabTrigger />
             <HangoutTabTrigger />
           </div>
+
         </div>
 
         {drafts.length > 0 && (

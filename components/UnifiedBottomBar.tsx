@@ -112,11 +112,17 @@ export function UnifiedBottomBar() {
                 key={item.key}
                 href={item.route}
                 onClick={(e) => {
+                  if (item.key === 'connect') {
+                    e.preventDefault();
+                    openUnified('moments');
+                    return;
+                  }
                   if (pathname === item.route) {
                     e.preventDefault();
                   }
                 }}
                 className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group"
+
                 style={{
                   color: isSelected ? appColor : 'rgba(255, 255, 255, 0.4)',
                   WebkitTapHighlightColor: 'transparent',
