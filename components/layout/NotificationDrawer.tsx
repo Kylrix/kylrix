@@ -507,6 +507,8 @@ export function NotificationDrawer({
       });
       return;
     }
+
+    if (notif.actionHref) {
       if (notif.actionHref.startsWith('/moment/')) {
         const rawId = notif.actionHref.replace('/moment/', '');
         const isNostr = rawId.startsWith('nostr_') || notif.source === 'nostr';
