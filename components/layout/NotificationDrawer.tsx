@@ -17,6 +17,7 @@ import {
   Heart,
   Zap,
   UserPlus,
+  UserCheck,
   ShieldCheck,
   CheckCheck,
   ChevronRight,
@@ -24,6 +25,7 @@ import {
   X as CloseIcon,
   RotateCw,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 import { account } from '@/lib/appwrite/client';
@@ -104,6 +106,8 @@ export function NotificationDrawer({
   const lastHarvestAtRef = useRef<number>(0);
   const isHarvestingRef = useRef<boolean>(false);
 
+  const [followingKeys, setFollowingKeys] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     notificationsRef.current = notifications;
   }, [notifications]);
@@ -137,18 +141,76 @@ export function NotificationDrawer({
     } catch {}
   }, [readStorageKey, dismissedStorageKey]);
 
-  // 3. 0ms Initial Cache Hydration from LocalEngine for this partition
+  // 3. 0ms Initial Cache Hydration from LocalEngine for this partition & Follows
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    let cancelled = false;
+
     void (async () => {
       const cached = await LocalEngine.cacheGet<KylrixNotification[]>(cacheKey, 600_000).catch(() => null);
-      if (Array.isArray(cached)) {
+      if (Array.isArray(cached) && !cancelled) {
         setNotifications(cached);
-      } else {
+      } else if (!cancelled) {
         setNotifications([]);
       }
+
+      const localGlobalFollows = (await LocalEngine.cacheGet<string[]>('kylrix:follows')) || [];
+      const localUserFollows = userId && userId !== 'guest' ? ((await LocalEngine.cacheGet<string[]>(`kylrix:follows_${userId}`)) || []) : [];
+      const merged = new Set<string>([...localGlobalFollows, ...localUserFollows].map((k) => k.toLowerCase()));
+      if (!cancelled && merged.size > 0) {
+        setFollowingKeys(merged);
+      }
     })();
-  }, [cacheKey]);
+
+    const handleFollowsUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<string[]>;
+      if (Array.isArray(customEvent.detail)) {
+        setFollowingKeys(new Set(customEvent.detail.map((k) => String(k).toLowerCase())));
+      }
+    };
+
+    window.addEventListener('kylrix:follows-updated', handleFollowsUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('kylrix:follows-updated', handleFollowsUpdated);
+    };
+  }, [cacheKey, userId]);
+
+  // 3b. Realtime background sync of active user follows on drawer open
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const discovered = new Set<string>();
+        if (userPubkeyHex) {
+          const { fetchNostrFollowing } = await import('@/lib/nostr/user-activity');
+          const nostrFollowing = await fetchNostrFollowing(userPubkeyHex, 3500).catch(() => []);
+          nostrFollowing.forEach((k) => discovered.add(k.toLowerCase()));
+        }
+        if (userId && userId !== 'guest') {
+          const { SocialService } = await import('@/lib/services/social');
+          const appFollows = await SocialService.getFollowing(userId).catch(() => []);
+          appFollows.forEach((f: any) => {
+            const target = f.followingId || f.targetUserId || f.userId;
+            if (target) discovered.add(String(target).toLowerCase());
+          });
+        }
+        if (!cancelled && discovered.size > 0) {
+          setFollowingKeys((prev) => {
+            const next = new Set([...Array.from(prev), ...Array.from(discovered)]);
+            void LocalEngine.cacheSet('kylrix:follows', Array.from(next)).catch(() => {});
+            if (userId && userId !== 'guest') {
+              void LocalEngine.cacheSet(`kylrix:follows_${userId}`, Array.from(next)).catch(() => {});
+            }
+            return next;
+          });
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, userPubkeyHex, userId]);
 
   // 4. Stable Activity Harvesting from LocalEngine & Nostr (Throttled, 0 loop)
   const harvestLiveActivity = useCallback(async (force: boolean = false) => {
@@ -481,6 +543,108 @@ export function NotificationDrawer({
   };
 
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
+
+  const isFollowingActor = useCallback(
+    (actor?: KylrixNotification['actor']) => {
+      if (!actor) return false;
+      const keys = [
+        actor.pubkey?.toLowerCase(),
+        actor.npub?.toLowerCase(),
+        actor.userId?.toLowerCase(),
+        actor.username?.toLowerCase()?.replace(/^@/, ''),
+      ].filter(Boolean) as string[];
+
+      return keys.some((k) => followingKeys.has(k));
+    },
+    [followingKeys]
+  );
+
+  const handleToggleFollow = async (
+    actor: NonNullable<KylrixNotification['actor']>,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    const primaryKey = actor.pubkey || actor.npub || actor.userId || actor.username;
+    if (!primaryKey) return;
+
+    const currentlyFollowing = isFollowingActor(actor);
+    const allKeysToToggle = [
+      actor.pubkey?.toLowerCase(),
+      actor.npub?.toLowerCase(),
+      actor.userId?.toLowerCase(),
+      actor.username?.toLowerCase()?.replace(/^@/, ''),
+    ].filter(Boolean) as string[];
+
+    setFollowingKeys((prev) => {
+      const nextSet = new Set(prev);
+      if (currentlyFollowing) {
+        allKeysToToggle.forEach((k) => nextSet.delete(k));
+      } else {
+        allKeysToToggle.forEach((k) => nextSet.add(k));
+      }
+      const nextArr = Array.from(nextSet);
+
+      // 1. LocalEngine 0ms persistence
+      void LocalEngine.cacheSet('kylrix:follows', nextArr).catch(() => {});
+      if (userId && userId !== 'guest') {
+        void LocalEngine.cacheSet(`kylrix:follows_${userId}`, nextArr).catch(() => {});
+      }
+
+      // 2. Realtime local broadcast
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('kylrix:follows-updated', { detail: nextArr }));
+      }
+      return nextSet;
+    });
+
+    toast.success(currentlyFollowing ? `Unfollowed ${actor.name || 'user'}` : `Following ${actor.name || 'user'}`);
+
+    // 3. Background remote dispatch (optimistic)
+    if (actor.userId && userId && userId !== 'guest') {
+      void (async () => {
+        try {
+          const { SocialService } = await import('@/lib/services/social');
+          if (currentlyFollowing) {
+            await SocialService.unfollowUser(userId, actor.userId!);
+          } else {
+            await SocialService.followUser(userId, actor.userId!);
+          }
+        } catch {}
+      })();
+    }
+
+    if (actor.pubkey && userPubkeyHex && identity) {
+      void (async () => {
+        try {
+          const { getNostrReadRelays } = await import('@/lib/connect/feed-settings');
+          const relays = await getNostrReadRelays().catch(() => DEFAULT_NOTIFICATION_RELAYS);
+          const activePool = poolRef.current || new NostrRelayPool(relays);
+          if (!poolRef.current) {
+            poolRef.current = activePool;
+            activePool.connect();
+          }
+          const storedFollows = (await LocalEngine.cacheGet<string[]>('kylrix:follows')) || [];
+          const followedPubkeys = storedFollows.filter((k) => /^[0-9a-f]{64}$/i.test(k));
+          const tags = followedPubkeys.map((pk) => ['p', pk]);
+          const { signEvent } = await import('@/lib/nostr/nostr');
+          const { hexToBytes } = await import('@/lib/nostr/crypto');
+          if (identity.secretKey) {
+            const ev = signEvent(
+              {
+                kind: 3,
+                pubkey: userPubkeyHex,
+                created_at: Math.floor(Date.now() / 1000),
+                tags,
+                content: '',
+              },
+              hexToBytes(identity.secretKey)
+            );
+            await activePool.publish(ev);
+          }
+        } catch {}
+      })();
+    }
+  };
 
   const handleNotificationClick = (notif: KylrixNotification) => {
     markNotificationRead(notif.id);
@@ -908,6 +1072,122 @@ export function NotificationDrawer({
               >
                 {notif.message}
               </Typography>
+
+              {/* Follow / Mutual Sub-Card */}
+              {notif.category === 'follows' && notif.actor && (
+                <Box
+                  onClick={(e: React.MouseEvent) => handleToggleFollow(notif.actor!, e)}
+                  sx={{
+                    mt: 1,
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1.25,
+                    px: 1.25,
+                    py: 1,
+                    borderRadius: '13px',
+                    bgcolor: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.03)' : alpha(appAccent, 0.08),
+                    border: '1px solid',
+                    borderColor: isFollowingActor(notif.actor)
+                      ? 'rgba(255,255,255,0.08)'
+                      : alpha(appAccent, 0.28),
+                    transition: 'all 0.15s ease',
+                    cursor: 'pointer',
+                    boxSizing: 'border-box',
+                    '&:hover': {
+                      bgcolor: isFollowingActor(notif.actor)
+                        ? 'rgba(255,255,255,0.06)'
+                        : alpha(appAccent, 0.14),
+                      borderColor: isFollowingActor(notif.actor)
+                        ? 'rgba(255,255,255,0.15)'
+                        : alpha(appAccent, 0.42),
+                    },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '7px',
+                        bgcolor: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.06)' : alpha(appAccent, 0.15),
+                        color: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.7)' : appAccent,
+                        display: 'grid',
+                        placeItems: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {isFollowingActor(notif.actor) ? (
+                        <UserCheck size={13} strokeWidth={2.4} />
+                      ) : (
+                        <UserPlus size={13} strokeWidth={2.4} />
+                      )}
+                    </Box>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                      <Typography
+                        component="span"
+                        sx={{
+                          color: 'white',
+                          fontWeight: 800,
+                          fontSize: '0.76rem',
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {isFollowingActor(notif.actor) ? 'Mutual Connection' : 'Follows you'}
+                      </Typography>
+                      <Typography
+                        component="span"
+                        sx={{
+                          color: 'rgba(255,255,255,0.4)',
+                          fontWeight: 500,
+                          fontSize: '0.66rem',
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {isFollowingActor(notif.actor) ? 'You follow each other' : 'You are not following back yet'}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      px: 1.25,
+                      py: 0.35,
+                      borderRadius: '999px',
+                      bgcolor: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.08)' : appAccent,
+                      color: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.85)' : '#000000',
+                      fontSize: '0.7rem',
+                      fontWeight: 900,
+                      letterSpacing: '0.02em',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.4,
+                      flexShrink: 0,
+                      boxShadow: isFollowingActor(notif.actor) ? 'none' : `0 2px 8px ${alpha(appAccent, 0.3)}`,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {isFollowingActor(notif.actor) ? (
+                      <>
+                        <UserCheck size={11} strokeWidth={2.5} />
+                        <span>Following</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus size={11} strokeWidth={2.5} />
+                        <span>Follow back</span>
+                      </>
+                    )}
+                  </Box>
+                </Box>
+              )}
             </Box>
 
             {/* 3. Dismiss & Right Action */}
