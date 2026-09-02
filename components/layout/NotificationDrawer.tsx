@@ -491,30 +491,6 @@ export function NotificationDrawer({
     markNotificationRead(notif.id);
     onClose();
 
-    const isLikeOrReaction =
-      notif.category === 'likes' ||
-      notif.id.includes('_like_') ||
-      notif.id.includes('_zap_') ||
-      notif.id.includes('_repost_');
-
-    if (isLikeOrReaction && notif.actor) {
-      // 1. Quietly route to the post behind/underneath the drawer so it's loaded and visible
-      if (notif.actionHref) {
-        router.push(notif.actionHref);
-      }
-      // 2. Open the like/reaction bottom drawer showing who liked/reacted and their identity
-      openUnifiedDrawer('reaction-detail', {
-        actor: notif.actor,
-        title: notif.title,
-        message: notif.message,
-        time: notif.time,
-        category: notif.category,
-        actionHref: notif.actionHref,
-        emoji: notif.title?.includes('reacted') ? notif.title.split('reacted')[1]?.trim() : '❤️',
-      });
-      return;
-    }
-
     if (notif.category === 'follows' && notif.actor) {
       openUnifiedDrawer('profile-preview', {
         userId: notif.actor.userId,
@@ -529,26 +505,16 @@ export function NotificationDrawer({
     }
 
     if (notif.actionHref) {
-      if (notif.actionHref.startsWith('/moment/')) {
-        const rawId = notif.actionHref.replace('/moment/', '');
-        const isNostr = rawId.startsWith('nostr_') || notif.source === 'nostr';
-        const cleanId = rawId.startsWith('nostr_') ? rawId.slice(6) : rawId;
-        openMomentObjectDetail({
-          momentId: cleanId,
-          source: isNostr ? 'nostr' : 'ecosystem',
-          preview: {
-            authorName: notif.actor?.name || notif.title,
-            authorAvatar: notif.actor?.avatar,
-          },
-          openSidebar,
-          openOverlay,
-          closeSidebar,
-          closeOverlay,
-        });
-        return;
-      }
-
       router.push(notif.actionHref);
+      return;
+    }
+
+    if (notif.id.includes('moment')) {
+      const parts = notif.id.split('_');
+      const momentId = parts[parts.length - 1];
+      if (momentId) {
+        router.push(`/moment/${momentId}`);
+      }
     }
   };
 
