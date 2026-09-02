@@ -10,7 +10,7 @@ import {
   alpha,
   useMediaQuery,
   useTheme} from '@/lib/openbricks/primitives';
-import { Plus, X, Trash2, Pin, CheckSquare } from 'lucide-react';
+import { Plus, X, Trash2, Pin, CheckSquare, ArrowUp } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { useSelection } from '@/context/SelectionContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -46,10 +46,47 @@ export default function UniversalFAB() {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
   const [_isProcessing, setIsProcessing] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const {} = useLocalContext();
 
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleScroll = () => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      let maxScroll = scrollY;
+      const scrollables = document.querySelectorAll('main, [data-scrollable="true"], .overflow-y-auto');
+      scrollables.forEach((el) => {
+        if (el instanceof HTMLElement && el.scrollTop > maxScroll) {
+          maxScroll = el.scrollTop;
+        }
+      });
+      setIsScrolled(maxScroll > 200);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('scroll', handleScroll, { capture: true });
+    };
+  }, [pathname]);
+
+  const scrollToTop = React.useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+    document.body.scrollTo({ top: 0, behavior: 'smooth' });
+    const scrollables = document.querySelectorAll('main, [data-scrollable="true"], .overflow-y-auto');
+    scrollables.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  }, []);
 
   const isLandingPage = pathname === '/';
 
@@ -339,26 +376,28 @@ export default function UniversalFAB() {
       <Box sx={anchorSx}>
         <Zoom in>
           <Fab
-            onClick={onMainClick}
+            onClick={isScrolled ? scrollToTop : onMainClick}
+            aria-label={isScrolled ? 'Back to top' : 'Add'}
+            title={isScrolled ? 'Back to top' : 'Add'}
             sx={{
               ...childPointerEvents,
               width: 56,
               height: 56,
-              bgcolor: mainColor,
-              color: '#000',
+              bgcolor: isScrolled ? '#0A0908' : mainColor,
+              color: isScrolled ? '#FFFFFF' : '#000',
               borderRadius: '16px',
-              border: '1px solid rgba(0,0,0,0.12)',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              border: isScrolled ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid rgba(0,0,0,0.12)',
+              boxShadow: isScrolled ? '0 10px 30px rgba(0,0,0,0.6)' : '0 8px 24px rgba(0,0,0,0.45)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease',
               '&:hover': {
-                bgcolor: mainColor,
+                bgcolor: isScrolled ? '#161412' : mainColor,
                 transform: 'translateY(-2px)',
                 boxShadow: '0 10px 28px rgba(0,0,0,0.5)',
               },
               '&:active': { transform: 'scale(0.96)' },
             }}
           >
-            {mainIcon || <Plus size={26} strokeWidth={2.5} />}
+            {isScrolled ? <ArrowUp size={24} strokeWidth={2.5} /> : (mainIcon || <Plus size={26} strokeWidth={2.5} />)}
           </Fab>
         </Zoom>
       </Box>
@@ -447,17 +486,26 @@ export default function UniversalFAB() {
         })}
 
         <Fab
-          onClick={() => setIsExpanded((open) => !open)}
-          aria-label={isExpanded ? 'Close actions' : 'Open actions'}
+          onClick={() => {
+            if (isExpanded) {
+              setIsExpanded(false);
+            } else if (isScrolled) {
+              scrollToTop();
+            } else {
+              setIsExpanded((open) => !open);
+            }
+          }}
+          aria-label={isExpanded ? 'Close actions' : isScrolled ? 'Back to top' : 'Open actions'}
+          title={isExpanded ? 'Close actions' : isScrolled ? 'Back to top' : 'Open actions'}
           sx={{
             ...childPointerEvents,
             width: 64,
             height: 64,
-            bgcolor: isExpanded ? 'rgba(255, 255, 255, 0.08)' : mainColor,
-            color: isExpanded ? '#fff' : '#000',
+            bgcolor: isExpanded ? 'rgba(255, 255, 255, 0.08)' : isScrolled ? '#0A0908' : mainColor,
+            color: isExpanded || isScrolled ? '#fff' : '#000',
             borderRadius: '20px',
-            border: isExpanded ? '1px solid rgba(255, 255, 255, 0.18)' : 'none',
-            boxShadow: isExpanded ? '0 12px 40px rgba(0,0,0,0.55)' : `0 10px 34px ${alpha(mainColor, 0.45)}`,
+            border: isExpanded || isScrolled ? '1px solid rgba(255, 255, 255, 0.18)' : 'none',
+            boxShadow: isExpanded || isScrolled ? '0 12px 40px rgba(0,0,0,0.55)' : `0 10px 34px ${alpha(mainColor, 0.45)}`,
             transform: isExpanded ? 'rotate(0deg)' : 'none',
             transition: 'all 0.38s cubic-bezier(0.34, 1.56, 0.64, 1)',
             '&:active': { transform: 'scale(0.94)' }}}
@@ -469,7 +517,13 @@ export default function UniversalFAB() {
               transform: isExpanded ? 'rotate(45deg)' : 'rotate(0deg)',
               transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)'}}
           >
-            {isExpanded ? <X size={28} strokeWidth={2} /> : (mainIcon || <Plus size={28} strokeWidth={2} />)}
+            {isExpanded ? (
+              <X size={28} strokeWidth={2} />
+            ) : isScrolled ? (
+              <ArrowUp size={28} strokeWidth={2.5} />
+            ) : (
+              mainIcon || <Plus size={28} strokeWidth={2} />
+            )}
           </Box>
         </Fab>
       </Box>
