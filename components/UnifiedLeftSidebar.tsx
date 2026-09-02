@@ -5,8 +5,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Box, Paper, Tooltip } from '@/lib/openbricks/primitives';
 import {
   FileText as NotesIcon,
+  FileSpreadsheet as FormIcon,
   Target as GoalsIcon,
+  Calendar as EventIcon,
   Lock as VaultIcon,
+  KeyRound as TotpIcon,
   Settings as SettingsIcon,
   Share2 as ShareIcon,
   MoreVertical as MoreIcon,
@@ -21,15 +24,19 @@ import { useSidebar } from '@/components/ui/SidebarContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { executeInstantShare } from '@/lib/share/instant-share';
 
-type NavId = 'note' | 'goal' | 'vault' | 'settings';
+type NavId = 'note' | 'form' | 'goal' | 'event' | 'vault' | 'totp' | 'settings';
 
-/** Same order + accents as UnifiedBottomBar: ideas → goals → vault → settings */
+/** Desktop Left Sidebar Primary Items: ideas, forms, goals, events, secrets, totp, settings */
 const NAV_COLORS: Record<NavId, string> = {
   note: '#EC4899',
+  form: '#6366F1',
   goal: '#A855F7',
+  event: '#8B5CF6',
   vault: '#10B981',
+  totp: '#10B981',
   settings: '#6366F1',
 };
+
 
 
 
@@ -98,8 +105,13 @@ export function UnifiedLeftSidebar() {
 
   const getCurrentTab = (): NavId | null => {
     if (pathname?.startsWith('/app')) return 'note';
-    if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
-    if (pathname?.startsWith('/vault')) return 'vault';
+    if (pathname?.startsWith('/forms') || pathname?.startsWith('/form')) return 'form';
+    if (pathname?.startsWith('/goals') || pathname?.startsWith('/goal')) return 'goal';
+    if (pathname?.startsWith('/events') || pathname?.startsWith('/event')) return 'event';
+    if (pathname?.startsWith('/vault')) {
+      if (pathname.includes('/totp')) return 'totp';
+      return 'vault';
+    }
     if (pathname?.startsWith('/settings')) return 'settings';
     return null;
   };
@@ -107,8 +119,11 @@ export function UnifiedLeftSidebar() {
   const handleNavChange = (navId: NavId) => {
     const routes: Record<NavId, string> = {
       note: '/app',
+      form: '/forms',
       goal: '/goals',
+      event: '/events',
       vault: '/vault',
+      totp: '/vault/totp',
       settings: '/settings',
     };
     navPush(routes[navId] || '/app');
@@ -120,12 +135,16 @@ export function UnifiedLeftSidebar() {
 
   const currentTab = getCurrentTab();
 
-  const navItems: { id: NavId; label: string; icon: typeof NotesIcon }[] = [
+  const navItems: { id: NavId; label: string; icon: any }[] = [
     { id: 'note', label: 'Ideas', icon: NotesIcon },
+    { id: 'form', label: 'Forms', icon: FormIcon },
     { id: 'goal', label: 'Goals', icon: GoalsIcon },
-    { id: 'vault', label: 'Vault', icon: VaultIcon },
+    { id: 'event', label: 'Events', icon: EventIcon },
+    { id: 'vault', label: 'Secrets', icon: VaultIcon },
+    { id: 'totp', label: 'TOTP', icon: TotpIcon },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
+
 
 
   return (

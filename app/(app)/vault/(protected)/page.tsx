@@ -16,7 +16,8 @@ import SudoModal from '@/components/overlays/SudoModal';
 import { useSudo } from '@/context/SudoContext';
 import { MultiSectionContainer, useSection } from '@/context/SectionContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
-import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw, Lock } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw, Lock, KeyRound } from 'lucide-react';
+
 import { useFAB } from '@/context/FABContext';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { TOTPPageContent } from './totp/page';
@@ -466,28 +467,35 @@ function DashboardPageContent() {
           <div>
             {/* Tab Switcher */}
             <div className="px-4 md:px-12 mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none">
+              <div className="flex items-center gap-1.5 sm:gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none">
                 <button
                   onClick={() => setActiveTab('secrets')}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+                  className={`flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'secrets'
                       ? 'bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)]'
                       : 'text-white/50 hover:text-white hover:bg-white/5'
                   }`}
+                  title="Secrets"
+                  aria-label="Secrets"
                 >
-                  Secrets
+                  <Lock size={15} />
+                  <span className="hidden sm:inline">Secrets</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('totp')}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+                  className={`flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'totp'
                       ? 'bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)]'
                       : 'text-white/50 hover:text-white hover:bg-white/5'
                   }`}
+                  title="TOTP"
+                  aria-label="TOTP"
                 >
-                  TOTP
+                  <KeyRound size={15} />
+                  <span className="hidden sm:inline">TOTP</span>
                 </button>
               </div>
+
 
               <div className="flex items-center gap-2">
                 <FlowTabTrigger />
