@@ -6,14 +6,14 @@
 import { parseEnvFlag } from '@/lib/config/env-flags';
 import { isPricingTiersEnabled } from '@/lib/config/product';
 
-/** Server/runtime flag — legacy self-hosted installs may set `SELFHOSTED=true`. */
+/** Server/runtime flag — self-hosted installs may set `SELFHOSTED=true` or `SELFHOST_MODE=true`. */
 function readSelfHostedEnv(): boolean {
-  return parseEnvFlag(process.env.SELFHOSTED);
+  return parseEnvFlag(process.env.SELFHOSTED) || parseEnvFlag(process.env.SELFHOST_MODE);
 }
 
-/** Client bundle flag — mirrored from SELFHOSTED at build time via next.config.js. */
+/** Client bundle flag — mirrored from SELFHOSTED/SELFHOST_MODE at build time. */
 function readSelfHostedClientEnv(): boolean {
-  return parseEnvFlag(process.env.NEXT_PUBLIC_SELFHOSTED);
+  return parseEnvFlag(process.env.NEXT_PUBLIC_SELFHOSTED) || parseEnvFlag(process.env.NEXT_PUBLIC_SELFHOST_MODE);
 }
 
 function readPricingTiersClientEnv(): boolean {
@@ -25,6 +25,12 @@ export function isSelfHostedDeployment(): boolean {
     return readSelfHostedEnv();
   }
   return readSelfHostedClientEnv();
+}
+
+/** Decoupled Backend mode: indicates if local bundled backend is active vs standalone Next.js deployment. */
+export function isIntegratedBackend(): boolean {
+  const flag = typeof window === 'undefined' ? process.env.BACKEND : process.env.NEXT_PUBLIC_BACKEND;
+  return parseEnvFlag(flag);
 }
 
 /** Commerce/checkout + tier paywalls — enabled for cloud deployments with pricing tiers on. */
