@@ -25,7 +25,6 @@ import {
   RotateCw,
 } from 'lucide-react';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
-import { isTopbarScrollAtTop } from '@/sdk/topbar';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 import { account } from '@/lib/appwrite/client';
 import { LocalEngine } from '@/lib/services/LocalEngine';
@@ -35,10 +34,7 @@ import { NostrRelayPool, type NostrEvent } from '@/lib/nostr/nostr';
 import { npubToBytes, bytesToHex, bytesToNpub, hexToBytes } from '@/lib/nostr/crypto';
 import { queueNostrProfileFetch, getCachedNostrProfile } from '@/lib/nostr/metadata';
 import { getNostrReadRelays } from '@/lib/connect/feed-settings';
-import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
-import { useOverlay } from '@/components/ui/OverlayContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { openMomentObjectDetail } from '@/components/objects/MomentObjectDetail';
 
 export type NotificationCategory = 'all' | 'replies' | 'likes' | 'zaps' | 'follows' | 'system';
 
@@ -484,8 +480,6 @@ export function NotificationDrawer({
     }
   };
 
-  const { openSidebar, closeSidebar } = useDynamicSidebar();
-  const { openOverlay, closeOverlay } = useOverlay();
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
 
   const handleNotificationClick = (notif: KylrixNotification) => {
