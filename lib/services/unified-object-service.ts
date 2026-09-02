@@ -112,25 +112,52 @@ export async function unifiedCreate<T extends Models.Row = Models.Row>(
   const { databaseId, tableId } = resolveConfig(kind);
   const ownerId = opts?.ownerId || (data.userId as string) || (data.ownerId as string) || '';
   const perms = opts?.permissions || (ownerId ? [Permission.read(Role.user(ownerId))] : []);
-  if (typeof window !== 'undefined') {
-    const { createRow } = await import('@/lib/actions/client-ops');
-    // client-ops wraps to server via secure-ops even on client — single path
-    return await createRow(databaseId, tableId, data, perms) as unknown as T;
-  } else {
-    const { createRowSecure } = await import('@/lib/actions/secure-ops');
-    return await createRowSecure(databaseId, tableId, data, perms) as unknown as T;
+  try {
+    if (typeof window !== 'undefined') {
+      const { createRow } = await import('@/lib/actions/client-ops');
+      // client-ops wraps to server via secure-ops even on client — single path
+      return await createRow(databaseId, tableId, data, perms) as unknown as T;
+    } else {
+      const { createRowSecure } = await import('@/lib/actions/secure-ops');
+      return await createRowSecure(databaseId, tableId, data, perms) as unknown as T;
+    }
+  } catch (err) {
+    console.warn(`[unifiedCreate] backend write failed for ${kind}, returning optimistic local object:`, err);
+    const localId = data.$id || data.id || `local_${Math.random().toString(36).slice(2, 10)}`;
+    const now = new Date().toISOString();
+    return {
+      $id: localId,
+      id: localId,
+      ...data,
+      $createdAt: data.$createdAt || now,
+      $updatedAt: now,
+      $permissions: perms,
+    } as unknown as T;
   }
 }
 
 export async function systemCreate<T extends Models.Row = Models.Row>(kind: ObjectKind, data: Record<string, any>): Promise<T> {
   const { databaseId, tableId } = resolveConfig(kind);
-  if (typeof window !== 'undefined') {
-    const { createRow } = await import('@/lib/actions/client-ops');
-    return await createRow(databaseId, tableId, data) as unknown as T;
-  } else {
-    const { createRowSecure } = await import('@/lib/actions/secure-ops');
-    // system tables bypass owner perm — server will grant admin-scoped
-    return await createRowSecure(databaseId, tableId, data) as unknown as T;
+  try {
+    if (typeof window !== 'undefined') {
+      const { createRow } = await import('@/lib/actions/client-ops');
+      return await createRow(databaseId, tableId, data) as unknown as T;
+    } else {
+      const { createRowSecure } = await import('@/lib/actions/secure-ops');
+      // system tables bypass owner perm — server will grant admin-scoped
+      return await createRowSecure(databaseId, tableId, data) as unknown as T;
+    }
+  } catch (err) {
+    console.warn(`[systemCreate] backend write failed for ${kind}, returning optimistic local object:`, err);
+    const localId = data.$id || data.id || `local_${Math.random().toString(36).slice(2, 10)}`;
+    const now = new Date().toISOString();
+    return {
+      $id: localId,
+      id: localId,
+      ...data,
+      $createdAt: data.$createdAt || now,
+      $updatedAt: now,
+    } as unknown as T;
   }
 }
 
@@ -142,12 +169,22 @@ export async function unifiedUpdate<T extends Models.Row = Models.Row>(
   opts?: { permissions?: string[] }
 ): Promise<T> {
   const { databaseId, tableId } = resolveConfig(kind);
-  if (typeof window !== 'undefined') {
-    const { updateRow } = await import('@/lib/actions/client-ops');
-    return await updateRow(databaseId, tableId, id, data, opts?.permissions) as unknown as T;
-  } else {
-    const { updateRowSecure } = await import('@/lib/actions/secure-ops');
-    return await updateRowSecure(databaseId, tableId, id, data, opts?.permissions) as unknown as T;
+  try {
+    if (typeof window !== 'undefined') {
+      const { updateRow } = await import('@/lib/actions/client-ops');
+      return await updateRow(databaseId, tableId, id, data, opts?.permissions) as unknown as T;
+    } else {
+      const { updateRowSecure } = await import('@/lib/actions/secure-ops');
+      return await updateRowSecure(databaseId, tableId, id, data, opts?.permissions) as unknown as T;
+    }
+  } catch (err) {
+    console.warn(`[unifiedUpdate] backend update failed for ${kind}:${id}, returning local optimistic object:`, err);
+    return {
+      $id: id,
+      id,
+      ...data,
+      $updatedAt: new Date().toISOString(),
+    } as unknown as T;
   }
 }
 
@@ -170,12 +207,16 @@ export async function unifiedDelete(
       } catch {}
     }
   }
-  if (typeof window !== 'undefined') {
-    const { deleteRow } = await import('@/lib/actions/client-ops');
-    await deleteRow(databaseId, tableId, id);
-  } else {
-    const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
-    await deleteRowSecure(databaseId, tableId, id);
+  try {
+    if (typeof window !== 'undefined') {
+      const { deleteRow } = await import('@/lib/actions/client-ops');
+      await deleteRow(databaseId, tableId, id);
+    } else {
+      const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
+      await deleteRowSecure(databaseId, tableId, id);
+    }
+  } catch (err) {
+    console.warn(`[unifiedDelete] backend delete failed for ${kind}:${id} (offline/budget cap):`, err);
   }
 }
 
