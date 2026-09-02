@@ -20,6 +20,11 @@ import { getNostrReadRelays } from '@/lib/connect/feed-settings';
 import { extractPostImages, truncateMomentBody } from '@/lib/connect/moment-media';
 import { bytesToNpub, hexToBytes, npubToBytes, bytesToHex } from '@/lib/nostr/crypto';
 import { getCachedNostrProfile, queueNostrProfileFetch } from '@/lib/nostr/metadata';
+import { fetchNostrEngagement } from '@/lib/nostr/thread';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useNostrIdentity } from '@/hooks/useNostrIdentity';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { toggleMomentLike, repostMoment } from '@/lib/connect/moment-engagement';
 import toast from 'react-hot-toast';
 
 export type ProfileTab = 'posts' | 'replies' | 'likes' | 'zaps';
@@ -162,6 +167,9 @@ export function ProfilePreviewDrawer({
   bio,
   source = 'ecosystem'
 }: ProfilePreviewDrawerProps) {
+  const { user } = useAuth();
+  const { identity, isVaultLocked, unlockAndLoad } = useNostrIdentity();
+  const { open: openUnifiedDrawer } = useUnifiedDrawer();
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const router = useRouter();
@@ -176,6 +184,18 @@ export function ProfilePreviewDrawer({
   const [nostrPosts, setNostrPosts] = useState<NostrEvent[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [engagement, setEngagement] = useState<{
+    likeCount: Record<string, number>;
+    replyCount: Record<string, number>;
+    zapCount: Record<string, number>;
+    repostCount: Record<string, number>;
+  }>({
+    likeCount: {},
+    replyCount: {},
+    zapCount: {},
+    repostCount: {},
+  });
+
 
   // If pubkey given, derive npub
   useEffect(() => {
@@ -319,7 +339,39 @@ export function ProfilePreviewDrawer({
     };
   }, [resolvedPubkey, resolvedNpub]);
 
+  // Fetch live engagement (likes, replies, reposts, zaps) across all fetched post and target IDs
+  useEffect(() => {
+    if (!nostrPosts.length) return;
+    let cancelled = false;
+
+    const ids = Array.from(new Set(nostrPosts.flatMap(p => {
+      const eTag = p.tags?.find(t => t[0] === 'e')?.[1];
+      return [p.id, eTag].filter(Boolean) as string[];
+    })));
+
+    if (!ids.length) return;
+
+    void (async () => {
+      try {
+        const engData = await fetchNostrEngagement(ids, 3500);
+        if (!cancelled && engData) {
+          setEngagement(prev => ({
+            likeCount: { ...prev.likeCount, ...engData.likeCount },
+            replyCount: { ...prev.replyCount, ...engData.replyCount },
+            zapCount: { ...prev.zapCount, ...engData.zapCount },
+            repostCount: { ...prev.repostCount, ...engData.repostCount },
+          }));
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nostrPosts]);
+
   const displayName = resolvedProfile.name || name || username || (resolvedNpub ? `Nostr ${resolvedNpub.slice(0, 10)}…` : 'Kylrix User');
+
   const displayHandle = resolvedProfile.username || username || (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : '');
 
   // Tab Filtering and Unpacking
@@ -669,40 +721,135 @@ export function ProfilePreviewDrawer({
 
                 {/* Bottom Interaction Strip */}
                 <div className="px-4 pb-3.5 pt-0 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <div className="grid grid-cols-4 gap-0.5 rounded-2xl border border-white/[0.08] bg-[#161412] p-1">
-                    <button
-                      type="button"
-                      onClick={openItem}
-                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#60A5FA] hover:bg-white/[0.04] transition-colors"
-                      title="Reply"
-                    >
-                      <MessageCircle size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openItem}
-                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#34D399] hover:bg-white/[0.04] transition-colors"
-                      title="Repost"
-                    >
-                      <Repeat2 size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openItem}
-                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#EC4899] hover:bg-white/[0.04] transition-colors"
-                      title="Like"
-                    >
-                      <Heart size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openItem}
-                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#F59E0B] hover:bg-white/[0.04] transition-colors"
-                      title="Zap"
-                    >
-                      <Zap size={15} />
-                    </button>
-                  </div>
+                  {(() => {
+                    const likesCount = engagement.likeCount[item.targetId] ?? (item.kind === 7 ? 1 : 0);
+                    const repliesCount = engagement.replyCount[item.targetId] ?? (item.kind === 1 && activeTab === 'replies' ? 1 : 0);
+                    const repostsCount = engagement.repostCount[item.targetId] ?? (item.isRepost ? 1 : 0);
+                    const zapsCount = engagement.zapCount[item.targetId] ?? (item.kind === 9735 ? 1 : 0);
+
+                    return (
+                      <div className="grid grid-cols-4 gap-0.5 rounded-2xl border border-white/[0.08] bg-[#161412] p-1">
+                        <button
+                          type="button"
+                          onClick={openItem}
+                          className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#60A5FA] hover:bg-white/[0.04] transition-colors"
+                          title="Reply"
+                        >
+                          <MessageCircle size={15} />
+                          {repliesCount > 0 && (
+                            <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
+                              {repliesCount}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (isVaultLocked || !identity) {
+                              toast.error('Unlock vault to repost on Nostr');
+                              void unlockAndLoad();
+                              return;
+                            }
+                            try {
+                              setEngagement(prev => ({
+                                ...prev,
+                                repostCount: { ...prev.repostCount, [item.targetId]: (prev.repostCount[item.targetId] || 0) + 1 }
+                              }));
+                              await repostMoment({
+                                source: 'nostr',
+                                id: item.targetId,
+                                userId: user?.$id,
+                                privateKeyBytes: identity.privateKeyBytes,
+                                nsec: identity.nsec,
+                                rootPubkey: item.authorPubkey,
+                                nostrId: item.targetId,
+                              });
+                              toast.success('Reposted to Nostr!');
+                            } catch (err: any) {
+                              toast.error(err?.message || 'Failed to repost');
+                            }
+                          }}
+                          className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#34D399] hover:bg-white/[0.04] transition-colors"
+                          title="Repost"
+                        >
+                          <Repeat2 size={15} />
+                          {repostsCount > 0 && (
+                            <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
+                              {repostsCount}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (isVaultLocked || !identity) {
+                              toast.error('Unlock vault to like on Nostr');
+                              void unlockAndLoad();
+                              return;
+                            }
+                            try {
+                              setEngagement(prev => ({
+                                ...prev,
+                                likeCount: { ...prev.likeCount, [item.targetId]: (prev.likeCount[item.targetId] || 0) + 1 }
+                              }));
+                              await toggleMomentLike({
+                                source: 'nostr',
+                                id: item.targetId,
+                                userId: user?.$id,
+                                contentSnippet: item.content?.slice(0, 80),
+                                privateKeyBytes: identity.privateKeyBytes,
+                                nsec: identity.nsec,
+                                rootPubkey: item.authorPubkey,
+                                nostrId: item.targetId,
+                              });
+                              toast.success('Liked!');
+                            } catch (err: any) {
+                              toast.error(err?.message || 'Failed to like');
+                            }
+                          }}
+                          className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#EC4899] hover:bg-white/[0.04] transition-colors"
+                          title="Like"
+                        >
+                          <Heart size={15} />
+                          {likesCount > 0 && (
+                            <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
+                              {likesCount}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openUnifiedDrawer('zap', {
+                              targetId: item.targetId,
+                              source: 'nostr',
+                              targetKind: 'moment',
+                              targetPubkey: item.authorPubkey,
+                              authorName: authorName,
+                              onZapSuccess: (amount: number) => {
+                                setEngagement(prev => ({
+                                  ...prev,
+                                  zapCount: { ...prev.zapCount, [item.targetId]: (prev.zapCount[item.targetId] || 0) + 1 }
+                                }));
+                              },
+                            });
+                          }}
+                          className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#F59E0B] hover:bg-white/[0.04] transition-colors"
+                          title="Zap"
+                        >
+                          <Zap size={15} />
+                          {zapsCount > 0 && (
+                            <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
+                              {zapsCount}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </article>
             );
@@ -711,6 +858,7 @@ export function ProfilePreviewDrawer({
       </div>
     </div>
   );
+
 }
 
 
