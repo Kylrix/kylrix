@@ -88,9 +88,7 @@ import {
 } from './connect-topbar-utils';
 import { SyncIndicator } from './SyncIndicator';
 import { NotificationDrawer } from './NotificationDrawer';
-import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
-import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
-import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
+
 
 
 interface ConnectTopbarProps {
@@ -2789,12 +2787,10 @@ export default function ConnectTopbar({
               <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flexShrink: 0 }}>
                 {user ? (
                   <>
-                    <FlowTabTrigger />
-                    <MomentTabTrigger />
-                    <HangoutTabTrigger />
                     <IconButton onClick={openAgenticFromTopbar} sx={{ color: appAccent, bgcolor: '#0B0A09', border: '1px solid', borderColor: alpha(appAccent, 0.35), borderRadius: '14px', width: 44, height: 44, boxShadow: `0 8px 24px ${alpha(appAccent, 0.25)}`, '&:hover': { bgcolor: '#1C1A18', transform: 'scale(1.05)' }, transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
                       <Bot size={20} strokeWidth={2.2} />
                     </IconButton>
+
 
                     <ButtonBase onClick={openProfileMenu} sx={{ borderRadius: '50%', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>
                       <IdentityAvatar 
