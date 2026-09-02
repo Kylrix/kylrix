@@ -17,24 +17,37 @@ import {
   Settings,
   ShieldCheck,
   UserPlus,
-  UserCheck
+  UserCheck,
+  Radio,
+  Sparkles,
+  Link as LinkIcon,
+  Twitter,
+  Github,
+  Send,
+  Flame,
+  KeyRound
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { NostrRelayPool, type NostrEvent } from '@/lib/nostr/nostr';
 import { getNostrReadRelays } from '@/lib/connect/feed-settings';
 import { extractPostImages, truncateMomentBody } from '@/lib/connect/moment-media';
 import { bytesToNpub, hexToBytes, npubToBytes, bytesToHex } from '@/lib/nostr/crypto';
-import { getCachedNostrProfile, queueNostrProfileFetch } from '@/lib/nostr/metadata';
+import { queueNostrProfileFetch } from '@/lib/nostr/metadata';
 import { fetchNostrEngagement } from '@/lib/nostr/thread';
-import { fetchNostrEventsByIds } from '@/lib/nostr/user-activity';
+import { fetchNostrEventsByIds, fetchNostrFollowers, fetchNostrFollowing } from '@/lib/nostr/user-activity';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { toggleMomentLike, repostMoment } from '@/lib/connect/moment-engagement';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
+import { getUserBadgesAction } from '@/lib/actions/sponsor-actions';
+import { BadgeChip } from '@/components/sponsor/SponsorBadges';
+import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
+import { getCachedIdentityById } from '@/lib/identity-cache';
 import toast from 'react-hot-toast';
 
 export type ProfileTab = 'posts' | 'replies' | 'likes' | 'zaps';
+export type ProfileViewMode = 'ecosystem' | 'nostr';
 
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
@@ -54,7 +67,7 @@ function formatRelative(ts: number | string) {
   if (min < 60) return `${min}m`;
   const hr = Math.floor(min / 60);
   if (hr < 24) return `${hr}h`;
-  const day = Math.floor(hr / 24);
+  const day = Math.floor(diff / (1000 * 60 * 60 * 24));
   if (day < 7) return `${day}d`;
   return new Date(timeMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
@@ -124,7 +137,7 @@ function unpackNostrEvent(item: NostrEvent, reposterName?: string): UnpackedPost
     }
   }
 
-  // Fallback: If content is still stringified JSON, unpack the text
+  // Fallback: If content is stringified JSON, unpack the text
   const trimmedFinal = rawContent.trim();
   if (trimmedFinal.startsWith('{') && trimmedFinal.endsWith('}')) {
     try {
@@ -176,30 +189,74 @@ export function UnifiedProfileView({
   onClose,
 }: UnifiedProfileViewProps) {
   const { user } = useAuth();
-  const { identity, isVaultLocked, unlockAndLoad } = useNostrIdentity();
+  const { identity } = useNostrIdentity();
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
+  const [viewMode, setViewMode] = useState<ProfileViewMode>(source === 'nostr' ? 'nostr' : 'ecosystem');
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const router = useRouter();
 
+  const currentUserId = user?.$id;
+  const targetUid = userId || initialProfile?.userId || initialProfile?.$id || (isOwnCheck() ? currentUserId : undefined);
+
+  function isOwnCheck() {
+    return Boolean(
+      (currentUserId && userId && currentUserId === userId) ||
+      (user?.name && username && user.name.toLowerCase() === username.toLowerCase()) ||
+      (user?.prefs?.username && username && user.prefs.username.toLowerCase() === username.toLowerCase())
+    );
+  }
+
+  const isOwnProfile = isOwnCheck();
+
+  // Resolved public keys (hex and npub)
   const [resolvedNpub, setResolvedNpub] = useState<string | null>(initialNpub || null);
   const [resolvedPubkey, setResolvedPubkey] = useState<string | null>(initialPubkey || null);
+
+  // Resolved profile details
   const [resolvedProfile, setResolvedProfile] = useState<{ 
     name?: string; 
     username?: string; 
     avatar?: string; 
     bio?: string;
     links?: Array<{ title?: string; url: string }>;
+    socials?: { twitter?: string; github?: string; website?: string; telegram?: string; lightning?: string };
     createdAt?: string;
   }>({
     name: name || initialProfile?.displayName || initialProfile?.name,
     username: username || initialProfile?.username,
     avatar: avatar || initialProfile?.avatar || initialProfile?.avatarUrl,
     bio: bio || initialProfile?.bio,
-    links: initialProfile?.preferences?.links || [],
+    links: initialProfile?.preferences?.links || initialProfile?.links || [],
+    socials: initialProfile?.socials || {},
     createdAt: initialProfile?.$createdAt || initialProfile?.createdAt,
   });
 
+  // Avatar URL resolved from Appwrite storage / local previews / remote
+  const [resolvedAvatarUrl, setResolvedAvatarUrl] = useState<string | null>(null);
+
+  // Nostr-native metadata
+  const [nostrMeta, setNostrMeta] = useState<{
+    name?: string;
+    displayName?: string;
+    about?: string;
+    picture?: string;
+    nip05?: string;
+    lud16?: string;
+    banner?: string;
+    relaysCount?: number;
+  }>({});
+
+  // Follower & Following metrics
+  const [kylrixFollowersCount, setKylrixFollowersCount] = useState<number>(0);
+  const [kylrixFollowingCount, setKylrixFollowingCount] = useState<number>(0);
+  const [nostrFollowersCount, setNostrFollowersCount] = useState<number>(0);
+  const [nostrFollowingCount, setNostrFollowingCount] = useState<number>(0);
+
+  // Badges
+  const [badges, setBadges] = useState<any[]>([]);
+
+  // Activity Stream State
   const [nostrPosts, setNostrPosts] = useState<NostrEvent[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -217,14 +274,26 @@ export function UnifiedProfileView({
   });
   const [parentEvents, setParentEvents] = useState<Record<string, NostrEvent>>({});
 
-  const currentUserId = user?.$id;
-  const isOwnProfile = Boolean(
-    (currentUserId && userId && currentUserId === userId) ||
-    (user?.name && username && user.name.toLowerCase() === username.toLowerCase()) ||
-    (user?.prefs?.username && username && user.prefs.username.toLowerCase() === username.toLowerCase())
-  );
+  // 1. Derive Keys from Identity or User Prefs
+  useEffect(() => {
+    if (isOwnProfile) {
+      const ownKey = identity?.publicKey || user?.prefs?.nostrPubkey || user?.prefs?.nostrNpub || user?.prefs?.npub;
+      if (ownKey) {
+        if (ownKey.startsWith('npub')) {
+          setResolvedNpub(ownKey);
+          try {
+            setResolvedPubkey(bytesToHex(npubToBytes(ownKey)));
+          } catch {}
+        } else {
+          setResolvedPubkey(ownKey);
+          try {
+            setResolvedNpub(bytesToNpub(hexToBytes(ownKey)));
+          } catch {}
+        }
+      }
+    }
+  }, [isOwnProfile, identity, user]);
 
-  // Derive hex/npub pairs
   useEffect(() => {
     if (initialPubkey && !resolvedNpub) {
       try {
@@ -241,14 +310,32 @@ export function UnifiedProfileView({
     }
   }, [initialNpub, resolvedPubkey]);
 
-  // Lookup profile by userId or username from local DB / LocalEngine
+  // 2. Resolve Profile & Identity from LocalEngine / DB
   useEffect(() => {
     let cancelled = false;
     const lookup = async () => {
       try {
-        if (userId) {
+        const uid = targetUid;
+        if (uid) {
+          // Instant Identity cache hit
+          const cachedIdentity = getCachedIdentityById(uid);
+          if (cachedIdentity && !cancelled) {
+            const storedNpub = cachedIdentity.nostrNpub || cachedIdentity.npub || (cachedIdentity.publicKey?.startsWith('npub') ? cachedIdentity.publicKey : undefined);
+            const storedPubkey = cachedIdentity.nostrPubkey || cachedIdentity.pubkey || (cachedIdentity.publicKey && !cachedIdentity.publicKey.startsWith('npub') ? cachedIdentity.publicKey : undefined);
+            if (storedNpub && !resolvedNpub) setResolvedNpub(storedNpub);
+            if (storedPubkey && !resolvedPubkey) setResolvedPubkey(storedPubkey);
+            setResolvedProfile(prev => ({
+              name: prev.name || cachedIdentity.displayName || cachedIdentity.name,
+              username: prev.username || cachedIdentity.username,
+              avatar: prev.avatar || cachedIdentity.avatar || cachedIdentity.avatarUrl,
+              bio: prev.bio || cachedIdentity.bio,
+              links: prev.links?.length ? prev.links : cachedIdentity.links || [],
+              createdAt: prev.createdAt || cachedIdentity.createdAt,
+            }));
+          }
+
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const localIdentity = await LocalEngine.cacheGet<any>(`identity:${userId}`).catch(() => null);
+          const localIdentity = await LocalEngine.cacheGet<any>(`identity:${uid}`).catch(() => null);
           if (localIdentity && !cancelled) {
             const storedNpub = localIdentity.nostrNpub || localIdentity.npub || (localIdentity.publicKey?.startsWith('npub') ? localIdentity.publicKey : undefined);
             const storedPubkey = localIdentity.nostrPubkey || localIdentity.pubkey || (localIdentity.publicKey && !localIdentity.publicKey.startsWith('npub') ? localIdentity.publicKey : undefined);
@@ -259,14 +346,13 @@ export function UnifiedProfileView({
               username: prev.username || localIdentity.username,
               avatar: prev.avatar || localIdentity.avatar || localIdentity.avatarUrl,
               bio: prev.bio || localIdentity.bio,
-              links: prev.links?.length ? prev.links : localIdentity.links,
+              links: prev.links?.length ? prev.links : localIdentity.links || [],
               createdAt: prev.createdAt || localIdentity.createdAt,
             }));
-            return;
           }
 
           const { UsersService } = await import('@/lib/services/users');
-          const prof = await UsersService.getProfileById(userId).catch(() => null);
+          const prof = await UsersService.getProfileById(uid).catch(() => null);
           if (cancelled || !prof) return;
           const storedNpub = (prof as any).nostrNpub || (prof as any).npub;
           const storedPubkey = (prof as any).nostrPubkey || (prof as any).pubkey;
@@ -277,6 +363,7 @@ export function UnifiedProfileView({
             username: prev.username || prof.username,
             avatar: prev.avatar || prof.avatar || prof.avatarUrl,
             bio: prev.bio || prof.bio,
+            links: prev.links?.length ? prev.links : (prof as any).preferences?.links || (prof as any).links || [],
             createdAt: prev.createdAt || (prof as any).$createdAt,
           }));
         } else if (username && !resolvedPubkey && !resolvedNpub) {
@@ -292,18 +379,108 @@ export function UnifiedProfileView({
             username: prev.username || prof.username,
             avatar: prev.avatar || prof.avatar || prof.avatarUrl,
             bio: prev.bio || prof.bio,
+            links: prev.links?.length ? prev.links : (prof as any).preferences?.links || (prof as any).links || [],
             createdAt: prev.createdAt || (prof as any).$createdAt,
           }));
         }
       } catch {}
     };
-    lookup();
+    void lookup();
     return () => { cancelled = true; };
-  }, [userId, username, resolvedNpub, resolvedPubkey]);
+  }, [targetUid, username, resolvedNpub, resolvedPubkey]);
 
-  // Check Follow status
+  // 3. Resolve Avatar Preview from Storage / Cache / Remote
   useEffect(() => {
-    const targetKey = resolvedNpub || resolvedPubkey || userId;
+    let cancelled = false;
+    const resolveAvatar = async () => {
+      const raw = resolvedProfile.avatar || (isOwnProfile ? (user?.prefs?.avatar || user?.prefs?.profilePicId) : null);
+      if (!raw) {
+        if (targetUid) {
+          const cachedPreview = getCachedProfilePreview(targetUid);
+          if (cachedPreview && !cancelled) {
+            setResolvedAvatarUrl(cachedPreview);
+            return;
+          }
+        }
+        if (nostrMeta.picture && !cancelled) {
+          setResolvedAvatarUrl(nostrMeta.picture);
+        }
+        return;
+      }
+
+      if (raw.startsWith('http')) {
+        if (!cancelled) setResolvedAvatarUrl(raw);
+        return;
+      }
+
+      // It's a file ID — load from cache or fetch preview
+      const cached = getCachedProfilePreview(raw);
+      if (cached && !cancelled) {
+        setResolvedAvatarUrl(cached);
+        return;
+      }
+
+      try {
+        const url = await fetchProfilePreview(raw, 160, 160);
+        if (!cancelled && typeof url === 'string') {
+          setResolvedAvatarUrl(url);
+        }
+      } catch {}
+    };
+
+    void resolveAvatar();
+    return () => { cancelled = true; };
+  }, [resolvedProfile.avatar, isOwnProfile, user, targetUid, nostrMeta.picture]);
+
+  // 4. Fetch Badges
+  useEffect(() => {
+    if (!targetUid) return;
+    getUserBadgesAction(targetUid)
+      .then((res) => {
+        if (Array.isArray(res)) setBadges(res);
+      })
+      .catch(() => {});
+  }, [targetUid]);
+
+  // 5. Fetch Follower / Following metrics for Kylrix and Nostr
+  useEffect(() => {
+    let cancelled = false;
+    const loadStats = async () => {
+      // Kylrix stats
+      if (targetUid) {
+        try {
+          const { SocialService } = await import('@/lib/services/social');
+          const res = await SocialService.getFollowers(targetUid).catch(() => null);
+          if (!cancelled && res) {
+            if (typeof res.followers === 'number') setKylrixFollowersCount(res.followers);
+            if (typeof res.following === 'number') setKylrixFollowingCount(res.following);
+          }
+        } catch {}
+      }
+
+      // Nostr stats
+      const hex = resolvedPubkey;
+      if (hex) {
+        try {
+          const [nFollowers, nFollowing] = await Promise.all([
+            fetchNostrFollowers(hex, 3500).catch(() => []),
+            fetchNostrFollowing(hex, 3500).catch(() => []),
+          ]);
+          if (!cancelled) {
+            setNostrFollowersCount(nFollowers.length);
+            setNostrFollowingCount(nFollowing.length);
+          }
+        } catch {}
+      }
+    };
+
+    void loadStats();
+    return () => { cancelled = true; };
+  }, [targetUid, resolvedPubkey]);
+
+  // 6. Check Local Follow Status
+  useEffect(() => {
+    const targetKey = resolvedNpub || resolvedPubkey || targetUid;
     if (!targetKey) return;
     import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
       LocalEngine.cacheGet<string[]>('kylrix:follows').then((follows) => {
@@ -312,9 +489,9 @@ export function UnifiedProfileView({
         }
       }).catch(() => {});
     });
-  }, [userId, resolvedNpub, resolvedPubkey]);
+  }, [targetUid, resolvedNpub, resolvedPubkey]);
 
-  // Fetch Nostr Activity
+  // 7. Fetch Nostr Activity & Profile Metadata
   useEffect(() => {
     if (!resolvedPubkey && !resolvedNpub) return;
     let cancelled = false;
@@ -357,12 +534,19 @@ export function UnifiedProfileView({
           if (ev.kind === 0) {
             try {
               const meta = JSON.parse(ev.content);
-              setResolvedProfile(prev => ({
-                name: meta.display_name || meta.name || prev.name,
-                username: meta.name || prev.username,
-                avatar: meta.picture || prev.avatar,
-                bio: meta.about || prev.bio
-              }));
+              setNostrMeta({
+                name: meta.name,
+                displayName: meta.display_name || meta.name,
+                about: meta.about,
+                picture: meta.picture,
+                nip05: meta.nip05,
+                lud16: meta.lud16 || meta.lud06,
+                banner: meta.banner,
+                relaysCount: targets.length,
+              });
+              if (meta.picture && !resolvedAvatarUrl) {
+                setResolvedAvatarUrl(meta.picture);
+              }
             } catch {}
           } else if ([1, 6, 7, 9735].includes(ev.kind)) {
             if (!fetchedEvents.some(e => e.id === ev.id)) {
@@ -393,9 +577,9 @@ export function UnifiedProfileView({
       cancelled = true;
       if (pool) pool.close();
     };
-  }, [resolvedPubkey, resolvedNpub]);
+  }, [resolvedPubkey, resolvedNpub, resolvedAvatarUrl]);
 
-  // Fetch live engagement counts
+  // 8. Fetch live engagement counts
   useEffect(() => {
     if (!nostrPosts.length) return;
     let cancelled = false;
@@ -426,8 +610,23 @@ export function UnifiedProfileView({
     };
   }, [nostrPosts]);
 
-  const displayName = resolvedProfile.name || name || username || (resolvedNpub ? `Nostr ${resolvedNpub.slice(0, 10)}…` : 'Kylrix User');
-  const displayHandle = resolvedProfile.username || username || (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : '');
+  // Derive Display Info based on View Mode
+  const isNostrMode = viewMode === 'nostr';
+
+  const activeDisplayName = isNostrMode
+    ? (nostrMeta.displayName || nostrMeta.name || resolvedProfile.name || name || 'Nostr User')
+    : (resolvedProfile.name || name || username || (resolvedNpub ? `Nostr ${resolvedNpub.slice(0, 10)}…` : 'Kylrix User'));
+
+  const activeHandle = isNostrMode
+    ? (nostrMeta.nip05 || (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''))
+    : (resolvedProfile.username || username ? `@${(resolvedProfile.username || username).replace(/^@/, '')}` : (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''));
+
+  const activeBio = isNostrMode
+    ? (nostrMeta.about || resolvedProfile.bio || bio || '')
+    : (resolvedProfile.bio || bio || nostrMeta.about || '');
+
+  const totalFollowers = isNostrMode ? nostrFollowersCount : (kylrixFollowersCount + nostrFollowersCount);
+  const totalFollowing = isNostrMode ? nostrFollowingCount : (kylrixFollowingCount + nostrFollowingCount);
 
   // Tab Filtering and Unpacking
   const unpackedPosts = useMemo(() => {
@@ -440,8 +639,8 @@ export function UnifiedProfileView({
         }
         return false;
       })
-      .map((ev) => unpackNostrEvent(ev, displayName));
-  }, [nostrPosts, displayName]);
+      .map((ev) => unpackNostrEvent(ev, activeDisplayName));
+  }, [nostrPosts, activeDisplayName]);
 
   const unpackedReplies = useMemo(() => {
     return nostrPosts
@@ -452,8 +651,8 @@ export function UnifiedProfileView({
         }
         return false;
       })
-      .map((ev) => unpackNostrEvent(ev, displayName));
-  }, [nostrPosts, displayName]);
+      .map((ev) => unpackNostrEvent(ev, activeDisplayName));
+  }, [nostrPosts, activeDisplayName]);
 
   // Fetch Parent Events for threaded replies view
   useEffect(() => {
@@ -494,14 +693,14 @@ export function UnifiedProfileView({
   const unpackedLikes = useMemo(() => {
     return nostrPosts
       .filter((ev) => ev.kind === 7)
-      .map((ev) => unpackNostrEvent(ev, displayName));
-  }, [nostrPosts, displayName]);
+      .map((ev) => unpackNostrEvent(ev, activeDisplayName));
+  }, [nostrPosts, activeDisplayName]);
 
   const unpackedZaps = useMemo(() => {
     return nostrPosts
       .filter((ev) => ev.kind === 9735)
-      .map((ev) => unpackNostrEvent(ev, displayName));
-  }, [nostrPosts, displayName]);
+      .map((ev) => unpackNostrEvent(ev, activeDisplayName));
+  }, [nostrPosts, activeDisplayName]);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -511,7 +710,7 @@ export function UnifiedProfileView({
   };
 
   const handleToggleFollow = async () => {
-    const targetKey = resolvedNpub || resolvedPubkey || userId;
+    const targetKey = resolvedNpub || resolvedPubkey || targetUid;
     if (!targetKey) return;
     try {
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
@@ -532,13 +731,13 @@ export function UnifiedProfileView({
     activeTab === 'likes' ? unpackedLikes : unpackedZaps;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#161412] text-white overflow-hidden select-none animate-in fade-in duration-150">
-      {/* Top Header Bar */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-[#161412] shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
-          <span className="text-xs font-mono font-bold text-white/70 truncate">
-            {displayHandle || displayName}
+    <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#12100E] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi">
+      {/* Top Header Bar (OpenBricks 4.0 Warm Ash Surface) */}
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-[#161412] shrink-0 z-30">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${isNostrMode ? 'bg-[#A855F7] shadow-[0_0_8px_rgba(168,85,247,0.6)]' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]'}`} />
+          <span className="text-xs font-mono font-bold text-white/80 truncate">
+            {activeHandle || activeDisplayName}
           </span>
         </div>
 
@@ -563,7 +762,7 @@ export function UnifiedProfileView({
                   if (onClose) onClose();
                   router.push('/settings');
                 }}
-                className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-[#1B1917] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                 title="Settings"
                 aria-label="Settings"
               >
@@ -591,9 +790,9 @@ export function UnifiedProfileView({
               <button
                 type="button"
                 onClick={() => {
-                  openUnifiedDrawer('new-chat', { recipientId: userId, recipientName: displayName });
+                  openUnifiedDrawer('new-chat', { recipientId: targetUid, recipientName: activeDisplayName });
                 }}
-                className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-[#1B1917] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                 title="Direct Message"
                 aria-label="Direct Message"
               >
@@ -604,12 +803,12 @@ export function UnifiedProfileView({
                 type="button"
                 onClick={() => {
                   openUnifiedDrawer('zap', {
-                    recipientName: displayName,
+                    recipientName: activeDisplayName,
                     recipientNpub: resolvedNpub,
                     recipientPubkey: resolvedPubkey,
                   });
                 }}
-                className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.08] text-amber-400 hover:text-amber-300 hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-[#1B1917] border border-white/[0.08] text-amber-400 hover:text-amber-300 hover:bg-white/5 transition-colors cursor-pointer"
                 title="Tip / Zap"
                 aria-label="Tip / Zap"
               >
@@ -621,11 +820,11 @@ export function UnifiedProfileView({
           <button
             type="button"
             onClick={() => {
-              const url = window.location.origin + (displayHandle ? `/u/${displayHandle.replace(/^@/, '')}` : `/moment/profile/${resolvedNpub || resolvedPubkey || userId}`);
+              const url = window.location.origin + (activeHandle ? `/u/${activeHandle.replace(/^@/, '')}` : `/moment/profile/${resolvedNpub || resolvedPubkey || targetUid}`);
               navigator.clipboard.writeText(url);
               toast.success('Link copied!');
             }}
-            className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-[#1B1917] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
             title="Share"
             aria-label="Share"
           >
@@ -646,54 +845,163 @@ export function UnifiedProfileView({
         </div>
       </header>
 
-      {/* Main Content Body */}
-      <main className="flex-1 overflow-y-auto min-h-0 select-text bg-[#161412]">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-          {/* Identity Card (OpenBricks 4.0 Inset Surface) */}
-          <div className="rounded-3xl bg-[#0A0908] border border-white/[0.08] p-5 sm:p-6 space-y-4 shadow-sm">
+      {/* Main Content Body (Warm Ash Background) */}
+      <main className="flex-1 overflow-y-auto min-h-0 select-text bg-[#12100E]">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+          
+          {/* View Mode Switcher: Ecosystem (Kylrix) ⟷ Nostr Native */}
+          <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-[#1B1917] border border-white/[0.08] shadow-sm">
+            <button
+              type="button"
+              onClick={() => setViewMode('ecosystem')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                !isNostrMode
+                  ? 'bg-[#292522] text-white shadow-sm border border-white/10'
+                  : 'text-white/50 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Sparkles size={14} className={!isNostrMode ? 'text-[#F59E0B]' : 'text-white/40'} />
+              <span>Ecosystem Profile</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode('nostr')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                isNostrMode
+                  ? 'bg-[#292522] text-white shadow-sm border border-[#A855F7]/30'
+                  : 'text-white/50 hover:text-white hover:bg-white/[0.03]'
+              }`}
+            >
+              <Globe size={14} className={isNostrMode ? 'text-[#A855F7]' : 'text-white/40'} />
+              <span>Nostr Mode</span>
+            </button>
+          </div>
+
+          {/* Identity Card (OpenBricks 4.0 Warm Ash Inset Surface) */}
+          <div className="rounded-3xl bg-[#1B1917] border border-white/[0.08] p-5 sm:p-6 space-y-4 shadow-sm">
             <div className="flex items-center gap-4 min-w-0">
+              {/* Avatar with Status */}
               <div className="relative shrink-0">
-                {resolvedProfile.avatar ? (
+                {resolvedAvatarUrl ? (
                   <img 
-                    src={resolvedProfile.avatar} 
-                    alt={displayName} 
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-white/10 shadow-md"
+                    src={resolvedAvatarUrl} 
+                    alt={activeDisplayName} 
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-white/10 shadow-md bg-[#24211E]"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
                 ) : (
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#EC4899] to-[#8B5CF6] flex items-center justify-center text-white text-2xl font-black font-clash shadow-md">
-                    {displayName.charAt(0).toUpperCase()}
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#6366F1] to-[#A855F7] flex items-center justify-center text-white text-2xl font-black font-clash shadow-md">
+                    {activeDisplayName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-400 border-2 border-[#0A0908]" />
+                <span className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-[#1B1917] ${isNostrMode ? 'bg-[#A855F7]' : 'bg-emerald-400'}`} />
               </div>
 
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl font-bold font-clash text-white tracking-tight truncate">
-                  {displayName}
-                </h1>
-                <p className="text-xs sm:text-sm font-mono text-white/50 truncate mt-0.5">
-                  {displayHandle}
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-black font-clash text-white tracking-tight truncate">
+                    {activeDisplayName}
+                  </h1>
+                  {isOwnProfile && (
+                    <span className="px-2 py-0.5 rounded-md bg-[#6366F1]/20 text-[#818CF8] text-[10px] font-bold shrink-0 font-mono">
+                      YOU
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs sm:text-sm font-mono text-white/50 truncate">
+                  {activeHandle}
                 </p>
               </div>
             </div>
 
+            {/* Follower & Following Metrics Strip */}
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <div className="rounded-2xl bg-[#24211E] border border-white/[0.08] px-4 py-2.5 flex items-center justify-between">
+                <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
+                  {isNostrMode ? 'Nostr Following' : 'Following'}
+                </span>
+                <span className="text-sm font-black font-mono text-white tabular-nums">
+                  {totalFollowing}
+                </span>
+              </div>
+              <div className="rounded-2xl bg-[#24211E] border border-white/[0.08] px-4 py-2.5 flex items-center justify-between">
+                <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
+                  {isNostrMode ? 'Nostr Followers' : 'Followers'}
+                </span>
+                <span className="text-sm font-black font-mono text-white tabular-nums">
+                  {totalFollowers}
+                </span>
+              </div>
+            </div>
+
             {/* Bio */}
-            {resolvedProfile.bio && (
-              <p className="text-sm text-white/80 leading-relaxed font-satoshi">
-                {resolvedProfile.bio}
+            {activeBio ? (
+              <p className="text-sm text-white/85 leading-relaxed font-satoshi whitespace-pre-wrap break-words">
+                {activeBio}
+              </p>
+            ) : (
+              <p className="text-xs text-white/35 italic font-satoshi">
+                {isNostrMode ? 'No Nostr about description set.' : 'No bio yet.'}
               </p>
             )}
 
-            {/* Keys & ID Pills */}
+            {/* Badges (Ecosystem Mode) */}
+            {!isNostrMode && badges.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {badges.map((b) => (
+                  <BadgeChip key={b.$id || b.id} badge={b} size="sm" />
+                ))}
+              </div>
+            )}
+
+            {/* Socials & Custom Links */}
+            {!isNostrMode && resolvedProfile.links && resolvedProfile.links.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {resolvedProfile.links.map((link, idx) => (
+                  <a
+                    key={idx}
+                    href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#24211E] border border-white/[0.08] hover:border-white/20 text-xs font-bold text-white/80 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <LinkIcon size={12} className="text-[#6366F1]" />
+                    <span className="truncate max-w-[160px]">{link.title || link.url.replace(/^https?:\/\//, '')}</span>
+                    <ExternalLink size={11} className="text-white/40" />
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Nostr-Specific Details (Lightning Address, Nip05) */}
+            {isNostrMode && (
+              <div className="space-y-2 pt-1">
+                {nostrMeta.lud16 && (
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(nostrMeta.lud16!, 'Lightning Address')}
+                    className="w-full inline-flex items-center justify-between p-3 rounded-2xl bg-[#24211E] border border-amber-500/20 text-xs font-mono text-amber-300 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <Flame size={14} className="text-amber-400 shrink-0" />
+                      <span className="truncate">{nostrMeta.lud16}</span>
+                    </div>
+                    {copiedKey === 'Lightning Address' ? <Check size={14} className="text-emerald-400 shrink-0" /> : <Copy size={14} className="text-amber-400/50 shrink-0" />}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Keys & Protocol Pills */}
             <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/[0.06]">
               {resolvedNpub && (
                 <button
                   type="button"
                   onClick={() => copyToClipboard(resolvedNpub, 'npub')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#24211E] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
                   title="Copy npub"
                 >
                   <Globe size={13} className="text-[#A855F7]" />
@@ -702,24 +1010,38 @@ export function UnifiedProfileView({
                 </button>
               )}
 
-              {userId && (
+              {targetUid && !isNostrMode && (
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(userId, 'Ecosystem ID')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 transition-colors cursor-pointer"
+                  onClick={() => copyToClipboard(targetUid, 'Ecosystem ID')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#24211E] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
                   title="Copy ID"
                 >
                   <ShieldCheck size={13} className="text-[#10B981]" />
-                  <span>ID: {userId.slice(0, 8)}…</span>
+                  <span>ID: {targetUid.slice(0, 8)}…</span>
                   {copiedKey === 'Ecosystem ID' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} className="text-white/40" />}
+                </button>
+              )}
+
+              {resolvedPubkey && isNostrMode && (
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(resolvedPubkey, 'hex pubkey')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#24211E] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
+                  title="Copy Hex"
+                >
+                  <KeyRound size={13} className="text-[#6366F1]" />
+                  <span>hex: {resolvedPubkey.slice(0, 8)}…</span>
+                  {copiedKey === 'hex pubkey' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} className="text-white/40" />}
                 </button>
               )}
             </div>
           </div>
 
-          {/* Activity Tabs */}
+          {/* Activity Section */}
           <div className="space-y-4">
-            <nav className="p-1.5 rounded-2xl bg-[#0A0908] border border-white/[0.08] flex gap-1 shadow-sm">
+            {/* Stream Tabs */}
+            <nav className="p-1.5 rounded-2xl bg-[#1B1917] border border-white/[0.08] flex gap-1 shadow-sm">
               {(
                 [
                   { id: 'posts', label: 'Posts', count: unpackedPosts.length },
@@ -736,12 +1058,12 @@ export function UnifiedProfileView({
                     onClick={() => setActiveTab(t.id)}
                     className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                       active
-                        ? 'bg-[#161412] text-white shadow-sm border border-white/10'
+                        ? 'bg-[#292522] text-white shadow-sm border border-white/10'
                         : 'text-white/50 hover:text-white hover:bg-white/[0.03]'
                     }`}
                   >
                     <span>{t.label}</span>
-                    <span className={`ml-1 text-[10px] ${active ? 'text-white/80' : 'text-white/30'}`}>
+                    <span className={`ml-1 text-[10px] font-mono ${active ? 'text-white/80' : 'text-white/30'}`}>
                       {t.count}
                     </span>
                   </button>
@@ -749,8 +1071,7 @@ export function UnifiedProfileView({
               })}
             </nav>
 
-
-            {/* Posts / Activity Stream */}
+            {/* Stream Cards */}
             <div className="space-y-3">
               {loadingPosts && nostrPosts.length === 0 ? (
                 <div className="py-12 text-center text-white/40 text-xs font-mono animate-pulse">
@@ -758,7 +1079,7 @@ export function UnifiedProfileView({
                 </div>
               ) : currentTabItems.length === 0 ? (
                 <div className="py-12 text-center text-white/40 text-xs font-mono">
-                  No {activeTab} found on relays
+                  No {activeTab} yet
                 </div>
               ) : (
                 currentTabItems.map((post) => {
@@ -772,25 +1093,25 @@ export function UnifiedProfileView({
                   return (
                     <div
                       key={post.id}
-                      className="rounded-[22px] bg-[#0A0908] border border-white/[0.08] p-4 sm:p-5 space-y-3.5 hover:border-white/15 transition-all shadow-sm"
+                      className="rounded-2xl bg-[#1B1917] border border-white/[0.08] p-4 sm:p-5 space-y-3 hover:border-white/15 transition-all shadow-sm"
                     >
                       {/* Context Banner */}
                       {post.isRepost && (
                         <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 font-mono pb-1 border-b border-white/[0.04]">
                           <Repeat2 size={13} />
-                          <span>{post.repostAuthor || displayName} reposted</span>
+                          <span>{post.repostAuthor || activeDisplayName} reposted</span>
                         </div>
                       )}
                       {post.kind === 7 && (
                         <div className="flex items-center gap-1.5 text-xs font-bold text-pink-400 font-mono pb-1 border-b border-white/[0.04]">
                           <Heart size={13} fill="currentColor" />
-                          <span>{displayName} liked</span>
+                          <span>{activeDisplayName} liked</span>
                         </div>
                       )}
                       {post.kind === 9735 && (
                         <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 font-mono pb-1 border-b border-white/[0.04]">
                           <Zap size={13} fill="currentColor" />
-                          <span>{displayName} zapped</span>
+                          <span>{activeDisplayName} zapped</span>
                         </div>
                       )}
 
@@ -817,13 +1138,21 @@ export function UnifiedProfileView({
                       {/* Header */}
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500/20 to-pink-500/20 border border-white/10 flex items-center justify-center text-white text-xs font-bold font-clash shrink-0">
-                            {displayName.charAt(0).toUpperCase()}
-                          </div>
+                          {resolvedAvatarUrl ? (
+                            <img
+                              src={resolvedAvatarUrl}
+                              alt={activeDisplayName}
+                              className="w-8 h-8 rounded-xl object-cover border border-white/10 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500/20 to-pink-500/20 border border-white/10 flex items-center justify-center text-white text-xs font-bold font-clash shrink-0">
+                              {activeDisplayName.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="text-sm font-bold text-white truncate">{displayName}</span>
-                              <span className="text-xs text-white/40 truncate font-mono">{displayHandle}</span>
+                              <span className="text-sm font-bold text-white truncate">{activeDisplayName}</span>
+                              <span className="text-xs text-white/40 truncate font-mono">{activeHandle}</span>
                             </div>
                             <span className="text-[10px] text-white/30 font-mono">
                               {formatRelative(post.createdAt)}
@@ -841,13 +1170,13 @@ export function UnifiedProfileView({
 
                       {/* Media Attachments */}
                       {post.images.length > 0 && (
-                        <div className="grid grid-cols-2 gap-2 rounded-2xl overflow-hidden border border-white/[0.06]">
+                        <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden border border-white/[0.06]">
                           {post.images.slice(0, 4).map((img, i) => (
                             <img
                               key={i}
                               src={img}
                               alt="Attachment"
-                              className="w-full h-40 object-cover bg-white/5"
+                              className="w-full h-36 object-cover bg-white/5"
                               loading="lazy"
                             />
                           ))}
@@ -874,7 +1203,7 @@ export function UnifiedProfileView({
                           type="button"
                           onClick={async () => {
                             const ok = await repostMoment(post.targetId, post.authorPubkey);
-                            if (ok) toast.success('Reposted to Nostr');
+                            if (ok) toast.success('Reposted');
                           }}
                           className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors cursor-pointer"
                         >
@@ -900,7 +1229,7 @@ export function UnifiedProfileView({
                             openUnifiedDrawer('zap', {
                               targetEventId: post.targetId,
                               recipientPubkey: post.authorPubkey,
-                              recipientName: displayName,
+                              recipientName: activeDisplayName,
                             });
                           }}
                           className="flex items-center gap-1.5 hover:text-amber-400 transition-colors cursor-pointer"
@@ -930,6 +1259,7 @@ export function UnifiedProfileView({
               avatar: updated.avatar || prev.avatar,
               bio: updated.bio || prev.bio,
             }));
+            if (updated.avatar) setResolvedAvatarUrl(updated.avatar);
             setIsEditModalOpen(false);
           }}
         />
@@ -937,3 +1267,4 @@ export function UnifiedProfileView({
     </div>
   );
 }
+
