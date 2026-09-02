@@ -385,10 +385,17 @@ export default function ConnectTopbar({
     setAppMenuAnchorEl(event.currentTarget);
   }, []);
 
-  const openProfileMenu = useCallback((event: MouseEvent<HTMLElement>) => {
-    setProfileMenuAnchorEl(event.currentTarget);
-    setCopyState('idle');
-  }, []);
+  const openProfileMenu = useCallback((_event?: MouseEvent<HTMLElement>) => {
+    handleCloseAll();
+    const effectiveUsername = user?.prefs?.username || user?.name || 'user';
+    openUnified('profile-preview', {
+      userId: user?.$id,
+      username: effectiveUsername,
+      name: user?.name,
+      avatar: profileAvatarUrl,
+    });
+  }, [user, profileAvatarUrl, openUnified, handleCloseAll]);
+
 
   useEffect(() => {
     const query = searchQuery.trim();
