@@ -276,13 +276,15 @@ function normalizeAffinity(raw: any): Affinity {
   };
 }
 function isSimilarTerm(a: string, b: string): boolean {
-  const cleanA = a.replace(/:\d+$/, '').toLowerCase();
-  const cleanB = b.replace(/:\d+$/, '').toLowerCase();
+  const cleanA = a.replace(/:\d+$/, '').replace(/^[#@]/, '').toLowerCase().trim();
+  const cleanB = b.replace(/:\d+$/, '').replace(/^[#@]/, '').toLowerCase().trim();
+  if (!cleanA || !cleanB) return false;
   if (cleanA === cleanB) return true;
-  // Match common prefixes if length is >= 4 (e.g. productiv* matches productive & productivity)
+  if (cleanA.includes(cleanB) || cleanB.includes(cleanA)) return true;
+  // Match common prefixes if length is >= 3 (e.g. crypto matches crypt*, sol matches solana)
   const minLen = Math.min(cleanA.length, cleanB.length);
-  if (minLen >= 4) {
-    const prefixLen = Math.floor(minLen * 0.75);
+  if (minLen >= 3) {
+    const prefixLen = Math.floor(minLen * 0.7);
     if (cleanA.slice(0, prefixLen) === cleanB.slice(0, prefixLen)) {
       return true;
     }
@@ -389,14 +391,46 @@ export function extractNegativeTopics(content: string, author?: string, tags?: s
   return Array.from(new Set(list)).slice(0, 10);
 }
 
-/** Add negative terms to See Less / Muted Topics in user settings */
+/** Add negative terms to See Less / Muted Topics in user settings, and purge similar matches from positive interests/topics */
 export async function addSeeLessTopics(newTopics: string[]): Promise<ConnectFeedSettings> {
   const current = await getConnectFeedSettings();
   const normalizedNew = newTopics
     .map((t) => String(t || '').trim().toLowerCase())
     .filter((t) => t.length >= 2);
+
   const nextSeeLess = Array.from(new Set([...normalizedNew, ...(current.seeLessTopics || [])])).slice(0, 80);
-  return setConnectFeedSettings({ seeLessTopics: nextSeeLess });
+
+  // Remove any remotely similar matches from regular interests & topics
+  const nextInterests = (current.interests || []).filter((interest) => {
+    return !normalizedNew.some((neg) => isSimilarTerm(neg, interest));
+  });
+
+  const nextTopics = (current.topics || []).filter((topic) => {
+    return !normalizedNew.some((neg) => isSimilarTerm(neg, topic));
+  });
+
+  // Purge from local affinity engine as well
+  try {
+    const curAffinity = normalizeAffinity(await LocalEngine.cacheGet<any>(AFFINITY_KEY).catch(() => null));
+    const cleanedAffinityInterests = curAffinity.interests.filter((interest) => {
+      return !normalizedNew.some((neg) => isSimilarTerm(neg, interest));
+    });
+    const updatedAffinity: Affinity = {
+      ...curAffinity,
+      interests: cleanedAffinityInterests,
+      updatedAt: Date.now(),
+    };
+    await LocalEngine.cacheSet(AFFINITY_KEY, updatedAffinity);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('kylrix-connect-affinity', { detail: updatedAffinity }));
+    }
+  } catch {}
+
+  return setConnectFeedSettings({
+    seeLessTopics: nextSeeLess,
+    interests: nextInterests,
+    topics: nextTopics,
+  });
 }
 
 /** Remove a term from See Less / Muted Topics */
