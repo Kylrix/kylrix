@@ -401,72 +401,53 @@ export default function CreateNoteForm({
 
   const scheduleLiveNoteSync = useCallback(() => {
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(() => flushLiveNote(), 250);
+    syncTimerRef.current = setTimeout(() => flushLiveNote(), 800);
   }, [flushLiveNote]);
+
+  const autoTitleTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Realtime input — flow.realtime-input-rxdb-sync: direct onInput interception, sync ref + LocalEngine
   const handleContentChange = useCallback((nextValue: string) => {
-    const curContent = editorStateRef.current.content;
-    if (curContent.includes('[[kylrix-object:')) {
-      const blocks = parseObjectBlocks(curContent);
-      let overlapping: typeof blocks[0] | null = null;
-      if (blocks.length) {
-        let s = 0;
-        while (s < curContent.length && s < nextValue.length && curContent[s] === nextValue[s]) s++;
-        let ePrev = curContent.length - 1;
-        let eNext = nextValue.length - 1;
-        while (ePrev >= s && eNext >= s && curContent[ePrev] === nextValue[eNext]) { ePrev--; eNext--; }
-        const changedStart = s;
-        const changedEndPrev = ePrev + 1;
-        overlapping = blocks.find((b) => changedStart < b.end && changedEndPrev > b.start) || null;
-      }
-      if (overlapping) {
-        setPendingBlockDelete(overlapping);
-        return;
-      }
-    }
-    // 1) Synchronous ref update — SoT for flushLiveNote
+    // 1) Synchronous ref update — instant SoT for flushLiveNote
     editorStateRef.current.content = nextValue;
-    setContent(nextValue);
 
-    // 2) Immediate synchronous auto-title derivation (matches CreateGoalComposer instant response)
+    // 2) Non-blocking React state update
+    const { startTransition } = React as any;
+    const upd = () => setContent(nextValue);
+    if (typeof startTransition === 'function') startTransition(upd); else upd();
+
+    // 3) Debounced auto-title derivation so typing is never blocked
     if (!isTitleManuallyEdited) {
-      const generated = nextValue.trim() ? buildAutoTitleFromContent(nextValue) : '';
-      editorStateRef.current.title = generated;
-      setTitle(generated);
+      if (autoTitleTimerRef.current) clearTimeout(autoTitleTimerRef.current);
+      autoTitleTimerRef.current = setTimeout(() => {
+        const generated = nextValue.trim() ? buildAutoTitleFromContent(nextValue) : '';
+        editorStateRef.current.title = generated;
+        if (typeof startTransition === 'function') {
+          startTransition(() => setTitle(generated));
+        } else {
+          setTitle(generated);
+        }
+      }, 150);
     }
 
-    // Keep textarea height (native DOM, no React)
-    if (contentRef.current) {
-      contentRef.current.style.height = 'auto';
-      contentRef.current.style.height = `${Math.max(76, Math.min(contentRef.current.scrollHeight, 360))}px`;
-    }
     scheduleLiveNoteSync();
   }, [isTitleManuallyEdited, scheduleLiveNoteSync]);
 
   const insertTextAtCursor = (text: string) => {
     const textarea = contentRef.current;
     if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
+      const start = textarea.selectionStart || 0;
+      const end = textarea.selectionEnd || 0;
       const nextContent = content.substring(0, start) + text + content.substring(end);
-      setContent(nextContent);
+      handleContentChange(nextContent);
       setTimeout(() => {
         textarea.focus();
         textarea.setSelectionRange(start + text.length, start + text.length);
       }, 50);
     } else {
-      setContent(prev => prev + text);
+      handleContentChange(content + text);
     }
   };
-
-  // Auto-title — derived from content matching CreateGoalComposer
-  useEffect(() => {
-    if (isTitleManuallyEdited) return;
-    const generatedTitle = content.trim() ? buildAutoTitleFromContent(content) : '';
-    setTitle(generatedTitle);
-    editorStateRef.current.title = generatedTitle;
-  }, [content, isTitleManuallyEdited]);
 
   const existingTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -809,6 +790,40 @@ export default function CreateNoteForm({
   const removeTag = useCallback((tag: string) => {
     setTags((prev) => prev.filter((candidate) => candidate !== tag));
   }, []);
+
+  const suggestions = useMemo(() => {
+    if (content.trim().length <= 4) return [];
+    const lower = content.toLowerCase();
+    const matchedGoals = (ecosystemTags as any[]).filter(g => g.name && lower.includes(g.name.toLowerCase()));
+    const list: { type: string; label: string; action: () => void }[] = [];
+
+    if (matchedGoals.length > 0) {
+      matchedGoals.forEach(g => {
+        if (!tags.includes(g.name)) {
+          list.push({
+            type: 'tag',
+            label: `Add tag: ${g.name.toUpperCase()}`,
+            action: () => appendTag(g.name)
+          });
+        }
+      });
+    }
+
+    if (lower.startsWith('create a note') || lower.includes('summarize') || lower.includes('goal')) {
+      list.push({
+        type: 'prompt',
+        label: '💡 Execute with Smart System',
+        action: () => {
+          if (onClose) onClose();
+          closeOverlay();
+          window.dispatchEvent(new CustomEvent('kylrix:open-agentic-drawer', {
+            detail: { prompt: content, autoRun: true }
+          }));
+        }
+      });
+    }
+    return list;
+  }, [content, ecosystemTags, tags, appendTag, onClose, closeOverlay]);
 
   const _wrapSelection = useCallback((before: string, after = before) => {
     const input = contentRef.current;
@@ -1254,80 +1269,41 @@ export default function CreateNoteForm({
             }}
             className="w-full flex-1 flex flex-col relative"
           >
-            <textarea
-              ref={contentRef}
-              rows={4}
+            <BareMetalInput
+              as="textarea"
+              forwardedRef={contentRef}
+              defaultValue={initialContent?.content || ''}
               value={content}
+              rows={4}
+              placeholder="Write your idea..."
+              autoFocus
+              enableLocalEngine={false}
+              onValueChange={handleContentChange}
               onPaste={(e) => {
                 isPastedRef.current = true;
                 if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
                 pasteTimerRef.current = setTimeout(() => {
                   isPastedRef.current = false;
                 }, 2000);
-                const pastedText = e.clipboardData.getData('text');
-                if (pastedText) {
-                  setTimeout(() => {
-                    const updated = contentRef.current?.value || content;
-                    handleContentChange(updated);
-                  }, 10);
-                }
               }}
-              onChange={(e) => handleContentChange(e.target.value)}
-              placeholder="Write your idea..."
-              autoFocus
               className="w-full flex-1 min-h-[180px] resize-none bg-transparent text-white placeholder-white/25 border-0 focus:outline-none p-2 text-base leading-relaxed scrollbar-thin font-satoshi"
             />
 
             {/* Offline fast suggestion system matching goals or tags as user types */}
-            {content.trim().length > 4 && (() => {
-              const lower = content.toLowerCase();
-              const matchedGoals = (ecosystemTags as any[]).filter(g => g.name && lower.includes(g.name.toLowerCase()));
-              const suggestions = [];
-
-              if (matchedGoals.length > 0) {
-                matchedGoals.forEach(g => {
-                  if (!tags.includes(g.name)) {
-                    suggestions.push({
-                      type: 'tag',
-                      label: `Add tag: ${g.name.toUpperCase()}`,
-                      action: () => appendTag(g.name)
-                    });
-                  }
-                });
-              }
-
-              // Instant uncanny prompt recommendation engine:
-              if (lower.startsWith('create a note') || lower.includes('summarize') || lower.includes('goal')) {
-                suggestions.push({
-                  type: 'prompt',
-                  label: '💡 Execute with Smart System',
-                  action: () => {
-                    if (onClose) onClose();
-                    closeOverlay();
-                    window.dispatchEvent(new CustomEvent('kylrix:open-agentic-drawer', {
-                      detail: { prompt: content, autoRun: true }
-                    }));
-                  }
-                });
-              }
-
-              if (suggestions.length === 0) return null;
-
-              return (
-                <div className="absolute bottom-2 left-2 right-2 z-10 flex flex-wrap gap-1.5 p-2 bg-[#0B0A09]/95 border border-white/10 rounded-xl max-h-[80px] overflow-y-auto">
-                  {suggestions.map((s, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={s.action}
-                      className="px-2.5 py-1 rounded-lg bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-pink-400 font-mono text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer"
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              );
-            })()}
+            {suggestions.length > 0 && (
+              <div className="absolute bottom-2 left-2 right-2 z-10 flex flex-wrap gap-1.5 p-2 bg-[#0B0A09]/95 border border-white/10 rounded-xl max-h-[80px] overflow-y-auto">
+                {suggestions.map((s, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={s.action}
+                    className="px-2.5 py-1 rounded-lg bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-pink-400 font-mono text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="text-[10px] text-white/30 font-mono select-none mt-auto pt-1">
