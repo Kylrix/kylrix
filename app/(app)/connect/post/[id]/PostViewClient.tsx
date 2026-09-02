@@ -373,7 +373,7 @@ export function PostViewClient({
   const copyLink = async () => {
     try {
       const url = source === 'nostr'
-        ? `${window.location.origin}/connect/post/nostr_${momentId}`
+        ? `${window.location.origin}/moment/nostr_${momentId}`
         : buildPublicResourceUrl('moment', momentId);
       await navigator.clipboard.writeText(url);
       toast.success('Link copied');

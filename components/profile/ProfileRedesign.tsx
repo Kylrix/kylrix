@@ -936,7 +936,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                 return (
                   <div
                     key={moment.$id}
-                    onClick={() => router.push(`/connect/post/${moment.$id}`)}
+                    onClick={() => router.push(`/moment/${moment.$id}`)}
                     className="p-4 bg-white/2 hover:bg-white/4 border border-white/8 rounded-2xl transition-[background-color,border-color] cursor-pointer flex flex-col gap-2.5"
                     style={{ contain: 'content' }}
                   >

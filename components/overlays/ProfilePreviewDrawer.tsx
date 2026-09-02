@@ -390,7 +390,7 @@ export function ProfilePreviewDrawer({
               const { text: postBody, images: postImages } = extractPostImages(post.content, post.tags);
               const openPost = () => {
                 onClose();
-                router.push(`/connect/post/nostr_${post.id}`);
+                router.push(`/moment/nostr_${post.id}`);
               };
               return (
                 <div

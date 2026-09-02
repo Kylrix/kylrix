@@ -204,7 +204,7 @@ export const SocialService = {
                             details: JSON.stringify({
                                 read: false,
                                 originalDetails: `Someone liked your post: ${contentSnippet || '...'}` ,
-                                actionUrl: `/connect/post/${momentId}`
+                                actionUrl: `/moment/${momentId}`
                             })
                         }
                     );
@@ -684,7 +684,7 @@ export const SocialService = {
                         originalDetails: type === 'post' ? `New post shared: ${content.substring(0, 50)}...` : 
                             type === 'reply' ? `Someone replied to your post: ${content.substring(0, 50)}...` :
                             type === 'pulse' ? `Someone pulsed your post` : `Someone quoted your post`,
-                        actionUrl: `/connect/post/${moment.$id}`
+                        actionUrl: `/moment/${moment.$id}`
                     })
                 }
             );

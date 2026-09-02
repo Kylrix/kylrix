@@ -349,6 +349,11 @@ const nextConfig = {
         destination: '/billing/api/pro/notify',
         permanent: false,
       },
+      {
+        source: '/connect/post/:id*',
+        destination: '/moment/:id*',
+        permanent: true,
+      },
     ];
   },
 };

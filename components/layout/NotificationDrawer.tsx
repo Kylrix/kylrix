@@ -38,6 +38,9 @@ import { npubToBytes, bytesToHex, bytesToNpub, hexToBytes } from '@/lib/nostr/cr
 import { queueNostrProfileFetch, getCachedNostrProfile } from '@/lib/nostr/metadata';
 import { SocialService } from '@/lib/services/social';
 import { getNostrReadRelays } from '@/lib/connect/feed-settings';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { openMomentObjectDetail } from '@/components/objects/MomentObjectDetail';
 
 export type NotificationCategory = 'all' | 'replies' | 'likes' | 'follows' | 'system';
 
@@ -209,7 +212,7 @@ export function NotificationDrawer({
               timestamp: ts + 1000,
               read: false,
               accent: '#6366F1',
-              actionHref: `/connect/post/${m.$id || m.id}`,
+              actionHref: `/moment/${m.$id || m.id}`,
               actor: {
                 name: m.userName || m.username || 'Community Member',
                 username: m.username,
@@ -230,7 +233,7 @@ export function NotificationDrawer({
               timestamp: ts + 500,
               read: false,
               accent: '#EC4899',
-              actionHref: `/connect/post/${m.$id || m.id}`,
+              actionHref: `/moment/${m.$id || m.id}`,
               source: m.isNostr ? 'nostr' : 'kylrix',
             });
           }
@@ -284,7 +287,7 @@ export function NotificationDrawer({
                 timestamp: ts,
                 read: false,
                 accent: '#8B5CF6',
-                actionHref: `/connect/post/nostr_${targetId}`,
+                actionHref: `/moment/nostr_${targetId}`,
                 actor: {
                   name: authorDisplayName,
                   username: cachedAuthor?.nip05,
@@ -309,7 +312,7 @@ export function NotificationDrawer({
                 timestamp: ts,
                 read: false,
                 accent: '#EC4899',
-                actionHref: `/connect/post/nostr_${targetId}`,
+                actionHref: `/moment/nostr_${targetId}`,
                 actor: {
                   name: authorDisplayName,
                   isNostr: true,
@@ -331,7 +334,7 @@ export function NotificationDrawer({
                 timestamp: ts,
                 read: false,
                 accent: '#10B981',
-                actionHref: `/connect/post/nostr_${targetId}`,
+                actionHref: `/moment/nostr_${targetId}`,
                 actor: {
                   name: authorDisplayName,
                   isNostr: true,
@@ -441,10 +444,34 @@ export function NotificationDrawer({
     }
   };
 
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
+
   const handleNotificationClick = (notif: KylrixNotification) => {
     markNotificationRead(notif.id);
     onClose();
+
     if (notif.actionHref) {
+      if (notif.actionHref.startsWith('/moment/')) {
+        const rawId = notif.actionHref.replace('/moment/', '');
+        const isNostr = rawId.startsWith('nostr_') || notif.source === 'nostr';
+        const cleanId = rawId.startsWith('nostr_') ? rawId.slice(6) : rawId;
+        openMomentObjectDetail({
+          momentId: cleanId,
+          source: isNostr ? 'nostr' : 'ecosystem',
+          preview: {
+            authorName: notif.actor?.name || notif.title,
+            authorAvatar: notif.actor?.avatar,
+            content: notif.message,
+          },
+          openSidebar,
+          openOverlay,
+          closeSidebar,
+          closeOverlay,
+        });
+        return;
+      }
+
       router.push(notif.actionHref);
     }
   };

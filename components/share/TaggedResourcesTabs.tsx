@@ -427,7 +427,7 @@ export function TaggedResourcesTabs({
                 title={moment.caption || 'Integrated Moment'} 
                 kind="moment"
                 metadata={`Published: ${new Date(moment.$createdAt || moment.createdAt).toLocaleDateString()}`}
-                onOpen={() => router.push(`/connect/post/${moment.$id}`)}
+                onOpen={() => router.push(`/moment/${moment.$id}`)}
                 onUnlink={() => handleUnlinkTagged(moment.caption || 'Integrated Moment')}
               />
             ))}

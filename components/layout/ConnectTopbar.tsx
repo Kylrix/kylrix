@@ -1112,7 +1112,7 @@ export default function ConnectTopbar({
                         component="button"
                         onClick={() => {
                           handleCloseAll();
-                          router.push(`/connect/post/${moment.$id || moment.id}`);
+                          router.push(`/moment/${moment.$id || moment.id}`);
                         }}
                         sx={{
                           width: '100%',
