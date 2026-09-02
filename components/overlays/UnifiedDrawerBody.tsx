@@ -93,6 +93,10 @@ const EcosystemSendDrawer = dynamic(
   () => import('./EcosystemSendDrawer').then((m) => m.EcosystemSendDrawer),
   { ssr: false },
 );
+const ReactionDetailDrawer = dynamic(
+  () => import('./ReactionDetailDrawer').then((m) => m.ReactionDetailDrawer),
+  { ssr: false },
+);
 const HangoutsDrawer = dynamic(
   () => import('../hangout/HangoutsDrawer').then((m) => m.HangoutsDrawer),
   { ssr: false },
@@ -455,6 +459,13 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           targetPubkey={drawerData?.targetPubkey || drawerData?.recipientPubkey}
           authorName={drawerData?.authorName || drawerData?.recipientName || 'Creator'}
           onZapSuccess={drawerData?.onZapSuccess}
+        />
+      );
+    case 'reaction-detail':
+      return (
+        <ReactionDetailDrawer
+          data={drawerData}
+          onClose={onClose}
         />
       );
     default:

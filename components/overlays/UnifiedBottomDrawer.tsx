@@ -49,6 +49,7 @@ export function UnifiedBottomDrawer() {
     'access-control',
     'add-to-project',
     'task-add-to-project',
+    'reaction-detail',
   ].includes(activeContent as string);
 
   return (

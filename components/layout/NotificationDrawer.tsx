@@ -40,6 +40,7 @@ import { SocialService } from '@/lib/services/social';
 import { getNostrReadRelays } from '@/lib/connect/feed-settings';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { openMomentObjectDetail } from '@/components/objects/MomentObjectDetail';
 
 export type NotificationCategory = 'all' | 'replies' | 'likes' | 'follows' | 'system';
@@ -269,6 +270,19 @@ export function NotificationDrawer({
             const timeStr = formatTimeAgo(ts);
             const cachedAuthor = getCachedNostrProfile(event.pubkey);
             const authorDisplayName = cachedAuthor?.name || cachedAuthor?.displayName || `npub…${event.pubkey.slice(-6)}`;
+            let npubStr: string | undefined;
+            try {
+              npubStr = bytesToNpub(hexToBytes(event.pubkey));
+            } catch {}
+
+            const actorMetadata = {
+              name: authorDisplayName,
+              username: cachedAuthor?.nip05 || (cachedAuthor?.name ? `@${cachedAuthor.name}` : undefined),
+              avatar: cachedAuthor?.picture,
+              isNostr: true,
+              npub: npubStr,
+              pubkey: event.pubkey,
+            };
 
             authorsToFetch.push(event.pubkey);
 
@@ -288,12 +302,7 @@ export function NotificationDrawer({
                 read: false,
                 accent: '#8B5CF6',
                 actionHref: `/moment/nostr_${targetId}`,
-                actor: {
-                  name: authorDisplayName,
-                  username: cachedAuthor?.nip05,
-                  isNostr: true,
-                  npub: bytesToNpub(hexToBytes(event.pubkey)),
-                },
+                actor: actorMetadata,
                 source: 'nostr',
               });
             } else if (event.kind === 7) {
@@ -313,10 +322,7 @@ export function NotificationDrawer({
                 read: false,
                 accent: '#EC4899',
                 actionHref: `/moment/nostr_${targetId}`,
-                actor: {
-                  name: authorDisplayName,
-                  isNostr: true,
-                },
+                actor: actorMetadata,
                 source: 'nostr',
               });
             } else if (event.kind === 6) {
@@ -335,15 +341,15 @@ export function NotificationDrawer({
                 read: false,
                 accent: '#10B981',
                 actionHref: `/moment/nostr_${targetId}`,
-                actor: {
-                  name: authorDisplayName,
-                  isNostr: true,
-                },
+                actor: actorMetadata,
                 source: 'nostr',
               });
             } else if (event.kind === 9735) {
               // Zap Receipt
               const notifId = `nostr_zap_${event.id}`;
+              const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
+              const targetId = targetNoteTag ? targetNoteTag[1] : undefined;
+
               itemsMap.set(notifId, {
                 id: notifId,
                 category: 'likes',
@@ -353,11 +359,8 @@ export function NotificationDrawer({
                 timestamp: ts,
                 read: false,
                 accent: '#F59E0B',
-                actionHref: `/connect`,
-                actor: {
-                  name: authorDisplayName,
-                  isNostr: true,
-                },
+                actionHref: targetId ? `/moment/nostr_${targetId}` : `/connect`,
+                actor: actorMetadata,
                 source: 'nostr',
               });
             }
@@ -446,10 +449,35 @@ export function NotificationDrawer({
 
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
+  const { open: openUnifiedDrawer } = useUnifiedDrawer();
 
   const handleNotificationClick = (notif: KylrixNotification) => {
     markNotificationRead(notif.id);
     onClose();
+
+    const isLikeOrReaction =
+      notif.category === 'likes' ||
+      notif.id.includes('_like_') ||
+      notif.id.includes('_zap_') ||
+      notif.id.includes('_repost_');
+
+    if (isLikeOrReaction && notif.actor) {
+      // 1. Quietly route to the post behind/underneath the drawer so it's loaded and visible
+      if (notif.actionHref) {
+        router.push(notif.actionHref);
+      }
+      // 2. Open the like/reaction bottom drawer showing who liked/reacted and their identity
+      openUnifiedDrawer('reaction-detail', {
+        actor: notif.actor,
+        title: notif.title,
+        message: notif.message,
+        time: notif.time,
+        category: notif.category,
+        actionHref: notif.actionHref,
+        emoji: notif.title?.includes('reacted') ? notif.title.split('reacted')[1]?.trim() : '❤️',
+      });
+      return;
+    }
 
     if (notif.actionHref) {
       if (notif.actionHref.startsWith('/moment/')) {
@@ -462,7 +490,6 @@ export function NotificationDrawer({
           preview: {
             authorName: notif.actor?.name || notif.title,
             authorAvatar: notif.actor?.avatar,
-            content: notif.message,
           },
           openSidebar,
           openOverlay,
