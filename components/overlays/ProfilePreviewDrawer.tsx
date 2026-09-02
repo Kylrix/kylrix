@@ -21,6 +21,7 @@ import { extractPostImages, truncateMomentBody } from '@/lib/connect/moment-medi
 import { bytesToNpub, hexToBytes, npubToBytes, bytesToHex } from '@/lib/nostr/crypto';
 import { getCachedNostrProfile, queueNostrProfileFetch } from '@/lib/nostr/metadata';
 import { fetchNostrEngagement } from '@/lib/nostr/thread';
+import { fetchNostrEventsByIds } from '@/lib/nostr/user-activity';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -28,6 +29,7 @@ import { toggleMomentLike, repostMoment } from '@/lib/connect/moment-engagement'
 import toast from 'react-hot-toast';
 
 export type ProfileTab = 'posts' | 'replies' | 'likes' | 'zaps';
+
 
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
@@ -195,7 +197,7 @@ export function ProfilePreviewDrawer({
     zapCount: {},
     repostCount: {},
   });
-
+  const [parentEvents, setParentEvents] = useState<Record<string, NostrEvent>>({});
 
   // If pubkey given, derive npub
   useEffect(() => {
@@ -400,6 +402,42 @@ export function ProfilePreviewDrawer({
       .map((ev) => unpackNostrEvent(ev, displayName));
   }, [nostrPosts, displayName]);
 
+  // Fetch Parent Events for threaded replies view
+  useEffect(() => {
+    if (!unpackedReplies.length) return;
+    let cancelled = false;
+
+    const parentIdsToFetch = Array.from(new Set(
+      unpackedReplies
+        .map(r => r.targetId)
+        .filter(id => id && id !== r.id && !parentEvents[id])
+    ));
+
+    if (!parentIdsToFetch.length) return;
+
+    void (async () => {
+      try {
+        const fetchedMap = await fetchNostrEventsByIds(parentIdsToFetch, 3500);
+        if (!cancelled && fetchedMap.size > 0) {
+          const newEntries: Record<string, NostrEvent> = {};
+          const parentPubkeys: string[] = [];
+          fetchedMap.forEach((ev, id) => {
+            newEntries[id] = ev;
+            if (ev.pubkey) parentPubkeys.push(ev.pubkey);
+          });
+          setParentEvents(prev => ({ ...prev, ...newEntries }));
+          if (parentPubkeys.length) {
+            void queueNostrProfileFetch(Array.from(new Set(parentPubkeys)));
+          }
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [unpackedReplies]);
+
   const unpackedLikes = useMemo(() => {
     return nostrPosts
       .filter((ev) => ev.kind === 7)
@@ -411,6 +449,7 @@ export function ProfilePreviewDrawer({
       .filter((ev) => ev.kind === 9735)
       .map((ev) => unpackNostrEvent(ev, displayName));
   }, [nostrPosts, displayName]);
+
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -633,6 +672,298 @@ export function ProfilePreviewDrawer({
               router.push(`/moment/nostr_${item.targetId}`);
             };
 
+            const parentEvent = activeTab === 'replies' && item.targetId ? parentEvents[item.targetId] : null;
+
+            // Common action strip
+            const renderActionStrip = () => {
+              const likesCount = engagement.likeCount[item.id] ?? engagement.likeCount[item.targetId] ?? (item.kind === 7 ? 1 : 0);
+              const repliesCount = engagement.replyCount[item.id] ?? (activeTab === 'replies' ? 0 : engagement.replyCount[item.targetId] ?? 0);
+              const repostsCount = engagement.repostCount[item.id] ?? engagement.repostCount[item.targetId] ?? (item.isRepost ? 1 : 0);
+              const zapsCount = engagement.zapCount[item.id] ?? engagement.zapCount[item.targetId] ?? (item.kind === 9735 ? 1 : 0);
+
+              return (
+                <div className="px-4 pb-3.5 pt-0 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div className="grid grid-cols-4 gap-0.5 rounded-2xl border border-white/[0.08] bg-[#161412] p-1">
+                    <button
+                      type="button"
+                      onClick={openItem}
+                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#60A5FA] hover:bg-white/[0.04] transition-colors"
+                      title="Reply"
+                    >
+                      <MessageCircle size={15} />
+                      {repliesCount > 0 && (
+                        <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
+                          {repliesCount}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (isVaultLocked || !identity) {
+                          toast.error('Unlock vault to repost on Nostr');
+                          void unlockAndLoad();
+                          return;
+                        }
+                        try {
+                          setEngagement(prev => ({
+                            ...prev,
+                            repostCount: { ...prev.repostCount, [item.id]: (prev.repostCount[item.id] || 0) + 1 }
+                          }));
+                          await repostMoment({
+                            source: 'nostr',
+                            id: item.id,
+                            userId: user?.$id,
+                            privateKeyBytes: identity.privateKeyBytes,
+                            nsec: identity.nsec,
+                            rootPubkey: item.authorPubkey,
+                            nostrId: item.id,
+                          });
+                          toast.success('Reposted to Nostr!');
+                        } catch (err: any) {
+                          toast.error(err?.message || 'Failed to repost');
+                        }
+                      }}
+                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#34D399] hover:bg-white/[0.04] transition-colors"
+                      title="Repost"
+                    >
+                      <Repeat2 size={15} />
+                      {repostsCount > 0 && (
+                        <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
+                          {repostsCount}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (isVaultLocked || !identity) {
+                          toast.error('Unlock vault to like on Nostr');
+                          void unlockAndLoad();
+                          return;
+                        }
+                        try {
+                          setEngagement(prev => ({
+                            ...prev,
+                            likeCount: { ...prev.likeCount, [item.id]: (prev.likeCount[item.id] || 0) + 1 }
+                          }));
+                          await toggleMomentLike({
+                            source: 'nostr',
+                            id: item.id,
+                            userId: user?.$id,
+                            contentSnippet: item.content?.slice(0, 80),
+                            privateKeyBytes: identity.privateKeyBytes,
+                            nsec: identity.nsec,
+                            rootPubkey: item.authorPubkey,
+                            nostrId: item.id,
+                          });
+                          toast.success('Liked!');
+                        } catch (err: any) {
+                          toast.error(err?.message || 'Failed to like');
+                        }
+                      }}
+                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#EC4899] hover:bg-white/[0.04] transition-colors"
+                      title="Like"
+                    >
+                      <Heart size={15} />
+                      {likesCount > 0 && (
+                        <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
+                          {likesCount}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openUnifiedDrawer('zap', {
+                          targetId: item.id,
+                          source: 'nostr',
+                          targetKind: 'moment',
+                          targetPubkey: item.authorPubkey,
+                          authorName: authorName,
+                          onZapSuccess: (amount: number) => {
+                            setEngagement(prev => ({
+                              ...prev,
+                              zapCount: { ...prev.zapCount, [item.id]: (prev.zapCount[item.id] || 0) + 1 }
+                            }));
+                          },
+                        });
+                      }}
+                      className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#F59E0B] hover:bg-white/[0.04] transition-colors"
+                      title="Zap"
+                    >
+                      <Zap size={15} />
+                      {zapsCount > 0 && (
+                        <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
+                          {zapsCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            };
+
+            // Threaded Card for Replies
+            if (activeTab === 'replies') {
+              return (
+                <article
+                  key={item.id}
+                  className="w-full max-w-full min-w-0 flex flex-col text-left rounded-[22px] bg-[#0A0908] border border-white/[0.08] hover:border-white/[0.14] hover:bg-[#12100E] transition-all duration-200 overflow-hidden"
+                >
+                  {/* Parent Post (if available) */}
+                  {parentEvent ? (() => {
+                    const parentUnpacked = unpackNostrEvent(parentEvent);
+                    const pMeta = getCachedNostrProfile(parentUnpacked.authorPubkey);
+                    let pName = pMeta?.name || pMeta?.displayName;
+                    let pHandle = pMeta?.nip05 || (pMeta?.name ? `@${pMeta.name}` : undefined);
+                    let pAvatar = pMeta?.picture;
+                    if (!pName) {
+                      try {
+                        const np = bytesToNpub(hexToBytes(parentUnpacked.authorPubkey));
+                        pName = `${np.slice(0, 10)}…${np.slice(-4)}`;
+                      } catch {
+                        pName = `${parentUnpacked.authorPubkey.slice(0, 8)}…`;
+                      }
+                    }
+
+                    const openParent = (e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      onClose();
+                      router.push(`/moment/nostr_${parentUnpacked.id}`);
+                    };
+
+                    return (
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={openParent}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openParent(e as any); } }}
+                        className="flex gap-3 px-4 pt-4 pb-1 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      >
+                        {/* Left column: Avatar + Vertical thread connecting line */}
+                        <div className="flex flex-col items-center shrink-0">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-black border border-white/[0.08] overflow-hidden bg-[#161412] text-white/70">
+                            {pAvatar ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={pAvatar} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              (pName || '?').slice(0, 2).toUpperCase()
+                            )}
+                          </div>
+                          <div className="w-0.5 flex-1 min-h-[22px] bg-white/20 my-1 rounded-full" />
+                        </div>
+
+                        {/* Right column: Content */}
+                        <div className="min-w-0 flex-1 overflow-hidden pb-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-[15px] font-extrabold text-white font-satoshi truncate">
+                              {pName.replace(/^@/, '')}
+                            </span>
+                            {pHandle && (
+                              <span className="text-[13px] text-white/40 font-medium truncate min-w-0">
+                                {pHandle.startsWith('@') ? pHandle : `@${pHandle}`}
+                              </span>
+                            )}
+                            <span className="text-white/25 text-[13px] shrink-0">·</span>
+                            <time className="text-[13px] text-white/40 font-medium tabular-nums shrink-0">
+                              {formatRelative(parentUnpacked.createdAt)}
+                            </time>
+                          </div>
+
+                          {parentUnpacked.content && (
+                            <p className="mt-1 text-[14px] leading-relaxed text-white/75 font-satoshi whitespace-pre-wrap break-words m-0">
+                              {truncateMomentBody(parentUnpacked.content)}
+                            </p>
+                          )}
+
+                          {parentUnpacked.images.length > 0 && (
+                            <div className={`mt-2 w-full max-w-full h-[120px] rounded-xl overflow-hidden border border-white/[0.06] bg-[#000] grid ${parentUnpacked.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 gap-0.5'} relative`}>
+                              {parentUnpacked.images.slice(0, 2).map((img, i) => (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img key={i} src={img} alt="" className="w-full h-full max-w-full object-cover" />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })() : (
+                    <div className="flex gap-3 px-4 pt-4 pb-1">
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-[10px] font-mono border border-white/[0.08] bg-[#161412] text-white/40">
+                          <MessageSquare size={14} />
+                        </div>
+                        <div className="w-0.5 flex-1 min-h-[18px] bg-white/20 my-1 rounded-full" />
+                      </div>
+                      <div className="min-w-0 flex-1 py-1">
+                        <p className="text-xs font-mono text-white/40 m-0">
+                          Replying to note #{item.targetId.slice(0, 10)}…
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Reply Post Body */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={openItem}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openItem(); } }}
+                    className="flex gap-3 px-4 pt-1 pb-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black border border-white/[0.08] overflow-hidden bg-[#161412] text-white/70">
+                      {authorAvatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={authorAvatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        (authorName || '?').slice(0, 2).toUpperCase()
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-[15px] font-extrabold text-white font-satoshi truncate">
+                          {authorName.replace(/^@/, '')}
+                        </span>
+                        {authorHandle && (
+                          <span className="text-[13px] text-white/40 font-medium truncate min-w-0">
+                            {authorHandle.startsWith('@') ? authorHandle : `@${authorHandle}`}
+                          </span>
+                        )}
+                        <span className="text-white/25 text-[13px] shrink-0">·</span>
+                        <time className="text-[13px] text-white/40 font-medium tabular-nums shrink-0">
+                          {formatRelative(item.createdAt)}
+                        </time>
+                      </div>
+
+                      {item.content && (
+                        <p className="mt-1.5 text-[14px] sm:text-[15px] leading-relaxed text-white/[0.92] font-satoshi whitespace-pre-wrap break-words m-0">
+                          {truncateMomentBody(item.content)}
+                        </p>
+                      )}
+
+                      {item.images.length > 0 && (
+                        <div className={`mt-3 w-full max-w-full h-[150px] rounded-xl overflow-hidden border border-white/[0.06] bg-[#000] grid ${item.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 gap-0.5'} relative`}>
+                          {item.images.slice(0, 2).map((img, i) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img key={i} src={img} alt="" className="w-full h-full max-w-full object-cover" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Strip */}
+                  {renderActionStrip()}
+                </article>
+              );
+            }
+
+            // Normal Moment Card for Posts, Likes, Zaps
             return (
               <article
                 key={item.id}
@@ -720,137 +1051,7 @@ export function ProfilePreviewDrawer({
                 </div>
 
                 {/* Bottom Interaction Strip */}
-                <div className="px-4 pb-3.5 pt-0 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  {(() => {
-                    const likesCount = engagement.likeCount[item.targetId] ?? (item.kind === 7 ? 1 : 0);
-                    const repliesCount = engagement.replyCount[item.targetId] ?? (item.kind === 1 && activeTab === 'replies' ? 1 : 0);
-                    const repostsCount = engagement.repostCount[item.targetId] ?? (item.isRepost ? 1 : 0);
-                    const zapsCount = engagement.zapCount[item.targetId] ?? (item.kind === 9735 ? 1 : 0);
-
-                    return (
-                      <div className="grid grid-cols-4 gap-0.5 rounded-2xl border border-white/[0.08] bg-[#161412] p-1">
-                        <button
-                          type="button"
-                          onClick={openItem}
-                          className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#60A5FA] hover:bg-white/[0.04] transition-colors"
-                          title="Reply"
-                        >
-                          <MessageCircle size={15} />
-                          {repliesCount > 0 && (
-                            <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
-                              {repliesCount}
-                            </span>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (isVaultLocked || !identity) {
-                              toast.error('Unlock vault to repost on Nostr');
-                              void unlockAndLoad();
-                              return;
-                            }
-                            try {
-                              setEngagement(prev => ({
-                                ...prev,
-                                repostCount: { ...prev.repostCount, [item.targetId]: (prev.repostCount[item.targetId] || 0) + 1 }
-                              }));
-                              await repostMoment({
-                                source: 'nostr',
-                                id: item.targetId,
-                                userId: user?.$id,
-                                privateKeyBytes: identity.privateKeyBytes,
-                                nsec: identity.nsec,
-                                rootPubkey: item.authorPubkey,
-                                nostrId: item.targetId,
-                              });
-                              toast.success('Reposted to Nostr!');
-                            } catch (err: any) {
-                              toast.error(err?.message || 'Failed to repost');
-                            }
-                          }}
-                          className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#34D399] hover:bg-white/[0.04] transition-colors"
-                          title="Repost"
-                        >
-                          <Repeat2 size={15} />
-                          {repostsCount > 0 && (
-                            <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
-                              {repostsCount}
-                            </span>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (isVaultLocked || !identity) {
-                              toast.error('Unlock vault to like on Nostr');
-                              void unlockAndLoad();
-                              return;
-                            }
-                            try {
-                              setEngagement(prev => ({
-                                ...prev,
-                                likeCount: { ...prev.likeCount, [item.targetId]: (prev.likeCount[item.targetId] || 0) + 1 }
-                              }));
-                              await toggleMomentLike({
-                                source: 'nostr',
-                                id: item.targetId,
-                                userId: user?.$id,
-                                contentSnippet: item.content?.slice(0, 80),
-                                privateKeyBytes: identity.privateKeyBytes,
-                                nsec: identity.nsec,
-                                rootPubkey: item.authorPubkey,
-                                nostrId: item.targetId,
-                              });
-                              toast.success('Liked!');
-                            } catch (err: any) {
-                              toast.error(err?.message || 'Failed to like');
-                            }
-                          }}
-                          className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#EC4899] hover:bg-white/[0.04] transition-colors"
-                          title="Like"
-                        >
-                          <Heart size={15} />
-                          {likesCount > 0 && (
-                            <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
-                              {likesCount}
-                            </span>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openUnifiedDrawer('zap', {
-                              targetId: item.targetId,
-                              source: 'nostr',
-                              targetKind: 'moment',
-                              targetPubkey: item.authorPubkey,
-                              authorName: authorName,
-                              onZapSuccess: (amount: number) => {
-                                setEngagement(prev => ({
-                                  ...prev,
-                                  zapCount: { ...prev.zapCount, [item.targetId]: (prev.zapCount[item.targetId] || 0) + 1 }
-                                }));
-                              },
-                            });
-                          }}
-                          className="flex items-center justify-center gap-1.5 min-h-[36px] rounded-xl text-white/60 hover:text-[#F59E0B] hover:bg-white/[0.04] transition-colors"
-                          title="Zap"
-                        >
-                          <Zap size={15} />
-                          {zapsCount > 0 && (
-                            <span className="text-[11px] font-mono font-bold tabular-nums text-white/70">
-                              {zapsCount}
-                            </span>
-                          )}
-                        </button>
-                      </div>
-                    );
-                  })()}
-                </div>
+                {renderActionStrip()}
               </article>
             );
           })}
@@ -858,7 +1059,7 @@ export function ProfilePreviewDrawer({
       </div>
     </div>
   );
-
 }
+
 
 
