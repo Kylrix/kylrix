@@ -85,55 +85,72 @@ export function useNostrIdentity() {
 
       setIsVaultLocked(false);
 
-      // Generate JWT for secure actions validation
-      let jwtToken: string | undefined;
-      try {
-        const jwtResponse = await account.createJWT();
-        jwtToken = jwtResponse.jwt;
-      } catch (err) {
-        console.warn('Failed to generate JWT (possible guest session):', err);
-      }
-
-      // Check all registered identities on server with LocalEngine cache fallback
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
       const localEncryptedCacheKey = `nostr:identities_encrypted_${user.$id}`;
-      let rows: any[] = [];
+      
+      // Load current local offline encrypted cache first
+      let localRows = (await LocalEngine.cacheGet<any[]>(localEncryptedCacheKey).catch(() => [])) || [];
+
+      // Opportunistically query server for remote updates (non-blocking if offline/limited)
+      let remoteRows: any[] = [];
       try {
-        rows = await listNostrIdentitiesAction({ jwt: jwtToken });
-        if (rows && rows.length > 0) {
-          void LocalEngine.cacheSet(localEncryptedCacheKey, rows).catch(() => {});
-        }
+        let jwtToken: string | undefined;
+        try {
+          const jwtResponse = await account.createJWT();
+          jwtToken = jwtResponse?.jwt;
+        } catch {}
+
+        remoteRows = (await listNostrIdentitiesAction({ jwt: jwtToken })) || [];
       } catch (err) {
-        console.warn('[useNostrIdentity] Server identity query failed, loading from local offline cache:', err);
-        rows = (await LocalEngine.cacheGet<any[]>(localEncryptedCacheKey).catch(() => [])) || [];
+        // Server unreachable or billing limited — proceed entirely from local cache
       }
 
-      if (rows && rows.length > 0) {
+      // Reconcile and deduplicate by npub (LocalEngine is SoT)
+      const mergedRowsMap = new Map<string, any>();
+      // Put existing local rows first
+      for (const row of localRows) {
+        if (row && row.npub) mergedRowsMap.set(row.npub, row);
+      }
+      // Merge remote rows, preserving local default flag if explicitly set
+      for (const remote of remoteRows) {
+        if (remote && remote.npub) {
+          const existing = mergedRowsMap.get(remote.npub);
+          mergedRowsMap.set(remote.npub, {
+            ...remote,
+            isDefault: existing?.isDefault ?? remote.isDefault,
+            label: existing?.label || remote.label,
+          });
+        }
+      }
+
+      let allRows = Array.from(mergedRowsMap.values());
+
+      if (allRows.length > 0) {
         const decryptedList: NostrIdentity[] = [];
-        for (const row of rows) {
+        for (const row of allRows) {
           try {
             const decryptedNsecRaw = await ecosystemSecurity.decrypt(row.encryptedNsec);
             const decryptedNsec = JSON.parse(decryptedNsecRaw);
             const privateKeyBytes = hexToBytes(decryptedNsec);
             const derivedNsec = bytesToNsec(privateKeyBytes);
             decryptedList.push({
-              id: row.id,
+              id: row.id || row.$id || `id_${row.npub.slice(0, 16)}`,
               npub: row.npub,
               nsec: derivedNsec,
-              label: row.label,
-              isDefault: row.isDefault,
-              isDerived: row.isDerived,
-              createdAt: row.createdAt,
+              label: row.label || `Key (${row.npub.slice(0, 8)}…)`,
+              isDefault: Boolean(row.isDefault),
+              isDerived: Boolean(row.isDerived),
+              createdAt: row.createdAt || row.$createdAt,
               privateKeyBytes
             });
           } catch (decryptErr) {
-            console.warn('Failed to decrypt Nostr identity row:', row.id, decryptErr);
+            console.warn('Failed to decrypt Nostr identity row:', row.id || row.npub, decryptErr);
           }
         }
 
         if (decryptedList.length > 0) {
           setIdentities(decryptedList);
-          const active = decryptedList.find(i => i.isDefault) || decryptedList[0] || null;
+          const active = decryptedList.find(i => i.isDefault) || decryptedList[0];
           const hydratedActive = hydrateNostrIdentity(active);
           setIdentity(hydratedActive);
           if (hydratedActive) {
@@ -142,18 +159,21 @@ export function useNostrIdentity() {
               window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: hydratedActive }));
             }
           }
+          void LocalEngine.cacheSet(localEncryptedCacheKey, allRows).catch(() => {});
           setLoading(false);
-          return active;
+          return hydratedActive;
         }
       }
 
-      // No identities exist or backend unreachable — Mint default deterministic Nostr key from user MEK (100% offline)
+      // No identities exist — Mint default deterministic Nostr key from user MEK (100% offline)
       const rawMek = await window.crypto.subtle.exportKey("raw", masterKey);
       const privKeyBytes = new Uint8Array(sha256(new Uint8Array(rawMek)));
       const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
 
       const npub = bytesToNpub(pubKeyBytes);
       const nsec = bytesToNsec(privKeyBytes);
+      const hexNsec = bytesToHex(privKeyBytes);
+      const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
 
       const newIdentity = hydrateNostrIdentity({
         id: `derived_${npub.slice(0, 16)}`,
@@ -165,9 +185,20 @@ export function useNostrIdentity() {
         privateKeyBytes: privKeyBytes,
       })!;
 
+      const initialRow = {
+        id: newIdentity.id,
+        npub,
+        encryptedNsec,
+        label: 'Default Kylrix Key',
+        isDefault: true,
+        isDerived: true,
+        createdAt: new Date().toISOString(),
+      };
+
       setIdentity(newIdentity);
       setIdentities([newIdentity]);
-      void LocalEngine.cacheSet('nostr:active_identity', newIdentity);
+      void LocalEngine.cacheSet(localEncryptedCacheKey, [initialRow]).catch(() => {});
+      void LocalEngine.cacheSet('nostr:active_identity', newIdentity).catch(() => {});
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: newIdentity }));
       }
@@ -175,8 +206,12 @@ export function useNostrIdentity() {
       // Non-blocking background sync to Appwrite database if available
       void (async () => {
         try {
-          const hexNsec = bytesToHex(privKeyBytes);
-          const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
+          let jwtToken: string | undefined;
+          try {
+            const jwtResponse = await account.createJWT();
+            jwtToken = jwtResponse?.jwt;
+          } catch {}
+
           const reg = await registerNostrIdentityAction({
             npub,
             encryptedNsec,
@@ -188,18 +223,10 @@ export function useNostrIdentity() {
             jwt: jwtToken
           });
           if (reg?.id) {
-            void LocalEngine.cacheSet(localEncryptedCacheKey, [{
-              id: reg.id,
-              npub,
-              encryptedNsec,
-              label: 'Default Kylrix Key',
-              isDefault: true,
-              isDerived: true,
-            }]).catch(() => {});
+            initialRow.id = reg.id;
+            void LocalEngine.cacheSet(localEncryptedCacheKey, [initialRow]).catch(() => {});
           }
-        } catch {
-          // Offline or budget capped — local key is already active and working
-        }
+        } catch {}
       })();
 
       setLoading(false);
@@ -211,7 +238,7 @@ export function useNostrIdentity() {
     }
   }, [user?.$id]);
 
-  const importCustomNsec = useCallback(async (customNsec: string, label?: string, makeDefault: boolean = false): Promise<NostrIdentity | null> => {
+  const importCustomNsec = useCallback(async (customNsec: string, label?: string, makeDefault: boolean = true): Promise<NostrIdentity | null> => {
     if (!user?.$id) return null;
     const clean = customNsec.trim();
     if (!clean) throw new Error('Private key cannot be empty');
@@ -231,29 +258,16 @@ export function useNostrIdentity() {
     const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
     const npub = bytesToNpub(pubKeyBytes);
     const nsec = bytesToNsec(privKeyBytes);
-
-    let jwtToken: string | undefined;
-    try {
-      const jwtResponse = await account.createJWT();
-      jwtToken = jwtResponse.jwt;
-    } catch {}
-
     const hexNsec = bytesToHex(privKeyBytes);
     const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
 
-    const reg = await registerNostrIdentityAction({
-      npub,
-      encryptedNsec,
-      iv: 'aes-gcm-iv',
-      salt: 'mek-derived-salt',
-      label: label || `Imported (${npub.slice(0, 10)}…)`,
-      isDerived: false,
-      makeDefault,
-      jwt: jwtToken,
-    });
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const localEncryptedCacheKey = `nostr:identities_encrypted_${user.$id}`;
+    let existingRows = (await LocalEngine.cacheGet<any[]>(localEncryptedCacheKey).catch(() => [])) || [];
 
+    const newId = `imported_${npub.slice(0, 16)}`;
     const newIdentity: NostrIdentity = {
-      id: reg.id,
+      id: newId,
       npub,
       nsec,
       label: label || `Imported (${npub.slice(0, 10)}…)`,
@@ -262,35 +276,133 @@ export function useNostrIdentity() {
       privateKeyBytes: privKeyBytes,
     };
 
+    // Update local encrypted storage immediately (100% offline)
+    const updatedRows = existingRows.map((r) => ({
+      ...r,
+      isDefault: makeDefault ? false : r.isDefault,
+    })).filter((r) => r.npub !== npub);
+
+    updatedRows.push({
+      id: newId,
+      npub,
+      encryptedNsec,
+      label: newIdentity.label,
+      isDefault: makeDefault,
+      isDerived: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    await LocalEngine.cacheSet(localEncryptedCacheKey, updatedRows);
+
     if (makeDefault) {
       setIdentity(newIdentity);
+      await LocalEngine.cacheSet('nostr:active_identity', newIdentity);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: newIdentity }));
+      }
     }
+
+    // Refresh state from local cache
     await loadOrMintIdentity();
+
+    // Background opportunistic sync to Appwrite
+    void (async () => {
+      try {
+        let jwtToken: string | undefined;
+        try {
+          const jwtResponse = await account.createJWT();
+          jwtToken = jwtResponse?.jwt;
+        } catch {}
+
+        const reg = await registerNostrIdentityAction({
+          npub,
+          encryptedNsec,
+          iv: 'aes-gcm-iv',
+          salt: 'mek-derived-salt',
+          label: newIdentity.label,
+          isDerived: false,
+          makeDefault,
+          jwt: jwtToken,
+        });
+
+        if (reg?.id) {
+          const syncedRows = (await LocalEngine.cacheGet<any[]>(localEncryptedCacheKey).catch(() => [])) || [];
+          const idx = syncedRows.findIndex((r) => r.npub === npub);
+          if (idx !== -1) {
+            syncedRows[idx].id = reg.id;
+            await LocalEngine.cacheSet(localEncryptedCacheKey, syncedRows);
+          }
+        }
+      } catch {
+        // Backend offline or over quota — local storage is already fully active
+      }
+    })();
+
     return newIdentity;
   }, [user?.$id, loadOrMintIdentity]);
 
-  const setActiveIdentity = useCallback(async (identityId: string) => {
+  const setActiveIdentity = useCallback(async (identityIdOrNpub: string) => {
     if (!user?.$id) return;
-    let jwtToken: string | undefined;
-    try {
-      const jwtResponse = await account.createJWT();
-      jwtToken = jwtResponse.jwt;
-    } catch {}
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const localEncryptedCacheKey = `nostr:identities_encrypted_${user.$id}`;
+    let existingRows = (await LocalEngine.cacheGet<any[]>(localEncryptedCacheKey).catch(() => [])) || [];
 
-    await setActiveNostrIdentityAction({ identityId, jwt: jwtToken });
+    const targetRow = existingRows.find((r) => r.id === identityIdOrNpub || r.npub === identityIdOrNpub);
+    if (targetRow) {
+      const updatedRows = existingRows.map((r) => ({
+        ...r,
+        isDefault: r.npub === targetRow.npub,
+      }));
+      await LocalEngine.cacheSet(localEncryptedCacheKey, updatedRows);
+    }
+
     await loadOrMintIdentity();
+
+    // Opportunistic background sync to Appwrite
+    void (async () => {
+      try {
+        let jwtToken: string | undefined;
+        try {
+          const jwtResponse = await account.createJWT();
+          jwtToken = jwtResponse?.jwt;
+        } catch {}
+        if (targetRow?.id && !targetRow.id.startsWith('imported_') && !targetRow.id.startsWith('derived_')) {
+          await setActiveNostrIdentityAction({ identityId: targetRow.id, jwt: jwtToken });
+        }
+      } catch {}
+    })();
   }, [user?.$id, loadOrMintIdentity]);
 
-  const deleteIdentity = useCallback(async (identityId: string) => {
+  const deleteIdentity = useCallback(async (identityIdOrNpub: string) => {
     if (!user?.$id) return;
-    let jwtToken: string | undefined;
-    try {
-      const jwtResponse = await account.createJWT();
-      jwtToken = jwtResponse.jwt;
-    } catch {}
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const localEncryptedCacheKey = `nostr:identities_encrypted_${user.$id}`;
+    let existingRows = (await LocalEngine.cacheGet<any[]>(localEncryptedCacheKey).catch(() => [])) || [];
 
-    await deleteNostrIdentityAction({ identityId, jwt: jwtToken });
+    const targetRow = existingRows.find((r) => r.id === identityIdOrNpub || r.npub === identityIdOrNpub);
+    const updatedRows = existingRows.filter((r) => r.id !== identityIdOrNpub && r.npub !== identityIdOrNpub);
+    
+    // If deleted identity was default, set first remaining as default
+    if (targetRow?.isDefault && updatedRows.length > 0) {
+      updatedRows[0].isDefault = true;
+    }
+
+    await LocalEngine.cacheSet(localEncryptedCacheKey, updatedRows);
     await loadOrMintIdentity();
+
+    // Opportunistic background delete on Appwrite
+    void (async () => {
+      try {
+        let jwtToken: string | undefined;
+        try {
+          const jwtResponse = await account.createJWT();
+          jwtToken = jwtResponse?.jwt;
+        } catch {}
+        if (targetRow?.id && !targetRow.id.startsWith('imported_') && !targetRow.id.startsWith('derived_')) {
+          await deleteNostrIdentityAction({ identityId: targetRow.id, jwt: jwtToken });
+        }
+      } catch {}
+    })();
   }, [user?.$id, loadOrMintIdentity]);
 
   const resetToDefaultIdentity = useCallback(async (): Promise<NostrIdentity | null> => {
@@ -304,40 +416,33 @@ export function useNostrIdentity() {
 
     const npub = bytesToNpub(pubKeyBytes);
     const nsec = bytesToNsec(privKeyBytes);
-
-    let jwtToken: string | undefined;
-    try {
-      const jwtResponse = await account.createJWT();
-      jwtToken = jwtResponse.jwt;
-    } catch {}
-
     const hexNsec = bytesToHex(privKeyBytes);
     const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
 
-    const reg = await registerNostrIdentityAction({
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const localEncryptedCacheKey = `nostr:identities_encrypted_${user.$id}`;
+    let existingRows = (await LocalEngine.cacheGet<any[]>(localEncryptedCacheKey).catch(() => [])) || [];
+
+    const defaultRow = {
+      id: `derived_${npub.slice(0, 16)}`,
       npub,
       encryptedNsec,
-      iv: 'aes-gcm-iv',
-      salt: 'mek-derived-salt',
       label: 'Default Kylrix Key',
       isDerived: true,
-      makeDefault: true,
-      jwt: jwtToken,
-    });
-
-    const newIdentity: NostrIdentity = {
-      id: reg.id,
-      npub,
-      nsec,
-      label: 'Default Kylrix Key',
       isDefault: true,
-      isDerived: true,
-      privateKeyBytes: privKeyBytes,
+      createdAt: new Date().toISOString(),
     };
 
-    setIdentity(newIdentity);
-    await loadOrMintIdentity();
-    return newIdentity;
+    const updatedRows = existingRows.map((r) => ({
+      ...r,
+      isDefault: r.npub === npub,
+    }));
+    if (!updatedRows.some((r) => r.npub === npub)) {
+      updatedRows.unshift(defaultRow);
+    }
+
+    await LocalEngine.cacheSet(localEncryptedCacheKey, updatedRows);
+    return await loadOrMintIdentity();
   }, [user?.$id, loadOrMintIdentity]);
 
   const unlockAndLoad = useCallback(async () => {
