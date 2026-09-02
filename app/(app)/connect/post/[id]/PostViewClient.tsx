@@ -407,8 +407,71 @@ export function PostViewClient({
   const { text: body, images } = extractPostImages(rawBody, moment?.tags || nostrEvent?.tags);
   const isNostr = source === 'nostr';
 
-  if (loading) {
-    return <div className="h-full w-full max-w-full min-w-0 overflow-x-hidden flex items-center justify-center text-white/50 text-sm">Loading…</div>;
+  if (loading && !moment && !preview?.content) {
+    return (
+      <div className="h-full w-full max-w-full min-w-0 overflow-x-hidden overflow-y-auto text-white bg-[#0A0908]">
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-[#0A0908] border-b border-[#34322F]">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="p-2 rounded-xl bg-[#161412] border border-[#34322F] text-white/60 hover:text-white shrink-0"
+            aria-label="Back"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <span className="text-sm font-extrabold font-clash truncate">
+            Moment
+          </span>
+        </div>
+
+        <div className="px-3 sm:px-4 py-4 space-y-3 min-w-0 max-w-full">
+          {/* Main post article skeleton */}
+          <article className="rounded-[22px] border border-[#34322F] bg-[#161412] p-4 space-y-3 min-w-0 max-w-full overflow-hidden">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-full shrink-0 bg-[#0A0908] border border-white/[0.06] flex items-center justify-center text-[11px] font-black text-white/20">
+                ••
+              </div>
+              <div className="min-w-0 flex-1 overflow-hidden space-y-2 pt-1">
+                <div className="h-3.5 w-32 rounded-md bg-white/[0.06]" />
+                <div className="h-2.5 w-20 rounded-md bg-white/[0.03]" />
+              </div>
+            </div>
+
+            <div className="space-y-2 py-1">
+              <div className="h-4 w-full rounded-md bg-white/[0.05]" />
+              <div className="h-4 w-5/6 rounded-md bg-white/[0.05]" />
+              <div className="h-4 w-2/3 rounded-md bg-white/[0.05]" />
+            </div>
+
+            <div className="flex items-center gap-4 sm:gap-6 pt-3 border-t border-white/[0.06] min-w-0">
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/30">
+                <Heart size={16} /> <span className="font-mono">0</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/30">
+                <MessageCircle size={16} /> <span className="font-mono">0</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/30">
+                <Repeat2 size={16} /> <span className="font-mono">0</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/30">
+                <Zap size={16} /> <span className="font-mono">0</span>
+              </span>
+            </div>
+          </article>
+
+          {/* Reply composer skeleton */}
+          <div className="flex gap-2 items-end min-w-0 max-w-full">
+            <div className="min-w-0 flex-1 h-[42px] rounded-xl bg-[#161412] border border-[#34322F] px-4 flex items-center text-sm text-white/30 font-satoshi">
+              Write a reply…
+            </div>
+            <div className="shrink-0 h-[42px] px-4 rounded-xl bg-[#F59E0B]/30 text-black/50 font-bold text-sm flex items-center">
+              Reply
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!moment && !preview?.content && source === 'ecosystem') {
