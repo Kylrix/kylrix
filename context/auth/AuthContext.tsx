@@ -140,11 +140,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return session as any;
       }
 
-      lastSeenUserIdRef.current = null;
-      setUser(null);
-      clearKylrixPulse();
+      // If online and session is genuinely null, clear session
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        lastSeenUserIdRef.current = null;
+        setUser(null);
+        clearKylrixPulse();
+        return null;
+      }
+
+      const offlineSnap = getCurrentUserSnapshot();
+      if (offlineSnap?.$id) {
+        setUser(offlineSnap as any);
+        return offlineSnap as any;
+      }
       return null;
     } catch (_error) {
+      const offlineSnap = getCurrentUserSnapshot();
+      if (offlineSnap?.$id) {
+        setUser(offlineSnap as any);
+        return offlineSnap as any;
+      }
+      if (user?.$id) {
+        return user;
+      }
       lastSeenUserIdRef.current = null;
       setUser(null);
       clearKylrixPulse();

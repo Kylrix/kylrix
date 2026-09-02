@@ -327,19 +327,30 @@ function canUseStorage() {
     return typeof window !== 'undefined';
 }
 
-function readCurrentUserSnapshot() {
+function readCurrentUserSnapshot(allowOfflineFallback: boolean = true) {
     if (!canUseStorage()) return null;
     try {
         const pid = localStorage.getItem('kylrix:activePartition') || 'acc_default';
         const cacheKey = `${CURRENT_USER_CACHE_KEY}_${pid}`;
         const raw = localStorage.getItem(cacheKey);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw) as { user: any; expiresAt: number; lastForcedAt?: number };
-        if (!parsed?.user) return null;
-        if (parsed.expiresAt <= Date.now()) {
-            return null;
+        if (raw) {
+            const parsed = JSON.parse(raw) as { user: any; expiresAt: number; lastForcedAt?: number };
+            if (parsed?.user) {
+                if (parsed.expiresAt > Date.now() || allowOfflineFallback || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+                    return parsed;
+                }
+            }
         }
-        return parsed;
+        // Fallback to durable last logged in user
+        const lastUserKey = `kylrix_last_logged_in_user_${pid}`;
+        const lastRaw = localStorage.getItem(lastUserKey);
+        if (lastRaw) {
+            const user = JSON.parse(lastRaw);
+            if (user?.$id) {
+                return { user, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
+            }
+        }
+        return null;
     } catch {
         return null;
     }
@@ -560,9 +571,12 @@ function getCookieDomain(): string {
 export function setKylrixPulse(user: any, avatarBase64?: string | null) {
     if (typeof window === 'undefined') return;
     try {
+        const resolvedName = (user.name && user.name.trim() !== 'User')
+            ? user.name
+            : (user.username || user.email?.split('@')[0] || (user.$id ? `Account ${user.$id.slice(0, 8)}` : 'Local Account'));
         const pulse = {
             $id: user.$id,
-            name: user.name || user.username || 'User',
+            name: resolvedName,
             profilePicId: user.prefs?.profilePicId || user.profilePicId || null
         };
         

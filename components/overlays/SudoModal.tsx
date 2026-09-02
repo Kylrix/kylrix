@@ -682,7 +682,9 @@ export default function SudoModal({
                         </div>
                         <div className="min-w-0">
                             <h3 className="font-clash font-black text-white text-lg tracking-tight leading-tight truncate">
-                                {user?.name || "User"}
+                                {(user?.name && user.name.trim() !== 'User')
+                                    ? user.name
+                                    : (user?.username || user?.email?.split('@')[0] || (user?.$id ? `Account ${user.$id.slice(0, 8)}` : 'Local Account'))}
                             </h3>
                             <p className="text-xs text-white/40 font-semibold font-satoshi mt-1">
                                 Enter MasterPass to continue
