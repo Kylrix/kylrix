@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   ExternalLink, 
@@ -9,8 +9,12 @@ import {
   Check, 
   Maximize2, 
   Minimize2, 
-  Radio, 
-  MessageSquare
+  MessageSquare,
+  MessageCircle,
+  Heart,
+  Zap,
+  Repeat,
+  Sparkles
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { NostrRelayPool, type NostrEvent } from '@/lib/nostr/nostr';
@@ -18,6 +22,8 @@ import { getNostrReadRelays } from '@/lib/connect/feed-settings';
 import { extractPostImages, truncateMomentBody } from '@/lib/connect/moment-media';
 import { bytesToNpub, hexToBytes, npubToBytes, bytesToHex } from '@/lib/nostr/crypto';
 import toast from 'react-hot-toast';
+
+export type ProfileTab = 'posts' | 'replies' | 'likes' | 'zaps';
 
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
@@ -67,7 +73,7 @@ export function ProfilePreviewDrawer({
   source = 'ecosystem'
 }: ProfilePreviewDrawerProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'nostr-activity'>('overview');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const router = useRouter();
   const [resolvedNpub, setResolvedNpub] = useState<string | null>(initialNpub || null);
   const [resolvedPubkey, setResolvedPubkey] = useState<string | null>(initialPubkey || null);
@@ -142,7 +148,7 @@ export function ProfilePreviewDrawer({
     return () => { cancelled = true; };
   }, [userId, resolvedNpub, resolvedPubkey]);
 
-  // Fetch Nostr Activity (posts, replies) with LocalEngine cache first
+  // Fetch Nostr Activity (posts, replies, likes, zaps) with LocalEngine cache first
   useEffect(() => {
     if (!resolvedPubkey && !resolvedNpub) return;
     let cancelled = false;
@@ -166,7 +172,7 @@ export function ProfilePreviewDrawer({
         }
 
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const cachedFeed = await LocalEngine.cacheGet<NostrEvent[]>(`nostr_profile_feed_${hex}`, 10 * 60 * 1000).catch(() => null);
+        const cachedFeed = await LocalEngine.cacheGet<NostrEvent[]>(`nostr_profile_feed_${hex}`).catch(() => null);
         if (Array.isArray(cachedFeed) && cachedFeed.length > 0 && !cancelled) {
           setNostrPosts(cachedFeed);
           setLoadingPosts(false);
@@ -190,7 +196,7 @@ export function ProfilePreviewDrawer({
                 bio: meta.about || prev.bio
               }));
             } catch {}
-          } else if ([1, 6, 7].includes(ev.kind)) {
+          } else if ([1, 6, 7, 9735].includes(ev.kind)) {
             if (!fetchedEvents.some(e => e.id === ev.id)) {
               fetchedEvents.push(ev);
               fetchedEvents.sort((a, b) => b.created_at - a.created_at);
@@ -200,7 +206,7 @@ export function ProfilePreviewDrawer({
           }
         });
 
-        pool.subscribe('profile-feed', [{ kinds: [1, 6, 7], authors: [hex], limit: 25 }]);
+        pool.subscribe('profile-feed', [{ kinds: [1, 6, 7, 9735], authors: [hex], limit: 60 }]);
         pool.subscribe('profile-meta', [{ kinds: [0], authors: [hex], limit: 1 }]);
       } catch (err) {
         console.warn('[ProfilePreview] Failed to fetch Nostr activity:', err);
@@ -216,6 +222,36 @@ export function ProfilePreviewDrawer({
     };
   }, [resolvedPubkey, resolvedNpub]);
 
+  // Tab Filtering
+  const posts = useMemo(() => {
+    return nostrPosts.filter((ev) => {
+      if (ev.kind === 6) return true; // Reposts shown in posts
+      if (ev.kind === 1) {
+        const eTags = ev.tags?.filter(t => t[0] === 'e') || [];
+        return eTags.length === 0 || eTags.every(t => t[3] === 'mention');
+      }
+      return false;
+    });
+  }, [nostrPosts]);
+
+  const replies = useMemo(() => {
+    return nostrPosts.filter((ev) => {
+      if (ev.kind === 1) {
+        const eTags = ev.tags?.filter(t => t[0] === 'e') || [];
+        return eTags.length > 0 && eTags.some(t => t[3] !== 'mention');
+      }
+      return false;
+    });
+  }, [nostrPosts]);
+
+  const likes = useMemo(() => {
+    return nostrPosts.filter((ev) => ev.kind === 7);
+  }, [nostrPosts]);
+
+  const zaps = useMemo(() => {
+    return nostrPosts.filter((ev) => ev.kind === 9735);
+  }, [nostrPosts]);
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(label);
@@ -225,6 +261,8 @@ export function ProfilePreviewDrawer({
 
   const displayName = resolvedProfile.name || name || username || (resolvedNpub ? `Nostr ${resolvedNpub.slice(0, 10)}…` : 'Kylrix User');
   const displayHandle = resolvedProfile.username || username || (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : '');
+
+  const currentTabItems = activeTab === 'posts' ? posts : activeTab === 'replies' ? replies : activeTab === 'likes' ? likes : zaps;
 
   return (
     <div className={`flex flex-col bg-[#161412] text-white transition-all duration-300 w-full ${isExpanded ? 'h-[100dvh] max-h-[100dvh] rounded-none' : 'h-[60dvh] max-h-[60dvh] mt-auto rounded-t-[28px] border-t border-white/[0.08] shadow-[0_-24px_60px_rgba(0,0,0,0.85)]'}`}>
@@ -251,7 +289,6 @@ export function ProfilePreviewDrawer({
                   const nextFollows = isFollowing ? follows.filter(k => k !== targetKey) : [...follows, targetKey];
                   await LocalEngine.cacheSet('kylrix:follows', nextFollows);
                   toast.success(isFollowing ? 'Unfollowed' : 'Following');
-                  // Trigger live feed refresh with new weights
                   window.dispatchEvent(new CustomEvent('kylrix:follows-updated', { detail: nextFollows }));
                 } catch {
                   toast.error('Could not update follow');
@@ -294,8 +331,8 @@ export function ProfilePreviewDrawer({
       </div>
 
       {/* Main Profile Body */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6 min-h-0">
-        {/* Profile Header Header Box */}
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 min-h-0">
+        {/* Profile Header Box */}
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 rounded-2xl bg-[#0A0908] border border-white/[0.08] flex items-center justify-center text-xl font-black shrink-0 overflow-hidden text-emerald-400">
             {resolvedProfile.avatar ? (
@@ -324,7 +361,7 @@ export function ProfilePreviewDrawer({
 
         {/* Nostr Identity Card */}
         {resolvedNpub && (
-          <div className="rounded-xl bg-[#0A0908] border border-[#F59E0B]/20 p-3.5 space-y-2.5">
+          <div className="rounded-xl bg-[#0A0908] border border-[#F59E0B]/20 p-3 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-[#F59E0B] uppercase tracking-wider font-mono flex items-center gap-1.5">
                 <Globe size={12} /> Nostr Identity (npub)
@@ -338,116 +375,147 @@ export function ProfilePreviewDrawer({
                 {copiedKey === 'npub' ? 'Copied' : 'Copy npub'}
               </button>
             </div>
-            <div className="rounded-lg bg-[#161412] border border-white/[0.04] p-2.5 break-all text-xs font-mono text-white/90 select-all">
+            <div className="rounded-lg bg-[#161412] border border-white/[0.04] p-2 break-all text-xs font-mono text-white/90 select-all">
               {resolvedNpub}
             </div>
           </div>
         )}
 
-        {/* Tabs: Overview vs Nostr Activity */}
-        <div className="flex items-center gap-2 border-b border-white/[0.06] pb-2">
+        {/* Profile Tabs: Posts | Replies | Likes | Zaps */}
+        <div className="flex items-center gap-1.5 border-b border-white/[0.06] pb-2 overflow-x-auto no-scrollbar">
           <button
             type="button"
-            onClick={() => setActiveTab('overview')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors ${
-              activeTab === 'overview'
+            onClick={() => setActiveTab('posts')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'posts'
                 ? 'bg-white/10 text-white'
-                : 'text-white/40 hover:text-white'
+                : 'text-white/40 hover:text-white hover:bg-white/5'
             }`}
           >
-            Overview
+            <MessageSquare size={13} />
+            Posts {posts.length > 0 && `(${posts.length})`}
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('nostr-activity')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors flex items-center gap-1.5 ${
-              activeTab === 'nostr-activity'
-                ? 'bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30'
-                : 'text-white/40 hover:text-white'
+            onClick={() => setActiveTab('replies')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'replies'
+                ? 'bg-white/10 text-white'
+                : 'text-white/40 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Radio size={12} className={activeTab === 'nostr-activity' ? 'text-[#F59E0B]' : 'text-white/40'} />
-            Nostr Feed Activity {nostrPosts.length > 0 && `(${nostrPosts.length})`}
+            <MessageCircle size={13} />
+            Replies {replies.length > 0 && `(${replies.length})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('likes')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'likes'
+                ? 'bg-white/10 text-[#EC4899]'
+                : 'text-white/40 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Heart size={13} className={activeTab === 'likes' ? 'text-[#EC4899]' : ''} />
+            Likes {likes.length > 0 && `(${likes.length})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('zaps')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-colors flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'zaps'
+                ? 'bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30'
+                : 'text-white/40 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Zap size={13} className={activeTab === 'zaps' ? 'text-[#F59E0B]' : ''} />
+            Zaps {zaps.length > 0 && `(${zaps.length})`}
           </button>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === 'overview' ? (
-          <div className="space-y-3">
-            <div className="rounded-xl bg-[#0A0908] border border-white/[0.04] p-3.5 space-y-2">
-              <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider font-mono">
-                Ecosystem Details
-              </span>
-              <div className="flex flex-col gap-1.5 text-xs text-white/80 font-mono">
-                {userId && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/40">Kylrix ID:</span>
-                    <span className="text-white/70">{userId}</span>
+        {/* Tab Items Feed */}
+        <div className="space-y-3">
+          {loadingPosts && currentTabItems.length === 0 && (
+            <div className="p-4 text-center text-xs text-white/40 font-mono">
+              Fetching {activeTab} from relays & local engine…
+            </div>
+          )}
+
+          {!loadingPosts && currentTabItems.length === 0 && (
+            <div className="p-6 rounded-xl bg-[#0A0908] border border-white/[0.04] text-center text-xs text-white/40 font-mono space-y-1">
+              <p className="m-0">No {activeTab} found for this identity.</p>
+            </div>
+          )}
+
+          {currentTabItems.map((item) => {
+            const { text: postBody, images: postImages } = extractPostImages(item.content, item.tags);
+            const targetNoteTag = item.tags?.find((t) => t[0] === 'e');
+            const targetId = targetNoteTag ? targetNoteTag[1] : item.id;
+            
+            const openItem = () => {
+              onClose();
+              router.push(`/moment/nostr_${targetId}`);
+            };
+
+            return (
+              <div
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onClick={openItem}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openItem(); } }}
+                className="rounded-xl bg-[#0A0908] border border-white/[0.04] p-3.5 space-y-2 hover:border-[#F59E0B]/30 hover:bg-[#161412] transition-colors cursor-pointer"
+              >
+                <div className="flex items-center justify-between text-[11px] font-mono text-white/40">
+                  <span className="flex items-center gap-1.5">
+                    {item.kind === 1 && activeTab === 'posts' && <MessageSquare size={12} className="text-[#F59E0B]" />}
+                    {item.kind === 1 && activeTab === 'replies' && <MessageCircle size={12} className="text-[#6366F1]" />}
+                    {item.kind === 6 && <Repeat size={12} className="text-[#10B981]" />}
+                    {item.kind === 7 && <Heart size={12} className="text-[#EC4899]" />}
+                    {item.kind === 9735 && <Zap size={12} className="text-[#F59E0B]" />}
+                    <span className="capitalize">
+                      {item.kind === 1 && activeTab === 'posts' ? 'Post' :
+                       item.kind === 1 && activeTab === 'replies' ? 'Reply' :
+                       item.kind === 6 ? 'Repost' :
+                       item.kind === 7 ? 'Reaction' :
+                       item.kind === 9735 ? 'Zap' : `Kind ${item.kind}`}
+                    </span>
+                  </span>
+                  <span>{formatRelative(item.created_at)}</span>
+                </div>
+
+                {item.kind === 7 && (
+                  <p className="text-xs text-[#EC4899] font-mono m-0">
+                    Reacted {item.content && item.content !== '+' ? item.content : '❤️'} to note {targetId.slice(0, 8)}…
+                  </p>
+                )}
+
+                {item.kind === 9735 && (
+                  <p className="text-xs text-[#F59E0B] font-mono m-0">
+                    ⚡ Lightning Zap on note {targetId ? `${targetId.slice(0, 8)}…` : ''}
+                  </p>
+                )}
+
+                {postBody && item.kind !== 7 && (
+                  <p className="text-xs leading-relaxed text-white/85 font-satoshi whitespace-pre-wrap break-words m-0">
+                    {truncateMomentBody(postBody)}
+                  </p>
+                )}
+
+                {postImages.length > 0 && (
+                  <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden max-h-40">
+                    {postImages.slice(0, 2).map((img, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={i} src={img} alt="" className="w-full h-28 object-cover rounded-md" />
+                    ))}
                   </div>
                 )}
-                <div className="flex items-center justify-between">
-                  <span className="text-white/40">Source:</span>
-                  <span className="capitalize">{source}</span>
-                </div>
               </div>
-            </div>
-          </div>
-        ) : (
-          /* Nostr Activity Stream */
-          <div className="space-y-3">
-            {loadingPosts && nostrPosts.length === 0 && (
-              <div className="p-4 text-center text-xs text-white/40 font-mono">
-                Scanning configured Nostr relays for posts & replies…
-              </div>
-            )}
-
-            {!loadingPosts && nostrPosts.length === 0 && (
-              <div className="p-4 rounded-xl bg-[#0A0908] border border-white/[0.04] text-center text-xs text-white/40 font-mono">
-                No recent Nostr posts found for this identity on active relays.
-              </div>
-            )}
-
-            {nostrPosts.map((post) => {
-              const { text: postBody, images: postImages } = extractPostImages(post.content, post.tags);
-              const openPost = () => {
-                onClose();
-                router.push(`/moment/nostr_${post.id}`);
-              };
-              return (
-                <div
-                  key={post.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={openPost}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPost(); } }}
-                  className="rounded-xl bg-[#0A0908] border border-white/[0.04] p-3.5 space-y-2 hover:border-[#F59E0B]/30 hover:bg-[#161412] transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center justify-between text-[11px] font-mono text-white/40">
-                    <span className="flex items-center gap-1">
-                      <MessageSquare size={11} className="text-[#F59E0B]" />
-                      {post.kind === 1 ? 'Note' : post.kind === 6 ? 'Repost' : post.kind === 7 ? 'Reaction' : `Kind ${post.kind}`}
-                    </span>
-                    <span>{formatRelative(new Date(post.created_at * 1000).toISOString())}</span>
-                  </div>
-                  {postBody && (
-                    <p className="text-xs leading-relaxed text-white/85 font-satoshi whitespace-pre-wrap break-words m-0">
-                      {truncateMomentBody(postBody)}
-                    </p>
-                  )}
-                  {postImages.length > 0 && (
-                    <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden max-h-40">
-                      {postImages.slice(0, 2).map((img, i) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={i} src={img} alt="" className="w-full h-28 object-cover rounded-md" />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
+
