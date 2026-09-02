@@ -222,7 +222,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (initAuthStarted.current) return;
     initAuthStarted.current = true;
-    refreshUser();
+    (async () => {
+      const refreshed = await refreshUser();
+      if (!refreshed) {
+        const { salvageUserFromLocalSubstrate } = await import('@/lib/appwrite/client');
+        const salvaged = await salvageUserFromLocalSubstrate();
+        if (salvaged) {
+          setUser(salvaged as any);
+        }
+      }
+    })();
   }, [refreshUser]);
 
   useEffect(() => {

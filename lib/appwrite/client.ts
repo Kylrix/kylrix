@@ -598,6 +598,68 @@ export function clearKylrixPulse() {
     document.documentElement.removeAttribute('data-kylrix-pulse');
 }
 
+export async function salvageUserFromLocalSubstrate(): Promise<any | null> {
+    if (!canUseStorage()) return null;
+    
+    // 1. Direct snapshot
+    const snap = readCurrentUserSnapshot(true);
+    if (snap?.user?.$id) return snap.user;
+
+    // 2. Pulse
+    const pulse = getKylrixPulse();
+    if (pulse?.$id) {
+        return {
+            $id: pulse.$id,
+            name: pulse.name || null,
+            email: null,
+            profilePicId: pulse.profilePicId || null,
+            isPulse: true
+        };
+    }
+
+    // 3. Search all local storage keys for previous active users
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('kylrix_last_logged_in_user_')) {
+            try {
+                const u = JSON.parse(localStorage.getItem(k) || '');
+                if (u?.$id) return u;
+            } catch {}
+        }
+    }
+
+    // 4. Scan RxDB/IndexedDB local copy collections for existing owner rows
+    try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const [notesList, projectsList, goalsList] = await Promise.all([
+            LocalEngine.cacheGet<any[]>('f_notes_list').catch(() => null),
+            LocalEngine.cacheGet<any[]>('f_projects_list').catch(() => null),
+            LocalEngine.cacheGet<any[]>('f_goals_list').catch(() => null),
+        ]);
+
+        const sampleRows = [...(notesList || []), ...(projectsList || []), ...(goalsList || [])];
+        for (const row of sampleRows) {
+            const uid = row.userId || row.ownerId || row.creatorId || row.authorId;
+            if (uid && typeof uid === 'string') {
+                const identity = await LocalEngine.cacheGet<any>(`identity:${uid}`).catch(() => null);
+                const recovered = {
+                    $id: uid,
+                    name: identity?.displayName || identity?.username || row.userName || row.authorName || null,
+                    username: identity?.username || null,
+                    email: identity?.email || null,
+                    profilePicId: identity?.avatar || null,
+                    isSalvaged: true,
+                };
+                writeCurrentUserSnapshot(recovered);
+                setKylrixPulse(recovered);
+                return recovered;
+            }
+        }
+    } catch {}
+
+    return null;
+}
+
 export async function getCurrentUser(force = false): Promise<any | null> {
     if (!force) {
         hydrateCurrentUserCache();
@@ -606,8 +668,10 @@ export async function getCurrentUser(force = false): Promise<any | null> {
             return currentUserCache.user;
         }
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
-            const snap = readCurrentUserSnapshot();
+            const snap = readCurrentUserSnapshot(true);
             if (snap?.user) return snap.user;
+            const salvaged = await salvageUserFromLocalSubstrate();
+            if (salvaged) return salvaged;
         }
     }
 
@@ -628,28 +692,33 @@ export async function getCurrentUser(force = false): Promise<any | null> {
             emitCurrentUserChange(user);
             return user;
         })
-        .catch((error: any) => {
-            const isUnauthorized =
-                error?.code === 401 ||
-                error?.code === 'user_unauthorized' ||
-                error?.code === 'user_session_not_found' ||
-                String(error?.message || '').toLowerCase().includes('unauthorized') ||
-                String(error?.message || '').toLowerCase().includes('missing scope') ||
-                String(error?.message || '').toLowerCase().includes('not found');
+        .catch(async (error: any) => {
+            // Only true 401 unauthenticated signals when online should invalidate session
+            const isStrictUnauthorized =
+                typeof navigator !== 'undefined' &&
+                navigator.onLine &&
+                (error?.code === 401 || error?.type === 'user_unauthorized' || error?.code === 'user_unauthorized');
 
-            if (isUnauthorized) {
+            if (isStrictUnauthorized) {
                 invalidateCurrentUserCache();
                 return null;
             }
 
-            // Network/timeout blips must not log the user out mid-navigation or offline.
-            const snap = readCurrentUserSnapshot();
+            // Rate limits, billing cap, network timeouts, offline, or server errors:
+            // MUST NEVER log out the user — salvage the local authenticated user!
+            const snap = readCurrentUserSnapshot(true);
             if (snap?.user) {
                 return snap.user;
             }
             if (currentUserCache?.user) {
                 return currentUserCache.user;
             }
+
+            const salvaged = await salvageUserFromLocalSubstrate();
+            if (salvaged) {
+                return salvaged;
+            }
+
             return null;
         })
         .finally(() => {
