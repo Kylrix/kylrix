@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
@@ -13,14 +11,15 @@ import {
   MessageCircle,
   Heart,
   Zap,
-  Repeat,
-  Sparkles
+  Repeat2,
+  Share2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { NostrRelayPool, type NostrEvent } from '@/lib/nostr/nostr';
 import { getNostrReadRelays } from '@/lib/connect/feed-settings';
 import { extractPostImages, truncateMomentBody } from '@/lib/connect/moment-media';
 import { bytesToNpub, hexToBytes, npubToBytes, bytesToHex } from '@/lib/nostr/crypto';
+import { getCachedNostrProfile, queueNostrProfileFetch } from '@/lib/nostr/metadata';
 import toast from 'react-hot-toast';
 
 export type ProfileTab = 'posts' | 'replies' | 'likes' | 'zaps';
@@ -46,6 +45,97 @@ function formatRelative(ts: number | string) {
   const day = Math.floor(hr / 24);
   if (day < 7) return `${day}d`;
   return new Date(timeMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+interface UnpackedPost {
+  id: string;
+  targetId: string;
+  isRepost: boolean;
+  repostAuthor?: string;
+  authorPubkey: string;
+  content: string;
+  createdAt: number;
+  images: string[];
+  kind: number;
+  reactionEmoji?: string;
+  zapAmount?: string;
+}
+
+function unpackNostrEvent(item: NostrEvent, reposterName?: string): UnpackedPost {
+  const isRepost = item.kind === 6;
+  let targetId = item.id;
+  let rawContent = item.content || '';
+  let authorPubkey = item.pubkey;
+  let createdAt = item.created_at;
+  let reactionEmoji: string | undefined;
+  let zapAmount: string | undefined;
+
+  // Handle Reposts (NIP-18 kind 6)
+  if (isRepost) {
+    const trimmed = rawContent.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed && typeof parsed === 'object') {
+          targetId = parsed.id || item.tags?.find(t => t[0] === 'e')?.[1] || item.id;
+          rawContent = parsed.content || '';
+          authorPubkey = parsed.pubkey || item.pubkey;
+          if (parsed.created_at) createdAt = parsed.created_at;
+        }
+      } catch {}
+    } else {
+      const eTag = item.tags?.find(t => t[0] === 'e');
+      if (eTag) targetId = eTag[1];
+      const pTag = item.tags?.find(t => t[0] === 'p');
+      if (pTag) authorPubkey = pTag[1];
+    }
+  }
+
+  // Handle Reactions (kind 7)
+  if (item.kind === 7) {
+    reactionEmoji = rawContent && rawContent !== '+' ? rawContent : '❤️';
+    const eTag = item.tags?.find(t => t[0] === 'e');
+    if (eTag) targetId = eTag[1];
+    rawContent = '';
+  }
+
+  // Handle Zaps (kind 9735)
+  if (item.kind === 9735) {
+    const eTag = item.tags?.find(t => t[0] === 'e');
+    if (eTag) targetId = eTag[1];
+    const descTag = item.tags?.find(t => t[0] === 'description');
+    if (descTag?.[1]) {
+      try {
+        const descObj = JSON.parse(descTag[1]);
+        if (descObj.content) rawContent = descObj.content;
+      } catch {}
+    }
+  }
+
+  // Fallback: If content is still stringified JSON, unpack the text
+  const trimmedFinal = rawContent.trim();
+  if (trimmedFinal.startsWith('{') && trimmedFinal.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(trimmedFinal);
+      if (parsed.content) rawContent = parsed.content;
+    } catch {}
+  }
+
+  const { text: cleanText, images } = extractPostImages(rawContent, item.tags);
+
+  return {
+    id: item.id,
+    targetId: targetId || item.id,
+    isRepost,
+    repostAuthor: isRepost ? reposterName : undefined,
+    authorPubkey,
+    content: cleanText,
+    createdAt,
+    images,
+    kind: item.kind,
+    reactionEmoji,
+    zapAmount,
+  };
 }
 
 export interface ProfilePreviewDrawerProps {
@@ -184,6 +274,8 @@ export function ProfilePreviewDrawer({
         await pool.connect();
 
         const fetchedEvents: NostrEvent[] = cachedFeed ? [...cachedFeed] : [];
+        const authorsToFetch: string[] = [];
+
         pool.addListener((ev) => {
           if (cancelled) return;
           if (ev.kind === 0) {
@@ -202,12 +294,17 @@ export function ProfilePreviewDrawer({
               fetchedEvents.sort((a, b) => b.created_at - a.created_at);
               setNostrPosts([...fetchedEvents]);
               void LocalEngine.cacheSet(`nostr_profile_feed_${hex}`, fetchedEvents).catch(() => {});
+              if (ev.pubkey) authorsToFetch.push(ev.pubkey);
             }
           }
         });
 
         pool.subscribe('profile-feed', [{ kinds: [1, 6, 7, 9735], authors: [hex], limit: 60 }]);
         pool.subscribe('profile-meta', [{ kinds: [0], authors: [hex], limit: 1 }]);
+
+        if (authorsToFetch.length > 0) {
+          void queueNostrProfileFetch(Array.from(new Set(authorsToFetch)));
+        }
       } catch (err) {
         console.warn('[ProfilePreview] Failed to fetch Nostr activity:', err);
       } finally {
@@ -222,35 +319,46 @@ export function ProfilePreviewDrawer({
     };
   }, [resolvedPubkey, resolvedNpub]);
 
-  // Tab Filtering
-  const posts = useMemo(() => {
-    return nostrPosts.filter((ev) => {
-      if (ev.kind === 6) return true; // Reposts shown in posts
-      if (ev.kind === 1) {
-        const eTags = ev.tags?.filter(t => t[0] === 'e') || [];
-        return eTags.length === 0 || eTags.every(t => t[3] === 'mention');
-      }
-      return false;
-    });
-  }, [nostrPosts]);
+  const displayName = resolvedProfile.name || name || username || (resolvedNpub ? `Nostr ${resolvedNpub.slice(0, 10)}…` : 'Kylrix User');
+  const displayHandle = resolvedProfile.username || username || (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : '');
 
-  const replies = useMemo(() => {
-    return nostrPosts.filter((ev) => {
-      if (ev.kind === 1) {
-        const eTags = ev.tags?.filter(t => t[0] === 'e') || [];
-        return eTags.length > 0 && eTags.some(t => t[3] !== 'mention');
-      }
-      return false;
-    });
-  }, [nostrPosts]);
+  // Tab Filtering and Unpacking
+  const unpackedPosts = useMemo(() => {
+    return nostrPosts
+      .filter((ev) => {
+        if (ev.kind === 6) return true; // Reposts shown in posts
+        if (ev.kind === 1) {
+          const eTags = ev.tags?.filter(t => t[0] === 'e') || [];
+          return eTags.length === 0 || eTags.every(t => t[3] === 'mention');
+        }
+        return false;
+      })
+      .map((ev) => unpackNostrEvent(ev, displayName));
+  }, [nostrPosts, displayName]);
 
-  const likes = useMemo(() => {
-    return nostrPosts.filter((ev) => ev.kind === 7);
-  }, [nostrPosts]);
+  const unpackedReplies = useMemo(() => {
+    return nostrPosts
+      .filter((ev) => {
+        if (ev.kind === 1) {
+          const eTags = ev.tags?.filter(t => t[0] === 'e') || [];
+          return eTags.length > 0 && eTags.some(t => t[3] !== 'mention');
+        }
+        return false;
+      })
+      .map((ev) => unpackNostrEvent(ev, displayName));
+  }, [nostrPosts, displayName]);
 
-  const zaps = useMemo(() => {
-    return nostrPosts.filter((ev) => ev.kind === 9735);
-  }, [nostrPosts]);
+  const unpackedLikes = useMemo(() => {
+    return nostrPosts
+      .filter((ev) => ev.kind === 7)
+      .map((ev) => unpackNostrEvent(ev, displayName));
+  }, [nostrPosts, displayName]);
+
+  const unpackedZaps = useMemo(() => {
+    return nostrPosts
+      .filter((ev) => ev.kind === 9735)
+      .map((ev) => unpackNostrEvent(ev, displayName));
+  }, [nostrPosts, displayName]);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -259,10 +367,10 @@ export function ProfilePreviewDrawer({
     setTimeout(() => setCopiedKey(null), 1500);
   };
 
-  const displayName = resolvedProfile.name || name || username || (resolvedNpub ? `Nostr ${resolvedNpub.slice(0, 10)}…` : 'Kylrix User');
-  const displayHandle = resolvedProfile.username || username || (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : '');
-
-  const currentTabItems = activeTab === 'posts' ? posts : activeTab === 'replies' ? replies : activeTab === 'likes' ? likes : zaps;
+  const currentTabItems: UnpackedPost[] =
+    activeTab === 'posts' ? unpackedPosts :
+    activeTab === 'replies' ? unpackedReplies :
+    activeTab === 'likes' ? unpackedLikes : unpackedZaps;
 
   return (
     <div className={`flex flex-col bg-[#161412] text-white transition-all duration-300 w-full ${isExpanded ? 'h-[100dvh] max-h-[100dvh] rounded-none' : 'h-[60dvh] max-h-[60dvh] mt-auto rounded-t-[28px] border-t border-white/[0.08] shadow-[0_-24px_60px_rgba(0,0,0,0.85)]'}`}>
@@ -393,7 +501,7 @@ export function ProfilePreviewDrawer({
             }`}
           >
             <MessageSquare size={13} />
-            Posts {posts.length > 0 && `(${posts.length})`}
+            Posts {unpackedPosts.length > 0 && `(${unpackedPosts.length})`}
           </button>
           <button
             type="button"
@@ -405,7 +513,7 @@ export function ProfilePreviewDrawer({
             }`}
           >
             <MessageCircle size={13} />
-            Replies {replies.length > 0 && `(${replies.length})`}
+            Replies {unpackedReplies.length > 0 && `(${unpackedReplies.length})`}
           </button>
           <button
             type="button"
@@ -417,7 +525,7 @@ export function ProfilePreviewDrawer({
             }`}
           >
             <Heart size={13} className={activeTab === 'likes' ? 'text-[#EC4899]' : ''} />
-            Likes {likes.length > 0 && `(${likes.length})`}
+            Likes {unpackedLikes.length > 0 && `(${unpackedLikes.length})`}
           </button>
           <button
             type="button"
@@ -429,7 +537,7 @@ export function ProfilePreviewDrawer({
             }`}
           >
             <Zap size={13} className={activeTab === 'zaps' ? 'text-[#F59E0B]' : ''} />
-            Zaps {zaps.length > 0 && `(${zaps.length})`}
+            Zaps {unpackedZaps.length > 0 && `(${unpackedZaps.length})`}
           </button>
         </div>
 
@@ -448,13 +556,29 @@ export function ProfilePreviewDrawer({
           )}
 
           {currentTabItems.map((item) => {
-            const { text: postBody, images: postImages } = extractPostImages(item.content, item.tags);
-            const targetNoteTag = item.tags?.find((t) => t[0] === 'e');
-            const targetId = targetNoteTag ? targetNoteTag[1] : item.id;
-            
+            const authorMeta = getCachedNostrProfile(item.authorPubkey);
+            let authorName = authorMeta?.name || authorMeta?.displayName;
+            let authorHandle = authorMeta?.nip05 || (authorMeta?.name ? `@${authorMeta.name}` : undefined);
+            let authorAvatar = authorMeta?.picture;
+
+            if (!authorName) {
+              if (item.authorPubkey === resolvedPubkey) {
+                authorName = displayName;
+                authorHandle = displayHandle;
+                authorAvatar = resolvedProfile.avatar;
+              } else {
+                try {
+                  const np = bytesToNpub(hexToBytes(item.authorPubkey));
+                  authorName = `${np.slice(0, 10)}…${np.slice(-4)}`;
+                } catch {
+                  authorName = `${item.authorPubkey.slice(0, 8)}…`;
+                }
+              }
+            }
+
             const openItem = () => {
               onClose();
-              router.push(`/moment/nostr_${targetId}`);
+              router.push(`/moment/nostr_${item.targetId}`);
             };
 
             return (
@@ -464,52 +588,97 @@ export function ProfilePreviewDrawer({
                 tabIndex={0}
                 onClick={openItem}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openItem(); } }}
-                className="rounded-xl bg-[#0A0908] border border-white/[0.04] p-3.5 space-y-2 hover:border-[#F59E0B]/30 hover:bg-[#161412] transition-colors cursor-pointer"
+                className="rounded-2xl bg-[#0F0E0D] border border-white/[0.06] p-4 space-y-3 hover:border-white/[0.15] hover:bg-[#141210] transition-all cursor-pointer"
               >
-                <div className="flex items-center justify-between text-[11px] font-mono text-white/40">
-                  <span className="flex items-center gap-1.5">
-                    {item.kind === 1 && activeTab === 'posts' && <MessageSquare size={12} className="text-[#F59E0B]" />}
-                    {item.kind === 1 && activeTab === 'replies' && <MessageCircle size={12} className="text-[#6366F1]" />}
-                    {item.kind === 6 && <Repeat size={12} className="text-[#10B981]" />}
-                    {item.kind === 7 && <Heart size={12} className="text-[#EC4899]" />}
-                    {item.kind === 9735 && <Zap size={12} className="text-[#F59E0B]" />}
-                    <span className="capitalize">
-                      {item.kind === 1 && activeTab === 'posts' ? 'Post' :
-                       item.kind === 1 && activeTab === 'replies' ? 'Reply' :
-                       item.kind === 6 ? 'Repost' :
-                       item.kind === 7 ? 'Reaction' :
-                       item.kind === 9735 ? 'Zap' : `Kind ${item.kind}`}
-                    </span>
+                {/* Repost Header Indicator */}
+                {item.isRepost && (
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#10B981] font-semibold pb-1 border-b border-white/[0.04]">
+                    <Repeat2 size={13} className="text-[#10B981]" />
+                    <span>{displayName} reposted</span>
+                  </div>
+                )}
+
+                {/* Like / Reaction Header Indicator */}
+                {item.kind === 7 && (
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#EC4899] font-semibold pb-1 border-b border-white/[0.04]">
+                    <Heart size={13} fill="currentColor" className="text-[#EC4899]" />
+                    <span>{displayName} reacted {item.reactionEmoji || '❤️'}</span>
+                  </div>
+                )}
+
+                {/* Zap Header Indicator */}
+                {item.kind === 9735 && (
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#F59E0B] font-semibold pb-1 border-b border-white/[0.04]">
+                    <Zap size={13} fill="currentColor" className="text-[#F59E0B]" />
+                    <span>Lightning Zap</span>
+                  </div>
+                )}
+
+                {/* Author Info Row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-full bg-[#1C1A18] border border-white/[0.08] flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden text-white/70">
+                      {authorAvatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={authorAvatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        (authorName || '?').slice(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-white font-satoshi truncate">
+                          {authorName}
+                        </span>
+                        {authorHandle && (
+                          <span className="text-[10px] text-white/40 font-mono truncate">
+                            {authorHandle.startsWith('@') ? authorHandle : `@${authorHandle}`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-white/40 shrink-0">
+                    {formatRelative(item.createdAt)}
                   </span>
-                  <span>{formatRelative(item.created_at)}</span>
                 </div>
 
-                {item.kind === 7 && (
-                  <p className="text-xs text-[#EC4899] font-mono m-0">
-                    Reacted {item.content && item.content !== '+' ? item.content : '❤️'} to note {targetId.slice(0, 8)}…
+                {/* Clean Content Body */}
+                {item.content ? (
+                  <p className="text-xs leading-relaxed text-white/90 font-satoshi whitespace-pre-wrap break-words m-0">
+                    {truncateMomentBody(item.content)}
                   </p>
-                )}
-
-                {item.kind === 9735 && (
-                  <p className="text-xs text-[#F59E0B] font-mono m-0">
-                    ⚡ Lightning Zap on note {targetId ? `${targetId.slice(0, 8)}…` : ''}
+                ) : item.kind === 7 ? (
+                  <p className="text-xs text-white/50 font-mono m-0 italic">
+                    Reacted to note #{item.targetId.slice(0, 8)}…
                   </p>
-                )}
+                ) : null}
 
-                {postBody && item.kind !== 7 && (
-                  <p className="text-xs leading-relaxed text-white/85 font-satoshi whitespace-pre-wrap break-words m-0">
-                    {truncateMomentBody(postBody)}
-                  </p>
-                )}
-
-                {postImages.length > 0 && (
-                  <div className="grid grid-cols-2 gap-1 rounded-lg overflow-hidden max-h-40">
-                    {postImages.slice(0, 2).map((img, i) => (
+                {/* Image Media Grid */}
+                {item.images.length > 0 && (
+                  <div className={`grid gap-1.5 rounded-xl overflow-hidden max-h-48 ${item.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    {item.images.slice(0, 2).map((img, i) => (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img key={i} src={img} alt="" className="w-full h-28 object-cover rounded-md" />
+                      <img key={i} src={img} alt="" className="w-full h-36 object-cover rounded-lg" />
                     ))}
                   </div>
                 )}
+
+                {/* Bottom Action Strip */}
+                <div className="flex items-center gap-4 pt-1 text-white/30 text-[11px] font-mono">
+                  <span className="flex items-center gap-1 hover:text-white/70 transition-colors">
+                    <MessageCircle size={13} />
+                  </span>
+                  <span className="flex items-center gap-1 hover:text-[#10B981] transition-colors">
+                    <Repeat2 size={13} />
+                  </span>
+                  <span className="flex items-center gap-1 hover:text-[#EC4899] transition-colors">
+                    <Heart size={13} />
+                  </span>
+                  <span className="flex items-center gap-1 hover:text-white/70 transition-colors ml-auto">
+                    <Share2 size={12} />
+                  </span>
+                </div>
               </div>
             );
           })}
@@ -518,4 +687,5 @@ export function ProfilePreviewDrawer({
     </div>
   );
 }
+
 
