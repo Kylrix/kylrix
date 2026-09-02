@@ -328,6 +328,12 @@ export function PostViewClient({
     setLiked(!prevLiked);
     setLikes(prevLiked ? Math.max(0, prevLikes - 1) : prevLikes + 1);
     try {
+      const words = `${moment?.caption || moment?.content || nostrEvent?.content || ''}`.toLowerCase().match(/#?\w{3,}/g) || [];
+      const topics = Array.from(new Set(words.slice(0, 10)));
+      void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) =>
+        recordFeedInteraction({ topics, searchWeight: 3, isConsciousAction: true }),
+      );
+
       await toggleMomentLike({
         source,
         id: momentId,
@@ -352,6 +358,12 @@ export function PostViewClient({
     if (source === 'ecosystem' && !user) return;
     setBusy(true);
     try {
+      const words = `${text} ${moment?.caption || moment?.content || ''}`.toLowerCase().match(/#?\w{3,}/g) || [];
+      const topics = Array.from(new Set(words.slice(0, 10)));
+      void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) =>
+        recordFeedInteraction({ topics, searchWeight: 3, isConsciousAction: true }),
+      );
+
       const created = await createMomentComment({
         source,
         id: momentId,

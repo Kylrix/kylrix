@@ -125,12 +125,19 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     });
   };
 
-  const openWithAffinity = () => {
+  const openWithAffinity = (isConscious = false) => {
     try {
       const words = `${item.content || ''}`.toLowerCase().match(/#?\w{3,}/g) || [];
-      const topics = Array.from(new Set(words.slice(0, 5)));
+      const topics = Array.from(new Set(words.slice(0, 10)));
       const mediaKind = images.length ? 'image' : bodyText ? 'text' : 'other';
-      void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) => recordFeedInteraction({ topics, mediaKind }));
+      void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) =>
+        recordFeedInteraction({
+          topics,
+          mediaKind,
+          searchWeight: isConscious ? 3 : 1,
+          isConsciousAction: isConscious,
+        }),
+      );
     } catch {}
   };
 
@@ -154,7 +161,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     const prevLikes = likes;
     setLiked(!prevLiked);
     setLikes(prevLiked ? Math.max(0, prevLikes - 1) : prevLikes + 1);
-    openWithAffinity();
+    openWithAffinity(true);
 
     try {
       await toggleMomentLike({
@@ -196,7 +203,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     setBusy(true);
     setReposted(true);
     setReposts((prev) => prev + 1);
-    openWithAffinity();
+    openWithAffinity(true);
 
     try {
       const { repostMoment } = await import('@/lib/connect/moment-engagement');

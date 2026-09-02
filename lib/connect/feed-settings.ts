@@ -266,15 +266,23 @@ export function subscribeConnectFeedSettings(cb: (s: ConnectFeedSettings) => voi
 }
 
 const AFFINITY_KEY = 'kylrix_connect_affinity_v1';
-type Affinity = { interests: string[]; mediaKinds: string[]; updatedAt: number };
+type Affinity = {
+  interests: string[];
+  mediaKinds: string[];
+  engagementCounters?: Record<string, number>;
+  updatedAt: number;
+};
+
 function normalizeAffinity(raw: any): Affinity {
-  if (!raw || typeof raw !== 'object') return { interests: [], mediaKinds: [], updatedAt: 0 };
+  if (!raw || typeof raw !== 'object') return { interests: [], mediaKinds: [], engagementCounters: {}, updatedAt: 0 };
   return {
     interests: Array.isArray(raw.interests) ? raw.interests.filter((t: any) => typeof t === 'string' && t.trim()).slice(0, 30) : [],
     mediaKinds: Array.isArray(raw.mediaKinds) ? raw.mediaKinds.filter((t: any) => typeof t === 'string' && t.trim()).slice(0, 10) : [],
+    engagementCounters: raw.engagementCounters && typeof raw.engagementCounters === 'object' ? raw.engagementCounters : {},
     updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : 0,
   };
 }
+
 function isSimilarTerm(a: string, b: string): boolean {
   const cleanA = a.replace(/:\d+$/, '').replace(/^[#@]/, '').toLowerCase().trim();
   const cleanB = b.replace(/:\d+$/, '').replace(/^[#@]/, '').toLowerCase().trim();
@@ -292,32 +300,78 @@ function isSimilarTerm(a: string, b: string): boolean {
   return false;
 }
 
-export async function recordFeedInteraction(input: { topics?: string[]; mediaKind?: string; searchWeight?: number }) {
+export async function recordFeedInteraction(input: {
+  topics?: string[];
+  mediaKind?: string;
+  searchWeight?: number;
+  isConsciousAction?: boolean;
+}) {
   const weight = input.searchWeight || 1;
-  const rawTopics = (input.topics || []).map(t => String(t).toLowerCase().trim()).filter(Boolean).slice(0, 5);
+  const isConscious = Boolean(input.isConsciousAction || weight >= 2);
+  const rawTopics = (input.topics || []).map((t) => String(t).toLowerCase().trim()).filter(Boolean).slice(0, 10);
   const mediaKind = String(input.mediaKind || '').toLowerCase().trim();
   if (!rawTopics.length && !mediaKind) return;
+
   try {
     const cur = normalizeAffinity(await LocalEngine.cacheGet<any>(AFFINITY_KEY).catch(() => null));
-    
+    const currentSettings = await getConnectFeedSettings();
+    const seeLess = [...(currentSettings.seeLessTopics || [])];
+    const counters = { ...(cur.engagementCounters || {}) };
+
+    const unblockedTerms: string[] = [];
+    const graduatedTopics: string[] = [];
+
+    // Conscious repeated engagement check (e.g. liking, commenting, zapping a post 3+ times unblocks it)
+    if (isConscious && seeLess.length > 0) {
+      for (const topic of rawTopics) {
+        const cleanTopic = topic.replace(/^[#@]/, '');
+        for (const muted of seeLess) {
+          if (isSimilarTerm(topic, muted)) {
+            const count = (counters[muted] || 0) + 1;
+            counters[muted] = count;
+            if (count >= 3) {
+              unblockedTerms.push(muted);
+              graduatedTopics.push(cleanTopic);
+              delete counters[muted];
+            }
+          }
+        }
+      }
+    }
+
+    let nextSeeLess = seeLess;
+    if (unblockedTerms.length > 0) {
+      nextSeeLess = seeLess.filter((t) => !unblockedTerms.includes(t));
+    }
+
     // Deduplicate against existing topics using dynamic stem/fuzzy matching
-    const filteredNewTopics = rawTopics.filter(newT => {
-      return !cur.interests.some(existing => isSimilarTerm(newT, existing));
+    const filteredNewTopics = rawTopics.filter((newT) => {
+      return !cur.interests.some((existing) => isSimilarTerm(newT, existing));
     });
 
-    const formattedTopics = weight > 1 ? filteredNewTopics.map(t => `${t}:${weight}`) : filteredNewTopics;
-    const nextInterests = Array.from(new Set([...formattedTopics, ...cur.interests])).slice(0, 30);
+    const formattedTopics = weight > 1 ? filteredNewTopics.map((t) => `${t}:${weight}`) : filteredNewTopics;
+    const nextInterests = Array.from(
+      new Set([...graduatedTopics.map((t) => `${t}:2`), ...formattedTopics, ...cur.interests]),
+    ).slice(0, 30);
     const nextMedia = mediaKind ? Array.from(new Set([mediaKind, ...cur.mediaKinds])).slice(0, 10) : cur.mediaKinds;
-    const next: Affinity = { interests: nextInterests, mediaKinds: nextMedia, updatedAt: Date.now() };
+    const next: Affinity = {
+      interests: nextInterests,
+      mediaKinds: nextMedia,
+      engagementCounters: counters,
+      updatedAt: Date.now(),
+    };
     await LocalEngine.cacheSet(AFFINITY_KEY, next);
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix-connect-affinity', { detail: next }));
-    // Merge affinity interests into live settings (offline + synced, curated phrases)
-    if (formattedTopics.length) {
-      const current = await getConnectFeedSettings();
-      const mergedInterests = Array.from(new Set([...formattedTopics, ...current.interests])).slice(0, 20);
-      if (mergedInterests.join('|') !== current.interests.join('|')) {
-        await setConnectFeedSettings({ interests: mergedInterests });
-      }
+
+    // Merge affinity interests and unblockings into live settings
+    if (unblockedTerms.length > 0 || formattedTopics.length) {
+      const mergedInterests = Array.from(
+        new Set([...graduatedTopics.map((t) => `${t}:2`), ...formattedTopics, ...currentSettings.interests]),
+      ).slice(0, 30);
+      await setConnectFeedSettings({
+        seeLessTopics: nextSeeLess,
+        interests: mergedInterests,
+      });
     }
   } catch {}
 }
@@ -409,20 +463,26 @@ export async function addSeeLessTopics(newTopics: string[]): Promise<ConnectFeed
     return !normalizedNew.some((neg) => isSimilarTerm(neg, topic));
   });
 
-  // Purge from local affinity engine as well
+  // Purge from local affinity engine as well and reset engagement counters
   try {
     const curAffinity = normalizeAffinity(await LocalEngine.cacheGet<any>(AFFINITY_KEY).catch(() => null));
+    const counters = { ...(curAffinity.engagementCounters || {}) };
+    for (const t of normalizedNew) {
+      delete counters[t];
+    }
     const cleanedAffinityInterests = curAffinity.interests.filter((interest) => {
       return !normalizedNew.some((neg) => isSimilarTerm(neg, interest));
     });
     const updatedAffinity: Affinity = {
       ...curAffinity,
       interests: cleanedAffinityInterests,
+      engagementCounters: counters,
       updatedAt: Date.now(),
     };
     await LocalEngine.cacheSet(AFFINITY_KEY, updatedAffinity);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('kylrix-connect-affinity', { detail: updatedAffinity }));
+      window.dispatchEvent(new CustomEvent('kylrix:see-less', { detail: { topics: normalizedNew } }));
     }
   } catch {}
 
