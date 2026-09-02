@@ -33,11 +33,9 @@ function mergeEvents(prev: NostrEvent[], incoming: NostrEvent[]): NostrEvent[] {
 }
 
 function persistFeed(next: NostrEvent[]) {
-  try {
-    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(next.slice(0, MAX_EVENTS)));
-  } catch {
-    /* ignore quota */
-  }
+  void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+    void LocalEngine.cacheSet(LOCAL_CACHE_KEY, next.slice(0, MAX_EVENTS)).catch(() => {});
+  });
 }
 
 export function useNostrFeed() {
@@ -112,21 +110,16 @@ export function useNostrFeed() {
   );
 
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem(LOCAL_CACHE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached) as NostrEvent[];
-        if (Array.isArray(parsed) && parsed.length) {
-          setFeed(parsed);
-          const authorPubkeys = Array.from(new Set(parsed.map((e) => e.pubkey).filter(Boolean)));
-          if (authorPubkeys.length) {
-            void queueNostrProfileFetch(authorPubkeys);
-          }
+    void import('@/lib/services/LocalEngine').then(async ({ LocalEngine }) => {
+      const cached = await LocalEngine.cacheGet<NostrEvent[]>(LOCAL_CACHE_KEY).catch(() => null);
+      if (Array.isArray(cached) && cached.length) {
+        setFeed(cached);
+        const authorPubkeys = Array.from(new Set(cached.map((e) => e.pubkey).filter(Boolean)));
+        if (authorPubkeys.length) {
+          void queueNostrProfileFetch(authorPubkeys);
         }
       }
-    } catch {
-      console.warn('Failed to load Nostr cache');
-    }
+    });
   }, []);
 
   // Connect and subscribe to relays based on user configured read relays & declared interests

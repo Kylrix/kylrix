@@ -94,8 +94,19 @@ export function useNostrIdentity() {
         console.warn('Failed to generate JWT (possible guest session):', err);
       }
 
-      // Check all registered identities on server
-      const rows = await listNostrIdentitiesAction({ jwt: jwtToken });
+      // Check all registered identities on server with LocalEngine cache fallback
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      const localEncryptedCacheKey = `nostr:identities_encrypted_${user.$id}`;
+      let rows: any[] = [];
+      try {
+        rows = await listNostrIdentitiesAction({ jwt: jwtToken });
+        if (rows && rows.length > 0) {
+          void LocalEngine.cacheSet(localEncryptedCacheKey, rows).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('[useNostrIdentity] Server identity query failed, loading from local offline cache:', err);
+        rows = (await LocalEngine.cacheGet<any[]>(localEncryptedCacheKey).catch(() => [])) || [];
+      }
 
       if (rows && rows.length > 0) {
         const decryptedList: NostrIdentity[] = [];
@@ -120,23 +131,23 @@ export function useNostrIdentity() {
           }
         }
 
-        setIdentities(decryptedList);
-        const active = decryptedList.find(i => i.isDefault) || decryptedList[0] || null;
-        const hydratedActive = hydrateNostrIdentity(active);
-        setIdentity(hydratedActive);
-        if (hydratedActive) {
-          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+        if (decryptedList.length > 0) {
+          setIdentities(decryptedList);
+          const active = decryptedList.find(i => i.isDefault) || decryptedList[0] || null;
+          const hydratedActive = hydrateNostrIdentity(active);
+          setIdentity(hydratedActive);
+          if (hydratedActive) {
             void LocalEngine.cacheSet('nostr:active_identity', hydratedActive);
-          });
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: hydratedActive }));
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: hydratedActive }));
+            }
           }
+          setLoading(false);
+          return active;
         }
-        setLoading(false);
-        return active;
       }
 
-      // No identities exist yet — Mint default deterministic Nostr key from user MEK
+      // No identities exist or backend unreachable — Mint default deterministic Nostr key from user MEK (100% offline)
       const rawMek = await window.crypto.subtle.exportKey("raw", masterKey);
       const privKeyBytes = new Uint8Array(sha256(new Uint8Array(rawMek)));
       const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
@@ -144,24 +155,8 @@ export function useNostrIdentity() {
       const npub = bytesToNpub(pubKeyBytes);
       const nsec = bytesToNsec(privKeyBytes);
 
-      // Encrypt the hex representation of the nsec using MEK
-      const hexNsec = bytesToHex(privKeyBytes);
-      const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
-
-      // Store in Appwrite database
-      const reg = await registerNostrIdentityAction({
-        npub,
-        encryptedNsec,
-        iv: 'aes-gcm-iv',
-        salt: 'mek-derived-salt',
-        label: 'Default Kylrix Key',
-        isDerived: true,
-        makeDefault: true,
-        jwt: jwtToken
-      });
-
       const newIdentity = hydrateNostrIdentity({
-        id: reg.id,
+        id: `derived_${npub.slice(0, 16)}`,
         npub,
         nsec,
         label: 'Default Kylrix Key',
@@ -172,12 +167,41 @@ export function useNostrIdentity() {
 
       setIdentity(newIdentity);
       setIdentities([newIdentity]);
-      void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
-        void LocalEngine.cacheSet('nostr:active_identity', newIdentity);
-      });
+      void LocalEngine.cacheSet('nostr:active_identity', newIdentity);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: newIdentity }));
       }
+
+      // Non-blocking background sync to Appwrite database if available
+      void (async () => {
+        try {
+          const hexNsec = bytesToHex(privKeyBytes);
+          const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
+          const reg = await registerNostrIdentityAction({
+            npub,
+            encryptedNsec,
+            iv: 'aes-gcm-iv',
+            salt: 'mek-derived-salt',
+            label: 'Default Kylrix Key',
+            isDerived: true,
+            makeDefault: true,
+            jwt: jwtToken
+          });
+          if (reg?.id) {
+            void LocalEngine.cacheSet(localEncryptedCacheKey, [{
+              id: reg.id,
+              npub,
+              encryptedNsec,
+              label: 'Default Kylrix Key',
+              isDefault: true,
+              isDerived: true,
+            }]).catch(() => {});
+          }
+        } catch {
+          // Offline or budget capped — local key is already active and working
+        }
+      })();
+
       setLoading(false);
       return newIdentity;
     } catch (err: any) {
