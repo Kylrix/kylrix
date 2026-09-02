@@ -150,7 +150,20 @@ export function useNostrIdentity() {
 
         if (decryptedList.length > 0) {
           setIdentities(decryptedList);
-          const active = decryptedList.find(i => i.isDefault) || decryptedList[0];
+
+          // Check if user previously selected or imported a specific active key
+          const cachedActive = await LocalEngine.cacheGet<NostrIdentity>('nostr:active_identity').catch(() => null);
+          const matchedCached = cachedActive?.npub
+            ? decryptedList.find((i) => i.npub === cachedActive.npub)
+            : null;
+
+          // Priority: (1) explicitly cached active -> (2) isDefault -> (3) imported non-derived -> (4) first
+          const active =
+            matchedCached ||
+            decryptedList.find((i) => i.isDefault) ||
+            decryptedList.find((i) => !i.isDerived) ||
+            decryptedList[0];
+
           const hydratedActive = hydrateNostrIdentity(active);
           setIdentity(hydratedActive);
           if (hydratedActive) {
@@ -159,7 +172,13 @@ export function useNostrIdentity() {
               window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: hydratedActive }));
             }
           }
-          void LocalEngine.cacheSet(localEncryptedCacheKey, allRows).catch(() => {});
+
+          // Keep local rows synchronized with the active default
+          const normalizedRows = allRows.map((r) => ({
+            ...r,
+            isDefault: r.npub === active.npub,
+          }));
+          void LocalEngine.cacheSet(localEncryptedCacheKey, normalizedRows).catch(() => {});
           setLoading(false);
           return hydratedActive;
         }
