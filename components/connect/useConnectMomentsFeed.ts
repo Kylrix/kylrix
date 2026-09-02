@@ -10,6 +10,11 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getCachedNostrProfile, queueNostrProfileFetch } from '@/lib/nostr/metadata';
 import { parseInterestsWithWeights } from '@/lib/ecosystem/intelligence-topics';
+import {
+  isContentBlockedBySeeLess,
+  isMomentHiddenLocally,
+  hideMomentLocally,
+} from '@/lib/connect/feed-settings';
 
 export interface UnifiedFeedItem {
   id: string;
