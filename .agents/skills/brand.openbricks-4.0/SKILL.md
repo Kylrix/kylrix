@@ -80,8 +80,11 @@ OpenBricks 4.0 evolves the Kylrix design language from rigid, corporate SaaS con
 
 - **Eliminate Single-Pill Full-Width Wastage**:
   - If two complementary actions exist (e.g. `GitHub` + `Discord`, `Wallet` + `Settings`), group them into a dynamic 2-column grid (`grid grid-cols-2 gap-1.25`) with centered labels.
+- **Mobile Icons-Only Actions**:
+  - On mobile viewports, prefer icons only instead of icon + text for action buttons, tabs, and triggers (except where there is abundant screen space). Use `hidden sm:inline` on labels with descriptive `title` and `aria-label` tags.
 - **Top Dismiss Action**:
   - Always place a compact, circular close button (`✕`, `30px`–`32px`, `rounded-full`, `bg-white/[0.05]`) at the top right of panels so mobile users can immediately dismiss without relying solely on drag gestures.
+
 
 ---
 
