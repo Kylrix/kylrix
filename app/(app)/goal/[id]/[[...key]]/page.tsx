@@ -18,9 +18,10 @@ export default async function SharedGoalPage({
     notFound();
   }
 
-  const goal = await getPublicGoalDataSecure(id);
+  const goal = await getPublicGoalDataSecure(id).catch(() => null);
   return (
     <SharedGoalClient
+      goalId={id}
       goal={goal}
       dekFragment={key?.join('/') || undefined}
     />

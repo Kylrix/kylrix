@@ -38,31 +38,48 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     return;
                 }
 
-                const user = await FormsService.getCurrentUser();
+                const user = await FormsService.getCurrentUser().catch(() => null);
                 setCurrentUser(user);
 
-                const data = await fetchOptimized(`f_form_schema_${resolvedParams.id}`, () => 
-                    FormsService.getForm(resolvedParams.id)
-                );
-                
-                let settings: any = {};
-                try {
-                    settings = JSON.parse(data.settings || '{}');
-                } catch (_e) {}
+                const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
 
-                const isOwner = user?.$id === data.userId;
+                await SharedOfflineSubstrate.syncSharedRoute<Forms>({
+                    kind: 'form',
+                    id: resolvedParams.id,
+                    currentUserId: user?.$id,
+                    onLocalHit: (cachedData) => {
+                        setForm(cachedData);
+                        setLoading(false);
+                    },
+                    fetchRemote: async () => {
+                        return await FormsService.getForm(resolvedParams.id);
+                    },
+                    isAccessibleRemote: (data, uid) => {
+                        let settings: any = {};
+                        try {
+                            settings = JSON.parse(data.settings || '{}');
+                        } catch (_e) {}
 
-                if (!isOwner && data.status !== 'published' && data.isPublic !== true) {
-                    setError('This form is private and not currently accepting public submissions.');
-                    return;
-                }
-
-                if (!isOwner && settings.expiresAt && new Date(settings.expiresAt) < new Date()) {
-                    setError('This form has expired and is no longer accepting responses.');
-                    return;
-                }
-
-                setForm(data);
+                        const isOwner = Boolean(uid && uid === data.userId);
+                        if (!isOwner && data.status !== 'published' && data.isPublic !== true) {
+                            return false;
+                        }
+                        if (!isOwner && settings.expiresAt && new Date(settings.expiresAt) < new Date()) {
+                            return false;
+                        }
+                        return true;
+                    },
+                    onRemoteSuccess: (data) => {
+                        setForm(data);
+                        setError(null);
+                        setLoading(false);
+                    },
+                    onAccessRevoked: (reason) => {
+                        setForm(null);
+                        setError(reason === 'not-found' ? 'Form not found or inaccessible.' : 'This form is private and not currently accepting responses.');
+                        setLoading(false);
+                    },
+                });
 
                 // Load existing draft/local data from RxDB LocalEngine
                 const localKey = `form_draft_${resolvedParams.id}`;
@@ -94,7 +111,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
             }
         };
         fetchForm();
-    }, [resolvedParams.id, fetchOptimized]);
+    }, [resolvedParams.id]);
 
     // Autosave logic with RxDB LocalEngine
     useEffect(() => {

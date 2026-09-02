@@ -80,27 +80,83 @@ function AccessUnavailable() {
 }
 
 export default function SharedGoalClient({
+  goalId,
   goal,
   dekFragment,
 }: {
+  goalId?: string;
   goal: PublicGoal | null;
   dekFragment?: string;
 }) {
+  const [currentGoal, setCurrentGoal] = useState<PublicGoal | null>(goal);
   const [view, setView] = useState<PublicGoal | null>(goal);
   const [error, setError] = useState<string | null>(null);
+  const [accessDenied, setAccessDenied] = useState<boolean>(false);
 
+  // ── Offline substrate & remote sync ────────────────────────────────────────
+  useEffect(() => {
+    let active = true;
+    if (!goalId) return;
+
+    void (async () => {
+      try {
+        const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
+        const { getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
+        const currentUser = getCurrentUserSnapshot();
+
+        await SharedOfflineSubstrate.syncSharedRoute<PublicGoal>({
+          kind: 'goal',
+          id: goalId,
+          currentUserId: currentUser?.$id,
+          onLocalHit: (cachedGoal) => {
+            if (active) {
+              setCurrentGoal(cachedGoal);
+            }
+          },
+          fetchRemote: async () => {
+            const { getPublicGoalDataSecure } = await import('@/lib/actions/secure-ops');
+            return (await getPublicGoalDataSecure(goalId)) as PublicGoal;
+          },
+          onRemoteSuccess: (freshGoal) => {
+            if (active) {
+              setCurrentGoal(freshGoal);
+              setAccessDenied(false);
+            }
+          },
+          onAccessRevoked: () => {
+            if (active) {
+              setAccessDenied(true);
+              setCurrentGoal(null);
+              setView(null);
+            }
+          },
+        });
+      } catch {
+        if (!currentGoal && !goal && active) {
+          setAccessDenied(true);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [goalId]);
+
+  // ── Decryption & View State ────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
+    const target = currentGoal || goal;
     async function run() {
-      if (!goal) return;
-      if (!goal.locked) {
-        setView(goal);
+      if (!target) return;
+      if (!target.locked) {
+        setView(target);
         return;
       }
       if (!dekFragment) {
         setError('This goal is locked. Open the full share link that includes the key.');
         setView({
-          ...goal,
+          ...target,
           title: 'Locked goal',
           description: null,
         });
@@ -108,18 +164,18 @@ export default function SharedGoalClient({
       }
       try {
         const dek = await importDek(dekFragment);
-        const title = await decryptWithDek(goal.title, dek);
-        const description = goal.description
-          ? await decryptWithDek(goal.description, dek)
+        const title = await decryptWithDek(target.title, dek);
+        const description = target.description
+          ? await decryptWithDek(target.description, dek)
           : null;
         if (!cancelled) {
-          setView({ ...goal, title, description, locked: false });
+          setView({ ...target, title, description, locked: false });
           setError(null);
         }
       } catch (err: any) {
         if (!cancelled) {
           setError(err?.message || 'Could not unlock this goal with the provided key.');
-          setView({ ...goal, title: 'Locked goal', description: null });
+          setView({ ...target, title: 'Locked goal', description: null });
         }
       }
     }
@@ -127,9 +183,9 @@ export default function SharedGoalClient({
     return () => {
       cancelled = true;
     };
-  }, [goal, dekFragment]);
+  }, [currentGoal, goal, dekFragment]);
 
-  if (!goal) return <AccessUnavailable />;
+  if (accessDenied || (!currentGoal && !goal && !view)) return <AccessUnavailable />;
   if (!view) return null;
 
   const priorityColor = PRIORITY_COLORS[String(view.priority)] || PRIORITY_COLORS.medium;

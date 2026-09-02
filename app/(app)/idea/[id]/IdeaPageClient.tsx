@@ -133,55 +133,54 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
   const resolveAccess = useCallback(async (forceRefresh = false): Promise<void> => {
     if (authLoading) return;
 
-    if (!forceRefresh) {
-      const cached = getCachedData<Notes>(CACHE_KEY);
-      if (cached && (cached as any).isTrash !== true && (cached as any).isDeleted !== true) {
-        // Resolve role from cache quickly
-        try {
-          const decrypted = await decryptNoteIfNeeded(cached, decryptionKey);
-          const role = computeRole(decrypted, user?.$id);
-          if (role !== 'none') {
-            setAccess({ role: role as any, note: decrypted });
-            // Still fetch fresh in background — fall through
-          }
-        } catch {}
-      }
-    }
-
     try {
-      const { getSharedNoteData } = await import('@/lib/actions/client-ops');
-      const raw = await getSharedNoteData(noteId);
+      const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
 
-      if (!raw || (raw as any).isTrash === true || (raw as any).isDeleted === true) {
-        setAccess({ role: 'none', reason: 'not-found' });
-        return;
-      }
-
-      // thread expiry check
-      const meta = parseNoteMeta(raw);
-      if (meta.isthread && meta.expiresAt && new Date(meta.expiresAt) < new Date()) {
-        setAccess({ role: 'none', reason: 'expired' });
-        return;
-      }
-
-      // Decrypt if needed
-      let note: Notes;
-      try {
-        note = await decryptNoteIfNeeded(raw, decryptionKey);
-      } catch {
-        // Encrypted but no key — still let owner/collab in; they can see raw
-        note = raw;
-      }
-
-      const role = computeRole(note, user?.$id);
-
-      if (role === 'none') {
-        setAccess({ role: 'none', reason: 'no-access' });
-        return;
-      }
-
-      setCachedData(CACHE_KEY, note, 1000 * 60 * 30);
-      setAccess({ role: role as any, note });
+      await SharedOfflineSubstrate.syncSharedRoute<Notes>({
+        kind: 'note',
+        id: noteId,
+        currentUserId: user?.$id,
+        onLocalHit: async (cachedRaw) => {
+          try {
+            const decrypted = await decryptNoteIfNeeded(cachedRaw, decryptionKey);
+            const role = computeRole(decrypted, user?.$id);
+            if (role !== 'none') {
+              setAccess({ role: role as any, note: decrypted });
+            }
+          } catch {}
+        },
+        fetchRemote: async () => {
+          const { getSharedNoteData } = await import('@/lib/actions/client-ops');
+          return await getSharedNoteData(noteId);
+        },
+        isAccessibleRemote: (raw, uid) => {
+          const meta = parseNoteMeta(raw);
+          if (meta.isthread && meta.expiresAt && new Date(meta.expiresAt) < new Date()) {
+            return false;
+          }
+          const role = computeRole(raw, uid);
+          return role !== 'none';
+        },
+        onRemoteSuccess: async (raw) => {
+          let note: Notes;
+          try {
+            note = await decryptNoteIfNeeded(raw, decryptionKey);
+          } catch {
+            note = raw;
+          }
+          const role = computeRole(note, user?.$id);
+          if (role === 'none') {
+            await SharedOfflineSubstrate.evictShared('note', noteId);
+            setAccess({ role: 'none', reason: 'no-access' });
+            return;
+          }
+          setCachedData(CACHE_KEY, note, 1000 * 60 * 30);
+          setAccess({ role: role as any, note });
+        },
+        onAccessRevoked: (reason) => {
+          setAccess({ role: 'none', reason });
+        },
+      });
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('not found') || msg.includes('404')) {
@@ -190,7 +189,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
         setAccess({ role: 'none', reason: 'no-access' });
       }
     }
-  }, [authLoading, user?.$id, noteId, decryptionKey, CACHE_KEY, getCachedData, setCachedData]);
+  }, [authLoading, user?.$id, noteId, decryptionKey, CACHE_KEY, setCachedData]);
 
   function computeRole(note: Notes, userId?: string): NoteAccessRole | 'none' {
     const ownerId = resolveResourceOwnerId(note as Record<string, unknown>);
