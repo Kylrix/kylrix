@@ -121,16 +121,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
       clearSessionProjectsList();
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      const [rows, localShared] = await Promise.all([
+      const [rows, localShared, directUserProjects, globalProjects] = await Promise.all([
         warmProjectsList({
           userId: userId || 'guest',
           getCachedDataAsync,
           fetchOptimized,
-        }),
+        }).catch(() => []),
         LocalEngine.cacheGet<WorkspaceItem[]>(`visited_shared_workspaces_${userId}`).catch(() => []),
+        LocalEngine.cacheGet<any[]>(`f_projects_list_${userId}`).catch(() => []),
+        LocalEngine.cacheGet<any[]>('f_projects_list').catch(() => []),
       ]);
 
-      const mapped = mapProjectRows(rows);
+      const candidateRows = (Array.isArray(rows) && rows.length > 0)
+        ? rows
+        : (Array.isArray(directUserProjects) && directUserProjects.length > 0)
+          ? directUserProjects
+          : (Array.isArray(globalProjects) ? globalProjects : []);
+
+      const mapped = mapProjectRows(candidateRows);
       const mappedLocal = Array.isArray(localShared)
         ? localShared.filter((s) => s.id && s.id !== personalWorkspace.id)
         : [];
@@ -142,7 +150,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         if (!byId.has(w.id)) byId.set(w.id, { ...w, isShared: true, isPersonal: false });
       }
 
-      setWorkspaces([personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)]);
+      setWorkspaces((prev) => {
+        // Retain any existing non-personal workspaces if fetch returns fewer
+        for (const existing of prev) {
+          if (existing.id && existing.id !== personalWorkspace.id && !byId.has(existing.id)) {
+            byId.set(existing.id, existing);
+          }
+        }
+        return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+      });
     } catch (err) {
       console.warn('[WorkspaceContext] Failed to load workspaces:', err);
     } finally {
@@ -519,6 +535,20 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           ...prev.filter((w) => w.id !== personalWorkspace.id && w.id !== newItem.id),
         ]);
         setActiveWorkspaceIdState(created.$id);
+
+        // Instantly write to LocalEngine caches
+        try {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cacheKey = `f_projects_list_${userId}`;
+          const currentCached = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
+          const updatedProjects = [
+            created,
+            ...currentCached.filter((p: any) => (p.$id || p.id) !== created.$id),
+          ];
+          await LocalEngine.cacheSet(cacheKey, updatedProjects);
+          await LocalEngine.cacheSet('f_projects_list', updatedProjects);
+        } catch {}
+
         void refreshWorkspaces();
         return newItem;
       } catch (err) {

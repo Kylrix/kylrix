@@ -31,20 +31,43 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
 
   const { LocalEngine } = await import('@/lib/services/LocalEngine');
   const cacheKey = `f_projects_list_${deps.userId}`;
-  const rows = filterRootWorkspaceProjects(
-    normalizeProjectsList(
-      await LocalEngine.query(
-        cacheKey,
-        async () => (await ProjectsService.listProjects(true)).rows as any,
-        { ttl: PROJECTS_LIST_TTL, realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents` }
-      )
-    )
-  );
-  setSessionProjectsList(rows, deps.userId);
   try {
-    void LocalEngine.cacheSet(cacheKey, rows);
-  } catch {
-    /* optional */
+    const raw = await LocalEngine.query(
+      cacheKey,
+      async () => {
+        const res = await ProjectsService.listProjects(true).catch(() => null);
+        return (res?.rows || []) as any;
+      },
+      {
+        ttl: PROJECTS_LIST_TTL,
+        realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents`,
+      }
+    );
+    const rows = filterRootWorkspaceProjects(normalizeProjectsList(raw));
+    if (rows.length > 0) {
+      setSessionProjectsList(rows, deps.userId);
+      try {
+        void LocalEngine.cacheSet(cacheKey, rows);
+      } catch {}
+      return rows;
+    }
+  } catch (err) {
+    console.warn('[warmProjectsList] Remote query failed, falling back to local cache:', err);
   }
-  return rows;
+
+  // Fallback to local cache directly
+  try {
+    const [userCached, globalCached] = await Promise.all([
+      LocalEngine.cacheGet<any[]>(cacheKey).catch(() => null),
+      LocalEngine.cacheGet<any[]>('f_projects_list').catch(() => null),
+    ]);
+    const cached = (Array.isArray(userCached) && userCached.length > 0) ? userCached : globalCached;
+    const rows = filterRootWorkspaceProjects(normalizeProjectsList(cached));
+    if (rows.length > 0) {
+      setSessionProjectsList(rows, deps.userId);
+      return rows;
+    }
+  } catch {}
+
+  return [];
 }
