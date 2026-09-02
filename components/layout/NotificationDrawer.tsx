@@ -111,33 +111,7 @@ export function NotificationDrawer({
     notificationsRef.current = notifications;
   }, [notifications]);
 
-  const userId = user?.$id || 'guest';
-  const cacheKey = `kylrix_activity_notifications_${userId}`;
-
-  // 1. Load persisted read/dismissed state
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const savedRead = window.localStorage.getItem(`kylrix_notif_read_${userId}`);
-      if (savedRead) setReadIds(new Set(JSON.parse(savedRead)));
-
-      const savedDismissed = window.localStorage.getItem(`kylrix_notif_dismissed_${userId}`);
-      if (savedDismissed) setDismissedIds(new Set(JSON.parse(savedDismissed)));
-    } catch {}
-  }, [userId]);
-
-  // 2. 0ms Initial Cache Hydration from LocalEngine
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    void (async () => {
-      const cached = await LocalEngine.cacheGet<KylrixNotification[]>(cacheKey, 600_000).catch(() => null);
-      if (Array.isArray(cached) && cached.length > 0) {
-        setNotifications(cached);
-      }
-    })();
-  }, [cacheKey]);
-
-  // 3. Extract user pubkey (Hex and Npub)
+  // 1. Extract user pubkey (Hex and Npub)
   const userPubkeyHex = useMemo(() => {
     if (!identity?.npub) return null;
     try {
@@ -147,6 +121,37 @@ export function NotificationDrawer({
       return null;
     }
   }, [identity?.npub]);
+
+  const userId = user?.$id || 'guest';
+  const notifPartitionKey = `${userId}_${userPubkeyHex ? userPubkeyHex.slice(0, 16) : 'default'}`;
+  const cacheKey = `kylrix_activity_notifications_${notifPartitionKey}`;
+  const readStorageKey = `kylrix_notif_read_${notifPartitionKey}`;
+  const dismissedStorageKey = `kylrix_notif_dismissed_${notifPartitionKey}`;
+
+  // 2. Load persisted read/dismissed state for this specific account/identity
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const savedRead = window.localStorage.getItem(readStorageKey);
+      setReadIds(savedRead ? new Set(JSON.parse(savedRead)) : new Set());
+
+      const savedDismissed = window.localStorage.getItem(dismissedStorageKey);
+      setDismissedIds(savedDismissed ? new Set(JSON.parse(savedDismissed)) : new Set());
+    } catch {}
+  }, [readStorageKey, dismissedStorageKey]);
+
+  // 3. 0ms Initial Cache Hydration from LocalEngine for this partition
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    void (async () => {
+      const cached = await LocalEngine.cacheGet<KylrixNotification[]>(cacheKey, 600_000).catch(() => null);
+      if (Array.isArray(cached)) {
+        setNotifications(cached);
+      } else {
+        setNotifications([]);
+      }
+    })();
+  }, [cacheKey]);
 
   // 4. Stable Activity Harvesting from LocalEngine & Nostr (Throttled, 0 loop)
   const harvestLiveActivity = useCallback(async (force: boolean = false) => {
@@ -443,7 +448,7 @@ export function NotificationDrawer({
     setReadIds((prev) => {
       const next = new Set(prev).add(id);
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem(`kylrix_notif_read_${userId}`, JSON.stringify(Array.from(next)));
+        window.localStorage.setItem(readStorageKey, JSON.stringify(Array.from(next)));
       }
       return next;
     });
@@ -454,7 +459,7 @@ export function NotificationDrawer({
     const next = new Set([...Array.from(readIds), ...allIds]);
     setReadIds(next);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(`kylrix_notif_read_${userId}`, JSON.stringify(Array.from(next)));
+      window.localStorage.setItem(readStorageKey, JSON.stringify(Array.from(next)));
     }
   };
 
@@ -463,7 +468,7 @@ export function NotificationDrawer({
     setDismissedIds((prev) => {
       const next = new Set(prev).add(id);
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem(`kylrix_notif_dismissed_${userId}`, JSON.stringify(Array.from(next)));
+        window.localStorage.setItem(dismissedStorageKey, JSON.stringify(Array.from(next)));
       }
       return next;
     });

@@ -102,21 +102,35 @@ export function ProfilePreviewDrawer({
   }, [initialNpub, resolvedPubkey]);
 
   // When an ecosystem userId is provided but no npub/pubkey was passed,
-  // look up the user's linked Nostr identity from their profile record.
+  // look up the user's linked Nostr identity from LocalEngine cache first, then profile record.
   useEffect(() => {
     if (!userId || resolvedNpub || resolvedPubkey) return;
     let cancelled = false;
     void (async () => {
       try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const localIdentity = await LocalEngine.cacheGet<any>(`identity:${userId}`).catch(() => null);
+        if (localIdentity && !cancelled) {
+          const storedNpub: string | undefined = localIdentity.nostrNpub || localIdentity.npub || (localIdentity.publicKey?.startsWith('npub') ? localIdentity.publicKey : undefined);
+          const storedPubkey: string | undefined = localIdentity.nostrPubkey || localIdentity.pubkey || (localIdentity.publicKey && !localIdentity.publicKey.startsWith('npub') ? localIdentity.publicKey : undefined);
+          if (storedNpub && !resolvedNpub) setResolvedNpub(storedNpub);
+          if (storedPubkey && !resolvedPubkey) setResolvedPubkey(storedPubkey);
+          setResolvedProfile(prev => ({
+            name: prev.name || localIdentity.displayName || localIdentity.name,
+            username: prev.username || localIdentity.username,
+            avatar: prev.avatar || localIdentity.avatar || localIdentity.avatarUrl,
+            bio: prev.bio || localIdentity.bio,
+          }));
+          return;
+        }
+
         const { UsersService } = await import('@/lib/services/users');
         const prof = await UsersService.getProfileById(userId).catch(() => null);
         if (cancelled || !prof) return;
-        // Prefer stored npub field, fall back to stored pubkey
         const storedNpub: string | undefined = (prof as any).nostrNpub || (prof as any).npub;
         const storedPubkey: string | undefined = (prof as any).nostrPubkey || (prof as any).pubkey;
         if (storedNpub && !resolvedNpub) setResolvedNpub(storedNpub);
         if (storedPubkey && !resolvedPubkey) setResolvedPubkey(storedPubkey);
-        // Also fill in profile data if not yet set
         setResolvedProfile(prev => ({
           name: prev.name || prof.displayName || prof.name,
           username: prev.username || prof.username,
@@ -126,10 +140,9 @@ export function ProfilePreviewDrawer({
       } catch {}
     })();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, resolvedNpub, resolvedPubkey]);
 
-  // Fetch Nostr Activity (posts, replies) when expanded or on Nostr tab
+  // Fetch Nostr Activity (posts, replies) with LocalEngine cache first
   useEffect(() => {
     if (!resolvedPubkey && !resolvedNpub) return;
     let cancelled = false;
@@ -152,12 +165,19 @@ export function ProfilePreviewDrawer({
           return;
         }
 
-        const readRelays = await getNostrReadRelays();
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cachedFeed = await LocalEngine.cacheGet<NostrEvent[]>(`nostr_profile_feed_${hex}`, 10 * 60 * 1000).catch(() => null);
+        if (Array.isArray(cachedFeed) && cachedFeed.length > 0 && !cancelled) {
+          setNostrPosts(cachedFeed);
+          setLoadingPosts(false);
+        }
+
+        const readRelays = await getNostrReadRelays().catch(() => DEFAULT_RELAYS);
         const targets = readRelays.length ? readRelays : DEFAULT_RELAYS;
         pool = new NostrRelayPool(targets);
         await pool.connect();
 
-        const fetchedEvents: NostrEvent[] = [];
+        const fetchedEvents: NostrEvent[] = cachedFeed ? [...cachedFeed] : [];
         pool.addListener((ev) => {
           if (cancelled) return;
           if (ev.kind === 0) {
@@ -175,6 +195,7 @@ export function ProfilePreviewDrawer({
               fetchedEvents.push(ev);
               fetchedEvents.sort((a, b) => b.created_at - a.created_at);
               setNostrPosts([...fetchedEvents]);
+              void LocalEngine.cacheSet(`nostr_profile_feed_${hex}`, fetchedEvents).catch(() => {});
             }
           }
         });
