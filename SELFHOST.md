@@ -25,8 +25,8 @@ curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | 
 
 Defaults:
 - **Kylrix app:** `http://localhost:5003`
-- **Appwrite API:** `http://localhost:8080/v1` (lean stack — API only, no console container)
-- **Project + API key:** auto-minted into `.env`
+- **Backend Mode:** `BACKEND=false` (standalone Next.js application by default, skipping Appwrite infrastructure).
+- **Integrated Backend Mode:** Set `BACKEND=true` (or run `./selfhost.sh --with-backend`) to spin up bundled Appwrite (`http://localhost:8080/v1`) + MariaDB + Redis.
 
 Without exports, admin credentials are written to `.env` as `SELFHOST_ADMIN_EMAIL` / `SELFHOST_ADMIN_PASSWORD`.
 

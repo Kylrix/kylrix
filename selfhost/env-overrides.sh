@@ -28,6 +28,8 @@ capture_env_override SELFHOST_ADMIN_PASSWORD
 capture_env_override SELFHOST_ADMIN_NAME
 
 # Auth & product surface
+capture_env_override BACKEND
+capture_env_override KYLRIX_BACKEND
 capture_env_override AUTH_EMAIL_PASSWORD_SIGNUP
 capture_env_override AUTH_PASSKEY_SIGNUP
 capture_env_override AUTH_PASSWORDLESS_MODE

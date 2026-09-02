@@ -100,8 +100,19 @@ if [ ! -f .env ]; then
   cp env.sample .env
 fi
 
-# shellcheck source=selfhost/env-overrides.sh
-source selfhost/env-overrides.sh
+# Check command line flags
+for arg in "$@"; do
+  if [ "$arg" = "--with-backend" ] || [ "$arg" = "--backend" ]; then
+    export BACKEND="true"
+    export KYLRIX_BACKEND="true"
+  elif [ "$arg" = "--standalone" ] || [ "$arg" = "--no-backend" ]; then
+    export BACKEND="false"
+    export KYLRIX_BACKEND="false"
+  fi
+done
+
+capture_env_override BACKEND
+capture_env_override KYLRIX_BACKEND
 capture_env_override SELFHOST_ADMIN_EMAIL
 capture_env_override SELFHOST_ADMIN_PASSWORD
 capture_env_override SELFHOST_ADMIN_NAME
@@ -130,52 +141,66 @@ bash selfhost/mint-env.sh
 source selfhost/load-env.sh .env
 eval "$(bash selfhost/detect-status.sh)"
 
-if [ "${KYLRIX_INFRA_READY:-0}" = "1" ]; then
-  echo -e "\n${GREEN}✓ Appwrite infrastructure already running${NC}"
-else
-  echo -e "\n${YELLOW}Starting Appwrite infrastructure (MariaDB, Redis, Appwrite)...${NC}"
-  $COMPOSE_CMD up -d mariadb redis appwrite
-fi
+IS_INTEGRATED_BACKEND="${KYLRIX_INTEGRATED_BACKEND:-0}"
 
-if [ "${KYLRIX_BOOTSTRAP_READY:-0}" = "1" ]; then
-  echo -e "${GREEN}✓ Local Appwrite project already bootstrapped${NC}"
-else
-  echo -e "\n${YELLOW}Bootstrapping local Appwrite project + API key...${NC}"
-  bash selfhost/bootstrap.sh
-fi
+if [ "$IS_INTEGRATED_BACKEND" = "1" ]; then
+  if [ "${KYLRIX_INFRA_READY:-0}" = "1" ]; then
+    echo -e "\n${GREEN}✓ Appwrite infrastructure already running${NC}"
+  else
+    echo -e "\n${YELLOW}Starting Appwrite infrastructure (MariaDB, Redis, Appwrite)...${NC}"
+    $COMPOSE_CMD up -d mariadb redis appwrite
+  fi
 
-if [ "${KYLRIX_NEEDS_REBUILD:-0}" = "1" ]; then
-  echo -e "\n${YELLOW}Rebuilding Kylrix for local Appwrite (client bundle must match .env)...${NC}"
+  if [ "${KYLRIX_BOOTSTRAP_READY:-0}" = "1" ]; then
+    echo -e "${GREEN}✓ Local Appwrite project already bootstrapped${NC}"
+  else
+    echo -e "\n${YELLOW}Bootstrapping local Appwrite project + API key...${NC}"
+    bash selfhost/bootstrap.sh
+  fi
+
+  if [ "${KYLRIX_NEEDS_REBUILD:-0}" = "1" ]; then
+    echo -e "\n${YELLOW}Rebuilding Kylrix for local Appwrite (client bundle must match .env)...${NC}"
+    source selfhost/load-env.sh .env
+    $COMPOSE_CMD up -d --build --force-recreate kylrix
+    echo "${KYLRIX_CONFIG_STAMP:-}" > .selfhost-config-stamp
+  elif [ "${KYLRIX_APP_RUNNING:-0}" = "1" ]; then
+    echo -e "\n${GREEN}✓ Kylrix app already running with local config${NC}"
+    $COMPOSE_CMD up -d kylrix
+  else
+    echo -e "\n${YELLOW}Building and launching Kylrix...${NC}"
+    source selfhost/load-env.sh .env
+    $COMPOSE_CMD up -d --build kylrix
+    echo "${KYLRIX_CONFIG_STAMP:-}" > .selfhost-config-stamp
+  fi
+
+  if [ "${KYLRIX_SKIP_SCHEMA:-}" != "1" ]; then
+    echo -e "\n${YELLOW}Provisioning Appwrite schema (tables, indexes, buckets)...${NC}"
+    bash selfhost/provision-schema.sh || {
+      echo -e "${YELLOW}Schema provisioning did not finish cleanly. Re-run: make schema-push${NC}"
+    }
+  fi
+
   source selfhost/load-env.sh .env
-  $COMPOSE_CMD up -d --build --force-recreate kylrix
-  echo "${KYLRIX_CONFIG_STAMP:-}" > .selfhost-config-stamp
-elif [ "${KYLRIX_APP_RUNNING:-0}" = "1" ]; then
-  echo -e "\n${GREEN}✓ Kylrix app already running with local config${NC}"
-  $COMPOSE_CMD up -d kylrix
+
+  echo -e "\n${GREEN}${BOLD}✓ Kylrix is self-hosted with integrated Appwrite backend${NC}"
+  echo -e "App:              ${CYAN}${BOLD}http://localhost:${APP_PORT:-$PORT}${NC}"
+  echo -e "Appwrite API:     ${CYAN}http://localhost:${APPWRITE_PORT}/v1${NC}"
+  echo -e "Project ID:       ${CYAN}$(grep '^APPWRITE_PROJECT_ID=' .env | cut -d= -f2-)${NC}"
+  echo -e "Admin email:      ${CYAN}${SELFHOST_ADMIN_EMAIL:-$(grep '^SELFHOST_ADMIN_EMAIL=' .env | cut -d= -f2-)}${NC}"
+  if [ "${USER_SET_ADMIN_PASSWORD:-0}" = "1" ]; then
+    echo -e "Admin password:   ${DIM}(from SELFHOST_ADMIN_PASSWORD)${NC}"
+  else
+    echo -e "Admin password:   ${CYAN}$(grep '^SELFHOST_ADMIN_PASSWORD=' .env | cut -d= -f2-)${NC}"
+  fi
+  echo ""
 else
-  echo -e "\n${YELLOW}Building and launching Kylrix...${NC}"
+  echo -e "\n${GREEN}Deploying Kylrix in standalone application mode (BACKEND=false / default)...${NC}"
   source selfhost/load-env.sh .env
-  $COMPOSE_CMD up -d --build kylrix
-  echo "${KYLRIX_CONFIG_STAMP:-}" > .selfhost-config-stamp
-fi
+  $COMPOSE_CMD -f docker-compose.yml -f docker-compose.app-only.yml up -d --build kylrix
 
-if [ "${KYLRIX_SKIP_SCHEMA:-}" != "1" ]; then
-  echo -e "\n${YELLOW}Provisioning Appwrite schema (tables, indexes, buckets)...${NC}"
-  bash selfhost/provision-schema.sh || {
-    echo -e "${YELLOW}Schema provisioning did not finish cleanly. Re-run: make schema-push${NC}"
-  }
+  echo -e "\n${GREEN}${BOLD}✓ Kylrix standalone application is running${NC}"
+  echo -e "App:              ${CYAN}${BOLD}http://localhost:${APP_PORT:-$PORT}${NC}"
+  echo -e "Backend:          ${YELLOW}Standalone Next.js (Appwrite self-host skipped; client/offline-first substrate active)${NC}"
+  echo -e "Tip:              ${DIM}To enable bundled Appwrite backend, set BACKEND=true or run ./selfhost.sh --with-backend${NC}"
+  echo ""
 fi
-
-source selfhost/load-env.sh .env
-
-echo -e "\n${GREEN}${BOLD}✓ Kylrix is self-hosted on your machine${NC}"
-echo -e "App:              ${CYAN}${BOLD}http://localhost:${APP_PORT:-$PORT}${NC}"
-echo -e "Appwrite API:     ${CYAN}http://localhost:${APPWRITE_PORT}/v1${NC}"
-echo -e "Project ID:       ${CYAN}$(grep '^APPWRITE_PROJECT_ID=' .env | cut -d= -f2-)${NC}"
-echo -e "Admin email:      ${CYAN}${SELFHOST_ADMIN_EMAIL:-$(grep '^SELFHOST_ADMIN_EMAIL=' .env | cut -d= -f2-)}${NC}"
-if [ "${USER_SET_ADMIN_PASSWORD:-0}" = "1" ]; then
-  echo -e "Admin password:   ${DIM}(from SELFHOST_ADMIN_PASSWORD)${NC}"
-else
-  echo -e "Admin password:   ${CYAN}$(grep '^SELFHOST_ADMIN_PASSWORD=' .env | cut -d= -f2-)${NC}"
-fi
-echo ""

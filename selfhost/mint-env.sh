@@ -31,6 +31,8 @@ capture_env_override KYLRIX_PUBLIC_APPWRITE_ENDPOINT
 capture_env_override SELFHOST_ADMIN_EMAIL
 capture_env_override SELFHOST_ADMIN_PASSWORD
 capture_env_override SELFHOST_ADMIN_NAME
+capture_env_override BACKEND
+capture_env_override KYLRIX_BACKEND
 capture_env_override AUTH_EMAIL_PASSWORD_SIGNUP
 capture_env_override AUTH_PASSKEY_SIGNUP
 capture_env_override AUTH_PASSWORDLESS_MODE
@@ -93,12 +95,14 @@ upsert_env "NEXT_PUBLIC_ORIGIN" "$PUBLIC_APP_URL"
 upsert_env "APP_URL" "$PUBLIC_APP_URL"
 upsert_env "SELFHOSTED" "true"
 
+BACKEND="$(apply_env_override BACKEND "${KYLRIX_BACKEND:-false}")"
 AUTH_EMAIL_PASSWORD_SIGNUP="$(apply_env_override AUTH_EMAIL_PASSWORD_SIGNUP true)"
 AUTH_PASSKEY_SIGNUP="$(apply_env_override AUTH_PASSKEY_SIGNUP false)"
 AUTH_PASSWORDLESS_MODE="$(apply_env_override AUTH_PASSWORDLESS_MODE false)"
 PRICING_TIERS_ENABLED="$(apply_env_override PRICING_TIERS_ENABLED false)"
 PRODUCT_NAME="$(apply_env_override PRODUCT_NAME Kylrix)"
 
+upsert_env "BACKEND" "$BACKEND"
 upsert_env "AUTH_EMAIL_PASSWORD_SIGNUP" "$AUTH_EMAIL_PASSWORD_SIGNUP"
 upsert_env "AUTH_PASSKEY_SIGNUP" "$AUTH_PASSKEY_SIGNUP"
 upsert_env "AUTH_PASSWORDLESS_MODE" "$AUTH_PASSWORDLESS_MODE"

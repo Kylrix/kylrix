@@ -44,6 +44,7 @@ Without exports, admin login is auto-minted into `.env`.
 
 | Variable | Purpose |
 |----------|---------|
+| `BACKEND` | `false` (default: standalone Next.js app) or `true`/`appwrite` (bundled backend) |
 | `SELFHOST_ADMIN_EMAIL` | First admin account email |
 | `SELFHOST_ADMIN_PASSWORD` | First admin password |
 | `SELFHOST_ADMIN_NAME` | Bootstrap admin display name |
