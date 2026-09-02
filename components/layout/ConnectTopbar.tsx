@@ -167,6 +167,9 @@ export default function ConnectTopbar({
   const [localTags, setLocalTags] = useState<any[]>([]);
   const [localTrash, setLocalTrash] = useState<any[]>([]);
   const [localForms, setLocalForms] = useState<any[]>([]);
+  const [localMoments, setLocalMoments] = useState<any[]>([]);
+  const [localVaultCreds, setLocalVaultCreds] = useState<any[]>([]);
+  const [localVaultTotp, setLocalVaultTotp] = useState<any[]>([]);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -184,9 +187,21 @@ export default function ConnectTopbar({
         import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
           LocalEngine.cacheGet<any[]>(`f_forms_${uid}`).catch(() => []),
         ),
-      ]).then(([trashData, formsData]) => {
-        if (Array.isArray(trashData)) setLocalTrash(trashData);
-        if (Array.isArray(formsData)) setLocalForms(formsData);
+        import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
+          LocalEngine.cacheGet<any[]>('f_unified_moments_feed').then(r => r || LocalEngine.cacheGet<any[]>('f_moments_list')).catch(() => []),
+        ),
+        import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
+          LocalEngine.cacheGet<any[]>('f_vault_creds').catch(() => []),
+        ),
+        import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
+          LocalEngine.cacheGet<any[]>('f_vault_totp').catch(() => []),
+        ),
+      ]).then(([trashData, formsData, momentsData, credsData, totpData]) => {
+        if (Array.isArray(trashData) && trashData.length) setLocalTrash(trashData);
+        if (Array.isArray(formsData) && formsData.length) setLocalForms(formsData);
+        if (Array.isArray(momentsData) && momentsData.length) setLocalMoments(momentsData);
+        if (Array.isArray(credsData) && credsData.length) setLocalVaultCreds(credsData);
+        if (Array.isArray(totpData) && totpData.length) setLocalVaultTotp(totpData);
       });
     });
   }, [searchOpen, user?.$id]);
@@ -200,15 +215,15 @@ export default function ConnectTopbar({
       events: localEvents,
       forms: localForms,
       flows: [],
-      vaultCreds: [],
-      vaultTotp: [],
-      moments: [],
+      vaultCreds: localVaultCreds,
+      vaultTotp: localVaultTotp,
+      moments: localMoments,
       chats: [],
       threads: [],
       tags: localTags,
       trash: localTrash,
     });
-  }, [searchQuery, notes, tasks, projects, localEvents, localForms, localTags, localTrash]);
+  }, [searchQuery, notes, tasks, projects, localEvents, localForms, localVaultCreds, localVaultTotp, localMoments, localTags, localTrash]);
   const groupedGlobalResults = useMemo(() => {
     const byKind: Record<string, GlobalResult[]> = {};
     for (const r of globalResults) {

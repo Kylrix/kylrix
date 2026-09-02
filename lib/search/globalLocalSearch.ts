@@ -408,3 +408,60 @@ export function searchLocalEngine(qRaw: string, ctx: GlobalSearchCtx): GlobalRes
   }
   return capped;
 }
+
+/**
+ * Searches exclusively through the LocalEngine IndexedDB / RxDB offline substrate.
+ * Zero contact with remote backend databases — serves instantaneous results from local copy.
+ */
+export async function searchLocalEngineAsync(
+  query: string,
+  userId?: string,
+  explicitCtx?: Partial<GlobalSearchCtx>,
+): Promise<GlobalResult[]> {
+  if (typeof window === 'undefined') {
+    return searchLocalEngine(query, explicitCtx || {});
+  }
+
+  const { LocalEngine } = await import('@/lib/services/LocalEngine');
+  const uid = userId || 'local';
+
+  const [
+    notesList,
+    goalsList,
+    projectsList,
+    eventsList,
+    formsList,
+    momentsList,
+    credsList,
+    totpList,
+    trashList,
+  ] = await Promise.all([
+    explicitCtx?.notes?.length ? Promise.resolve(explicitCtx.notes) : LocalEngine.cacheGet<any[]>('f_notes_list').then(r => r || LocalEngine.cacheGet<any[]>('notes_all').catch(() => [])),
+    explicitCtx?.tasks?.length ? Promise.resolve(explicitCtx.tasks) : LocalEngine.cacheGet<any[]>('f_goals_list').then(r => r || LocalEngine.cacheGet<any[]>('f_tasks_list').catch(() => [])),
+    explicitCtx?.workspaces?.length ? Promise.resolve(explicitCtx.workspaces) : LocalEngine.cacheGet<any[]>('f_projects_list').then(r => r || LocalEngine.cacheGet<any[]>('projects_all').catch(() => [])),
+    explicitCtx?.events?.length ? Promise.resolve(explicitCtx.events) : LocalEngine.cacheGet<any[]>('f_events_list').then(r => r || LocalEngine.cacheGet<any[]>('events_all').catch(() => [])),
+    explicitCtx?.forms?.length ? Promise.resolve(explicitCtx.forms) : LocalEngine.cacheGet<any[]>(`f_forms_${uid}`).then(r => r || LocalEngine.cacheGet<any[]>('forms_all').catch(() => [])),
+    explicitCtx?.moments?.length ? Promise.resolve(explicitCtx.moments) : LocalEngine.cacheGet<any[]>('f_unified_moments_feed').then(r => r || LocalEngine.cacheGet<any[]>('f_moments_list').catch(() => [])),
+    explicitCtx?.vaultCreds?.length ? Promise.resolve(explicitCtx.vaultCreds) : LocalEngine.cacheGet<any[]>('f_vault_creds').then(r => r || LocalEngine.cacheGet<any[]>('credentials_all').catch(() => [])),
+    explicitCtx?.vaultTotp?.length ? Promise.resolve(explicitCtx.vaultTotp) : LocalEngine.cacheGet<any[]>('f_vault_totp').then(r => r || LocalEngine.cacheGet<any[]>('totp_all').catch(() => [])),
+    explicitCtx?.trash?.length ? Promise.resolve(explicitCtx.trash) : LocalEngine.cacheGet<any[]>(`trash_all_${uid}`).catch(() => []),
+  ]);
+
+  const ctx: GlobalSearchCtx = {
+    notes: (notesList as any[]) || [],
+    tasks: (goalsList as any[]) || [],
+    workspaces: (projectsList as any[]) || [],
+    events: (eventsList as any[]) || [],
+    forms: (formsList as any[]) || [],
+    flows: explicitCtx?.flows || [],
+    vaultCreds: (credsList as any[]) || [],
+    vaultTotp: (totpList as any[]) || [],
+    moments: (momentsList as any[]) || [],
+    chats: explicitCtx?.chats || [],
+    threads: explicitCtx?.threads || [],
+    tags: explicitCtx?.tags || [],
+    trash: (trashList as any[]) || [],
+  };
+
+  return searchLocalEngine(query, ctx);
+}
