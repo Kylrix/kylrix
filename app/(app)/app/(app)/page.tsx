@@ -12,6 +12,8 @@ import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useResourcePins } from '@/context/ResourcePinContext';
+
 
 import Link from 'next/link';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
@@ -44,7 +46,9 @@ export default function IdeasPage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { notes: contextNotes, upsertNote, isPinned: isNotePinned } = useNotes();
+  const { isPinned: isResourcePinned, pinSets } = useResourcePins();
   const { activeWorkspace } = useWorkspace();
+
   const { openSidebar } = useDynamicSidebar();
 
   const { open: openUnified } = useUnifiedDrawer();
@@ -446,20 +450,53 @@ export default function IdeasPage() {
 
   const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
 
-  const activeNotes = (contextNotes || []).filter((n) => n);
-  const pinnedNotes = activeNotes.filter((n) => Boolean(n.isPinned || isNotePinned?.(n.$id)));
-  const unpinnedNotes = activeNotes.filter((n) => !Boolean(n.isPinned || isNotePinned?.(n.$id)));
+  const sourceNotes = useMemo(() => {
+    const map = new Map<string, any>();
+    (contextNotes || []).forEach((n: any) => {
+      if (n?.$id) map.set(n.$id, n);
+    });
+    (notes || []).forEach((n: any) => {
+      if (n?.$id) {
+        const existing = map.get(n.$id);
+        map.set(n.$id, existing ? { ...existing, ...n } : n);
+      }
+    });
+    return Array.from(map.values());
+  }, [notes, contextNotes]);
 
-  const tags = React.useMemo(() => {
-    const fromNotes = notes.flatMap((n: any) => n.tags || []).filter(Boolean);
+  const checkIsPinned = useCallback(
+    (n: any) => {
+      if (!n) return false;
+      const id = n.$id || n.id;
+      if (n.isPinned === true || String(n.isPinned) === 'true') return true;
+      if (pinSets?.note?.has(id)) return true;
+      if (isNotePinned?.(id)) return true;
+      if (isResourcePinned?.('note', id, n.userId, n.isPinned)) return true;
+      return false;
+    },
+    [isNotePinned, isResourcePinned, pinSets]
+  );
+
+  const activeNotes = useMemo(() => sourceNotes.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true), [sourceNotes]);
+  const pinnedNotes = useMemo(() => activeNotes.filter(checkIsPinned), [activeNotes, checkIsPinned]);
+  const unpinnedNotes = useMemo(() => activeNotes.filter((n: any) => !checkIsPinned(n)), [activeNotes, checkIsPinned]);
+
+  const tags = useMemo(() => {
+    const fromNotes = activeNotes.flatMap((n: any) => n.tags || []).filter(Boolean);
     const fromEcosystem = ecosystemTagsList.map((t) => t.name).filter(Boolean);
     return Array.from(new Set([...fromEcosystem, ...fromNotes])).slice(0, 16);
-  }, [notes, ecosystemTagsList]);
+  }, [activeNotes, ecosystemTagsList]);
 
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  const displayPinned = selectedTag ? pinnedNotes.filter((n: any) => n.tags?.includes(selectedTag)) : pinnedNotes;
-  const displayUnpinned = selectedTag ? unpinnedNotes.filter((n: any) => n.tags?.includes(selectedTag)) : unpinnedNotes;
+  const displayPinned = useMemo(() => {
+    return selectedTag ? pinnedNotes.filter((n: any) => n.tags?.includes(selectedTag)) : pinnedNotes;
+  }, [pinnedNotes, selectedTag]);
+
+  const displayUnpinned = useMemo(() => {
+    return selectedTag ? unpinnedNotes.filter((n: any) => n.tags?.includes(selectedTag)) : unpinnedNotes;
+  }, [unpinnedNotes, selectedTag]);
+
 
   const handleDeleteNote = useCallback((noteId: string) => {
     setNotes((prev) => prev.filter((n) => n.$id !== noteId));
@@ -558,9 +595,10 @@ export default function IdeasPage() {
         </div>
       )}
 
-      {loading ? (
+      {loading && activeNotes.length === 0 ? (
         <div className="p-8 text-center text-white/40">Loading ideas...</div>
-      ) : notes.length === 0 ? (
+      ) : activeNotes.length === 0 ? (
+
         <div className="p-12 text-center flex flex-col items-center justify-center gap-4 bg-white/[0.01] border border-white/5 rounded-3xl">
           <p className="text-white/40 text-sm">No ideas found.</p>
           <button
