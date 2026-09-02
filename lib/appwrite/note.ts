@@ -1672,51 +1672,113 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
       finalQueries
     );
   } catch (err: any) {
-    const isNetworkError = !err.status || err.code === 'network_error' || err.message?.includes('fetch') || err.message?.includes('NetworkError');
-    if (isNetworkError && typeof window !== 'undefined') {
-        console.log('[listNotesPaginated] Network error detected. Falling back to RxDB local notes...');
-        let effectiveUserId = userId;
-        if (!effectiveUserId) {
-          const user = await getCurrentUser();
-          effectiveUserId = user?.$id;
+    if (typeof window !== 'undefined') {
+      let effectiveUserId = userId;
+      if (!effectiveUserId) {
+        const user = await getCurrentUser().catch(() => null);
+        effectiveUserId = user?.$id;
+      }
+      try {
+        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+        const db = await getRxDB().catch(() => null);
+        if (db?.notes) {
+          const selector: any = { _deleted: { $ne: true } };
+          if (effectiveUserId && effectiveUserId !== 'guest') {
+            selector.$or = [{ userId: effectiveUserId }, { userId: 'guest' }, { userId: { $exists: false } }];
+          }
+          const docs = await db.notes.find({ selector }).exec().catch(() => []);
+          const sortedDocs = docs
+            .map((d: any) => (d.toJSON ? d.toJSON() : d))
+            .sort((a: any, b: any) => new Date(b.updatedAt || b.$updatedAt || 0).getTime() - new Date(a.updatedAt || a.$updatedAt || 0).getTime());
+
+          const rows = sortedDocs
+            .map((doc: any) => ({
+              $id: doc.id || doc.$id,
+              $createdAt: doc.updatedAt || doc.createdAt || doc.$createdAt || new Date().toISOString(),
+              $updatedAt: doc.updatedAt || doc.$updatedAt || new Date().toISOString(),
+              title: doc.title,
+              content: doc.content,
+              format: doc.format || 'text',
+              tags: doc.tags || [],
+              userId: doc.userId || effectiveUserId || 'guest',
+              isPublic: Boolean(doc.isPublic),
+              isGuest: Boolean(doc.isGuest),
+              metadata: doc.metadata || '{}',
+            }))
+            .filter((doc: any) => includeThreads || !isExcludedNote(doc)) as any[];
+
+          if (rows.length > 0) {
+            return {
+              rows,
+              total: rows.length,
+              nextCursor: null,
+              hasMore: false,
+            };
+          }
         }
-        if (effectiveUserId) {
-          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-          const db = await getRxDB();
-          const docs = await db.notes.find({
-            selector: {
-              userId: effectiveUserId,
-              _deleted: { $ne: true }
-            }
-          }).exec();
-          
-          const sortedDocs = docs.sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-          
-          const rows = sortedDocs.map((doc: any) => ({
-            $id: doc.id,
-            $createdAt: doc.updatedAt,
-            $updatedAt: doc.updatedAt,
-            title: doc.title,
-            content: doc.content,
-            format: 'text',
-            tags: [],
-            userId: doc.userId,
-            isPublic: false,
-            isGuest: false,
-            metadata: doc.metadata || '{}'})).filter((doc: any) => includeThreads || !isExcludedNote(doc)) as any[];
-          
+
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cachedList =
+          (await LocalEngine.cacheGet<any[]>(`f_notes_list_${effectiveUserId || 'guest'}`).catch(() => null)) ||
+          (await LocalEngine.cacheGet<any[]>(`f_ideas_${effectiveUserId || 'guest'}`).catch(() => null));
+        const candidateRows = (Array.isArray(cachedList) ? cachedList : (cachedList as any)?.rows) || [];
+        if (candidateRows.length > 0) {
           return {
-            rows,
-            total: rows.length,
+            rows: candidateRows,
+            total: candidateRows.length,
             nextCursor: null,
-            hasMore: false
+            hasMore: false,
           };
         }
+      } catch {}
+      return { rows: [], total: 0, nextCursor: null, hasMore: false };
     }
     throw err;
   }
 
-  const notes = (res.rows as any[]).map((doc: any) => hydrateVirtualAttributes(doc)) as unknown as Notes[];
+  let notes = (res?.rows as any[] || []).map((doc: any) => hydrateVirtualAttributes(doc)) as unknown as Notes[];
+
+  // Merge any local-only / unsynced RxDB notes with remote notes so local creations are never lost
+  if (typeof window !== 'undefined') {
+    try {
+      let effectiveUserId = userId;
+      if (!effectiveUserId) {
+        const user = await getCurrentUser().catch(() => null);
+        effectiveUserId = user?.$id;
+      }
+      const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+      const db = await getRxDB().catch(() => null);
+      if (db?.notes) {
+        const selector: any = { _deleted: { $ne: true } };
+        if (effectiveUserId && effectiveUserId !== 'guest') {
+          selector.$or = [{ userId: effectiveUserId }, { userId: 'guest' }, { userId: { $exists: false } }];
+        }
+        const localDocs = (await db.notes.find({ selector }).exec().catch(() => []))
+          .map((d: any) => (d.toJSON ? d.toJSON() : d));
+        const existingIds = new Set(notes.map((n: any) => n.$id || (n as any).id));
+        const missingLocalRows = localDocs
+          .filter((d: any) => !existingIds.has(d.id || d.$id))
+          .map((doc: any) => ({
+            $id: doc.id || doc.$id,
+            $createdAt: doc.updatedAt || doc.createdAt || doc.$createdAt || new Date().toISOString(),
+            $updatedAt: doc.updatedAt || doc.$updatedAt || new Date().toISOString(),
+            title: doc.title,
+            content: doc.content,
+            format: doc.format || 'text',
+            tags: doc.tags || [],
+            userId: doc.userId || effectiveUserId || 'guest',
+            isPublic: Boolean(doc.isPublic),
+            isGuest: Boolean(doc.isGuest),
+            metadata: doc.metadata || '{}',
+          }))
+          .filter((doc: any) => includeThreads || !isExcludedNote(doc));
+
+        if (missingLocalRows.length > 0) {
+          notes = [...missingLocalRows, ...notes] as unknown as Notes[];
+        }
+      }
+    } catch {}
+  }
 
   if (hydrateTags && notes.length) {
     try {

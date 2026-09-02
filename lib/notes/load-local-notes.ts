@@ -69,25 +69,28 @@ export async function loadNotesFromLocalCopy(opts: {
     }
   }
 
-  // 2) RxDB notes collection — filter by userId to prevent cross-account contamination
-  if (userId && userId !== 'guest') {
-    try {
-      const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-      const db = await getRxDB().catch(() => null);
-      if (db?.notes) {
-        const rxRows = (await db.notes.find({ selector: { userId: { $eq: userId } } }).exec()).map((d: any) => d.toJSON());
-        const notes = rxRows.map(normalizeNoteRow).filter((n): n is Notes => !!n);
-        if (notes.length) {
-          return {
-            notes,
-            totalNotes: notes.length,
-            cursor: null,
-            hasMore: true};
-        }
+  // 2) RxDB notes collection — check for active user, guest, and local offline creations
+  try {
+    const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+    const db = await getRxDB().catch(() => null);
+    if (db?.notes) {
+      const selector: any = { _deleted: { $ne: true } };
+      if (userId && userId !== 'guest') {
+        selector.$or = [{ userId: { $eq: userId } }, { userId: { $eq: 'guest' } }, { userId: { $exists: false } }];
       }
-    } catch {
-      /* non-fatal */
+      const rxRows = (await db.notes.find({ selector }).exec().catch(() => []))
+        .map((d: any) => (d.toJSON ? d.toJSON() : d));
+      const notes = rxRows.map(normalizeNoteRow).filter((n): n is Notes => !!n);
+      if (notes.length) {
+        return {
+          notes,
+          totalNotes: notes.length,
+          cursor: null,
+          hasMore: true};
+      }
     }
+  } catch {
+    /* non-fatal */
   }
 
   // 3) LocalEngine flat list — check f_notes_list_${userId} and f_ideas_${userId}

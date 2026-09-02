@@ -110,7 +110,35 @@ export default function IdeasPage() {
           force: !hasLocal
         }
       );
-      const validRows = rows.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true');
+      // Merge with local RxDB notes so local unsynced creations are never dropped
+      const { getRxDB: getRxDBInstance } = await import('@/lib/webrtc/RxDBManager');
+      const localDb = await getRxDBInstance().catch(() => null);
+      let localRxRows: any[] = [];
+      if (localDb?.notes) {
+        const localDocs = (await localDb.notes.find({ selector: { _deleted: { $ne: true } } }).exec().catch(() => []))
+          .map((d: any) => (d.toJSON ? d.toJSON() : d));
+        localRxRows = localDocs.map((doc: any) => ({
+          $id: doc.id || doc.$id,
+          $createdAt: doc.updatedAt || doc.createdAt || doc.$createdAt || new Date().toISOString(),
+          $updatedAt: doc.updatedAt || doc.$updatedAt || new Date().toISOString(),
+          title: doc.title,
+          content: doc.content,
+          format: doc.format || 'text',
+          tags: doc.tags || [],
+          userId: doc.userId || user.$id,
+          isPublic: Boolean(doc.isPublic),
+          isGuest: Boolean(doc.isGuest),
+          metadata: doc.metadata || '{}',
+        }));
+      }
+
+      const existingIds = new Set((rows || []).map((r: any) => r.$id || r.id));
+      const combinedRows = [
+        ...localRxRows.filter((lr: any) => !existingIds.has(lr.$id)),
+        ...(rows || []),
+      ];
+
+      const validRows = combinedRows.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true');
 
       // Read local pins state directly from ResourcePinContext storage key
       let pinnedMap: Record<string, boolean> = {};
@@ -200,22 +228,57 @@ export default function IdeasPage() {
 
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const { tagsCacheKey } = await import('@/lib/data');
-        const [cachedIdeas, cachedNotesList, cachedInitial, cachedTags] = await Promise.all([
+        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+        const db = await getRxDB().catch(() => null);
+
+        const [cachedIdeas, cachedNotesList, cachedInitial, cachedTags, rxDocs] = await Promise.all([
           LocalEngine.cacheGet<{ rows?: any[] } | any[]>(`f_ideas_${userId}`).catch(() => null),
           LocalEngine.cacheGet<any[]>(`f_notes_list_${userId}`).catch(() => null),
           LocalEngine.cacheGet<{ notes?: any[]; rows?: any[] } | any[]>(`initial_notes_${userId}`).catch(() => null),
           LocalEngine.cacheGet<any>(tagsCacheKey(userId)).catch(() => null),
+          db?.notes
+            ? db.notes
+                .find({ selector: { _deleted: { $ne: true } } })
+                .exec()
+                .catch(() => [])
+            : Promise.resolve([]),
         ]);
 
-        const rawRows =
-          (Array.isArray(cachedIdeas) ? cachedIdeas : cachedIdeas?.rows) ||
-          cachedNotesList ||
-          (Array.isArray(cachedInitial) ? cachedInitial : cachedInitial?.notes || cachedInitial?.rows) ||
-          [];
+        const rxRows = (rxDocs || []).map((d: any) => (d.toJSON ? d.toJSON() : d)).map((doc: any) => ({
+          $id: doc.id || doc.$id,
+          $createdAt: doc.updatedAt || doc.createdAt || doc.$createdAt || new Date().toISOString(),
+          $updatedAt: doc.updatedAt || doc.$updatedAt || new Date().toISOString(),
+          title: doc.title,
+          content: doc.content,
+          format: doc.format || 'text',
+          tags: doc.tags || [],
+          userId: doc.userId || userId,
+          isPublic: Boolean(doc.isPublic),
+          isGuest: Boolean(doc.isGuest),
+          metadata: doc.metadata || '{}',
+        }));
 
-        const validRawRows = Array.isArray(rawRows)
-          ? rawRows.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true')
-          : [];
+        const rawRows = [
+          ...rxRows,
+          ...((Array.isArray(cachedIdeas) ? cachedIdeas : cachedIdeas?.rows) || []),
+          ...(cachedNotesList || []),
+          ...((Array.isArray(cachedInitial) ? cachedInitial : cachedInitial?.notes || cachedInitial?.rows) || []),
+        ];
+
+        // Deduplicate rows by $id
+        const seenIds = new Set<string>();
+        const uniqueRawRows: any[] = [];
+        for (const row of rawRows) {
+          const id = row?.$id || row?.id;
+          if (id && !seenIds.has(id)) {
+            seenIds.add(id);
+            uniqueRawRows.push(row);
+          }
+        }
+
+        const validRawRows = uniqueRawRows.filter(
+          (n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true'
+        );
 
         if (validRawRows.length > 0) {
           hasLocalCopy = true;
