@@ -164,6 +164,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
         creatorId: item.rawEvent?.userId || item.rawEvent?.creatorId,
         contentSnippet: preview.slice(0, 80),
         privateKeyBytes: identity?.privateKeyBytes,
+        nsec: identity?.nsec,
         rootPubkey: item.rawEvent?.pubkey,
         nostrId: item.rawEvent?.nostrId,
       });
@@ -205,6 +206,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
         userId: user?.$id,
         creatorId: item.rawEvent?.userId || item.rawEvent?.creatorId,
         privateKeyBytes: identity?.privateKeyBytes,
+        nsec: identity?.nsec,
         rootPubkey: item.rawEvent?.pubkey,
         nostrId: item.rawEvent?.nostrId,
       });

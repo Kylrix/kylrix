@@ -8,6 +8,7 @@ import { fetchNostrThread } from '@/lib/nostr/thread';
 import { signEvent, type NostrEvent } from '@/lib/nostr/nostr';
 import { NostrRelayPool } from '@/lib/nostr/nostr';
 import { bytesToHex, normalizePrivateKeyBytes } from '@/lib/nostr/crypto';
+import { getNostrWriteRelays } from '@/lib/connect/feed-settings';
 import * as secp256k1 from '@noble/secp256k1';
 
 export type MomentSource = 'ecosystem' | 'nostr';
@@ -31,11 +32,12 @@ export interface MomentEngagementSnapshot {
   isLiked?: boolean;
 }
 
-const RELAYS = [
-  'wss://nos.lol',
-  'wss://purplepag.es',
+const FALLBACK_WRITE_RELAYS = [
   'wss://relay.damus.io',
+  'wss://nos.lol',
   'wss://relay.primal.net',
+  'wss://relay.nostr.band',
+  'wss://relay.snort.social',
 ];
 
 function shortPubkey(pubkey: string) {
@@ -65,7 +67,7 @@ function mapNostrReply(event: NostrEvent): MomentComment {
   };
 }
 
-/** Build, sign and fire-and-forget a Nostr event to all relays. */
+/** Build, sign and broadcast a Nostr event to all write relays. */
 async function publishToNostr(
   privBytes: Uint8Array,
   kind: number,
@@ -81,7 +83,9 @@ async function publishToNostr(
     content,
   };
   const signed = signEvent(unsigned, privBytes);
-  const pool = new NostrRelayPool(RELAYS);
+  const configured = await getNostrWriteRelays().catch(() => []);
+  const writeRelays = Array.from(new Set([...FALLBACK_WRITE_RELAYS, ...configured]));
+  const pool = new NostrRelayPool(writeRelays);
   await pool.publishAndClose(signed);
 }
 
@@ -171,7 +175,7 @@ export async function createMomentComment(opts: {
   }
   if (!privBytes) throw new Error('Unlock vault to comment on Nostr');
 
-  const tags: string[][] = [['e', opts.id, '', 'root']];
+  const tags: string[][] = [['e', opts.id, '', 'root'], ['client', 'kylrix']];
   if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
   const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
   const unsigned = {
@@ -182,8 +186,7 @@ export async function createMomentComment(opts: {
     content: text,
   };
   const signed = signEvent(unsigned, privBytes);
-  const pool = new NostrRelayPool(RELAYS);
-  await pool.publishAndClose(signed);
+  await publishToNostr(privBytes, 1, tags, text);
   return mapNostrReply(signed);
 }
 
@@ -193,7 +196,8 @@ export async function toggleMomentLike(opts: {
   userId?: string;
   creatorId?: string;
   contentSnippet?: string;
-  privateKeyBytes?: Uint8Array;
+  privateKeyBytes?: Uint8Array | Record<string, number> | any;
+  nsec?: string;
   rootPubkey?: string;
   nostrId?: string;
 }): Promise<{ liked: boolean }> {
@@ -206,10 +210,16 @@ export async function toggleMomentLike(opts: {
       opts.contentSnippet,
     );
 
-    if (res.liked && opts.nostrId && opts.privateKeyBytes) {
-      const privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
+    if (res.liked && opts.nostrId && (opts.privateKeyBytes || opts.nsec)) {
+      let privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
+      if (!privBytes && opts.nsec) {
+        try {
+          const { nsecToBytes } = await import('@/lib/nostr/crypto');
+          privBytes = nsecToBytes(opts.nsec);
+        } catch {}
+      }
       if (privBytes) {
-        const tags: string[][] = [['e', opts.nostrId, '', 'root']];
+        const tags: string[][] = [['e', opts.nostrId], ['k', '1'], ['client', 'kylrix']];
         if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
         await publishToNostr(privBytes, 7, tags, '+').catch((e) =>
           console.warn('[Engagement] Dual Nostr like sync skipped:', e),
@@ -220,10 +230,16 @@ export async function toggleMomentLike(opts: {
     return res;
   }
 
-  const privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
+  let privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
+  if (!privBytes && opts.nsec) {
+    try {
+      const { nsecToBytes } = await import('@/lib/nostr/crypto');
+      privBytes = nsecToBytes(opts.nsec);
+    } catch {}
+  }
   if (!privBytes) throw new Error('Unlock vault to like on Nostr');
 
-  const tags: string[][] = [['e', opts.id, '', 'root']];
+  const tags: string[][] = [['e', opts.id], ['k', '1'], ['client', 'kylrix']];
   if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
   await publishToNostr(privBytes, 7, tags, '+');
   return { liked: true };
@@ -234,7 +250,8 @@ export async function repostMoment(opts: {
   id: string;
   userId?: string;
   creatorId?: string;
-  privateKeyBytes?: Uint8Array;
+  privateKeyBytes?: Uint8Array | Record<string, number> | any;
+  nsec?: string;
   rootPubkey?: string;
   nostrId?: string;
 }): Promise<{ reposted: boolean }> {
@@ -251,10 +268,16 @@ export async function repostMoment(opts: {
       opts.id,
     );
 
-    if (opts.nostrId && opts.privateKeyBytes) {
-      const privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
+    if (opts.nostrId && (opts.privateKeyBytes || opts.nsec)) {
+      let privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
+      if (!privBytes && opts.nsec) {
+        try {
+          const { nsecToBytes } = await import('@/lib/nostr/crypto');
+          privBytes = nsecToBytes(opts.nsec);
+        } catch {}
+      }
       if (privBytes) {
-        const tags: string[][] = [['e', opts.nostrId, '', 'root']];
+        const tags: string[][] = [['e', opts.nostrId], ['client', 'kylrix']];
         if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
         await publishToNostr(privBytes, 6, tags, '').catch((e) =>
           console.warn('[Engagement] Dual Nostr pulse sync skipped:', e),
@@ -265,10 +288,16 @@ export async function repostMoment(opts: {
     return { reposted: true };
   }
 
-  const privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
+  let privBytes = normalizePrivateKeyBytes(opts.privateKeyBytes);
+  if (!privBytes && opts.nsec) {
+    try {
+      const { nsecToBytes } = await import('@/lib/nostr/crypto');
+      privBytes = nsecToBytes(opts.nsec);
+    } catch {}
+  }
   if (!privBytes) throw new Error('Unlock vault to repost on Nostr');
 
-  const tags: string[][] = [['e', opts.id, '', 'root']];
+  const tags: string[][] = [['e', opts.id], ['client', 'kylrix']];
   if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
   await publishToNostr(privBytes, 6, tags, '');
   return { reposted: true };

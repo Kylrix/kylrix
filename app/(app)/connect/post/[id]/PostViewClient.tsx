@@ -329,11 +329,14 @@ export function PostViewClient({
     setLikes(prevLiked ? Math.max(0, prevLikes - 1) : prevLikes + 1);
     try {
       await toggleMomentLike({
-        source, id: momentId, userId: user?.$id,
+        source,
+        id: momentId,
+        userId: user?.$id,
         creatorId: moment?.userId || moment?.creatorId,
         contentSnippet: moment?.caption || moment?.content,
         privateKeyBytes: identity?.privateKeyBytes,
-        rootPubkey: moment?.pubkey,
+        nsec: identity?.nsec,
+        rootPubkey: moment?.pubkey || nostrEvent?.pubkey,
       });
     } catch (e) {
       setLiked(prevLiked); setLikes(prevLikes); console.error(e);
@@ -350,9 +353,14 @@ export function PostViewClient({
     setBusy(true);
     try {
       const created = await createMomentComment({
-        source, id: momentId, content: text, userId: user?.$id,
-        privateKeyBytes: identity?.privateKeyBytes, nsec: identity?.nsec,
-        rootPubkey: moment?.pubkey, nostrId: (moment as any)?.nostrId,
+        source,
+        id: momentId,
+        content: text,
+        userId: user?.$id,
+        privateKeyBytes: identity?.privateKeyBytes,
+        nsec: identity?.nsec,
+        rootPubkey: moment?.pubkey || nostrEvent?.pubkey,
+        nostrId: (moment as any)?.nostrId,
       });
       setReplyContent('');
       if (created) setReplies(prev => [...prev, created]);
