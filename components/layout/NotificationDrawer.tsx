@@ -103,6 +103,13 @@ export function NotificationDrawer({
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [syncing, setSyncing] = useState(false);
   const poolRef = useRef<NostrRelayPool | null>(null);
+  const notificationsRef = useRef<KylrixNotification[]>([]);
+  const lastHarvestAtRef = useRef<number>(0);
+  const isHarvestingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
 
   const userId = user?.$id || 'guest';
   const cacheKey = `kylrix_activity_notifications_${userId}`;
@@ -141,28 +148,32 @@ export function NotificationDrawer({
     }
   }, [identity?.npub]);
 
-  // 4. Live Activity Harvesting across Nostr Relays, Moments & Account Security
-  const harvestLiveActivity = useCallback(async () => {
+  // 4. Stable Activity Harvesting from LocalEngine & Nostr (Throttled, 0 loop)
+  const harvestLiveActivity = useCallback(async (force: boolean = false) => {
     if (typeof window === 'undefined') return;
+    const now = Date.now();
+    if (!force && now - lastHarvestAtRef.current < 60_000) {
+      return;
+    }
+    if (isHarvestingRef.current) return;
+    isHarvestingRef.current = true;
+    lastHarvestAtRef.current = now;
     setSyncing(true);
 
     try {
       const itemsMap = new Map<string, KylrixNotification>();
 
       // Preserve existing valid cached items first
-      for (const n of notifications) {
+      for (const n of notificationsRef.current) {
         itemsMap.set(n.id, n);
       }
 
-      // A. Real Appwrite Security & Session Logs (Cached)
+      // A. Real Appwrite Security & Session Logs (Cached with 30-min TTL in LocalEngine)
       if (user?.$id) {
         try {
-          const now = Date.now();
-          const cachedLogs = await LocalEngine.cacheGet<{ logs: any[]; at: number }>('kylrix_session_logs_cache').catch(() => null);
-          let logs: any[] = [];
-          if (cachedLogs && now - cachedLogs.at < 15 * 60 * 1000) {
-            logs = cachedLogs.logs || [];
-          } else {
+          const cachedLogs = await LocalEngine.cacheGet<{ logs: any[]; at: number }>('kylrix_session_logs_cache', 30 * 60 * 1000).catch(() => null);
+          let logs: any[] = cachedLogs?.logs || [];
+          if (!logs.length && navigator.onLine) {
             const logsRes = await account.listLogs().catch(() => ({ logs: [] }));
             logs = logsRes.logs || [];
             if (logs.length) {
@@ -269,7 +280,7 @@ export function NotificationDrawer({
             {
               '#p': [userPubkeyHex],
               kinds: [1, 3, 6, 7, 9735],
-              limit: 80,
+              limit: 50,
             },
           ]);
 
@@ -296,7 +307,6 @@ export function NotificationDrawer({
             authorsToFetch.push(event.pubkey);
 
             if (event.kind === 1) {
-              // Reply / Mention
               const notifId = `nostr_reply_${event.id}`;
               const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
               const targetId = targetNoteTag ? targetNoteTag[1] : event.id;
@@ -315,7 +325,6 @@ export function NotificationDrawer({
                 source: 'nostr',
               });
             } else if (event.kind === 3) {
-              // Follow / Contact list update
               const notifId = `nostr_follow_${event.pubkey}`;
               itemsMap.set(notifId, {
                 id: notifId,
@@ -331,7 +340,6 @@ export function NotificationDrawer({
                 source: 'nostr',
               });
             } else if (event.kind === 7) {
-              // Reaction / Like
               const notifId = `nostr_like_${event.id}`;
               const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
               const targetId = targetNoteTag ? targetNoteTag[1] : event.id;
@@ -351,7 +359,6 @@ export function NotificationDrawer({
                 source: 'nostr',
               });
             } else if (event.kind === 6) {
-              // Repost / Boost
               const notifId = `nostr_repost_${event.id}`;
               const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
               const targetId = targetNoteTag ? targetNoteTag[1] : event.id;
@@ -370,7 +377,6 @@ export function NotificationDrawer({
                 source: 'nostr',
               });
             } else if (event.kind === 9735) {
-              // Zap Receipt
               const notifId = `nostr_zap_${event.id}`;
               const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
               const targetId = targetNoteTag ? targetNoteTag[1] : undefined;
@@ -391,10 +397,8 @@ export function NotificationDrawer({
             }
           };
 
-          // Attach listener for incoming relay frames
           (poolRef.current as any).listeners.add(handleNostrEvent);
 
-          // Allow 2.5 seconds for fast relay harvest then unsubscribe
           setTimeout(() => {
             if (poolRef.current) {
               (poolRef.current as any).listeners.delete(handleNostrEvent);
@@ -409,7 +413,8 @@ export function NotificationDrawer({
             setNotifications(finalSorted);
             void LocalEngine.cacheSet(cacheKey, finalSorted);
             setSyncing(false);
-          }, 2500);
+            isHarvestingRef.current = false;
+          }, 1500);
         } catch (err) {
           console.warn('[NotificationDrawer] Nostr harvest warning:', err);
         }
@@ -423,13 +428,14 @@ export function NotificationDrawer({
     } finally {
       if (!userPubkeyHex) {
         setSyncing(false);
+        isHarvestingRef.current = false;
       }
     }
-  }, [user?.$id, userPubkeyHex, notifications, cacheKey, identity?.npub]);
+  }, [user?.$id, userPubkeyHex, cacheKey]);
 
   useEffect(() => {
     if (isOpen) {
-      void harvestLiveActivity();
+      void harvestLiveActivity(false);
     }
   }, [isOpen, harvestLiveActivity]);
 

@@ -101,7 +101,7 @@ export function useNostrIdentity() {
         } catch {}
 
         remoteRows = (await listNostrIdentitiesAction({ jwt: jwtToken })) || [];
-      } catch (err) {
+      } catch (_err) {
         // Server unreachable or billing limited — proceed entirely from local cache
       }
 
@@ -434,7 +434,6 @@ export function useNostrIdentity() {
     const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
 
     const npub = bytesToNpub(pubKeyBytes);
-    const nsec = bytesToNsec(privKeyBytes);
     const hexNsec = bytesToHex(privKeyBytes);
     const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
 
