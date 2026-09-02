@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Globe, Heart, MessageCircle, Repeat2, Share, Shield, Zap, Copy, Bookmark, User, Trash2 } from 'lucide-react';
+import { Globe, Heart, MessageCircle, Repeat2, Share, Shield, Zap, Copy, Bookmark, User, Trash2, EyeOff } from 'lucide-react';
 import type { UnifiedFeedItem } from '@/components/connect/useConnectMomentsFeed';
 import { toggleMomentLike } from '@/lib/connect/moment-engagement';
 import { extractPostImages, truncateMomentBody } from '@/lib/connect/moment-media';
@@ -353,6 +353,31 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
         label: 'Save to Bookmarks',
         icon: <Bookmark size={16} />,
         onClick: () => { void onBookmark(); },
+      },
+      {
+        label: 'See Less Like This',
+        icon: <EyeOff size={16} className="text-amber-500" />,
+        onClick: async () => {
+          try {
+            const { extractNegativeTopics, addSeeLessTopics, hideMomentLocally } = await import('@/lib/connect/feed-settings');
+            const topics = extractNegativeTopics(item.content || '', item.authorUsername || item.authorName, item.rawEvent?.tags);
+            if (momentId) hideMomentLocally(momentId);
+            if (topics.length) await addSeeLessTopics(topics);
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('kylrix:see-less', {
+                detail: {
+                  id: momentId,
+                  topics,
+                  author: item.authorUsername || item.authorName,
+                }
+              }));
+            }
+            toast.success("We'll show fewer posts like this");
+          } catch (err) {
+            console.error(err);
+            toast.error("Could not update preferences");
+          }
+        },
       },
       {
         label: `View ${item.authorName.replace(/^@/, '')}'s Profile`,

@@ -35,6 +35,7 @@ export type NostrSettingsConfig = {
 export type ConnectFeedSettings = {
   topics: string[];
   interests: string[];
+  seeLessTopics: string[];
   autoPreviewMedia: boolean;
   dataSaverMode: boolean;
   showNostr: boolean;
@@ -76,6 +77,7 @@ export const NOSTR_CONFIG_DEFAULTS: NostrSettingsConfig = {
 const DEFAULTS: ConnectFeedSettings = {
   topics: [],
   interests: ['builders', 'nostr', 'kylrix'],
+  seeLessTopics: [],
   autoPreviewMedia: true,
   dataSaverMode: true,
   showNostr: true,
@@ -142,7 +144,8 @@ function normalize(raw: any): ConnectFeedSettings {
   if (!raw || typeof raw !== 'object') return { ...DEFAULTS };
   return {
     topics: Array.isArray(raw.topics) ? raw.topics.filter((t: any) => typeof t === 'string' && t.trim()).slice(0, 20) : [...DEFAULTS.topics],
-    interests: Array.isArray(raw.interests) ? raw.interests.filter((t: any) => typeof t === 'string' && t.trim()).slice(0, 20) : [...DEFAULTS.interests],
+    interests: Array.isArray(raw.interests) ? raw.interests.filter((t: any) => typeof t === 'string' && t.trim()).slice(0, 30) : [...DEFAULTS.interests],
+    seeLessTopics: Array.isArray(raw.seeLessTopics) ? raw.seeLessTopics.filter((t: any) => typeof t === 'string' && t.trim()).slice(0, 50) : [...DEFAULTS.seeLessTopics],
     autoPreviewMedia: typeof raw.autoPreviewMedia === 'boolean' ? raw.autoPreviewMedia : DEFAULTS.autoPreviewMedia,
     dataSaverMode: typeof raw.dataSaverMode === 'boolean' ? raw.dataSaverMode : DEFAULTS.dataSaverMode,
     showNostr: typeof raw.showNostr === 'boolean' ? raw.showNostr : DEFAULTS.showNostr,
@@ -162,6 +165,7 @@ async function broadcastFeedSettingsIfChanged(normalizedRemote: ConnectFeedSetti
     !prev ||
     prev.topics.join('|') !== normalizedRemote.topics.join('|') ||
     prev.interests.join('|') !== normalizedRemote.interests.join('|') ||
+    prev.seeLessTopics?.join('|') !== normalizedRemote.seeLessTopics?.join('|') ||
     prev.showNostr !== normalizedRemote.showNostr ||
     prev.showEcosystem !== normalizedRemote.showEcosystem ||
     prev.showReplies !== normalizedRemote.showReplies ||
@@ -337,6 +341,134 @@ export async function getNostrWriteRelays(): Promise<string[]> {
     .filter(r => r.write && r.url)
     .map(r => r.url);
   return configured.length > 0 ? configured : NOSTR_CONFIG_DEFAULTS.relays.defaults.map(r => r.url);
+}
+
+const STOP_WORDS = new Set([
+  'the', 'and', 'for', 'that', 'this', 'with', 'from', 'have', 'what', 'your',
+  'about', 'just', 'more', 'when', 'some', 'there', 'they', 'will', 'been',
+  'would', 'their', 'them', 'these', 'could', 'were', 'than', 'into', 'only',
+  'other', 'then', 'also', 'after', 'most', 'over', 'even', 'want', 'like',
+  'post', 'view', 'feed', 'here', 'http', 'https', 'nostr', 'com', 'www',
+  'well', 'very', 'much', 'know', 'good', 'make', 'look', 'come', 'time',
+]);
+
+/** Extract prominent negative topic signatures, hashtags and keywords from a moment */
+export function extractNegativeTopics(content: string, author?: string, tags?: string[][]): string[] {
+  const list: string[] = [];
+  if (author) {
+    const cleanAuthor = String(author).replace(/^@/, '').trim().toLowerCase();
+    if (cleanAuthor && cleanAuthor.length >= 2) {
+      list.push(`@${cleanAuthor}`);
+    }
+  }
+
+  // Extract explicit hashtags
+  const hashtags = (content || '').match(/#[\w\d_-]+/g) || [];
+  for (const ht of hashtags) {
+    const clean = ht.toLowerCase().trim();
+    if (clean.length > 2) list.push(clean);
+  }
+
+  // Extract tags from raw Nostr/Kylrix tags
+  if (Array.isArray(tags)) {
+    for (const t of tags) {
+      if (t[0] === 't' && t[1]) {
+        list.push(`#${String(t[1]).toLowerCase().trim()}`);
+      }
+    }
+  }
+
+  // Extract keywords >= 4 chars
+  const words = (content || '').toLowerCase().match(/[a-z0-9_-]{4,}/g) || [];
+  for (const w of words) {
+    if (!STOP_WORDS.has(w) && !/^\d+$/.test(w)) {
+      list.push(w);
+    }
+  }
+
+  return Array.from(new Set(list)).slice(0, 10);
+}
+
+/** Add negative terms to See Less / Muted Topics in user settings */
+export async function addSeeLessTopics(newTopics: string[]): Promise<ConnectFeedSettings> {
+  const current = await getConnectFeedSettings();
+  const normalizedNew = newTopics
+    .map((t) => String(t || '').trim().toLowerCase())
+    .filter((t) => t.length >= 2);
+  const nextSeeLess = Array.from(new Set([...normalizedNew, ...(current.seeLessTopics || [])])).slice(0, 80);
+  return setConnectFeedSettings({ seeLessTopics: nextSeeLess });
+}
+
+/** Remove a term from See Less / Muted Topics */
+export async function removeSeeLessTopic(topic: string): Promise<ConnectFeedSettings> {
+  const current = await getConnectFeedSettings();
+  const target = String(topic || '').trim().toLowerCase();
+  const nextSeeLess = (current.seeLessTopics || []).filter((t) => t.toLowerCase() !== target);
+  return setConnectFeedSettings({ seeLessTopics: nextSeeLess });
+}
+
+/** Strictly check if a post or note matches any negative See Less topic */
+export function isContentBlockedBySeeLess(
+  content: string,
+  author?: string,
+  tags?: string[][],
+  seeLessTopics?: string[],
+): boolean {
+  if (!seeLessTopics || !seeLessTopics.length) return false;
+  const hay = `${content || ''} ${author || ''}`.toLowerCase();
+  const rawTags = Array.isArray(tags)
+    ? tags.map((t) => String(t[1] || '').toLowerCase())
+    : [];
+
+  for (const raw of seeLessTopics) {
+    const term = String(raw || '').trim().toLowerCase();
+    if (!term || term.length < 2) continue;
+
+    // Handle @username block
+    if (term.startsWith('@')) {
+      const handle = term.slice(1);
+      if (author && author.toLowerCase().includes(handle)) return true;
+      if (hay.includes(term)) return true;
+      continue;
+    }
+
+    // Handle #hashtag block
+    if (term.startsWith('#')) {
+      const tagWithoutHash = term.slice(1);
+      if (rawTags.includes(tagWithoutHash)) return true;
+      if (hay.includes(term)) return true;
+      continue;
+    }
+
+    // Direct substring or word match
+    if (hay.includes(term)) return true;
+    if (rawTags.some((t) => t === term || t.includes(term))) return true;
+  }
+
+  return false;
+}
+
+const HIDDEN_MOMENTS_KEY = 'kylrix_hidden_moment_ids_v1';
+
+export function hideMomentLocally(momentId: string): void {
+  if (typeof window === 'undefined' || !momentId) return;
+  try {
+    const existing: string[] = JSON.parse(localStorage.getItem(HIDDEN_MOMENTS_KEY) || '[]');
+    if (!existing.includes(momentId)) {
+      existing.push(momentId);
+      localStorage.setItem(HIDDEN_MOMENTS_KEY, JSON.stringify(existing.slice(-500)));
+    }
+  } catch {}
+}
+
+export function isMomentHiddenLocally(momentId: string): boolean {
+  if (typeof window === 'undefined' || !momentId) return false;
+  try {
+    const existing: string[] = JSON.parse(localStorage.getItem(HIDDEN_MOMENTS_KEY) || '[]');
+    return existing.includes(momentId);
+  } catch {
+    return false;
+  }
 }
 
 export const CONNECT_FEED_DEFAULTS = DEFAULTS;

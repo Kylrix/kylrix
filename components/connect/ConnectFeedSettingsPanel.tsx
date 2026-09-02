@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sliders, Tag, Eye, Layers, Hash, RadioTower, ChevronRight, ChevronUp, ChevronDown, UserCircle2 } from 'lucide-react';
+import { X, Sliders, Tag, Eye, Layers, Hash, RadioTower, ChevronRight, ChevronUp, ChevronDown, UserCircle2, EyeOff } from 'lucide-react';
 import { CONNECT_FEED_DEFAULTS, getConnectFeedSettings, setConnectFeedSettings, type ConnectFeedSettings } from '@/lib/connect/feed-settings';
 import { CURATED_TOPIC_CATEGORIES } from '@/lib/ecosystem/intelligence-topics';
 import { ConnectNostrSettingsView } from './ConnectNostrSettingsView';
@@ -44,6 +44,7 @@ export function ConnectFeedSettingsPanel({
   const [settings, setSettings] = useState<ConnectFeedSettings>(CONNECT_FEED_DEFAULTS);
   const [newTopic, setNewTopic] = useState('');
   const [newInterest, setNewInterest] = useState('');
+  const [newSeeLess, setNewSeeLess] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -79,10 +80,18 @@ export function ConnectFeedSettingsPanel({
   const addInterest = () => {
     const t = newInterest.trim().toLowerCase();
     if (!t || settings.interests.includes(t)) return;
-    patch({ interests: [...settings.interests, t].slice(0, 20) });
+    patch({ interests: [...settings.interests, t].slice(0, 30) });
     setNewInterest('');
   };
   const removeInterest = (t: string) => patch({ interests: settings.interests.filter(x => x !== t) });
+
+  const addSeeLess = () => {
+    const t = newSeeLess.trim().toLowerCase();
+    if (!t || (settings.seeLessTopics || []).includes(t)) return;
+    patch({ seeLessTopics: [t, ...(settings.seeLessTopics || [])].slice(0, 80) });
+    setNewSeeLess('');
+  };
+  const removeSeeLess = (t: string) => patch({ seeLessTopics: (settings.seeLessTopics || []).filter(x => x !== t) });
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#0A0908]">
@@ -279,6 +288,52 @@ export function ConnectFeedSettingsPanel({
                 </span>
               );
             })}
+          </div>
+        </section>
+
+        {/* See Less / Blocked Keywords & Topics Section */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-rose-400 flex items-center gap-1.5 font-mono">
+              <EyeOff size={12} className="text-rose-400" /> See Less / Muted Topics
+            </h3>
+            <span className="text-[10px] font-mono text-rose-400 font-bold">Hard block</span>
+          </div>
+
+          <p className="text-[11px] text-white/40 font-satoshi m-0 leading-relaxed">
+            Posts containing these keywords, hashtags, or author handles are strictly blocked and filtered out across your feed.
+          </p>
+
+          <div className="flex gap-2">
+            <input
+              value={newSeeLess}
+              onChange={e => setNewSeeLess(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSeeLess(); } }}
+              placeholder="e.g. nsfw, @spammer, #scam, pump..."
+              className="flex-1 h-9 rounded-xl bg-[#161412] border border-white/[0.06] px-3 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-rose-400/40"
+            />
+            <button type="button" onClick={addSeeLess} className="h-9 px-3.5 rounded-xl bg-rose-500 text-white text-xs font-black">Block</button>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {(settings.seeLessTopics || []).map(rawTopic => (
+              <span
+                key={rawTopic}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-mono font-bold bg-rose-500/15 border border-rose-500/30 text-rose-300"
+              >
+                {rawTopic}
+                <button
+                  type="button"
+                  onClick={() => removeSeeLess(rawTopic)}
+                  className="text-rose-300/60 hover:text-white"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            {!(settings.seeLessTopics && settings.seeLessTopics.length) && (
+              <p className="text-xs text-white/30 italic m-0">No muted topics yet. Right click any post to see less like it.</p>
+            )}
           </div>
         </section>
 

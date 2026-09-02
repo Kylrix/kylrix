@@ -49,7 +49,16 @@ const SPAM_KEYWORDS = [
 ];
 
 /** Returns false = hide completely, { rank } = show but with adjusted rank (0–100). */
-export function sanitizeFeedContent(text: string, author: string): false | { rank: number } {
+export function sanitizeFeedContent(
+  text: string,
+  author: string,
+  tags?: string[][],
+  seeLessTopics?: string[],
+  momentId?: string,
+): false | { rank: number } {
+  if (momentId && isMomentHiddenLocally(momentId)) return false;
+  if (isContentBlockedBySeeLess(text, author, tags, seeLessTopics)) return false;
+
   const trimmed = (text || '').trim();
   const hay = `${trimmed} ${author || ''}`.toLowerCase();
 
@@ -100,7 +109,7 @@ function buildItems(
     zapCount?: Record<string, number>;
     repostCount?: Record<string, number>;
   },
-  interestsConfig?: { topics?: string[]; interests?: string[] },
+  interestsConfig?: { topics?: string[]; interests?: string[]; seeLessTopics?: string[] },
 ): UnifiedFeedItem[] {
   const rows: UnifiedFeedItem[] = [];
   const ecosystemNostrIds = new Set<string>();
@@ -119,8 +128,15 @@ function buildItems(
     const authorName = m.userName || m.user?.name || m.username || 'Creator';
     const authorUsername = m.username || m.user?.username || m.userName;
     const authorKey = m.userId || authorUsername || authorName || m.$id;
+    const momentId = m.$id || m.id;
 
-    const sanitizeResult = sanitizeFeedContent(rawContent, `${authorName} ${authorUsername || ''}`);
+    const sanitizeResult = sanitizeFeedContent(
+      rawContent,
+      `${authorName} ${authorUsername || ''}`,
+      m.tags,
+      interestsConfig?.seeLessTopics,
+      momentId,
+    );
     if (!sanitizeResult) {
       continue;
     }
@@ -190,7 +206,13 @@ function buildItems(
       }
     }
 
-    const nostrSanitize = sanitizeFeedContent(event.content || '', `${authorName} ${authorUsername || ''}`);
+    const nostrSanitize = sanitizeFeedContent(
+      event.content || '',
+      `${authorName} ${authorUsername || ''}`,
+      event.tags,
+      interestsConfig?.seeLessTopics,
+      event.id,
+    );
     if (!nostrSanitize) {
       continue;
     }
@@ -521,8 +543,14 @@ export function useConnectMomentsFeed() {
         'presale is live', 'private key', 'seed phrase'
       ];
 
-      // Aggressive anti-spam filter: eliminate shilling, bots, and spam links
+      // Aggressive anti-spam & See Less negative filter: eliminate muted topics, shilling, bots, and spam links
       incoming = incoming.filter(i => {
+        const momentId = i.source === 'ecosystem' ? i.rawEvent?.$id || i.rawEvent?.id : i.rawEvent?.id;
+        if (momentId && isMomentHiddenLocally(momentId)) return false;
+        if (i.id && isMomentHiddenLocally(i.id)) return false;
+        if (isContentBlockedBySeeLess(i.content || '', `${i.authorName || ''} ${i.authorUsername || ''}`, i.rawEvent?.tags, s.seeLessTopics)) {
+          return false;
+        }
         const text = (i.content || '').toLowerCase();
         const author = `${i.authorName || ''} ${i.authorUsername || ''}`.toLowerCase();
         const isSpamText = spamKeywords.some(w => text.includes(w) || author.includes(w));
@@ -603,6 +631,14 @@ export function useConnectMomentsFeed() {
       if (s.showEcosystem === false) next = next.filter(i => i.source !== 'ecosystem');
       if (s.showNostr === false) next = next.filter(i => i.source !== 'nostr');
       if (s.showReplies === false) next = next.filter(i => (i.repliesCount || 0) === 0);
+      if (s.seeLessTopics && s.seeLessTopics.length) {
+        next = next.filter(i => {
+          const momentId = i.source === 'ecosystem' ? i.rawEvent?.$id || i.rawEvent?.id : i.rawEvent?.id;
+          if (momentId && isMomentHiddenLocally(momentId)) return false;
+          if (i.id && isMomentHiddenLocally(i.id)) return false;
+          return !isContentBlockedBySeeLess(i.content || '', `${i.authorName || ''} ${i.authorUsername || ''}`, i.rawEvent?.tags, s.seeLessTopics);
+        });
+      }
       const phrases: string[] = [...((s.topics as string[]) || []), ...((s.interests as string[]) || [])].map(t => String(t).toLowerCase()).filter(Boolean);
       if (phrases.length) {
         const filtered = next.filter(i => {
@@ -617,6 +653,46 @@ export function useConnectMomentsFeed() {
       return next;
     });
   }, [feedSettings, hydrated]);
+
+  // See Less real-time hide listener — instantly removes matching moment from UI
+  useEffect(() => {
+    const handleSeeLess = (e: any) => {
+      const detail = e?.detail;
+      const targetId = detail?.id;
+      const topics = (detail?.topics || []) as string[];
+      if (targetId) hideMomentLocally(targetId);
+
+      setDisplayItems((prev) => {
+        return prev.filter((item) => {
+          const momentId = item.source === 'ecosystem' ? item.rawEvent?.$id || item.rawEvent?.id : item.rawEvent?.id;
+          if (
+            targetId &&
+            (item.id === targetId ||
+              momentId === targetId ||
+              `eco_${momentId}` === targetId ||
+              `nostr_${momentId}` === targetId)
+          ) {
+            return false;
+          }
+          if (
+            topics.length &&
+            isContentBlockedBySeeLess(
+              item.content || '',
+              `${item.authorName || ''} ${item.authorUsername || ''}`,
+              item.rawEvent?.tags,
+              topics,
+            )
+          ) {
+            return false;
+          }
+          return true;
+        });
+      });
+    };
+
+    window.addEventListener('kylrix:see-less', handleSeeLess);
+    return () => window.removeEventListener('kylrix:see-less', handleSeeLess);
+  }, []);
 
   // Feed search submit listener — instant in-page query filter and prioritize
   useEffect(() => {
