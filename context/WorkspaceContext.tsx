@@ -108,12 +108,56 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     [personalWorkspace.id, userId],
   );
 
+  const getSynchronousOfflineWorkspaces = useCallback((uid: string): WorkspaceItem[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const keys = [
+        `kylrix_workspaces_${uid}`,
+        'kylrix_workspaces',
+        `f_projects_list_${uid}`,
+        'f_projects_list',
+        'kylrix_all_cached_workspaces',
+      ];
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const list = Array.isArray(parsed) ? parsed : (parsed?.rows || parsed?.workspaces || []);
+          if (Array.isArray(list) && list.length > 0) {
+            return mapProjectRows(list);
+          }
+        }
+      }
+    } catch {}
+    return [];
+  }, [mapProjectRows]);
+
   const initialItems = useMemo<WorkspaceItem[]>(() => {
-    return [personalWorkspace, ...mapProjectRows(getSessionProjectsList(userId) || [])];
-  }, [personalWorkspace, mapProjectRows, userId]);
+    const sessionItems = mapProjectRows(getSessionProjectsList(userId) || []);
+    const localCached = getSynchronousOfflineWorkspaces(userId);
+    const byId = new Map<string, WorkspaceItem>();
+    byId.set(personalWorkspace.id, personalWorkspace);
+    for (const w of localCached) byId.set(w.id, w);
+    for (const w of sessionItems) byId.set(w.id, w);
+    return Array.from(byId.values());
+  }, [personalWorkspace, mapProjectRows, userId, getSynchronousOfflineWorkspaces]);
 
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>(initialItems);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
+
+  const persistWorkspacesOffline = useCallback((items: WorkspaceItem[], uid: string) => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`kylrix_workspaces_${uid}`, JSON.stringify(items));
+        localStorage.setItem('kylrix_all_cached_workspaces', JSON.stringify(items));
+      }
+      import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+        LocalEngine.cacheSet(`kylrix_workspaces_${uid}`, items).catch(() => {});
+        LocalEngine.cacheSet(`f_projects_list_${uid}`, items).catch(() => {});
+        LocalEngine.cacheSet('f_projects_list', items).catch(() => {});
+      }).catch(() => {});
+    } catch {}
+  }, []);
 
   const refreshWorkspaces = useCallback(async () => {
     setLoadingWorkspaces(true);
@@ -121,7 +165,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
       clearSessionProjectsList();
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      const [rows, localShared, directUserProjects, globalProjects] = await Promise.all([
+      const [rows, localShared, directUserProjects, globalProjects, customCached] = await Promise.all([
         warmProjectsList({
           userId: userId || 'guest',
           getCachedDataAsync,
@@ -130,13 +174,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         LocalEngine.cacheGet<WorkspaceItem[]>(`visited_shared_workspaces_${userId}`).catch(() => []),
         LocalEngine.cacheGet<any[]>(`f_projects_list_${userId}`).catch(() => []),
         LocalEngine.cacheGet<any[]>('f_projects_list').catch(() => []),
+        LocalEngine.cacheGet<any[]>(`kylrix_workspaces_${userId}`).catch(() => []),
       ]);
 
       const candidateRows = (Array.isArray(rows) && rows.length > 0)
         ? rows
-        : (Array.isArray(directUserProjects) && directUserProjects.length > 0)
-          ? directUserProjects
-          : (Array.isArray(globalProjects) ? globalProjects : []);
+        : (Array.isArray(customCached) && customCached.length > 0)
+          ? customCached
+          : (Array.isArray(directUserProjects) && directUserProjects.length > 0)
+            ? directUserProjects
+            : (Array.isArray(globalProjects) ? globalProjects : []);
 
       const mapped = mapProjectRows(candidateRows);
       const mappedLocal = Array.isArray(localShared)
@@ -151,20 +198,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
 
       setWorkspaces((prev) => {
-        // Retain any existing non-personal workspaces if fetch returns fewer
         for (const existing of prev) {
           if (existing.id && existing.id !== personalWorkspace.id && !byId.has(existing.id)) {
             byId.set(existing.id, existing);
           }
         }
-        return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+        const finalWorkspaces = [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+        persistWorkspacesOffline(finalWorkspaces, userId);
+        return finalWorkspaces;
       });
     } catch (err) {
       console.warn('[WorkspaceContext] Failed to load workspaces:', err);
     } finally {
       setLoadingWorkspaces(false);
     }
-  }, [personalWorkspace, getCachedDataAsync, fetchOptimized, mapProjectRows, userId]);
+  }, [personalWorkspace, getCachedDataAsync, fetchOptimized, mapProjectRows, userId, persistWorkspacesOffline]);
 
   const registerSharedWorkspace = useCallback(
     async (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean }) => {
@@ -196,22 +244,26 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
           const byId = new Map(prev.map((w) => [w.id, w]));
           byId.set(item.id, item);
-          return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+          const next = [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+          persistWorkspacesOffline(next, userId);
+          return next;
         });
       } catch (err) {
         console.warn('[WorkspaceContext] Failed to register visited shared workspace:', err);
       }
     },
-    [personalWorkspace, userId]
+    [personalWorkspace, userId, persistWorkspacesOffline]
   );
 
   const markWorkspacePublic = useCallback(
     async (workspaceId: string) => {
-      setWorkspaces((prev) =>
-        prev.map((w) =>
+      setWorkspaces((prev) => {
+        const next = prev.map((w) =>
           w.id === workspaceId ? { ...w, isPublic: true, isGuest: true } : w
-        )
-      );
+        );
+        persistWorkspacesOffline(next, userId);
+        return next;
+      });
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const [userProjects, globalProjects] = await Promise.all([
@@ -232,7 +284,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {}
     },
-    [userId]
+    [userId, persistWorkspacesOffline]
   );
 
   useEffect(() => {
@@ -258,7 +310,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       lastSetIdRef.current = userId;
       lastUserIdRef.current = userId;
       setActiveWorkspaceIdState(userId);
-      setWorkspaces([personalWorkspace]);
+      // Synchronously load offline cached workspaces on user transition
+      const cached = getSynchronousOfflineWorkspaces(userId);
+      setWorkspaces((prev) => {
+        const byId = new Map<string, WorkspaceItem>();
+        byId.set(personalWorkspace.id, personalWorkspace);
+        for (const w of cached) byId.set(w.id, w);
+        for (const w of prev) {
+          if (w.id && w.id !== personalWorkspace.id && !byId.has(w.id)) {
+            byId.set(w.id, w);
+          }
+        }
+        return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+      });
       try {
         const { clearSessionProjectsList } = require('@/lib/projects/projects-cache');
         clearSessionProjectsList();
@@ -267,17 +331,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setActiveWorkspaceIdState((prev) => (prev === 'guest' && userId !== 'guest' ? userId : prev));
     }
     void refreshWorkspaces();
-  }, [userId, personalWorkspace, refreshWorkspaces]);
+  }, [userId, personalWorkspace, refreshWorkspaces, getSynchronousOfflineWorkspaces]);
 
   useEffect(() => {
     void (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const [userProjects, localShared] = await Promise.all([
+        const [userProjects, localShared, customCached] = await Promise.all([
           LocalEngine.cacheGet(`f_projects_list_${userId}`),
           LocalEngine.cacheGet<WorkspaceItem[]>(`visited_shared_workspaces_${userId}`).catch(() => []),
+          LocalEngine.cacheGet<any[]>(`kylrix_workspaces_${userId}`).catch(() => []),
         ]);
-        const mapped = mapProjectRows(userProjects || []);
+        const mapped = mapProjectRows(userProjects || customCached || []);
         const mappedLocal = Array.isArray(localShared)
           ? localShared.filter((s) => s.id && s.id !== personalWorkspace.id)
           : [];
@@ -289,13 +354,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           for (const w of mappedLocal) {
             if (!byId.has(w.id)) byId.set(w.id, { ...w, isShared: true, isPersonal: false });
           }
-          return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+          const next = [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+          persistWorkspacesOffline(next, userId);
+          return next;
         });
       } catch {
         /* optional */
       }
     })();
-  }, [personalWorkspace, mapProjectRows, userId]);
+  }, [personalWorkspace, mapProjectRows, userId, persistWorkspacesOffline]);
+
 
   const ACTIVE_WORKSPACE_CACHE_KEY = `kylrix_active_workspace_${userId}`;
 
@@ -502,25 +570,39 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const ownedWorkspaces = useMemo(
-    () => workspaces.filter((w) => !w.isPersonal && !w.isAgentic && (!w.isShared && (w.ownerId === userId || !w.ownerId))),
+    () => workspaces.filter((w) => !w.isPersonal && !w.isAgentic && (!w.isShared || w.ownerId === userId || !w.ownerId)),
     [workspaces, userId]
   );
 
   const sharedWorkspaces = useMemo(
-    () => workspaces.filter((w) => !w.isPersonal && !w.isAgentic && (w.isShared || (w.ownerId && w.ownerId !== userId))),
+    () => workspaces.filter((w) => !w.isPersonal && !w.isAgentic && w.isShared && w.ownerId && w.ownerId !== userId),
     [workspaces, userId]
   );
 
   const createWorkspace = useCallback(
     async (title: string, summary?: string): Promise<WorkspaceItem | null> => {
       try {
-        const created = await ProjectsService.createProject({
-          title,
-          summary: summary || '',
-          ownerId: userId,
-          kind: 'workspace',
-          parentProjectId: null,
-        });
+        let created: any = null;
+        try {
+          created = await ProjectsService.createProject({
+            title,
+            summary: summary || '',
+            ownerId: userId,
+            kind: 'workspace',
+            parentProjectId: null,
+          });
+        } catch (netErr) {
+          console.warn('[WorkspaceContext] Network create failed, creating offline workspace:', netErr);
+          created = {
+            $id: `ws_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            title,
+            summary: summary || '',
+            ownerId: userId,
+            kind: 'workspace',
+            $createdAt: new Date().toISOString(),
+            $updatedAt: new Date().toISOString(),
+          };
+        }
         const newItem: WorkspaceItem = {
           id: created.$id,
           title: created.title || title,
@@ -529,12 +611,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           isShared: false,
           role: 'owner',
         };
-        setWorkspaces((prev) => [
-          personalWorkspace,
-          newItem,
-          ...prev.filter((w) => w.id !== personalWorkspace.id && w.id !== newItem.id),
-        ]);
+        setWorkspaces((prev) => {
+          const next = [
+            personalWorkspace,
+            newItem,
+            ...prev.filter((w) => w.id !== personalWorkspace.id && w.id !== newItem.id),
+          ];
+          persistWorkspacesOffline(next, userId);
+          return next;
+        });
         setActiveWorkspaceIdState(created.$id);
+        lastSetIdRef.current = created.$id;
 
         // Instantly write to LocalEngine caches
         try {
@@ -547,6 +634,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           ];
           await LocalEngine.cacheSet(cacheKey, updatedProjects);
           await LocalEngine.cacheSet('f_projects_list', updatedProjects);
+          await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, created.$id);
         } catch {}
 
         void refreshWorkspaces();
@@ -556,8 +644,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     },
-    [userId, refreshWorkspaces, personalWorkspace]
+    [userId, refreshWorkspaces, personalWorkspace, persistWorkspacesOffline, ACTIVE_WORKSPACE_CACHE_KEY]
   );
+
 
   const attachEntityToActiveWorkspace = useCallback(
     async (entityKind: string, entityId: string) => {
