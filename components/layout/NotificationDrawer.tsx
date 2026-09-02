@@ -578,7 +578,7 @@ export function NotificationDrawer({
 
   // OpenBricks 4.0 Tactile Content Architecture (1:1 with renderProfilePanel)
   const notificationBody = (
-    <Box sx={{ display: 'grid', gap: 2, minWidth: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, width: '100%', maxWidth: '100%', height: '100%', flex: 1, boxSizing: 'border-box' }}>
       {/* 1. Header Identity Tile (Generous padding, avatar/icon slot, title, and close button) */}
       <Box
         sx={{
@@ -593,6 +593,7 @@ export function NotificationDrawer({
           border: '1px solid rgba(255,255,255,0.08)',
           bgcolor: 'rgba(255,255,255,0.03)',
           minWidth: 0,
+          flexShrink: 0,
           boxSizing: 'border-box',
         }}
       >
@@ -700,53 +701,57 @@ export function NotificationDrawer({
               width: 32,
               height: 32,
               borderRadius: '999px',
-              color: 'rgba(255,255,255,0.6)',
-              bgcolor: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' },
+              color: 'rgba(255,255,255,0.4)',
+              bgcolor: 'rgba(255,255,255,0.03)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' },
             }}
           >
-            <CloseIcon size={15} />
+            <CloseIcon size={14} />
           </IconButton>
         </Box>
       </Box>
 
-      {/* 2. OpenBricks 4.0 Tactile Category Tabs */}
+      {/* 2. Horizontal Filter Pill Tabs */}
       <Box
         sx={{
-          p: 0.75,
-          borderRadius: '18px',
-          bgcolor: '#0A0908',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, 1fr)',
-          gap: 0.75,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          overflowX: 'auto',
+          pb: 0.5,
+          flexShrink: 0,
           width: '100%',
-          boxSizing: 'border-box',
+          '&::-webkit-scrollbar': { display: 'none' },
+          scrollbarWidth: 'none',
         }}
       >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
-          const count = unreadCounts[tab.id] || 0;
+          const count = unreadCounts[tab.id];
+
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
               type="button"
+              onClick={() => setActiveTab(tab.id)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '5px',
-                padding: '8px 4px',
-                borderRadius: '12px',
-                fontSize: '11.5px',
+                gap: '6px',
+                padding: '7px 13px',
+                borderRadius: '999px',
+                fontSize: '12px',
                 fontWeight: isActive ? 800 : 600,
-                fontFamily: 'inherit',
-                color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.45)',
-                backgroundColor: isActive ? '#1F1D1A' : 'transparent',
-                border: isActive ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
+                border: isActive
+                  ? `1px solid ${appAccent}`
+                  : '1px solid rgba(255,255,255,0.08)',
+                backgroundColor: isActive
+                  ? alpha(appAccent, 0.16)
+                  : 'rgba(255,255,255,0.03)',
+                color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 transition: 'all 0.15s ease',
                 minWidth: 0,
               }}
@@ -754,19 +759,16 @@ export function NotificationDrawer({
               <span style={{ display: 'flex', alignItems: 'center', opacity: isActive ? 1 : 0.7 }}>
                 {tab.icon}
               </span>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {tab.label}
-              </span>
+              <span>{tab.label}</span>
               {count > 0 && (
                 <span
                   style={{
-                    padding: '1px 5px',
+                    padding: '1px 6px',
                     borderRadius: '999px',
-                    fontSize: '9.5px',
+                    fontSize: '9px',
                     fontWeight: 900,
                     backgroundColor: isActive ? appAccent : 'rgba(255,255,255,0.15)',
                     color: '#FFFFFF',
-                    lineHeight: 1.2,
                   }}
                 >
                   {count}
@@ -777,18 +779,21 @@ export function NotificationDrawer({
         })}
       </Box>
 
-      {/* 3. Notifications List Column (ui.tailwind-fix standard) */}
+      {/* 3. Notifications List Column (Freely scrollable row stream) */}
       <Box
         sx={{
           display: 'flex',
           flexDirection: 'column',
           gap: 1.25,
-          maxHeight: isDesktop ? 'calc(100vh - 310px)' : '45vh',
+          flex: 1,
+          minHeight: 0,
           overflowY: 'auto',
           overflowX: 'hidden',
+          overscrollBehavior: 'contain',
           pr: 0.5,
           width: '100%',
           boxSizing: 'border-box',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         {filteredNotifications.map((notif) => (
@@ -1155,7 +1160,7 @@ export function NotificationDrawer({
         sx={{
           px: { xs: 1.5, sm: 2.25, md: 4 },
           py: { xs: 1.5, sm: 2 },
-          maxHeight: '52vh',
+          maxHeight: '82dvh',
           overflowY: 'auto',
           overflowX: 'hidden',
           width: '100%',
