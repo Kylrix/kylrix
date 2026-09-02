@@ -2,7 +2,7 @@ import { ApiResources } from '@/lib/api/resources';
 import type { ApiActor } from '@/lib/api/guard';
 import { mcpListResult } from '@/sdk/contracts';
 import { assertActorFeatureAccess } from '@/lib/tools/gate';
-import { featureIdForMcpTool } from '@/lib/tools/mcp-features';
+import { featureIdForMcpTool } from '@/lib/tools/features';
 
 type McpToolHandler = (actor: ApiActor, args: Record<string, any>) => Promise<any>;
 

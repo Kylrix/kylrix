@@ -191,15 +191,15 @@ export function createSystemTablesDB(): TablesDB {
           let databaseId = '';
           let tableId = '';
           let rowId = '';
-          let queries: any[] | undefined;
+          let _queries: any[] | undefined;
 
           if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
             databaseId = args[0].databaseId;
             tableId = args[0].tableId;
             rowId = args[0].rowId;
-            queries = args[0].queries;
+            _queries = args[0].queries;
           } else {
-            [databaseId, tableId, rowId, queries] = args;
+            [databaseId, tableId, rowId, _queries] = args;
           }
 
           if (!databaseId || !tableId || !rowId) {
