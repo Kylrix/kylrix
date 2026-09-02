@@ -99,6 +99,9 @@ function storeIdentity(identity: CachedIdentity) {
     memoryCache.set(`username:${identity.username}`, identity);
   }
   persistStorage();
+  void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+    void LocalEngine.cacheSet(`identity:${identity.userId}`, identity).catch(() => {});
+  });
   emitUpdate(identity);
 }
 
@@ -140,21 +143,21 @@ function normalizeIdentity(input: IdentityInput | null | undefined): CachedIdent
     source: input.source};
 }
 
-export function seedIdentityCache(input: IdentityInput | null | undefined) {
-  hydrateStorage();
-  const identity = normalizeIdentity(input);
-  if (!identity) return null;
-  storeIdentity(identity);
-  return identity;
+export function seedIdentityCache(input: IdentityInput | null | undefined): CachedIdentity | null {
+  const normalized = normalizeIdentity(input);
+  if (!normalized) return null;
+
+  storeIdentity(normalized);
+  return normalized;
 }
 
-export function getCachedIdentityById(userId?: string | null) {
+export function getCachedIdentityById(userId?: string | null): CachedIdentity | null {
   if (!userId) return null;
   hydrateStorage();
   return memoryCache.get(`id:${userId}`) || null;
 }
 
-export function getCachedIdentityByUsername(username?: string | null) {
+export function getCachedIdentityByUsername(username?: string | null): CachedIdentity | null {
   const normalized = normalizeUsername(username);
   if (!normalized) return null;
   hydrateStorage();
@@ -199,6 +202,23 @@ export async function resolveIdentityById(
       void refreshIdentity(`id:${userId}`, fetcher);
     }
     return cached;
+  }
+
+  // Check LocalEngine offline IndexedDB substrate before network probe
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const local = await LocalEngine.cacheGet<CachedIdentity>(`identity:${userId}`).catch(() => null);
+    if (local && local.userId) {
+      seedIdentityCache(local);
+      if (typeof navigator !== 'undefined' && navigator.onLine && shouldRefresh(local, staleAfterMs)) {
+        void refreshIdentity(`id:${userId}`, fetcher);
+      }
+      return local;
+    }
+  } catch {}
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return null;
   }
 
   return refreshIdentity(`id:${userId}`, fetcher);

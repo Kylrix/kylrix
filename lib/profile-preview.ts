@@ -49,6 +49,16 @@ export async function fetchProfilePreview(fileId?: string | null, width: number 
       return pulse.avatarBase64;
   }
 
+  // 3. LocalEngine IndexedDB Offline Substrate
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const localCached = await LocalEngine.cacheGet<string>(`avatar:${fileId}`).catch(() => null);
+    if (localCached) {
+      previewCache.set(fileId, localCached);
+      return localCached;
+    }
+  } catch {}
+
   try {
     const urlObj = getProfilePicturePreview(fileId, width, height);
     if (!urlObj) throw new Error('Failed to generate preview URL');
@@ -61,15 +71,23 @@ export async function fetchProfilePreview(fileId?: string | null, width: number 
     } catch {}
 
     if (isAccessible) {
-      // Background: Save to Pulse directly if it is already a base64 data url, otherwise convert
-      if (pulse?.profilePicId === fileId || pulse?.$id === fileId) {
-          if (str.startsWith('data:')) {
-              setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: fileId } }, str);
-          } else {
-              convertUrlToBase64(str).then(base64 => {
-                  setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: fileId } }, base64);
-              }).catch(() => {});
+      // Background: Save to Pulse & LocalEngine
+      if (str.startsWith('data:')) {
+        void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+          void LocalEngine.cacheSet(`avatar:${fileId}`, str).catch(() => {});
+        });
+        if (pulse?.profilePicId === fileId || pulse?.$id === fileId) {
+          setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: fileId } }, str);
+        }
+      } else {
+        convertUrlToBase64(str).then(base64 => {
+          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+            void LocalEngine.cacheSet(`avatar:${fileId}`, base64).catch(() => {});
+          });
+          if (pulse?.profilePicId === fileId || pulse?.$id === fileId) {
+            setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: fileId } }, base64);
           }
+        }).catch(() => {});
       }
 
       previewCache.set(fileId, str);
@@ -80,6 +98,9 @@ export async function fetchProfilePreview(fileId?: string | null, width: number 
       const { getProfilePicturePreviewSecure } = await import('@/lib/actions/secure-ops');
       const secureBase64 = await getProfilePicturePreviewSecure(fileId);
       if (secureBase64) {
+        void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+          void LocalEngine.cacheSet(`avatar:${fileId}`, secureBase64).catch(() => {});
+        });
         if (pulse?.profilePicId === fileId || pulse?.$id === fileId) {
           setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: fileId } }, secureBase64);
         }
