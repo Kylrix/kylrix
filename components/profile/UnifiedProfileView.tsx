@@ -732,9 +732,9 @@ export function UnifiedProfileView({
     activeTab === 'likes' ? unpackedLikes : unpackedZaps;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#12100E] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi">
-      {/* Top Header Bar (OpenBricks 4.0 Warm Ash Surface) */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-[#161412] shrink-0 z-30">
+    <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi">
+      {/* Top Header Bar */}
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-[#0A0908] shrink-0 z-30">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${isNostrMode ? 'bg-[#A855F7] shadow-[0_0_8px_rgba(168,85,247,0.6)]' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]'}`} />
           <span className="text-xs font-mono font-bold text-white/80 truncate">
@@ -846,18 +846,18 @@ export function UnifiedProfileView({
         </div>
       </header>
 
-      {/* Main Content Body (Warm Ash Background) */}
-      <main className="flex-1 overflow-y-auto min-h-0 select-text bg-[#12100E]">
+      {/* Main Content Body (Pitch Black Background) */}
+      <main className="flex-1 overflow-y-auto min-h-0 select-text bg-[#000000]">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-5">
           
           {/* View Mode Switcher: Ecosystem (Kylrix) ⟷ Nostr Native */}
-          <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-[#1B1917] border border-white/[0.08] shadow-sm">
+          <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-[#0A0908] border border-white/[0.08] shadow-sm">
             <button
               type="button"
               onClick={() => setViewMode('ecosystem')}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 !isNostrMode
-                  ? 'bg-[#292522] text-white shadow-sm border border-white/10'
+                  ? 'bg-[#161412] text-white shadow-sm border border-white/10'
                   : 'text-white/50 hover:text-white hover:bg-white/[0.03]'
               }`}
             >
@@ -870,7 +870,7 @@ export function UnifiedProfileView({
               onClick={() => setViewMode('nostr')}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 isNostrMode
-                  ? 'bg-[#292522] text-white shadow-sm border border-[#A855F7]/30'
+                  ? 'bg-[#161412] text-white shadow-sm border border-[#A855F7]/30'
                   : 'text-white/50 hover:text-white hover:bg-white/[0.03]'
               }`}
             >
@@ -879,8 +879,8 @@ export function UnifiedProfileView({
             </button>
           </div>
 
-          {/* Identity Card (OpenBricks 4.0 Warm Ash Inset Surface) */}
-          <div className="rounded-3xl bg-[#1B1917] border border-white/[0.08] p-5 sm:p-6 space-y-4 shadow-sm">
+          {/* Identity Card */}
+          <div className="rounded-3xl bg-[#0A0908] border border-white/[0.08] p-5 sm:p-6 space-y-4 shadow-sm">
             <div className="flex items-center gap-4 min-w-0">
               {/* Avatar with Status */}
               <div className="relative shrink-0">
@@ -888,7 +888,7 @@ export function UnifiedProfileView({
                   <img 
                     src={resolvedAvatarUrl} 
                     alt={activeDisplayName} 
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-white/10 shadow-md bg-[#24211E]"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-white/10 shadow-md bg-[#161412]"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = 'none';
                     }}
@@ -898,7 +898,7 @@ export function UnifiedProfileView({
                     {activeDisplayName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-[#1B1917] ${isNostrMode ? 'bg-[#A855F7]' : 'bg-emerald-400'}`} />
+                <span className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-[#0A0908] ${isNostrMode ? 'bg-[#A855F7]' : 'bg-emerald-400'}`} />
               </div>
 
               <div className="min-w-0 flex-1 space-y-1">
@@ -920,7 +920,7 @@ export function UnifiedProfileView({
 
             {/* Follower & Following Metrics Strip */}
             <div className="grid grid-cols-2 gap-2 pt-2">
-              <div className="rounded-2xl bg-[#24211E] border border-white/[0.08] px-4 py-2.5 flex items-center justify-between">
+              <div className="rounded-2xl bg-[#161412] border border-white/[0.08] px-4 py-2.5 flex items-center justify-between">
                 <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
                   {isNostrMode ? 'Nostr Following' : 'Following'}
                 </span>
@@ -928,7 +928,7 @@ export function UnifiedProfileView({
                   {totalFollowing}
                 </span>
               </div>
-              <div className="rounded-2xl bg-[#24211E] border border-white/[0.08] px-4 py-2.5 flex items-center justify-between">
+              <div className="rounded-2xl bg-[#161412] border border-white/[0.08] px-4 py-2.5 flex items-center justify-between">
                 <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
                   {isNostrMode ? 'Nostr Followers' : 'Followers'}
                 </span>
@@ -967,7 +967,7 @@ export function UnifiedProfileView({
                     href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#24211E] border border-white/[0.08] hover:border-white/20 text-xs font-bold text-white/80 hover:text-white transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/[0.08] hover:border-white/20 text-xs font-bold text-white/80 hover:text-white transition-colors cursor-pointer"
                   >
                     <LinkIcon size={12} className="text-[#6366F1]" />
                     <span className="truncate max-w-[160px]">{link.title || link.url.replace(/^https?:\/\//, '')}</span>
@@ -984,7 +984,7 @@ export function UnifiedProfileView({
                   <button
                     type="button"
                     onClick={() => copyToClipboard(nostrMeta.lud16!, 'Lightning Address')}
-                    className="w-full inline-flex items-center justify-between p-3 rounded-2xl bg-[#24211E] border border-amber-500/20 text-xs font-mono text-amber-300 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                    className="w-full inline-flex items-center justify-between p-3 rounded-2xl bg-[#161412] border border-amber-500/20 text-xs font-mono text-amber-300 hover:bg-amber-500/10 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-2 truncate">
                       <Flame size={14} className="text-amber-400 shrink-0" />
@@ -1002,7 +1002,7 @@ export function UnifiedProfileView({
                 <button
                   type="button"
                   onClick={() => copyToClipboard(resolvedNpub, 'npub')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#24211E] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
                   title="Copy npub"
                 >
                   <Globe size={13} className="text-[#A855F7]" />
@@ -1015,7 +1015,7 @@ export function UnifiedProfileView({
                 <button
                   type="button"
                   onClick={() => copyToClipboard(targetUid, 'Ecosystem ID')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#24211E] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
                   title="Copy ID"
                 >
                   <ShieldCheck size={13} className="text-[#10B981]" />
@@ -1028,7 +1028,7 @@ export function UnifiedProfileView({
                 <button
                   type="button"
                   onClick={() => copyToClipboard(resolvedPubkey, 'hex pubkey')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#24211E] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/[0.08] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
                   title="Copy Hex"
                 >
                   <KeyRound size={13} className="text-[#6366F1]" />
@@ -1042,7 +1042,7 @@ export function UnifiedProfileView({
           {/* Activity Section */}
           <div className="space-y-4">
             {/* Stream Tabs */}
-            <nav className="p-1.5 rounded-2xl bg-[#1B1917] border border-white/[0.08] flex gap-1 shadow-sm">
+            <nav className="p-1.5 rounded-2xl bg-[#0A0908] border border-white/[0.08] flex gap-1 shadow-sm">
               {(
                 [
                   { id: 'posts', label: 'Posts', count: unpackedPosts.length },
@@ -1059,7 +1059,7 @@ export function UnifiedProfileView({
                     onClick={() => setActiveTab(t.id)}
                     className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                       active
-                        ? 'bg-[#292522] text-white shadow-sm border border-white/10'
+                        ? 'bg-[#161412] text-white shadow-sm border border-white/10'
                         : 'text-white/50 hover:text-white hover:bg-white/[0.03]'
                     }`}
                   >
@@ -1094,7 +1094,7 @@ export function UnifiedProfileView({
                   return (
                     <div
                       key={post.id}
-                      className="rounded-2xl bg-[#1B1917] border border-white/[0.08] p-4 sm:p-5 space-y-3 hover:border-white/15 transition-all shadow-sm"
+                      className="rounded-2xl bg-[#0A0908] border border-white/[0.08] p-4 sm:p-5 space-y-3 hover:border-white/15 transition-all shadow-sm"
                     >
                       {/* Context Banner */}
                       {post.isRepost && (
