@@ -174,7 +174,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
               onClick={onCreateMoment}
               className="h-10 px-5 rounded-xl bg-[#F59E0B] text-black font-extrabold text-xs"
             >
-              Create moment
+              Create
             </button>
           ) : null}
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect } from 'react';
-import { X, Plus, Sliders, Sparkles } from 'lucide-react';
+import { X, Plus, Sliders, Radio } from 'lucide-react';
 import { ConnectMomentsPanel } from '@/components/connect/ConnectMomentsPanel';
 import { ConnectFeedSettingsPanel } from '@/components/connect/ConnectFeedSettingsPanel';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -43,37 +43,32 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-200">
       {/* Top Header Chrome */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-white/[0.08] bg-[#0A0908] shrink-0">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-[#0A0908] shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-[#F59E0B]/15 border border-[#F59E0B]/30 flex items-center justify-center text-[#F59E0B]">
-            <Sparkles size={16} />
+            <Radio size={16} />
           </div>
-          <div>
-            <h2 className="text-base font-black font-clash text-white tracking-tight m-0">
-              Moments
-            </h2>
-            <p className="text-[11px] font-mono text-white/40 m-0">
-              Decentralized social pulse & stream
-            </p>
-          </div>
+          <h2 className="text-base font-bold text-white tracking-tight m-0">
+            Moments
+          </h2>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleOpenComposer}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#F59E0B] text-black hover:bg-[#d97706] active:scale-95 transition-all shadow-[0_2px_10px_rgba(245,158,11,0.25)] cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F59E0B] text-black hover:bg-[#d97706] active:scale-95 transition-all shadow-[0_2px_10px_rgba(245,158,11,0.25)] cursor-pointer"
           >
             <Plus size={15} strokeWidth={2.5} />
-            <span>Create Moment</span>
+            <span>Create</span>
           </button>
 
           <button
             type="button"
             onClick={handleOpenSettings}
-            className="p-2 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-            title="Feed settings"
-            aria-label="Feed settings"
+            className="p-1.5 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            title="Settings"
+            aria-label="Settings"
           >
             <Sliders size={16} />
           </button>
@@ -82,9 +77,9 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer ml-1"
-              title="Close Moments"
-              aria-label="Close Moments"
+              className="p-1.5 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer ml-1"
+              title="Close"
+              aria-label="Close"
             >
               <X size={18} />
             </button>
