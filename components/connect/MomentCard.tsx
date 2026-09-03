@@ -244,19 +244,15 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     });
   };
 
-  const onShare = async (e: React.MouseEvent) => {
+  const onShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!momentId) return;
-    try {
-      const url =
-        item.source === 'nostr'
-          ? `${window.location.origin}/moment/nostr_${momentId}`
-          : buildPublicResourceUrl('moment', momentId);
-      await navigator.clipboard.writeText(url);
-      toast.success('Link copied');
-    } catch {
-      /* ignore */
-    }
+    openUnifiedDrawer('share-context', {
+      resourceType: 'moment',
+      resourceId: item.source === 'nostr' ? `nostr_${momentId}` : momentId,
+      resourceTitle: item.authorName ? `${item.authorName.replace(/^@/, '')}'s Moment` : 'Moment',
+      accentColor: '#F59E0B',
+    });
   };
 
   const onBookmark = async (e?: React.MouseEvent) => {

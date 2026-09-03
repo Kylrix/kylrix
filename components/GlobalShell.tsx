@@ -330,7 +330,18 @@ const isSpecificPostPage = useMemo(
 
       {/* --- LAYER 2: OVERLAYS --- */}
       {/* Agentic / wallet / unified → NativeSidebarBridge; mobile / modal overlays → UnifiedBottomDrawer */}
-      {unifiedDrawerActive !== 'navbar' && (!isDesktopShell || unifiedDrawerActive === 'login') && <UnifiedBottomDrawer />}
+      {unifiedDrawerActive !== 'navbar' &&
+        (!isDesktopShell ||
+          [
+            'login',
+            'share-context',
+            'share-note',
+            'zap',
+            'delete-confirm',
+            'delete-note',
+            'security-confirm',
+            'access-control',
+          ].includes(unifiedDrawerActive as string)) && <UnifiedBottomDrawer />}
       {unifiedDrawerActive === 'moment-composer' && (
         <MomentComposerDrawer onClose={() => closeUnified()} />
       )}

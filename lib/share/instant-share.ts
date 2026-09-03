@@ -47,7 +47,7 @@ export async function executeInstantShare(
 
   // 1. Verify User Authentication for cloud sharing
   const currentUser = getCurrentUserSnapshot();
-  if (!currentUser?.$id) {
+  if (!currentUser?.$id && resourceType !== 'moment') {
     if (openLoginDrawer) {
       const friendlyName = resourceTitle ? `"${resourceTitle}"` : resourceType;
       openLoginDrawer({

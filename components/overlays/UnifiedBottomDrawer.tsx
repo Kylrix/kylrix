@@ -57,7 +57,8 @@ export function UnifiedBottomDrawer() {
       anchor="bottom"
       open={Boolean(activeContent && (activeContent as string) !== 'navbar')}
       onClose={close}
-      ModalProps={{ keepMounted: false, disablePortal: true }}
+      ModalProps={{ keepMounted: false, disablePortal: false }}
+      sx={{ zIndex: 10000 }}
       PaperProps={{
         sx: {
           bgcolor: '#161412',
@@ -75,6 +76,7 @@ export function UnifiedBottomDrawer() {
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
+          zIndex: 10000,
         },
       }}
     >

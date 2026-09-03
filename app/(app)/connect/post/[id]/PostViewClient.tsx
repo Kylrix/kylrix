@@ -17,11 +17,11 @@ import { SocialService } from '@/lib/services/social';
 import { UsersService } from '@/lib/services/users';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { fetchNostrEventById } from '@/lib/nostr/thread';
-import type { NostrEvent } from '@/lib/nostr/nostr';
 import {
   ArrowLeft, Globe, Heart, Link2, Lock, MessageCircle,
-  Repeat2, Shield, Zap, X
+  Repeat2, Shield, Zap, X, Share2
 } from 'lucide-react';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import toast from 'react-hot-toast';
 
 type PreviewSeed = {
@@ -213,6 +213,7 @@ export function PostViewClient({
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { open: openUnifiedDrawer } = useUnifiedDrawer();
   const { identity, isVaultLocked, unlockAndLoad } = useNostrIdentity();
   const rawId =
     propId || (Array.isArray(params?.id) ? params.id[0] : (params?.id as string | undefined));
@@ -404,14 +405,14 @@ export function PostViewClient({
     } finally { setBusy(false); }
   };
 
-  const copyLink = async () => {
-    try {
-      const url = source === 'nostr'
-        ? `${window.location.origin}/moment/nostr_${momentId}`
-        : buildPublicResourceUrl('moment', momentId);
-      await navigator.clipboard.writeText(url);
-      toast.success('Link copied');
-    } catch { /* ignore */ }
+  const handleShare = () => {
+    if (!momentId) return;
+    openUnifiedDrawer('share-context', {
+      resourceType: 'moment',
+      resourceId: source === 'nostr' ? `nostr_${momentId}` : momentId,
+      resourceTitle: creator?.displayName ? `${creator.displayName}'s Moment` : 'Moment',
+      accentColor: '#F59E0B',
+    });
   };
 
   // Detect Nostr event kind
@@ -694,11 +695,11 @@ export function PostViewClient({
               </button>
               <button
                 type="button"
-                onClick={() => void copyLink()}
-                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/60 hover:text-white ml-auto shrink-0"
+                onClick={handleShare}
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/60 hover:text-white ml-auto shrink-0 cursor-pointer"
               >
-                <Link2 size={16} />
-                <span className="hidden sm:inline">Copy link</span>
+                <Share2 size={16} />
+                <span className="hidden sm:inline">Share</span>
               </button>
             </div>
           </article>
