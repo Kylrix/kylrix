@@ -251,6 +251,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
       resourceType: 'moment',
       resourceId: item.source === 'nostr' ? `nostr_${momentId}` : momentId,
       resourceTitle: item.authorName ? `${item.authorName.replace(/^@/, '')}'s Moment` : 'Moment',
+      content: item.content || item.caption || '',
       accentColor: '#F59E0B',
     });
   };

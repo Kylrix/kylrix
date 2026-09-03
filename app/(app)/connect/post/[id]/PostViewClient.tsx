@@ -411,6 +411,7 @@ export function PostViewClient({
       resourceType: 'moment',
       resourceId: source === 'nostr' ? `nostr_${momentId}` : momentId,
       resourceTitle: creator?.displayName ? `${creator.displayName}'s Moment` : 'Moment',
+      content: moment?.caption || moment?.content || nostrEvent?.content || '',
       accentColor: '#F59E0B',
     });
   };

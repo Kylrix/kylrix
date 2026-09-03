@@ -8,7 +8,9 @@ import {
   QrCode, 
   Mail, 
   X,
-  Globe
+  Globe,
+  FileText,
+  Download
 } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -16,6 +18,7 @@ import { executeInstantShare } from '@/lib/share/instant-share';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { account } from '@/lib/appwrite/client';
+import { exportToMarkdown, exportToICS } from '@/lib/utils/export';
 import toast from 'react-hot-toast';
 
 export interface ShareContextData {
@@ -27,6 +30,11 @@ export interface ShareContextData {
   dek?: string | null;
   projectId?: string;
   accentColor?: string;
+  content?: string;
+  description?: string;
+  startTime?: string;
+  endTime?: string;
+  location?: string;
 }
 
 interface ShareActionItem {
@@ -82,7 +90,7 @@ async function getFrequentShareMethods(userId?: string | null): Promise<string[]
     } catch {}
   }
 
-  return ['copy', 'whatsapp', 'telegram', 'x', 'native'];
+  return ['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'native'];
 }
 
 async function recordShareMethodUsage(methodId: string, userId?: string | null): Promise<void> {
@@ -106,13 +114,76 @@ async function recordShareMethodUsage(methodId: string, userId?: string | null):
   } catch {}
 }
 
+async function resolveObjectContent(
+  resourceType: PublicResourceType,
+  resourceId: string,
+  providedContent?: string,
+  meta?: { title?: string; startTime?: string; endTime?: string; location?: string }
+): Promise<{ text: string; markdown: string; title: string }> {
+  let title = meta?.title || `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}`;
+  let content = providedContent || '';
+
+  if (!content && resourceId && typeof window !== 'undefined') {
+    try {
+      if (resourceType === 'note') {
+        const cached = (await LocalEngine.cacheGet<{ rows: any[] }>('f_ideas_all')) || (await LocalEngine.cacheGet<{ rows: any[] }>('f_ideas_guest'));
+        const item = cached?.rows?.find((r: any) => r.$id === resourceId);
+        if (item) {
+          title = item.title || title;
+          content = item.content || '';
+        }
+      } else if (resourceType === 'moment') {
+        const cached = localStorage.getItem('kylrix_nostr_feed_cache');
+        if (cached) {
+          const events = JSON.parse(cached);
+          const ev = events.find((e: any) => e.id === resourceId.replace(/^nostr_/, ''));
+          if (ev) {
+            content = ev.content || '';
+          }
+        }
+      } else if (resourceType === 'goal' || resourceType === 'task') {
+        const cached = await LocalEngine.cacheGet<{ rows: any[] }>('f_goals_all');
+        const item = cached?.rows?.find((r: any) => r.$id === resourceId);
+        if (item) {
+          title = item.title || title;
+          content = item.description || item.content || '';
+        }
+      } else if (resourceType === 'event') {
+        const cached = await LocalEngine.cacheGet<{ rows: any[] }>('f_events_all');
+        const item = cached?.rows?.find((r: any) => r.$id === resourceId);
+        if (item) {
+          title = item.title || title;
+          content = item.description || '';
+        }
+      }
+    } catch { /* fallback to provided */ }
+  }
+
+  let markdown = '';
+  let text = '';
+
+  if (resourceType === 'event') {
+    text = `Event: ${title}\n${meta?.startTime ? `Date: ${new Date(meta.startTime).toLocaleString()}\n` : ''}${meta?.location ? `Location: ${meta.location}\n` : ''}\n${content}`;
+    markdown = `# ${title}\n\n**Date:** ${meta?.startTime ? new Date(meta.startTime).toLocaleString() : 'N/A'}\n${meta?.location ? `**Location:** ${meta.location}\n` : ''}\n${content}`;
+  } else if (resourceType === 'goal' || resourceType === 'task') {
+    text = `Goal: ${title}\n\n${content}`;
+    markdown = `# Goal: ${title}\n\n${content}`;
+  } else {
+    text = `${title}\n\n${content}`;
+    markdown = `# ${title}\n\n${content}`;
+  }
+
+  return { text, markdown, title };
+}
+
 export function ShareContextDrawer() {
   const { drawerData, close, open } = useUnifiedDrawer();
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
   const [resolvedUrl, setResolvedUrl] = useState<string>('');
   const [isResolving, setIsResolving] = useState(true);
-  const [methodOrder, setMethodOrder] = useState<string[]>(['copy', 'whatsapp', 'telegram', 'x', 'native']);
+  const [methodOrder, setMethodOrder] = useState<string[]>(['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'native']);
   const [showQR, setShowQR] = useState(false);
 
   const data: ShareContextData = drawerData || {
@@ -121,7 +192,7 @@ export function ShareContextDrawer() {
     resourceTitle: 'Untitled',
   };
 
-  const { resourceType, resourceId, resourceTitle = '', dek, projectId, isPublic = true, isGuest = true } = data;
+  const { resourceType, resourceId, resourceTitle = '', dek, projectId, isPublic = true, isGuest = true, content, description, startTime, endTime, location } = data;
   const friendlyTitle = resourceTitle || `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}`;
 
   useEffect(() => {
@@ -178,6 +249,58 @@ export function ShareContextDrawer() {
     }
   };
 
+  const handleCopyText = async () => {
+    try {
+      const resolved = await resolveObjectContent(resourceType, resourceId, content || description, {
+        title: friendlyTitle,
+        startTime,
+        endTime,
+        location,
+      });
+      const payload = resolved.text || resolved.markdown || friendlyTitle;
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(payload);
+        setCopiedText(true);
+        toast.success('Text copied to clipboard');
+        await recordShareMethodUsage('copyText', user?.$id);
+        setTimeout(() => {
+          setCopiedText(false);
+          close();
+        }, 400);
+      }
+    } catch {
+      toast.error('Failed to copy text');
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      const resolved = await resolveObjectContent(resourceType, resourceId, content || description, {
+        title: friendlyTitle,
+        startTime,
+        endTime,
+        location,
+      });
+
+      if (resourceType === 'event') {
+        exportToICS(
+          resolved.title,
+          content || description || '',
+          startTime || new Date().toISOString(),
+          endTime
+        );
+        toast.success('Event (.ics) downloaded');
+      } else {
+        exportToMarkdown(resolved.title, resolved.markdown || content || description || '');
+        toast.success('Markdown (.md) downloaded');
+      }
+      await recordShareMethodUsage('download', user?.$id);
+      setTimeout(() => close(), 400);
+    } catch {
+      toast.error('Failed to download file');
+    }
+  };
+
   const allActions: Record<string, ShareActionItem> = useMemo(() => ({
     copy: {
       id: 'copy',
@@ -188,6 +311,26 @@ export function ShareContextDrawer() {
       bg: copied ? 'bg-[#10B981]/15' : 'bg-white/[0.04]',
       border: copied ? 'border-[#10B981]/40' : 'border-white/10',
       execute: handleCopyLink,
+    },
+    copyText: {
+      id: 'copyText',
+      label: copiedText ? 'Copied' : 'Copy Text',
+      sublabel: 'Full text',
+      icon: copiedText ? Check : FileText,
+      color: copiedText ? 'text-[#10B981]' : 'text-emerald-400',
+      bg: copiedText ? 'bg-[#10B981]/15' : 'bg-emerald-500/10',
+      border: copiedText ? 'border-[#10B981]/40' : 'border-emerald-500/25',
+      execute: handleCopyText,
+    },
+    download: {
+      id: 'download',
+      label: resourceType === 'event' ? 'Download .ics' : 'Download .md',
+      sublabel: resourceType === 'event' ? 'Calendar file' : 'Markdown file',
+      icon: Download,
+      color: 'text-amber-400',
+      bg: 'bg-amber-500/10',
+      border: 'border-amber-500/25',
+      execute: handleDownload,
     },
     whatsapp: {
       id: 'whatsapp',
@@ -294,10 +437,10 @@ export function ShareContextDrawer() {
         }
       },
     },
-  }), [copied, resolvedUrl, user?.$id, close]);
+  }), [copied, copiedText, resourceType, resolvedUrl, user?.$id, close, handleCopyText, handleDownload]);
 
   const orderedActions = useMemo(() => {
-    const defaultKeys = ['copy', 'whatsapp', 'telegram', 'x', 'qr', 'email', 'native'];
+    const defaultKeys = ['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'qr', 'email', 'native'];
     const seen = new Set<string>();
     const result: ShareActionItem[] = [];
 
