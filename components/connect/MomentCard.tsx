@@ -653,19 +653,6 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
         >
           <Share size={15} />
         </button>
-
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleContextMenu(e);
-          }}
-          className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer text-white/40"
-          title="More actions"
-          aria-label="More actions"
-        >
-          <MoreHorizontal size={15} />
-        </button>
       </div>
     </article>
   );
