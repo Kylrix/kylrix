@@ -421,19 +421,59 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
 
   const isSyncedToNostr = !isNostr && Boolean(item.rawEvent?.nostrId);
 
+  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFired = React.useRef(false);
+
+  const clearLongPress = React.useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleTouchStart = React.useCallback(
+    (e: React.TouchEvent) => {
+      longPressFired.current = false;
+      clearLongPress();
+      const touch = e.touches[0];
+      longPressTimer.current = setTimeout(() => {
+        longPressFired.current = true;
+        handleContextMenu({
+          preventDefault: () => {},
+          stopPropagation: () => {},
+          clientX: touch?.clientX ?? 0,
+          clientY: touch?.clientY ?? 0,
+        } as unknown as React.MouseEvent);
+      }, 480);
+    },
+    [clearLongPress, handleContextMenu],
+  );
+
+  const handleCardClick = React.useCallback(() => {
+    if (longPressFired.current) {
+      longPressFired.current = false;
+      return;
+    }
+    open();
+  }, [open]);
+
   return (
     <article
       role="button"
       tabIndex={0}
-      onClick={open}
+      onClick={handleCardClick}
       onContextMenu={handleContextMenu}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={clearLongPress}
+      onTouchMove={clearLongPress}
+      onTouchCancel={clearLongPress}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          open();
+          handleCardClick();
         }
       }}
-      className="w-full text-left rounded-2xl bg-[#161412] border border-white/[0.06] p-4 sm:p-5 space-y-3 hover:border-white/15 transition-all shadow-sm cursor-pointer focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
+      className="w-full text-left rounded-[26px] bg-[#161412] border border-[#34322F] hover:border-[#3C3A38] hover:bg-[#1C1A18] hover:-translate-y-px p-5 space-y-3.5 transition-all duration-200 shadow-sm cursor-pointer select-none relative focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between gap-3">

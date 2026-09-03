@@ -131,24 +131,46 @@ export function ContextMenuPanel({ onCloseAction, items, title }: { onCloseActio
   );
 }
 
-export function ContextMenu({ onCloseAction, items, appType, title }: ContextMenuProps) {
+export function ContextMenu({ x, y, onCloseAction, items, appType, title }: ContextMenuProps) {
   if (typeof window === 'undefined') return null;
+
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+
+  // Clamp x and y coordinates to viewport bounds on desktop
+  const posX = isDesktop ? Math.min(Math.max(16, (x || window.innerWidth / 2) - 20), window.innerWidth - 300) : 0;
+  const posY = isDesktop ? Math.min(Math.max(16, (y || window.innerHeight / 2) - 20), window.innerHeight - 380) : 0;
 
   return createPortal(
     <>
       <div
-        className="fixed inset-0 z-[10090] bg-black/40 transition-opacity duration-300 ease-in-out cursor-default"
+        className="fixed inset-0 z-[10090] bg-black/40 transition-opacity duration-200 ease-in-out cursor-default"
         onClick={onCloseAction}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onCloseAction();
+        }}
       />
-      <div
-        data-kylrix-context-menu="true"
-        className="fixed bottom-0 left-0 right-0 max-h-[60dvh] bg-[#161412] border-t border-white/10 rounded-t-[24px] z-[10100] text-white p-3.5 flex flex-col gap-2 animate-slide-up overflow-y-auto font-satoshi shadow-[0_-24px_48px_rgba(0,0,0,0.8)] max-w-lg mx-auto"
-        onClick={(e) => e.stopPropagation()}
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        <div className="w-9 h-1 bg-[#34322F] rounded-full mx-auto shrink-0 mb-0.5" />
-        <ContextMenuPanel onCloseAction={onCloseAction} items={items} appType={appType} title={title} />
-      </div>
+      {isDesktop ? (
+        <div
+          data-kylrix-context-menu="true"
+          style={{ top: `${posY}px`, left: `${posX}px` }}
+          className="fixed z-[10100] w-[280px] max-h-[85vh] bg-[#161412] border border-white/[0.12] rounded-2xl text-white p-2.5 flex flex-col gap-2 overflow-y-auto font-satoshi shadow-[0_24px_50px_rgba(0,0,0,0.85)] animate-in fade-in zoom-in-95 duration-150"
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <ContextMenuPanel onCloseAction={onCloseAction} items={items} appType={appType} title={title} />
+        </div>
+      ) : (
+        <div
+          data-kylrix-context-menu="true"
+          className="fixed bottom-0 left-0 right-0 max-h-[60dvh] bg-[#161412] border-t border-white/10 rounded-t-[24px] z-[10100] text-white p-3.5 flex flex-col gap-2 animate-slide-up overflow-y-auto font-satoshi shadow-[0_-24px_48px_rgba(0,0,0,0.8)] max-w-lg mx-auto"
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <div className="w-9 h-1 bg-[#34322F] rounded-full mx-auto shrink-0 mb-0.5" />
+          <ContextMenuPanel onCloseAction={onCloseAction} items={items} appType={appType} title={title} />
+        </div>
+      )}
     </>,
     document.body
   );
