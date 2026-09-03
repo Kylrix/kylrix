@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Globe, Heart, MessageCircle, Repeat2, Share, Shield, Zap, Copy, Bookmark, User, Trash2, EyeOff } from 'lucide-react';
+import { Globe, Heart, MessageCircle, Repeat2, Share, Shield, Zap, Copy, Bookmark, User, Trash2, EyeOff, MoreHorizontal } from 'lucide-react';
 import type { UnifiedFeedItem } from '@/components/connect/useConnectMomentsFeed';
 import { toggleMomentLike } from '@/lib/connect/moment-engagement';
 import { extractPostImages, truncateMomentBody } from '@/lib/connect/moment-media';
@@ -512,22 +512,37 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
           </div>
         </div>
 
-        <span
-          className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0A0908] border border-white/[0.06] text-[10px] font-bold uppercase tracking-wider text-white/45"
-          title={isNostr ? 'From Nostr relays' : isSyncedToNostr ? 'Kylrix + Nostr Synced' : 'From Kylrix'}
-        >
-          {isNostr ? (
-            <Globe size={11} className="text-[#F59E0B]" />
-          ) : isSyncedToNostr ? (
-            <>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0A0908] border border-white/[0.06] text-[10px] font-bold uppercase tracking-wider text-white/45"
+            title={isNostr ? 'From Nostr relays' : isSyncedToNostr ? 'Kylrix + Nostr Synced' : 'From Kylrix'}
+          >
+            {isNostr ? (
+              <Globe size={11} className="text-[#F59E0B]" />
+            ) : isSyncedToNostr ? (
+              <>
+                <Shield size={11} className="text-emerald-400" />
+                <Globe size={10} className="text-[#F59E0B]" />
+              </>
+            ) : (
               <Shield size={11} className="text-emerald-400" />
-              <Globe size={10} className="text-[#F59E0B]" />
-            </>
-          ) : (
-            <Shield size={11} className="text-emerald-400" />
-          )}
-          <span>{isNostr ? 'Nostr' : isSyncedToNostr ? 'Synced' : 'Kylrix'}</span>
-        </span>
+            )}
+            <span>{isNostr ? 'Nostr' : isSyncedToNostr ? 'Synced' : 'Kylrix'}</span>
+          </span>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleContextMenu(e);
+            }}
+            className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+            title="More actions"
+            aria-label="More actions"
+          >
+            <MoreHorizontal size={15} />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -637,6 +652,19 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
           aria-label="Share"
         >
           <Share size={15} />
+        </button>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleContextMenu(e);
+          }}
+          className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer text-white/40"
+          title="More actions"
+          aria-label="More actions"
+        >
+          <MoreHorizontal size={15} />
         </button>
       </div>
     </article>
