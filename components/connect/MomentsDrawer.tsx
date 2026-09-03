@@ -8,6 +8,9 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 
+import { MomentObjectDetail } from '@/components/objects/MomentObjectDetail';
+import type { MomentSource } from '@/lib/connect/moment-engagement';
+
 export interface MomentsDrawerProps {
   onClose?: () => void;
   initialTab?: 'moments' | 'replies' | 'likes' | 'bookmarks';
@@ -17,6 +20,11 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
   const { open: openUnified } = useUnifiedDrawer();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
+  const [selectedMoment, setSelectedMoment] = React.useState<{
+    momentId: string;
+    source: MomentSource;
+    preview?: any;
+  } | null>(null);
 
   const handleOpenComposer = useCallback(() => {
     openUnified('moment-composer');
@@ -29,16 +37,36 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
     else openOverlay(node);
   }, [closeOverlay, closeSidebar, openOverlay, openSidebar]);
 
+  // Listen for moment selection from cards
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.momentId) {
+        setSelectedMoment({
+          momentId: detail.momentId,
+          source: detail.source || 'ecosystem',
+          preview: detail.preview,
+        });
+      }
+    };
+    window.addEventListener('kylrix:open-moment-detail', handler);
+    return () => window.removeEventListener('kylrix:open-moment-detail', handler);
+  }, []);
+
   // Handle ESC to close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && onClose) {
-        onClose();
+      if (e.key === 'Escape') {
+        if (selectedMoment) {
+          setSelectedMoment(null);
+        } else if (onClose) {
+          onClose();
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, selectedMoment]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-200">
@@ -91,6 +119,19 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
       <main className="flex-1 overflow-y-auto px-3 sm:px-6 py-6 min-h-0 select-text">
         <ConnectMomentsPanel onCreateMoment={handleOpenComposer} />
       </main>
+
+      {/* Top-Layer Object Context Detail View */}
+      {selectedMoment && (
+        <div className="fixed inset-0 z-[60] flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-150">
+          <MomentObjectDetail
+            momentId={selectedMoment.momentId}
+            source={selectedMoment.source}
+            preview={selectedMoment.preview}
+            embedded
+            onClose={() => setSelectedMoment(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }

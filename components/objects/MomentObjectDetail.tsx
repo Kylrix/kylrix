@@ -69,11 +69,23 @@ export function openMomentObjectDetail(opts: {
   momentId: string;
   source: MomentSource;
   preview?: Props['preview'];
-  openSidebar: (content: React.ReactNode, key?: string, options?: { hideHeader?: boolean }) => void;
-  openOverlay: (content: React.ReactNode) => void;
-  closeSidebar: () => void;
-  closeOverlay: () => void;
+  openSidebar?: (content: React.ReactNode, key?: string, options?: { hideHeader?: boolean }) => void;
+  openOverlay?: (content: React.ReactNode) => void;
+  closeSidebar?: () => void;
+  closeOverlay?: () => void;
 }) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('kylrix:open-moment-detail', {
+        detail: {
+          momentId: opts.momentId,
+          source: opts.source,
+          preview: opts.preview,
+        },
+      }),
+    );
+  }
+
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
   const node = (
     <MomentObjectDetail
@@ -81,12 +93,12 @@ export function openMomentObjectDetail(opts: {
       source={opts.source}
       embedded
       preview={opts.preview}
-      onClose={isDesktop ? opts.closeSidebar : opts.closeOverlay}
+      onClose={isDesktop ? (opts.closeSidebar || opts.closeOverlay) : (opts.closeOverlay || opts.closeSidebar)}
     />
   );
-  if (isDesktop) {
+  if (isDesktop && opts.openSidebar) {
     opts.openSidebar(node, opts.momentId, { hideHeader: true });
-  } else {
+  } else if (opts.openOverlay) {
     opts.openOverlay(node);
   }
 }

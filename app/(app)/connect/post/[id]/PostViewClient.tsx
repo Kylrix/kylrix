@@ -216,7 +216,8 @@ export function PostViewClient({
   const { identity, isVaultLocked, unlockAndLoad } = useNostrIdentity();
   const rawId =
     propId || (Array.isArray(params?.id) ? params.id[0] : (params?.id as string | undefined));
-  const parsed = rawId ? parseMomentRouteId(rawId) : null;
+  
+  const parsed = useMemo(() => (rawId ? parseMomentRouteId(rawId) : null), [rawId]);
 
   const [source, setSource] = useState<MomentSource>(parsed?.source || 'ecosystem');
   const [momentId, setMomentId] = useState(parsed?.id || '');
@@ -247,73 +248,94 @@ export function PostViewClient({
     setMomentId(parsed.id);
   }, [parsed?.source, parsed?.id]);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
     if (!momentId) return;
+    let cancelled = false;
     if (!preview?.content) setLoading(true);
-    try {
-      if (source === 'ecosystem') {
-        const data = await SocialService.getMomentById(momentId);
-        setMoment(data);
-        const creatorId = data?.userId || data?.creatorId;
-        if (creatorId) {
-          try { setCreator(await UsersService.getProfileById(creatorId)); } catch { /* keep preview */ }
-        }
-      } else {
-        // Try local feed cache first
-        let raw: NostrEvent | null = null;
-        try {
-          const cached = localStorage.getItem('kylrix_nostr_feed_cache');
-          if (cached) {
-            const events = JSON.parse(cached) as NostrEvent[];
-            raw = events.find(e => e.id === momentId) || null;
+
+    (async () => {
+      try {
+        if (source === 'ecosystem') {
+          const data = await SocialService.getMomentById(momentId);
+          if (cancelled) return;
+          setMoment(data);
+          const creatorId = data?.userId || data?.creatorId;
+          if (creatorId) {
+            try { 
+              const profile = await UsersService.getProfileById(creatorId);
+              if (!cancelled) setCreator(profile);
+            } catch { /* keep preview */ }
           }
-        } catch { /* ignore */ }
+        } else {
+          // Try local feed cache first
+          let raw: NostrEvent | null = null;
+          try {
+            const cached = localStorage.getItem('kylrix_nostr_feed_cache');
+            if (cached) {
+              const events = JSON.parse(cached) as NostrEvent[];
+              raw = events.find(e => e.id === momentId) || null;
+            }
+          } catch { /* ignore */ }
 
-        if (!raw) {
-          raw = await fetchNostrEventById(momentId, 3000);
-        }
+          if (!raw && !cancelled) {
+            raw = await fetchNostrEventById(momentId, 2500);
+          }
 
-        if (raw) {
-          setNostrEvent(raw);
-          setMoment({
-            id: raw.id,
-            caption: raw.content,
-            content: raw.content,
-            pubkey: raw.pubkey,
-            createdAt: raw.created_at * 1000,
-            tags: raw.tags,
-            kind: raw.kind,
-          });
+          if (raw && !cancelled) {
+            setNostrEvent(raw);
+            setMoment({
+              id: raw.id,
+              caption: raw.content,
+              content: raw.content,
+              pubkey: raw.pubkey,
+              createdAt: raw.created_at * 1000,
+              tags: raw.tags,
+              kind: raw.kind,
+            });
 
-          // If this is a reply, reaction or repost — fetch the parent
-          const eventKind = kindLabel(raw.kind);
-          if (eventKind !== 'post' || (raw.kind === 1 && raw.tags.some(t => t[0] === 'e'))) {
-            const parentId = getRootParentId(raw.tags);
-            if (parentId) {
-              setParentLoading(true);
-              fetchNostrEventById(parentId, 3500)
-                .then(p => { setParentEvent(p); setParentLoading(false); })
-                .catch(() => setParentLoading(false));
+            // If this is a reply, reaction or repost — fetch the parent
+            const eventKind = kindLabel(raw.kind);
+            if (eventKind !== 'post' || (raw.kind === 1 && raw.tags.some(t => t[0] === 'e'))) {
+              const parentId = getRootParentId(raw.tags);
+              if (parentId && !cancelled) {
+                setParentLoading(true);
+                fetchNostrEventById(parentId, 2500)
+                  .then(p => { 
+                    if (!cancelled) {
+                      setParentEvent(p); 
+                      setParentLoading(false);
+                    }
+                  })
+                  .catch(() => {
+                    if (!cancelled) setParentLoading(false);
+                  });
+              }
             }
           }
         }
+
+        if (!cancelled) {
+          const engagement = await loadMomentEngagement({ source, id: momentId, userId: user?.$id });
+          if (!cancelled) {
+            setReplies(engagement.comments);
+            setLikes(engagement.likesCount);
+            setZaps(engagement.zapsCount || 0);
+            setReposts(engagement.repostsCount || 0);
+            setLiked(Boolean(engagement.isLiked));
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load moment', e);
+        if (!preview?.content && !cancelled) setMoment(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    })();
 
-      const engagement = await loadMomentEngagement({ source, id: momentId, userId: user?.$id });
-      setReplies(engagement.comments);
-      setLikes(engagement.likesCount);
-      setZaps(engagement.zapsCount || 0);
-      setReposts(engagement.repostsCount || 0);
-      setLiked(Boolean(engagement.isLiked));
-    } catch (e) {
-      console.error('Failed to load moment', e);
-      if (!preview?.content) setMoment(null);
-    } finally {
-      setLoading(false);
-    }
+    return () => {
+      cancelled = true;
+    };
   }, [momentId, source, user?.$id, preview?.content]);
-
-  useEffect(() => { void load(); }, [load]);
 
   const handleBack = () => { if (onBack) onBack(); else router.back(); };
 
