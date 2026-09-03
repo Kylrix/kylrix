@@ -27,37 +27,19 @@ export function HangoutTabTrigger({
   const hasUnread = unreadConversations.size > 0;
 
   const isRealWorkspace = activeWorkspace && !activeWorkspace.isPersonal;
-  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
-
   const handleOpenHangouts = useCallback(() => {
     const wsId = isRealWorkspace ? activeWorkspace.id : undefined;
     const wsTitle = isRealWorkspace ? (activeWorkspace.title || (activeWorkspace as any)?.name) : undefined;
 
-    const panel = (
+    openOverlay(
       <HangoutsDrawer
         mode="browse"
         workspaceId={wsId}
         workspaceTitle={wsTitle}
-        onClose={() => {
-          if (isDesktop && native) {
-            native.close('hangouts-drawer');
-          } else {
-            closeOverlay();
-          }
-        }}
+        onClose={closeOverlay}
       />
     );
-
-    if (isDesktop && native) {
-      native.open(panel, {
-        key: 'hangouts-drawer',
-        width: NATIVE_SIDEBAR_WIDTHS.default,
-        title: isRealWorkspace ? `${wsTitle || 'Workspace'} Discussion` : 'Hangouts',
-      });
-    } else {
-      openOverlay(panel);
-    }
-  }, [isRealWorkspace, activeWorkspace, isDesktop, native, closeOverlay, openOverlay]);
+  }, [isRealWorkspace, activeWorkspace, closeOverlay, openOverlay]);
 
   if (variant === 'pill') {
     return (

@@ -82,7 +82,12 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'WalletDetail'
   );
 
-  const isFlapover = !isProfileSidebar && !isWalletOverlay && React.isValidElement(content) && (
+  const isHangout = isHangoutsDrawerContent(content) || (React.isValidElement(content) && (
+    (content.type as any).name === 'HangoutsDrawer' ||
+    (content.type as any).displayName === 'HangoutsDrawer'
+  ));
+
+  const isFlapover = isHangout || (!isProfileSidebar && !isWalletOverlay && React.isValidElement(content) && (
     (content.props as any).note !== undefined ||
     (content.props as any).taskId !== undefined ||
     (content.props as any).formId !== undefined ||
@@ -102,7 +107,7 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'PricingDrawer' ||
     (content.type as any).name === 'TagObjectDetail' ||
     (content.type as any).name === 'TrashObjectDetail'
-  );
+  ));
 
   const drawerHeight = isMobile && !isFlapover
     ? (isWalletOverlay ? (isExpanded ? '100dvh' : '65dvh') : isProfileSidebar ? (isExpanded ? '100dvh' : '60vh') : (isExpanded ? '100dvh' : '60dvh'))
@@ -131,7 +136,7 @@ const Overlay: React.FC = () => {
           borderTop: isMobile && !isFlapover ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
           borderLeft: isMobile || isFlapover ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
           backgroundImage: 'none',
-          bgcolor: '#161412',
+          bgcolor: isFlapover ? '#000000' : '#161412',
           boxShadow: isFlapover ? 'none' : '0 24px 48px rgba(0,0,0,0.45)',
           display: 'flex',
           flexDirection: 'column',

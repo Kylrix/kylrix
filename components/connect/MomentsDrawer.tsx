@@ -120,6 +120,19 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
         <ConnectMomentsPanel onCreateMoment={handleOpenComposer} />
       </main>
 
+      {/* Floating Action Button (FAB) for Moments */}
+      <div className="fixed bottom-6 right-6 z-[55] pointer-events-auto">
+        <button
+          type="button"
+          onClick={handleOpenComposer}
+          className="w-14 h-14 rounded-2xl bg-[#F59E0B] text-black flex items-center justify-center shadow-[0_10px_30px_rgba(245,158,11,0.4)] hover:bg-[#d97706] hover:scale-105 active:scale-95 transition-all cursor-pointer border border-black/10"
+          title="Create Moment"
+          aria-label="Create Moment"
+        >
+          <Plus size={26} strokeWidth={2.5} />
+        </button>
+      </div>
+
       {/* Top-Layer Object Context Detail View */}
       {selectedMoment && (
         <div className="fixed inset-0 z-[60] flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-150">

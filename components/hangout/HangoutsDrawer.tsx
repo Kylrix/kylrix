@@ -501,18 +501,18 @@ export function HangoutsDrawer({
   };
 
   return (
-    <div className="flex h-full min-h-0 max-w-full flex-col overflow-hidden bg-[#161412] text-white select-none">
+    <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-[#000000] text-white select-none">
       {/* Slim top controls */}
-      <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-4 py-2.5">
-        <span className="truncate text-[10px] font-mono font-bold uppercase tracking-wider text-[#A855F7]/80">
-          {mode === 'share' ? 'Share' : 'Hangouts'}
+      <div className="flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-[#0A0908] px-4 sm:px-6 py-3">
+        <span className="truncate text-xs font-mono font-bold uppercase tracking-wider text-[#A855F7]">
+          {mode === 'share' ? 'Share to Hangout' : 'Hangouts'}
         </span>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1.5">
           {mode === 'browse' && (
             <button
               type="button"
               onClick={() => setShowCreateChat(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
               title="New hangout"
             >
               <Plus size={15} />
@@ -522,7 +522,7 @@ export function HangoutsDrawer({
             <button
               type="button"
               onClick={onToggleExpand}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
               title={isExpanded ? 'Dock drawer' : 'Expand'}
             >
               {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
@@ -531,27 +531,28 @@ export function HangoutsDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer ml-1"
             title="Close"
           >
-            <X size={15} />
+            <X size={16} />
           </button>
         </div>
       </div>
 
-      {/* Title */}
-      <div className="shrink-0 px-5 pt-3.5 pb-1">
-        <h2 className="m-0 truncate font-clash text-base font-black text-white">
-          {mode === 'share' && object ? `Share "${object.title || 'Item'}"` : 'Hangouts & Chats'}
-        </h2>
-        <p className="m-0 mt-1 truncate font-satoshi text-[11px] font-bold text-white/45">
-          {mode === 'share'
-            ? 'Pick hangouts to send this to'
-            : currentWorkspaceTitle
-              ? `${currentWorkspaceTitle} · Connect`
-              : 'Discussions and private chats'}
-        </p>
-      </div>
+      <div className="w-full max-w-3xl mx-auto flex flex-col flex-1 min-h-0">
+        {/* Title */}
+        <div className="shrink-0 px-5 pt-4 pb-1">
+          <h2 className="m-0 truncate font-clash text-lg font-black text-white">
+            {mode === 'share' && object ? `Share "${object.title || 'Item'}"` : 'Hangouts & Chats'}
+          </h2>
+          <p className="m-0 mt-1 truncate font-satoshi text-xs font-bold text-white/45">
+            {mode === 'share'
+              ? 'Pick hangouts to send this to'
+              : currentWorkspaceTitle
+                ? `${currentWorkspaceTitle} · Connect`
+                : 'Discussions and private chats'}
+          </p>
+        </div>
 
       {/* Search & filter pills */}
       {mode === 'browse' && (
@@ -754,6 +755,7 @@ export function HangoutsDrawer({
           </button>
         </div>
       )}
+      </div>
 
       {showCreateChat && (
         <ChatCreateDrawer

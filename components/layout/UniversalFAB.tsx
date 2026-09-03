@@ -113,7 +113,8 @@ export default function UniversalFAB() {
     isFlowPath(pathname) ||
     isGoalsSurfacePath(pathname) ||
     pathname.startsWith('/vault') ||
-    (pathname.startsWith('/connect') && !pathname.includes('/invite/'))
+    (pathname.startsWith('/connect') && !pathname.includes('/invite/')) ||
+    pathname.startsWith('/moment')
   );
 
   if (isDrawerOpen || isAgenticDrawerOpen) return null;
