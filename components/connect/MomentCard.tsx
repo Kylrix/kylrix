@@ -433,179 +433,174 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
           open();
         }
       }}
-      className="w-full max-w-full min-w-[280px] sm:min-w-[320px] h-full flex flex-col text-left rounded-[22px] bg-[#161412] border border-white/[0.08] hover:border-white/[0.12] hover:bg-[#1C1A18] transition-all duration-200 hover:-translate-y-px cursor-pointer focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
+      className="w-full text-left rounded-2xl bg-[#161412] border border-white/[0.06] p-4 sm:p-5 space-y-3 hover:border-white/15 transition-all shadow-sm cursor-pointer focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
     >
-      <div className="flex gap-3 p-4 min-w-0 max-w-full flex-1">
-        <button
-          type="button"
-          onClick={openProfilePreview}
-          className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black border border-white/[0.06] overflow-hidden bg-[#0A0908] hover:ring-2 hover:ring-emerald-400/40 transition-all cursor-pointer"
-          style={{ color: isNostr ? '#F59E0B' : '#34D399' }}
-          title={`View ${item.authorName}'s profile`}
-        >
-          {item.authorAvatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.authorAvatar} alt="" className="w-full h-full object-cover" />
-          ) : (
-            initials(item.authorName)
-          )}
-        </button>
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={openProfilePreview}
+            className="shrink-0 cursor-pointer"
+            title={`View ${item.authorName}'s profile`}
+          >
+            {item.authorAvatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.authorAvatar}
+                alt=""
+                className="w-8 h-8 rounded-xl object-cover border border-white/10"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500/20 to-pink-500/20 border border-white/10 flex items-center justify-center text-white text-xs font-bold font-clash">
+                {initials(item.authorName)}
+              </div>
+            )}
+          </button>
 
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <button
-              type="button"
-              onClick={openProfilePreview}
-              className="text-[15px] font-extrabold text-white font-satoshi truncate hover:underline hover:text-emerald-400 text-left transition-colors"
-            >
-              {item.authorName.replace(/^@/, '')}
-            </button>
-            <span className="text-[13px] text-white/40 font-medium truncate min-w-0">
-              {handle}
-            </span>
-            <span className="text-white/25 text-[13px] shrink-0">·</span>
-            <time className="text-[13px] text-white/40 font-medium tabular-nums shrink-0">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <button
+                type="button"
+                onClick={openProfilePreview}
+                className="text-sm font-bold text-white truncate hover:underline hover:text-emerald-400 text-left transition-colors"
+              >
+                {item.authorName.replace(/^@/, '')}
+              </button>
+              <span className="text-xs text-white/40 truncate font-mono">{handle}</span>
+            </div>
+            <span className="text-[10px] text-white/30 font-mono">
               {formatRelative(item.createdAt)}
-            </time>
-            <span
-              className="ml-auto shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0A0908] border border-white/[0.06] text-[10px] font-bold uppercase tracking-wider text-white/45"
-              title={isNostr ? 'From Nostr relays' : isSyncedToNostr ? 'Kylrix + Nostr Synced' : 'From Kylrix'}
-            >
-              {isNostr ? (
-                <Globe size={11} className="text-[#F59E0B]" />
-              ) : isSyncedToNostr ? (
-                <>
-                  <Shield size={11} className="text-emerald-400" />
-                  <Globe size={10} className="text-[#F59E0B]" />
-                </>
-              ) : (
-                <Shield size={11} className="text-emerald-400" />
-              )}
-              {isNostr ? 'Nostr' : isSyncedToNostr ? 'Kylrix & Nostr' : 'Kylrix'}
             </span>
           </div>
-
-          {preview ? (
-            <p className="mt-1.5 text-[15px] leading-relaxed text-white/[0.88] font-satoshi whitespace-pre-wrap break-words [overflow-wrap:anywhere] m-0 max-w-full">
-              {preview}
-            </p>
-          ) : null}
-
-          {/* Media Container — Data Saver mode uses lightweight previews and on-demand reveal */}
-          {images.length > 0 ? (
-            <div
-              className={`mt-3 w-full max-w-full ${IMAGE_BAND_H} rounded-xl overflow-hidden border border-white/[0.06] bg-[#0A0908] grid ${
-                images.length > 1 ? 'grid-cols-2 gap-0.5' : 'grid-cols-1'
-              } relative group/media`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {images.slice(0, 2).map((src) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={src}
-                  src={src}
-                  alt=""
-                  className="w-full h-full max-w-full object-cover transition-opacity duration-300"
-                  loading="lazy"
-                  decoding="async"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              ))}
-            </div>
-          ) : null}
         </div>
+
+        <span
+          className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0A0908] border border-white/[0.06] text-[10px] font-bold uppercase tracking-wider text-white/45"
+          title={isNostr ? 'From Nostr relays' : isSyncedToNostr ? 'Kylrix + Nostr Synced' : 'From Kylrix'}
+        >
+          {isNostr ? (
+            <Globe size={11} className="text-[#F59E0B]" />
+          ) : isSyncedToNostr ? (
+            <>
+              <Shield size={11} className="text-emerald-400" />
+              <Globe size={10} className="text-[#F59E0B]" />
+            </>
+          ) : (
+            <Shield size={11} className="text-emerald-400" />
+          )}
+          <span>{isNostr ? 'Nostr' : isSyncedToNostr ? 'Synced' : 'Kylrix'}</span>
+        </span>
       </div>
 
+      {/* Content */}
+      {preview ? (
+        <p className="text-sm text-white/90 leading-relaxed break-words whitespace-pre-wrap font-satoshi m-0">
+          {preview}
+        </p>
+      ) : null}
+
+      {/* Media Attachments */}
+      {images.length > 0 ? (
+        <div
+          className={`rounded-xl overflow-hidden border border-white/[0.06] bg-[#0A0908] grid ${
+            images.length > 1 ? 'grid-cols-2 gap-1' : 'grid-cols-1'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {images.slice(0, 4).map((src, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={src || i}
+              src={src}
+              alt=""
+              className="w-full h-36 sm:h-44 object-cover bg-white/5"
+              loading="lazy"
+              decoding="async"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {/* Interactive Action Strip */}
       <div
-        className="px-4 pb-4 pt-0 shrink-0"
+        className="flex items-center justify-between pt-2 border-t border-white/[0.06] text-white/40 text-xs"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="grid grid-cols-6 gap-0.5 rounded-2xl border border-white/[0.08] bg-[#0A0908] p-1">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              open();
-            }}
-            className="group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl text-white/75 hover:text-[#60A5FA] hover:bg-white/[0.04] transition-colors"
-            aria-label="Comments"
-          >
-            <MessageCircle size={17} strokeWidth={2.25} />
-            <span className="text-[10px] font-mono font-bold tabular-nums text-white/55 group-hover:text-inherit min-h-[12px]">
-              {(item.repliesCount || 0) > 0 ? item.repliesCount : ''}
-            </span>
-          </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            open();
+          }}
+          className="flex items-center gap-1.5 hover:text-[#6366F1] transition-colors cursor-pointer"
+          aria-label="Comments"
+        >
+          <MessageCircle size={15} />
+          <span>{(item.repliesCount || 0) > 0 ? item.repliesCount : ''}</span>
+        </button>
 
-          <button
-            type="button"
-            disabled={busy || reposted}
-            className={`group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl transition-colors ${
-              reposted
-                ? 'text-[#34D399] bg-white/[0.03]'
-                : 'text-white/75 hover:text-[#34D399] hover:bg-white/[0.04]'
-            }`}
-            aria-label="Repost"
-            onClick={onRepost}
-          >
-            <Repeat2 size={17} strokeWidth={2.25} />
-            <span className="text-[10px] font-mono font-bold tabular-nums text-white/55 group-hover:text-inherit min-h-[12px]">
-              {reposts > 0 ? reposts : ''}
-            </span>
-          </button>
+        <button
+          type="button"
+          disabled={busy || reposted}
+          onClick={onRepost}
+          className={`flex items-center gap-1.5 hover:text-emerald-400 transition-colors cursor-pointer ${
+            reposted ? 'text-emerald-400' : ''
+          }`}
+          aria-label="Repost"
+        >
+          <Repeat2 size={15} />
+          <span>{reposts > 0 ? reposts : ''}</span>
+        </button>
 
-          <button
-            type="button"
-            className="group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl text-white/75 hover:text-[#F59E0B] hover:bg-white/[0.04] transition-colors"
-            aria-label="Zap"
-            onClick={onZap}
-          >
-            <Zap size={17} strokeWidth={2.25} className={zaps > 0 ? 'fill-[#F59E0B] text-[#F59E0B]' : ''} />
-            <span className="text-[10px] font-mono font-bold tabular-nums text-white/55 group-hover:text-inherit min-h-[12px]">
-              {zaps > 0 ? zaps : ''}
-            </span>
-          </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onLike}
+          className={`flex items-center gap-1.5 hover:text-pink-400 transition-colors cursor-pointer ${
+            liked ? 'text-pink-400' : ''
+          }`}
+          aria-label="Like"
+        >
+          <Heart size={15} fill={liked ? 'currentColor' : 'none'} />
+          <span>{likes > 0 ? likes : ''}</span>
+        </button>
 
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onLike}
-            className={`group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl transition-colors ${
-              liked
-                ? 'text-[#F472B6] bg-white/[0.03]'
-                : 'text-white/75 hover:text-[#F472B6] hover:bg-white/[0.04]'
-            }`}
-            aria-label="Like"
-          >
-            <Heart size={17} strokeWidth={2.25} className={liked ? 'fill-[#F472B6]' : ''} />
-            <span className="text-[10px] font-mono font-bold tabular-nums text-white/55 group-hover:text-inherit min-h-[12px]">
-              {likes > 0 ? likes : ''}
-            </span>
-          </button>
+        <button
+          type="button"
+          onClick={onZap}
+          className={`flex items-center gap-1.5 hover:text-amber-400 transition-colors cursor-pointer ${
+            zaps > 0 ? 'text-amber-400' : ''
+          }`}
+          aria-label="Zap"
+        >
+          <Zap size={15} fill={zaps > 0 ? 'currentColor' : 'none'} />
+          <span>{zaps > 0 ? zaps : ''}</span>
+        </button>
 
-          <button
-            type="button"
-            disabled={bookmarkBusy}
-            onClick={onBookmark}
-            className="group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl text-white/75 hover:text-[#F59E0B] hover:bg-white/[0.04] transition-colors disabled:opacity-40"
-            aria-label="Bookmark"
-            title="Save to your personal chat"
-          >
-            <Bookmark size={17} strokeWidth={2.25} />
-            <span className="text-[10px] font-mono font-bold min-h-[12px]" aria-hidden />
-          </button>
+        <button
+          type="button"
+          disabled={bookmarkBusy}
+          onClick={onBookmark}
+          className="flex items-center gap-1.5 hover:text-amber-400 transition-colors cursor-pointer disabled:opacity-40"
+          title="Save to your personal chat"
+          aria-label="Bookmark"
+        >
+          <Bookmark size={15} />
+        </button>
 
-          <button
-            type="button"
-            onClick={onShare}
-            className="group flex flex-col items-center justify-center gap-0.5 min-h-[44px] rounded-xl text-white/75 hover:text-[#60A5FA] hover:bg-white/[0.04] transition-colors"
-            aria-label="Share"
-          >
-            <Share size={17} strokeWidth={2.25} />
-            <span className="text-[10px] font-mono font-bold min-h-[12px]" aria-hidden />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onShare}
+          className="flex items-center gap-1.5 hover:text-[#60A5FA] transition-colors cursor-pointer"
+          title="Share"
+          aria-label="Share"
+        >
+          <Share size={15} />
+        </button>
       </div>
     </article>
   );

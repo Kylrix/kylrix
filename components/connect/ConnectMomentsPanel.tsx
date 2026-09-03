@@ -127,7 +127,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
         </div>
 
         <nav
-          className="p-1 rounded-2xl bg-[#0A0908] border border-white/[0.08] flex gap-1 overflow-x-auto scrollbar-none"
+          className="p-1.5 rounded-2xl bg-[#161412] border border-white/[0.06] flex gap-1 overflow-x-auto scrollbar-none"
           aria-label="Connect feed tabs"
         >
           {TABS.map((t) => {
@@ -139,10 +139,10 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
                 onClick={() => setTab(t.id)}
                 aria-current={active ? 'page' : undefined}
                 className={[
-                  'flex-1 min-w-[4.5rem] px-3 py-2.5 rounded-xl text-[11px] sm:text-xs font-extrabold font-satoshi transition-colors whitespace-nowrap',
+                  'flex-1 min-w-[4.5rem] px-3 py-2 rounded-xl text-xs font-bold font-satoshi transition-all whitespace-nowrap cursor-pointer',
                   active
-                    ? 'bg-[#161412] text-white border border-white/[0.08] shadow-sm'
-                    : 'text-white/45 hover:text-white/75 border border-transparent',
+                    ? 'bg-[#0A0908] text-white border border-white/10 shadow-sm'
+                    : 'text-white/50 hover:text-white hover:bg-white/[0.03] border border-transparent',
                 ].join(' ')}
               >
                 {t.label}
@@ -157,22 +157,22 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
           {[1, 2, 3, 4].map((n) => (
             <div
               key={n}
-              className="h-[140px] rounded-[22px] bg-[#161412] border border-[#34322F] animate-pulse"
+              className="h-[140px] rounded-2xl bg-[#161412] border border-white/[0.06] animate-pulse"
             />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center rounded-[22px] bg-[#161412] border border-dashed border-[#34322F] px-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center mb-4">
+        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl bg-[#161412] border border-white/[0.06] px-4 space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center mb-1">
             {meta.icon}
           </div>
-          <h4 className="text-white font-black text-lg font-clash mb-1">{meta.emptyTitle}</h4>
-          <p className="text-white/45 text-xs max-w-xs mb-5 font-satoshi">{meta.emptyBody}</p>
+          <h4 className="text-white font-bold text-base font-clash">{meta.emptyTitle}</h4>
+          <p className="text-white/45 text-xs max-w-xs font-satoshi">{meta.emptyBody}</p>
           {tab === 'moments' && onCreateMoment ? (
             <button
               type="button"
               onClick={onCreateMoment}
-              className="h-10 px-5 rounded-xl bg-[#F59E0B] text-black font-extrabold text-xs"
+              className="mt-2 h-9 px-4 rounded-xl bg-[#F59E0B] text-black font-extrabold text-xs cursor-pointer hover:bg-[#d97706] active:scale-95 transition-all"
             >
               Create
             </button>
@@ -180,7 +180,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
         </div>
       ) : (
         <div
-          className="grid gap-6 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] min-w-0 w-full max-w-full overflow-hidden"
+          className="flex flex-col gap-3 min-w-0 w-full max-w-full overflow-hidden"
           style={{ overflowAnchor: 'none' }}
         >
           {items.map((item) => (
@@ -189,7 +189,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
           {hasMore ? (
             <div
               ref={sentinelRef}
-              className="h-12 w-full flex items-center justify-center py-4 col-span-full"
+              className="h-12 w-full flex items-center justify-center py-4"
               aria-hidden
             >
               <span className="w-5 h-5 rounded-full border-2 border-white/10 border-t-[#F59E0B] animate-spin" />
