@@ -50,8 +50,11 @@ const SPAM_KEYWORDS = [
   'free btc', 't.me/', 'pumpex', 'ca:', 'buy now!', '0x', '$pepe', '$wif',
   'airdrop', 'giveaway', 'join channel', 'telegram.me', 'casin', 'bonus claim',
   'free spin', 'crypto signal', 'whatsapp', 'dm to buy', 'whitelist', 'mint now',
-  'presale is live', 'private key', 'seed phrase', 'nigger', 'faggot', 'kike', 'retard'
+  'presale is live', 'private key', 'seed phrase', 'trust score', 'kaspersky integrity',
+  'verified node', 'semantic web 4.0', 'web 4.0', 'web 5.0', 'nigger', 'faggot', 'kike', 'retard'
 ];
+
+const BARE_DOMAIN_REGEX = /\b[a-zA-Z0-9][-a-zA-Z0-9]*\.(?:com|net|org|io|ro|xyz|top|site|online|info|biz|app|dev|ai|cc|co|tv|me|tech|space|world|link|live|store|club|vip|pro|icu|cloud|press|news|agency|digital|network|systems|solutions|services|group|global|center|company|international|click|work|finance|guru|today|wiki)\b(?:\/[^\s,)]*)?/gi;
 
 /** Returns false = hide completely, { rank } = show but with adjusted rank (0–100). */
 export function sanitizeFeedContent(
@@ -73,27 +76,35 @@ export function sanitizeFeedContent(
   // Too short to convey anything meaningful
   if (trimmed.length < 3) return false;
 
-  // Strip Nostr metadata markers (npub/note refs, URLs, hashtags) from content to assess actual prose
+  // Extract all links: both http(s) URLs and naked/bare domain names
+  const urls = trimmed.match(/https?:\/\/\S+/gi) || [];
+  const bareDomains = trimmed.match(BARE_DOMAIN_REGEX) || [];
+  const allLinks = Array.from(new Set([...urls, ...bareDomains.filter((d) => !urls.some((u) => u.includes(d)))]));
+
+  // Strip Nostr metadata markers (npub/note refs, URLs, bare domains, hashtags) from content to assess actual prose
   const stripped = trimmed
     .replace(/nostr:[a-z0-9]+/gi, '')
     .replace(/https?:\/\/\S+/gi, '')
+    .replace(BARE_DOMAIN_REGEX, '')
     .replace(/#\S+/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 
-  // ── LINK-ONLY OR PRIMARILY-LINK POSTS ────────────────────────────────────
-  // Automatically filter out posts that are purely URLs or primarily link drops with negligible commentary
-  const urls = trimmed.match(/https?:\/\/\S+/gi) || [];
-  if (urls.length > 0) {
-    const totalUrlLength = urls.reduce((acc, u) => acc + u.length, 0);
+  // ── DOMAIN FARM & LINK DUMPS ─────────────────────────────────────────────
+  // If a post lists 2 or more domains/URLs (e.g. domain farms, node aggregators, directory dumps)
+  if (allLinks.length >= 2) return false;
+
+  // If a post contains any link/domain and the remaining authentic prose is negligible
+  if (allLinks.length > 0) {
+    const totalLinkLength = allLinks.reduce((acc, l) => acc + l.length, 0);
     const proseLength = stripped.length;
 
-    // 1. Pure link post (no prose text at all after removing URLs, tags, and refs)
+    // 1. Pure link/domain post (0 prose chars after stripping)
     if (proseLength === 0) return false;
 
-    // 2. Primarily link post: non-URL prose is under 16 characters OR URLs dominate >60% of the post length with <35 chars of prose
-    if (proseLength < 16) return false;
-    if (totalUrlLength / trimmed.length > 0.60 && proseLength < 35) return false;
+    // 2. Primarily link post: non-URL prose is under 20 chars OR links take up > 35% of the text
+    if (proseLength < 20) return false;
+    if (totalLinkLength / trimmed.length > 0.35 && proseLength < 50) return false;
   }
 
   // ── HASHTAG-ONLY FILTER ──────────────────────────────────────────────────

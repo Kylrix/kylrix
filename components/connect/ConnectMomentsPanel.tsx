@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Bookmark, Heart, MessageCircle, Sliders, Sparkles } from 'lucide-react';
 import { MomentCard } from '@/components/connect/MomentCard';
-import { useConnectMomentsFeed } from '@/components/connect/useConnectMomentsFeed';
+import { useConnectMomentsFeed, sanitizeFeedContent } from '@/components/connect/useConnectMomentsFeed';
 import { ConnectFeedSettingsPanel } from '@/components/connect/ConnectFeedSettingsPanel';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -70,6 +70,20 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
           : bookmarksFeed;
 
   const { items, total, loading, hasMore, loadMore } = activeFeed;
+  
+  const visibleItems = React.useMemo(() => {
+    return items.filter((item) => {
+      const res = sanitizeFeedContent(
+        item.content || '',
+        `${item.authorName || ''} ${item.authorUsername || ''}`,
+        item.rawEvent?.tags,
+        undefined,
+        item.id
+      );
+      return res !== false;
+    });
+  }, [items]);
+
   const meta = TAB_META[tab];
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const { openSidebar, closeSidebar } = useDynamicSidebar();
@@ -92,7 +106,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
     });
     io.observe(el);
     return () => io.disconnect();
-  }, [onIntersect, hasMore, items.length, tab]);
+  }, [onIntersect, hasMore, visibleItems.length, tab]);
 
   return (
     <div className="flex flex-col gap-5 w-full max-w-2xl mx-auto min-w-0 overflow-x-hidden">
@@ -117,7 +131,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
                 if (isDesktop) openSidebar(node, 'connect-feed-settings', { hideHeader: true });
                 else openOverlay(node);
               }}
-              className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-white/[0.08] flex items-center justify-center hover:border-white/15 hover:bg-white/[0.05] transition-colors"
+              className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-white/[0.08] flex items-center justify-center hover:border-white/15 hover:bg-white/[0.05] transition-colors cursor-pointer"
               aria-label="Feed settings"
               title="Feed settings"
             >
@@ -161,7 +175,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
             />
           ))}
         </div>
-      ) : items.length === 0 ? (
+      ) : visibleItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl bg-[#161412] border border-white/[0.06] px-4 space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center mb-1">
             {meta.icon}
@@ -183,7 +197,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
           className="flex flex-col gap-3 min-w-0 w-full max-w-full overflow-hidden"
           style={{ overflowAnchor: 'none' }}
         >
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <MomentCard key={item.id} item={item} />
           ))}
           {hasMore ? (
