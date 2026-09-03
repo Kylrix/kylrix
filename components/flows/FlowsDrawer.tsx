@@ -72,16 +72,16 @@ function FlowRow({
 }) {
   return (
     <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] overflow-hidden h-full">
-      <div className="flex items-center gap-3 p-3.5">
+      <div className="flex items-center gap-3.5 p-4">
         <button
           type="button"
           onClick={onOpen}
-          className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer"
+          className="flex items-center gap-3.5 min-w-0 flex-1 text-left cursor-pointer"
         >
-          <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#A855F7] shrink-0">
+          <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.06] text-[#A855F7] shrink-0">
             <Layers size={16} />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 pr-1.5">
             <div className="flex items-center gap-2 min-w-0">
               <p className="text-sm font-bold text-white truncate">{flow.name}</p>
               {recentlyUpdated && (
@@ -90,8 +90,8 @@ function FlowRow({
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
-              <span className="text-[11px] font-bold text-white/40 truncate">
+            <div className="flex items-center gap-1.5 mt-1 min-w-0">
+              <span className="text-[11px] font-medium text-white/40 truncate">
                 {flow.publisher.handle}
               </span>
               <VerifiedMark kind={flow.publisher.verified} />
@@ -346,36 +346,31 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
   return (
     <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-200">
       {/* Top Header Chrome */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-white/[0.08] bg-[#0A0908] shrink-0">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-[#0A0908] shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-[#A855F7]/15 border border-[#A855F7]/30 flex items-center justify-center text-[#A855F7]">
             <GitFork size={16} />
           </div>
-          <div>
-            <h2 className="text-base font-black font-clash text-white tracking-tight m-0">
-              Flows Hub
-            </h2>
-            <p className="text-[11px] font-mono text-white/40 m-0">
-              Automations & executable pipelines
-            </p>
-          </div>
+          <h2 className="text-base font-bold text-white tracking-tight m-0">
+            Flows
+          </h2>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setShowCreate(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#A855F7] text-white hover:bg-[#9333ea] active:scale-95 transition-all shadow-[0_2px_10px_rgba(168,85,247,0.25)] cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#A855F7] text-white hover:bg-[#9333ea] active:scale-95 transition-all shadow-[0_2px_10px_rgba(168,85,247,0.25)] cursor-pointer"
           >
             <Plus size={15} strokeWidth={2.5} />
-            <span>Create Flow</span>
+            <span>Create</span>
           </button>
 
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer ml-1"
+              className="p-1.5 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer ml-1"
               title="Close Flows"
               aria-label="Close Flows"
             >
