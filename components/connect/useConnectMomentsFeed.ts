@@ -73,16 +73,32 @@ export function sanitizeFeedContent(
   // Too short to convey anything meaningful
   if (trimmed.length < 3) return false;
 
-  // Strip Nostr metadata markers (npub/note refs, URLs) from content to assess actual prose
+  // Strip Nostr metadata markers (npub/note refs, URLs, hashtags) from content to assess actual prose
   const stripped = trimmed
     .replace(/nostr:[a-z0-9]+/gi, '')
     .replace(/https?:\/\/\S+/gi, '')
+    .replace(/#\S+/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 
+  // ── LINK-ONLY OR PRIMARILY-LINK POSTS ────────────────────────────────────
+  // Automatically filter out posts that are purely URLs or primarily link drops with negligible commentary
+  const urls = trimmed.match(/https?:\/\/\S+/gi) || [];
+  if (urls.length > 0) {
+    const totalUrlLength = urls.reduce((acc, u) => acc + u.length, 0);
+    const proseLength = stripped.length;
+
+    // 1. Pure link post (no prose text at all after removing URLs, tags, and refs)
+    if (proseLength === 0) return false;
+
+    // 2. Primarily link post: non-URL prose is under 16 characters OR URLs dominate >60% of the post length with <35 chars of prose
+    if (proseLength < 16) return false;
+    if (totalUrlLength / trimmed.length > 0.60 && proseLength < 35) return false;
+  }
+
   // ── HASHTAG-ONLY FILTER ──────────────────────────────────────────────────
   // Post whose entire visible body is one or more hashtags (and whitespace)
-  const isHashtagsOnly = stripped.length > 0 && /^(#\S+\s*)+$/.test(stripped);
+  const isHashtagsOnly = stripped.length === 0 && (trimmed.match(/#\S+/g) || []).length > 0;
   if (isHashtagsOnly) return false;
 
   // ── SYMBOLS / RANDOM NUMBERS ONLY ───────────────────────────────────────
@@ -96,10 +112,6 @@ export function sanitizeFeedContent(
   const hashtagCount = (trimmed.match(/#\S+/g) || []).length;
   if (hashtagCount >= 5) return { rank: 20 };
   if (hashtagCount >= 3) return { rank: 40 };
-
-  // ── LINK-ONLY POSTS (no prose, just a URL or two) ───────────────────────
-  const isLinksOnly = stripped.length === 0 && /https?:\/\//.test(trimmed);
-  if (isLinksOnly) return { rank: 30 };
 
   return { rank: 50 };
 }
