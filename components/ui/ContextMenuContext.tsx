@@ -26,7 +26,6 @@ import {
 
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { isFlowPath } from '@/lib/routing/app-paths';
-import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { ContextMenuPanel } from '@/components/ui/ContextMenu';
 import type { KylrixApp } from '@/sdk/design';
 
@@ -59,7 +58,6 @@ const ContextMenuContext = createContext<ContextMenuContextType | undefined>(und
 export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<MenuState | null>(null);
   const { setIsDrawerOpen } = useDrawerState();
-  const { openSidebar, closeSidebar } = useDynamicSidebar();
   const isOpen = !!state;
 
   useEffect(() => {
