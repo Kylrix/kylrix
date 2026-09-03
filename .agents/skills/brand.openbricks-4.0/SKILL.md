@@ -25,9 +25,11 @@ OpenBricks 4.0 evolves the Kylrix design language from rigid, corporate SaaS con
 ---
 
 ## 2. Surfaces & Unified Color Architecture
-
+ 
+- **Page & Canvas Pitch Black (`#000000` STRICT)**:
+  - Page, overlay root backdrop, and app canvas must strictly use pure `#000000` (pitch black). Never substitute false pitch blacks (like `#0A0908` or `#12100E`) as canvas backgrounds.
 - **Single Unified Surface Fill (`#161412`)**:
-  - The drawer body, header, and footer share a continuous ash background.
+  - Primary panels, cards, header chrome, and drawers adopt the continuous `#161412` OpenBricks deep ash background.
   - Never split a panel into awkward two-tone slabs (e.g. ash header with pitch-black body sharing one outer border).
 - **Tactile Inset Child Wells (`#0A0908`)**:
   - Nest interactive child blocks inside `#0A0908` with subtle hairline borders (`rgba(255, 255, 255, 0.08)`).

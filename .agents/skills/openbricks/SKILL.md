@@ -32,12 +32,14 @@ A single component / section uses **one continuous fill**. Do **not** split a ca
 
 | Role | Hex / token |
 |---|---|
-| Page / pitch | `#000000` / near-black |
-| Panel / section (unified) | `#161412` |
-| Nested row / child tile | `#0A0908` / `#0B0A09` |
+| Page / Pitch Black (STRICT) | `#000000` (Strictly pure `#000000`, never false pitch like `#0A0908` or `#12100E`) |
+| Primary panel / section (unified) | `#161412` (Canonical deep ash surface) |
+| Inset child well / nested tile | `#0A0908` / `#0B0A09` |
 | Icon / action chip on a row | `#161412` (on a darker row) or `#0A0908` (on a panel) |
-| Border | `white/[0.04]`–`white/[0.06]` or `#34322F` |
+| Border | `white/[0.04]`–`white/[0.08]` or `#34322F` |
 | Accent (core) | `#6366F1` |
+| Accent (social/moment) | `#F59E0B` |
+| Accent (flow) | `#A855F7` |
 
 ## Copy density (STRICT)
 
