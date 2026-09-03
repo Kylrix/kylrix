@@ -68,6 +68,8 @@ import { ChatNotificationProvider } from '@/components/providers/ChatNotificatio
 
 import { UniversalScrollRestoration } from '@/components/providers/UniversalScrollRestoration';
 import { UnifiedMediaProvider } from '@/context/UnifiedMediaContext';
+import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
+import { GlobalContextMenu } from '@/components/ui/GlobalContextMenu';
 
 const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   SpineProvider,
@@ -84,6 +86,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   ThemeProvider,
   ToastProvider,
   UnifiedDrawerProvider,
+  ContextMenuProvider,
   ProUpgradeProvider,
   SubscriptionProvider,
   ResourcePinProvider,
@@ -115,6 +118,7 @@ export function ClientProviders({ children }: { children: ReactNode }) {
       <UniversalScrollRestoration />
       <ComposeProviders providers={rootProvidersList}>
         {children}
+        <GlobalContextMenu />
         <WebMcpInspectorDrawer />
       </ComposeProviders>
       <ClientToaster />

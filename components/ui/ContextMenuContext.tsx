@@ -69,8 +69,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
 
   const closeMenu = useCallback(() => {
     setState(null);
-    closeSidebar();
-  }, [closeSidebar]);
+  }, []);
   
   // Track if a component already handled this context menu event
   const menuOpenedInCurrentTick = useRef(false);
@@ -78,49 +77,23 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
   const openMenu = useCallback((s: MenuState) => {
     setState(s);
     menuOpenedInCurrentTick.current = true;
-    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
-    if (isDesktop) {
-      openSidebar(
-        <ContextMenuPanel items={s.items} onCloseAction={closeMenu} appType={s.appType} title={s.title} />,
-        'context-menu',
-        { hideHeader: true }
-      );
-    }
-  }, [closeMenu, openSidebar]);
+  }, []);
 
   const pathname = usePathname();
   const router = useRouter();
   const { showSuccess } = useToast();
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
 
-  // Global listeners for close click/keyboard (deferred so opening click does not instantly dismiss)
+  // Global listener for ESC key
   useEffect(() => {
     if (!isOpen) return;
-    const onClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('[data-kylrix-context-menu]')) return;
-      closeMenu();
-    };
     const onEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeMenu();
     };
-    const timer = window.setTimeout(() => {
-      window.addEventListener('click', onClick, true);
-    }, 0);
     window.addEventListener('keydown', onEscape);
     return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('click', onClick, true);
       window.removeEventListener('keydown', onEscape);
     };
-  }, [isOpen, closeMenu]);
-
-  // Close on scroll
-  useEffect(() => {
-    if (!isOpen) return;
-    const onScroll = () => closeMenu();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
   }, [isOpen, closeMenu]);
 
   // Global contextmenu listener with intelligent adaptive scoping

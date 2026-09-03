@@ -8,20 +8,9 @@ import { SourceProvider } from '@/lib/source-context';
 import { ProfileProvider } from '@/components/providers/ProfileProvider';
 import { NoteDrawerProvider } from '@/context/NoteDrawerContext';
 import { LoginDrawerProvider } from '@/context/LoginDrawerContext';
-import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
-import { GlobalContextMenu } from '@/components/ui/GlobalContextMenu';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
 import { TokenOpsProvider } from '@/context/TokenOpsContext';
 import { EcosystemStateTracker } from '@/components/providers/EcosystemStateTracker';
-
-function ContextMenuWrapper({ children }: { children: ReactNode }) {
-  return (
-    <ContextMenuProvider>
-      <GlobalContextMenu />
-      {children}
-    </ContextMenuProvider>
-  );
-}
 
 interface ComposeProvidersProps {
   providers: Array<React.ComponentType<{ children: ReactNode }>>;
@@ -51,7 +40,6 @@ const ecosystemProvidersList: Array<React.ComponentType<{ children: ReactNode }>
   SourceProvider,
   NoteDrawerProvider,
   LoginDrawerProvider,
-  ContextMenuWrapper,
   TokenOpsProvider,
   ChatNotificationProvider,
   EcosystemStateTracker,
