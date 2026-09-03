@@ -46,9 +46,20 @@ export function WebMcpProvider({ children }: { children: ReactNode }) {
       setExecutionHistory(updatedHistory);
     });
 
+    const handleOpen = () => setIsInspectorOpen(true);
+    const handleToggle = () => setIsInspectorOpen((prev) => !prev);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('kylrix:open-webmcp', handleOpen);
+      window.addEventListener('kylrix:toggle-webmcp', handleToggle);
+    }
+
     return () => {
       unsubTools();
       unsubHistory();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('kylrix:open-webmcp', handleOpen);
+        window.removeEventListener('kylrix:toggle-webmcp', handleToggle);
+      }
     };
   }, []);
 

@@ -41,7 +41,7 @@ export interface WebMcpToolDefinition<TArgs = Record<string, any>> {
   description: string;
   inputSchema: JsonSchema;
   execute: (args: TArgs) => Promise<WebMcpToolExecutionResult | Record<string, any> | string>;
-  category?: 'notes' | 'goals' | 'workspaces' | 'flows' | 'events' | 'forms' | 'chat' | 'navigation' | 'system';
+  category?: 'notes' | 'goals' | 'workspaces' | 'flows' | 'events' | 'forms' | 'chat' | 'moments' | 'threads' | 'vault' | 'tags' | 'navigation' | 'system';
 }
 
 export interface WebMcpToolExecutionEvent {
