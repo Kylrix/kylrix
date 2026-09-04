@@ -36,26 +36,27 @@ export function renderShortcutsList() {
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 1.5,
-            p: 1.5,
+            px: 2,
+            py: 1.5,
             borderRadius: '16px',
-            bgcolor: 'rgba(255,255,255,0.015)',
-            border: '1px solid rgba(255,255,255,0.04)'}}
+            bgcolor: '#000000',
+            border: '1px solid rgba(255,255,255,0.08)'}}
         >
-          <Typography sx={{ color: 'rgba(255,255,255,0.78)', fontSize: '0.84rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)', lineHeight: 1.35, minWidth: 0 }}>
+          <Typography sx={{ color: '#fff', fontSize: '0.84rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)', lineHeight: 1.35, minWidth: 0 }}>
             {item.desc}
           </Typography>
           <Typography
             component="span"
             sx={{
-              color: '#6366F1',
+              color: '#fff',
               fontSize: '0.72rem',
               fontWeight: 800,
               fontFamily: 'var(--font-mono)',
-              bgcolor: 'rgba(99, 102, 241, 0.08)',
+              bgcolor: 'rgba(255, 255, 255, 0.1)',
               px: 1.1,
               py: 0.55,
               borderRadius: '8px',
-              border: '1px solid rgba(99, 102, 241, 0.18)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
               flexShrink: 0,
               whiteSpace: 'nowrap'}}
           >

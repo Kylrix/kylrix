@@ -28,38 +28,24 @@ A single component / section uses **one continuous fill**. Do **not** split a ca
 - Need structure or contrast? Nest a **child** with its own background (icon chip, row tile, delete button, duration chip) — like the fingerprint / trash tiles on passkey rows.
 - Separate sections = separate sibling panels with gap, not internal color bands or long hairline dividers between list items.
 
-## Color stack
+## Color stack (Inverted Accent Standard)
 
 | Role | Hex / token |
 |---|---|
-| Page / Pitch Black (STRICT) | `#000000` (Strictly pure `#000000`, never false pitch like `#0A0908` or `#12100E`) |
-| Primary panel / section (unified) | `#161412` (Canonical deep ash surface) |
-| Inset child well / nested tile | `#0A0908` / `#0B0A09` |
-| Icon / action chip on a row | `#161412` (on a darker row) or `#0A0908` (on a panel) |
-| Border | `white/[0.04]`–`white/[0.08]` or `#34322F` |
+| Panel / Container Background | `#161412` (Canonical deep ash background for shells, pages, drawers, sidebars) |
+| Primary Components / Cards / Wells (STRICT) | `#000000` (Strictly pitch black for all components, interactive cards, input wells, and items with text) |
+| Component Border | `white/[0.08]`–`white/[0.12]` or `#34322F` |
+| Text Color (STRICT) | `#FFFFFF` (`color: '#fff'`, `text-white` only — differentiate hierarchy by font-size, weight, or uppercase tracking, never muted/gray opacity) |
 | Accent (core) | `#6366F1` |
 | Accent (social/moment) | `#F59E0B` |
 | Accent (flow) | `#A855F7` |
 
-## Copy density (STRICT)
-
-- **Cut text.** Labels and actions beat paragraphs.
-- No intro/hero cards that repeat the tab or nav the user already clicked.
-- No “stats summary” chips that only mirror content listed below.
-- No explanatory blah for obvious controls. One short warning line is enough for risky toggles (e.g. Remember Unlock → “Less safe”).
-- Layman English only — see `copy.plain-language`. No crypto jargon in UI.
-
-## Cards & lists
-
-- Cards are for **interaction** or a real section of controls — not for decorative empty “About” blocks.
-- List rows: compact icon chip + title + one meta line + trailing action chip — each chip/row owns its fill.
-- Event detail structure (header → labeled blocks → actions) is fine for **object details**; strip gradients/blur if copying that pattern.
-
-## Typography
+## Typography & Text Hierarchy
 
 - Headers: `font-clash`
 - Body / settings: `font-satoshi`
-- Tiny section labels: uppercase tracking, muted white (`white/55`)
+- **Pure White Text Rule (STRICT)**: All text is pure `#FFFFFF`. Prohibit `rgba(255,255,255,0.45)`, `text-white/50`, or gray text.
+- Secondary / meta markers: smaller size (`0.72rem`), font-weight (`500` vs `800`), uppercase with letter-spacing (`letterSpacing: '0.08em'`).
 
 ## Related pointers
 

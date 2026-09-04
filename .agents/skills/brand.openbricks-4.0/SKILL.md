@@ -24,27 +24,26 @@ OpenBricks 4.0 evolves the Kylrix design language from rigid, corporate SaaS con
 
 ---
 
-## 2. Surfaces & Unified Color Architecture
+## 2. Surfaces & Unified Color Architecture (Inverted Accent Standard)
  
-- **Page & Canvas Pitch Black (`#000000` STRICT)**:
-  - Page, overlay root backdrop, and app canvas must strictly use pure `#000000` (pitch black). Never substitute false pitch blacks (like `#0A0908` or `#12100E`) as canvas backgrounds.
-- **Single Unified Surface Fill (`#161412`)**:
-  - Primary panels, cards, header chrome, and drawers adopt the continuous `#161412` OpenBricks deep ash background.
-  - Never split a panel into awkward two-tone slabs (e.g. ash header with pitch-black body sharing one outer border).
-- **Tactile Inset Child Wells (`#0A0908`)**:
-  - Nest interactive child blocks inside `#0A0908` with subtle hairline borders (`rgba(255, 255, 255, 0.08)`).
-  - Use generous radii (`rounded-2xl` / `16px`–`20px`).
+- **Inverted Surfaces Model (STRICT)**:
+  - **Panels & Shell Backgrounds (`#161412`)**: The overall page, drawer, sidebar, and container background assumes the signature OpenBricks deep ash (`#161412`).
+  - **Component Cards & Interactive Wells (`#000000` STRICT Pitch Black)**: All primary components, interactive cards, input wells, list tiles, and elements containing text must strictly assume pitch black (`#000000`). Never substitute off-black or dark gray tones (`#0A0908`, `#12100E`, etc.).
+  - **Single Unified Surface Fill**: Never split a component card into awkward two-tone slabs (e.g. ash header with pitch-black body sharing one outer border).
+- **Pure White Typography Mandate (STRICT)**:
+  - **All Text is Pure White (`#FFFFFF` / `color: '#fff'` / `text-white`)**: Prohibit muted text shades, opacities, and gray values (`text-white/50`, `rgba(255,255,255,0.45)`, etc.) for copy and labels.
+  - **Hierarchy via Typography Scales**: Differentiate primary vs secondary hierarchy strictly using font size (e.g. `0.9rem` vs `0.72rem`), font weight (`800`/`900` bold vs `500`/`600` medium), uppercase letter tracking (`tracking-wider`, `letterSpacing: '0.08em'`), or layout spacing—never by dimming font color.
 - **Dark Inset Inputs**:
   - Native `<input>` / `<textarea>` elements styled with:
     ```tsx
-    bgcolor: '#0A0908',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    bgcolor: '#000000',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
     borderRadius: '16px',
     px: 2,
     py: 1.5,
     color: '#fff',
     '&:focus': { borderColor: '#6366F1' },
-    '&::placeholder': { color: 'rgba(255, 255, 255, 0.25)' }
+    '&::placeholder': { color: '#fff', opacity: 0.4 }
     ```
 
 ---
