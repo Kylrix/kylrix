@@ -483,7 +483,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           <ObjectCard
             item={cardItem}
             titleNode={customTitleNode}
-            children={customPreviewNode}
             onOpen={() => handleClick()}
             onContextMenu={handleRightClick}
             trailing={
@@ -525,23 +524,25 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
               />
             }
           >
-            <div className="flex flex-col gap-3">
-              <p className="text-white font-satoshi text-sm font-medium leading-relaxed line-clamp-3 break-words m-0 select-text">
-                {previewText}
-              </p>
-              {previewImageUrl && !isEncryptedNote ? (
-                <div className="relative w-full h-24 sm:h-28 rounded-[14px] overflow-hidden border border-white/[0.06]">
-                  <img
-                    src={previewImageUrl}
-                    alt=""
-                    className="w-full h-full object-cover object-center opacity-90"
-                    onError={(e) => {
-                      (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              ) : null}
-            </div>
+            {customPreviewNode ?? (
+              <div className="flex flex-col gap-3">
+                <p className="text-white font-satoshi text-sm font-medium leading-relaxed line-clamp-3 break-words m-0 select-text">
+                  {previewText}
+                </p>
+                {previewImageUrl && !isEncryptedNote ? (
+                  <div className="relative w-full h-24 sm:h-28 rounded-[14px] overflow-hidden border border-white/[0.06]">
+                    <img
+                      src={previewImageUrl}
+                      alt=""
+                      className="w-full h-full object-cover object-center opacity-90"
+                      onError={(e) => {
+                        (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            )}
           </ObjectCard>
         </div>
       )}

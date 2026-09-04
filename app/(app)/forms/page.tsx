@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
     Plus, 
     Edit, 
@@ -38,6 +39,7 @@ import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 
 
 export default function FormsDashboard() {
+    const router = useRouter();
     const { user } = useAuth();
     const { isPinned: isResourcePinned, togglePin } = useResourcePins();
     const { open: openDrawer } = useUnifiedDrawer();
