@@ -324,6 +324,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const title = String(args.title || 'Untitled Note').trim();
       const content = String(args.content || '').trim();
       const tags = Array.isArray(args.tags) ? args.tags : [];
+      const uid = getEffectiveUserId();
 
       const created = await createNote({
         title,
@@ -337,6 +338,8 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
           title,
           content,
           tags,
+          userId: uid,
+          creatorId: uid,
           $createdAt: new Date().toISOString(),
           $updatedAt: new Date().toISOString(),
         };
@@ -345,8 +348,45 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       });
 
       const id = (created as any)?.$id || (created as any)?.id;
+      const normalizedDoc = {
+        $id: id,
+        id,
+        title,
+        content,
+        tags,
+        userId: uid,
+        creatorId: uid,
+        $createdAt: (created as any)?.$createdAt || new Date().toISOString(),
+        $updatedAt: (created as any)?.$updatedAt || new Date().toISOString(),
+      };
+
+      // 1. Instantly persist to RxDB and LocalEngine so local-first UI sees it
+      if (typeof window !== 'undefined') {
+        try {
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB().catch(() => null);
+          if (db?.notes) {
+            await db.notes.upsert({
+              id,
+              title,
+              content,
+              userId: uid,
+              updatedAt: normalizedDoc.$updatedAt,
+            }).catch(() => {});
+          }
+          await LocalEngine.cacheSet(`local:note:${id}`, normalizedDoc);
+          const cachedList = (await LocalEngine.cacheGet<any[]>(`f_notes_list_${uid}`)) || [];
+          const updatedList = [normalizedDoc, ...cachedList.filter((n: any) => (n.$id || n.id) !== id)];
+          await LocalEngine.cacheSet(`f_notes_list_${uid}`, updatedList);
+
+          // 2. Trigger real-time soft refresh across active views
+          const { triggerLocalSoftRefresh } = await import('@/lib/sync/local-soft-refresh');
+          triggerLocalSoftRefresh('note', id);
+        } catch {}
+      }
+
       return formatResult(
-        { id, title, tags, createdAt: new Date().toISOString() },
+        { id, title, tags, createdAt: normalizedDoc.$createdAt },
         `Note "${title}" created successfully (ID: ${id}).`
       );
     },
@@ -368,6 +408,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const noteId = String(args.id);
+      const uid = getEffectiveUserId();
       const payload: any = {};
       if (args.title !== undefined) payload.title = String(args.title);
       if (args.content !== undefined) payload.content = String(args.content);
@@ -377,6 +418,32 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
         const existing = (await LocalEngine.cacheGet<any>(`local:note:${noteId}`)) || {};
         await LocalEngine.cacheSet(`local:note:${noteId}`, { ...existing, ...payload });
       });
+
+      if (typeof window !== 'undefined') {
+        try {
+          const existing = (await LocalEngine.cacheGet<any>(`local:note:${noteId}`)) || {};
+          const merged = { ...existing, ...payload, $id: noteId, id: noteId, $updatedAt: new Date().toISOString() };
+          await LocalEngine.cacheSet(`local:note:${noteId}`, merged);
+
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB().catch(() => null);
+          if (db?.notes) {
+            const rxDoc = await db.notes.findOne(noteId).exec().catch(() => null);
+            if (rxDoc) {
+              await rxDoc.patch(payload).catch(() => {});
+            }
+          }
+
+          const cachedList = (await LocalEngine.cacheGet<any[]>(`f_notes_list_${uid}`)) || [];
+          if (cachedList.length) {
+            const updated = cachedList.map((n: any) => (n.$id === noteId || n.id === noteId ? { ...n, ...payload } : n));
+            await LocalEngine.cacheSet(`f_notes_list_${uid}`, updated);
+          }
+
+          const { triggerLocalSoftRefresh } = await import('@/lib/sync/local-soft-refresh');
+          triggerLocalSoftRefresh('note', noteId);
+        } catch {}
+      }
 
       return formatResult({ id: noteId, ...payload }, `Note '${noteId}' updated successfully.`);
     },
@@ -395,9 +462,32 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const noteId = String(args.id);
+      const uid = getEffectiveUserId();
       await deleteNote(noteId).catch(async () => {
         await LocalEngine.cacheDelete(`local:note:${noteId}`);
       });
+
+      if (typeof window !== 'undefined') {
+        try {
+          await LocalEngine.cacheDelete(`local:note:${noteId}`);
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB().catch(() => null);
+          if (db?.notes) {
+            const doc = await db.notes.findOne(noteId).exec().catch(() => null);
+            if (doc) await doc.remove().catch(() => {});
+          }
+
+          const cachedList = (await LocalEngine.cacheGet<any[]>(`f_notes_list_${uid}`)) || [];
+          if (cachedList.length) {
+            const updated = cachedList.filter((n: any) => (n.$id || n.id) !== noteId);
+            await LocalEngine.cacheSet(`f_notes_list_${uid}`, updated);
+          }
+
+          const { triggerLocalSoftRefresh } = await import('@/lib/sync/local-soft-refresh');
+          triggerLocalSoftRefresh('note', noteId);
+        } catch {}
+      }
+
       return formatResult({ id: noteId, deleted: true }, `Note '${noteId}' deleted.`);
     },
   },
@@ -513,6 +603,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     execute: async (args) => {
       const title = String(args.title).trim();
       const description = String(args.description || '').trim();
+      const uid = getEffectiveUserId();
 
       const created = await createRow(
         APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
@@ -536,13 +627,61 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
           progress: 0,
           targetDate: args.targetDate || null,
           category: args.category || 'general',
+          userId: uid,
+          creatorId: uid,
           $createdAt: new Date().toISOString(),
+          $updatedAt: new Date().toISOString(),
         };
         await LocalEngine.cacheSet(`local:goal:${id}`, localDoc);
         return localDoc;
       });
 
       const id = (created as any)?.$id || (created as any)?.id;
+      const normalizedGoal = {
+        $id: id,
+        id,
+        title,
+        description,
+        status: 'active',
+        progress: 0,
+        targetDate: args.targetDate || null,
+        category: args.category || 'general',
+        userId: uid,
+        creatorId: uid,
+        $createdAt: (created as any)?.$createdAt || new Date().toISOString(),
+        $updatedAt: (created as any)?.$updatedAt || new Date().toISOString(),
+      };
+
+      if (typeof window !== 'undefined') {
+        try {
+          await LocalEngine.cacheSet(`local:goal:${id}`, normalizedGoal);
+
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB().catch(() => null);
+          if (db?.tasks) {
+            await db.tasks.upsert({
+              id,
+              title,
+              description,
+              status: 'todo',
+              priority: 'medium',
+              projectId: 'inbox',
+              labels: [],
+              userId: uid,
+              updatedAt: normalizedGoal.$updatedAt,
+            }).catch(() => {});
+          }
+
+          const existingGoals = (await LocalEngine.cacheGet<any[]>(`f_goals_list_${uid}`)) || [];
+          const updatedGoals = [normalizedGoal, ...existingGoals.filter((g: any) => (g.$id || g.id) !== id)];
+          await LocalEngine.cacheSet(`f_goals_list_${uid}`, updatedGoals);
+          await LocalEngine.cacheSet(`f_tasks_${uid}`, { rows: updatedGoals, total: updatedGoals.length });
+
+          const { triggerLocalSoftRefresh } = await import('@/lib/sync/local-soft-refresh');
+          triggerLocalSoftRefresh('goal', id);
+        } catch {}
+      }
+
       return formatResult(
         { id, title, status: 'active' },
         `Goal "${title}" created successfully.`
@@ -635,6 +774,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const name = String(args.name).trim();
+      const uid = getEffectiveUserId();
       const created = await createProject({
         name,
         description: String(args.description || ''),
@@ -645,9 +785,11 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
           $id: id,
           id,
           name,
+          title: name,
           description: String(args.description || ''),
           isAgentic: Boolean(args.isAgentic),
           isPersonal: false,
+          ownerId: uid,
           $createdAt: new Date().toISOString(),
         };
         await LocalEngine.cacheSet(`local:workspace:${id}`, localWs);
@@ -655,6 +797,30 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       });
 
       const id = (created as any)?.$id || (created as any)?.id;
+      const normalizedWs = {
+        $id: id,
+        id,
+        name,
+        title: name,
+        description: String(args.description || ''),
+        isAgentic: Boolean(args.isAgentic),
+        isPersonal: false,
+        ownerId: uid,
+        $createdAt: (created as any)?.$createdAt || new Date().toISOString(),
+      };
+
+      if (typeof window !== 'undefined') {
+        try {
+          const userProjects = (await LocalEngine.cacheGet<any[]>(`f_projects_list_${uid}`)) || [];
+          const updated = [normalizedWs, ...userProjects.filter((p: any) => (p.$id || p.id) !== id)];
+          await LocalEngine.cacheSet(`f_projects_list_${uid}`, updated);
+          await LocalEngine.cacheSet('f_projects_list', updated);
+          localStorage.setItem(`kylrix_workspaces_${uid}`, JSON.stringify(updated));
+          localStorage.setItem('kylrix_all_cached_workspaces', JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent('kylrix:workspace-changed', { detail: { workspaceId: id } }));
+        } catch {}
+      }
+
       return formatResult(
         { id, name, isAgentic: Boolean(args.isAgentic) },
         `Workspace "${name}" created.`
