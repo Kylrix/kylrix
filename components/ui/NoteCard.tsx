@@ -425,26 +425,20 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const customTitleNode = React.useMemo(() => {
     if (isLocked) {
       return (
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <PrivateIcon size={14} className="text-[#10B981] flex-shrink-0" />
           <span className="text-[#10B981] font-bold text-[0.88rem] tracking-tight">
             Locked Idea
-          </span>
-          <span className="text-[0.62rem] font-mono uppercase px-1.5 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] font-extrabold tracking-wider ml-1">
-            Vault Key
           </span>
         </div>
       );
     }
     if (isEncryptedNote) {
       return (
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <Shield size={14} className="text-[#818CF8] flex-shrink-0" />
           <span className="text-[#818CF8] font-bold text-[0.88rem] tracking-tight">
             Encrypted Idea
-          </span>
-          <span className="text-[0.62rem] font-mono uppercase px-1.5 py-0.5 rounded bg-[#6366F1]/15 text-[#A5B4FC] font-extrabold tracking-wider ml-1">
-            Zero-Trust
           </span>
         </div>
       );

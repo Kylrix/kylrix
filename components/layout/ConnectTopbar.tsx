@@ -801,80 +801,82 @@ export default function ConnectTopbar({
           maxHeight: isDesktop ? 'none' : '45vh',
           overflowY: isDesktop ? 'visible' : 'auto'}}
       >
-        <Paper
-          elevation={0}
-          sx={{
-            width: '100%',
-            borderRadius: '26px',
-            bgcolor: '#161412',
-            border: `1px solid ${alpha(appAccent, 0.22)}`,
-            overflow: 'hidden'}}
-        >
-          <Box sx={{ p: 1.25 }}>
-        {/* For Mobile Search Input */}
-        {!isDesktop && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-                  <Logo app={activeApp} size={14} variant="icon" />
+        {isDesktop ? (
+          <Box sx={{ p: 0 }}>
+            <Stack spacing={2.5}>
+        ) : (
+          <Paper
+            elevation={0}
+            sx={{
+              width: '100%',
+              borderRadius: '26px',
+              bgcolor: '#161412',
+              border: `1px solid ${alpha(appAccent, 0.22)}`,
+              overflow: 'hidden'}}
+          >
+            <Box sx={{ p: 1.25 }}>
+              {/* For Mobile Search Input */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                    <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                      <Logo app={activeApp} size={14} variant="icon" />
+                    </Box>
+                    <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1rem' }}>
+                      Search Ecosystem
+                    </Typography>
+                  </Box>
+                  <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+                    <CloseIcon size={16} />
+                  </IconButton>
                 </Box>
-                <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1rem' }}>
-                  Search Ecosystem
-                </Typography>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    bgcolor: 'rgba(0, 0, 0, 0.25)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px',
+                    px: 2,
+                    py: 0.5,
+                    transition: 'all 0.2s',
+                    '&:focus-within': {
+                      borderColor: '#6366F1',
+                      boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.15)',
+                      bgcolor: 'rgba(0, 0, 0, 0.4)'}
+                  }}
+                >
+                  <Search size={16} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 8, flexShrink: 0 }} />
+                  <InputBase
+                    id="topbar-search-field"
+                    inputRef={searchInputRef}
+                    value={searchQuery}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
+                    placeholder="Search ideas, goals, vault, connect..."
+                    fullWidth
+                    autoFocus
+                    sx={{
+                      color: 'white',
+                      fontFamily: 'var(--font-satoshi)',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 }}}
+                    onKeyDown={(event: React.KeyboardEvent) => {
+                      if (event.key === 'Escape') {
+                        handleCloseAll();
+                      }
+                    }}
+                  />
+                  {searchQuery && (
+                    <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5 }}>
+                      <CloseIcon size={14} />
+                    </IconButton>
+                  )}
+                </Box>
               </Box>
-              <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
-                <CloseIcon size={16} />
-              </IconButton>
-            </Box>
-
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                bgcolor: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '16px',
-                px: 2,
-                py: 0.5,
-                transition: 'all 0.2s',
-                '&:focus-within': {
-                  borderColor: '#6366F1',
-                  boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.15)',
-                  bgcolor: 'rgba(0, 0, 0, 0.4)'}
-              }}
-            >
-              <Search size={16} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 8, flexShrink: 0 }} />
-              <InputBase
-                id="topbar-search-field"
-                inputRef={searchInputRef}
-                value={searchQuery}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
-                placeholder="Search ideas, goals, vault, connect..."
-                fullWidth
-                autoFocus
-                sx={{
-                  color: 'white',
-                  fontFamily: 'var(--font-satoshi)',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 }}}
-                onKeyDown={(event: React.KeyboardEvent) => {
-                  if (event.key === 'Escape') {
-                    handleCloseAll();
-                  }
-                }}
-              />
-              {searchQuery && (
-                <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5 }}>
-                  <CloseIcon size={14} />
-                </IconButton>
-              )}
-            </Box>
-          </Box>
+              <Stack spacing={2.5} sx={{ mt: 1.5 }}>
         )}
-
-        <Stack spacing={2.5} sx={{ mt: isDesktop ? 0 : 1.5 }}>
           {searchShortcutsView ? (
             <Box sx={{ display: 'grid', gap: 1.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
@@ -1467,8 +1469,12 @@ export default function ConnectTopbar({
             </Box>
           )}
         </Stack>
+        {isDesktop ? (
           </Box>
-        </Paper>
+        ) : (
+            </Box>
+          </Paper>
+        )}
       </Box>
     );
 
@@ -1482,27 +1488,32 @@ export default function ConnectTopbar({
             title="Search"
           >
             <Box sx={{ p: 2.75, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#161412' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3.5 }}>
-                <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
-                  Search System
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+                <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
+                  Search
                 </Typography>
-                <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }, width: 32, height: 32 }}>
-                  <CloseIcon size={16} />
+                <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }, width: 30, height: 30 }}>
+                  <CloseIcon size={15} />
                 </IconButton>
               </Box>
               <Box
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  bgcolor: 'rgba(0, 0, 0, 0.25)',
+                  bgcolor: '#0A0908',
                   border: '1px solid rgba(255, 255, 255, 0.08)',
                   borderRadius: '16px',
                   px: 2,
                   py: 1.25,
-                  mb: 3,
+                  mb: 2.5,
+                  transition: 'all 0.15s ease',
+                  '&:focus-within': {
+                    borderColor: '#6366F1',
+                    boxShadow: '0 0 0 1px #6366F1',
+                  }
                 }}
               >
-                <Search size={18} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 10, flexShrink: 0 }} />
+                <Search size={16} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 10, flexShrink: 0 }} />
                 <InputBase
                   inputRef={searchInputRef}
                   value={searchQuery}
@@ -1514,12 +1525,17 @@ export default function ConnectTopbar({
                     color: 'white',
                     fontFamily: 'var(--font-satoshi)',
                     fontWeight: 600,
-                    fontSize: '0.92rem',
-                    '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 }}}
+                    fontSize: '0.88rem',
+                    '& input::placeholder': { color: 'rgba(255,255,255,0.28)', opacity: 1 }}}
                   onKeyDown={(event: React.KeyboardEvent) => {
                     if (event.key === 'Escape') handleCloseAll();
                   }}
                 />
+                {searchQuery && (
+                  <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5, p: 0.25 }}>
+                    <CloseIcon size={13} />
+                  </IconButton>
+                )}
               </Box>
               <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>{searchContent}</Box>
             </Box>
@@ -1547,12 +1563,12 @@ export default function ConnectTopbar({
           }}
         >
           {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3.5 }}>
-            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
-              Search System
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
+              Search
             </Typography>
-            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }, width: 32, height: 32 }}>
-              <CloseIcon size={16} />
+            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }, width: 30, height: 30 }}>
+              <CloseIcon size={15} />
             </IconButton>
           </Box>
           
@@ -1561,20 +1577,20 @@ export default function ConnectTopbar({
             sx={{
               display: 'flex',
               alignItems: 'center',
-              bgcolor: 'rgba(0, 0, 0, 0.25)',
+              bgcolor: '#0A0908',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '16px',
               px: 2,
               py: 1.25,
-              mb: 3,
-              transition: 'all 0.2s',
+              mb: 2.5,
+              transition: 'all 0.15s ease',
               '&:focus-within': {
                 borderColor: '#6366F1',
-                boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.15)',
-                bgcolor: 'rgba(0, 0, 0, 0.4)'}
+                boxShadow: '0 0 0 1px #6366F1',
+              }
             }}
           >
-            <Search size={18} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 10, flexShrink: 0 }} />
+            <Search size={16} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 10, flexShrink: 0 }} />
             <InputBase
               inputRef={searchInputRef}
               value={searchQuery}
@@ -1586,8 +1602,8 @@ export default function ConnectTopbar({
                 color: 'white',
                 fontFamily: 'var(--font-satoshi)',
                 fontWeight: 600,
-                fontSize: '0.92rem',
-                '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 }}}
+                fontSize: '0.88rem',
+                '& input::placeholder': { color: 'rgba(255,255,255,0.28)', opacity: 1 }}}
               onKeyDown={(event: React.KeyboardEvent) => {
                 if (event.key === 'Escape') {
                   handleCloseAll();
@@ -1608,8 +1624,8 @@ export default function ConnectTopbar({
               }}
             />
             {searchQuery && (
-              <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5 }}>
-                <CloseIcon size={14} />
+              <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5, p: 0.25 }}>
+                <CloseIcon size={13} />
               </IconButton>
             )}
           </Box>

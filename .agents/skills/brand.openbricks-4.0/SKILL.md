@@ -108,11 +108,14 @@ OpenBricks 4.0 evolves the Kylrix design language from rigid, corporate SaaS con
 - **Deprecated Drag Handles**:
   - Rounded pill drag handles (`<div className="w-10 h-1 rounded-full bg-white/20" />`) are deprecated and removed.
   - The thin 1px outline boundary (`borderTop: 1px solid rgba(255,255,255,0.08)`) defines the surface edge.
-- **Fixed 60% Height Mandate**:
+- **Fixed 60% Height Mandate (Mobile)**:
   - Bottom drawers must default to a **fixed 60% viewport height** (`60vh` / `60dvh`).
   - 🚫 **Negative Feature (Strictly Prohibited)**: Varying or auto-calculating drawer height based on changing child content. Auto-collapsing heights cause visual jitter, layout thrash, and jumping interaction targets.
+- **Desktop Sidebar Translation Principle (STRICT)**:
+  - On desktop, bottom drawers and fullscreen details/drawers **translate cleanly to the native right sidebar** (`NativeSidebarMount` or right `Drawer`, opaque `#161412`, width 420px–560px, `borderLeft: 1px solid rgba(255, 255, 255, 0.06)`).
+  - Never render edge-to-edge floating sheets, bottom sheets, or disconnected modals on desktop viewports. The right sidebar provides a stable, tactile surface that preserves the pitch-black `#000000` canvas and leaves primary navigation unobstructed.
 - **High-Contrast Surface Layering**:
-  - **Outer Drawer Shell**: Signature opaque ash background (`#161412`) to contrast against the standard pitch-black app canvas (`#000000` / `#050505`).
+  - **Outer Drawer Shell / Sidebar**: Signature opaque ash background (`#161412`) to contrast against the standard pitch-black app canvas (`#000000` / `#050505`).
   - **Inner Interactive Components**: Pitch-black wells (`#0A0908` / `#0B0A09`) for cards, text fields, radio buttons, and inputs to create crisp, legible contrast.
 
 ---
