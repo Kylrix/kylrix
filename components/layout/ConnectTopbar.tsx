@@ -64,6 +64,7 @@ import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import { useWebMcpContext } from '@/context/WebMcpContext';
 import { useNativeSidebarApiOptional } from '@/context/RightRailContext';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
@@ -101,6 +102,7 @@ export default function ConnectTopbar({
   const { user, logout, isAuthenticating, updatePreferences } = useAuth();
   const { openWallet } = useWalletOverlay();
   const { openAgenticDrawer, closeAgenticDrawer } = useAgenticDrawer();
+  const { toggleInspector: toggleWebMcp, isInspectorOpen: isWebMcpOpen } = useWebMcpContext();
   const { open: openUnified } = useUnifiedDrawer();
   const nativeSidebar = useNativeSidebarApiOptional();
   const { openProUpgrade } = useProUpgrade();
@@ -2815,15 +2817,16 @@ export default function ConnectTopbar({
                       <Tooltip title="WebMCP Tools (Browser-Native Inspector)">
                         <IconButton
                           onClick={() => {
+                            toggleWebMcp();
                             if (typeof window !== 'undefined') {
-                              window.dispatchEvent(new CustomEvent('kylrix:open-webmcp'));
+                              window.dispatchEvent(new CustomEvent('kylrix:toggle-webmcp'));
                             }
                           }}
                           sx={{
-                            color: '#10B981',
-                            bgcolor: '#161412',
+                            color: isWebMcpOpen ? '#34D399' : '#10B981',
+                            bgcolor: isWebMcpOpen ? '#000000' : '#161412',
                             border: '1px solid',
-                            borderColor: alpha('#10B981', 0.35),
+                            borderColor: isWebMcpOpen ? '#10B981' : alpha('#10B981', 0.35),
                             borderRadius: '14px',
                             width: 44,
                             height: 44,
