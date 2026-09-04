@@ -24,6 +24,7 @@ import { isFlowPath } from '@/lib/routing/app-paths';
 import { searchLocalEngine, type GlobalResult } from '@/lib/search/globalLocalSearch';
 import {
   Bot,
+  Terminal,
   Wallet,
   Copy as CopyIcon,
   Search,
@@ -141,6 +142,31 @@ export default function ConnectTopbar({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+  const [showWebMcpTopbar, setShowWebMcpTopbar] = useState(false);
+
+  useEffect(() => {
+    // 1. Initial check from LocalEngine (offline-first)
+    import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+      LocalEngine.cacheGet<boolean>('setting_show_webmcp_topbar').then((val) => {
+        if (typeof val === 'boolean') {
+          setShowWebMcpTopbar(val);
+        }
+      }).catch(() => {});
+    });
+
+    // 2. Event listener for live updates
+    const handleTopbarChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail === 'boolean') {
+        setShowWebMcpTopbar(detail);
+      }
+    };
+    window.addEventListener('kylrix:webmcp-topbar-changed', handleTopbarChange);
+    return () => {
+      window.removeEventListener('kylrix:webmcp-topbar-changed', handleTopbarChange);
+    };
+  }, []);
+
   const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username' | 'copied-referral'>('idle');
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -2785,6 +2811,32 @@ export default function ConnectTopbar({
               <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flexShrink: 0 }}>
                 {user ? (
                   <>
+                    {showWebMcpTopbar && isDesktop && (
+                      <Tooltip title="WebMCP Tools (Browser-Native Inspector)">
+                        <IconButton
+                          onClick={() => {
+                            if (typeof window !== 'undefined') {
+                              window.dispatchEvent(new CustomEvent('kylrix:open-webmcp'));
+                            }
+                          }}
+                          sx={{
+                            color: '#10B981',
+                            bgcolor: '#161412',
+                            border: '1px solid',
+                            borderColor: alpha('#10B981', 0.35),
+                            borderRadius: '14px',
+                            width: 44,
+                            height: 44,
+                            boxShadow: `0 8px 24px ${alpha('#10B981', 0.25)}`,
+                            '&:hover': { bgcolor: '#201D1A', transform: 'scale(1.05)' },
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          }}
+                        >
+                          <Terminal size={19} strokeWidth={2.2} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+
                     <IconButton onClick={openAgenticFromTopbar} sx={{ color: appAccent, bgcolor: '#161412', border: '1px solid', borderColor: alpha(appAccent, 0.35), borderRadius: '14px', width: 44, height: 44, boxShadow: `0 8px 24px ${alpha(appAccent, 0.25)}`, '&:hover': { bgcolor: '#201D1A', transform: 'scale(1.05)' }, transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
                       <Bot size={20} strokeWidth={2.2} />
                     </IconButton>

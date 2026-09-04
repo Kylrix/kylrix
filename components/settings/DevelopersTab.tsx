@@ -101,6 +101,11 @@ function SkillRow({
   );
 }
 
+import { LocalEngine } from '@/lib/services/LocalEngine';
+
+export const WEBMCP_TOPBAR_STORAGE_KEY = 'setting_show_webmcp_topbar';
+export const WEBMCP_TOPBAR_EVENT = 'kylrix:webmcp-topbar-changed';
+
 export function DevelopersTab() {
   const { open: openDrawer } = useUnifiedDrawer();
   const { tools: webMcpTools, openInspector: openWebMcpInspector } = useWebMcpContext();
@@ -109,6 +114,7 @@ export function DevelopersTab() {
   const isTeams = currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
 
   const [developerMode, setDeveloperMode] = useState(false);
+  const [showWebMcpTopbar, setShowWebMcpTopbar] = useState(false);
   const [pats, setPats] = useState<PatItem[]>([]);
   const [apps, setApps] = useState<OauthApp[]>([]);
   const [loadingPats, setLoadingPats] = useState(true);
@@ -128,8 +134,19 @@ export function DevelopersTab() {
   const refreshPats = useCallback(async () => {
     setLoadingPats(true);
     try {
+      // 1. Check local engine first for offline-first responsiveness
+      const cachedTopbar = await LocalEngine.cacheGet<boolean>(WEBMCP_TOPBAR_STORAGE_KEY);
+      if (typeof cachedTopbar === 'boolean') {
+        setShowWebMcpTopbar(cachedTopbar);
+      }
+
       const prefs = await account.getPrefs().catch(() => ({} as any));
       setDeveloperMode(!!(prefs as any)?.developerMode);
+      if (typeof (prefs as any)?.showWebMcpTopbar === 'boolean') {
+        setShowWebMcpTopbar((prefs as any).showWebMcpTopbar);
+        void LocalEngine.cacheSet(WEBMCP_TOPBAR_STORAGE_KEY, (prefs as any).showWebMcpTopbar);
+      }
+
       const res = await listPats({ isWorkspace: false });
       if (res?.success) setPats((res.data || []) as PatItem[]);
     } catch (err: any) {
@@ -170,6 +187,22 @@ export function DevelopersTab() {
     } catch (err: any) {
       toast.error(err?.message || 'Could not update');
     }
+  };
+
+  const toggleWebMcpTopbar = async () => {
+    const next = !showWebMcpTopbar;
+    setShowWebMcpTopbar(next);
+    // Instant offline-first persistence & window notification
+    await LocalEngine.cacheSet(WEBMCP_TOPBAR_STORAGE_KEY, next);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(WEBMCP_TOPBAR_EVENT, { detail: next }));
+    }
+    toast.success(next ? 'WebMCP tools added to topbar' : 'WebMCP tools removed from topbar');
+    // Asynchronous background sync to account prefs
+    account
+      .getPrefs()
+      .then((prefs) => account.updatePrefs({ ...(prefs as any), showWebMcpTopbar: next }))
+      .catch((e) => console.warn('[Developers] failed background sync of showWebMcpTopbar', e));
   };
 
   const confirmRevokePat = (pat: PatItem) => {
@@ -437,6 +470,34 @@ export function DevelopersTab() {
             />
           </button>
         </div>
+
+        {developerMode && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] px-3.5 py-3.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <Terminal size={14} className="text-emerald-400 shrink-0" />
+                <p className="text-sm font-bold text-white">Show WebMCP tools on topbar</p>
+              </div>
+              <p className="text-[11px] text-white/40 mt-0.5">
+                Quick-access shortcut on the desktop topbar to launch the WebMCP Inspector
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void toggleWebMcpTopbar()}
+              className={`relative h-7 w-12 rounded-full border transition-colors cursor-pointer shrink-0 ${
+                showWebMcpTopbar ? 'bg-emerald-600 border-emerald-600' : 'bg-[#161412] border-white/15'
+              }`}
+              aria-pressed={showWebMcpTopbar}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                  showWebMcpTopbar ? 'left-6' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+        )}
       </Section>
 
       {patDrawerOpen && (
