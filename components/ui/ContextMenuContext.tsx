@@ -26,7 +26,6 @@ import {
 
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { isFlowPath } from '@/lib/routing/app-paths';
-import { ContextMenuPanel } from '@/components/ui/ContextMenu';
 import type { KylrixApp } from '@/sdk/design';
 
 interface ContextMenuItem {

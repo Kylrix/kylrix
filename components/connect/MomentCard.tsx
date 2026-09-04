@@ -13,9 +13,6 @@ import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import toast from 'react-hot-toast';
 
-/** Fixed image band ≈ 3/4 of usable post content area (header+text+actions consume the rest). */
-const IMAGE_BAND_H = 'h-[160px]';
-
 function formatRelative(ts: number) {
   if (!ts) return '';
   const diff = Date.now() - ts;
@@ -251,7 +248,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
       resourceType: 'moment',
       resourceId: item.source === 'nostr' ? `nostr_${momentId}` : momentId,
       resourceTitle: item.authorName ? `${item.authorName.replace(/^@/, '')}'s Moment` : 'Moment',
-      content: item.content || item.caption || '',
+      content: item.content || (item as any).caption || '',
       accentColor: '#F59E0B',
     });
   };

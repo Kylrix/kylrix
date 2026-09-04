@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
@@ -15,10 +15,10 @@ import {
 import { extractPostImages } from '@/lib/connect/moment-media';
 import { SocialService } from '@/lib/services/social';
 import { UsersService } from '@/lib/services/users';
-import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { fetchNostrEventById } from '@/lib/nostr/thread';
+import type { NostrEvent } from '@/lib/nostr/nostr';
 import {
-  ArrowLeft, Globe, Heart, Link2, Lock, MessageCircle,
+  ArrowLeft, Globe, Heart, Lock, MessageCircle,
   Repeat2, Shield, Zap, X, Share2
 } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -398,8 +398,12 @@ export function PostViewClient({
         nostrId: (moment as any)?.nostrId,
       });
       setReplyContent('');
-      if (created) setReplies(prev => [...prev, created]);
-      else await load();
+      if (created) {
+        setReplies(prev => [...prev, created]);
+      } else {
+        const refreshed = await loadMomentEngagement({ source, id: momentId, userId: user?.$id });
+        setReplies(refreshed.comments);
+      }
     } catch (e) {
       console.error(e); toast.error('Could not post reply');
     } finally { setBusy(false); }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useContextMenu } from './ContextMenuContext';
 
 // Lazy load context menu only when needed (mobile bottom drawer)

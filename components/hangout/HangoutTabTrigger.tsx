@@ -6,10 +6,6 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { HangoutsDrawer } from '@/components/hangout/HangoutsDrawer';
 import { useChatNotifications } from '@/components/providers/ChatNotificationProvider';
-import {
-  useNativeSidebarApiOptional,
-  NATIVE_SIDEBAR_WIDTHS,
-} from '@/context/RightRailContext';
 
 export interface HangoutTabTriggerProps {
   className?: string;
@@ -21,7 +17,6 @@ export function HangoutTabTrigger({
   variant = 'icon',
 }: HangoutTabTriggerProps) {
   const { openOverlay, closeOverlay } = useOverlay();
-  const native = useNativeSidebarApiOptional();
   const { activeWorkspace } = useWorkspace();
   const { unreadConversations } = useChatNotifications();
   const hasUnread = unreadConversations.size > 0;
