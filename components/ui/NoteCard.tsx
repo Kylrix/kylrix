@@ -24,7 +24,7 @@ import { ShareLockButton } from '../share/ShareLockButton';
 import { useAccessControlMenuItems } from '../share/AccessControlMenuItems';
 import { SidekickDrawer } from '@/components/agentic/SidekickDrawer';
 
-import { resolveNoteCardTitle } from '@/constants/noteTitle';
+import { resolveNoteCardTitle, isEncryptedCiphertext } from '@/constants/noteTitle';
 import { createTaskFromNote, getNotePublicState, lockNote, unlockNote } from '@/lib/appwrite';
 import { updateNote, deleteNote as deleteNoteAction } from '@/lib/actions/client-ops';
 import { useToast } from './Toast';
@@ -139,13 +139,22 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const isPro = hasPaidKylrixPlan(user);
   const noteMeta = React.useMemo(() => {
     try {
-      return JSON.parse(note.metadata || '{}');
+      return JSON.parse(liveNote.metadata || note.metadata || '{}');
     } catch {
       return {};
     }
-  }, [note.metadata]);
-  const isLocked = !!note.dek && !noteMeta?.clientDecrypted;
-  const isEncryptedNote = ((noteMeta?.encryptionVersion === 'T4' && !!noteMeta?.isEncrypted) || isLocked) && !noteMeta?.clientDecrypted;
+  }, [liveNote.metadata, note.metadata]);
+  const isLocked = !!(liveNote.dek || note.dek || noteMeta?.dek) && !noteMeta?.clientDecrypted;
+  const isEncryptedNote =
+    (isLocked ||
+      (noteMeta?.encryptionVersion === 'T4' && (!!noteMeta?.isEncrypted || noteMeta?.isEncrypted === 'true')) ||
+      noteMeta?.isEncrypted === true ||
+      noteMeta?.isEncrypted === 'true' ||
+      liveNote.title === '🔒 Encrypted Note' ||
+      note.title === '🔒 Encrypted Note' ||
+      isEncryptedCiphertext(liveNote.content) ||
+      isEncryptedCiphertext(liveNote.title)) &&
+    !noteMeta?.clientDecrypted;
   const pinned = isPinned(note.$id);
 
   // Extract first image URL from note content, attachments, or object blocks

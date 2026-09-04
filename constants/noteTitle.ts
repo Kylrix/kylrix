@@ -12,6 +12,20 @@ const NOTE_TITLE_MAX_LENGTH = 206;
 
 const OBJECT_BLOCK_REGEX = /\[\[kylrix-object:(\{.*?\})\]\]/g;
 
+/**
+ * Robustly detects whether a string is raw base64 ciphertext output from AES-GCM (IV + ciphertext).
+ * Typical AES-GCM base64 string is > 32 chars without whitespace, base64 character set, often ending in = or ==.
+ */
+export function isEncryptedCiphertext(str?: string | null): boolean {
+  if (!str) return false;
+  const trimmed = str.trim();
+  if (trimmed.length < 24) return false;
+  // If it has spaces or newlines, it's natural language / markdown, not raw base64 ciphertext
+  if (/\s/.test(trimmed)) return false;
+  // AES-GCM Base64 ciphertext contains only base64 characters
+  return /^[A-Za-z0-9+/]+={0,2}$/.test(trimmed);
+}
+
 /** Replace inline object blocks with human labels before deriving a title. */
 function stripObjectBlocksForTitleSource(rawContent: string): string {
   if (!rawContent) return '';
@@ -46,8 +60,9 @@ export function clampNoteTitle(value: unknown, fallback = ''): string {
  * Stops at word boundaries and follows dynamic character limits.
  */
 export const buildAutoTitleFromContent = (rawContent: string): string => {
+  if (isEncryptedCiphertext(rawContent)) return '';
   const normalized = stripObjectBlocksForTitleSource(rawContent);
-  if (!normalized) return '';
+  if (!normalized || isEncryptedCiphertext(normalized)) return '';
 
   const words = normalized.split(' ').filter(Boolean);
   if (!words.length) return '';
@@ -93,6 +108,6 @@ export const buildAutoTitleFromContent = (rawContent: string): string => {
 
 export const resolveNoteCardTitle = (title?: string | null, content?: string | null): string => {
   const trimmed = clampNoteTitle(title);
-  if (trimmed && trimmed.trim() !== '') return trimmed;
+  if (trimmed && trimmed.trim() !== '' && !isEncryptedCiphertext(trimmed)) return trimmed;
   return buildAutoTitleFromContent(content || '') || 'New Note';
 };

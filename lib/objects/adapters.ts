@@ -1,13 +1,41 @@
 import type { Notes } from '@/types/appwrite';
 import type { Task } from '@/types';
 import type { UnifiedObjectCardModel, UnifiedObjectDetailModel } from '@/lib/objects/types';
-import { resolveNoteCardTitle } from '@/constants/noteTitle';
+import { isEncryptedCiphertext, resolveNoteCardTitle } from '@/constants/noteTitle';
 
 export function noteToCard(note: Notes): UnifiedObjectCardModel {
   const id = note.$id || note.id || '';
-  const title =
-    resolveNoteCardTitle(note.title, note.content) || note.title || 'Untitled';
-  const subtitle = (note.content || '').trim().slice(0, 160) || undefined;
+  const meta = (() => {
+    try {
+      return JSON.parse(note.metadata || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const isLocked = Boolean(note.dek || meta.dek) && !meta.clientDecrypted;
+  const isEncrypted =
+    (isLocked ||
+      meta.isEncrypted === true ||
+      meta.isEncrypted === 'true' ||
+      meta.encryptionVersion === 'T4' ||
+      isEncryptedCiphertext(note.content) ||
+      isEncryptedCiphertext(note.title)) &&
+    !meta.clientDecrypted;
+
+  let title: string;
+  let subtitle: string | undefined;
+
+  if (isLocked) {
+    title = 'Locked';
+    subtitle = 'Locked note';
+  } else if (isEncrypted) {
+    title = 'Encrypted';
+    subtitle = 'Encrypted note';
+  } else {
+    title = resolveNoteCardTitle(note.title, note.content) || note.title || 'Untitled';
+    subtitle = (note.content || '').trim().slice(0, 160) || undefined;
+  }
+
   return {
     kind: 'note',
     id,
