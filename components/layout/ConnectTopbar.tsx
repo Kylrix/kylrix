@@ -119,10 +119,6 @@ export default function ConnectTopbar({
   // To let any drawer communicate full state expansion globally:
   const isDrawerExpanded = typeof window !== 'undefined' && document.body.classList.contains('drawer-expanded');
   
-  if (isDrawerExpanded) {
-    return null;
-  }
-  
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
@@ -2602,6 +2598,7 @@ export default function ConnectTopbar({
         position="fixed"
         elevation={0}
         sx={{
+          display: isDrawerExpanded ? 'none' : 'block',
           zIndex: 1201,
           bgcolor: '#161412',
           borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -2810,10 +2807,14 @@ export default function ConnectTopbar({
         </Box>
 
       </AppBar>
-      {renderSearchPanel()}
-      {renderNotificationDrawer()}
-      {renderAppPanel()}
-      {renderProfilePanel()}
+      {!isDrawerExpanded && (
+        <>
+          {renderSearchPanel()}
+          {renderNotificationDrawer()}
+          {renderAppPanel()}
+          {renderProfilePanel()}
+        </>
+      )}
     </>
   );
 }
