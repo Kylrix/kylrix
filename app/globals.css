@@ -11,8 +11,8 @@
 @source "../types/**/*.{js,ts,jsx,tsx,mdx}";
 
 @theme {
-  --color-background: #000000;
-  --color-foreground: #F5F2ED;
+  --color-background: #161412;
+  --color-foreground: #FFFFFF;
   --color-surface: #161412;
   --color-surface-2: #1C1917;
   --color-surface-border: rgba(255, 255, 255, 0.08);

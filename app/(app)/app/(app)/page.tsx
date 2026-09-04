@@ -550,8 +550,8 @@ export default function IdeasPage() {
 
           {/* Tags Filter Row (positioned under top nav switcher like Goals) */}
           {tags.length > 0 && (
-            <div className="overflow-x-auto scrollbar-none p-2 bg-white/[0.01] border border-white/5 rounded-[24px] flex items-center gap-2 select-none">
-              <Tag size={14} className="text-[#EC4899]/60 ml-2 shrink-0" />
+            <div className="overflow-x-auto scrollbar-none p-2 bg-[#000000] border border-white/[0.08] rounded-[24px] flex items-center gap-2 select-none">
+              <Tag size={14} className="text-[#EC4899] ml-2 shrink-0" />
               {tags.map((tag: string, index: number) => {
                 const tagColor = getTagColor(tag);
                 const isSelected = selectedTag === tag;
@@ -564,11 +564,11 @@ export default function IdeasPage() {
                     className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                       isSelected 
                         ? 'bg-[#EC4899] border-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.2)]' 
-                        : 'bg-white/3 border-white/8 text-white/60 hover:text-white hover:border-white/15'
+                        : 'bg-[#000000] border-white/[0.1] text-white hover:border-white/[0.25]'
                     }`}
                     style={
                       !isSelected && tagColor
-                        ? { borderColor: `${tagColor}33`, color: tagColor }
+                        ? { borderColor: `${tagColor}66`, color: '#FFFFFF' }
                         : undefined
                     }
                   >
@@ -596,11 +596,11 @@ export default function IdeasPage() {
       )}
 
       {loading && activeNotes.length === 0 ? (
-        <div className="p-8 text-center text-white/40">Loading ideas...</div>
+        <div className="p-8 text-center text-white text-sm font-semibold">Loading ideas...</div>
       ) : activeNotes.length === 0 ? (
 
-        <div className="p-12 text-center flex flex-col items-center justify-center gap-4 bg-white/[0.01] border border-white/5 rounded-3xl">
-          <p className="text-white/40 text-sm">No ideas found.</p>
+        <div className="p-12 text-center flex flex-col items-center justify-center gap-4 bg-[#000000] border border-white/[0.08] rounded-3xl">
+          <p className="text-white text-sm font-semibold">No ideas found.</p>
           <button
             type="button"
             onClick={openCreateNote}
@@ -616,7 +616,7 @@ export default function IdeasPage() {
           {displayPinned.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
-                <h2 className="text-xs font-mono font-bold text-white/40 uppercase tracking-wider">
+                <h2 className="text-[11px] font-mono font-bold text-white uppercase tracking-wider">
                   Pinned ({Math.min(3, displayPinned.length)})
                 </h2>
                 {displayPinned.length > 3 && (
@@ -642,7 +642,7 @@ export default function IdeasPage() {
           {displayUnpinned.length > 0 && (
             <div className="space-y-3">
               {displayPinned.length > 0 && (
-                <h2 className="text-xs font-mono font-bold text-white/40 uppercase tracking-wider px-1 pt-2">
+                <h2 className="text-[11px] font-mono font-bold text-white uppercase tracking-wider px-1 pt-2">
                   All Ideas ({displayUnpinned.length})
                 </h2>
               )}

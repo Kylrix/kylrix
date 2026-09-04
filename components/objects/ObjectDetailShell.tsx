@@ -35,9 +35,9 @@ export function ObjectDetailShell({
         className="absolute inset-0 bg-black/50 pointer-events-auto"
         onClick={onClose}
       />
-      <aside className="relative h-[100dvh] w-full max-w-none bg-[#0A0908] pointer-events-auto flex flex-col">
+      <aside className="relative h-[100dvh] w-full max-w-none bg-[#161412] pointer-events-auto flex flex-col">
         {chrome === 'full' ? (
-          <header className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#2C2A28]">
+          <header className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.08]">
             <div className="min-w-0">
               <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#9B9691] mb-1">
                 {objectKindLabel(item.kind)}

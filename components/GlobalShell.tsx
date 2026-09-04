@@ -230,7 +230,7 @@ const isSpecificPostPage = useMemo(
     <Box 
         sx={{ 
             minHeight: '100vh', 
-            bgcolor: '#000000', 
+            bgcolor: '#161412', 
             color: '#fff',
             position: 'relative',
             overflowX: 'hidden'

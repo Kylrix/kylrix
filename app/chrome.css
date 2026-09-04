@@ -1,7 +1,7 @@
 /* Kylrix Absolute Layout Isolation — no will-change: keeps chrome off permanent GPU layers */
 .kylrix-sidebar, .kylrix-topbar, .kylrix-bottombar {
   contain: layout style paint;
-  background-color: #000000;
+  background-color: #161412;
   border-color: rgba(255, 255, 255, 0.08);
 }
 

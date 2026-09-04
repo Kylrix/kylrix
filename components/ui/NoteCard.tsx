@@ -449,11 +449,11 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const customPreviewNode = React.useMemo(() => {
     if (isLocked) {
       return (
-        <div className="flex items-center gap-2 p-2 rounded-xl bg-[#0A0908] border border-[#10B981]/20 my-0.5">
-          <div className="w-6 h-6 rounded-lg bg-[#10B981]/10 flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-2 p-2 rounded-xl bg-[#000000] border border-[#10B981]/30 my-0.5">
+          <div className="w-6 h-6 rounded-lg bg-[#10B981]/20 flex items-center justify-center flex-shrink-0">
             <PrivateIcon size={12} className="text-[#10B981]" />
           </div>
-          <p className="font-satoshi text-white/50 text-[0.76rem] font-medium leading-tight m-0">
+          <p className="font-satoshi text-white text-[0.76rem] font-medium leading-tight m-0">
             Protected with personal vault key. Click to unlock.
           </p>
         </div>
@@ -461,11 +461,11 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     }
     if (isEncryptedNote) {
       return (
-        <div className="flex items-center gap-2 p-2 rounded-xl bg-[#0A0908] border border-[#6366F1]/20 my-0.5">
-          <div className="w-6 h-6 rounded-lg bg-[#6366F1]/10 flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-2 p-2 rounded-xl bg-[#000000] border border-[#6366F1]/30 my-0.5">
+          <div className="w-6 h-6 rounded-lg bg-[#6366F1]/20 flex items-center justify-center flex-shrink-0">
             <KeyRound size={12} className="text-[#818CF8]" />
           </div>
-          <p className="font-satoshi text-white/50 text-[0.76rem] font-medium leading-tight m-0">
+          <p className="font-satoshi text-white text-[0.76rem] font-medium leading-tight m-0">
             End-to-end encrypted. Sealed with recipient or group keys.
           </p>
         </div>
@@ -494,7 +494,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                   className={`p-1.5 rounded-lg transition-all duration-200 ${
                     pinned
                       ? 'text-[#EC4899] bg-[#EC4899]/10'
-                      : 'text-white/25 hover:text-[#EC4899] hover:bg-[#EC4899]/10'
+                      : 'text-white/40 hover:text-[#EC4899] hover:bg-[#EC4899]/10'
                   }`}
                   title={pinned ? 'Unpin' : 'Pin'}
                   aria-label={pinned ? 'Unpin' : 'Pin'}
@@ -526,7 +526,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
             }
           >
             <div className="flex flex-col gap-3">
-              <p className="text-white/55 font-satoshi text-sm font-medium leading-relaxed line-clamp-3 break-words m-0 select-text">
+              <p className="text-white font-satoshi text-sm font-medium leading-relaxed line-clamp-3 break-words m-0 select-text">
                 {previewText}
               </p>
               {previewImageUrl && !isEncryptedNote ? (

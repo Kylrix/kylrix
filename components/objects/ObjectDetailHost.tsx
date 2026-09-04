@@ -40,12 +40,12 @@ export function ObjectDetailHost({
   // Never nest a fixed shell — Drawer transforms trap `position:fixed` to ~720px.
   if (embedded || chrome === 'panel') {
     return (
-      <div className="flex h-full min-h-0 w-full max-w-full min-w-0 flex-col bg-[#0A0908] overflow-x-hidden overflow-hidden">
+      <div className="flex h-full min-h-0 w-full max-w-full min-w-0 flex-col bg-[#161412] overflow-x-hidden overflow-hidden">
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 min-w-0 max-w-full overscroll-contain">
           {children}
         </div>
         {footer ? (
-          <footer className="border-t border-[#2C2A28] px-5 py-3 shrink-0">{footer}</footer>
+          <footer className="border-t border-white/[0.08] px-5 py-3 shrink-0">{footer}</footer>
         ) : null}
       </div>
     );

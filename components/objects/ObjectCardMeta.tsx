@@ -106,7 +106,7 @@ export function ObjectCardMeta({
         ) : null}
       </div>
       {dueLabel ? (
-        <span className="text-[9px] font-bold font-mono uppercase tracking-wider text-white/40 flex-shrink-0">
+        <span className="text-[9px] font-bold font-mono uppercase tracking-wider text-white flex-shrink-0">
           {dueLabel}
         </span>
       ) : null}

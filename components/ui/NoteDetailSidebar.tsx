@@ -1170,13 +1170,13 @@ export function NoteDetailSidebar({
 
   return (
     <div
-      className={`note-detail-sidebar-root flex flex-col bg-[#0A0908] overflow-hidden text-white w-full ${
+      className={`note-detail-sidebar-root flex flex-col bg-[#161412] overflow-hidden text-white w-full ${
         isPageLayout ? 'min-h-0' : 'h-full bg-[#161412]'
       }`}
     >
       {/* Header */}
       <div
-        className={`flex flex-col gap-3 border-b border-white/5 bg-[#0A0908] shrink-0 ${
+        className={`flex flex-col gap-3 border-b border-white/[0.08] bg-[#161412] shrink-0 ${
           isPageLayout ? 'px-4 md:px-5 pt-1 pb-3' : 'p-4 pb-3'
         }`}
       >

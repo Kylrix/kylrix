@@ -79,8 +79,8 @@ export function PinnedNotesSidebar({ offset = 0, notes: providedNotes }: { offse
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', overflow: 'hidden' }}>
-      {/* Header - Sticky/Fixed at Top with Unified #0A0908 pitch dark fill */}
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#161412', overflow: 'hidden' }}>
+      {/* Header - Sticky/Fixed at Top with Unified #161412 deep ash fill */}
       <Box
         sx={{
           display: 'flex',
@@ -90,18 +90,18 @@ export function PinnedNotesSidebar({ offset = 0, notes: providedNotes }: { offse
           py: 2.5,
           pt: { xs: 'max(20px, env(safe-area-inset-top))', md: 2.5 },
           flexShrink: 0,
-          bgcolor: '#0A0908',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          bgcolor: '#161412',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
         <Stack direction="row" spacing={1.5} alignItems="center">
           <IconButton
             onClick={closeSidebar}
             sx={{
-              color: 'rgba(255,255,255,0.55)',
+              color: '#fff',
               p: 1,
               borderRadius: '12px',
-              '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.06)' },
+              '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' },
             }}
             size="small"
             aria-label="Close pinned notes"
@@ -111,7 +111,7 @@ export function PinnedNotesSidebar({ offset = 0, notes: providedNotes }: { offse
           <Box
             sx={{
               p: 1,
-              bgcolor: 'rgba(99, 102, 241, 0.12)',
+              bgcolor: 'rgba(99, 102, 241, 0.15)',
               borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
@@ -124,7 +124,7 @@ export function PinnedNotesSidebar({ offset = 0, notes: providedNotes }: { offse
             sx={{
               fontWeight: 800,
               fontFamily: 'var(--font-clash), sans-serif',
-              color: '#F5F2ED',
+              color: '#fff',
               textTransform: 'uppercase',
               letterSpacing: '0.04em',
               fontSize: '1rem',
@@ -140,13 +140,13 @@ export function PinnedNotesSidebar({ offset = 0, notes: providedNotes }: { offse
         {loading && pinnedNotes.length === 0 ? (
           <Box sx={{ py: 8, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <CircularProgress size={22} sx={{ color: '#6366F1' }} />
-            <Typography variant="body2" sx={{ ml: 2, color: 'rgba(255,255,255,0.4)', fontWeight: 700, fontFamily: 'var(--font-satoshi), sans-serif' }}>
+            <Typography variant="body2" sx={{ ml: 2, color: '#fff', fontWeight: 700, fontFamily: 'var(--font-satoshi), sans-serif' }}>
               Loading pinned notes...
             </Typography>
           </Box>
         ) : !loading && displayNotes.length === 0 ? (
           <Box sx={{ py: 8, px: 2, textAlign: 'center' }}>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', fontFamily: 'var(--font-satoshi), sans-serif' }}>
+            <Typography variant="body2" sx={{ color: '#fff', fontStyle: 'italic', fontFamily: 'var(--font-satoshi), sans-serif', fontSize: '0.85rem' }}>
               No additional pinned notes in this workspace.
             </Typography>
           </Box>
