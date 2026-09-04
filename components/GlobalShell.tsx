@@ -268,6 +268,7 @@ const isSpecificPostPage = useMemo(
                 ? { xs: 0, sm: 0, md: 0 }
                 : { xs: 1.5, sm: 2, md: 2.5 },
             pointerEvents: 'auto',
+            overflowX: 'hidden',
             transition: 'margin 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1)'}}
         >
           {children}

@@ -732,7 +732,7 @@ export function UnifiedProfileView({
     activeTab === 'likes' ? unpackedLikes : unpackedZaps;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi">
+    <div className={`${onClose ? 'h-full flex flex-col' : 'fixed inset-0 z-50 flex flex-col'} w-full max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi`}>
       {/* Top Header Bar */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.06] bg-[#161412] shrink-0 z-30">
         <div className="flex items-center gap-2.5 min-w-0">

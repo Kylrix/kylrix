@@ -1517,7 +1517,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   }, [messages, activeSessionId]);
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#000000]">
       {/* Sticky header */}
       <div className="flex-shrink-0 px-5 pt-2 pb-3.5 border-b border-white/5 relative overflow-hidden">
         <div

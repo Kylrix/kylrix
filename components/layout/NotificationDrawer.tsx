@@ -769,7 +769,7 @@ export function NotificationDrawer({
 
   // OpenBricks 4.0 Tactile Content Architecture (1:1 with renderProfilePanel)
   const notificationBody = (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, width: '100%', maxWidth: '100%', height: '100%', flex: 1, boxSizing: 'border-box' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, width: '100%', maxWidth: '100%', height: '100%', flex: 1, boxSizing: 'border-box', px: 0.5 }}>
       {/* 1. Header Identity Tile (Generous padding, avatar/icon slot, title, and close button) */}
       <Box
         sx={{
@@ -981,7 +981,7 @@ export function NotificationDrawer({
           overflowY: 'auto',
           overflowX: 'hidden',
           overscrollBehavior: 'contain',
-          px: 0.25,
+          px: 0.5,
           pb: 1,
           width: '100%',
           boxSizing: 'border-box',
