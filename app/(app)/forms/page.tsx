@@ -303,72 +303,89 @@ export default function FormsDashboard() {
     };
 
     return (
-        <div className="flex-1 min-h-screen bg-[#0A0908] text-white p-4 md:p-8">
-            <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
-                {/* Header Row */}
-                <div className="flex justify-between items-center mb-8">
-                    <div>
-                        <h1 className="text-3xl font-black mb-1 tracking-tight font-clash text-white">
-                            Forms
-                        </h1>
-                        <p className="text-[#9B9691] font-semibold font-satoshi text-sm">
-                            Design structured intake portals and workflows.
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <FlowTabTrigger />
-                        <MomentTabTrigger />
-                        <HangoutTabTrigger />
-                        <button 
-
-
-                            type="button"
-                            onClick={handleCreate}
-                            className="flex items-center gap-2 px-5 py-2.5 font-extrabold rounded-2xl bg-[#6366F1] hover:bg-[#5254D8] text-white font-satoshi transition-all shadow-[0_4px_16px_rgba(99,102,241,0.3)] cursor-pointer text-sm"
-                        >
-                            <Plus size={16} strokeWidth={2.5} />
-                            <span>Create Form</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex border-b border-white/6 mb-8 overflow-x-auto whitespace-nowrap scrollbar-none gap-8">
-                    {[
-                        { label: 'Active Forms', icon: FileText },
-                        { label: 'Templates', icon: Sparkles },
-                        { 
-                            label: (
-                                <div className="flex items-center gap-1.5">
-                                    <span>Drafts</span>
-                                    {offlineDrafts.length > 0 && (
-                                        <span className="bg-[#FFB020] text-black rounded-full px-1.5 py-0.2 text-[10px] flex items-center justify-center font-bold font-mono">
-                                            {offlineDrafts.length}
-                                        </span>
-                                    )}
-                                </div>
-                            ),
-                            icon: History 
-                        }
-                    ].map((tab, idx) => {
-                        const Icon = tab.icon;
-                        const isActive = tabValue === idx;
-                        return (
+        <div className="flex-1 min-h-screen pointer-events-auto">
+            <div className="w-full max-w-[1440px] mx-auto p-4 md:p-8">
+                <div className="min-w-0 w-full flex flex-col gap-6">
+                    {/* Top Nav Switcher */}
+                    <div className="flex items-center justify-between gap-3 w-full">
+                        <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border border-white/[0.08] rounded-2xl w-fit select-none shadow-md">
                             <button
-                                key={idx}
                                 type="button"
-                                onClick={() => setTabValue(idx)}
-                                className={`flex items-center gap-2 pb-3 border-b-2 font-bold text-sm transition-all font-satoshi cursor-pointer ${
-                                    isActive 
-                                        ? 'border-[#6366F1] text-[#6366F1]' 
-                                        : 'border-transparent text-white/40 hover:text-white'
-                                }`}
+                                onClick={() => router.push('/app')}
+                                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all text-white hover:bg-white/[0.06]"
+                                title="Ideas"
+                                aria-label="Ideas"
                             >
-                                <Icon className="h-4.5 w-4.5" />
-                                <span>{tab.label}</span>
+                                <FileText size={15} />
+                                <span className="hidden sm:inline">Ideas</span>
                             </button>
-                        );
-                    })}
-                </div>
+                            <button
+                                type="button"
+                                onClick={() => router.push('/forms')}
+                                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#6366F1] text-white shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
+                                title="Forms"
+                                aria-label="Forms"
+                            >
+                                <FolderKanban size={15} />
+                                <span className="hidden sm:inline">Forms</span>
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <FlowTabTrigger />
+                            <MomentTabTrigger />
+                            <HangoutTabTrigger />
+                            <button 
+                                type="button"
+                                onClick={handleCreate}
+                                className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white hover:bg-[#5254D8] active:scale-95 transition-all shadow-[0_4px_14px_rgba(99,102,241,0.3)] select-none shrink-0"
+                            >
+                                <Plus size={16} strokeWidth={2.5} />
+                                <span>Create Form</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Filter Tabs Bar */}
+                    <div className="overflow-x-auto scrollbar-none p-1.5 bg-[#000000] border border-white/[0.08] rounded-[24px] flex items-center gap-2 select-none w-fit">
+                        {[
+                            { label: 'Active Forms', icon: FileText },
+                            { label: 'Templates', icon: Sparkles },
+                            { 
+                                label: (
+                                    <div className="flex items-center gap-1.5">
+                                        <span>Drafts</span>
+                                        {offlineDrafts.length > 0 && (
+                                            <span className="bg-[#FFB020] text-black rounded-full px-1.5 py-0.2 text-[10px] flex items-center justify-center font-bold font-mono">
+                                                {offlineDrafts.length}
+                                            </span>
+                                        )}
+                                    </div>
+                                ),
+                                icon: History 
+                            }
+                        ].map((tab, idx) => {
+                            const Icon = tab.icon;
+                            const isActive = tabValue === idx;
+                            return (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setTabValue(idx)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all font-satoshi cursor-pointer border ${
+                                        isActive 
+                                            ? 'bg-[#161412] text-white border-white/10 shadow-sm' 
+                                            : 'border-transparent text-white opacity-60 hover:opacity-100 hover:bg-white/[0.04]'
+                                    }`}
+                                >
+                                    <Icon className="h-4 w-4" />
+                                    <span>{tab.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
 
                 {loading && forms.length === 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -500,7 +517,9 @@ export default function FormsDashboard() {
                         onSaved={() => fetchForms(false)}
                     />
                 )}
-            </MultiSectionContainer>
+                    </MultiSectionContainer>
+                </div>
+            </div>
         </div>
     );
 }

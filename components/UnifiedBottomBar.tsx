@@ -97,7 +97,7 @@ export function UnifiedBottomBar() {
       className="fixed left-0 right-0 bottom-0 z-[1300] block md:hidden pointer-events-auto select-none"
       style={{ touchAction: 'manipulation' }}
     >
-      <div className="w-full bg-[#161412] border-t border-white/[0.08] rounded-t-[24px] px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl">
+      <div className="w-full bg-[#000000] border-t border-white/[0.08] rounded-t-[24px] px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl">
         <nav className="flex w-full items-center justify-around h-[64px]" aria-label="Bottom Navigation">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -115,7 +115,8 @@ export function UnifiedBottomBar() {
                 className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group"
 
                 style={{
-                  color: isSelected ? appColor : 'rgba(255, 255, 255, 0.4)',
+                  color: isSelected ? appColor : '#FFFFFF',
+                  opacity: isSelected ? 1 : 0.6,
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >
