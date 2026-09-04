@@ -819,7 +819,7 @@ export default function ConnectTopbar({
                   sx={{
                     minWidth: 0,
                     borderRadius: '12px',
-                    bgcolor: '#000000',
+                    bgcolor: '#161412',
                     border: '1px solid rgba(255,255,255,0.12)',
                     color: '#fff',
                     px: 1.5,
@@ -852,7 +852,7 @@ export default function ConnectTopbar({
                     px: 2,
                     py: 1.5,
                     borderRadius: '16px',
-                    bgcolor: '#000000',
+                    bgcolor: '#161412',
                     border: '1px solid rgba(255,255,255,0.1)',
                     color: '#fff',
                     textAlign: 'left',
@@ -905,7 +905,7 @@ export default function ConnectTopbar({
                       }}
                       sx={{
                         borderRadius: '16px',
-                        bgcolor: '#000000',
+                        bgcolor: '#161412',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
                         px: 2,
                         py: 1.75,
@@ -953,7 +953,7 @@ export default function ConnectTopbar({
                       px: 2,
                       py: 1.5,
                       borderRadius: '16px',
-                      bgcolor: '#000000',
+                      bgcolor: '#161412',
                       border: '1px solid rgba(255,255,255,0.1)',
                       color: '#fff',
                       textAlign: 'left',
@@ -994,7 +994,7 @@ export default function ConnectTopbar({
                         px: 2,
                         py: 1.5,
                         borderRadius: '16px',
-                        bgcolor: '#000000',
+                        bgcolor: '#161412',
                         border: '1px solid rgba(255,255,255,0.1)',
                         color: '#fff',
                         textAlign: 'left',
@@ -1059,7 +1059,7 @@ export default function ConnectTopbar({
                           px: 2,
                           py: 1.5,
                           borderRadius: '16px',
-                          bgcolor: '#000000',
+                          bgcolor: '#161412',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           color: '#fff',
                           textAlign: 'left',
@@ -1205,7 +1205,7 @@ export default function ConnectTopbar({
                               px: 2,
                               py: 1.35,
                               borderRadius: '16px',
-                              bgcolor: '#000000',
+                              bgcolor: '#161412',
                               border: '1px solid rgba(255,255,255,0.1)',
                               color: '#fff',
                               textAlign: 'left',
@@ -1258,7 +1258,7 @@ export default function ConnectTopbar({
                           px: 2,
                           py: 1.5,
                           borderRadius: '16px',
-                          bgcolor: '#000000',
+                          bgcolor: '#161412',
                           border: '1px solid rgba(255,255,255,0.1)',
                           color: '#fff',
                           textAlign: 'left',
@@ -1315,7 +1315,7 @@ export default function ConnectTopbar({
                             px: 2,
                             py: 1.5,
                             borderRadius: '16px',
-                            bgcolor: '#000000',
+                            bgcolor: '#161412',
                             border: '1px solid rgba(255,255,255,0.1)',
                             color: '#fff',
                             textAlign: 'left',
@@ -1366,7 +1366,7 @@ export default function ConnectTopbar({
                         px: 2,
                         py: 1.5,
                         borderRadius: '16px',
-                        bgcolor: '#000000',
+                        bgcolor: '#161412',
                         border: '1px solid rgba(255,255,255,0.1)',
                         color: '#fff',
                         textAlign: 'left',
@@ -1404,7 +1404,7 @@ export default function ConnectTopbar({
             width={560}
             title="Search"
           >
-            <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#161412', boxSizing: 'border-box' }}>
+            <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#000000', boxSizing: 'border-box' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
                 <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
                   Search
@@ -1417,7 +1417,7 @@ export default function ConnectTopbar({
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  bgcolor: '#000000',
+                  bgcolor: '#161412',
                   border: '1px solid rgba(255, 255, 255, 0.12)',
                   borderRadius: '16px',
                   px: 2,
@@ -1469,7 +1469,7 @@ export default function ConnectTopbar({
           slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
           PaperProps={{
             sx: {
-              bgcolor: '#161412',
+              bgcolor: '#000000',
               width: 480,
               height: '100vh',
               borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
@@ -1494,7 +1494,7 @@ export default function ConnectTopbar({
             sx={{
               display: 'flex',
               alignItems: 'center',
-              bgcolor: '#000000',
+              bgcolor: '#161412',
               border: '1px solid rgba(255, 255, 255, 0.12)',
               borderRadius: '16px',
               px: 2,
@@ -1563,7 +1563,7 @@ export default function ConnectTopbar({
           borderTop: '1px solid rgba(255,255,255,0.05)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '0 0 28px 28px',
-          bgcolor: '#161412',
+          bgcolor: '#000000',
           overflow: 'hidden',
           boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
           p: 1.5,
@@ -1589,7 +1589,7 @@ export default function ConnectTopbar({
             sx={{
               display: 'flex',
               alignItems: 'center',
-              bgcolor: '#0A0908',
+              bgcolor: '#161412',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '14px',
               px: 1.75,
@@ -1601,7 +1601,7 @@ export default function ConnectTopbar({
               }
             }}
           >
-            <Search size={15} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 8, flexShrink: 0 }} />
+            <Search size={15} style={{ color: '#fff', opacity: 0.5, marginRight: 8, flexShrink: 0 }} />
             <InputBase
               id="topbar-search-field"
               inputRef={searchInputRef}
@@ -1611,11 +1611,11 @@ export default function ConnectTopbar({
               fullWidth
               autoFocus
               sx={{
-                color: 'white',
+                color: '#fff',
                 fontFamily: 'var(--font-satoshi)',
                 fontWeight: 600,
                 fontSize: '0.88rem',
-                '& input::placeholder': { color: 'rgba(255,255,255,0.28)', opacity: 1 }}}
+                '& input::placeholder': { color: '#fff', opacity: 0.4 }}}
               onKeyDown={(event: React.KeyboardEvent) => {
                 if (event.key === 'Escape') {
                   handleCloseAll();

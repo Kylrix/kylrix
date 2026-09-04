@@ -39,7 +39,7 @@ export function renderShortcutsList() {
             px: 2,
             py: 1.5,
             borderRadius: '16px',
-            bgcolor: '#000000',
+            bgcolor: '#161412',
             border: '1px solid rgba(255,255,255,0.08)'}}
         >
           <Typography sx={{ color: '#fff', fontSize: '0.84rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)', lineHeight: 1.35, minWidth: 0 }}>
