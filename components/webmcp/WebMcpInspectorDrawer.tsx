@@ -165,6 +165,18 @@ export function WebMcpInspectorDrawer() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isInspectorOpen, closeInspector]);
 
+  // Close inspector when native sidebar dismisses or swaps away
+  useEffect(() => {
+    if (!isDesktop || !nativeSidebar || !isInspectorOpen) return;
+    const interval = setInterval(() => {
+      const activeKey = nativeSidebar.getActiveKey();
+      if (activeKey !== 'webmcp-inspector') {
+        closeInspector();
+      }
+    }, 150);
+    return () => clearInterval(interval);
+  }, [isDesktop, nativeSidebar, isInspectorOpen, closeInspector]);
+
   if (!mounted) return null;
 
   const handleSelectTool = (tool: WebMcpToolDefinition) => {
@@ -701,18 +713,6 @@ const result = await navigator.modelContext.executeTool('kylrix_create_note', {
       </div>
     </div>
   );
-
-  // Close inspector when native sidebar dismisses or swaps away
-  useEffect(() => {
-    if (!isDesktop || !nativeSidebar || !isInspectorOpen) return;
-    const interval = setInterval(() => {
-      const activeKey = nativeSidebar.getActiveKey();
-      if (activeKey !== 'webmcp-inspector') {
-        closeInspector();
-      }
-    }, 150);
-    return () => clearInterval(interval);
-  }, [isDesktop, nativeSidebar, isInspectorOpen, closeInspector]);
 
   if (isDesktop && nativeSidebar) {
     return (
