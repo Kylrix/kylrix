@@ -937,9 +937,9 @@ export function NotificationDrawer({
                   ? `1px solid ${appAccent}`
                   : '1px solid rgba(255,255,255,0.08)',
                 backgroundColor: isActive
-                  ? alpha(appAccent, 0.16)
-                  : 'rgba(255,255,255,0.03)',
-                color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
+                  ? alpha(appAccent, 0.22)
+                  : '#161412',
+                color: '#FFFFFF',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
@@ -947,7 +947,7 @@ export function NotificationDrawer({
                 minWidth: 0,
               }}
             >
-              <span style={{ display: 'flex', alignItems: 'center', opacity: isActive ? 1 : 0.7 }}>
+              <span style={{ display: 'flex', alignItems: 'center', opacity: isActive ? 1 : 0.85 }}>
                 {tab.icon}
               </span>
               <span>{tab.label}</span>
@@ -1000,18 +1000,18 @@ export function NotificationDrawer({
               px: 2.25,
               py: 1.75,
               borderRadius: '18px',
-              bgcolor: notif.read ? 'rgba(255,255,255,0.02)' : '#1C1A18',
+              bgcolor: notif.read ? '#161412' : '#1C1A18',
               border: '1px solid',
-              borderColor: notif.read ? 'rgba(255,255,255,0.06)' : alpha(notif.accent, 0.26),
-              color: 'white',
+              borderColor: notif.read ? 'rgba(255,255,255,0.08)' : alpha(notif.accent, 0.35),
+              color: '#FFFFFF',
               textAlign: 'left',
               cursor: 'pointer',
               transition: 'all 0.18s ease',
               minWidth: 0,
               boxSizing: 'border-box',
               '&:hover': {
-                bgcolor: '#242220',
-                borderColor: alpha(notif.accent, 0.4),
+                bgcolor: '#22201D',
+                borderColor: alpha(notif.accent, 0.5),
                 transform: 'translateY(-1px)',
               },
             }}
@@ -1044,12 +1044,12 @@ export function NotificationDrawer({
                     height: 15,
                     borderRadius: '50%',
                     bgcolor: '#8B5CF6',
-                    color: 'white',
+                    color: '#FFFFFF',
                     fontSize: '8px',
                     fontWeight: 900,
                     display: 'grid',
                     placeItems: 'center',
-                    border: '1.5px solid #161412',
+                    border: '1.5px solid #000000',
                   }}
                 >
                   ⚡
@@ -1063,8 +1063,8 @@ export function NotificationDrawer({
                 <Typography
                   component="span"
                   sx={{
-                    color: notif.read ? 'rgba(255,255,255,0.85)' : 'white',
-                    fontWeight: notif.read ? 700 : 800,
+                    color: '#FFFFFF',
+                    fontWeight: notif.read ? 700 : 900,
                     fontSize: '0.88rem',
                     lineHeight: 1.25,
                   }}
@@ -1075,7 +1075,8 @@ export function NotificationDrawer({
                 <Typography
                   component="span"
                   sx={{
-                    color: 'rgba(255,255,255,0.4)',
+                    color: '#FFFFFF',
+                    opacity: 0.65,
                     fontWeight: 600,
                     fontSize: '0.7rem',
                     whiteSpace: 'nowrap',
@@ -1089,7 +1090,8 @@ export function NotificationDrawer({
               <Typography
                 component="span"
                 sx={{
-                  color: notif.read ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.76)',
+                  color: '#FFFFFF',
+                  opacity: notif.read ? 0.75 : 0.95,
                   fontWeight: 500,
                   fontSize: '0.78rem',
                   lineHeight: 1.35,
@@ -1116,21 +1118,21 @@ export function NotificationDrawer({
                     px: 1.25,
                     py: 1,
                     borderRadius: '13px',
-                    bgcolor: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.03)' : alpha(appAccent, 0.08),
+                    bgcolor: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.06)' : alpha(appAccent, 0.12),
                     border: '1px solid',
                     borderColor: isFollowingActor(notif.actor)
-                      ? 'rgba(255,255,255,0.08)'
-                      : alpha(appAccent, 0.28),
+                      ? 'rgba(255,255,255,0.12)'
+                      : alpha(appAccent, 0.35),
                     transition: 'all 0.15s ease',
                     cursor: 'pointer',
                     boxSizing: 'border-box',
                     '&:hover': {
                       bgcolor: isFollowingActor(notif.actor)
-                        ? 'rgba(255,255,255,0.06)'
-                        : alpha(appAccent, 0.14),
+                        ? 'rgba(255,255,255,0.1)'
+                        : alpha(appAccent, 0.2),
                       borderColor: isFollowingActor(notif.actor)
-                        ? 'rgba(255,255,255,0.15)'
-                        : alpha(appAccent, 0.42),
+                        ? 'rgba(255,255,255,0.2)'
+                        : alpha(appAccent, 0.5),
                     },
                   }}
                 >
@@ -1140,8 +1142,8 @@ export function NotificationDrawer({
                         width: 24,
                         height: 24,
                         borderRadius: '7px',
-                        bgcolor: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.06)' : alpha(appAccent, 0.15),
-                        color: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.7)' : appAccent,
+                        bgcolor: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.08)' : alpha(appAccent, 0.2),
+                        color: isFollowingActor(notif.actor) ? '#FFFFFF' : appAccent,
                         display: 'grid',
                         placeItems: 'center',
                         flexShrink: 0,
@@ -1157,7 +1159,7 @@ export function NotificationDrawer({
                       <Typography
                         component="span"
                         sx={{
-                          color: 'white',
+                          color: '#FFFFFF',
                           fontWeight: 800,
                           fontSize: '0.76rem',
                           lineHeight: 1.2,
@@ -1171,7 +1173,8 @@ export function NotificationDrawer({
                       <Typography
                         component="span"
                         sx={{
-                          color: 'rgba(255,255,255,0.4)',
+                          color: '#FFFFFF',
+                          opacity: 0.65,
                           fontWeight: 500,
                           fontSize: '0.66rem',
                           lineHeight: 1.2,
@@ -1190,8 +1193,8 @@ export function NotificationDrawer({
                       px: 1.25,
                       py: 0.35,
                       borderRadius: '999px',
-                      bgcolor: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.08)' : appAccent,
-                      color: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.85)' : '#000000',
+                      bgcolor: isFollowingActor(notif.actor) ? 'rgba(255,255,255,0.1)' : appAccent,
+                      color: isFollowingActor(notif.actor) ? '#FFFFFF' : '#000000',
                       fontSize: '0.7rem',
                       fontWeight: 900,
                       letterSpacing: '0.02em',
@@ -1228,13 +1231,14 @@ export function NotificationDrawer({
                 sx={{
                   width: 26,
                   height: 26,
-                  color: 'rgba(255,255,255,0.25)',
-                  '&:hover': { color: '#EF4444', bgcolor: 'rgba(239,68,68,0.1)' },
+                  color: '#FFFFFF',
+                  opacity: 0.5,
+                  '&:hover': { opacity: 1, color: '#EF4444', bgcolor: 'rgba(239,68,68,0.15)' },
                 }}
               >
                 <CloseIcon size={13} />
               </IconButton>
-              <ChevronRight size={15} style={{ color: 'rgba(255,255,255,0.25)' }} />
+              <ChevronRight size={15} style={{ color: '#FFFFFF', opacity: 0.4 }} />
             </Box>
           </Box>
         ))}
@@ -1248,44 +1252,34 @@ export function NotificationDrawer({
               textAlign: 'center',
               display: 'grid',
               placeItems: 'center',
-              gap: 1.5,
+              bgcolor: '#161412',
               borderRadius: '20px',
-              border: '1px dashed rgba(255,255,255,0.08)',
-              bgcolor: 'rgba(255,255,255,0.01)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              my: 1,
             }}
           >
             <Box
               sx={{
                 width: 48,
                 height: 48,
-                borderRadius: '50%',
-                bgcolor: 'rgba(255,255,255,0.04)',
-                color: 'rgba(255,255,255,0.4)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '16px',
+                bgcolor: 'rgba(255,255,255,0.06)',
+                color: '#FFFFFF',
                 display: 'grid',
                 placeItems: 'center',
+                mb: 1.5,
               }}
             >
-              {renderCategoryIcon(activeTab === 'all' ? 'system' : activeTab)}
+              <Bell size={22} strokeWidth={2} />
             </Box>
-            <Typography
-              component="span"
-              sx={{
-                color: 'rgba(255,255,255,0.7)',
-                fontWeight: 800,
-                fontSize: '0.86rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                lineHeight: 1.2,
-              }}
-            >
-              No {activeTab === 'all' ? '' : activeTab} notifications
+            <Typography sx={{ color: '#FFFFFF', fontWeight: 800, fontSize: '0.92rem', mb: 0.5 }}>
+              No Notifications
             </Typography>
             <Typography
-              component="span"
               sx={{
-                color: 'rgba(255,255,255,0.3)',
-                fontSize: '0.76rem',
+                color: '#FFFFFF',
+                opacity: 0.65,
+                fontSize: '0.78rem',
                 maxWidth: 240,
                 lineHeight: 1.35,
               }}
@@ -1312,9 +1306,9 @@ export function NotificationDrawer({
           sx={{
             minHeight: 44,
             borderRadius: '16px',
-            bgcolor: alpha(appAccent, 0.08),
-            border: `1px solid ${alpha(appAccent, 0.16)}`,
-            color: appAccent,
+            bgcolor: '#161412',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            color: '#FFFFFF',
             px: 2,
             py: 1.2,
             fontSize: '0.84rem',
@@ -1322,7 +1316,7 @@ export function NotificationDrawer({
             fontWeight: 800,
             minWidth: 0,
             overflow: 'hidden',
-            '&:hover': { bgcolor: alpha(appAccent, 0.15) },
+            '&:hover': { bgcolor: '#22201D', borderColor: 'rgba(255,255,255,0.2)' },
             '&:disabled': { opacity: 0.35 },
           }}
           startIcon={<CheckCheck size={14} style={{ flexShrink: 0 }} />}
@@ -1338,9 +1332,9 @@ export function NotificationDrawer({
           sx={{
             minHeight: 44,
             borderRadius: '16px',
-            bgcolor: 'rgba(255,77,77,0.06)',
+            bgcolor: '#161412',
             color: '#FF4D4D',
-            border: '1px solid rgba(255,77,77,0.14)',
+            border: '1px solid rgba(255, 77, 77, 0.25)',
             px: 2,
             py: 1.2,
             fontSize: '0.84rem',
@@ -1348,7 +1342,7 @@ export function NotificationDrawer({
             fontWeight: 800,
             minWidth: 0,
             overflow: 'hidden',
-            '&:hover': { bgcolor: 'rgba(255,77,77,0.12)' },
+            '&:hover': { bgcolor: 'rgba(255,77,77,0.15)' },
             '&:disabled': { opacity: 0.35 },
           }}
           startIcon={<Trash2 size={14} style={{ flexShrink: 0 }} />}
@@ -1368,10 +1362,10 @@ export function NotificationDrawer({
         <NativeSidebarMount
           active={isOpen}
           sidebarKey="topbar-notifications"
-          width={400}
+          width={440}
           title="Notifications"
         >
-          <Box sx={{ p: { xs: 1.5, sm: 2.25 }, overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+          <Box sx={{ p: { xs: 2, sm: 3 }, overflowX: 'hidden', width: '100%', height: '100%', boxSizing: 'border-box', bgcolor: '#000000' }}>
             {notificationBody}
           </Box>
         </NativeSidebarMount>
@@ -1387,26 +1381,26 @@ export function NotificationDrawer({
         slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
         PaperProps={{
           sx: {
-            bgcolor: '#161412',
+            bgcolor: '#000000',
             backgroundImage: 'none',
-            width: { xs: '100vw', sm: 400 },
+            width: { xs: '100vw', sm: 440 },
             maxWidth: '100vw',
-            borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
             boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
             height: '100vh',
             display: 'flex',
             flexDirection: 'column',
             boxSizing: 'border-box',
             overflowX: 'hidden',
-            p: { xs: 2, sm: 2.75 },
+            p: { xs: 2, sm: 3 },
           },
         }}
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, minWidth: 0 }}>
-          <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
+          <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#FFFFFF', fontSize: '1.1rem' }}>
             Notifications
           </Typography>
-          <IconButton onClick={onClose} sx={{ color: 'rgba(255, 255, 255, 0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+          <IconButton onClick={onClose} sx={{ color: '#FFFFFF', opacity: 0.6, '&:hover': { opacity: 1, color: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.08)' }, width: 32, height: 32 }}>
             <CloseIcon size={16} />
           </IconButton>
         </Box>
@@ -1417,8 +1411,8 @@ export function NotificationDrawer({
             width: '100%',
             maxWidth: '100%',
             borderRadius: '26px',
-            bgcolor: '#161412',
-            border: `1px solid ${alpha(appAccent, 0.22)}`,
+            bgcolor: '#000000',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             overflow: 'hidden',
             flex: 1,
             display: 'flex',
@@ -1445,7 +1439,7 @@ export function NotificationDrawer({
         borderTop: '1px solid rgba(255,255,255,0.05)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
         borderRadius: '0 0 28px 28px',
-        bgcolor: '#161412',
+        bgcolor: '#000000',
         overflow: 'hidden',
         boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
       }}
@@ -1468,8 +1462,8 @@ export function NotificationDrawer({
             width: '100%',
             maxWidth: '100%',
             borderRadius: '24px',
-            bgcolor: '#161412',
-            border: `1px solid ${alpha(appAccent, 0.22)}`,
+            bgcolor: '#000000',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             overflow: 'hidden',
             boxSizing: 'border-box',
           }}

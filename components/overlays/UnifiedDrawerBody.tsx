@@ -141,6 +141,10 @@ export function unifiedDrawerWidth(content: DrawerContent): number {
       return 560;
     case 'agentic':
       return 440;
+    case 'flows':
+      return 560;
+    case 'moments':
+      return 480;
     case 'zap':
       return 420;
     default:

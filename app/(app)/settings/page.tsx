@@ -611,7 +611,7 @@ function SettingsPageInner() {
                     const username = getEffectiveUsername(user);
                     if (username) router.push(`/u/${username}`);
                 }}
-                className="mb-6 p-5 bg-[#161412] border border-white/5 rounded-[24px] shadow-xl overflow-hidden relative group cursor-pointer hover:border-white/10 hover:bg-[#1C1A18] transition-all"
+                className="mb-6 p-5 sm:p-6 bg-[#000000] border border-white/[0.08] rounded-[24px] shadow-2xl overflow-hidden relative group cursor-pointer hover:border-white/20 transition-all"
             >
                 <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#6366F1]/10 rounded-full pointer-events-none" />
                 
@@ -637,7 +637,7 @@ function SettingsPageInner() {
                                     {currentTier} PLAN
                                 </span>
                                 {isPro && expiresAt && (
-                                    <span className="text-[10px] font-bold text-white/20 uppercase font-mono">
+                                    <span className="text-[10px] font-bold text-white/50 uppercase font-mono">
                                         • Ends {new Date(expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                     </span>
                                 )}
@@ -648,7 +648,7 @@ function SettingsPageInner() {
                                 e.stopPropagation();
                                 setIsEditModalOpen(true);
                             }}
-                            className="py-2.5 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg select-none w-full md:w-auto"
+                            className="py-2.5 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg select-none w-full md:w-auto cursor-pointer"
                         >
                             <Edit3 size={14} />
                             <span>Edit Profile</span>
@@ -658,7 +658,7 @@ function SettingsPageInner() {
                     {/* AI Compute Section (Usage 0-100%) */}
                     <div className={`w-full flex flex-col gap-2 ${isRightRailPushing ? 'xl:w-[220px]' : 'md:w-[220px]'}`}>
                         <div className="flex items-center justify-between gap-2">
-                            <span className="text-[9px] font-black text-white/30 tracking-widest uppercase font-mono">
+                            <span className="text-[9px] font-black text-white/50 tracking-widest uppercase font-mono">
                                 AI Compute Usage
                             </span>
                             <span className="text-sm font-black font-mono text-white">
@@ -666,7 +666,7 @@ function SettingsPageInner() {
                             </span>
                         </div>
                         
-                        <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                        <div className="h-2 w-full bg-[#161412] rounded-full overflow-hidden border border-white/[0.08]">
                             <motion.div 
                                 initial={{ width: 0 }}
                                 animate={{ width: `${100 - (computeBalance?.percent ?? 100)}%` }}
@@ -684,7 +684,7 @@ function SettingsPageInner() {
             <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6 lg:gap-8 items-start">
                 {/* Desktop vertical nav — hidden on mobile, sticky, aware of right rail */}
                 <aside className="hidden lg:block sticky top-[96px] self-start z-10">
-                    <nav className="flex flex-col gap-1.5 p-2 bg-[#161412] border border-white/5 rounded-2xl shadow-xl">
+                    <nav className="flex flex-col gap-1.5 p-2 bg-[#000000] border border-white/[0.08] rounded-2xl shadow-xl">
                         {tabsList.map((t) => {
                             const Icon = t.icon;
                             const isActive = activeTab === t.id;
@@ -696,23 +696,23 @@ function SettingsPageInner() {
                                     className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-left w-full cursor-pointer ${
                                         isActive
                                             ? 'bg-[#6366F1] text-white shadow-lg'
-                                            : 'text-white/60 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                                            : 'text-white/70 hover:text-white hover:bg-white/[0.06] border border-transparent'
                                     }`}
                                 >
-                                    <Icon size={16} className={isActive ? 'text-white' : 'text-white/40'} />
+                                    <Icon size={16} className={isActive ? 'text-white' : 'text-white/60'} />
                                     <span className="truncate">{t.label}</span>
                                 </button>
                             );
                         })}
                     </nav>
-                    <div className="mt-4 p-3 bg-white/[0.02] border border-white/5 rounded-xl">
-                        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Tip</p>
-                        <p className="text-xs text-white/50 leading-relaxed mt-1">Right sidebar pushes this layout — no overlay. Resize to see fluid reflow.</p>
+                    <div className="mt-4 p-3 bg-[#000000] border border-white/[0.08] rounded-xl">
+                        <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Tip</p>
+                        <p className="text-xs text-white/70 leading-relaxed mt-1">Right sidebar pushes this layout — no overlay. Resize to see fluid reflow.</p>
                     </div>
                 </aside>
 
                 {/* Mobile horizontal tabs — visible only on mobile */}
-                <div className="lg:hidden col-span-1 -mx-4 px-4 flex gap-2 overflow-x-auto pb-3 border-b border-white/5 scrollbar-none select-none snap-x snap-mandatory">
+                <div className="lg:hidden col-span-1 -mx-4 px-4 flex gap-2 overflow-x-auto pb-3 border-b border-white/[0.08] scrollbar-none select-none snap-x snap-mandatory">
                     {tabsList.map((t) => {
                         const Icon = t.icon;
                         const isActive = activeTab === t.id;
@@ -724,7 +724,7 @@ function SettingsPageInner() {
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 cursor-pointer snap-start ${
                                     isActive 
                                         ? 'bg-[#6366F1] text-white border border-[#6366F1] shadow-lg' 
-                                        : 'bg-[#161412] hover:bg-[#1C1A18] text-white/60 border border-white/5'
+                                        : 'bg-[#000000] hover:bg-[#161412] text-white/70 border border-white/[0.08]'
                                 }`}
                             >
                                 <Icon size={14} />
@@ -749,7 +749,7 @@ function SettingsPageInner() {
                         {/* Left Column: Discoverability, Integrations & Feedback */}
                         <div className="flex flex-col gap-8">
                             {/* Referral Program */}
-                            <div className="p-5 md:p-6 bg-[#161412] border border-white/10 rounded-[22px] shadow-xl flex flex-col gap-4 max-w-full overflow-hidden">
+                            <div className="p-5 md:p-6 bg-[#000000] border border-white/[0.08] rounded-[22px] shadow-2xl flex flex-col gap-4 max-w-full overflow-hidden">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div className="flex items-center gap-3 min-w-0 flex-1">
                                         <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center shrink-0">
@@ -757,34 +757,34 @@ function SettingsPageInner() {
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
-                                                <h4 className="text-white font-bold text-sm md:text-base font-clash m-0 truncate">
-                                                    Referral & Growth
-                                                </h4>
-                                                <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
-                                                    +1.5 $KYL / invite
-                                                </span>
-                                            </div>
-                                            <p className="text-white/40 text-xs font-medium mt-0.5 m-0 line-clamp-2 sm:line-clamp-none">
-                                                Earn 1.5 $KYL for each user who joins with your link, plus 0.5 $KYL for 30-day activity.
-                                            </p>
-                                        </div>
+                                                 <h4 className="text-white font-bold text-sm md:text-base font-clash m-0 truncate">
+                                                     Referral & Growth
+                                                 </h4>
+                                                 <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                                                     +1.5 $KYL / invite
+                                                 </span>
+                                             </div>
+                                             <p className="text-white/60 text-xs font-medium mt-0.5 m-0 line-clamp-2 sm:line-clamp-none">
+                                                 Earn 1.5 $KYL for each user who joins with your link, plus 0.5 $KYL for 30-day activity.
+                                             </p>
+                                         </div>
                                     </div>
 
                                     {/* Inset Metric Badges */}
                                     <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                                        <div className="bg-[#0A0908] border border-white/10 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[70px]">
-                                            <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest font-mono">Referred</span>
+                                        <div className="bg-[#161412] border border-white/[0.08] rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[70px]">
+                                            <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest font-mono">Referred</span>
                                             <span className="text-white font-black text-xs font-mono">{referralStats?.totalReferred ?? 0}</span>
                                         </div>
-                                        <div className="bg-[#0A0908] border border-emerald-500/20 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[85px]">
-                                            <span className="text-[9px] font-bold text-emerald-400/60 uppercase tracking-widest font-mono">Earned</span>
+                                        <div className="bg-[#161412] border border-emerald-500/20 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[85px]">
+                                            <span className="text-[9px] font-bold text-emerald-400/80 uppercase tracking-widest font-mono">Earned</span>
                                             <span className="text-emerald-400 font-black text-xs font-mono">+{referralStats?.totalTokensEarned ?? '0.0'} $KYL</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Shareable Link Box */}
-                                <div className="flex items-center gap-2 bg-[#0A0908] p-1.5 pl-3 rounded-xl border border-white/10 max-w-full min-w-0">
+                                <div className="flex items-center gap-2 bg-[#161412] p-1.5 pl-3 rounded-xl border border-white/[0.08] max-w-full min-w-0">
                                     <input 
                                         type="text"
                                         readOnly
@@ -803,16 +803,16 @@ function SettingsPageInner() {
                             </div>
 
                             {/* Daily Token Mint */}
-                            <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-3">
+                            <div className="p-6 bg-[#000000] border border-white/[0.08] rounded-[28px] shadow-2xl flex flex-col gap-3">
                                 <h4 className="text-white font-black text-base font-mono">Daily Token Mint</h4>
-                                <p className="text-white/40 text-xs font-semibold leading-relaxed">
+                                <p className="text-white/60 text-xs font-semibold leading-relaxed">
                                     Manually trigger your daily token minting reward.
                                 </p>
                                 <button
                                     type="button"
                                     onClick={handleManualMint}
                                     disabled={minting}
-                                    className="h-11 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all select-none disabled:opacity-40 w-fit"
+                                    className="h-11 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all select-none disabled:opacity-40 w-fit cursor-pointer"
                                 >
                                     {minting ? <SpinnerIcon className="animate-spin text-white" size={16} /> : <RefreshCw size={16} />}
                                     <span>{minting ? 'Minting...' : 'Mint Daily Tokens'}</span>
@@ -825,20 +825,20 @@ function SettingsPageInner() {
                                     <Lightbulb size={20} className="text-[#6366F1]" />
                                     <span>Feedback & Intelligence</span>
                                 </h3>
-                                <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl hover:border-white/10 hover:bg-[#1C1A18] transition-all duration-300">
+                                <div className="p-6 bg-[#000000] border border-white/[0.08] rounded-[28px] shadow-2xl hover:border-white/20 transition-all duration-300">
                                     <div className="flex items-center justify-between gap-4 flex-wrap">
                                         <div className="min-w-0">
                                             <h4 className="text-white font-extrabold text-sm truncate">
                                                 Feature Request & Bug Report
                                             </h4>
-                                            <p className="text-white/40 text-xs font-semibold font-sans mt-0.5 leading-relaxed">
+                                            <p className="text-white/60 text-xs font-semibold font-sans mt-0.5 leading-relaxed">
                                                 Help us improve the Kylrix ecosystem by reporting issues or suggesting new features.
                                             </p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => openDrawer('form', { formId: FEATURE_FORM_ID })}
-                                            className="h-10 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center transition-all w-full md:w-auto"
+                                            className="h-10 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center transition-all w-full md:w-auto cursor-pointer"
                                         >
                                             Open Portal
                                         </button>
@@ -853,7 +853,7 @@ function SettingsPageInner() {
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('agents')}
-                                className="w-full text-left p-6 bg-[#161412] border border-white/5 hover:border-white/10 hover:bg-[#1C1A18] rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
+                                className="w-full text-left p-6 bg-[#000000] border border-white/[0.08] hover:border-white/20 rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
                             >
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-11 h-11 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
@@ -863,19 +863,19 @@ function SettingsPageInner() {
                                         <h4 className="text-white font-black text-base leading-tight font-mono">
                                             Smart Assistants
                                         </h4>
-                                        <p className="text-white/40 text-xs font-semibold mt-0.5 leading-relaxed">
+                                        <p className="text-white/60 text-xs font-semibold mt-0.5 leading-relaxed">
                                             Configure private AI keys, automated assistant systems, and active workspaces.
                                         </p>
                                     </div>
                                 </div>
-                                <ChevronRight size={20} className="text-white/30 group-hover:text-white transition-colors" />
+                                <ChevronRight size={20} className="text-white/40 group-hover:text-white transition-colors" />
                             </button>
 
                             {/* Trash Management Card */}
                             <button
                                 type="button"
                                 onClick={() => openDrawer('trash')}
-                                className="w-full text-left p-6 bg-[#161412] border border-white/5 hover:border-white/10 hover:bg-[#1C1A18] rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group"
+                                className="w-full text-left p-6 bg-[#000000] border border-white/[0.08] hover:border-white/20 rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
                             >
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-11 h-11 rounded-xl bg-[#EF4444]/10 text-[#EF4444] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
@@ -885,24 +885,24 @@ function SettingsPageInner() {
                                         <h4 className="text-white font-black text-base leading-tight font-mono">
                                             Trash bin
                                         </h4>
-                                        <p className="text-white/40 text-xs font-semibold mt-0.5 leading-relaxed">
+                                        <p className="text-white/60 text-xs font-semibold mt-0.5 leading-relaxed">
                                             Review and manage recently soft-deleted notes, credentials, tags, forms, events, and tasks.
                                         </p>
                                     </div>
                                 </div>
-                                <ChevronRight size={20} className="text-white/30 group-hover:text-white transition-colors" />
+                                <ChevronRight size={20} className="text-white/40 group-hover:text-white transition-colors" />
                             </button>
 
                             {/* Telegram panel */}
-                            <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-5">
-                                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                            <div className="p-6 bg-[#000000] border border-white/[0.08] rounded-[28px] shadow-2xl flex flex-col gap-5">
+                                <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-9 h-9 rounded-xl bg-[#0088cc]/10 text-[#0088cc] flex items-center justify-center">
                                             <TelegramIcon />
                                         </div>
                                         <div>
                                             <h4 className="font-extrabold text-sm text-white">Telegram Notifications</h4>
-                                            <p className="text-[10px] text-white/40 font-bold">Push notifications outlet</p>
+                                            <p className="text-[10px] text-white/50 font-bold">Push notifications outlet</p>
                                         </div>
                                     </div>
                                     <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
@@ -916,17 +916,17 @@ function SettingsPageInner() {
                                 <button
                                     type="button"
                                     onClick={() => setTgDrawerOpen(true)}
-                                    className="py-3 px-5 rounded-xl border border-white/10 text-white hover:text-white font-extrabold text-xs hover:border-white/20 transition-all text-center w-full bg-transparent cursor-pointer"
+                                    className="py-3 px-5 rounded-xl border border-white/[0.08] text-white hover:text-white font-extrabold text-xs hover:border-white/20 transition-all text-center w-full bg-transparent cursor-pointer"
                                 >
                                     {telegramConnected ? 'Manage Link' : 'Link Telegram Bot'}
                                 </button>
                             </div>
 
                             {/* Primary Account Email Card */}
-                            <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-3">
+                            <div className="p-6 bg-[#000000] border border-white/[0.08] rounded-[28px] shadow-2xl flex flex-col gap-3">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                     <div>
-                                        <span className="text-[10px] text-[#9B9691] font-bold font-mono uppercase tracking-wider block mb-1">
+                                        <span className="text-[10px] text-white/50 font-bold font-mono uppercase tracking-wider block mb-1">
                                             Primary Mail Relay
                                         </span>
                                         <span className="text-sm md:text-base text-white font-extrabold font-mono tracking-tight break-all">
@@ -940,7 +940,7 @@ function SettingsPageInner() {
                                                 navigator.clipboard.writeText(String(user.email));
                                                 toast.success('Email copied');
                                             }}
-                                            className="py-2 px-4 rounded-xl border border-white/10 text-white font-bold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all cursor-pointer flex-shrink-0"
+                                            className="py-2 px-4 rounded-xl border border-white/[0.08] text-white font-bold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all cursor-pointer flex-shrink-0"
                                         >
                                             Copy Email
                                         </button>

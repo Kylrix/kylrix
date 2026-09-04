@@ -141,7 +141,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
         </div>
 
         <nav
-          className="p-1.5 rounded-2xl bg-[#161412] border border-white/[0.06] flex gap-1 overflow-x-auto scrollbar-none"
+          className="p-1.5 rounded-2xl bg-[#000000] border border-white/[0.08] flex gap-1 overflow-x-auto scrollbar-none"
           aria-label="Connect feed tabs"
         >
           {TABS.map((t) => {
@@ -155,8 +155,8 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
                 className={[
                   'flex-1 min-w-[4.5rem] px-3 py-2 rounded-xl text-xs font-bold font-satoshi transition-all whitespace-nowrap cursor-pointer',
                   active
-                    ? 'bg-[#0A0908] text-white border border-white/10 shadow-sm'
-                    : 'text-white/50 hover:text-white hover:bg-white/[0.03] border border-transparent',
+                    ? 'bg-[#161412] text-white border border-white/10 shadow-sm'
+                    : 'text-white/70 hover:text-white hover:bg-white/[0.04] border border-transparent',
                 ].join(' ')}
               >
                 {t.label}
@@ -171,17 +171,17 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
           {[1, 2, 3, 4].map((n) => (
             <div
               key={n}
-              className="h-[140px] rounded-2xl bg-[#161412] border border-white/[0.06] animate-pulse"
+              className="h-[140px] rounded-2xl bg-[#000000] border border-white/[0.08] animate-pulse"
             />
           ))}
         </div>
       ) : visibleItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl bg-[#161412] border border-white/[0.06] px-4 space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center mb-1">
+        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl bg-[#000000] border border-white/[0.08] px-4 space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-[#161412] border border-white/[0.08] flex items-center justify-center mb-1">
             {meta.icon}
           </div>
           <h4 className="text-white font-bold text-base font-clash">{meta.emptyTitle}</h4>
-          <p className="text-white/45 text-xs max-w-xs font-satoshi">{meta.emptyBody}</p>
+          <p className="text-white/70 text-xs max-w-xs font-satoshi">{meta.emptyBody}</p>
           {tab === 'moments' && onCreateMoment ? (
             <button
               type="button"

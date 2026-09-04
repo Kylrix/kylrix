@@ -71,14 +71,14 @@ function FlowRow({
   recentlyUpdated?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] overflow-hidden h-full">
+    <div className="rounded-2xl bg-[#000000] border border-white/[0.08] overflow-hidden h-full shadow-sm hover:border-white/15 transition-all">
       <div className="flex items-center gap-3.5 p-4">
         <button
           type="button"
           onClick={onOpen}
           className="flex items-center gap-3.5 min-w-0 flex-1 text-left cursor-pointer"
         >
-          <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.06] text-[#A855F7] shrink-0">
+          <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.08] text-[#A855F7] shrink-0">
             <Layers size={16} />
           </div>
           <div className="min-w-0 flex-1 pr-1.5">
@@ -91,11 +91,11 @@ function FlowRow({
               )}
             </div>
             <div className="flex items-center gap-1.5 mt-1 min-w-0">
-              <span className="text-[11px] font-medium text-white/40 truncate">
+              <span className="text-[11px] font-medium text-white/70 truncate">
                 {flow.publisher.handle}
               </span>
               <VerifiedMark kind={flow.publisher.verified} />
-              <span className="text-[11px] text-white/25 truncate">
+              <span className="text-[11px] text-white/50 truncate">
                 · {flow.steps.length} steps
               </span>
             </div>
@@ -344,7 +344,11 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-200">
+    <div className={
+      isDesktop
+        ? "flex flex-col h-full min-h-0 w-full max-w-full bg-[#000000] text-white overflow-hidden select-none"
+        : "fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-200"
+    }>
       {/* Top Header Chrome */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-[#0A0908] shrink-0">
         <div className="flex items-center gap-2.5">
@@ -381,7 +385,7 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
       </header>
 
       {/* Main Flows Content Stream */}
-      <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 min-h-0 select-text max-w-[1440px] w-full mx-auto space-y-6">
+      <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 min-h-0 select-text w-full mx-auto space-y-6">
         {/* Navigation Tab Bar */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#161412] border border-white/[0.06] w-fit">
@@ -422,17 +426,17 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {drafts.map((d) => (
-                <div key={d.id} className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5 flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-white/40 shrink-0">
+                <div key={d.id} className="rounded-2xl bg-[#000000] border border-white/[0.08] p-3.5 flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 shrink-0">
                     <Workflow size={16} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-white truncate">{d.name || (d as any).title || 'Untitled'}</p>
-                    <p className="text-[11px] text-white/35 truncate">{d.niche} · {d.steps.length} steps{(d as any).ready ? ' · ready' : ''}</p>
+                    <p className="text-[11px] text-white/60 truncate">{d.niche} · {d.steps.length} steps{(d as any).ready ? ' · ready' : ''}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button type="button" onClick={() => void handleResumeDraft(d)} className="px-3 py-1.5 rounded-lg bg-[#A855F7] text-white text-[11px] font-extrabold cursor-pointer">Resume</button>
-                    <button type="button" onClick={() => void handleDeleteDraft(d.id)} className="p-2 rounded-lg bg-[#161412] border border-white/[0.06] text-white/40 hover:text-white cursor-pointer"><Trash2 size={14} /></button>
+                    <button type="button" onClick={() => void handleDeleteDraft(d.id)} className="p-2 rounded-lg bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white cursor-pointer"><Trash2 size={14} /></button>
                   </div>
                 </div>
               ))}

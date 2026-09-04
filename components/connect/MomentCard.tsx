@@ -467,7 +467,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
           handleCardClick();
         }
       }}
-      className="w-full text-left rounded-[26px] bg-[#161412] border border-[#34322F] hover:border-[#3C3A38] hover:bg-[#1C1A18] hover:-translate-y-px p-5 space-y-3.5 transition-all duration-200 shadow-sm cursor-pointer select-none relative focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
+      className="w-full text-left rounded-[26px] bg-[#000000] border border-white/[0.08] hover:border-white/20 hover:bg-[#000000] hover:-translate-y-px p-5 space-y-3.5 transition-all duration-200 shadow-sm cursor-pointer select-none relative focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between gap-3">

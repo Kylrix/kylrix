@@ -448,14 +448,14 @@ function DashboardPageContent() {
 
   if (!isAuthReady || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0A0908]">
+      <div className="flex items-center justify-center min-h-screen bg-[#161412]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen pb-10 bg-[#0A0908] pt-4 md:pt-8 relative">
+    <div className="flex flex-col min-h-screen pb-10 bg-[#161412] pt-4 md:pt-8 relative">
       <div 
         className="flex-1 flex flex-col transition-opacity duration-300"
         style={{
@@ -467,13 +467,13 @@ function DashboardPageContent() {
           <div>
             {/* Tab Switcher */}
             <div className="px-4 md:px-12 mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#161412] border border-white/[0.08] rounded-2xl w-fit select-none shadow-md">
+              <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border border-white/[0.08] rounded-2xl w-fit select-none shadow-md">
                 <button
                   onClick={() => setActiveTab('secrets')}
                   className={`flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'secrets'
                       ? 'bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)]'
-                      : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
+                      : 'text-white/70 hover:text-white hover:bg-white/[0.06]'
                   }`}
                   title="Secrets"
                   aria-label="Secrets"
@@ -560,12 +560,12 @@ function DashboardPageContent() {
                         ))}
                       </div>
                     ) : workspaceScopedCredentials.length === 0 ? (
-                      <div className="p-16 text-center rounded-[32px] bg-[#161412] border border-dashed border-[#1C1A18] flex flex-col items-center justify-center">
-                        <Lock className="h-12 w-12 text-white/10 mb-4" />
+                      <div className="p-16 text-center rounded-[32px] bg-[#000000] border border-white/[0.08] flex flex-col items-center justify-center">
+                        <Lock className="h-12 w-12 text-white/20 mb-4" />
                         <h2 className="text-xl font-black text-white mb-2 font-clash">
                           No Secrets Found
                         </h2>
-                        <p className="text-[#9B9691] max-w-xs mx-auto mb-6 text-sm">
+                        <p className="text-white/60 max-w-xs mx-auto mb-6 text-sm">
                           Your secure vault is empty. Store passwords, logins, or cards safely.
                         </p>
                         <div className="flex items-center gap-3">
@@ -589,7 +589,7 @@ function DashboardPageContent() {
                               } catch {}
                               void loadAllCredentials();
                             }}
-                            className="inline-flex items-center gap-2 px-4 h-12 bg-[#161412] hover:bg-[#1C1A18] text-white/70 hover:text-white border border-[#1C1A18] font-bold rounded-2xl text-xs transition-colors"
+                            className="inline-flex items-center gap-2 px-4 h-12 bg-[#161412] hover:bg-[#1C1A18] text-white/80 hover:text-white border border-white/[0.08] font-bold rounded-2xl text-xs transition-colors"
                           >
                             <RefreshCw size={15} />
                             Sync Remote

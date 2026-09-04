@@ -292,7 +292,7 @@ function TOTPCardStable({
         requireUnlock(() => setSelectedTotp(displayTotp));
       }}
       onContextMenu={selection.isSelectMode ? (e) => e.preventDefault() : handleContextMenu}
-      className={`h-full p-5 rounded-3xl transition-all duration-300 flex flex-col gap-4 cursor-pointer border ${isCardActive ? 'ring-1 ring-[#10B981]' : ''} ${isSelected ? 'bg-[#1C1A18] border-emerald-500/40 ring-2 ring-emerald-500' : 'bg-[#161412] border-[#1C1A18] hover:bg-[#1C1A18] hover:border-emerald-500/20'} hover:-translate-y-0.5 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)]`}
+      className={`h-full p-5 rounded-3xl transition-all duration-300 flex flex-col gap-4 cursor-pointer border ${isCardActive ? 'ring-1 ring-[#10B981]' : ''} ${isSelected ? 'bg-[#000000] border-emerald-500/60 ring-2 ring-emerald-500' : 'bg-[#000000] border-white/[0.08] hover:border-emerald-500/40'} hover:-translate-y-0.5 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)]`}
     >
       <div className="flex items-center gap-3.5 min-w-0 w-full">
         {selection.isSelectMode ? (
@@ -305,20 +305,20 @@ function TOTPCardStable({
           >
             <div
               className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
-                isSelected ? 'bg-[#10B981] border-[#10B981] text-[#0A0908]' : 'border-[#9B9691] bg-transparent'
+                isSelected ? 'bg-[#10B981] border-[#10B981] text-[#000000]' : 'border-white/40 bg-transparent'
               }`}
             >
               {isSelected && <CheckSquare className="w-4 h-4" />}
             </div>
           </div>
-        ) : faviconUrl ? (<div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors"><img src={faviconUrl} alt={totp.issuer || 'app favicon'} onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} className="w-7 h-7 rounded-md" /></div>) : (<div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors"><span className="font-black text-emerald-500 text-xl font-clash">{issuerInitials}</span></div>)}
+        ) : faviconUrl ? (<div className="w-[52px] h-[52px] rounded-2xl bg-[#161412] border border-white/[0.08] flex items-center justify-center flex-shrink-0 transition-colors"><img src={faviconUrl} alt={totp.issuer || 'app favicon'} onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} className="w-7 h-7 rounded-md" /></div>) : (<div className="w-[52px] h-[52px] rounded-2xl bg-[#161412] border border-white/[0.08] flex items-center justify-center flex-shrink-0 transition-colors"><span className="font-black text-emerald-500 text-xl font-clash">{issuerInitials}</span></div>)}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
             <div className="text-[1.05rem] font-extrabold text-white font-clash leading-tight truncate flex-1 min-w-0">{looksEncrypted((displayTotp as any).issuer) ? "Encrypted Code" : ((displayTotp as any).issuer || "Smart Code")}</div>
             <SyncStatusDot resourceId={displayTotp.$id} kind="totp" row={displayTotp as unknown as Record<string, unknown>} />
           </div>
-          <div className="text-sm font-medium text-[#9B9691] font-satoshi mt-0.5 truncate transition-[filter] duration-300" style={{ filter: isVaultBlurEnabled ? 'blur(4.5px)' : 'none' }}>{looksEncrypted((displayTotp as any).accountName) ? "••••••••" : ((displayTotp as any).accountName || "No account info")}</div>
-          <div className="flex flex-wrap gap-1 mt-2">{folderName && (<span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-black bg-white/4 text-[#9B9691] uppercase tracking-wider">{folderName}</span>)}{totp.sharedFrom && (<span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-black bg-emerald-500/10 text-emerald-500 uppercase tracking-wider">Received</span>)}</div>
+          <div className="text-sm font-medium text-white/70 font-satoshi mt-0.5 truncate transition-[filter] duration-300" style={{ filter: isVaultBlurEnabled ? 'blur(4.5px)' : 'none' }}>{looksEncrypted((displayTotp as any).accountName) ? "••••••••" : ((displayTotp as any).accountName || "No account info")}</div>
+          <div className="flex flex-wrap gap-1 mt-2">{folderName && (<span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-black bg-white/[0.08] text-white/80 uppercase tracking-wider">{folderName}</span>)}{totp.sharedFrom && (<span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-black bg-emerald-500/10 text-emerald-400 uppercase tracking-wider">Received</span>)}</div>
         </div>
       </div>
       <div className="flex items-center justify-between gap-4 w-full mt-auto pt-4 border-t border-white/5">
@@ -628,14 +628,14 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-8 max-w-3xl">
           <div className="relative w-full sm:max-w-[400px] flex-grow">
             <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <Search className="text-white/30 h-[18px] w-[18px]" />
+              <Search className="text-white/40 h-[18px] w-[18px]" />
             </span>
             <input
               type="text"
               placeholder="Search codes..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-12 pl-11 pr-4 rounded-2xl bg-[#161412] border border-[#1C1A18] text-white placeholder-white/30 focus:outline-none focus:border-emerald-500 transition-colors"
+              className="w-full h-12 pl-11 pr-4 rounded-2xl bg-[#000000] border border-white/[0.08] text-white placeholder-white/40 focus:outline-none focus:border-emerald-500 transition-colors"
             />
           </div>
           <button 
@@ -653,20 +653,20 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
           </div>
         ) : scopedTotpCodes.length === 0 ? (
-          <div className="p-24 text-center rounded-[32px] bg-[#161412] border border-dashed border-[#1C1A18] max-w-3xl">
-            <Shield className="h-16 w-16 mx-auto mb-6 text-white/5" />
+          <div className="p-24 text-center rounded-[32px] bg-[#000000] border border-white/[0.08] max-w-3xl">
+            <Shield className="h-16 w-16 mx-auto mb-6 text-white/20" />
             <h2 className="text-xl font-black text-white mb-2 font-clash">
               No Smart Codes
             </h2>
-            <p className="text-[#9B9691] max-w-xs mx-auto mb-8 text-sm">
-              Your secure vault is ready to manage two-step verification codes.
+            <p className="text-white/60 text-sm max-w-xs mx-auto mb-8">
+              Safely store time-based one-time password (TOTP) codes for all your accounts.
             </p>
             <button 
               onClick={() => requireUnlock(() => setShowNew(true))} 
               className="inline-flex items-center gap-2 px-6 h-12 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-2xl transition-colors"
             >
               <Plus size={18} />
-              Add Code
+              Add First Code
             </button>
           </div>
         ) : (
@@ -708,28 +708,28 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
       {deleteDialog.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-          <div className="w-full max-w-md p-6 rounded-[24px] bg-[#161412] border border-[#1C1A18] shadow-[0_40px_80px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md p-6 rounded-[24px] bg-[#000000] border border-white/[0.08] shadow-[0_40px_80px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-2xl font-black font-clash text-white mb-3">
               Delete Smart Code
             </h3>
             <div className="mb-4">
-              <p className="text-sm text-[#9B9691] leading-relaxed">
+              <p className="text-sm text-white/70 leading-relaxed">
                 Are you sure you want to delete this verification code? This action cannot be undone.
               </p>
             </div>
             
-            <div className="flex flex-col gap-2.5 p-4 rounded-2xl bg-[#0A0908] border border-white/5 mb-6">
+            <div className="flex flex-col gap-2.5 p-4 rounded-2xl bg-[#161412] border border-white/[0.08] mb-6">
               {(() => {
                 const selected = totpCodes.find((t) => t.$id === deleteDialog.id);
                 if (!selected) return null;
                 return (
                   <>
                     <div>
-                      <span className="text-[10px] text-[#9B9691] block mb-0.5 font-black uppercase tracking-wider">Issuer</span>
+                      <span className="text-[10px] text-white/50 block mb-0.5 font-black uppercase tracking-wider">Issuer</span>
                       <span className="text-sm font-extrabold text-white">{selected.issuer || "—"}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-[#9B9691] block mb-0.5 font-black uppercase tracking-wider">Account</span>
+                      <span className="text-[10px] text-white/50 block mb-0.5 font-black uppercase tracking-wider">Account</span>
                       <span className="text-sm font-extrabold text-white">{selected.accountName || "—"}</span>
                     </div>
                   </>
@@ -768,7 +768,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   }
 
   return (
-    <div className="flex flex-col min-h-screen pb-10 bg-[#0A0908] pt-4 md:pt-8 relative">
+    <div className="flex flex-col min-h-screen pb-10 bg-[#161412] pt-4 md:pt-8 relative">
       <div 
         className="flex-1 flex flex-col transition-opacity duration-300"
         style={{

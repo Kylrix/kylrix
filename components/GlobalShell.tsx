@@ -345,10 +345,10 @@ const isSpecificPostPage = useMemo(
       {unifiedDrawerActive === 'moment-composer' && (
         <MomentComposerDrawer onClose={() => closeUnified()} />
       )}
-      {unifiedDrawerActive === 'moments' && (
+      {!isDesktopShell && unifiedDrawerActive === 'moments' && (
         <MomentsDrawer onClose={() => closeUnified()} />
       )}
-      {unifiedDrawerActive === 'flows' && (
+      {!isDesktopShell && unifiedDrawerActive === 'flows' && (
         <FlowsDrawer onClose={() => closeUnified()} />
       )}
       {isDesktopShell && unifiedDrawerActive === 'new-chat' && (

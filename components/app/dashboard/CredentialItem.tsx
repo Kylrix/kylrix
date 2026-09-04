@@ -321,14 +321,14 @@ export default function CredentialItem({
       onContextMenu={handleContextMenu}
       className={`group h-full px-[18px] py-[14px] rounded-[24px] border cursor-pointer transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center gap-[12px] shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)] ${
         isSelected 
-          ? 'bg-[#1C1A18] border-[#10B981]/40 shadow-[0_8px_10px_-8px_rgba(0,0,0,1),0_6px_8px_-6px_rgba(37,35,33,1.0)]' 
-          : 'bg-[#161412] border-[#34322F] hover:bg-[#1C1A18] hover:border-[#10B981]/20 hover:-translate-y-0.5 hover:shadow-[0_8px_10px_-8px_rgba(0,0,0,1),0_6px_8px_-6px_rgba(37,35,33,1.0)]'
+          ? 'bg-[#000000] border-[#10B981]/60 shadow-[0_8px_10px_-8px_rgba(0,0,0,1),0_6px_8px_-6px_rgba(37,35,33,1.0)]' 
+          : 'bg-[#000000] border-white/[0.08] hover:border-[#10B981]/40 hover:-translate-y-0.5 hover:shadow-[0_8px_10px_-8px_rgba(0,0,0,1),0_6px_8px_-6px_rgba(37,35,33,1.0)]'
       }`}
     >
       {isSelectMode && (
         <div className="shrink-0 flex items-center justify-center pr-1">
           <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
-            isSelected ? 'bg-[#10B981] border-[#10B981] text-[#0A0908]' : 'border-[#9B9691] bg-transparent'
+            isSelected ? 'bg-[#10B981] border-[#10B981] text-[#000000]' : 'border-white/40 bg-transparent'
           }`}>
             {isSelected && <CheckSquare className="w-4 h-4" />}
           </div>
@@ -337,7 +337,7 @@ export default function CredentialItem({
 
       {/* Icon */}
       <div 
-        className="w-[52px] h-[52px] rounded-[16px] bg-white/[0.02] flex items-center justify-center shrink-0 border border-white/[0.05] overflow-hidden transition-all duration-300 group-hover:border-[#10B981]/20 group-hover:bg-[#10B981]/5"
+        className="w-[52px] h-[52px] rounded-[16px] bg-[#161412] flex items-center justify-center shrink-0 border border-white/[0.08] overflow-hidden transition-all duration-300 group-hover:border-[#10B981]/30 group-hover:bg-[#10B981]/5"
       >
         {faviconUrl ? (
           <img src={faviconUrl} className="w-8 h-8 object-contain" alt="" />
@@ -360,7 +360,7 @@ export default function CredentialItem({
           <SyncStatusDot resourceId={credential.$id} kind="secret" row={displayCredential as unknown as Record<string, unknown>} />
         </div>
         <span 
-          className="text-[#9B9691] font-medium text-[0.85rem] leading-[1.35] font-satoshi truncate transition-[filter] duration-300"
+          className="text-white/70 font-medium text-[0.85rem] leading-[1.35] font-satoshi truncate transition-[filter] duration-300"
           style={{ filter: isBlurEnabled ? 'blur(4.5px)' : 'none' }}
         >
           {looksEncrypted((displayCredential as any).username)

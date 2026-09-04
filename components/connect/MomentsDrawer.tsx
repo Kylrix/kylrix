@@ -53,6 +53,15 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
     return () => window.removeEventListener('kylrix:open-moment-detail', handler);
   }, []);
 
+  const [isDesktop, setIsDesktop] = React.useState(false);
+
+  useEffect(() => {
+    const update = () => setIsDesktop(window.innerWidth >= 900);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
   // Handle ESC to close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -69,7 +78,11 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
   }, [onClose, selectedMoment]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-200">
+    <div className={
+      isDesktop
+        ? "flex flex-col h-full min-h-0 w-full max-w-full bg-[#000000] text-white overflow-hidden select-none"
+        : "fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-200"
+    }>
       {/* Top Header Chrome */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-[#0A0908] shrink-0">
         <div className="flex items-center gap-2.5">

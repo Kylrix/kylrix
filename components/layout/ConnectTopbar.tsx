@@ -792,8 +792,8 @@ export default function ConnectTopbar({
         }}
         sx={{
           width: '100%',
-          px: isDesktop ? 0.5 : { xs: 2.25, md: 4 },
-          py: isDesktop ? 0.5 : 1.25,
+          px: isDesktop ? 1.5 : { xs: 2.25, md: 4 },
+          py: isDesktop ? 1 : 1.25,
           maxHeight: isDesktop ? 'none' : '45vh',
           overflowY: isDesktop ? 'visible' : 'auto'}}
       >
@@ -1454,7 +1454,7 @@ export default function ConnectTopbar({
                   </IconButton>
                 )}
               </Box>
-              <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0, px: 0.5 }}>{searchContent}</Box>
+              <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0, px: 1.5 }}>{searchContent}</Box>
             </Box>
           </NativeSidebarMount>
         );
@@ -1547,7 +1547,7 @@ export default function ConnectTopbar({
             )}
           </Box>
           
-          <Box sx={{ flex: 1, overflowY: 'auto', px: 0.5 }}>
+          <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5 }}>
             {searchContent}
           </Box>
         </Drawer>
