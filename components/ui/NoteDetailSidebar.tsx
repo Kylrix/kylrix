@@ -681,7 +681,12 @@ export function NoteDetailSidebar({
     m.addEventListener('change', on);
     return () => m.removeEventListener('change', on);
   }, []);
-  const { openSidebar: openNativeSidebar } = useDynamicSidebar();
+  const { openSidebar: openNativeSidebar, closeSidebar: closeNativeSidebar } = useDynamicSidebar();
+  const closeContextActions = useCallback(() => {
+    setIsContextDrawerOpen(false);
+    // Desktop context was stacked on the native right rail — pop it without closing the note.
+    if (isDesktop) closeNativeSidebar();
+  }, [isDesktop, closeNativeSidebar]);
   const [isExportDrawerOpen, setIsExportDrawerOpen] = useState(false);
   const [isAttachObjectPickerOpen, setIsAttachObjectPickerOpen] = useState(false);
   const [isObjectPermissionInfoOpen, setIsObjectPermissionInfoOpen] = useState(false);
@@ -695,9 +700,9 @@ export function NoteDetailSidebar({
   const isPageLayout = layout === 'page';
 
   const renderContextActionsContent = useCallback(() => (
-    <div className="flex flex-col gap-3 p-5 md:p-6 bg-[#161412] text-white select-none max-h-[60vh] overflow-y-auto">
-      {/* Drawer Handle */}
-      <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-2" aria-hidden />
+    <div className="flex flex-col gap-3 p-5 md:p-6 bg-[#161412] text-white select-none max-h-[60vh] md:max-h-none md:h-full overflow-y-auto">
+      {/* Mobile drawer handle only */}
+      <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-2 md:hidden" aria-hidden />
 
       {/* Header */}
       <div className="flex items-center justify-between pb-2.5 border-b border-white/5">
@@ -709,7 +714,7 @@ export function NoteDetailSidebar({
         </div>
         <button
           type="button"
-          onClick={() => setIsContextDrawerOpen(false)}
+          onClick={closeContextActions}
           className="w-7 h-7 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white transition-colors flex items-center justify-center cursor-pointer"
         >
           <CloseIcon size={14} />
@@ -722,7 +727,7 @@ export function NoteDetailSidebar({
         <button
           type="button"
           onClick={() => {
-            setIsContextDrawerOpen(false);
+            closeContextActions();
             openUnified('zap', {
               targetId: liveNote.$id,
               source: 'ecosystem',
@@ -748,7 +753,7 @@ export function NoteDetailSidebar({
           onClick={() => {
             navigator.clipboard.writeText(content);
             showSuccess('Copied', 'Entire note content copied to clipboard.');
-            setIsContextDrawerOpen(false);
+            closeContextActions();
           }}
           className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
         >
@@ -765,7 +770,7 @@ export function NoteDetailSidebar({
         <button
           type="button"
           onClick={() => {
-            setIsContextDrawerOpen(false);
+            closeContextActions();
             setTimeout(() => {
               const textarea = contentTextareaRef.current;
               if (textarea) {
@@ -789,7 +794,7 @@ export function NoteDetailSidebar({
         <button
           type="button"
           onClick={async () => {
-            setIsContextDrawerOpen(false);
+            closeContextActions();
             try {
               const text = await navigator.clipboard.readText();
               const textarea = contentTextareaRef.current;
@@ -828,7 +833,7 @@ export function NoteDetailSidebar({
           <button
             type="button"
             onClick={() => {
-              setIsContextDrawerOpen(false);
+              closeContextActions();
               openFileDrawer({
                 title: 'Attach Object or Media',
                 onSelectFile: (file) => {
@@ -878,7 +883,7 @@ export function NoteDetailSidebar({
               await LocalEngine.cacheSet('kylrix_disable_link_previews', next);
               (window as any).__KylrixDisableLinkPreviews = next;
             }
-            setIsContextDrawerOpen(false);
+            closeContextActions();
           }}
           className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
         >
@@ -895,7 +900,7 @@ export function NoteDetailSidebar({
         <button
           type="button"
           onClick={() => {
-            setIsContextDrawerOpen(false);
+            closeContextActions();
             setIsExportDrawerOpen(true);
           }}
           className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
@@ -910,19 +915,14 @@ export function NoteDetailSidebar({
         </button>
       </div>
     </div>
-  ), [content, liveNote, note, canAttachSecondaryObject, openFileDrawer, openUnified, showSuccess, showError]);
+  ), [content, liveNote, note, canAttachSecondaryObject, openFileDrawer, openUnified, showSuccess, showError, closeContextActions]);
 
   useEffect(() => {
-    // Desktop: push context as stacked right sidebar, keep note detail underneath
-    if (isDesktop && isContextDrawerOpen) {
-      openNativeSidebar(renderContextActionsContent(), 'note-context-actions', { hideHeader: true });
-      // close the inline flag — stacked sidebar now holds context, detail stays in stack
-      setTimeout(() => setIsContextDrawerOpen(false), 0);
-      return;
-    }
+    // Mobile bottom drawer only — desktop opens native right rail directly from the More button.
+    if (isDesktop) return;
     setIsDrawerOpen(isContextDrawerOpen);
     return () => setIsDrawerOpen(false);
-  }, [isContextDrawerOpen, setIsDrawerOpen, isDesktop, openNativeSidebar, renderContextActionsContent]);
+  }, [isContextDrawerOpen, setIsDrawerOpen, isDesktop]);
 
   useEffect(() => {
     setIsDrawerOpen(isObjectPermissionInfoOpen);
@@ -1114,9 +1114,9 @@ export function NoteDetailSidebar({
       showError('Attach failed', err?.message || 'Unable to upload and attach file.');
     } finally {
       setIsAttachingObject(false);
-      setIsContextDrawerOpen(false);
+      closeContextActions();
     }
-  }, [canAttachSecondaryObject, showError, liveNote.$id, getCursorLineNumber, insertObjectBlockAtCursor, showSuccess]);
+  }, [canAttachSecondaryObject, showError, liveNote.$id, getCursorLineNumber, insertObjectBlockAtCursor, showSuccess, closeContextActions]);
 
   useEffect(() => {
     const previous = previousContentRef.current;
@@ -1346,7 +1346,13 @@ export function NoteDetailSidebar({
           {/* More actions — always available for export / details */}
           <button 
             type="button"
-            onClick={() => setIsContextDrawerOpen(true)} 
+            onClick={() => {
+              if (isDesktop) {
+                openNativeSidebar(renderContextActionsContent(), 'note-context-actions', { hideHeader: true });
+              } else {
+                setIsContextDrawerOpen(true);
+              }
+            }} 
             className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
             title="More Actions"
           >
@@ -1812,11 +1818,11 @@ export function NoteDetailSidebar({
         </Box>
       </Drawer>
 
-      {isContextDrawerOpen && (
+      {!isDesktop && isContextDrawerOpen && (
         <Drawer
           anchor="bottom"
           open={isContextDrawerOpen}
-          onClose={() => setIsContextDrawerOpen(false)}
+          onClose={closeContextActions}
           disablePortal={false}
           keepMounted={false}
           sx={{ zIndex: 11000 }}
