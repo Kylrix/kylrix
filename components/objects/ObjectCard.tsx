@@ -23,6 +23,8 @@ type Props = {
   onContextMenu?: (event: React.MouseEvent | React.TouchEvent) => void;
   /** Left of title — e.g. goal complete checkbox. */
   leading?: React.ReactNode;
+  /** Optional custom title node (e.g. icon + badge) overriding default string title. */
+  titleNode?: React.ReactNode;
   trailing?: React.ReactNode;
   children?: React.ReactNode;
   footer?: React.ReactNode;
@@ -54,6 +56,7 @@ export function ObjectCard({
   onOpen,
   onContextMenu,
   leading,
+  titleNode,
   trailing,
   children,
   footer,
@@ -200,17 +203,19 @@ export function ObjectCard({
               </div>
             ) : null}
             <div className="min-w-0 flex-1 flex items-center gap-2">
-              <span
-                className={[
-                  'min-w-0 flex-1 leading-snug line-clamp-2',
-                  isTask
-                    ? 'text-[0.9375rem] font-semibold font-satoshi tracking-[-0.01em] text-[#F5F2ED]'
-                    : 'text-white font-black text-[0.95rem] sm:text-[1rem] leading-[1.25]',
-                  done ? 'line-through text-white/40' : '',
-                ].join(' ')}
-              >
-                {item.title || 'Untitled'}
-              </span>
+              {titleNode ?? (
+                <span
+                  className={[
+                    'min-w-0 flex-1 leading-snug line-clamp-2',
+                    isTask
+                      ? 'text-[0.9375rem] font-semibold font-satoshi tracking-[-0.01em] text-[#F5F2ED]'
+                      : 'text-white font-black text-[0.95rem] sm:text-[1rem] leading-[1.25]',
+                    done ? 'line-through text-white/40' : '',
+                  ].join(' ')}
+                >
+                  {item.title || 'Untitled'}
+                </span>
+              )}
               <SyncStatusDot resourceId={pendingResourceId(item.kind, item.id)} kind={item.kind} />
             </div>
           </div>

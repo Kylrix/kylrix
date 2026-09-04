@@ -9,7 +9,9 @@ import {
   PlusSquare as TodoIcon,
   Unlock,
   Sparkles,
-  CheckSquare
+  CheckSquare,
+  KeyRound,
+  Shield,
 } from 'lucide-react';
 
 import { useContextMenu } from './ContextMenuContext';
@@ -420,6 +422,64 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     };
   }, [liveNote, cardTitle, previewText, pinned]);
 
+  const customTitleNode = React.useMemo(() => {
+    if (isLocked) {
+      return (
+        <div className="flex items-center gap-1.5 min-w-0">
+          <PrivateIcon size={14} className="text-[#10B981] flex-shrink-0" />
+          <span className="text-[#10B981] font-bold text-[0.88rem] tracking-tight">
+            Locked Idea
+          </span>
+          <span className="text-[0.62rem] font-mono uppercase px-1.5 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] font-extrabold tracking-wider ml-1">
+            Vault Key
+          </span>
+        </div>
+      );
+    }
+    if (isEncryptedNote) {
+      return (
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Shield size={14} className="text-[#818CF8] flex-shrink-0" />
+          <span className="text-[#818CF8] font-bold text-[0.88rem] tracking-tight">
+            Encrypted Idea
+          </span>
+          <span className="text-[0.62rem] font-mono uppercase px-1.5 py-0.5 rounded bg-[#6366F1]/15 text-[#A5B4FC] font-extrabold tracking-wider ml-1">
+            Zero-Trust
+          </span>
+        </div>
+      );
+    }
+    return undefined;
+  }, [isLocked, isEncryptedNote]);
+
+  const customPreviewNode = React.useMemo(() => {
+    if (isLocked) {
+      return (
+        <div className="flex items-center gap-2 p-2 rounded-xl bg-[#0A0908] border border-[#10B981]/20 my-0.5">
+          <div className="w-6 h-6 rounded-lg bg-[#10B981]/10 flex items-center justify-center flex-shrink-0">
+            <PrivateIcon size={12} className="text-[#10B981]" />
+          </div>
+          <p className="font-satoshi text-white/50 text-[0.76rem] font-medium leading-tight m-0">
+            Protected with personal vault key. Click to unlock.
+          </p>
+        </div>
+      );
+    }
+    if (isEncryptedNote) {
+      return (
+        <div className="flex items-center gap-2 p-2 rounded-xl bg-[#0A0908] border border-[#6366F1]/20 my-0.5">
+          <div className="w-6 h-6 rounded-lg bg-[#6366F1]/10 flex items-center justify-center flex-shrink-0">
+            <KeyRound size={12} className="text-[#818CF8]" />
+          </div>
+          <p className="font-satoshi text-white/50 text-[0.76rem] font-medium leading-tight m-0">
+            End-to-end encrypted. Sealed with recipient or group keys.
+          </p>
+        </div>
+      );
+    }
+    return undefined;
+  }, [isLocked, isEncryptedNote]);
+
   return (
     <>
       {!mounted ? (
@@ -428,6 +488,8 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         <div {...sidebarIgnoreProps} className="w-full max-w-full">
           <ObjectCard
             item={cardItem}
+            titleNode={customTitleNode}
+            children={customPreviewNode}
             onOpen={() => handleClick()}
             onContextMenu={handleRightClick}
             trailing={
