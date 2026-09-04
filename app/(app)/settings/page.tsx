@@ -594,8 +594,8 @@ function SettingsPageInner() {
 
     return (
         <MultiSectionContainer>
-            <div className="relative w-full max-w-[1600px] mx-auto pt-4 md:pt-6 pb-12 px-4 md:px-6 lg:px-8 z-10 select-none transition-all duration-300">
-            
+            <div className="relative w-full max-w-full mx-auto pt-4 md:pt-6 pb-12 px-3 md:px-4 z-10 select-none transition-all duration-300 overflow-x-hidden">
+
             {/* Back Button */}
             <button
                 onClick={handleBack}
@@ -681,9 +681,9 @@ function SettingsPageInner() {
             </header>
 
             {/* Desktop: fluid canvas — vertical nav + content; Mobile: horizontal pills */}
-            <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6 lg:gap-8 items-start">
+            <div className={`grid grid-cols-1 gap-6 items-start ${isRightRailPushing ? 'xl:grid-cols-[220px_1fr] xl:gap-6' : 'lg:grid-cols-[240px_1fr] lg:gap-8'} min-w-0 w-full`}>
                 {/* Desktop vertical nav — hidden on mobile, sticky, aware of right rail */}
-                <aside className="hidden lg:block sticky top-[96px] self-start z-10">
+                <aside className={`${isRightRailPushing ? 'hidden xl:block' : 'hidden lg:block'} sticky top-[96px] self-start z-10 min-w-0`}>
                     <nav className="flex flex-col gap-1.5 p-2 bg-[#000000] border border-white/[0.08] rounded-2xl shadow-xl">
                         {tabsList.map((t) => {
                             const Icon = t.icon;
@@ -711,8 +711,8 @@ function SettingsPageInner() {
                     </div>
                 </aside>
 
-                {/* Mobile horizontal tabs — visible only on mobile */}
-                <div className="lg:hidden col-span-1 -mx-4 px-4 flex gap-2 overflow-x-auto pb-3 border-b border-white/[0.08] scrollbar-none select-none snap-x snap-mandatory">
+                {/* Mobile horizontal tabs — visible below aside breakpoint */}
+                <div className={`${isRightRailPushing ? 'xl:hidden' : 'lg:hidden'} col-span-1 -mx-3 md:-mx-4 px-3 md:px-4 flex gap-2 overflow-x-auto pb-3 border-b border-white/[0.08] scrollbar-none select-none snap-x snap-mandatory`}>
                     {tabsList.map((t) => {
                         const Icon = t.icon;
                         const isActive = activeTab === t.id;
@@ -735,7 +735,7 @@ function SettingsPageInner() {
                 </div>
 
                 {/* Content — fluid, right-rail aware */}
-                <div className="w-full relative min-h-[400px] min-w-0 col-span-1 lg:col-span-1">
+                <div className="w-full relative min-h-[400px] min-w-0 overflow-x-hidden col-span-1 lg:col-span-1">
                 {activeTab === 'agents' && (
                     <AgentsSettingsTab />
                 )}

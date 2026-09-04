@@ -568,7 +568,7 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
 
   if (layout.columnsCount === 1) {
     return (
-      <Box sx={{ width: '100%', px: { xs: 1, lg: 2, xl: 3 }, boxSizing: 'border-box' }}>
+      <Box sx={{ width: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
         {children}
         <GlobalDetailDrawer activeDetail={activeDetail} onClose={() => setActiveDetail(null)} />
       </Box>

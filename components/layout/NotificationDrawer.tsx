@@ -981,7 +981,8 @@ export function NotificationDrawer({
           overflowY: 'auto',
           overflowX: 'hidden',
           overscrollBehavior: 'contain',
-          pr: 0.5,
+          px: 0.25,
+          pb: 1,
           width: '100%',
           boxSizing: 'border-box',
           WebkitOverflowScrolling: 'touch',
@@ -1365,7 +1366,7 @@ export function NotificationDrawer({
           width={440}
           title="Notifications"
         >
-          <Box sx={{ p: { xs: 2, sm: 3 }, overflowX: 'hidden', width: '100%', height: '100%', boxSizing: 'border-box', bgcolor: '#000000' }}>
+          <Box sx={{ p: 3, overflowX: 'hidden', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', bgcolor: '#000000' }}>
             {notificationBody}
           </Box>
         </NativeSidebarMount>
@@ -1405,25 +1406,7 @@ export function NotificationDrawer({
           </IconButton>
         </Box>
 
-        <Paper
-          elevation={0}
-          sx={{
-            width: '100%',
-            maxWidth: '100%',
-            borderRadius: '26px',
-            bgcolor: '#000000',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            overflow: 'hidden',
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            boxSizing: 'border-box',
-          }}
-        >
-          <Box sx={{ p: { xs: 1.5, sm: 2.25 }, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-            {notificationBody}
-          </Box>
-        </Paper>
+        {notificationBody}
       </Drawer>
     );
   }
