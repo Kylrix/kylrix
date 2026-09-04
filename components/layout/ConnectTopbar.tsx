@@ -801,83 +801,8 @@ export default function ConnectTopbar({
           maxHeight: isDesktop ? 'none' : '45vh',
           overflowY: isDesktop ? 'visible' : 'auto'}}
       >
-        {isDesktop ? (
-          <Box sx={{ p: 0 }}>
-            <Stack spacing={2.5}>
-        ) : (
-          <Paper
-            elevation={0}
-            sx={{
-              width: '100%',
-              borderRadius: '26px',
-              bgcolor: '#161412',
-              border: `1px solid ${alpha(appAccent, 0.22)}`,
-              overflow: 'hidden'}}
-          >
-            <Box sx={{ p: 1.25 }}>
-              {/* For Mobile Search Input */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                    <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-                      <Logo app={activeApp} size={14} variant="icon" />
-                    </Box>
-                    <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1rem' }}>
-                      Search Ecosystem
-                    </Typography>
-                  </Box>
-                  <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
-                    <CloseIcon size={16} />
-                  </IconButton>
-                </Box>
-
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    bgcolor: 'rgba(0, 0, 0, 0.25)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '16px',
-                    px: 2,
-                    py: 0.5,
-                    transition: 'all 0.2s',
-                    '&:focus-within': {
-                      borderColor: '#6366F1',
-                      boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.15)',
-                      bgcolor: 'rgba(0, 0, 0, 0.4)'}
-                  }}
-                >
-                  <Search size={16} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 8, flexShrink: 0 }} />
-                  <InputBase
-                    id="topbar-search-field"
-                    inputRef={searchInputRef}
-                    value={searchQuery}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
-                    placeholder="Search ideas, goals, vault, connect..."
-                    fullWidth
-                    autoFocus
-                    sx={{
-                      color: 'white',
-                      fontFamily: 'var(--font-satoshi)',
-                      fontWeight: 600,
-                      fontSize: '0.9rem',
-                      '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 }}}
-                    onKeyDown={(event: React.KeyboardEvent) => {
-                      if (event.key === 'Escape') {
-                        handleCloseAll();
-                      }
-                    }}
-                  />
-                  {searchQuery && (
-                    <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5 }}>
-                      <CloseIcon size={14} />
-                    </IconButton>
-                  )}
-                </Box>
-              </Box>
-              <Stack spacing={2.5} sx={{ mt: 1.5 }}>
-        )}
-          {searchShortcutsView ? (
+        <Stack spacing={2.5}>
+              {searchShortcutsView ? (
             <Box sx={{ display: 'grid', gap: 1.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
@@ -1469,12 +1394,6 @@ export default function ConnectTopbar({
             </Box>
           )}
         </Stack>
-        {isDesktop ? (
-          </Box>
-        ) : (
-            </Box>
-          </Paper>
-        )}
       </Box>
     );
 
@@ -1648,8 +1567,70 @@ export default function ConnectTopbar({
           borderRadius: '0 0 28px 28px',
           bgcolor: '#161412',
           overflow: 'hidden',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.35)'}}
+          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+          p: 1.5,
+        }}
       >
+        {/* Mobile Search Header & Input */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box sx={{ width: 28, height: 28, borderRadius: '8px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                <Logo app={activeApp} size={14} variant="icon" />
+              </Box>
+              <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '0.95rem' }}>
+                Search
+              </Typography>
+            </Box>
+            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' }, width: 28, height: 28 }}>
+              <CloseIcon size={14} />
+            </IconButton>
+          </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: '#0A0908',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '14px',
+              px: 1.75,
+              py: 0.75,
+              transition: 'all 0.15s ease',
+              '&:focus-within': {
+                borderColor: '#6366F1',
+                boxShadow: '0 0 0 1px #6366F1',
+              }
+            }}
+          >
+            <Search size={15} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 8, flexShrink: 0 }} />
+            <InputBase
+              id="topbar-search-field"
+              inputRef={searchInputRef}
+              value={searchQuery}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
+              placeholder="Search globally..."
+              fullWidth
+              autoFocus
+              sx={{
+                color: 'white',
+                fontFamily: 'var(--font-satoshi)',
+                fontWeight: 600,
+                fontSize: '0.88rem',
+                '& input::placeholder': { color: 'rgba(255,255,255,0.28)', opacity: 1 }}}
+              onKeyDown={(event: React.KeyboardEvent) => {
+                if (event.key === 'Escape') {
+                  handleCloseAll();
+                }
+              }}
+            />
+            {searchQuery && (
+              <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5, p: 0.25 }}>
+                <CloseIcon size={13} />
+              </IconButton>
+            )}
+          </Box>
+        </Box>
         {searchContent}
       </Box>
     );
