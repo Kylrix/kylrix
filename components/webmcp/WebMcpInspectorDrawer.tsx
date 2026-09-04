@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { WebMcpToolDefinition } from '@/lib/webmcp/types';
+import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
+import { useNativeSidebarApiOptional } from '@/context/RightRailContext';
 
 export function WebMcpInspectorDrawer() {
   const {
@@ -29,6 +31,17 @@ export function WebMcpInspectorDrawer() {
   } = useWebMcpContext();
 
   const [mounted, setMounted] = useState(false);
+  const nativeSidebar = useNativeSidebarApiOptional();
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const updateMedia = () => {
+      setIsDesktop(typeof window !== 'undefined' && window.innerWidth >= 768);
+    };
+    updateMedia();
+    window.addEventListener('resize', updateMedia);
+    return () => window.removeEventListener('resize', updateMedia);
+  }, []);
   const [activeTab, setActiveTab] = useState<'tools' | 'runner' | 'logs' | 'setup'>('tools');
   const [selectedTool, setSelectedTool] = useState<WebMcpToolDefinition | null>(null);
   const [inputArgs, setInputArgs] = useState<string>('{}');
@@ -114,25 +127,8 @@ export function WebMcpInspectorDrawer() {
     toast.success('Copied JS invocation snippet');
   };
 
-  return createPortal(
-    <div className="fixed inset-0 z-[15000] flex flex-col justify-end md:flex-row md:justify-end pointer-events-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in"
-        onClick={closeInspector}
-      />
-
-      {/* Drawer Container:
-          Mobile: bottom sheet (h-[88dvh] max-h-[88dvh] rounded-t-[28px])
-          Desktop: right side drawer docked below the 88px topbar (top-[88px] h-[calc(100dvh-88px)] rounded-tl-[28px])
-      */}
-      <div className="relative w-full max-w-[620px] h-[88dvh] max-h-[88dvh] md:h-[calc(100dvh-88px)] md:max-h-[calc(100dvh-88px)] md:top-[88px] bg-[#161412] border-t md:border-t md:border-l border-white/10 rounded-t-[28px] md:rounded-none md:rounded-tl-[28px] shadow-2xl z-[15001] flex flex-col text-neutral-200 overflow-hidden animate-in slide-in-from-bottom md:slide-in-from-right duration-300">
-        
-        {/* Mobile Drag Indicator Handle */}
-        <div className="flex md:hidden justify-center pt-2.5 pb-1 bg-[#161412]">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
-        </div>
-
+  const inspectorContent = (
+    <div className="flex flex-col h-full min-h-0 w-full bg-[#000000] text-neutral-200 overflow-hidden select-none font-satoshi">
         {/* Sticky Header with prominent close button */}
         <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between bg-[#161412] shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -484,6 +480,37 @@ const result = await navigator.modelContext.executeTool('kylrix_create_note', {
             </div>
           )}
         </div>
+    </div>
+  );
+
+  if (isDesktop && nativeSidebar) {
+    return (
+      <NativeSidebarMount
+        active={isInspectorOpen}
+        sidebarKey="webmcp-inspector"
+        width={560}
+        title="WebMCP Inspector"
+      >
+        {inspectorContent}
+      </NativeSidebarMount>
+    );
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[15000] flex flex-col justify-end pointer-events-auto">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/80 transition-opacity duration-200 animate-in fade-in"
+        onClick={closeInspector}
+      />
+
+      {/* Mobile Drawer Container */}
+      <div className="relative w-full h-[88dvh] max-h-[88dvh] bg-[#000000] border-t border-white/10 rounded-t-[28px] shadow-2xl z-[15001] flex flex-col text-neutral-200 overflow-hidden animate-in slide-in-from-bottom duration-300">
+        {/* Mobile Drag Indicator Handle */}
+        <div className="flex justify-center pt-2.5 pb-1 bg-[#000000]">
+          <div className="w-10 h-1 rounded-full bg-white/20" />
+        </div>
+        {inspectorContent}
       </div>
     </div>,
     document.body
