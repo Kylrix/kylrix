@@ -2823,10 +2823,8 @@ export default function ConnectTopbar({
                             setSearchShortcutsView(false);
                             setNotificationsOpen(false);
                             setNotifHint(null);
+                            // Single toggle — do not also dispatch kylrix:toggle-webmcp (double-toggles closed).
                             toggleWebMcp();
-                            if (typeof window !== 'undefined') {
-                              window.dispatchEvent(new CustomEvent('kylrix:toggle-webmcp'));
-                            }
                           }}
                           sx={{
                             color: isWebMcpOpen ? '#34D399' : '#10B981',

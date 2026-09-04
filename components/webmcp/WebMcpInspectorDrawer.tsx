@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useWebMcpContext } from '@/context/WebMcpContext';
 import {
@@ -21,7 +21,7 @@ import {
 import { toast } from 'react-hot-toast';
 import type { WebMcpToolDefinition } from '@/lib/webmcp/types';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
-import { useNativeSidebarApiOptional } from '@/context/RightRailContext';
+import { useNativeSidebarOptional } from '@/context/RightRailContext';
 
 export function WebMcpInspectorDrawer() {
   const {
@@ -34,7 +34,8 @@ export function WebMcpInspectorDrawer() {
   } = useWebMcpContext();
 
   const [mounted, setMounted] = useState(false);
-  const nativeSidebar = useNativeSidebarApiOptional();
+  const nativeSidebar = useNativeSidebarOptional();
+  const claimedRailRef = useRef(false);
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
@@ -165,14 +166,22 @@ export function WebMcpInspectorDrawer() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isInspectorOpen, closeInspector]);
 
-  // Handle dismiss or swap away when sidebar key changes to another drawer
+  // Sync closed when another native rail panel takes over — never on first open (key may lag).
   useEffect(() => {
-    if (!isDesktop || !nativeSidebar || !isInspectorOpen) return;
-    const currentKey = nativeSidebar.getActiveKey();
-    if (currentKey && currentKey !== 'webmcp-inspector') {
+    if (!isDesktop || !isInspectorOpen) {
+      claimedRailRef.current = false;
+      return;
+    }
+    const key = nativeSidebar?.activeKey ?? null;
+    if (key === 'webmcp-inspector') {
+      claimedRailRef.current = true;
+      return;
+    }
+    if (claimedRailRef.current && key !== 'webmcp-inspector') {
+      claimedRailRef.current = false;
       closeInspector();
     }
-  }, [isDesktop, nativeSidebar, isInspectorOpen, closeInspector]);
+  }, [isDesktop, isInspectorOpen, nativeSidebar?.activeKey, closeInspector]);
 
   if (!mounted) return null;
 
