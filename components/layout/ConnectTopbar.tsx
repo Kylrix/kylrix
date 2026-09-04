@@ -2817,6 +2817,12 @@ export default function ConnectTopbar({
                       <Tooltip title="WebMCP Tools (Browser-Native Inspector)">
                         <IconButton
                           onClick={() => {
+                            setProfileMenuAnchorEl(null);
+                            setAppMenuAnchorEl(null);
+                            setSearchOpen(false);
+                            setSearchShortcutsView(false);
+                            setNotificationsOpen(false);
+                            setNotifHint(null);
                             toggleWebMcp();
                             if (typeof window !== 'undefined') {
                               window.dispatchEvent(new CustomEvent('kylrix:toggle-webmcp'));

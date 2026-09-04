@@ -165,16 +165,13 @@ export function WebMcpInspectorDrawer() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isInspectorOpen, closeInspector]);
 
-  // Close inspector when native sidebar dismisses or swaps away
+  // Handle dismiss or swap away when sidebar key changes to another drawer
   useEffect(() => {
     if (!isDesktop || !nativeSidebar || !isInspectorOpen) return;
-    const interval = setInterval(() => {
-      const activeKey = nativeSidebar.getActiveKey();
-      if (activeKey !== 'webmcp-inspector') {
-        closeInspector();
-      }
-    }, 150);
-    return () => clearInterval(interval);
+    const currentKey = nativeSidebar.getActiveKey();
+    if (currentKey && currentKey !== 'webmcp-inspector') {
+      closeInspector();
+    }
   }, [isDesktop, nativeSidebar, isInspectorOpen, closeInspector]);
 
   if (!mounted) return null;
