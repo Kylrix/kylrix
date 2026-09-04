@@ -813,190 +813,124 @@ export function UnifiedLeftSidebar() {
             </a>
           </Tooltip>
 
-          {/* Social Links Row */}
-          {!isCollapsed ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
-              <Tooltip title="View Source on GitHub" placement="top">
-                <a
-                  href="https://github.com/Kylrix/kylrix"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    color: 'rgba(255, 255, 255, 0.75)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
-                    transition: 'all 0.2s ease',
-                    textDecoration: 'none',
-                    boxSizing: 'border-box',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    fontFamily: 'var(--font-satoshi)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#FFFFFF';
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.75)';
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+          {/* GitHub CTA */}
+          <Tooltip title="View Source on GitHub" placement="right" arrow={isCollapsed}>
+            <a
+              href="https://github.com/Kylrix/kylrix"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
+                gap: isCollapsed ? '0px' : '10px',
+                width: isCollapsed ? '42px' : '100%',
+                height: '34px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                color: 'rgba(255, 255, 255, 0.75)',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                transition: 'all 0.2s ease',
+                textDecoration: 'none',
+                boxSizing: 'border-box',
+                paddingLeft: isCollapsed ? '0px' : '10px',
+                paddingRight: isCollapsed ? '0px' : '10px',
+                margin: isCollapsed ? '0 auto' : '0',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#FFFFFF';
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.75)';
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+              }}
+            >
+              <svg 
+                style={{ width: '15px', height: '15px', fill: 'currentColor', flexShrink: 0 }} 
+                viewBox="0 0 24 24"
+              >
+                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+              </svg>
+              {!isCollapsed && (
+                <span
+                  style={{ 
+                    fontFamily: 'var(--font-satoshi)', 
+                    fontWeight: 700, 
+                    fontSize: '0.78rem',
+                    letterSpacing: '0.01em',
                   }}
                 >
-                  <svg 
-                    style={{ width: '14px', height: '14px', fill: 'currentColor', flexShrink: 0 }} 
-                    viewBox="0 0 24 24"
-                  >
-                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                  </svg>
                   GitHub
-                </a>
-              </Tooltip>
+                </span>
+              )}
+            </a>
+          </Tooltip>
 
-              <Tooltip title="Join our Discord" placement="top">
-                <a
-                  href="https://discord.gg/YjF5yCBCmx"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => {
-                    if (typeof updatePreferences === 'function') {
-                      void updatePreferences({ discordJoined: true }).catch(() => {});
-                    }
-                  }}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    color: 'rgba(255, 255, 255, 0.75)',
-                    backgroundColor: 'rgba(88, 101, 242, 0.08)',
-                    border: '1px solid rgba(88, 101, 242, 0.2)',
-                    transition: 'all 0.2s ease',
-                    textDecoration: 'none',
-                    boxSizing: 'border-box',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    fontFamily: 'var(--font-satoshi)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#FFFFFF';
-                    e.currentTarget.style.backgroundColor = 'rgba(88, 101, 242, 0.16)';
-                    e.currentTarget.style.borderColor = 'rgba(88, 101, 242, 0.35)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.75)';
-                    e.currentTarget.style.backgroundColor = 'rgba(88, 101, 242, 0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(88, 101, 242, 0.2)';
+          {/* Discord CTA */}
+          <Tooltip title="Join our Discord Community" placement="right" arrow={isCollapsed}>
+            <a
+              href="https://discord.gg/YjF5yCBCmx"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                if (typeof updatePreferences === 'function') {
+                  void updatePreferences({ discordJoined: true }).catch(() => {});
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
+                gap: isCollapsed ? '0px' : '10px',
+                width: isCollapsed ? '42px' : '100%',
+                height: '34px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                color: 'rgba(255, 255, 255, 0.75)',
+                backgroundColor: 'rgba(88, 101, 242, 0.08)',
+                border: '1px solid rgba(88, 101, 242, 0.2)',
+                transition: 'all 0.2s ease',
+                textDecoration: 'none',
+                boxSizing: 'border-box',
+                paddingLeft: isCollapsed ? '0px' : '10px',
+                paddingRight: isCollapsed ? '0px' : '10px',
+                margin: isCollapsed ? '0 auto' : '0',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#FFFFFF';
+                e.currentTarget.style.backgroundColor = 'rgba(88, 101, 242, 0.16)';
+                e.currentTarget.style.borderColor = 'rgba(88, 101, 242, 0.35)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.75)';
+                e.currentTarget.style.backgroundColor = 'rgba(88, 101, 242, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(88, 101, 242, 0.2)';
+              }}
+            >
+              <svg 
+                style={{ width: '15px', height: '15px', fill: 'currentColor', flexShrink: 0 }} 
+                viewBox="0 0 127.14 96.36"
+              >
+                <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36c2.65-3.6,5-7.46,7-11.5a68.88,68.88,0,0,1-11-5.26c.92-.68,1.82-1.39,2.69-2.13A75.14,75.14,0,0,0,96.5,77.47c.87.74,1.77,1.45,2.69,2.13a68.88,68.88,0,0,1-11,5.26c2,4,4.35,7.9,7,11.5a105.73,105.73,0,0,0,31-18.83C129,54.65,122.68,31.58,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.9,46,53.9,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.14,46,96.14,53,91,65.69,84.69,65.69Z"/>
+              </svg>
+              {!isCollapsed && (
+                <span
+                  style={{ 
+                    fontFamily: 'var(--font-satoshi)', 
+                    fontWeight: 700, 
+                    fontSize: '0.78rem',
+                    letterSpacing: '0.01em',
                   }}
                 >
-                  <svg 
-                    style={{ width: '14px', height: '14px', fill: 'currentColor', flexShrink: 0 }} 
-                    viewBox="0 0 127.14 96.36"
-                  >
-                    <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36c2.65-3.6,5-7.46,7-11.5a68.88,68.88,0,0,1-11-5.26c.92-.68,1.82-1.39,2.69-2.13A75.14,75.14,0,0,0,96.5,77.47c.87.74,1.77,1.45,2.69,2.13a68.88,68.88,0,0,1-11,5.26c2,4,4.35,7.9,7,11.5a105.73,105.73,0,0,0,31-18.83C129,54.65,122.68,31.58,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.9,46,53.9,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.14,46,96.14,53,91,65.69,84.69,65.69Z"/>
-                  </svg>
                   Discord
-                </a>
-              </Tooltip>
-            </Box>
-          ) : (
-            <>
-              {/* Collapsed GitHub */}
-              <Tooltip title="View Source on GitHub" placement="right" arrow>
-                <a
-                  href="https://github.com/Kylrix/kylrix"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '42px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    color: 'rgba(255, 255, 255, 0.75)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
-                    transition: 'all 0.2s ease',
-                    textDecoration: 'none',
-                    margin: '0 auto',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#FFFFFF';
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.75)';
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
-                  }}
-                >
-                  <svg 
-                    style={{ width: '15px', height: '15px', fill: 'currentColor', flexShrink: 0 }} 
-                    viewBox="0 0 24 24"
-                  >
-                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                  </svg>
-                </a>
-              </Tooltip>
-
-              {/* Collapsed Discord */}
-              <Tooltip title="Join our Discord" placement="right" arrow>
-                <a
-                  href="https://discord.gg/YjF5yCBCmx"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => {
-                    if (typeof updatePreferences === 'function') {
-                      void updatePreferences({ discordJoined: true }).catch(() => {});
-                    }
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '42px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    color: 'rgba(255, 255, 255, 0.75)',
-                    backgroundColor: 'rgba(88, 101, 242, 0.08)',
-                    border: '1px solid rgba(88, 101, 242, 0.2)',
-                    transition: 'all 0.2s ease',
-                    textDecoration: 'none',
-                    margin: '0 auto',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#FFFFFF';
-                    e.currentTarget.style.backgroundColor = 'rgba(88, 101, 242, 0.16)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.75)';
-                    e.currentTarget.style.backgroundColor = 'rgba(88, 101, 242, 0.08)';
-                  }}
-                >
-                  <svg 
-                    style={{ width: '15px', height: '15px', fill: 'currentColor', flexShrink: 0 }} 
-                    viewBox="0 0 127.14 96.36"
-                  >
-                    <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36c2.65-3.6,5-7.46,7-11.5a68.88,68.88,0,0,1-11-5.26c.92-.68,1.82-1.39,2.69-2.13A75.14,75.14,0,0,0,96.5,77.47c.87.74,1.77,1.45,2.69,2.13a68.88,68.88,0,0,1-11,5.26c2,4,4.35,7.9,7,11.5a105.73,105.73,0,0,0,31-18.83C129,54.65,122.68,31.58,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.9,46,53.9,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.14,46,96.14,53,91,65.69,84.69,65.69Z"/>
-                  </svg>
-                </a>
-              </Tooltip>
-            </>
-          )}
+                </span>
+              )}
+            </a>
+          </Tooltip>
         </Box>
       </Paper>
     </Box>
