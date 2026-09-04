@@ -243,7 +243,7 @@ export default function EventList() {
           </button>
         </div>
 
-        <div className="mb-8 bg-[#161412] rounded-[28px] p-1 border border-[#34322F] flex gap-1 w-fit">
+        <div className="mb-8 bg-[#000000] rounded-[28px] p-1 border border-white/[0.08] flex gap-1 w-fit">
           {['All', 'Past', ...(isAuthenticated ? ['My Events'] : [])].map((tab, idx) => {
             const isActive = tabValue === idx;
             return (
@@ -255,7 +255,7 @@ export default function EventList() {
                   setTabValue(idx);
                 }}
                 className={`rounded-full px-5 py-2 font-bold text-xs sm:text-sm font-satoshi transition-all cursor-pointer ${
-                  isActive ? 'bg-[#1C1A18] text-white' : 'text-[#8E8A86] hover:text-white hover:bg-[#1C1A18]/50'
+                  isActive ? 'bg-[#161412] text-white border border-white/10' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/[0.04]'
                 }`}
               >
                 {tab}

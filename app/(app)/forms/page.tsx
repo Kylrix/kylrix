@@ -373,7 +373,7 @@ export default function FormsDashboard() {
                 {loading && forms.length === 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         {[1, 2, 3].map((i) => (
-                            <div key={i} className="bg-[#161412] border border-white/6 rounded-2xl p-5 animate-pulse space-y-4">
+                            <div key={i} className="bg-[#000000] border border-white/[0.08] rounded-2xl p-5 animate-pulse space-y-4">
                                 <div className="flex justify-between">
                                     <div className="h-5 w-24 bg-white/5 rounded-lg" />
                                     <div className="h-5 w-12 bg-white/5 rounded-lg" />
@@ -388,13 +388,13 @@ export default function FormsDashboard() {
                         {tabValue === 0 && (
                             <>
                                 {workspaceScopedForms.length === 0 ? (
-                                    <div className="py-24 text-center bg-[#161412] border border-dashed border-white/10 rounded-3xl">
+                                    <div className="py-24 text-center bg-[#000000] border border-dashed border-white/10 rounded-3xl">
                                         <FileText className="h-14 w-14 mx-auto text-white/20 mb-3" />
                                         <h3 className="text-lg font-clash font-bold text-white mb-4">No active forms</h3>
                                         <button 
                                             type="button" 
                                             onClick={handleCreate} 
-                                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0A0908] border border-white/10 hover:border-[#6366F1] text-white font-bold rounded-xl text-xs font-satoshi transition-all cursor-pointer"
+                                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#161412] border border-white/10 hover:border-[#6366F1] text-white font-bold rounded-xl text-xs font-satoshi transition-all cursor-pointer"
                                         >
                                             <Plus size={14} />
                                             <span>Build First Form</span>
@@ -403,7 +403,7 @@ export default function FormsDashboard() {
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                         {workspaceScopedForms.map((form) => (
-                                            <FormCard
+                                             <FormCard
                                                 key={form.$id}
                                                 form={form}
                                                 onSelect={() => handleOpenDetail(form)}
@@ -420,7 +420,7 @@ export default function FormsDashboard() {
                         )}
 
                         {tabValue === 1 && (
-                            <div className="py-24 text-center bg-[#161412] border border-dashed border-white/10 rounded-3xl">
+                            <div className="py-24 text-center bg-[#000000] border border-dashed border-white/10 rounded-3xl">
                                 <Sparkles className="h-14 w-14 mx-auto text-white/20 mb-3" />
                                 <h3 className="text-lg font-bold font-clash text-white tracking-tight">Form Templates Catalog Coming Soon</h3>
                             </div>
@@ -429,7 +429,7 @@ export default function FormsDashboard() {
                         {tabValue === 2 && (
                             <>
                                 {offlineDrafts.length === 0 ? (
-                                    <div className="py-24 text-center bg-[#161412] border border-dashed border-white/10 rounded-3xl">
+                                    <div className="py-24 text-center bg-[#000000] border border-dashed border-white/10 rounded-3xl">
                                         <History className="h-14 w-14 mx-auto text-white/20 mb-3" />
                                         <h3 className="text-lg font-bold font-clash text-white tracking-tight">No offline form drafts</h3>
                                     </div>
@@ -439,26 +439,26 @@ export default function FormsDashboard() {
                                             <div 
                                                 key={draft.id}
                                                 onClick={() => handleEditDraft(draft)}
-                                                className="bg-[#161412] border border-white/6 hover:border-[#FFB020]/40 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer group"
+                                                className="bg-[#000000] border border-white/[0.08] hover:border-[#FFB020]/40 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer group"
                                             >
                                                 <div>
                                                     <div className="flex justify-between items-center mb-3">
                                                         <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border border-[#FFB020]/40 text-[#FFB020] bg-[#FFB020]/10 tracking-wider">
                                                             LOCAL DRAFT
                                                         </span>
-                                                        <span className="text-xs text-white/40 font-mono">
+                                                        <span className="text-xs text-white opacity-60 font-mono">
                                                             {new Date(draft.updatedAt).toLocaleTimeString()}
                                                         </span>
                                                     </div>
                                                     <h2 className="text-base font-bold text-white font-clash tracking-tight truncate group-hover:text-[#FFB020] transition-colors">
                                                         {draft.title || 'Untitled Draft'}
                                                     </h2>
-                                                    <p className="text-white/40 text-xs font-satoshi line-clamp-2 mt-1">
+                                                    <p className="text-white opacity-60 text-xs font-satoshi line-clamp-2 mt-1">
                                                         Unsynced changes stored in device engine.
                                                     </p>
                                                 </div>
 
-                                                <div className="pt-4 mt-4 border-t border-white/6 flex items-center justify-between">
+                                                <div className="pt-4 mt-4 border-t border-white/[0.08] flex items-center justify-between">
                                                     <span className="text-xs font-bold text-[#FFB020] font-satoshi">
                                                         Resume Draft
                                                     </span>
@@ -468,7 +468,7 @@ export default function FormsDashboard() {
                                                             e.stopPropagation();
                                                             handleDeleteDraft(draft);
                                                         }}
-                                                        className="text-white/40 hover:text-red-400 p-1 transition-colors"
+                                                        className="text-white hover:text-red-400 p-1 transition-colors"
                                                     >
                                                         <Trash2 size={14} />
                                                     </button>
@@ -591,12 +591,12 @@ function FormCard({
         <div 
             onClick={onSelect}
             onContextMenu={handleRightClick}
-            className="group relative bg-[#161412] hover:bg-[#1A1816] border border-white/6 hover:border-[#6366F1]/40 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer select-none"
+            className="group relative bg-[#000000] hover:bg-[#080808] border border-white/[0.08] hover:border-[#6366F1]/50 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer select-none"
         >
             <div className="space-y-3">
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-[#0A0908] border border-white/8 flex items-center justify-center text-[#6366F1] shrink-0 group-hover:border-[#6366F1]/30 transition-colors">
+                        <div className="w-8 h-8 rounded-xl bg-[#161412] border border-white/10 flex items-center justify-center text-[#6366F1] shrink-0 group-hover:border-[#6366F1]/40 transition-colors">
                             <FileText size={15} />
                         </div>
                         <h3 className="font-clash font-extrabold text-white text-base tracking-tight group-hover:text-[#6366F1] transition-colors truncate">
@@ -616,13 +616,13 @@ function FormCard({
                     </div>
                 </div>
 
-                <p className="text-xs text-white/50 font-satoshi line-clamp-2 min-h-[2.5rem] leading-relaxed">
+                <p className="text-xs text-white opacity-70 font-satoshi line-clamp-2 min-h-[2.5rem] leading-relaxed">
                     {form.description || 'No description provided.'}
                 </p>
             </div>
 
-            <div className="pt-4 mt-4 border-t border-white/6 flex items-center justify-between">
-                <div className="text-[11px] text-white/40 font-mono">
+            <div className="pt-4 mt-4 border-t border-white/[0.08] flex items-center justify-between">
+                <div className="text-[11px] text-white opacity-60 font-mono">
                     {new Date(form.updatedAt || form.$createdAt).toLocaleDateString()}
                 </div>
 
@@ -633,11 +633,11 @@ function FormCard({
                             e.stopPropagation();
                             onEdit(form);
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-[#0A0908] border border-white/8 hover:border-[#6366F1] text-[11px] font-bold text-white hover:bg-[#6366F1]/10 transition-colors font-satoshi cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-[#161412] border border-white/10 hover:border-[#6366F1] text-[11px] font-bold text-white hover:bg-[#6366F1]/15 transition-colors font-satoshi cursor-pointer"
                     >
                         Edit
                     </button>
-                    <div className="text-white/30 group-hover:text-white/70 transition-colors">
+                    <div className="text-white opacity-40 group-hover:opacity-100 transition-opacity">
                         <ChevronRight size={14} />
                     </div>
                 </div>

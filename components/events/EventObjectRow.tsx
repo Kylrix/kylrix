@@ -199,10 +199,10 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
           handleCardClick();
         }
       }}
-      className={`group flex flex-col bg-[#161412] hover:bg-[#1C1A18] border rounded-[28px] cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] h-full text-left min-w-[260px] sm:min-w-[280px] ${
+      className={`group flex flex-col bg-[#000000] hover:bg-[#080808] border rounded-[28px] cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] h-full text-left min-w-[260px] sm:min-w-[280px] ${
         isSelected
-          ? 'ring-2 ring-[#10B981] border-[#10B981]/50 bg-[#1A1816]'
-          : 'border-[#34322F] hover:border-[#22C55E]/55'
+          ? 'ring-2 ring-[#10B981] border-[#10B981]/50 bg-[#080808]'
+          : 'border-white/[0.08] hover:border-[#22C55E]/55'
       }`}
     >
       {/* Cover — image or deterministic colorful pattern */}
@@ -292,7 +292,7 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
             </h2>
             <SyncStatusDot resourceId={event.id} kind="event" row={event as unknown as Record<string, unknown>} />
           </div>
-          <div className="flex items-center gap-2 text-[#9B9691] mb-1.5">
+          <div className="flex items-center gap-2 text-white opacity-80 mb-1.5">
             <Clock size={14} className="shrink-0" />
             <span className="text-[11px] font-semibold font-satoshi">
               {formatTime(start, { hour: 'numeric', minute: '2-digit', hour12: true })}
@@ -301,7 +301,7 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
             </span>
           </div>
           {event.location ? (
-            <div className="flex items-center gap-2 text-[#9B9691]">
+            <div className="flex items-center gap-2 text-white opacity-70">
               <MapPin size={14} className="shrink-0" />
               <span className="text-[11px] font-semibold font-satoshi truncate">
                 {event.location}
@@ -310,16 +310,16 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between border-t border-[#34322F]/40 pt-3 mt-auto">
+        <div className="flex items-center justify-between border-t border-white/[0.08] pt-3 mt-auto">
           {(event.attendees?.length ?? 0) > 0 ? (
-            <div className="flex items-center gap-1.5 text-[#9B9691]">
+            <div className="flex items-center gap-1.5 text-white opacity-75">
               <Users size={14} />
               <span className="text-xs font-semibold font-satoshi">
                 {event.attendees.length} going
               </span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-[#9B9691]">
+            <div className="flex items-center gap-1.5 text-white opacity-50">
               <Users size={14} />
               <span className="text-xs font-semibold font-satoshi">No attendees</span>
             </div>

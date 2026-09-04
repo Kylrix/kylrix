@@ -527,19 +527,19 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
 
 
   return (
-    <div className="flex flex-col h-full bg-[#161412] text-[#F5F2ED] font-satoshi relative overflow-hidden">
+    <div className="flex flex-col h-full bg-[#161412] text-white font-satoshi relative overflow-hidden">
       {/* Ambient radial gradient spotlight */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(168,85,247,0.12),transparent_60%)] pointer-events-none" />
 
       {/* Header - Sticky/Fixed at Top */}
-      <div className="relative z-20 flex flex-col gap-3 p-5 md:p-6 border-b border-white/5 bg-[#161412] shrink-0">
+      <div className="relative z-20 flex flex-col gap-3 p-5 md:p-6 border-b border-white/[0.08] bg-[#161412] shrink-0">
         {/* Row 1: chrome only — back + actions (title is not on this line) */}
         <div className="flex items-center justify-between gap-3">
           {onBack ? (
             <button
               type="button"
               onClick={onBack}
-              className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-colors shrink-0"
+              className="p-2 text-white hover:text-white rounded-xl hover:bg-white/5 transition-colors shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -547,7 +547,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             <button
               type="button"
               onClick={handleClose}
-              className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-colors shrink-0 md:hidden"
+              className="p-2 text-white hover:text-white rounded-xl hover:bg-white/5 transition-colors shrink-0 md:hidden"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -801,7 +801,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
       {/* Content Area - Scrollable */}
       <div className="relative z-10 flex-1 overflow-y-auto p-5 md:p-6 space-y-6 scrollbar-thin">
         {/* Objective Details Box */}
-        <div className="p-5 rounded-[28px] bg-[#0A0908] border border-white/5 shadow-[0_12px_32px_rgba(0,0,0,0.4)] flex flex-col">
+        <div className="p-5 rounded-[28px] bg-[#000000] border border-white/[0.08] shadow-[0_12px_32px_rgba(0,0,0,0.4)] flex flex-col">
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider font-mono">Objective details</span>
             {task.description && !isEditingDescription && (
@@ -812,7 +812,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                   navigator.clipboard.writeText(task.description || '');
                   showSuccess('Copied', 'Objective details copied to clipboard');
                 }}
-                className="p-1.5 rounded-lg text-[#9B9691] hover:text-white hover:bg-white/5 transition-colors"
+                className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                 title="Copy details"
               >
                 <Copy className="w-3.5 h-3.5" />
@@ -834,18 +834,18 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
 
         {/* Milestones Box */}
         {!task.parentTaskId && (
-          <div className="p-5 rounded-[28px] bg-[#0A0908] border border-white/5 shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
+          <div className="p-5 rounded-[28px] bg-[#000000] border border-white/[0.08] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider font-mono">Milestones</span>
-              <span className="text-xs font-bold text-[#9B9691] font-mono">{completedSubtasks} / {task.subtasks.length}</span>
+              <span className="text-xs font-bold text-white font-mono">{completedSubtasks} / {task.subtasks.length}</span>
             </div>
-            <div className="w-full h-1 bg-white/5 rounded-full mb-4 overflow-hidden">
+            <div className="w-full h-1 bg-white/10 rounded-full mb-4 overflow-hidden">
               <div className="h-full bg-[#A855F7] transition-all duration-500" style={{ width: `${subtaskProgress}%` }} />
             </div>
 
             <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
               {task.subtasks.length === 0 ? (
-                <div className="text-xs text-white/30 italic py-2">No milestones yet.</div>
+                <div className="text-xs text-white opacity-50 italic py-2">No milestones yet.</div>
               ) : (
                 task.subtasks.map((subtask) => (
                   <div key={subtask.id} className="flex items-start gap-3 py-1 group">
@@ -1076,8 +1076,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                            <div 
                              className={`px-3.5 py-2 rounded-2xl text-[13px] leading-relaxed max-w-[90%] border shadow-sm transition-all hover:shadow-md ${
                                isOutgoing
-                                 ? 'bg-[#161412] border-[#23211F] border-right-[3px] border-r-[#A855F7] text-white font-medium'
-                                 : 'bg-[#161412] border-[#23211F] border-left-[3px] border-l-[#34322F] text-[#F5F2ED]'
+                                 ? 'bg-[#000000] border-white/[0.08] border-right-[3px] border-r-[#A855F7] text-white font-medium'
+                                 : 'bg-[#000000] border-white/[0.08] border-left-[3px] border-l-[#A855F7]/50 text-white'
                              }`}
                            >
                              {msg.content}
@@ -1090,13 +1090,13 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 </div>
               )}
 
-              <form onSubmit={handleSendMessage} className="flex gap-2 mt-2 p-1.5 bg-[#1C1A18] rounded-2xl border border-white/5 items-center focus-within:border-[#A855F7]/30 transition-all">
+              <form onSubmit={handleSendMessage} className="flex gap-2 mt-2 p-1.5 bg-[#000000] rounded-2xl border border-white/[0.08] items-center focus-within:border-[#A855F7]/40 transition-all">
                 <input
                   type="text"
                   placeholder="Message the team..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  className="w-full bg-transparent border-0 outline-none px-3 py-1.5 text-[13px] text-white font-medium placeholder:text-white/10 focus:ring-0 focus:outline-none"
+                  className="w-full bg-transparent border-0 outline-none px-3 py-1.5 text-[13px] text-white font-medium placeholder:text-white/30 focus:ring-0 focus:outline-none"
                 />
                 <button
                   type="submit"
@@ -1148,8 +1148,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
           sx={{
             zIndex: 15000,
             '& .ob-drawer-panel': {
-              bgcolor: '#161412',
-              backgroundImage: 'linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(10, 9, 8, 0.02) 100%)',
+              bgcolor: '#000000',
+              backgroundImage: 'none',
               borderTop: '1px solid rgba(255, 255, 255, 0.1)',
               maxHeight: '60vh',
               width: '100%',
@@ -1158,17 +1158,17 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
           <Stack direction="row" alignItems="center" justifyContent="between" sx={{ mb: 3 }}>
             <Stack direction="row" alignItems="center" spacing={1.5}>
               <TagIcon size={20} color="#A855F7" />
-              <Typography sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+              <Typography sx={{ color: '#FFFFFF', fontWeight: 900, fontSize: '1.1rem', fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
                 Select Tags
               </Typography>
             </Stack>
             <IconButton
               onClick={() => setIsTagSelectorOpen(false)}
               sx={{
-                color: '#E8E6E3',
-                bgcolor: '#0A0908',
-                border: '1px solid #34322F',
-                '&:hover': { bgcolor: '#1C1A18' }}}
+                color: '#FFFFFF',
+                bgcolor: '#161412',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                '&:hover': { bgcolor: '#201D1A' }}}
             >
               <X size={18} />
             </IconButton>

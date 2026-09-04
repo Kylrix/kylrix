@@ -29,7 +29,7 @@ export default function GoalsPage() {
       <div className="w-full max-w-[1440px] mx-auto p-4 md:p-8">
         <div className="min-w-0 w-full flex flex-col gap-6">
           <div className="flex items-center justify-between gap-3 w-full">
-            <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#161412] border border-white/[0.08] rounded-2xl w-fit select-none shadow-md">
+            <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border border-white/[0.08] rounded-2xl w-fit select-none shadow-md">
               <button
                 type="button"
                 onClick={() => router.push('/goals')}
@@ -43,7 +43,7 @@ export default function GoalsPage() {
               <button
                 type="button"
                 onClick={() => router.push('/events')}
-                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/60 hover:text-white hover:bg-white/[0.06]"
+                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all text-white hover:bg-white/[0.06]"
                 title="Events"
                 aria-label="Events"
               >

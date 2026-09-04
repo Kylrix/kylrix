@@ -429,7 +429,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
         </div>
 
         {/* Seamless RSVP Registration Banner */}
-        <div className="p-4 rounded-[20px] bg-[#0A0908] border border-white/[0.04] flex items-center justify-between gap-3 shadow-[0_4px_16px_rgba(0,0,0,0.4)]">
+        <div className="p-4 rounded-[20px] bg-[#000000] border border-white/[0.08] flex items-center justify-between gap-3 shadow-[0_4px_16px_rgba(0,0,0,0.4)]">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2.5 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/30 text-[#6366F1] shrink-0">
               <Users className="w-5 h-5" />
@@ -438,7 +438,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
               <span className="text-xs font-bold text-white leading-tight truncate">
                 {isRegistered ? 'You are attending this event!' : 'RSVP to confirm attendance'}
               </span>
-              <span className="text-[10px] text-[#8E8A86] font-mono mt-0.5">
+              <span className="text-[10px] text-white opacity-70 font-mono mt-0.5">
                 {(event as any).attendeeCount || attendees.length} confirmed {((event as any).attendeeCount || attendees.length) === 1 ? 'guest' : 'guests'}
               </span>
             </div>
@@ -458,7 +458,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
         </div>
 
         {/* Date & Time / Location (Card) */}
-        <div className="p-4 rounded-[20px] bg-[#0A0908] border border-white/[0.04] shadow-[0_8px_24px_rgba(0,0,0,0.5)] flex flex-col gap-4">
+        <div className="p-4 rounded-[20px] bg-[#000000] border border-white/[0.08] shadow-[0_8px_24px_rgba(0,0,0,0.5)] flex flex-col gap-4">
           {/* When */}
           <div 
             onClick={() => setIsDateTimeDrawerOpen(true)}
@@ -473,8 +473,8 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
                 <span className="text-sm font-bold text-white leading-tight">
                   {formatTime(startDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                 </span>
-                <span className="text-xs text-[#8E8A86] mt-0.5 flex items-center gap-1 font-satoshi">
-                  <Clock className="w-3 h-3 text-[#8E8A86]" />
+                <span className="text-xs text-white opacity-70 mt-0.5 flex items-center gap-1 font-satoshi">
+                  <Clock className="w-3 h-3 text-white opacity-70" />
                   {formatTime(startDate, { hour: 'numeric', minute: '2-digit', hour12: true })} - {formatTime(endDate, { hour: 'numeric', minute: '2-digit', hour12: true })}
                 </span>
               </div>
@@ -503,7 +503,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="mt-2 inline-flex items-center justify-center gap-2 px-3.5 py-1.5 text-xs font-bold font-satoshi text-white bg-[#1C1A18] hover:bg-[#242220] border border-[#34322F] hover:border-[#6366F1] rounded-[8px] transition-all w-fit cursor-pointer"
+                    className="mt-2 inline-flex items-center justify-center gap-2 px-3.5 py-1.5 text-xs font-bold font-satoshi text-white bg-[#161412] hover:bg-[#201D1A] border border-white/10 hover:border-[#6366F1] rounded-[8px] transition-all w-fit cursor-pointer"
                   >
                     <Video className="w-3.5 h-3.5 text-[#6366F1]" />
                     <span>Join Meeting</span>
@@ -517,8 +517,8 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
         {/* Organizer */}
         {((event as any).userId || (event as any).creatorId) && (
           <div className="flex flex-col gap-2">
-            <span className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase">Organizer</span>
-            <div className="p-3 rounded-[20px] bg-[#0A0908] border border-white/[0.04] flex items-center gap-3">
+            <span className="text-[10px] font-mono font-bold tracking-wider text-white opacity-60 uppercase">Organizer</span>
+            <div className="p-3 rounded-[20px] bg-[#000000] border border-white/[0.08] flex items-center gap-3">
               <IdentityAvatar 
                 userId={(event as any).userId || (event as any).creatorId} 
                 size={36} 
@@ -528,7 +528,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
                   {organizer?.displayName || organizer?.username || 'Organizer'}
                 </span>
                 {organizer?.username && (
-                  <span className="text-[10px] text-[#8E8A86] truncate">
+                  <span className="text-[10px] text-white opacity-60 truncate">
                     @{organizer.username.replace(/^@/, '')}
                   </span>
                 )}
@@ -539,7 +539,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
 
         {/* Description / About */}
         <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase">About</span>
+          <span className="text-[10px] font-mono font-bold tracking-wider text-white opacity-60 uppercase">About</span>
           <div className="flex items-center justify-between">
             {!isEditingAbout && (
               <button
@@ -560,7 +560,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
                 value={aboutInput}
                 onChange={(e) => setAboutInput(e.target.value)}
                 autoFocus
-                className="w-full p-3 rounded-2xl bg-black/60 border border-emerald-500 text-sm leading-relaxed text-[#C1BEBA] font-satoshi focus:outline-none resize-none"
+                className="w-full p-3 rounded-2xl bg-black/60 border border-emerald-500 text-sm leading-relaxed text-white font-satoshi focus:outline-none resize-none"
               />
               <div className="flex justify-end gap-2">
                 <button
@@ -583,7 +583,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
           ) : (
             <div 
               onClick={() => setIsEditingAbout(true)}
-              className="p-4 rounded-[20px] bg-[#0A0908] border border-white/[0.04] hover:border-white/10 transition-all text-sm leading-relaxed text-[#C1BEBA] font-satoshi whitespace-pre-line break-words cursor-pointer"
+              className="p-4 rounded-[20px] bg-[#000000] border border-white/[0.08] hover:border-white/20 transition-all text-sm leading-relaxed text-white font-satoshi whitespace-pre-line break-words cursor-pointer"
             >
               {event.description || 'No description provided. Click to add details.'}
             </div>

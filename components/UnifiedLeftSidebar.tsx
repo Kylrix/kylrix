@@ -150,7 +150,7 @@ export function UnifiedLeftSidebar() {
         sx={{
           height: '100%',
           width: '100%',
-          bgcolor: '#161412',
+          bgcolor: '#000000',
           backgroundImage: 'none',
           borderRight: '1px solid rgba(255, 255, 255, 0.05)',
           borderRadius: 0,
@@ -187,15 +187,15 @@ export function UnifiedLeftSidebar() {
                 gap: 1,
                 p: isCollapsed ? 1 : '8px 10px',
                 borderRadius: '12px',
-                bgcolor: workspaceMenuOpen ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.03)',
-                border: workspaceMenuOpen ? '1px solid rgba(255, 255, 255, 0.14)' : '1px solid rgba(255, 255, 255, 0.06)',
+                bgcolor: workspaceMenuOpen ? '#161412' : 'rgba(255, 255, 255, 0.04)',
+                border: workspaceMenuOpen ? '1px solid rgba(255, 255, 255, 0.16)' : '1px solid rgba(255, 255, 255, 0.08)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 minWidth: 0,
                 boxSizing: 'border-box',
                 '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.06)',
-                  borderColor: 'rgba(255, 255, 255, 0.12)'}}}
+                  bgcolor: '#161412',
+                  borderColor: 'rgba(255, 255, 255, 0.18)'}}}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0, flex: 1 }}>
                 <Box
@@ -218,7 +218,7 @@ export function UnifiedLeftSidebar() {
                     <span
                       style={{
                         display: 'block',
-                        color: '#fff',
+                        color: '#FFFFFF',
                         fontWeight: 800,
                         fontSize: '0.82rem',
                         fontFamily: 'var(--font-satoshi)',
@@ -230,7 +230,7 @@ export function UnifiedLeftSidebar() {
                     >
                       {activeWorkspace?.title || 'Workspace'}
                     </span>
-                    <span style={{ display: 'block', color: 'rgba(255, 255, 255, 0.45)', fontWeight: 600, fontSize: '0.68rem', fontFamily: 'var(--font-satoshi)' }}>
+                    <span style={{ display: 'block', color: '#FFFFFF', opacity: 0.6, fontWeight: 600, fontSize: '0.68rem', fontFamily: 'var(--font-satoshi)' }}>
                       {activeWorkspace?.isPersonal ? 'Default workspace' : activeWorkspace?.isAgentic ? 'Agent workspace' : 'Workspace'}
                     </span>
                   </Box>
@@ -240,7 +240,8 @@ export function UnifiedLeftSidebar() {
                 <WorkspaceChevronIcon
                   size={15}
                   style={{
-                    color: 'rgba(255, 255, 255, 0.5)',
+                    color: '#FFFFFF',
+                    opacity: 0.7,
                     transition: 'transform 0.2s',
                     transform: workspaceMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                     flexShrink: 0}}
@@ -257,8 +258,8 @@ export function UnifiedLeftSidebar() {
                 mb: 0.5,
                 p: 1,
                 borderRadius: '14px',
-                bgcolor: '#0A0908',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                bgcolor: '#161412',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 0.5,
@@ -676,17 +677,17 @@ export function UnifiedLeftSidebar() {
                   px: isCollapsed ? 0 : 1.5,
                   gap: isCollapsed ? 0 : 1.5,
                   cursor: 'pointer',
-                  color: isSelected ? itemColor : 'rgba(255, 255, 255, 0.85)',
-                  bgcolor: isSelected ? 'rgba(255, 255, 255, 0.04)' : 'transparent',
+                  color: isSelected ? itemColor : '#FFFFFF',
+                  bgcolor: isSelected ? '#161412' : 'transparent',
                   transition: 'all 0.2s ease',
-                  border: isSelected ? `1px solid ${itemColor}33` : '1px solid transparent',
+                  border: isSelected ? `1px solid ${itemColor}44` : '1px solid transparent',
                   boxSizing: 'border-box',
                   flexShrink: 0,
                   mx: isCollapsed ? 'auto' : 0,
                   '&:hover': {
                     color: isSelected ? itemColor : '#FFFFFF',
-                    bgcolor: 'rgba(255, 255, 255, 0.06)',
-                    ...(isSelected ? {} : { borderColor: 'rgba(255,255,255,0.06)' }),
+                    bgcolor: '#161412',
+                    ...(isSelected ? {} : { borderColor: 'rgba(255, 255, 255, 0.08)' }),
                   },
                   '&:active': {
                     transform: 'scale(0.98)',
@@ -828,9 +829,9 @@ export function UnifiedLeftSidebar() {
                 height: '34px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                color: 'rgba(255, 255, 255, 0.75)',
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                color: '#FFFFFF',
+                backgroundColor: '#161412',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
                 transition: 'all 0.2s ease',
                 textDecoration: 'none',
                 boxSizing: 'border-box',
@@ -840,13 +841,13 @@ export function UnifiedLeftSidebar() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = '#FFFFFF';
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                e.currentTarget.style.backgroundColor = '#201D1A';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.18)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.75)';
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                e.currentTarget.style.color = '#FFFFFF';
+                e.currentTarget.style.backgroundColor = '#161412';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
               }}
             >
               <svg 
@@ -890,9 +891,9 @@ export function UnifiedLeftSidebar() {
                 height: '34px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                color: 'rgba(255, 255, 255, 0.75)',
-                backgroundColor: 'rgba(88, 101, 242, 0.08)',
-                border: '1px solid rgba(88, 101, 242, 0.2)',
+                color: '#FFFFFF',
+                backgroundColor: '#161412',
+                border: '1px solid rgba(88, 101, 242, 0.3)',
                 transition: 'all 0.2s ease',
                 textDecoration: 'none',
                 boxSizing: 'border-box',
@@ -902,13 +903,13 @@ export function UnifiedLeftSidebar() {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = '#FFFFFF';
-                e.currentTarget.style.backgroundColor = 'rgba(88, 101, 242, 0.16)';
-                e.currentTarget.style.borderColor = 'rgba(88, 101, 242, 0.35)';
+                e.currentTarget.style.backgroundColor = '#201D1A';
+                e.currentTarget.style.borderColor = 'rgba(88, 101, 242, 0.5)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.75)';
-                e.currentTarget.style.backgroundColor = 'rgba(88, 101, 242, 0.08)';
-                e.currentTarget.style.borderColor = 'rgba(88, 101, 242, 0.2)';
+                e.currentTarget.style.color = '#FFFFFF';
+                e.currentTarget.style.backgroundColor = '#161412';
+                e.currentTarget.style.borderColor = 'rgba(88, 101, 242, 0.3)';
               }}
             >
               <svg 
