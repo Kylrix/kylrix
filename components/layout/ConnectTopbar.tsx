@@ -2629,7 +2629,7 @@ export default function ConnectTopbar({
           display: isDrawerExpanded ? 'none' : 'block',
           zIndex: 1201,
           bgcolor: '#000000',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid rgba(255,255,255,0.18)',
           borderRadius: '0 0 28px 28px',
           boxShadow: '0 16px 42px rgba(0,0,0,0.5)',
           backgroundImage: 'none',

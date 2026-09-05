@@ -139,19 +139,19 @@ export function ObjectCard({
       className={[
         'w-full text-left overflow-hidden cursor-pointer select-none relative min-w-[260px] sm:min-w-[280px]',
         isSelected
-          ? 'ring-2 ring-[#10B981] border-[#10B981]/50 bg-[#000000]'
+          ? 'ring-2 ring-[#10B981] border-2 border-[#10B981] bg-[#000000]'
           : isTask
           ? [
-              'rounded-2xl bg-[#000000] border border-white/[0.08]',
-              'hover:border-white/[0.18] hover:bg-[#000000]',
+              'rounded-2xl bg-[#000000] border border-white/20',
+              'hover:border-white/50 hover:bg-[#000000]',
               'transition-colors duration-150',
               uniform
                 ? 'h-full min-h-[112px] sm:min-h-[120px] lg:min-h-[128px] flex flex-col'
                 : '',
             ].join(' ')
           : [
-              'rounded-[26px] bg-[#000000] border border-white/[0.08]',
-              'transition-all duration-200 hover:border-white/[0.2] hover:bg-[#000000] hover:-translate-y-px',
+              'rounded-[26px] bg-[#000000] border border-white/20 shadow-md',
+              'transition-all duration-200 hover:border-white/50 hover:bg-[#000000] hover:-translate-y-px',
               uniform
                 ? 'h-full min-h-[152px] sm:min-h-[164px] lg:min-h-[176px] xl:min-h-[188px] flex flex-col'
                 : '',

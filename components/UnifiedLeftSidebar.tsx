@@ -152,7 +152,7 @@ export function UnifiedLeftSidebar() {
           width: '100%',
           bgcolor: '#000000',
           backgroundImage: 'none',
-          borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.18)',
           borderRadius: 0,
           display: 'flex',
           flexDirection: 'column',
