@@ -16,8 +16,13 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
   const actor = await getActor(opts.jwt);
   if (!actor?.$id) return { success: false, error: 'Unauthorized' };
   const target = opts.target;
+  const { userHasPaidAiAccess } = await import('@/lib/server/ai-subscription-gate');
+  const { AI_REQUIRES_PRO_MESSAGE } = await import('@/lib/agentic/access');
+  const hasAccess = await userHasPaidAiAccess(actor.$id);
+  if (!hasAccess) {
+    return { success: false, error: AI_REQUIRES_PRO_MESSAGE };
+  }
   const { databases } = createSystemClient();
-  // Check compute balance like other agentic calls if needed — skip for now, rely on later gate
 
   // Lookup existing session for this targetType/targetId
   let existing: any = null;
@@ -128,6 +133,12 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
 export async function executeSidekickChat(opts: { target: { type: string; id: string; title?: string }; message: string; sessionId?: string; jwt?: string }) {
   const actor = await getActor(opts.jwt);
   if (!actor?.$id) return { success: false, error: 'Unauthorized' };
+  const { userHasPaidAiAccess } = await import('@/lib/server/ai-subscription-gate');
+  const { AI_REQUIRES_PRO_MESSAGE } = await import('@/lib/agentic/access');
+  const hasAccess = await userHasPaidAiAccess(actor.$id);
+  if (!hasAccess) {
+    return { success: false, error: AI_REQUIRES_PRO_MESSAGE };
+  }
   const { databases } = createSystemClient();
   let session: any = null;
   if (opts.sessionId) {

@@ -146,11 +146,11 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // Skip static assets — but protect public API/MCP surfaces from IP pounding.
+  // Skip static assets — but protect API and MCP surfaces from IP pounding.
   if (
     pathname.startsWith(KYLRIX_API_V1_BASE) ||
-    pathname === '/api/mcp' ||
-    pathname.startsWith('/api/mcp/')
+    pathname.startsWith('/api/mcp') ||
+    pathname.startsWith('/api/dev')
   ) {
     const shield = enforceApiIpShield(request);
     if (!shield.allowed) {

@@ -20,26 +20,26 @@ const SHIELD_PRESETS = {
   /** Coarse IP ceiling for all /api/v1 traffic (middleware + guard). */
   apiIp: {
     windowMs: 60_000,
-    max: 180,
+    max: 100,
     burstWindowMs: 5_000,
-    burstMax: 55,
-    blockMs: 90_000,
+    burstMax: 30,
+    blockMs: 180_000,
   },
   /** Unauthenticated API probes (missing/invalid bearer). */
   apiAnon: {
     windowMs: 60_000,
-    max: 40,
+    max: 20,
     burstWindowMs: 5_000,
-    burstMax: 15,
-    blockMs: 120_000,
+    burstMax: 8,
+    blockMs: 300_000,
   },
   /** MCP handshake methods without auth (initialize, tools/list, ping). */
   mcpPublic: {
     windowMs: 60_000,
-    max: 45,
+    max: 25,
     burstWindowMs: 5_000,
-    burstMax: 22,
-    blockMs: 120_000,
+    burstMax: 10,
+    blockMs: 300_000,
   },
   /** Short burst before DB incrementRowColumn (per PAT / user bucket). */
   patBurst: {
