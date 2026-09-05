@@ -310,11 +310,11 @@ export default function FormsDashboard() {
                 <div className="min-w-0 w-full flex flex-col gap-6">
                     {/* Top Nav Switcher */}
                     <div className="flex items-center justify-between gap-3 w-full">
-                        <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border border-white/[0.08] rounded-2xl w-fit select-none shadow-md">
+                        <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border-2 border-white/20 rounded-2xl w-fit select-none shadow-md">
                             <button
                                 type="button"
                                 onClick={() => router.push('/app')}
-                                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all text-white hover:bg-white/[0.06]"
+                                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all text-white border border-white/10 hover:border-white/30 hover:bg-white/[0.06]"
                                 title="Ideas"
                                 aria-label="Ideas"
                             >
@@ -324,7 +324,7 @@ export default function FormsDashboard() {
                             <button
                                 type="button"
                                 onClick={() => router.push('/forms')}
-                                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#6366F1] text-white shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
+                                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#6366F1] text-white border border-[#6366F1] shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
                                 title="Forms"
                                 aria-label="Forms"
                             >
@@ -349,7 +349,7 @@ export default function FormsDashboard() {
                     </div>
 
                     {/* Filter Tabs Bar */}
-                    <div className="overflow-x-auto scrollbar-none p-1.5 bg-[#000000] border border-white/[0.08] rounded-[24px] flex items-center gap-2 select-none w-fit">
+                    <div className="overflow-x-auto scrollbar-none p-1.5 bg-[#000000] border-2 border-white/20 rounded-[24px] flex items-center gap-2 select-none w-fit shadow-md">
                         {[
                             { label: 'Active Forms', icon: FileText },
                             { label: 'Templates', icon: Sparkles },
@@ -376,8 +376,8 @@ export default function FormsDashboard() {
                                     onClick={() => setTabValue(idx)}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all font-satoshi cursor-pointer border ${
                                         isActive 
-                                            ? 'bg-[#161412] text-white border-white/10 shadow-sm' 
-                                            : 'border-transparent text-white opacity-60 hover:opacity-100 hover:bg-white/[0.04]'
+                                            ? 'bg-[#161412] text-white border-2 border-[#FFFFFF] shadow-sm' 
+                                            : 'border border-white/20 text-white hover:border-white/50 hover:bg-[#161412]'
                                     }`}
                                 >
                                     <Icon className="h-4 w-4" />

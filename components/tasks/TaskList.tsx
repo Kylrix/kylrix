@@ -184,8 +184,8 @@ export default function TaskList() {
       <div className="animate-fadeIn pointer-events-auto w-full">
 
         {tagFilterOptions.length > 0 && (
-          <div className="overflow-x-auto scrollbar-none mb-6 p-2 bg-white/[0.01] border border-white/5 rounded-[24px] flex items-center gap-2 select-none">
-            <Tag size={14} className="text-[#A855F7]/60 ml-2 shrink-0" />
+          <div className="overflow-x-auto scrollbar-none mb-6 p-2 bg-[#000000] border-2 border-white/20 rounded-[24px] flex items-center gap-2 select-none shadow-md">
+            <Tag size={14} className="text-[#A855F7] ml-2 shrink-0" />
             {tagFilterOptions.map((tag) => (
               <button
                 key={tag}
@@ -194,12 +194,12 @@ export default function TaskList() {
                 onClick={() => handleTagFilterToggle(tag)}
                 className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                   activeTagFilter === tag
-                    ? 'bg-[#A855F7] border-[#A855F7] text-white shadow-[0_4px_12px_rgba(168,85,247,0.2)]'
-                    : 'bg-white/3 border-white/8 text-white/60 hover:text-white hover:border-white/15'
+                    ? 'bg-[#A855F7] border-2 border-[#FFFFFF] text-white shadow-[0_4px_12px_rgba(168,85,247,0.2)]'
+                    : 'bg-[#161412] border border-white/25 text-white hover:border-white/60 hover:bg-[#201D1A]'
                 }`}
                 style={
                   activeTagFilter !== tag
-                    ? { borderColor: `${getTagColor(tag)}33`, color: getTagColor(tag) }
+                    ? { borderColor: `${getTagColor(tag)}99`, color: '#FFFFFF' }
                     : undefined
                 }
               >

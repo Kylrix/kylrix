@@ -34,7 +34,7 @@ A single component / section uses **one continuous fill**. Do **not** split a ca
 |---|---|
 | Panel / Container Background | `#161412` (Canonical deep ash background for shells, pages, drawers, sidebars) |
 | Primary Components / Cards / Wells (STRICT) | `#000000` (Strictly pitch black for all components, interactive cards, input wells, and items with text) |
-| Component Border | `white/[0.08]`–`white/[0.12]` or `#34322F` |
+| Component Border (STRICT) | `white/20`–`white/25` or `rgba(255, 255, 255, 0.18)`–`0.25` (Crisp, solid high-contrast outlines separating components from background) |
 | Text Color (STRICT) | `#FFFFFF` (`color: '#fff'`, `text-white` only — differentiate hierarchy by font-size, weight, or uppercase tracking, never muted/gray opacity) |
 | Accent (core) | `#6366F1` |
 | Accent (social/moment) | `#F59E0B` |

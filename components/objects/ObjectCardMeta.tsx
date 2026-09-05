@@ -47,8 +47,8 @@ export function MetaChip({
       className="inline-flex items-center gap-1 max-w-[7.5rem] truncate text-[9px] font-black font-mono uppercase tracking-wider px-2 py-0.5 rounded-lg border flex-shrink-0"
       style={{
         color,
-        backgroundColor: `${color}1a`,
-        borderColor: `${color}33`,
+        backgroundColor: `${color}25`,
+        borderColor: `${color}88`,
       }}
       title={label}
     >

@@ -508,10 +508,10 @@ export default function IdeasPage() {
         <div className="min-w-0 w-full flex flex-col gap-6">
           {/* Top Nav Switcher */}
           <div className="flex items-center justify-between gap-3 w-full">
-            <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border border-white/[0.08] rounded-2xl w-fit select-none shadow-md">
+            <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border-2 border-white/20 rounded-2xl w-fit select-none shadow-md">
               <Link
                 href="/app"
-                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.25)]"
+                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#EC4899] text-white border border-[#EC4899] shadow-[0_4px_12px_rgba(236,72,153,0.25)]"
                 title="Ideas"
                 aria-label="Ideas"
               >
@@ -520,7 +520,7 @@ export default function IdeasPage() {
               </Link>
               <Link
                 href="/forms"
-                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all text-white hover:bg-white/[0.06]"
+                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all text-white border border-white/10 hover:border-white/30 hover:bg-white/[0.06]"
                 title="Forms"
                 aria-label="Forms"
               >
@@ -550,7 +550,7 @@ export default function IdeasPage() {
 
           {/* Tags Filter Row (positioned under top nav switcher like Goals) */}
           {tags.length > 0 && (
-            <div className="overflow-x-auto scrollbar-none p-2 bg-[#000000] border border-white/[0.08] rounded-[24px] flex items-center gap-2 select-none">
+            <div className="overflow-x-auto scrollbar-none p-2 bg-[#000000] border-2 border-white/20 rounded-[24px] flex items-center gap-2 select-none shadow-md">
               <Tag size={14} className="text-[#EC4899] ml-2 shrink-0" />
               {tags.map((tag: string, index: number) => {
                 const tagColor = getTagColor(tag);
@@ -563,12 +563,12 @@ export default function IdeasPage() {
                     onClick={() => setSelectedTag(isSelected ? null : tag)}
                     className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                       isSelected 
-                        ? 'bg-[#EC4899] border-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.2)]' 
-                        : 'bg-[#000000] border-white/[0.1] text-white hover:border-white/[0.25]'
+                        ? 'bg-[#EC4899] border-2 border-[#FFFFFF] text-white shadow-[0_4px_12px_rgba(236,72,153,0.2)]' 
+                        : 'bg-[#161412] border border-white/25 text-white hover:border-white/60 hover:bg-[#201D1A]'
                     }`}
                     style={
                       !isSelected && tagColor
-                        ? { borderColor: `${tagColor}66`, color: '#FFFFFF' }
+                        ? { borderColor: `${tagColor}99`, color: '#FFFFFF' }
                         : undefined
                     }
                   >

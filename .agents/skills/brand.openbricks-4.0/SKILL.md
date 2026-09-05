@@ -89,16 +89,17 @@ OpenBricks 4.0 evolves the Kylrix design language from rigid, corporate SaaS con
 
 ---
 
-## 6. Thin Outline Depth & Form Definition
+## 6. High-Contrast Solid Outline Depth & Form Definition (STRICT)
 
-- **Formalized Outer Boundaries**:
-  - All drawers (top and bottom), sidebars, and dropdown panels must feature a crisp, thin 1px outline to give a clean sense of form and depth:
-    - Inner panel card outline: `border: 1px solid alpha(appAccent, 0.22)` or `border: 1px solid rgba(255, 255, 255, 0.08)`.
-    - Mobile top drawer / panel: `borderBottom: '1px solid rgba(255, 255, 255, 0.08)'`, `borderRadius: '0 0 28px 28px'`.
-    - Mobile bottom drawer: `borderTop: '1px solid rgba(255, 255, 255, 0.08)'`, `borderRadius: '28px 28px 0 0'`.
-    - Desktop right sidebar: `borderLeft: '1px solid rgba(255, 255, 255, 0.06)'`.
-    - Desktop left sidebar: `borderRight: '1px solid rgba(255, 255, 255, 0.06)'`.
-- **Purpose**: Establishes unambiguous structural contouring and tactile form definition across opaque ash surfaces without blurry glassmorphism or translucent haze.
+- **Formalized Solid Outer Boundaries**:
+  - Components, interactive cards, panels, and chrome must feature crisp, solid high-contrast outlines to separate them unambiguously from background surfaces (preventing "formless" black-on-ash mud):
+    - Topbar Chrome: `borderBottom: '1px solid rgba(255, 255, 255, 0.18)'` to `0.22` with pitch black `#000000` surface.
+    - Bottom Navbar: Container `border-t-2 border-[#FFFFFF]/30`, with item icon containers `border border-[#FFFFFF]/40` (and `border-2 border-[#FFFFFF]` with drop-glow when active).
+    - Primary Cards & Wells (ObjectCard, TaskCard, FormCard): `border border-white/20` (hover: `border-white/50`, selected: `border-2 border-[#10B981]`).
+    - Tab Switchers & Filter Rows (e.g. Ideas/Forms switcher, Tag filter lists): Container `border border-white/20` on `#000000`, item buttons `border border-white/25` (active: `border-2 border-[#FFFFFF]` or accent, hover: `border-white/50`).
+    - Action Triggers (Flow, Moment, Hangout triggers): `border border-white/25` on `#161412` (hover: `border-white/60`, active: `border-[#FFFFFF]`).
+    - Desktop sidebars: `borderRight: '1px solid rgba(255, 255, 255, 0.18)'` (left nav), `borderLeft: '1px solid rgba(255, 255, 255, 0.18)'` (right rail).
+- **Purpose**: Establishes unambiguous structural contouring and tactile form definition across opaque pitch-black and deep-ash surfaces without blurry glassmorphism or low-contrast washed-out hairlines.
 
 ---
 

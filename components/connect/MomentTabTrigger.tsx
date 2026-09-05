@@ -51,7 +51,7 @@ export function MomentTabTrigger({
       <button
         type="button"
         onClick={handleOpenMoments}
-        className={`relative inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-[#1C1A18] hover:border-white/15 active:scale-95 transition-all select-none cursor-pointer ${className}`}
+        className={`relative inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-[#161412] border border-white/25 text-white hover:text-white hover:bg-[#201D1A] hover:border-white/60 active:scale-95 transition-all select-none cursor-pointer shadow-sm ${className}`}
         title="Moments & Feed"
       >
         <Radio size={16} className="text-[#F59E0B]" />
@@ -64,7 +64,7 @@ export function MomentTabTrigger({
     <button
       type="button"
       onClick={handleOpenMoments}
-      className={`relative inline-flex items-center justify-center p-2.5 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-[#1C1A18] hover:border-white/15 active:scale-95 transition-all select-none cursor-pointer ${className}`}
+      className={`relative inline-flex items-center justify-center p-2.5 rounded-xl bg-[#161412] border border-white/25 text-white hover:text-white hover:bg-[#201D1A] hover:border-white/60 active:scale-95 transition-all select-none cursor-pointer shadow-sm ${className}`}
       title="Moments & Feed"
       aria-label="Moments"
     >
