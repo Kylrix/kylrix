@@ -32,8 +32,8 @@ function releaseSession(sessionId: string) {
   if (!set.size) sessionsPerIp.delete(session.clientIp);
 }
 
-// Cleanup stale sessions after 1 hour
-setInterval(() => {
+// Cleanup stale sessions after 1 hour (unref'd to prevent keeping serverless instances alive)
+const sseCleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [id, session] of activeSessions.entries()) {
     if (now - session.createdAt > 3600 * 1000) {
@@ -44,6 +44,9 @@ setInterval(() => {
     }
   }
 }, 60 * 1000);
+if (sseCleanupTimer && typeof sseCleanupTimer.unref === 'function') {
+  sseCleanupTimer.unref();
+}
 
 export function createSseStream(req: NextRequest, endpointPrefix = MCP_SSE_ENDPOINT): Response {
   assertShieldAllowed(enforceMcpSseOpenShield(req));
@@ -60,6 +63,8 @@ export function createSseStream(req: NextRequest, endpointPrefix = MCP_SSE_ENDPO
 
   const sessionId = `mcp_sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
+  let streamTimeout: NodeJS.Timeout | null = null;
+
   const stream = new ReadableStream({
     start(controller) {
       activeSessions.set(sessionId, {
@@ -74,8 +79,22 @@ export function createSseStream(req: NextRequest, endpointPrefix = MCP_SSE_ENDPO
       const messageEndpoint = `${endpointPrefix}/messages?sessionId=${sessionId}`;
       const initialPayload = `event: endpoint\ndata: ${messageEndpoint}\n\n`;
       controller.enqueue(new TextEncoder().encode(initialPayload));
+
+      // Auto-terminate the individual SSE response after 45 seconds to release serverless CPU.
+      // Standard MCP clients auto-reconnect cleanly.
+      streamTimeout = setTimeout(() => {
+        try {
+          controller.enqueue(new TextEncoder().encode(`event: ping\ndata: keepalive-reconnect\n\n`));
+          controller.close();
+        } catch {}
+        releaseSession(sessionId);
+      }, 45_000);
+      if (streamTimeout && typeof streamTimeout.unref === 'function') {
+        streamTimeout.unref();
+      }
     },
     cancel() {
+      if (streamTimeout) clearTimeout(streamTimeout);
       releaseSession(sessionId);
     },
   });

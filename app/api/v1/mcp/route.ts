@@ -9,6 +9,7 @@ import { getProductName, getProductSiteUrl } from '@/lib/config/product';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 function mcpShieldResponse(err: EdgeShieldError) {
   return NextResponse.json(

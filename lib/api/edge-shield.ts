@@ -171,9 +171,9 @@ export function assertShieldAllowed(verdict: ShieldVerdict): void {
   }
 }
 
-/** Periodic cleanup — server-only. */
+/** Periodic cleanup — server-only (unref'd to avoid holding serverless instances open). */
 if (typeof window === 'undefined') {
-  setInterval(() => {
+  const edgeShieldTimer = setInterval(() => {
     const now = Date.now();
     for (const [key, bucket] of buckets.entries()) {
       const stale =
@@ -182,4 +182,7 @@ if (typeof window === 'undefined') {
       if (stale) buckets.delete(key);
     }
   }, 300_000);
+  if (edgeShieldTimer && typeof edgeShieldTimer.unref === 'function') {
+    edgeShieldTimer.unref();
+  }
 }
