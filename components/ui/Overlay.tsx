@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Drawer,
   Box, 
@@ -35,33 +35,6 @@ const Overlay: React.FC = () => {
     }
     setIsExpanded(isHangoutsDrawerContent(content));
   }, [isOpen, content]);
-  const dragStartY = useRef(0);
-  const startHeight = useRef(0);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    dragStartY.current = e.clientY;
-    startHeight.current = isExpanded ? window.innerHeight : window.innerHeight * 0.6;
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (dragStartY.current === 0) return;
-    
-    const deltaY = dragStartY.current - e.clientY;
-    const threshold = 100;
-    
-    // If dragging up more than threshold, expand
-    if (deltaY > threshold && !isExpanded) {
-      setIsExpanded(true);
-    }
-    // If dragging down more than threshold, collapse
-    if (deltaY < -threshold && isExpanded) {
-      setIsExpanded(false);
-    }
-  };
-
-  const handleMouseUp = () => {
-    dragStartY.current = 0;
-  };
 
   const hasOwnDrawer = React.isValidElement(content) && (content.props as any).open !== undefined;
 
