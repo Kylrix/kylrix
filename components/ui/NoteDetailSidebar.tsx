@@ -1170,8 +1170,8 @@ export function NoteDetailSidebar({
 
   return (
     <div
-      className={`note-detail-sidebar-root flex flex-col bg-[#161412] overflow-hidden text-white w-full ${
-        isPageLayout ? 'min-h-0' : 'h-full bg-[#161412]'
+      className={`note-detail-sidebar-root flex flex-col bg-[#161412] text-white w-full ${
+        isPageLayout ? 'min-h-screen overflow-visible' : 'h-full overflow-hidden'
       }`}
     >
       {/* Header */}
@@ -1394,9 +1394,11 @@ export function NoteDetailSidebar({
             persistScrollPosition(`note_detail:${liveNote.$id}`, e.currentTarget.scrollTop);
           }
         }}
-        style={{ overflowAnchor: 'none', contain: 'layout paint' } as React.CSSProperties}
-        className={`flex-1 overflow-y-auto flex flex-col gap-5 scrollbar-thin overscroll-contain ${
-          isPageLayout ? 'px-4 md:px-5 py-4' : 'p-4 gap-4'
+        style={{ overflowAnchor: 'none' } as React.CSSProperties}
+        className={`flex flex-col gap-5 ${
+          isPageLayout
+            ? 'flex-1 overflow-visible px-4 md:px-5 py-4'
+            : 'flex-1 min-h-0 overflow-y-auto scrollbar-thin overscroll-contain p-4 gap-4'
         }`}
       >
         {/* Unified WYSIWYG Editor */}

@@ -162,11 +162,7 @@ const Overlay: React.FC = () => {
             flex: 1,
             maxHeight: '100dvh',
             overflowX: 'hidden',
-            overflowY: 'hidden',
-            userSelect: 'none'}}
-          onMouseDown={isMobile ? handleMouseDown : undefined}
-          onMouseMove={isMobile ? handleMouseMove : undefined}
-          onMouseUp={isMobile ? handleMouseUp : undefined}
+            overflowY: 'hidden'}}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
         >
           {React.isValidElement(content)
