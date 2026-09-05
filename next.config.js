@@ -356,6 +356,19 @@ const nextConfig = {
       },
     ];
   },
+  async headers() {
+    return [
+      {
+        source: '/(idea|flow|flows|goal|goals|form|forms|vault|workspaces|app|settings|moment)/:path*',
+        headers: [
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex, nofollow, noarchive',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

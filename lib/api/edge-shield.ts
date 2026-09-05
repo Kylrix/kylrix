@@ -57,6 +57,14 @@ const SHIELD_PRESETS = {
     burstMax: 6,
     blockMs: 180_000,
   },
+  /** Scraper / crawler rate ceiling on public and shared pages. */
+  crawlerRate: {
+    windowMs: 60_000,
+    max: 30,
+    burstWindowMs: 5_000,
+    burstMax: 8,
+    blockMs: 180_000,
+  },
 } as const;
 
 function pruneHits(hits: number[], windowMs: number, now: number) {
@@ -148,6 +156,18 @@ export function enforcePatBurstShield(patKey: string): ShieldVerdict {
 export function enforceMcpSseOpenShield(req: NextRequest | Request): ShieldVerdict {
   const ip = getClientIp(req);
   return checkShield(`mcp_sse:${ip}`, SHIELD_PRESETS.mcpSseOpen);
+}
+
+const BOT_USER_AGENTS = /bot|spider|crawl|scraper|curl|wget|python|postman|node-fetch|axios|httpclient/i;
+
+export function isCrawlerOrBot(userAgent: string | null): boolean {
+  if (!userAgent) return false;
+  return BOT_USER_AGENTS.test(userAgent);
+}
+
+export function enforceCrawlerShield(req: NextRequest | Request): ShieldVerdict {
+  const ip = getClientIp(req);
+  return checkShield(`crawler:${ip}`, SHIELD_PRESETS.crawlerRate);
 }
 
 export class EdgeShieldError extends Error {

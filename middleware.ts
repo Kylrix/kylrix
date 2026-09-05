@@ -6,7 +6,7 @@ import {
   LAST_ROUTE_COOKIE,
 } from '@/lib/ecosystem/resume-route';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
-import { enforceApiIpShield } from '@/lib/api/edge-shield';
+import { enforceApiIpShield, enforceCrawlerShield, isCrawlerOrBot } from '@/lib/api/edge-shield';
 import { KYLRIX_API_V1_BASE } from '@/sdk/api';
 
 /**
@@ -193,6 +193,35 @@ export function middleware(request: NextRequest) {
 
   if (isRscFlight) {
     return NextResponse.next();
+  }
+
+  // ─── CRAWLER & SCRAPER DEFENSE ON SHARED / PUBLIC PATHS ───
+  const isSharedOrPublicRoute =
+    pathname.startsWith('/idea/') ||
+    pathname.startsWith('/flow/') ||
+    pathname.startsWith('/goal/') ||
+    pathname.startsWith('/form/') ||
+    pathname.startsWith('/vault/') ||
+    pathname.startsWith('/u/') ||
+    pathname.startsWith('/moment/');
+
+  const userAgent = request.headers.get('user-agent');
+  if (isSharedOrPublicRoute && isCrawlerOrBot(userAgent)) {
+    const shield = enforceCrawlerShield(request);
+    if (!shield.allowed) {
+      return new NextResponse(
+        `<html><head><meta name="robots" content="noindex, nofollow"><title>Too Many Requests</title></head><body style="background:#0a0a0a;color:#fff;font-family:sans-serif;padding:2rem;text-align:center"><h2>Crawler Rate Limit Exceeded</h2><p>Slow down your requests.</p></body></html>`,
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Retry-After': String(shield.retryAfterSec),
+            'Cache-Control': 'no-store, no-cache',
+            'X-Robots-Tag': 'noindex, nofollow, noarchive',
+          },
+        },
+      );
+    }
   }
 
   // Instant Route Forwards (Legacy -> Canonical)
