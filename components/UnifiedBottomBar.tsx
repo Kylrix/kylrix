@@ -113,26 +113,43 @@ export function UnifiedBottomBar() {
                 }}
 
                 className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group"
-
                 style={{
                   color: isSelected ? appColor : '#FFFFFF',
-                  opacity: isSelected ? 1 : 0.6,
+                  opacity: isSelected ? 1 : 0.75,
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >
-                <div className="relative flex items-center justify-center">
+                <div
+                  className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all ${
+                    isSelected
+                      ? 'bg-[#161412] border border-[#FFFFFF]'
+                      : 'bg-transparent border border-[#FFFFFF]/25 hover:border-[#FFFFFF]/60 hover:bg-[#161412]/50'
+                  }`}
+                >
                   <Icon
-                    size={22}
-                    strokeWidth={isSelected ? 2.2 : 1.6}
+                    size={20}
+                    strokeWidth={isSelected ? 2.2 : 1.8}
                     className="transition-colors duration-200"
+                    style={{
+                      color: isSelected ? appColor : '#FFFFFF',
+                    }}
                   />
                   {isSelected && (
                     <div
-                      className="absolute -bottom-1.5 w-1 h-1 rounded-full animate-fadeIn"
+                      className="absolute -bottom-1 w-1.5 h-1.5 rounded-full animate-fadeIn"
                       style={{ backgroundColor: appColor }}
                     />
                   )}
                 </div>
+                <span
+                  className="text-[10px] font-bold mt-1 tracking-tight font-satoshi transition-colors"
+                  style={{
+                    color: isSelected ? appColor : '#FFFFFF',
+                    fontFamily: 'var(--font-satoshi)',
+                  }}
+                >
+                  {item.label}
+                </span>
               </Link>
             );
           })}
