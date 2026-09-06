@@ -118,9 +118,9 @@ export function ProfileSidebar({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#0F0E0D] text-white font-satoshi overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col bg-[#161412] text-white font-satoshi overflow-hidden">
       {/* Top Header Navigation — Arrow toggles full height expand */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[#151311] border-b border-white/8 shrink-0 z-20">
+      <div className="flex items-center justify-between px-4 py-3 bg-[#161412] border-b border-white/20 shrink-0 z-20">
         <button
           type="button"
           onClick={handleExpandToggle}
@@ -141,15 +141,15 @@ export function ProfileSidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 space-y-4 pb-6">
-        {/* Banner Gradient Header matching ProfileRedesign */}
+        {/* Banner Header matching ProfileRedesign */}
         <div className="relative h-24 md:h-28 w-full shrink-0 bg-gradient-to-r from-[#6366F1]/40 via-[#FBBF24]/20 to-[#6366F1]/30">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
         </div>
 
-        {/* Profile Details Container */}
-        <div className="relative z-10 bg-[#151311] border-t border-b border-white/8 p-5 -mt-10 space-y-4">
+        {/* Profile Details Container (Pitch Black Outlined Card) */}
+        <div className="relative z-10 bg-[#000000] border border-white/20 rounded-2xl mx-4 p-5 -mt-10 space-y-4 shadow-xl">
           <div className="flex items-end gap-3 -mt-12">
-            <div className="border-3 border-[#0F0E0D] rounded-[24px] overflow-hidden shadow-2xl bg-[#0F0E0D] shrink-0">
+            <div className="border-3 border-[#000000] rounded-[24px] overflow-hidden shadow-2xl bg-[#000000] shrink-0">
               <IdentityAvatar
                 userId={isGroup ? undefined : uid || undefined}
                 src={isGroup ? (conversation?.avatarUrl?.startsWith?.('http') ? conversation.avatarUrl : null) : (avatarUrl?.startsWith?.('http') ? avatarUrl : null)}
@@ -238,14 +238,14 @@ export function ProfileSidebar({
 
               {groupTab === 'overview' && (
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-xl bg-[#0F0E0D] border border-white/6 px-3 py-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/35 m-0">Members</p>
+                  <div className="rounded-xl bg-[#161412] border border-white/20 px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 m-0">Members</p>
                     <p className="text-xs font-extrabold text-white m-0 mt-0.5 tabular-nums">
                       {conversation?.participants?.length || 0}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-[#0F0E0D] border border-white/6 px-3 py-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/35 m-0">Security</p>
+                  <div className="rounded-xl bg-[#161412] border border-white/20 px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 m-0">Security</p>
                     <p className="text-xs font-extrabold text-emerald-400 m-0 mt-0.5">
                       {conversation?.isEncrypted ? 'E2EE' : 'Private'}
                     </p>
@@ -256,7 +256,7 @@ export function ProfileSidebar({
               {groupTab === 'members' && (
                 <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                   {(conversation?.participants || []).map((memberId: string) => (
-                    <div key={memberId} className="flex items-center gap-2.5 p-2 rounded-xl bg-[#0F0E0D] border border-white/6">
+                    <div key={memberId} className="flex items-center gap-2.5 p-2 rounded-xl bg-[#161412] border border-white/20">
                       <IdentityAvatar userId={memberId} size={28} borderRadius="8px" />
                       <span className="text-xs font-bold text-white truncate">
                         {memberId === user?.$id ? 'You' : `@${memberId.slice(0, 8)}`}
@@ -267,21 +267,21 @@ export function ProfileSidebar({
               )}
 
               {groupTab === 'media' && (
-                <div className="p-4 text-center rounded-xl bg-[#0F0E0D] border border-white/6 text-xs text-white/40 font-mono">
+                <div className="p-4 text-center rounded-xl bg-[#161412] border border-white/20 text-xs text-white/50 font-mono">
                   Shared attachments and media appear here
                 </div>
               )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-[#0F0E0D] border border-white/6 px-3 py-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/35 m-0">Following</p>
+              <div className="rounded-xl bg-[#161412] border border-white/20 px-3 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 m-0">Following</p>
                 <p className="text-xs font-extrabold text-white m-0 mt-0.5 tabular-nums">
                   {profile?.followingCount ?? profile?.stats?.following ?? '—'}
                 </p>
               </div>
-              <div className="rounded-xl bg-[#0F0E0D] border border-white/6 px-3 py-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/35 m-0">Followers</p>
+              <div className="rounded-xl bg-[#161412] border border-white/20 px-3 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 m-0">Followers</p>
                 <p className="text-xs font-extrabold text-white m-0 mt-0.5 tabular-nums">
                   {profile?.followerCount ?? profile?.stats?.followers ?? '—'}
                 </p>

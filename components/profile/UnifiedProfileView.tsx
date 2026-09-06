@@ -732,9 +732,9 @@ export function UnifiedProfileView({
     activeTab === 'likes' ? unpackedLikes : unpackedZaps;
 
   return (
-    <div className={`${onClose ? 'h-full flex flex-col' : 'fixed inset-0 z-50 flex flex-col'} w-full max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi`}>
+    <div className={`${onClose ? 'h-full flex flex-col' : 'fixed inset-0 z-50 flex flex-col'} w-full max-h-[100dvh] bg-[#161412] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi`}>
       {/* Top Header Bar */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.06] bg-[#161412] shrink-0 z-30">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/20 bg-[#161412] shrink-0 z-30">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${isNostrMode ? 'bg-[#A855F7] shadow-[0_0_8px_rgba(168,85,247,0.6)]' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]'}`} />
           <span className="text-xs font-mono font-bold text-white/80 truncate">
@@ -763,7 +763,7 @@ export function UnifiedProfileView({
                   if (onClose) onClose();
                   router.push('/settings');
                 }}
-                className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.06] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-[#000000] border border-white/20 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                 title="Settings"
                 aria-label="Settings"
               >
@@ -778,7 +778,7 @@ export function UnifiedProfileView({
                 onClick={handleToggleFollow}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                   isFollowing
-                    ? 'bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/30'
+                    ? 'bg-[#000000] text-[#10B981] border border-[#10B981]/30 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/30'
                     : 'bg-[#F59E0B] text-black hover:bg-[#d97706]'
                 }`}
                 title={isFollowing ? 'Following' : 'Follow'}
@@ -793,7 +793,7 @@ export function UnifiedProfileView({
                 onClick={() => {
                   openUnifiedDrawer('new-chat', { recipientId: targetUid, recipientName: activeDisplayName });
                 }}
-                className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.06] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-[#000000] border border-white/20 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                 title="Direct Message"
                 aria-label="Direct Message"
               >
@@ -809,7 +809,7 @@ export function UnifiedProfileView({
                     recipientPubkey: resolvedPubkey,
                   });
                 }}
-                className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.06] text-amber-400 hover:text-amber-300 hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-[#000000] border border-white/20 text-amber-400 hover:text-amber-300 hover:bg-white/5 transition-colors cursor-pointer"
                 title="Tip / Zap"
                 aria-label="Tip / Zap"
               >
@@ -825,7 +825,7 @@ export function UnifiedProfileView({
               navigator.clipboard.writeText(url);
               toast.success('Link copied!');
             }}
-            className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.06] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-[#000000] border border-white/20 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
             title="Share"
             aria-label="Share"
           >
@@ -836,7 +836,7 @@ export function UnifiedProfileView({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-full bg-white/[0.06] hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer ml-1"
+              className="p-2 rounded-xl bg-[#000000] border border-white/20 text-white/70 hover:text-white transition-colors cursor-pointer ml-1"
               title="Close"
               aria-label="Close"
             >
@@ -846,18 +846,18 @@ export function UnifiedProfileView({
         </div>
       </header>
 
-      {/* Main Content Body (Pure Pitch Black Canvas) */}
-      <main className="flex-1 overflow-y-auto min-h-0 select-text bg-[#000000]">
+      {/* Main Content Body (Canonical Deep Ash Canvas) */}
+      <main className="flex-1 overflow-y-auto min-h-0 select-text bg-[#161412]">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-5">
           
           {/* View Mode Switcher: Ecosystem (Kylrix) ⟷ Nostr Native */}
-          <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-[#161412] border border-white/[0.06] shadow-sm">
+          <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-[#000000] border-2 border-white/20 shadow-sm">
             <button
               type="button"
               onClick={() => setViewMode('ecosystem')}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 !isNostrMode
-                  ? 'bg-[#0A0908] text-white shadow-sm border border-white/10'
+                  ? 'bg-[#161412] text-white shadow-sm border border-white/20'
                   : 'text-white/50 hover:text-white hover:bg-white/[0.03]'
               }`}
             >
@@ -870,7 +870,7 @@ export function UnifiedProfileView({
               onClick={() => setViewMode('nostr')}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 isNostrMode
-                  ? 'bg-[#0A0908] text-white shadow-sm border border-[#A855F7]/30'
+                  ? 'bg-[#161412] text-white shadow-sm border border-[#A855F7]/40'
                   : 'text-white/50 hover:text-white hover:bg-white/[0.03]'
               }`}
             >
@@ -879,8 +879,8 @@ export function UnifiedProfileView({
             </button>
           </div>
 
-          {/* Identity Card (Primary Panel) */}
-          <div className="rounded-3xl bg-[#161412] border border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-sm">
+          {/* Identity Card (Primary Pitch Black Outlined Panel) */}
+          <div className="rounded-3xl bg-[#000000] border border-white/20 p-5 sm:p-6 space-y-4 shadow-sm">
             <div className="flex items-center gap-4 min-w-0">
               {/* Avatar with Status */}
               <div className="relative shrink-0">
@@ -920,7 +920,7 @@ export function UnifiedProfileView({
 
             {/* Follower & Following Metrics Strip (Inset Wells) */}
             <div className="grid grid-cols-2 gap-2 pt-2">
-              <div className="rounded-2xl bg-[#0A0908] border border-white/[0.06] px-4 py-2.5 flex items-center justify-between">
+              <div className="rounded-2xl bg-[#161412] border border-white/20 px-4 py-2.5 flex items-center justify-between">
                 <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
                   {isNostrMode ? 'Nostr Following' : 'Following'}
                 </span>
@@ -928,7 +928,7 @@ export function UnifiedProfileView({
                   {totalFollowing}
                 </span>
               </div>
-              <div className="rounded-2xl bg-[#0A0908] border border-white/[0.06] px-4 py-2.5 flex items-center justify-between">
+              <div className="rounded-2xl bg-[#161412] border border-white/20 px-4 py-2.5 flex items-center justify-between">
                 <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
                   {isNostrMode ? 'Nostr Followers' : 'Followers'}
                 </span>
@@ -967,7 +967,7 @@ export function UnifiedProfileView({
                     href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A0908] border border-white/[0.06] hover:border-white/20 text-xs font-bold text-white/80 hover:text-white transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/20 hover:border-white/40 text-xs font-bold text-white/80 hover:text-white transition-colors cursor-pointer"
                   >
                     <LinkIcon size={12} className="text-[#6366F1]" />
                     <span className="truncate max-w-[160px]">{link.title || link.url.replace(/^https?:\/\//, '')}</span>
@@ -984,7 +984,7 @@ export function UnifiedProfileView({
                   <button
                     type="button"
                     onClick={() => copyToClipboard(nostrMeta.lud16!, 'Lightning Address')}
-                    className="w-full inline-flex items-center justify-between p-3 rounded-2xl bg-[#0A0908] border border-amber-500/20 text-xs font-mono text-amber-300 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                    className="w-full inline-flex items-center justify-between p-3 rounded-2xl bg-[#161412] border border-amber-500/20 text-xs font-mono text-amber-300 hover:bg-amber-500/10 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-2 truncate">
                       <Flame size={14} className="text-amber-400 shrink-0" />
@@ -997,12 +997,12 @@ export function UnifiedProfileView({
             )}
 
             {/* Keys & Protocol Pills */}
-            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/[0.06]">
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/20">
               {resolvedNpub && (
                 <button
                   type="button"
                   onClick={() => copyToClipboard(resolvedNpub, 'npub')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A0908] border border-white/[0.06] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/20 hover:border-white/40 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
                   title="Copy npub"
                 >
                   <Globe size={13} className="text-[#A855F7]" />
@@ -1015,7 +1015,7 @@ export function UnifiedProfileView({
                 <button
                   type="button"
                   onClick={() => copyToClipboard(targetUid, 'Ecosystem ID')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A0908] border border-white/[0.06] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/20 hover:border-white/40 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
                   title="Copy ID"
                 >
                   <ShieldCheck size={13} className="text-[#10B981]" />
@@ -1028,7 +1028,7 @@ export function UnifiedProfileView({
                 <button
                   type="button"
                   onClick={() => copyToClipboard(resolvedPubkey, 'hex pubkey')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0A0908] border border-white/[0.06] hover:border-white/20 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/20 hover:border-white/40 text-xs font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
                   title="Copy Hex"
                 >
                   <KeyRound size={13} className="text-[#6366F1]" />
@@ -1042,7 +1042,7 @@ export function UnifiedProfileView({
           {/* Activity Section */}
           <div className="space-y-4">
             {/* Stream Tabs */}
-            <nav className="p-1.5 rounded-2xl bg-[#161412] border border-white/[0.06] flex gap-1 shadow-sm">
+            <nav className="p-1.5 rounded-2xl bg-[#000000] border-2 border-white/20 flex gap-1 shadow-sm">
               {(
                 [
                   { id: 'posts', label: 'Posts', count: unpackedPosts.length },
@@ -1059,7 +1059,7 @@ export function UnifiedProfileView({
                     onClick={() => setActiveTab(t.id)}
                     className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                       active
-                        ? 'bg-[#0A0908] text-white shadow-sm border border-white/10'
+                        ? 'bg-[#161412] text-white shadow-sm border border-white/20'
                         : 'text-white/50 hover:text-white hover:bg-white/[0.03]'
                     }`}
                   >
@@ -1094,7 +1094,7 @@ export function UnifiedProfileView({
                   return (
                     <div
                       key={post.id}
-                      className="rounded-2xl bg-[#161412] border border-white/[0.06] p-4 sm:p-5 space-y-3 hover:border-white/15 transition-all shadow-sm"
+                      className="rounded-2xl bg-[#000000] border border-white/20 p-4 sm:p-5 space-y-3 hover:border-white/40 transition-all shadow-sm"
                     >
                       {/* Context Banner */}
                       {post.isRepost && (
