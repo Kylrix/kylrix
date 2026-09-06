@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Drawer,
   Button,
@@ -43,6 +43,9 @@ import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
+import { TypeIntelBar } from '@/components/agentic/TypeIntelBar';
+import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
 
 import {
   DndContext, 
@@ -310,6 +313,9 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
+  const isPro = hasPaidKylrixPlan(user);
+  const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('form');
+  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
   const { invalidate } = useDataNexus();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const { setIsDrawerOpen } = useDrawerState();
@@ -337,6 +343,44 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   };
   
   const initialLoadRef = useRef(true);
+
+  const {
+    learningStatus,
+    learningLabel,
+    suggestion: agentSuggestion,
+    busy: agentBusy,
+    showWand,
+    acceptSuggestion: acceptAgentSuggestion,
+    runTakeover,
+    handleKeyDown: handleAgentKeyDown,
+    accent: agentAccent,
+  } = useTypeIntelligence({
+    kind: 'form',
+    userId: user?.$id,
+    displayName: user?.name || user?.email || undefined,
+    draft: description || title,
+    enabled: createWithAgent && open,
+    isPro,
+    onOpenPro: openPro,
+    setDraft: (next) => {
+      if (description.trim().length > 0 || !title.trim()) {
+        setDescription(next);
+      } else {
+        // Completing from title-only draft → put full text in description
+        setDescription(next);
+      }
+    },
+  });
+
+  const {
+    inlineSuffix,
+    suggestions: autoSuggestions,
+    handleKeyDown: handleAutoKeyDown,
+    acceptSuggestion: acceptAutoSuggestion,
+  } = useContextualAutocomplete(description || title, {
+    niche: 'productivity',
+    onAccept: (completedText) => setDescription(completedText),
+  });
 
   // Sync isDrawerOpen global state and body class when open
   useEffect(() => {
@@ -724,8 +768,29 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  onKeyDown={(e) => {
+                    handleAgentKeyDown(e);
+                    handleAutoKeyDown(e);
+                  }}
                   placeholder="Briefly describe the purpose of this form..."
                   className="w-full bg-transparent border-0 outline-none text-sm text-[#9B9691] focus:ring-0 resize-none font-satoshi"
+                />
+                <ContextualAutocompleteOverlay
+                  inlineSuffix={inlineSuffix}
+                  suggestions={autoSuggestions}
+                  onAccept={acceptAutoSuggestion}
+                />
+                <TypeIntelBar
+                  enabled={createWithAgent}
+                  onToggle={persistAgent}
+                  accent={agentAccent}
+                  learningStatus={learningStatus}
+                  learningLabel={learningLabel}
+                  suggestion={agentSuggestion}
+                  busy={agentBusy}
+                  showWand={showWand}
+                  onAccept={acceptAgentSuggestion}
+                  onTakeover={() => void runTakeover()}
                 />
               </div>
 

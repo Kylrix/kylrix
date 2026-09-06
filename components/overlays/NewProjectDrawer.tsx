@@ -29,6 +29,11 @@ import { listNotesByUser } from '@/lib/appwrite/note';
 import { tasks } from '@/lib/kylrixflow';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
 import { buildSubProjectCreatePayload } from '@/lib/projects/sub-projects';
+import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
+import { TypeIntelBar } from '@/components/agentic/TypeIntelBar';
+import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 const SURFACE_ASH = '#161412';
 const VOID = '#0A0908';
@@ -45,6 +50,10 @@ export function NewProjectDrawer() {
   const { showSuccess, showError } = useToast();
   const { user } = useAuth();
   const { refreshWorkspaces } = useWorkspace();
+  const { openProUpgrade } = useProUpgrade();
+  const isPro = hasPaidKylrixPlan(user);
+  const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('project');
+  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
 
   const template = drawerData?.template;
   const onSuccess = drawerData?.onCreated as ((project: any) => void) | undefined;
@@ -67,6 +76,41 @@ export function NewProjectDrawer() {
   const [summary, setSummary] = useState('');
   const [visibility, setVisibility] = useState<'private' | 'public'>('public');
   const [isGuest, setIsGuest] = useState(true);
+
+  const projectDraft = summary.trim() ? summary : title;
+  const {
+    learningStatus,
+    learningLabel,
+    suggestion: agentSuggestion,
+    busy: agentBusy,
+    showWand,
+    acceptSuggestion: acceptAgentSuggestion,
+    runTakeover,
+    handleKeyDown: handleAgentKeyDown,
+    accent: agentAccent,
+  } = useTypeIntelligence({
+    kind: 'project',
+    userId: user?.$id,
+    displayName: user?.name || user?.email || undefined,
+    draft: projectDraft,
+    enabled: createWithAgent && isOpen,
+    isPro,
+    onOpenPro: openPro,
+    setDraft: (next) => {
+      if (summary.trim() || !title.trim()) setSummary(next);
+      else setSummary(next);
+    },
+  });
+
+  const {
+    inlineSuffix,
+    suggestions: autoSuggestions,
+    handleKeyDown: handleAutoKeyDown,
+    acceptSuggestion: acceptAutoSuggestion,
+  } = useContextualAutocomplete(projectDraft, {
+    niche: 'workspace',
+    onAccept: (completedText) => setSummary(completedText),
+  });
 
   const fetchResources = useCallback(async () => {
     if (!user?.$id) return;
@@ -478,6 +522,10 @@ export function NewProjectDrawer() {
                 rows={2}
                 value={summary}
                 onChange={(e: any) => setSummary(e.target.value)}
+                onKeyDown={(e: any) => {
+                  handleAgentKeyDown(e);
+                  handleAutoKeyDown(e);
+                }}
                 placeholder={isSubProject ? 'What is this project about?' : 'What is this workspace about?'}
                 sx={{
                   width: '100%',
@@ -497,6 +545,23 @@ export function NewProjectDrawer() {
                   '&:focus': { borderColor: SYSTEM_PRIMARY },
                   '&::placeholder': { color: 'rgba(255,255,255,0.25)' },
                 }}
+              />
+              <ContextualAutocompleteOverlay
+                inlineSuffix={inlineSuffix}
+                suggestions={autoSuggestions}
+                onAccept={acceptAutoSuggestion}
+              />
+              <TypeIntelBar
+                enabled={createWithAgent}
+                onToggle={persistAgent}
+                accent={agentAccent}
+                learningStatus={learningStatus}
+                learningLabel={learningLabel}
+                suggestion={agentSuggestion}
+                busy={agentBusy}
+                showWand={showWand}
+                onAccept={acceptAgentSuggestion}
+                onTakeover={() => void runTakeover()}
               />
             </Box>
 

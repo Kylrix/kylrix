@@ -11,6 +11,11 @@ import { addHours } from '@/lib/time-util';
 import type { Event } from '@/types';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { useEvents } from '@/context/EventsContext';
+import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
+import { TypeIntelBar, TypeIntelGhostOverlay } from '@/components/agentic/TypeIntelBar';
+import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 type Props = {
   onClose?: () => void;
@@ -51,6 +56,10 @@ export function CreateEventComposer({
 }: Props) {
   const { user } = useAuth();
   const { pushLiveEvent } = useEvents();
+  const { openProUpgrade } = useProUpgrade();
+  const isPro = hasPaidKylrixPlan(user);
+  const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('event');
+  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
   const ownerId = user?.$id || 'guest';
   const cacheKey = 'f_events_list';
 
@@ -213,6 +222,38 @@ export function CreateEventComposer({
     [buildLive, isTitleManuallyEdited, pushLive, title],
   );
 
+  const {
+    learningStatus,
+    learningLabel,
+    suggestion: agentSuggestion,
+    busy: agentBusy,
+    showWand,
+    acceptSuggestion: acceptAgentSuggestion,
+    runTakeover,
+    handleKeyDown: handleAgentKeyDown,
+    accent: agentAccent,
+  } = useTypeIntelligence({
+    kind: 'event',
+    userId: user?.$id,
+    displayName: user?.name || user?.email || undefined,
+    draft: content,
+    enabled: createWithAgent,
+    isPro,
+    onOpenPro: openPro,
+    setDraft: handleContentChange,
+  });
+
+  const {
+    inlineSuffix,
+    suggestions: autoSuggestions,
+    handleKeyDown: handleAutoKeyDown,
+    acceptSuggestion: acceptAutoSuggestion,
+  } = useContextualAutocomplete(content, {
+    niche: 'connect',
+    activeObjectId: resolvedId,
+    onAccept: (completedText) => handleContentChange(completedText),
+  });
+
   const handleClose = useCallback(() => {
     const id = liveIdRef.current || resolvedId;
     const hasContent = Boolean(content.trim() || title.trim());
@@ -321,27 +362,62 @@ export function CreateEventComposer({
           />
         )}
 
-        <textarea
-          rows={isExpanded ? 10 : 5}
-          value={content}
-          onPaste={() => {
-            isPastedRef.current = true;
-            if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
-            pasteTimerRef.current = setTimeout(() => {
-              isPastedRef.current = false;
-            }, 2000);
-          }}
-          onChange={(e) => handleContentChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !isExpanded && !isPastedRef.current) {
-              e.preventDefault();
-              handleClose();
-            }
-          }}
-          placeholder="Write your event..."
-          autoFocus
-          className="w-full h-full min-h-[120px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-[#22C55E]/30 rounded-xl px-3 py-2 text-lg focus:outline-none transition-all scrollbar-thin"
-        />
+        <div className="relative flex-1 min-h-[120px] flex flex-col">
+          <TypeIntelGhostOverlay
+            draft={content}
+            suggestion={agentSuggestion}
+            enabled={createWithAgent}
+            className="px-3 py-2 text-lg leading-normal font-satoshi"
+          />
+          <textarea
+            rows={isExpanded ? 10 : 5}
+            value={content}
+            onPaste={() => {
+              isPastedRef.current = true;
+              if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+              pasteTimerRef.current = setTimeout(() => {
+                isPastedRef.current = false;
+              }, 2000);
+            }}
+            onChange={(e) => handleContentChange(e.target.value)}
+            onKeyDown={(e) => {
+              handleAgentKeyDown(e);
+              handleAutoKeyDown(e);
+              if (
+                e.key === 'Enter' &&
+                !e.shiftKey &&
+                !isExpanded &&
+                !isPastedRef.current &&
+                !inlineSuffix &&
+                !agentSuggestion
+              ) {
+                e.preventDefault();
+                handleClose();
+              }
+            }}
+            placeholder="Write your event..."
+            autoFocus
+            className="relative w-full h-full min-h-[120px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-[#22C55E]/30 rounded-xl px-3 py-2 text-lg focus:outline-none transition-all scrollbar-thin"
+          />
+          <ContextualAutocompleteOverlay
+            inlineSuffix={inlineSuffix}
+            suggestions={autoSuggestions}
+            onAccept={acceptAutoSuggestion}
+          />
+          <TypeIntelBar
+            enabled={createWithAgent}
+            onToggle={persistAgent}
+            accent={agentAccent}
+            learningStatus={learningStatus}
+            learningLabel={learningLabel}
+            suggestion={agentSuggestion}
+            busy={agentBusy}
+            showWand={showWand}
+            onAccept={acceptAgentSuggestion}
+            onTakeover={() => void runTakeover()}
+            className="mt-1.5"
+          />
+        </div>
       </div>
 
       <div className="p-3 border-t border-white/5 bg-[#161412] flex flex-col gap-2.5 shrink-0">

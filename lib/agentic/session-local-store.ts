@@ -4,6 +4,8 @@
  */
 
 import type { AgenticMessageBlock } from './message-blocks';
+import type { TypeIntelKind } from '@/lib/agentic/type-intel-kinds';
+import { TYPE_INTEL_KINDS } from '@/lib/agentic/type-intel-kinds';
 
 export type AgenticSyncStatus = 'pending' | 'synced' | 'error';
 
@@ -101,6 +103,25 @@ export function momentDoppelgangerRemoteRowId(userId: string): string {
 }
 
 export const MOMENT_DOPPELGANGER_TARGET_TYPE = 'momentDoppelganger' as const;
+
+/** Deterministic type-intel session id (instant local fetch). */
+export function typeIntelSessionId(kind: TypeIntelKind, userId: string): string {
+  return `type_intel_${kind}_${userId}`;
+}
+
+/**
+ * Appwrite row ids max 36 chars — short deterministic remote id.
+ * Local id stays `type_intel_${kind}_${userId}` for LocalEngine.
+ */
+export function typeIntelRemoteRowId(kind: TypeIntelKind, userId: string): string {
+  const prefix = TYPE_INTEL_KINDS[kind].remotePrefix;
+  const raw = `${prefix}${String(userId || '').replace(/[^a-zA-Z0-9._-]/g, '_')}`.slice(0, 36);
+  return raw || `${prefix}${Date.now().toString(36)}`.slice(0, 36);
+}
+
+export function typeIntelTargetType(kind: TypeIntelKind): string {
+  return TYPE_INTEL_KINDS[kind].targetType;
+}
 
 export const AgenticSessionLocalStore = {
   sessionsListKey,
@@ -348,6 +369,87 @@ export const AgenticSessionLocalStore = {
       targetType: MOMENT_DOPPELGANGER_TARGET_TYPE,
       targetId: userId,
       context: 'Moment voice twin — learns from your posts to draft in your style. No chat UI.',
+      chatHistory: [],
+    };
+    await this.upsertSession(newSession);
+    return newSession;
+  },
+
+  /**
+   * Type-level intelligence — one durable session per account × object type (no chat UI).
+   * Stable id: `type_intel_${kind}_${userId}`. Prunes stray duplicate list entries.
+   */
+  async getOrCreateTypeIntelSession(
+    kind: TypeIntelKind,
+    userId: string,
+  ): Promise<AgenticLocalSession> {
+    const sessionId = typeIntelSessionId(kind, userId);
+    const targetType = typeIntelTargetType(kind);
+    const list = await this.getSessionsList(userId);
+    const dupes = list.filter(
+      (s) =>
+        s.targetType === targetType &&
+        (s.targetId === userId || s.targetId === 'self' || s.id === sessionId),
+    );
+
+    if (dupes.length > 1 || (dupes.length === 1 && dupes[0].id !== sessionId)) {
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      for (const d of dupes) {
+        if (d.id === sessionId) continue;
+        await LocalEngine.cacheDelete(sessionKey(d.id)).catch(() => {});
+      }
+      await this.setSessionsList(
+        userId,
+        list.filter(
+          (s) =>
+            !(
+              s.targetType === targetType &&
+              (s.targetId === userId || s.targetId === 'self') &&
+              s.id !== sessionId
+            ),
+        ),
+      );
+    }
+
+    const existing = await this.getSession(sessionId);
+    if (existing) {
+      if (existing.targetType !== targetType || existing.targetId !== userId) {
+        await this.upsertSession({
+          ...existing,
+          id: sessionId,
+          userId,
+          targetType,
+          targetId: userId,
+        });
+        return (await this.getSession(sessionId)) || existing;
+      }
+      return existing;
+    }
+
+    const byType = dupes.find((s) => s.id !== sessionId) || dupes[0];
+    if (byType && byType.id !== sessionId) {
+      const full = await this.getSession(byType.id);
+      if (full) {
+        await this.upsertSession({
+          ...full,
+          id: sessionId,
+          userId,
+          targetType,
+          targetId: userId,
+        });
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        await LocalEngine.cacheDelete(sessionKey(byType.id)).catch(() => {});
+        return (await this.getSession(sessionId))!;
+      }
+    }
+
+    const label = TYPE_INTEL_KINDS[kind].label;
+    const newSession: AgenticLocalSession = {
+      id: sessionId,
+      userId,
+      targetType,
+      targetId: userId,
+      context: `${label} writing twin — learns from your past ${label}s. No chat UI.`,
       chatHistory: [],
     };
     await this.upsertSession(newSession);

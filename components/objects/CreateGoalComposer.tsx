@@ -17,6 +17,10 @@ import {
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
+import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
+import { TypeIntelBar } from '@/components/agentic/TypeIntelBar';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low'];
 
@@ -51,6 +55,10 @@ export function CreateGoalComposer({
   const { pushLiveGoal, selectedProjectId, userId, deleteTask, ecosystemTags, refreshEcosystemTags, tasks: allTasks } = useTask();
   const { user } = useAuth();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
+  const { openProUpgrade } = useProUpgrade();
+  const isPro = hasPaidKylrixPlan(user);
+  const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('goal');
+  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
   const ownerId = user?.$id || userId || 'guest';
   const { closeSidebar } = useDynamicSidebar();
   const { getCachedData, setCachedData } = useDataNexus();
@@ -328,6 +336,27 @@ export function CreateGoalComposer({
     [isTitleManuallyEdited, scheduleLiveGoalSync, title],
   );
 
+  const {
+    learningStatus,
+    learningLabel,
+    suggestion: agentSuggestion,
+    busy: agentBusy,
+    showWand,
+    acceptSuggestion: acceptAgentSuggestion,
+    runTakeover,
+    handleKeyDown: handleAgentKeyDown,
+    accent: agentAccent,
+  } = useTypeIntelligence({
+    kind: 'goal',
+    userId: user?.$id,
+    displayName: user?.name || user?.email || undefined,
+    draft: content,
+    enabled: createWithAgent,
+    isPro,
+    onOpenPro: openPro,
+    setDraft: handleContentChange,
+  });
+
   const handleClose = useCallback(() => {
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     const id = liveIdRef.current || resolvedId;
@@ -470,8 +499,9 @@ export function CreateGoalComposer({
             }}
             onChange={(e) => handleContentChange(e.target.value)}
             onKeyDown={(e) => {
+              handleAgentKeyDown(e);
               handleAutoKeyDown(e);
-              if (e.key === 'Enter' && !e.shiftKey && !isExpanded && !isPastedRef.current && !inlineSuffix) {
+              if (e.key === 'Enter' && !e.shiftKey && !isExpanded && !isPastedRef.current && !inlineSuffix && !agentSuggestion) {
                 e.preventDefault();
                 recordContent(content);
                 handleClose();
@@ -486,6 +516,18 @@ export function CreateGoalComposer({
             inlineSuffix={inlineSuffix}
             suggestions={autoSuggestions}
             onAccept={acceptSuggestion}
+          />
+          <TypeIntelBar
+            enabled={createWithAgent}
+            onToggle={persistAgent}
+            accent={agentAccent}
+            learningStatus={learningStatus}
+            learningLabel={learningLabel}
+            suggestion={agentSuggestion}
+            busy={agentBusy}
+            showWand={showWand}
+            onAccept={acceptAgentSuggestion}
+            onTakeover={() => void runTakeover()}
           />
         </div>
 

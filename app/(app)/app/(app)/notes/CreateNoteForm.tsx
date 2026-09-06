@@ -51,6 +51,9 @@ import { isEphemeralComposeNoteId, isUnpersistedComposeDraft, markNotePersistedR
 import { isValidAppwriteRowId } from '@/lib/utils/resource-ids';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
+import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
+import { TypeIntelBar } from '@/components/agentic/TypeIntelBar';
+import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
 
 interface CreateNoteFormProps {
   onNoteCreated?: (note: Notes) => void;
@@ -93,6 +96,9 @@ export default function CreateNoteForm({
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const { openProUpgrade } = useProUpgrade();
   const { openFileDrawer } = useUnifiedFileDrawer();
+  const isPro = hasPaidKylrixPlan(user);
+  const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('note');
+  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
 
   const [title, setTitle] = useState(initialContent?.title || '');
   const [content, setContent] = useState(initialContent?.content || '');
@@ -432,6 +438,39 @@ export default function CreateNoteForm({
 
     scheduleLiveNoteSync();
   }, [isTitleManuallyEdited, scheduleLiveNoteSync]);
+
+  const {
+    learningStatus,
+    learningLabel,
+    suggestion: agentSuggestion,
+    busy: agentBusy,
+    showWand,
+    acceptSuggestion,
+    runTakeover,
+    handleKeyDown: handleAgentKeyDown,
+    accent: agentAccent,
+  } = useTypeIntelligence({
+    kind: 'note',
+    userId: user?.$id,
+    displayName: user?.name || user?.email || undefined,
+    draft: content,
+    enabled: createWithAgent,
+    isPro,
+    onOpenPro: openPro,
+    setDraft: handleContentChange,
+  });
+
+  const {
+    inlineSuffix,
+    suggestions: autoSuggestions,
+    handleKeyDown: handleAutoKeyDown,
+    acceptSuggestion: acceptAutoSuggestion,
+  } = useContextualAutocomplete(content, {
+    niche: 'productivity',
+    activeObjectId: resolvedNoteId,
+    tags,
+    onAccept: (completedText) => handleContentChange(completedText),
+  });
 
   const insertTextAtCursor = (text: string) => {
     const textarea = contentRef.current;
@@ -1279,6 +1318,10 @@ export default function CreateNoteForm({
               autoFocus
               enableLocalEngine={false}
               onValueChange={handleContentChange}
+              onKeyDown={(e) => {
+                handleAgentKeyDown(e);
+                handleAutoKeyDown(e);
+              }}
               onPaste={(_e) => {
                 isPastedRef.current = true;
                 if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
@@ -1287,6 +1330,26 @@ export default function CreateNoteForm({
                 }, 2000);
               }}
               className="w-full flex-1 min-h-[180px] resize-none bg-transparent text-white placeholder-white/25 border-0 focus:outline-none p-2 text-base leading-relaxed scrollbar-thin font-satoshi"
+            />
+
+            <ContextualAutocompleteOverlay
+              inlineSuffix={inlineSuffix}
+              suggestions={autoSuggestions}
+              onAccept={acceptAutoSuggestion}
+            />
+
+            <TypeIntelBar
+              enabled={createWithAgent}
+              onToggle={persistAgent}
+              accent={agentAccent}
+              learningStatus={learningStatus}
+              learningLabel={learningLabel}
+              suggestion={agentSuggestion}
+              busy={agentBusy}
+              showWand={showWand}
+              onAccept={acceptSuggestion}
+              onTakeover={() => void runTakeover()}
+              className="mt-1"
             />
 
             {/* Offline fast suggestion system matching goals or tags as user types */}
