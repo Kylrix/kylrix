@@ -26,7 +26,7 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
-/** Markdown punctuation nodes to hide (Notion-style: never show modifiers). */
+/** Markdown punctuation nodes to hide unless the caret is inside that construct. */
 const MARKDOWN_MARK_NODES = new Set([
   'HeaderMark',
   'EmphasisMark',
@@ -55,19 +55,25 @@ const liveMarkdownHighlight = HighlightStyle.define([
   { tag: tags.monospace, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '0.9em', color: '#A5B4FC', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '4px' },
   { tag: tags.quote, color: 'rgba(255,255,255,0.78)', fontStyle: 'italic' },
   { tag: tags.list, color: '#FFFFFF' },
-  // Hide markdown punctuation visually (HeaderMark/EmphasisMark/etc. map here).
-  { tag: tags.processingInstruction, class: 'kylrix-md-mark' },
-  { tag: tags.meta, class: 'kylrix-md-mark' },
+  // Visible only when not decoration-hidden (caret inside that construct).
+  { tag: tags.processingInstruction, color: 'rgba(255,255,255,0.4)' },
+  { tag: tags.meta, color: 'rgba(255,255,255,0.4)' },
   { tag: tags.contentSeparator, color: 'rgba(255,255,255,0.2)' },
 ]);
 
 const hiddenMarkDeco = Decoration.replace({});
 
-/** Hide markdown punctuation in the doc (source stays; UI is clean). */
+/**
+ * Hide markdown punctuation by default; reveal when the caret/selection
+ * intersects that mark's parent construct (heading, bold span, link, …).
+ * Read-only: always hide.
+ */
 function buildHiddenMarkdownMarks(view: EditorView): DecorationSet {
   const ranges: Range<Decoration>[] = [];
-  // Force a parse so mark nodes exist on first paint / after large edits.
   ensureSyntaxTree(view.state, view.viewport.to, 150);
+
+  const selection = view.state.selection.main;
+  const editable = view.state.facet(EditorView.editable);
 
   for (const { from, to } of view.visibleRanges) {
     syntaxTree(view.state).iterate({
@@ -75,9 +81,17 @@ function buildHiddenMarkdownMarks(view: EditorView): DecorationSet {
       to,
       enter(node) {
         if (!MARKDOWN_MARK_NODES.has(node.name)) return;
-        if (node.to > node.from) {
-          ranges.push(hiddenMarkDeco.range(node.from, node.to));
+        if (node.to <= node.from) return;
+
+        if (editable) {
+          const parent = node.node.parent;
+          const regionFrom = parent ? parent.from : node.from;
+          const regionTo = parent ? parent.to : node.to;
+          // Caret inside this construct → keep modifiers visible for editing.
+          if (selection.from <= regionTo && selection.to >= regionFrom) return;
         }
+
+        ranges.push(hiddenMarkDeco.range(node.from, node.to));
       },
     });
   }
@@ -94,6 +108,7 @@ const liveMarkdownMarkHider = ViewPlugin.fromClass(
     update(update: ViewUpdate) {
       if (
         update.docChanged ||
+        update.selectionSet ||
         update.viewportChanged ||
         syntaxTree(update.startState) !== syntaxTree(update.state)
       ) {
@@ -354,10 +369,6 @@ export function KylrixWYSIWYGEditor({
       '.cm-placeholder': {
         color: 'rgba(155, 150, 145, 0.45)',
         fontStyle: 'normal',
-      },
-      // Notion-style: hide markdown punctuation that HighlightStyle tags as marks
-      '.kylrix-md-mark': {
-        display: 'none !important',
       },
     });
 

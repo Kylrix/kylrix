@@ -27,28 +27,6 @@ export function UnifiedBottomBar() {
   const { isDrawerOpen } = useDrawerState();
   const { isOpen: isOverlayOpen } = useOverlay();
 
-  const appContext = useMemo(() => {
-    if (pathname?.startsWith('/app')) return 'note';
-    if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
-    if (pathname?.startsWith('/vault')) return 'vault';
-    if (pathname?.startsWith('/settings')) return 'settings';
-    return null;
-  }, [pathname]);
-
-  const appColor = useMemo(() => {
-    switch (appContext) {
-      case 'vault':
-        return '#10B981';
-      case 'goal':
-        return '#A855F7';
-      case 'settings':
-        return '#6366F1';
-      case 'note':
-      default:
-        return '#EC4899';
-    }
-  }, [appContext]);
-
   const currentTab = useMemo(() => {
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
