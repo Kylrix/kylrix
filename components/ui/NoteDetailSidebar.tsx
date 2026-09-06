@@ -1402,7 +1402,7 @@ export function NoteDetailSidebar({
         }`}
       >
         {/* Unified WYSIWYG Editor */}
-        <div className="flex flex-col rounded-[24px] bg-[#161412] border border-white/5 overflow-hidden flex-shrink-0">
+        <div className="flex flex-col rounded-[24px] bg-[#000000] border border-white/20 overflow-hidden flex-shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-5 pt-4 pb-3 border-b border-white/5">
             <div className="min-w-0 flex flex-col gap-0.5">
               <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash">
