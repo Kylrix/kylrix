@@ -16,9 +16,9 @@ import {
 
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
+import { useContextualAutocomplete } from '@/lib/contextual-engine';
 import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
-import { TypeIntelBar } from '@/components/agentic/TypeIntelBar';
+import { TypeIntelToggle, TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 
@@ -121,10 +121,8 @@ export function CreateGoalComposer({
 
   const {
     inlineSuffix,
-    suggestions: autoSuggestions,
     handleKeyDown: handleAutoKeyDown,
     recordContent,
-    acceptSuggestion,
   } = useContextualAutocomplete(content, {
     niche: 'productivity',
     activeObjectId: resolvedId,
@@ -357,6 +355,24 @@ export function CreateGoalComposer({
     setDraft: handleContentChange,
   });
 
+  const ghostSuggestion =
+    createWithAgent && agentSuggestion ? agentSuggestion : inlineSuffix || '';
+
+  const acceptGhost = useCallback(() => {
+    if (createWithAgent && agentSuggestion) {
+      acceptAgentSuggestion();
+      return;
+    }
+    if (inlineSuffix) handleContentChange(content + inlineSuffix);
+  }, [
+    createWithAgent,
+    agentSuggestion,
+    acceptAgentSuggestion,
+    inlineSuffix,
+    handleContentChange,
+    content,
+  ]);
+
   const handleClose = useCallback(() => {
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     const id = liveIdRef.current || resolvedId;
@@ -479,55 +495,74 @@ export function CreateGoalComposer({
           <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/35">
             Description & Milestones
           </label>
-          <textarea
-            ref={contentRef}
-            rows={3}
-            value={content}
-            onPaste={(e) => {
-              isPastedRef.current = true;
-              if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
-              pasteTimerRef.current = setTimeout(() => {
-                isPastedRef.current = false;
-              }, 2000);
-              const pastedText = e.clipboardData.getData('text');
-              if (pastedText) {
-                setTimeout(() => {
-                  const updated = contentRef.current?.value || content;
-                  handleContentChange(updated);
-                }, 10);
-              }
-            }}
-            onChange={(e) => handleContentChange(e.target.value)}
-            onKeyDown={(e) => {
-              handleAgentKeyDown(e);
-              handleAutoKeyDown(e);
-              if (e.key === 'Enter' && !e.shiftKey && !isExpanded && !isPastedRef.current && !inlineSuffix && !agentSuggestion) {
-                e.preventDefault();
-                recordContent(content);
-                handleClose();
-              }
-            }}
-            placeholder="Break down your goal, steps, or notes..."
-            autoFocus
-            style={{ minHeight: '76px', height: '76px' }}
-            className="w-full resize-none bg-[#100F0E] text-white placeholder-white/25 border border-white/10 focus:border-[#A855F7]/40 rounded-2xl p-3.5 text-sm leading-relaxed focus:outline-none transition-all scrollbar-thin font-satoshi"
-          />
-          <ContextualAutocompleteOverlay
-            inlineSuffix={inlineSuffix}
-            suggestions={autoSuggestions}
-            onAccept={acceptSuggestion}
-          />
-          <TypeIntelBar
+          <div className="relative rounded-2xl border border-white/10 bg-[#100F0E] focus-within:border-[#A855F7]/40 transition-all">
+            <textarea
+              ref={contentRef}
+              rows={3}
+              value={content}
+              onPaste={(e) => {
+                isPastedRef.current = true;
+                if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+                pasteTimerRef.current = setTimeout(() => {
+                  isPastedRef.current = false;
+                }, 2000);
+                const pastedText = e.clipboardData.getData('text');
+                if (pastedText) {
+                  setTimeout(() => {
+                    const updated = contentRef.current?.value || content;
+                    handleContentChange(updated);
+                  }, 10);
+                }
+              }}
+              onChange={(e) => handleContentChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (
+                  (e.key === 'ArrowRight' || e.key === 'Tab') &&
+                  ghostSuggestion &&
+                  e.currentTarget.selectionStart === e.currentTarget.value.length
+                ) {
+                  e.preventDefault();
+                  acceptGhost();
+                  return;
+                }
+                handleAgentKeyDown(e);
+                handleAutoKeyDown(e);
+                if (
+                  e.key === 'Enter' &&
+                  !e.shiftKey &&
+                  !isExpanded &&
+                  !isPastedRef.current &&
+                  !ghostSuggestion
+                ) {
+                  e.preventDefault();
+                  recordContent(content);
+                  handleClose();
+                }
+              }}
+              placeholder="Break down your goal, steps, or notes..."
+              autoFocus
+              style={{ minHeight: '76px', height: '76px' }}
+              className="w-full resize-none bg-transparent text-white placeholder-white/25 border-0 rounded-2xl p-3.5 text-sm leading-relaxed focus:outline-none transition-all scrollbar-thin font-satoshi"
+            />
+            <TypeIntelGhostLayer
+              draft={content}
+              suggestion={ghostSuggestion}
+              enabled={Boolean(ghostSuggestion) || (createWithAgent && showWand)}
+              showWand={createWithAgent && showWand}
+              busy={agentBusy}
+              accent={agentAccent}
+              onAccept={acceptGhost}
+              onTakeover={() => void runTakeover()}
+              className="p-3.5 text-sm leading-relaxed font-satoshi"
+            />
+          </div>
+          <TypeIntelToggle
             enabled={createWithAgent}
             onToggle={persistAgent}
             accent={agentAccent}
             learningStatus={learningStatus}
             learningLabel={learningLabel}
-            suggestion={agentSuggestion}
             busy={agentBusy}
-            showWand={showWand}
-            onAccept={acceptAgentSuggestion}
-            onTakeover={() => void runTakeover()}
           />
         </div>
 

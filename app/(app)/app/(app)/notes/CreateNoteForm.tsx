@@ -52,8 +52,8 @@ import { isValidAppwriteRowId } from '@/lib/utils/resource-ids';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
 import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
-import { TypeIntelBar } from '@/components/agentic/TypeIntelBar';
-import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
+import { TypeIntelToggle, TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
+import { useContextualAutocomplete } from '@/lib/contextual-engine';
 
 interface CreateNoteFormProps {
   onNoteCreated?: (note: Notes) => void;
@@ -412,32 +412,34 @@ export default function CreateNoteForm({
 
   const autoTitleTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Realtime input — flow.realtime-input-rxdb-sync: direct onInput interception, sync ref + LocalEngine
+  // Realtime input — flow.realtime-input-rxdb-sync: sync setState (never startTransition on keystrokes)
   const handleContentChange = useCallback((nextValue: string) => {
-    // 1) Synchronous ref update — instant SoT for flushLiveNote
     editorStateRef.current.content = nextValue;
+    setContent(nextValue);
 
-    // 2) Non-blocking React state update
-    const { startTransition } = React as any;
-    const upd = () => setContent(nextValue);
-    if (typeof startTransition === 'function') startTransition(upd); else upd();
-
-    // 3) Debounced auto-title derivation so typing is never blocked
     if (!isTitleManuallyEdited) {
       if (autoTitleTimerRef.current) clearTimeout(autoTitleTimerRef.current);
       autoTitleTimerRef.current = setTimeout(() => {
         const generated = nextValue.trim() ? buildAutoTitleFromContent(nextValue) : '';
         editorStateRef.current.title = generated;
-        if (typeof startTransition === 'function') {
-          startTransition(() => setTitle(generated));
-        } else {
-          setTitle(generated);
-        }
-      }, 150);
+        setTitle(generated);
+      }, 280);
     }
 
     scheduleLiveNoteSync();
   }, [isTitleManuallyEdited, scheduleLiveNoteSync]);
+
+  /** Agent accept/takeover must update BareMetal DOM while focused (external value sync is blocked). */
+  const applyContentDraft = useCallback(
+    (nextValue: string) => {
+      const el = contentRef.current;
+      if (el && el.value !== nextValue) {
+        el.value = nextValue;
+      }
+      handleContentChange(nextValue);
+    },
+    [handleContentChange],
+  );
 
   const {
     learningStatus,
@@ -457,20 +459,33 @@ export default function CreateNoteForm({
     enabled: createWithAgent,
     isPro,
     onOpenPro: openPro,
-    setDraft: handleContentChange,
+    setDraft: applyContentDraft,
   });
 
   const {
     inlineSuffix,
-    suggestions: autoSuggestions,
     handleKeyDown: handleAutoKeyDown,
-    acceptSuggestion: acceptAutoSuggestion,
   } = useContextualAutocomplete(content, {
     niche: 'productivity',
     activeObjectId: resolvedNoteId,
     tags,
-    onAccept: (completedText) => handleContentChange(completedText),
+    onAccept: (completedText) => applyContentDraft(completedText),
   });
+
+  const ghostSuggestion =
+    createWithAgent && agentSuggestion
+      ? agentSuggestion
+      : inlineSuffix || '';
+
+  const acceptGhost = useCallback(() => {
+    if (createWithAgent && agentSuggestion) {
+      acceptSuggestion();
+      return;
+    }
+    if (inlineSuffix) {
+      applyContentDraft(content + inlineSuffix);
+    }
+  }, [createWithAgent, agentSuggestion, acceptSuggestion, inlineSuffix, applyContentDraft, content]);
 
   const insertTextAtCursor = (text: string) => {
     const textarea = contentRef.current;
@@ -1290,9 +1305,8 @@ export default function CreateNoteForm({
               enableLocalEngine={false}
               onValueChange={(val) => {
                 editorStateRef.current.title = val;
-                const { startTransition } = React as any;
-                const upd = () => { setTitle(val); setIsTitleManuallyEdited(true); };
-                if (typeof startTransition === 'function') startTransition(upd); else upd();
+                setTitle(val);
+                setIsTitleManuallyEdited(true);
                 scheduleLiveNoteSync();
               }}
               placeholder="Title"
@@ -1319,6 +1333,15 @@ export default function CreateNoteForm({
               enableLocalEngine={false}
               onValueChange={handleContentChange}
               onKeyDown={(e) => {
+                if (
+                  (e.key === 'ArrowRight' || e.key === 'Tab') &&
+                  ghostSuggestion &&
+                  e.currentTarget.selectionStart === e.currentTarget.value.length
+                ) {
+                  e.preventDefault();
+                  acceptGhost();
+                  return;
+                }
                 handleAgentKeyDown(e);
                 handleAutoKeyDown(e);
               }}
@@ -1331,25 +1354,26 @@ export default function CreateNoteForm({
               }}
               className="w-full flex-1 min-h-[180px] resize-none bg-transparent text-white placeholder-white/25 border-0 focus:outline-none p-2 text-base leading-relaxed scrollbar-thin font-satoshi"
             />
-
-            <ContextualAutocompleteOverlay
-              inlineSuffix={inlineSuffix}
-              suggestions={autoSuggestions}
-              onAccept={acceptAutoSuggestion}
+            <TypeIntelGhostLayer
+              draft={content}
+              suggestion={ghostSuggestion}
+              enabled={Boolean(ghostSuggestion) || (createWithAgent && showWand)}
+              showWand={createWithAgent && showWand}
+              busy={agentBusy}
+              accent={agentAccent}
+              onAccept={acceptGhost}
+              onTakeover={() => void runTakeover()}
+              className="p-2 text-base leading-relaxed font-satoshi"
             />
 
-            <TypeIntelBar
+            <TypeIntelToggle
               enabled={createWithAgent}
               onToggle={persistAgent}
               accent={agentAccent}
               learningStatus={learningStatus}
               learningLabel={learningLabel}
-              suggestion={agentSuggestion}
               busy={agentBusy}
-              showWand={showWand}
-              onAccept={acceptSuggestion}
-              onTakeover={() => void runTakeover()}
-              className="mt-1"
+              className="mt-1.5"
             />
 
             {/* Offline fast suggestion system matching goals or tags as user types */}

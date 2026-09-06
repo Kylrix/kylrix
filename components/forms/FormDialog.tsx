@@ -44,8 +44,8 @@ import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
-import { TypeIntelBar } from '@/components/agentic/TypeIntelBar';
-import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
+import { TypeIntelToggle, TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
+import { useContextualAutocomplete } from '@/lib/contextual-engine';
 
 import {
   DndContext, 
@@ -374,13 +374,25 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
 
   const {
     inlineSuffix,
-    suggestions: autoSuggestions,
     handleKeyDown: handleAutoKeyDown,
-    acceptSuggestion: acceptAutoSuggestion,
   } = useContextualAutocomplete(description || title, {
     niche: 'productivity',
     onAccept: (completedText) => setDescription(completedText),
   });
+
+  const ghostSuggestion =
+    createWithAgent && agentSuggestion ? agentSuggestion : inlineSuffix || '';
+
+  const acceptGhost = useCallback(() => {
+    if (createWithAgent && agentSuggestion) {
+      acceptAgentSuggestion();
+      return;
+    }
+    if (inlineSuffix) {
+      const base = description || title;
+      setDescription(base + inlineSuffix);
+    }
+  }, [createWithAgent, agentSuggestion, acceptAgentSuggestion, inlineSuffix, description, title]);
 
   // Sync isDrawerOpen global state and body class when open
   useEffect(() => {
@@ -764,33 +776,46 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                   className="w-full bg-transparent border-0 outline-none text-base font-black text-[#F5F2ED] focus:ring-0 font-clash"
                 />
                 <div className="h-px bg-white/5" />
-                <textarea
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  onKeyDown={(e) => {
-                    handleAgentKeyDown(e);
-                    handleAutoKeyDown(e);
-                  }}
-                  placeholder="Briefly describe the purpose of this form..."
-                  className="w-full bg-transparent border-0 outline-none text-sm text-[#9B9691] focus:ring-0 resize-none font-satoshi"
-                />
-                <ContextualAutocompleteOverlay
-                  inlineSuffix={inlineSuffix}
-                  suggestions={autoSuggestions}
-                  onAccept={acceptAutoSuggestion}
-                />
-                <TypeIntelBar
+                <div className="relative min-h-[72px]">
+                  <textarea
+                    rows={3}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (
+                        (e.key === 'ArrowRight' || e.key === 'Tab') &&
+                        ghostSuggestion &&
+                        e.currentTarget.selectionStart === e.currentTarget.value.length
+                      ) {
+                        e.preventDefault();
+                        acceptGhost();
+                        return;
+                      }
+                      handleAgentKeyDown(e);
+                      handleAutoKeyDown(e);
+                    }}
+                    placeholder="Briefly describe the purpose of this form..."
+                    className="relative w-full bg-transparent border-0 outline-none text-sm text-[#9B9691] focus:ring-0 resize-none font-satoshi"
+                  />
+                  <TypeIntelGhostLayer
+                    draft={description}
+                    suggestion={ghostSuggestion}
+                    enabled={Boolean(ghostSuggestion) || (createWithAgent && showWand)}
+                    showWand={createWithAgent && showWand}
+                    busy={agentBusy}
+                    accent={agentAccent}
+                    onAccept={acceptGhost}
+                    onTakeover={() => void runTakeover()}
+                    className="text-sm leading-normal font-satoshi"
+                  />
+                </div>
+                <TypeIntelToggle
                   enabled={createWithAgent}
                   onToggle={persistAgent}
                   accent={agentAccent}
                   learningStatus={learningStatus}
                   learningLabel={learningLabel}
-                  suggestion={agentSuggestion}
                   busy={agentBusy}
-                  showWand={showWand}
-                  onAccept={acceptAgentSuggestion}
-                  onTakeover={() => void runTakeover()}
                 />
               </div>
 

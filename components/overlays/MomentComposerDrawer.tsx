@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ArrowRight,
   ChevronDown,
   ChevronUp,
   Globe,
@@ -13,7 +12,6 @@ import {
   Send,
   Sparkles,
   Square,
-  Wand2,
   X,
 } from 'lucide-react';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
@@ -30,6 +28,7 @@ import {
   saveMomentAgentPref,
   useMomentIntelligence,
 } from '@/hooks/useMomentIntelligence';
+import { TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
 import toast from 'react-hot-toast';
 
 interface MomentComposerDrawerProps {
@@ -411,56 +410,37 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
           className="flex-1 min-h-0 flex flex-col p-5 pt-3 gap-3 overflow-hidden"
         >
           <div className="relative flex-1 min-h-[100px] flex flex-col">
-            {/* Ghost autocomplete overlay */}
-            <div
-              aria-hidden
-              className={`absolute inset-0 pointer-events-none whitespace-pre-wrap break-words font-satoshi leading-relaxed ${
-                isExpanded ? 'text-xl' : 'text-[17px]'
-              }`}
-            >
-              <span className="text-transparent">{content}</span>
-              {createWithAgent && suggestion ? (
-                <span className="text-white/28">{suggestion}</span>
-              ) : null}
-            </div>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (
+                  createWithAgent &&
+                  suggestion &&
+                  (e.key === 'ArrowRight' || e.key === 'Tab') &&
+                  e.currentTarget.selectionStart === e.currentTarget.value.length
+                ) {
+                  e.preventDefault();
+                  acceptSuggestion();
+                }
+              }}
               placeholder="What's happening?"
               className={`relative w-full flex-1 min-h-[100px] bg-transparent border-none text-white leading-relaxed focus:outline-none resize-none placeholder:text-white/30 font-satoshi caret-[#F59E0B] ${
                 isExpanded ? 'text-xl' : 'text-[17px]'
               }`}
               autoFocus
             />
-
-            {createWithAgent && (suggestion || showWand) ? (
-              <div className="absolute right-0 bottom-0 flex items-center gap-1.5">
-                {suggestion ? (
-                  <button
-                    type="button"
-                    onClick={acceptSuggestion}
-                    disabled={agentBusy}
-                    className="w-8 h-8 rounded-full bg-[#000000] border-2 border-white/20 text-[#F59E0B] hover:border-[#F59E0B]/60 flex items-center justify-center transition-colors cursor-pointer"
-                    title="Accept suggestion"
-                    aria-label="Accept suggestion"
-                  >
-                    <ArrowRight size={16} strokeWidth={2.5} />
-                  </button>
-                ) : null}
-                {showWand ? (
-                  <button
-                    type="button"
-                    onClick={() => void runTakeover()}
-                    disabled={agentBusy}
-                    className="w-8 h-8 rounded-full bg-[#F59E0B] border-2 border-[#F59E0B] text-black hover:bg-amber-400 flex items-center justify-center transition-colors cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.35)]"
-                    title="Write full post in your style"
-                    aria-label="Write full post in your style"
-                  >
-                    <Wand2 size={15} strokeWidth={2.5} />
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
+            <TypeIntelGhostLayer
+              draft={content}
+              suggestion={suggestion}
+              enabled={createWithAgent && Boolean(suggestion || showWand)}
+              showWand={showWand}
+              busy={agentBusy}
+              accent="#F59E0B"
+              onAccept={acceptSuggestion}
+              onTakeover={() => void runTakeover()}
+              className={`font-satoshi leading-relaxed ${isExpanded ? 'text-xl' : 'text-[17px]'}`}
+            />
           </div>
 
           {createWithAgent && learningLabel ? (

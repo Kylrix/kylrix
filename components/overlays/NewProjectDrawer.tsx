@@ -30,8 +30,8 @@ import { tasks } from '@/lib/kylrixflow';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
 import { buildSubProjectCreatePayload } from '@/lib/projects/sub-projects';
 import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
-import { TypeIntelBar } from '@/components/agentic/TypeIntelBar';
-import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
+import { TypeIntelToggle, TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
+import { useContextualAutocomplete } from '@/lib/contextual-engine';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 
@@ -104,13 +104,25 @@ export function NewProjectDrawer() {
 
   const {
     inlineSuffix,
-    suggestions: autoSuggestions,
     handleKeyDown: handleAutoKeyDown,
-    acceptSuggestion: acceptAutoSuggestion,
   } = useContextualAutocomplete(projectDraft, {
     niche: 'workspace',
     onAccept: (completedText) => setSummary(completedText),
   });
+
+  const ghostSuggestion =
+    createWithAgent && agentSuggestion ? agentSuggestion : inlineSuffix || '';
+
+  const acceptGhost = useCallback(() => {
+    if (createWithAgent && agentSuggestion) {
+      acceptAgentSuggestion();
+      return;
+    }
+    if (inlineSuffix) {
+      const base = summary.trim() ? summary : title;
+      setSummary(base + inlineSuffix);
+    }
+  }, [createWithAgent, agentSuggestion, acceptAgentSuggestion, inlineSuffix, summary, title]);
 
   const fetchResources = useCallback(async () => {
     if (!user?.$id) return;
@@ -518,50 +530,71 @@ export function NewProjectDrawer() {
                 Description (Optional)
               </Typography>
               <Box
-                component="textarea"
-                rows={2}
-                value={summary}
-                onChange={(e: any) => setSummary(e.target.value)}
-                onKeyDown={(e: any) => {
-                  handleAgentKeyDown(e);
-                  handleAutoKeyDown(e);
-                }}
-                placeholder={isSubProject ? 'What is this project about?' : 'What is this workspace about?'}
                 sx={{
-                  width: '100%',
-                  px: 2,
-                  py: 1.25,
+                  position: 'relative',
+                  minHeight: 56,
                   borderRadius: '16px',
                   bgcolor: VOID,
                   border: `1px solid ${BORDER_HAIRLINE}`,
-                  color: '#fff',
-                  fontSize: '0.86rem',
-                  fontWeight: 500,
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  resize: 'none',
-                  fontFamily: 'inherit',
-                  transition: 'border-color 0.2s',
-                  '&:focus': { borderColor: SYSTEM_PRIMARY },
-                  '&::placeholder': { color: 'rgba(255,255,255,0.25)' },
+                  overflow: 'hidden',
                 }}
-              />
-              <ContextualAutocompleteOverlay
-                inlineSuffix={inlineSuffix}
-                suggestions={autoSuggestions}
-                onAccept={acceptAutoSuggestion}
-              />
-              <TypeIntelBar
+              >
+                <Box
+                  component="textarea"
+                  rows={2}
+                  value={summary}
+                  onChange={(e: any) => setSummary(e.target.value)}
+                  onKeyDown={(e: any) => {
+                    if (
+                      (e.key === 'ArrowRight' || e.key === 'Tab') &&
+                      ghostSuggestion &&
+                      e.currentTarget.selectionStart === e.currentTarget.value.length
+                    ) {
+                      e.preventDefault();
+                      acceptGhost();
+                      return;
+                    }
+                    handleAgentKeyDown(e);
+                    handleAutoKeyDown(e);
+                  }}
+                  placeholder={isSubProject ? 'What is this project about?' : 'What is this workspace about?'}
+                  sx={{
+                    position: 'relative',
+                    width: '100%',
+                    px: 2,
+                    py: 1.25,
+                    borderRadius: '16px',
+                    bgcolor: 'transparent',
+                    border: 'none',
+                    color: '#fff',
+                    fontSize: '0.86rem',
+                    fontWeight: 500,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    resize: 'none',
+                    fontFamily: 'inherit',
+                    '&::placeholder': { color: 'rgba(255,255,255,0.25)' },
+                  }}
+                />
+                <TypeIntelGhostLayer
+                  draft={summary}
+                  suggestion={ghostSuggestion}
+                  enabled={Boolean(ghostSuggestion) || (createWithAgent && showWand)}
+                  showWand={createWithAgent && showWand}
+                  busy={agentBusy}
+                  accent={agentAccent}
+                  onAccept={acceptGhost}
+                  onTakeover={() => void runTakeover()}
+                  className="px-2 py-[5px] text-[0.86rem] leading-normal font-medium"
+                />
+              </Box>
+              <TypeIntelToggle
                 enabled={createWithAgent}
                 onToggle={persistAgent}
                 accent={agentAccent}
                 learningStatus={learningStatus}
                 learningLabel={learningLabel}
-                suggestion={agentSuggestion}
                 busy={agentBusy}
-                showWand={showWand}
-                onAccept={acceptAgentSuggestion}
-                onTakeover={() => void runTakeover()}
               />
             </Box>
 

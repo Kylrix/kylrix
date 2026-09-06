@@ -12,8 +12,8 @@ import type { Event } from '@/types';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { useEvents } from '@/context/EventsContext';
 import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
-import { TypeIntelBar, TypeIntelGhostOverlay } from '@/components/agentic/TypeIntelBar';
-import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
+import { TypeIntelToggle, TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
+import { useContextualAutocomplete } from '@/lib/contextual-engine';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 
@@ -245,14 +245,30 @@ export function CreateEventComposer({
 
   const {
     inlineSuffix,
-    suggestions: autoSuggestions,
     handleKeyDown: handleAutoKeyDown,
-    acceptSuggestion: acceptAutoSuggestion,
   } = useContextualAutocomplete(content, {
     niche: 'connect',
     activeObjectId: resolvedId,
     onAccept: (completedText) => handleContentChange(completedText),
   });
+
+  const ghostSuggestion =
+    createWithAgent && agentSuggestion ? agentSuggestion : inlineSuffix || '';
+
+  const acceptGhost = useCallback(() => {
+    if (createWithAgent && agentSuggestion) {
+      acceptAgentSuggestion();
+      return;
+    }
+    if (inlineSuffix) handleContentChange(content + inlineSuffix);
+  }, [
+    createWithAgent,
+    agentSuggestion,
+    acceptAgentSuggestion,
+    inlineSuffix,
+    handleContentChange,
+    content,
+  ]);
 
   const handleClose = useCallback(() => {
     const id = liveIdRef.current || resolvedId;
@@ -363,12 +379,6 @@ export function CreateEventComposer({
         )}
 
         <div className="relative flex-1 min-h-[120px] flex flex-col">
-          <TypeIntelGhostOverlay
-            draft={content}
-            suggestion={agentSuggestion}
-            enabled={createWithAgent}
-            className="px-3 py-2 text-lg leading-normal font-satoshi"
-          />
           <textarea
             rows={isExpanded ? 10 : 5}
             value={content}
@@ -381,6 +391,15 @@ export function CreateEventComposer({
             }}
             onChange={(e) => handleContentChange(e.target.value)}
             onKeyDown={(e) => {
+              if (
+                (e.key === 'ArrowRight' || e.key === 'Tab') &&
+                ghostSuggestion &&
+                e.currentTarget.selectionStart === e.currentTarget.value.length
+              ) {
+                e.preventDefault();
+                acceptGhost();
+                return;
+              }
               handleAgentKeyDown(e);
               handleAutoKeyDown(e);
               if (
@@ -388,8 +407,7 @@ export function CreateEventComposer({
                 !e.shiftKey &&
                 !isExpanded &&
                 !isPastedRef.current &&
-                !inlineSuffix &&
-                !agentSuggestion
+                !ghostSuggestion
               ) {
                 e.preventDefault();
                 handleClose();
@@ -397,24 +415,26 @@ export function CreateEventComposer({
             }}
             placeholder="Write your event..."
             autoFocus
-            className="relative w-full h-full min-h-[120px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-[#22C55E]/30 rounded-xl px-3 py-2 text-lg focus:outline-none transition-all scrollbar-thin"
+            className="relative w-full h-full min-h-[120px] resize-none bg-transparent text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-[#22C55E]/30 rounded-xl px-3 py-2 text-lg focus:outline-none transition-all scrollbar-thin"
           />
-          <ContextualAutocompleteOverlay
-            inlineSuffix={inlineSuffix}
-            suggestions={autoSuggestions}
-            onAccept={acceptAutoSuggestion}
+          <TypeIntelGhostLayer
+            draft={content}
+            suggestion={ghostSuggestion}
+            enabled={Boolean(ghostSuggestion) || (createWithAgent && showWand)}
+            showWand={createWithAgent && showWand}
+            busy={agentBusy}
+            accent={agentAccent}
+            onAccept={acceptGhost}
+            onTakeover={() => void runTakeover()}
+            className="px-3 py-2 text-lg leading-normal"
           />
-          <TypeIntelBar
+          <TypeIntelToggle
             enabled={createWithAgent}
             onToggle={persistAgent}
             accent={agentAccent}
             learningStatus={learningStatus}
             learningLabel={learningLabel}
-            suggestion={agentSuggestion}
             busy={agentBusy}
-            showWand={showWand}
-            onAccept={acceptAgentSuggestion}
-            onTakeover={() => void runTakeover()}
             className="mt-1.5"
           />
         </div>
