@@ -85,3 +85,28 @@ export function buildTypeIntelTakeoverPrompt(params: {
     .filter(Boolean)
     .join('\n\n');
 }
+
+export function buildWorkspaceIntelNudgePrompt(params: {
+  displayName?: string;
+  samples: Array<{ kind: string; title: string; blurb?: string }>;
+}): { systemInstruction: string; prompt: string } {
+  const name = (params.displayName || 'the user').trim() || 'the user';
+  const sampleLines = params.samples
+    .slice(0, 8)
+    .map((s, i) => `${i + 1}. [${s.kind}] ${s.title}${s.blurb ? ` — ${s.blurb}` : ''}`)
+    .join('\n');
+  return {
+    systemInstruction: [
+      `You write short, friendly workspace tips for ${name} inside Kylrix.`,
+      'No chatbot tone. No jargon. One practical suggestion only.',
+      'Never invent private facts. Samples are already redacted.',
+      'OUTPUT — JSON only: {"title":"...","message":"...","actionHref":"/workspaces"}',
+      'title ≤ 28 chars. message ≤ 120 chars. actionHref must be a simple in-app path.',
+    ].join('\n'),
+    prompt: [
+      'Write one occasional tip from these local objects:',
+      sampleLines || '(none)',
+      'JSON:',
+    ].join('\n\n'),
+  };
+}

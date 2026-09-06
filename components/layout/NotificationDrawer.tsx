@@ -182,6 +182,21 @@ export function NotificationDrawer({
         setNotifications(cached);
       }
 
+      // Merge LocalEngine workspace-intel tips (0 DB)
+      try {
+        const { listWorkspaceIntelNotifications } = await import('@/lib/agentic/local-notifications');
+        const intel = await listWorkspaceIntelNotifications(userId);
+        if (!cancelled && intel.length) {
+          setNotifications((prev) => {
+            const map = new Map<string, KylrixNotification>();
+            for (const n of [...intel, ...prev]) map.set(n.id, n);
+            return Array.from(map.values())
+              .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+              .slice(0, 100);
+          });
+        }
+      } catch {}
+
       const localGlobalFollows = (await LocalEngine.cacheGet<string[]>('kylrix:follows')) || [];
       const localUserFollows = userId && userId !== 'guest' ? ((await LocalEngine.cacheGet<string[]>(`kylrix:follows_${userId}`)) || []) : [];
       const merged = new Set<string>([...localGlobalFollows, ...localUserFollows].map((k) => k.toLowerCase()));
@@ -259,6 +274,15 @@ export function NotificationDrawer({
       for (const n of notificationsRef.current) {
         itemsMap.set(n.id, n);
       }
+
+      // A0. Workspace ambient tips from LocalEngine (never remote)
+      try {
+        const { listWorkspaceIntelNotifications } = await import('@/lib/agentic/local-notifications');
+        const intel = await listWorkspaceIntelNotifications(userId);
+        for (const n of intel) {
+          itemsMap.set(n.id, { ...n, time: formatTimeAgo(n.timestamp || Date.now()) });
+        }
+      } catch {}
 
       // A. Real Appwrite Security & Session Logs (Cached with 30-min TTL in LocalEngine)
       if (user?.$id) {
@@ -532,6 +556,28 @@ export function NotificationDrawer({
       void harvestLiveActivity(false);
     }
   }, [isOpen, harvestLiveActivity]);
+
+  // Live merge when ambient workspace tip lands in LocalEngine
+  useEffect(() => {
+    const onLocal = (e: Event) => {
+      const detail = (e as CustomEvent).detail as
+        | { userId?: string; notification?: KylrixNotification }
+        | undefined;
+      if (detail?.userId && detail.userId !== userId) return;
+      const row = detail?.notification;
+      if (!row) return;
+      setNotifications((prev) => {
+        const map = new Map<string, KylrixNotification>();
+        map.set(row.id, { ...row, time: formatTimeAgo(row.timestamp || Date.now()) });
+        for (const n of prev) map.set(n.id, n);
+        return Array.from(map.values())
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+          .slice(0, 100);
+      });
+    };
+    window.addEventListener('kylrix:local-notifications', onLocal as EventListener);
+    return () => window.removeEventListener('kylrix:local-notifications', onLocal as EventListener);
+  }, [userId]);
 
   const markNotificationRead = (id: string) => {
     setReadIds((prev) => {

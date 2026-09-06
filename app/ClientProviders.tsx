@@ -65,6 +65,7 @@ import { EventsProvider } from '@/context/EventsContext';
  */
 import { ContextIntelligenceProvider } from '@/context/ContextIntelligenceContext';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
+import { WorkspaceIntelAmbientProvider } from '@/components/providers/WorkspaceIntelAmbientProvider';
 
 import { UniversalScrollRestoration } from '@/components/providers/UniversalScrollRestoration';
 import { UnifiedMediaProvider } from '@/context/UnifiedMediaContext';
@@ -92,6 +93,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   ResourcePinProvider,
   SelectionProvider,
   WorkspaceProvider,
+  WorkspaceIntelAmbientProvider,
   NotesProvider,
   EventsProvider,
   TaskProvider,

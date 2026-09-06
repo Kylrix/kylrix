@@ -7,6 +7,7 @@ import {
   buildTypeIntelCompletePrompt,
   buildTypeIntelSystemInstruction,
   buildTypeIntelTakeoverPrompt,
+  buildWorkspaceIntelNudgePrompt,
   type TypeIntelVoiceSample,
 } from '@/lib/agentic/prompts/type-intel';
 import {
@@ -264,5 +265,53 @@ export async function generateTypeIntelTakeoverAction(params: {
     return { success: true, draft };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Could not write draft' };
+  }
+}
+
+/** Occasional workspace tip — samples come from LocalEngine; no table list on server. */
+export async function generateWorkspaceIntelNudgeAction(params: {
+  jwt?: string;
+  displayName?: string;
+  samples: Array<{ kind: string; title: string; blurb?: string }>;
+}): Promise<{
+  success: boolean;
+  title?: string;
+  message?: string;
+  actionHref?: string;
+  error?: string;
+}> {
+  try {
+    const actor = await getActor(params.jwt);
+    if (!actor?.$id) return { success: false, error: 'Unauthorized' };
+    const hasAccess = await userHasPaidAiAccess(actor.$id);
+    if (!hasAccess) return { success: false, error: AI_REQUIRES_PRO_MESSAGE };
+
+    // Touch type-intel project session once (never-dup) — no object table reads
+    await ensureTypeIntelSessionAction({ kind: 'project', jwt: params.jwt });
+
+    const samples = (params.samples || []).slice(0, 8);
+    if (!samples.length) return { success: false, error: 'No samples' };
+
+    const { systemInstruction, prompt } = buildWorkspaceIntelNudgePrompt({
+      displayName: params.displayName || actor.name || actor.email,
+      samples,
+    });
+    const raw = await generateAiSdkCompletion({ systemInstruction, prompt });
+    let parsed: any = null;
+    const cleaned = cleanModelText(raw);
+    try {
+      const start = cleaned.indexOf('{');
+      const end = cleaned.lastIndexOf('}');
+      if (start >= 0 && end > start) parsed = JSON.parse(cleaned.slice(start, end + 1));
+    } catch {}
+
+    const title = String(parsed?.title || 'Workspace tip').trim().slice(0, 40);
+    const message = String(parsed?.message || cleaned).trim().slice(0, 160);
+    let actionHref = String(parsed?.actionHref || '/workspaces').trim();
+    if (!actionHref.startsWith('/')) actionHref = '/workspaces';
+    if (!message) return { success: false, error: 'Empty tip' };
+    return { success: true, title, message, actionHref };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Could not write tip' };
   }
 }
