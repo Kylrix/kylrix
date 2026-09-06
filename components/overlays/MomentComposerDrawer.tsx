@@ -89,6 +89,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     showWand,
     acceptSuggestion,
     runTakeover,
+    flushReinforce,
   } = useMomentIntelligence({
     userId: user?.$id,
     displayName: user?.name || user?.email || undefined,
@@ -252,6 +253,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     if (!user?.$id && mode !== 'reply') return;
     if (mode === 'reply' && replySource === 'ecosystem' && !user?.$id) return;
 
+    flushReinforce();
     setPublishing(true);
     const mediaIds = attachments.map((a) => a.id);
     let body = content.trim();

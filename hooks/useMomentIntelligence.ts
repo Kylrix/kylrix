@@ -68,15 +68,26 @@ export function useMomentIntelligence(opts: {
   const applySuggestion = useCallback((raw: string, forDraft: string) => {
     const cleaned = asSuggestionSuffix(forDraft, raw);
     setSuggestion(cleaned);
+    lastShownSuggestionRef.current = cleaned;
     return cleaned;
   }, []);
 
   const samplesRef = useRef<MomentVoiceSample[]>([]);
   const hintsRef = useRef<string[]>([]);
+  const styleNotesRef = useRef<string[]>([]);
+  const sessionInfoRef = useRef<string[]>([]);
+  const learningsRef = useRef<string[]>([]);
   const reqIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sourceRef = useRef<SuggestionSource>('offline');
   const voiceReadyRef = useRef(false);
+  const lastShownSuggestionRef = useRef('');
+  const pendingAcceptRef = useRef<{
+    draftBefore: string;
+    suggestion: string;
+    draftAfterAccept: string;
+  } | null>(null);
+  const reinforceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!enabled || !userId) {
@@ -94,6 +105,11 @@ export function useMomentIntelligence(opts: {
         if (cancelled) return;
         samplesRef.current = res.samples;
         hintsRef.current = res.hints;
+        const { recentLearningsFromSession } = await import('@/lib/agentic/suggest-reinforce-local');
+        const learned = recentLearningsFromSession(res.session);
+        styleNotesRef.current = learned.styleNotes;
+        sessionInfoRef.current = learned.sessionInfo;
+        learningsRef.current = learned.learnings;
         voiceReadyRef.current = true;
         setLearningStatus(res.status === 'ready' ? 'ready' : 'empty');
       } catch {
@@ -225,6 +241,9 @@ export function useMomentIntelligence(opts: {
             jwt,
             replyMode: isReply,
             parentSnippet: isReply ? parentSnippet : undefined,
+            styleNotes: styleNotesRef.current,
+            sessionInfo: sessionInfoRef.current,
+            learnings: learningsRef.current,
           });
           if (myReq !== reqIdRef.current) return;
           if (!res.success) {
@@ -275,6 +294,93 @@ export function useMomentIntelligence(opts: {
     learningStatus,
   ]);
 
+  // Reinforce: after accept, watch subsequent edits; also catch ignored hints
+  useEffect(() => {
+    if (!userId || !enabled) return;
+    if (reinforceTimerRef.current) clearTimeout(reinforceTimerRef.current);
+
+    reinforceTimerRef.current = setTimeout(() => {
+      void (async () => {
+        const {
+          classifySuggestEdit,
+          enqueueSuggestReinforce,
+        } = await import('@/lib/agentic/suggest-reinforce-local');
+
+        const pending = pendingAcceptRef.current;
+        if (pending) {
+          const kind = classifySuggestEdit({
+            draftBefore: pending.draftBefore,
+            suggestion: pending.suggestion,
+            draftAfter: draft,
+            accepted: true,
+          });
+          // Settle once draft is stable relative to accept
+          if (draft !== pending.draftAfterAccept || kind !== 'accepted_verbatim') {
+            await enqueueSuggestReinforce({
+              userId,
+              signal: {
+                kind,
+                mode: isReply ? 'reply' : 'create',
+                draftBefore: pending.draftBefore,
+                suggestion: pending.suggestion,
+                draftAfter: draft,
+                parentSnippet: isReply ? parentSnippet : undefined,
+                at: new Date().toISOString(),
+              },
+            });
+            pendingAcceptRef.current = null;
+          } else if (kind === 'accepted_verbatim' && draft === pending.draftAfterAccept) {
+            // Still verbatim after settle window — record once
+            await enqueueSuggestReinforce({
+              userId,
+              signal: {
+                kind: 'accepted_verbatim',
+                mode: isReply ? 'reply' : 'create',
+                draftBefore: pending.draftBefore,
+                suggestion: pending.suggestion,
+                draftAfter: draft,
+                parentSnippet: isReply ? parentSnippet : undefined,
+                at: new Date().toISOString(),
+              },
+            });
+            pendingAcceptRef.current = null;
+          }
+          return;
+        }
+
+        // Ignored: had a hint, user typed instead without accepting
+        const shown = lastShownSuggestionRef.current;
+        if (shown && !suggestion && draft.trim().length >= 3) {
+          const kind = classifySuggestEdit({
+            draftBefore: draft.slice(0, Math.max(0, draft.length - 1)),
+            suggestion: shown,
+            draftAfter: draft,
+            accepted: false,
+          });
+          if (kind === 'ignored_suggestion' || kind === 'deleted_hint') {
+            await enqueueSuggestReinforce({
+              userId,
+              signal: {
+                kind,
+                mode: isReply ? 'reply' : 'create',
+                draftBefore: '',
+                suggestion: shown,
+                draftAfter: draft,
+                parentSnippet: isReply ? parentSnippet : undefined,
+                at: new Date().toISOString(),
+              },
+            });
+            lastShownSuggestionRef.current = '';
+          }
+        }
+      })();
+    }, 1600);
+
+    return () => {
+      if (reinforceTimerRef.current) clearTimeout(reinforceTimerRef.current);
+    };
+  }, [draft, suggestion, userId, enabled, isReply, parentSnippet]);
+
   const acceptSuggestion = useCallback(() => {
     if (!suggestion) return;
     if (sourceRef.current === 'ai' && !isPro) {
@@ -285,14 +391,28 @@ export function useMomentIntelligence(opts: {
       draft.length === 0 || /\s$/.test(draft) || suggestion.startsWith(' ') || /^[.,!?;:]/.test(suggestion)
         ? ''
         : ' ';
-    setDraft(`${draft}${joiner}${suggestion}`);
+    const next = `${draft}${joiner}${suggestion}`;
+    pendingAcceptRef.current = {
+      draftBefore: draft,
+      suggestion,
+      draftAfterAccept: next,
+    };
+    lastShownSuggestionRef.current = '';
+    setDraft(next);
     setSuggestion('');
     setAcceptStreak((n) => {
-      const next = n + 1;
-      if (next >= 2) setShowWand(true);
-      return next;
+      const nextStreak = n + 1;
+      if (nextStreak >= 2) setShowWand(true);
+      return nextStreak;
     });
   }, [suggestion, draft, setDraft, isPro, onOpenPro]);
+
+  const flushReinforce = useCallback(() => {
+    if (!userId) return;
+    void import('@/lib/agentic/suggest-reinforce-local').then(({ scheduleReinforceFlush }) => {
+      scheduleReinforceFlush(userId, true);
+    });
+  }, [userId]);
 
   const runTakeover = useCallback(async () => {
     if (!userId) return;
@@ -327,6 +447,9 @@ export function useMomentIntelligence(opts: {
           jwt,
           replyMode: true,
           parentSnippet,
+          styleNotes: styleNotesRef.current,
+          sessionInfo: sessionInfoRef.current,
+          learnings: learningsRef.current,
         });
         if (!res.success || !res.completion) {
           if (String(res.error || '').toLowerCase().includes('pro')) onOpenPro();
@@ -345,6 +468,9 @@ export function useMomentIntelligence(opts: {
         coldStartHints: hintsRef.current,
         displayName,
         jwt,
+        styleNotes: styleNotesRef.current,
+        sessionInfo: sessionInfoRef.current,
+        learnings: learningsRef.current,
       });
       if (!res.success || !res.post) {
         if (String(res.error || '').toLowerCase().includes('pro')) onOpenPro();
@@ -367,6 +493,7 @@ export function useMomentIntelligence(opts: {
     showWand,
     acceptSuggestion,
     runTakeover,
+    flushReinforce,
   };
 }
 

@@ -9,8 +9,14 @@ import {
   type AgenticLocalSession,
 } from '@/lib/agentic/session-local-store';
 import type { MomentVoiceSample } from '@/lib/agentic/prompts/moment-doppelganger';
+import {
+  parseSessionInfoFromContext,
+  parseStyleNotesFromContext,
+} from '@/lib/agentic/suggest-reinforce-local';
 
 const VOICE_CONTEXT_PREFIX = 'MOMENT_VOICE_SAMPLES_V1:';
+const STYLE_PREFIX = 'MOMENT_STYLE_NOTES_V1:';
+const SESSION_INFO_PREFIX = 'MOMENT_SESSION_INFO_V1:';
 
 export function redactForMomentDoppelganger(text: string): string {
   return String(text || '')
@@ -126,7 +132,14 @@ export async function refreshMomentDoppelgangerVoice(
     userId,
     targetType: 'momentDoppelganger',
     targetId: userId,
-    context: `${VOICE_CONTEXT_PREFIX}${JSON.stringify(samples)}`,
+    context: (() => {
+      const styleNotes = parseStyleNotesFromContext(session.context);
+      const sessionInfo = parseSessionInfoFromContext(session.context);
+      const parts = [`${VOICE_CONTEXT_PREFIX}${JSON.stringify(samples)}`];
+      if (styleNotes.length) parts.push(`${STYLE_PREFIX}${JSON.stringify(styleNotes)}`);
+      if (sessionInfo.length) parts.push(`${SESSION_INFO_PREFIX}${JSON.stringify(sessionInfo)}`);
+      return parts.join('\n');
+    })(),
     chatHistory: session.chatHistory || [],
   });
 

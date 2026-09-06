@@ -1,13 +1,28 @@
 /**
  * Moment doppelganger — no-chat intelligence layer for Connect composer.
  * Session identity: targetType=momentDoppelganger, stable id moment_doppelganger_${userId}.
- * User post history IS the session memory (redacted). No conversational chat UI.
+ * User post history IS the session memory (redacted). Reinforced style notes are separate.
  */
 
 export type MomentVoiceSample = {
   text: string;
   at?: string;
 };
+
+function styleBlock(params: {
+  styleNotes?: string[];
+  sessionInfo?: string[];
+  learnings?: string[];
+}): string {
+  const notes = (params.styleNotes || []).filter(Boolean).slice(0, 8);
+  const info = (params.sessionInfo || []).filter(Boolean).slice(0, 4);
+  const learn = (params.learnings || []).filter(Boolean).slice(0, 6);
+  const lines: string[] = [];
+  if (notes.length) lines.push(`STYLE NOTES (from edit reinforcement):\n${notes.map((n) => `- ${n}`).join('\n')}`);
+  if (info.length) lines.push(`SESSION INFO:\n${info.map((n) => `- ${n}`).join('\n')}`);
+  if (learn.length) lines.push(`RECENT LEARNINGS:\n${learn.map((n) => `- ${n}`).join('\n')}`);
+  return lines.join('\n\n');
+}
 
 export function buildMomentDoppelgangerSystemInstruction(params: {
   displayName?: string;
@@ -21,6 +36,7 @@ export function buildMomentDoppelgangerSystemInstruction(params: {
     'GOAL — every completion must be optimized for instant views and reads: punchy first line, concrete, scannable, zero fluff.',
     'PRIVACY — samples are already redacted. Never invent emails, phones, keys, wallet addresses, or private facts.',
     'OUTPUT — plain post text only. No quotes around the whole post. No markdown headings. No "here is a draft". No hashtags unless the samples use them often.',
+    'If STYLE NOTES / SESSION INFO / RECENT LEARNINGS are present, treat them as hard preferences from how the user edited prior suggestions.',
     params.hasVoiceSamples
       ? 'Use VOICE SAMPLES as ground truth for style. Prefer continuing the draft rather than rewriting unless asked to take over.'
       : 'No post history yet — invent a natural first-person post from GOALS/IDEAS hints if provided, still plain and human. Stay short.',
@@ -31,17 +47,22 @@ export function buildMomentCompletePrompt(params: {
   draft: string;
   voiceSamples: MomentVoiceSample[];
   coldStartHints?: string[];
+  styleNotes?: string[];
+  sessionInfo?: string[];
+  learnings?: string[];
 }): string {
   const samples = params.voiceSamples
     .slice(0, 24)
     .map((s, i) => `${i + 1}. ${s.text}`)
     .join('\n');
   const hints = (params.coldStartHints || []).filter(Boolean).slice(0, 8).join(' · ');
+  const style = styleBlock(params);
   return [
     'MODE: live autocomplete. Return ONLY the continuation suffix to append after the draft (not the draft again).',
     'Keep the suffix short (about 4–40 words) unless the draft clearly needs a longer finish.',
     'Match the draft mid-sentence if needed. Do not restart the post.',
     samples ? `VOICE SAMPLES:\n${samples}` : 'VOICE SAMPLES: (none)',
+    style,
     hints ? `COLD START HINTS (ideas/goals, redacted):\n${hints}` : '',
     `DRAFT SO FAR:\n${params.draft || '(empty — write a strong opening line only)'}`,
     'SUFFIX:',
@@ -54,17 +75,22 @@ export function buildMomentTakeoverPrompt(params: {
   draft: string;
   voiceSamples: MomentVoiceSample[];
   coldStartHints?: string[];
+  styleNotes?: string[];
+  sessionInfo?: string[];
+  learnings?: string[];
 }): string {
   const samples = params.voiceSamples
     .slice(0, 24)
     .map((s, i) => `${i + 1}. ${s.text}`)
     .join('\n');
   const hints = (params.coldStartHints || []).filter(Boolean).slice(0, 8).join(' · ');
+  const style = styleBlock(params);
   return [
     'MODE: full takeover. Write one complete Moments post in the user voice.',
     'Optimize for instant views and reads: hook in line 1, concrete detail, human energy, 1–4 short lines preferred.',
     'If a partial draft exists, elevate it into a finished post in their style — do not ignore their intent.',
     samples ? `VOICE SAMPLES:\n${samples}` : 'VOICE SAMPLES: (none)',
+    style,
     hints ? `COLD START HINTS (ideas/goals, redacted):\n${hints}` : '',
     `PARTIAL DRAFT (may be empty):\n${params.draft || '(none)'}`,
     'FULL POST:',
@@ -81,12 +107,16 @@ export function buildMomentReplySuggestPrompt(params: {
   parentSnippet?: string;
   voiceSamples: MomentVoiceSample[];
   coldStartHints?: string[];
+  styleNotes?: string[];
+  sessionInfo?: string[];
+  learnings?: string[];
 }): string {
   const samples = params.voiceSamples
     .slice(0, 24)
     .map((s, i) => `${i + 1}. ${s.text}`)
     .join('\n');
   const hints = (params.coldStartHints || []).filter(Boolean).slice(0, 8).join(' · ');
+  const style = styleBlock(params);
   const draft = String(params.draft || '').trim();
   const parent = String(params.parentSnippet || '').trim().slice(0, 400);
   const empty = draft.length === 0;
@@ -99,6 +129,7 @@ export function buildMomentReplySuggestPrompt(params: {
     'Keep it short (about 6–36 words). No quotes, no markdown, no "here is a reply".',
     'Do not invent private facts. Do not spam empty praise like "Great post!" unless samples do that.',
     samples ? `VOICE SAMPLES:\n${samples}` : 'VOICE SAMPLES: (none)',
+    style,
     hints ? `COLD START HINTS:\n${hints}` : '',
     parent ? `PARENT POST:\n${parent}` : 'PARENT POST: (unavailable)',
     empty

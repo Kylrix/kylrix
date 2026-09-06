@@ -182,6 +182,9 @@ export async function completeMomentDraftAction(params: {
   /** Reply mode: allow empty draft + parent context */
   replyMode?: boolean;
   parentSnippet?: string;
+  styleNotes?: string[];
+  sessionInfo?: string[];
+  learnings?: string[];
 }): Promise<{ success: boolean; completion?: string; error?: string }> {
   try {
     const actor = await getActor(params.jwt);
@@ -199,17 +202,25 @@ export async function completeMomentDraftAction(params: {
       hasVoiceSamples: samples.length > 0,
     });
 
+    const styleOpts = {
+      styleNotes: params.styleNotes,
+      sessionInfo: params.sessionInfo,
+      learnings: params.learnings,
+    };
+
     const prompt = replyMode
       ? buildMomentReplySuggestPrompt({
           draft,
           parentSnippet: params.parentSnippet,
           voiceSamples: samples,
           coldStartHints: params.coldStartHints,
+          ...styleOpts,
         })
       : buildMomentCompletePrompt({
           draft,
           voiceSamples: samples,
           coldStartHints: params.coldStartHints,
+          ...styleOpts,
         });
 
     const raw = await generateAiSdkCompletion({ systemInstruction, prompt });
@@ -231,6 +242,9 @@ export async function generateMomentTakeoverAction(params: {
   coldStartHints?: string[];
   displayName?: string;
   jwt?: string;
+  styleNotes?: string[];
+  sessionInfo?: string[];
+  learnings?: string[];
 }): Promise<{ success: boolean; post?: string; error?: string }> {
   try {
     const actor = await getActor(params.jwt);
@@ -249,6 +263,9 @@ export async function generateMomentTakeoverAction(params: {
       draft: String(params.draft || '').slice(0, 4000),
       voiceSamples: samples,
       coldStartHints: params.coldStartHints,
+      styleNotes: params.styleNotes,
+      sessionInfo: params.sessionInfo,
+      learnings: params.learnings,
     });
 
     const raw = await generateAiSdkCompletion({ systemInstruction, prompt });
