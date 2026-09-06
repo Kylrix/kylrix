@@ -247,9 +247,8 @@ export async function createProjectSecure(data: any, jwt?: string) {
   const now = new Date().toISOString();
   const projectId = ID.unique();
 
-  const permissions = [
-    Permission.read(Role.user(actor.$id)),
-  ];
+  const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
+  const permissions = ownerRowPermissions(actor.$id);
 
   const project = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
@@ -1092,23 +1091,20 @@ export async function updateFormSecure(formId: string, data: any, jwt?: string) 
     delete data.isPinned;
   }
 
-  const permissions = [
-    Permission.read(Role.user(ownerId))];
-
-  if (currentStatus === 'published') {
-    permissions.push(Permission.read(Role.any()));
-  }
-
-  // Include physical read permissions for collaborators in the new permissions set
   let settings: any = {};
   try {
     settings = JSON.parse(form.settings || '{}');
   } catch {}
-  if (settings.collaborators) {
-    Object.keys(settings.collaborators).forEach((userId) => {
-      permissions.push(Permission.read(Role.user(userId)));
-    });
-  }
+
+  const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
+  const extraReadUserIds =
+    settings.collaborators && typeof settings.collaborators === 'object'
+      ? Object.keys(settings.collaborators)
+      : [];
+  const permissions = ownerRowPermissions(ownerId || actor.$id, {
+    isPublic: currentStatus === 'published',
+    extraReadUserIds,
+  });
 
   const updatedForm = await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1227,8 +1223,8 @@ export async function updateEventSecure(eventId: string, data: any, jwt?: string
       rowId: eventId});
 
   const ownerId = event.userId;
-  const permissions = [
-    Permission.read(Role.user(ownerId))];
+  const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
+  const extraReadUserIds: string[] = [];
 
   // Include physical read permissions for all manager guests
   try {
@@ -1238,12 +1234,17 @@ export async function updateEventSecure(eventId: string, data: any, jwt?: string
       queries: [Query.equal('eventId', eventId)] as any});
     guestsRes.rows.forEach((g: any) => {
       if (g.userId && String(g.role || '').startsWith('manager-')) {
-        permissions.push(Permission.read(Role.user(g.userId)));
+        extraReadUserIds.push(g.userId);
       }
     });
   } catch (err) {
     console.error('Failed to query manager physical read permissions in updateEventSecure', err);
   }
+
+  const permissions = ownerRowPermissions(ownerId || actor.$id, {
+    isPublic: !!(data as any)?.isPublic || !!(event as any)?.isPublic,
+    extraReadUserIds,
+  });
 
   const sanitizedData = sanitizeEventData(data);
 
@@ -1734,10 +1735,8 @@ export async function createGoalSecure(data: any, jwt?: string): Promise<any> {
   const dataPayload = pickGoalAutosavePayload(rawGoal);
   (dataPayload as any).userId = actor.$id;
 
-  const permissions = [Permission.read(Role.user(actor.$id))];
-  if (data?.isPublic) {
-    permissions.push(Permission.read(Role.any()));
-  }
+  const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
+  const permissions = ownerRowPermissions(actor.$id, { isPublic: !!data?.isPublic });
 
   const result = await tables.createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1785,11 +1784,15 @@ export async function updateGoalSecure(goalId: string, data: any, jwt?: string):
   delete (dataPayload as any).$databaseId;
   delete (dataPayload as any).$tableId;
 
+  const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
   const updated = await tables.updateRow({
     databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
     tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
     rowId: goalId,
     data: dataPayload as any,
+    permissions: ownerRowPermissions(ownerId && ownerId !== 'guest' ? ownerId : actor.$id, {
+      isPublic: !!(dataPayload as any)?.isPublic,
+    }),
   });
 
   return JSON.parse(JSON.stringify(updated));

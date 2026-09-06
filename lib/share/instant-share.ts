@@ -100,7 +100,7 @@ export async function executeInstantShare(
   // Flush row first, then ALWAYS publish columns (idempotent). Never skip on local flags.
   try {
     try {
-      if (resourceType === 'note' || resourceType === 'idea') {
+      if (resourceType === 'note') {
         const { getLiveNoteForSync } = await import('@/lib/sync/pending-sync-bridge');
         const live = getLiveNoteForSync(resourceId);
         const stamped = {

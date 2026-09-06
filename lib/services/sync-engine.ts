@@ -174,7 +174,7 @@ let firstPendingTimestamp: number | null = null;
  * 1000x perceived speedup: UI already green via local copy; engine flush is now frame-coalesced
  * not 150ms, plus pre-warmed JWT and parallel bulk flush. DB reads go DOWN (soft-pull
  * gated, Realtime replenishes). */
-const FLUSH_COALESCE_MS = 16;
+const FLUSH_COALESCE_MS = 450; // typing bursts → one Server/Appwrite write (was 16ms = Vercel burn)
 const FLUSH_DISCRETE_MS = 0;
 const HARD_CEILING_MS = 500;
 const RETRY_BASE_MS = 1_000;
@@ -440,7 +440,7 @@ function scheduleDemandFlush(opts?: { immediate?: boolean; retry?: boolean; disc
   }
 
   // 1000x fix: discrete actions (pin, tag, create) flush on next microtask (0ms),
-  // typing bursts coalesce to one frame (16ms) via rAF — not 150ms.
+  // typing bursts coalesce (~450ms) to cut invocation/CPU burn.
   const delay = opts?.discrete ? FLUSH_DISCRETE_MS : FLUSH_COALESCE_MS;
   if (syncTimeout) clearTimeout(syncTimeout);
   if (delay === 0) {
@@ -805,24 +805,12 @@ export const autonomicSyncEngine = {
   },
 
   flushImmediately() {
-    // Keep navigate-away sync (nice feature) — use keepalive so it survives pagehide even if tab is killed.
-    // Tries immediate runCycle with keepalive; falls back to beacon for the pending queue.
-    if (typeof window !== 'undefined' && pendingById.size > 0) {
-      // Best-effort: try to flush with keepalive fetch before unload
-      void (async () => {
-        try {
-          const pending = queueSnapshot();
-          const payloads = payloadsSnapshot();
-          const blob = new Blob([JSON.stringify({ pending, payloads })], { type: 'application/json' });
-          // Persist outbox via keepalive + IndexedDB — LocalEngine + RxDB already durable,
-          // this just ensures the latest queue survives the navigation.
-          if (navigator.sendBeacon) {
-            // Beacon the outbox to a no-op endpoint that keeps the Service Worker alive;
-            // real flush happens via cached JWT + keepalive fetch on next tick.
-            navigator.sendBeacon('/api/sync-beacon', blob);
-          }
-        } catch {}
-      })();
+    // Persist pending queue locally; do NOT beacon to Vercel (each sendBeacon = Function Invocation).
+    // runCycle uses session client / secure-ops as needed; RxDB already holds the outbox.
+    if (typeof window !== 'undefined') {
+      try {
+        writePersistedQueue();
+      } catch {}
     }
     scheduleDemandFlush({ immediate: true });
   },
@@ -847,7 +835,11 @@ export const autonomicSyncEngine = {
           const synced = await pullAndSyncUserFlowInstalls();
           if (onRefreshed) onRefreshed(synced);
 
-          // Background: check for community flow step updates
+          // Background: check for community flow step updates (throttled — avoid Vercel spam)
+          const throttleKey = 'kylrix:flow-updates-checked-at';
+          const last = Number(sessionStorage.getItem(throttleKey) || 0);
+          if (Date.now() - last < 30 * 60 * 1000) return;
+          sessionStorage.setItem(throttleKey, String(Date.now()));
           const { checkFlowUpdatesSecure } = await import('@/lib/actions/secure-ops/flows');
           const result = await checkFlowUpdatesSecure().catch(() => null);
           if (result?.success && Object.keys(result.updates ?? {}).length > 0) {

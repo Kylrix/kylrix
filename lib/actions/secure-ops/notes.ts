@@ -776,12 +776,16 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
       throw new Error('createRow is not available in updateNoteSecure');
     },
     updateRow: async (_databaseId, _tableId, rowId, rowData, permissions) => {
+      const ownerPerms =
+        permissions && permissions.length
+          ? permissions
+          : getNotePermissions(noteOwnerId || actor.$id, !!(rowData as any)?.isPublic);
       return tables.updateRow({
         databaseId: APPWRITE_DATABASE_ID,
         tableId: APPWRITE_TABLE_ID_NOTES,
         rowId,
         data: rowData as any,
-        permissions}) as any;
+        permissions: ownerPerms}) as any;
     },
     getNote: hydrateNoteRow,
     getNotePermissions,

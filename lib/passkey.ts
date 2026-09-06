@@ -61,8 +61,11 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
 
     if (passkeyEntries.length === 0) {
       // Soft-timeout remote fill — never hang unlock on a dead socket
-      const entries = await withTimeout(AppwriteService.listKeychainEntries(userId), 4000);
-      if (entries?.length) {
+      const entries = await withTimeout<any[]>(
+        AppwriteService.listKeychainEntries(userId) as Promise<any[]>,
+        4000,
+      );
+      if (Array.isArray(entries) && entries.length > 0) {
         passkeyEntries = entries.filter((k: any) => k.type === 'passkey');
         void SecurityEnclave.setKeychain(userId, entries).catch(() => {});
       }
@@ -143,14 +146,15 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
       const extensionResults = authResp.clientExtensionResults as any;
       const prfBuffer = extensionResults?.prf?.results?.first;
       if (prfBuffer) {
-        seedCandidates.push(
+        const bytes =
           prfBuffer instanceof ArrayBuffer
-            ? prfBuffer
-            : (prfBuffer as Uint8Array).buffer.slice(
-                (prfBuffer as Uint8Array).byteOffset,
-                (prfBuffer as Uint8Array).byteOffset + (prfBuffer as Uint8Array).byteLength,
-              ),
-        );
+            ? new Uint8Array(prfBuffer)
+            : prfBuffer instanceof Uint8Array
+              ? prfBuffer
+              : new Uint8Array(prfBuffer as ArrayBuffer);
+        const copy = new Uint8Array(bytes.byteLength);
+        copy.set(bytes);
+        seedCandidates.push(copy.buffer);
       }
     }
 

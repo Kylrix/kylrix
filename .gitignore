@@ -68,3 +68,4 @@ functions/**/.env
 functions/**/.env.*
 .repo/
 
+.env*

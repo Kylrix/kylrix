@@ -75,6 +75,9 @@ export async function createNote(data: any) {
 }
 
 export async function updateNote(noteId: string, data: any) {
+  const { tryOwnerDirectUpdateNote } = await import('@/lib/appwrite/owner-direct-write');
+  const direct = await tryOwnerDirectUpdateNote(noteId, data).catch(() => null);
+  if (direct) return direct;
   const jwt = await getJwt();
   return updateNoteSecure(noteId, data, jwt);
 }
@@ -92,6 +95,9 @@ export async function createGoal(data: any) {
 }
 
 export async function updateGoal(goalId: string, data: any) {
+  const { tryOwnerDirectUpdateGoal } = await import('@/lib/appwrite/owner-direct-write');
+  const direct = await tryOwnerDirectUpdateGoal(goalId, data).catch(() => null);
+  if (direct) return direct;
   const jwt = await getJwt();
   const { updateGoalSecure } = await import('./secure-ops');
   return updateGoalSecure(goalId, data, jwt);
@@ -155,6 +161,11 @@ export async function listSubProjectsForWorkspace(workspaceId: string) {
 }
 
 export async function updateProject(projectId: string, data: any, permissions?: string[]) {
+  if (!permissions) {
+    const { tryOwnerDirectUpdateProject } = await import('@/lib/appwrite/owner-direct-write');
+    const direct = await tryOwnerDirectUpdateProject(projectId, data).catch(() => null);
+    if (direct) return direct;
+  }
   const jwt = await getJwt();
   return updateProjectSecure(projectId, data, permissions, jwt);
 }
@@ -205,6 +216,9 @@ export async function listUserForms(userId: string) {
 }
 
 export async function updateForm(formId: string, data: any) {
+  const { tryOwnerDirectUpdateForm } = await import('@/lib/appwrite/owner-direct-write');
+  const direct = await tryOwnerDirectUpdateForm(formId, data).catch(() => null);
+  if (direct) return direct;
   const jwt = await getJwt();
   return updateFormSecure(formId, data, jwt);
 }
@@ -237,6 +251,9 @@ export async function createEvent(data: any) {
 }
 
 export async function updateEvent(eventId: string, data: any) {
+  const { tryOwnerDirectUpdateEvent } = await import('@/lib/appwrite/owner-direct-write');
+  const direct = await tryOwnerDirectUpdateEvent(eventId, data).catch(() => null);
+  if (direct) return direct;
   const jwt = await getJwt();
   return updateEventSecure(eventId, data, jwt);
 }

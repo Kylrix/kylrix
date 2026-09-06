@@ -17,6 +17,7 @@ import { buildSourceNoteTags } from '@/sdk/crosslinks';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { invalidateTablesDbRowCache } from '@/lib/ecosystem/tablesdb-row-cache';
 import { publishNexusInvalidate } from '@/lib/ecosystem/nexus-bridge';
+import { ownerRowPermissions } from '@/lib/appwrite/owner-acl';
 
 const activeNoteKeys = new Map<string, CryptoKey>();
 
@@ -236,16 +237,9 @@ function hydrateVirtualAttributes(doc: any): any {
 }
 
 export function getNotePermissions(userId: string, isPublic: boolean) {
-  // Paradigm: create grants read-only to owner (and isPublic read to any). Update/delete are gated via collaborators table + verifyResourcePermissionSecure, not ACL.
-  const permissions = [
-    Permission.read(Role.user(userId)),
-  ];
-
-  if (isPublic) {
-    permissions.push(Permission.read(Role.any()));
-  }
-
-  return permissions;
+  // Owner may update/delete via session client (avoids Vercel Server Actions on every keystroke).
+  // Collaborators remain read-only at ACL; cross-owner writes still use secure-ops.
+  return ownerRowPermissions(userId, { isPublic });
 }
 
 /** Hydrated client-side fields that must never be written back on update. */

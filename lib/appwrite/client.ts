@@ -20,6 +20,11 @@ export const account = new Account(client);
 const originalDatabases = new Databases(client);
 const originalTablesDB = new TablesDB(client);
 
+/** Session TablesDB without the secure-ops proxy — sole-owner direct writes only. */
+export function getSessionTablesDB(): TablesDB {
+  return originalTablesDB;
+}
+
 // Helper to fetch JWT securely from client-side SDK
 async function getJwt(): Promise<string | undefined> {
   if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && !navigator.onLine) {
