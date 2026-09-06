@@ -820,10 +820,14 @@ export default function ConnectTopbar({
         }}
         sx={{
           width: '100%',
-          px: isDesktop ? 0 : { xs: 2.25, md: 4 },
+          px: isDesktop ? 0 : { xs: 1, sm: 2 },
           py: isDesktop ? 1 : 1.25,
-          maxHeight: isDesktop ? 'none' : '45vh',
-          overflowY: isDesktop ? 'visible' : 'auto'}}
+          flex: isDesktop ? 'none' : 1,
+          minHeight: 0,
+          maxHeight: isDesktop ? 'none' : 'calc(60dvh - 120px)',
+          overflowY: 'auto',
+          boxSizing: 'border-box',
+        }}
       >
         <Stack spacing={2.5}>
               {searchShortcutsView ? (
@@ -881,14 +885,14 @@ export default function ConnectTopbar({
                     py: 1.5,
                     borderRadius: '16px',
                     bgcolor: '#161412',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: '2px solid rgba(255, 255, 255, 0.22)',
                     color: '#fff',
                     textAlign: 'left',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                     '&:hover': {
                       bgcolor: 'rgba(255,255,255,0.04)',
-                      borderColor: 'rgba(255,255,255,0.2)',
+                      borderColor: 'rgba(255,255,255,0.4)',
                       transform: 'translateX(2px)'}}}
                 >
                   <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.08)', color: '#fff', flexShrink: 0 }}>
@@ -934,7 +938,7 @@ export default function ConnectTopbar({
                       sx={{
                         borderRadius: '16px',
                         bgcolor: '#161412',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        border: '2px solid rgba(255, 255, 255, 0.22)',
                         px: 2,
                         py: 1.75,
                         display: 'flex',
@@ -982,7 +986,7 @@ export default function ConnectTopbar({
                       py: 1.5,
                       borderRadius: '16px',
                       bgcolor: '#161412',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      border: '2px solid rgba(255, 255, 255, 0.22)',
                       color: '#fff',
                       textAlign: 'left',
                       cursor: 'pointer',
@@ -1023,14 +1027,14 @@ export default function ConnectTopbar({
                         py: 1.5,
                         borderRadius: '16px',
                         bgcolor: '#161412',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        border: '2px solid rgba(255, 255, 255, 0.22)',
                         color: '#fff',
                         textAlign: 'left',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                         '&:hover': {
                           bgcolor: 'rgba(255,255,255,0.04)',
-                          borderColor: 'rgba(255,255,255,0.2)',
+                          borderColor: 'rgba(255,255,255,0.4)',
                           transform: 'translateX(2px)'
                         }
                       }}
@@ -1088,11 +1092,11 @@ export default function ConnectTopbar({
                           py: 1.5,
                           borderRadius: '16px',
                           bgcolor: '#161412',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          border: '2px solid rgba(255, 255, 255, 0.22)',
                           color: '#fff',
                           textAlign: 'left',
                           cursor: 'pointer',
-                          '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.04)', borderColor: 'rgba(245, 158, 11, 0.4)' }
+                          '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.04)', borderColor: 'rgba(245, 158, 11, 0.5)' }
                         }}
                       >
                         <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
@@ -1234,11 +1238,11 @@ export default function ConnectTopbar({
                               py: 1.35,
                               borderRadius: '16px',
                               bgcolor: '#161412',
-                              border: '1px solid rgba(255,255,255,0.1)',
+                              border: '2px solid rgba(255, 255, 255, 0.22)',
                               color: '#fff',
                               textAlign: 'left',
                               cursor: 'pointer',
-                              '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.25)' },
+                              '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' },
                             }}
                           >
                             <Box sx={{ width: 30, height: 30, borderRadius: '8px', display: 'grid', placeItems: 'center', bgcolor: `${r.accent}22`, color: r.accent, flexShrink: 0, fontSize: '0.72rem', fontWeight: 900 }}>
@@ -1287,11 +1291,11 @@ export default function ConnectTopbar({
                           py: 1.5,
                           borderRadius: '16px',
                           bgcolor: '#161412',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          border: '2px solid rgba(255, 255, 255, 0.22)',
                           color: '#fff',
                           textAlign: 'left',
                           cursor: 'pointer',
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.2)' }
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' }
                         }}
                       >
                         <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.08)', color: '#fff', flexShrink: 0 }}>
@@ -1344,11 +1348,11 @@ export default function ConnectTopbar({
                             py: 1.5,
                             borderRadius: '16px',
                             bgcolor: '#161412',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            border: '2px solid rgba(255, 255, 255, 0.22)',
                             color: '#fff',
                             textAlign: 'left',
                             cursor: 'pointer',
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.2)' }
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' }
                           }}
                         >
                           <IdentityAvatar
@@ -1395,11 +1399,11 @@ export default function ConnectTopbar({
                         py: 1.5,
                         borderRadius: '16px',
                         bgcolor: '#161412',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        border: '2px solid rgba(255, 255, 255, 0.22)',
                         color: '#fff',
                         textAlign: 'left',
                         cursor: 'pointer',
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.2)' }
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' }
                       }}
                     >
                       <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}18`, color: action.accent, flexShrink: 0 }}>
@@ -1588,27 +1592,32 @@ export default function ConnectTopbar({
         data-note-search-surface="true"
         sx={{
           width: '100%',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          maxWidth: '100vw',
+          maxHeight: '60dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          borderBottom: '2px solid rgba(255,255,255,0.25)',
           borderRadius: '0 0 28px 28px',
           bgcolor: '#000000',
           overflow: 'hidden',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
-          p: 1.5,
+          boxShadow: '0 16px 42px rgba(0,0,0,0.6)',
+          p: { xs: 2, sm: 2.5 },
+          boxSizing: 'border-box',
         }}
       >
         {/* Mobile Search Header & Input */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 1.5, px: { xs: 0.5, sm: 1 }, shrink: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.15)' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-              <Box sx={{ width: 28, height: 28, borderRadius: '8px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+              <Box sx={{ width: 28, height: 28, borderRadius: '8px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
                 <Logo app={activeApp} size={14} variant="icon" />
               </Box>
               <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '0.95rem' }}>
                 Search
               </Typography>
             </Box>
-            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' }, width: 28, height: 28 }}>
+            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: 'white' }, width: 28, height: 28 }}>
               <CloseIcon size={14} />
             </IconButton>
           </Box>
@@ -1618,10 +1627,12 @@ export default function ConnectTopbar({
               display: 'flex',
               alignItems: 'center',
               bgcolor: '#161412',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '14px',
-              px: 1.75,
-              py: 0.75,
+              border: '2px solid rgba(255, 255, 255, 0.22)',
+              borderRadius: '16px',
+              px: 2,
+              py: 1,
+              mx: { xs: 0.5, sm: 1 },
+              boxSizing: 'border-box',
               transition: 'all 0.15s ease',
               '&:focus-within': {
                 borderColor: '#6366F1',
@@ -1629,7 +1640,7 @@ export default function ConnectTopbar({
               }
             }}
           >
-            <Search size={15} style={{ color: '#fff', opacity: 0.5, marginRight: 8, flexShrink: 0 }} />
+            <Search size={16} style={{ color: '#fff', opacity: 0.8, marginRight: 10, flexShrink: 0 }} />
             <InputBase
               id="topbar-search-field"
               inputRef={searchInputRef}
@@ -1643,7 +1654,8 @@ export default function ConnectTopbar({
                 fontFamily: 'var(--font-satoshi)',
                 fontWeight: 600,
                 fontSize: '0.88rem',
-                '& input::placeholder': { color: '#fff', opacity: 0.4 }}}
+                '& input': { px: 0.5, py: 0.25 },
+                '& input::placeholder': { color: '#fff', opacity: 0.45 }}}
               onKeyDown={(event: React.KeyboardEvent) => {
                 if (event.key === 'Escape') {
                   handleCloseAll();
@@ -1651,7 +1663,7 @@ export default function ConnectTopbar({
               }}
             />
             {searchQuery && (
-              <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5, p: 0.25 }}>
+              <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.6)', ml: 0.5, p: 0.25 }}>
                 <CloseIcon size={13} />
               </IconButton>
             )}

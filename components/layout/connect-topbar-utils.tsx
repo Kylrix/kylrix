@@ -40,7 +40,13 @@ export function renderShortcutsList() {
             py: 1.5,
             borderRadius: '16px',
             bgcolor: '#161412',
-            border: '1px solid rgba(255,255,255,0.08)'}}
+            border: '2px solid rgba(255,255,255,0.22)',
+            transition: 'all 0.15s ease',
+            '&:hover': {
+              borderColor: 'rgba(255,255,255,0.4)',
+              bgcolor: 'rgba(255,255,255,0.04)',
+            }
+          }}
         >
           <Typography sx={{ color: '#fff', fontSize: '0.84rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)', lineHeight: 1.35, minWidth: 0 }}>
             {item.desc}
@@ -52,11 +58,11 @@ export function renderShortcutsList() {
               fontSize: '0.72rem',
               fontWeight: 800,
               fontFamily: 'var(--font-mono)',
-              bgcolor: 'rgba(255, 255, 255, 0.1)',
+              bgcolor: 'rgba(255, 255, 255, 0.12)',
               px: 1.1,
               py: 0.55,
               borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.16)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
               flexShrink: 0,
               whiteSpace: 'nowrap'}}
           >
