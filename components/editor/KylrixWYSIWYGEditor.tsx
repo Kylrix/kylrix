@@ -11,10 +11,10 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
-import { EditorState, StateField, Range, RangeSetBuilder } from '@codemirror/state';
+import { EditorState, StateField, Range } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language';
+import { HighlightStyle, syntaxHighlighting, syntaxTree, ensureSyntaxTree } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { parseObjectBlocks, serializeObjectBlock, type SecondaryObjectPayload } from '@/lib/note-object-secondary';
 import { Mic, Paperclip, Loader2 } from 'lucide-react';
@@ -26,7 +26,7 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
-/** Markdown punctuation nodes to hide while the caret is outside that construct. */
+/** Markdown punctuation nodes to hide (Notion-style: never show modifiers). */
 const MARKDOWN_MARK_NODES = new Set([
   'HeaderMark',
   'EmphasisMark',
@@ -34,6 +34,10 @@ const MARKDOWN_MARK_NODES = new Set([
   'CodeMark',
   'LinkMark',
   'StrikethroughMark',
+  'QuoteMark',
+  'ListMark',
+  'URL',
+  'LinkTitle',
 ]);
 
 const liveMarkdownHighlight = HighlightStyle.define([
@@ -51,18 +55,19 @@ const liveMarkdownHighlight = HighlightStyle.define([
   { tag: tags.monospace, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '0.9em', color: '#A5B4FC', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '4px' },
   { tag: tags.quote, color: 'rgba(255,255,255,0.78)', fontStyle: 'italic' },
   { tag: tags.list, color: '#FFFFFF' },
-  { tag: tags.meta, color: 'rgba(255,255,255,0.35)' },
-  { tag: tags.processingInstruction, color: 'rgba(255,255,255,0.35)' },
+  // Hide markdown punctuation visually (HeaderMark/EmphasisMark/etc. map here).
+  { tag: tags.processingInstruction, class: 'kylrix-md-mark' },
+  { tag: tags.meta, class: 'kylrix-md-mark' },
   { tag: tags.contentSeparator, color: 'rgba(255,255,255,0.2)' },
 ]);
 
 const hiddenMarkDeco = Decoration.replace({});
 
-/** Hide markdown punctuation unless the selection intersects that mark's parent. */
+/** Hide markdown punctuation in the doc (source stays; UI is clean). */
 function buildHiddenMarkdownMarks(view: EditorView): DecorationSet {
-  const builder = new RangeSetBuilder<Decoration>();
-  const selection = view.state.selection.main;
-  const editable = view.state.facet(EditorView.editable);
+  const ranges: Range<Decoration>[] = [];
+  // Force a parse so mark nodes exist on first paint / after large edits.
+  ensureSyntaxTree(view.state, view.viewport.to, 150);
 
   for (const { from, to } of view.visibleRanges) {
     syntaxTree(view.state).iterate({
@@ -70,19 +75,14 @@ function buildHiddenMarkdownMarks(view: EditorView): DecorationSet {
       to,
       enter(node) {
         if (!MARKDOWN_MARK_NODES.has(node.name)) return;
-        if (editable) {
-          const parent = node.node.parent;
-          const regionFrom = parent ? parent.from : node.from;
-          const regionTo = parent ? parent.to : node.to;
-          // Keep marks visible while editing inside the same construct.
-          if (selection.from <= regionTo && selection.to >= regionFrom) return;
+        if (node.to > node.from) {
+          ranges.push(hiddenMarkDeco.range(node.from, node.to));
         }
-        builder.add(node.from, node.to, hiddenMarkDeco);
       },
     });
   }
 
-  return builder.finish();
+  return Decoration.set(ranges, true);
 }
 
 const liveMarkdownMarkHider = ViewPlugin.fromClass(
@@ -92,7 +92,11 @@ const liveMarkdownMarkHider = ViewPlugin.fromClass(
       this.decorations = buildHiddenMarkdownMarks(view);
     }
     update(update: ViewUpdate) {
-      if (update.docChanged || update.selectionSet || update.viewportChanged) {
+      if (
+        update.docChanged ||
+        update.viewportChanged ||
+        syntaxTree(update.startState) !== syntaxTree(update.state)
+      ) {
         this.decorations = buildHiddenMarkdownMarks(update.view);
       }
     }
@@ -350,6 +354,10 @@ export function KylrixWYSIWYGEditor({
       '.cm-placeholder': {
         color: 'rgba(155, 150, 145, 0.45)',
         fontStyle: 'normal',
+      },
+      // Notion-style: hide markdown punctuation that HighlightStyle tags as marks
+      '.kylrix-md-mark': {
+        display: 'none !important',
       },
     });
 
