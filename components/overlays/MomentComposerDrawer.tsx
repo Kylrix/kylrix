@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  ArrowRight,
   ChevronDown,
   ChevronUp,
   Globe,
@@ -12,6 +13,7 @@ import {
   Send,
   Sparkles,
   Square,
+  Wand2,
   X,
 } from 'lucide-react';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
@@ -23,6 +25,11 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
+import {
+  loadMomentAgentPref,
+  saveMomentAgentPref,
+  useMomentIntelligence,
+} from '@/hooks/useMomentIntelligence';
 import toast from 'react-hot-toast';
 
 interface MomentComposerDrawerProps {
@@ -51,6 +58,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   const [content, setContent] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [syncToNostr, setSyncToNostr] = useState(false);
+  const [createWithAgent, setCreateWithAgent] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [attachments, setAttachments] = useState<PendingAttach[]>([]);
@@ -60,6 +68,25 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
+
+  const {
+    learningStatus,
+    suggestion,
+    busy: agentBusy,
+    showWand,
+    acceptSuggestion,
+    runTakeover,
+  } = useMomentIntelligence({
+    userId: user?.$id,
+    displayName: user?.name || user?.email,
+    draft: content,
+    enabled: createWithAgent,
+    isPro,
+    onOpenPro: openPro,
+    setDraft: setContent,
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -77,19 +104,33 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     void LocalEngine.cacheGet<boolean>('f_sync_to_nostr_pref').then((pref) => {
       if (pref !== null && pref !== undefined) setSyncToNostr(Boolean(pref));
     });
+    void loadMomentAgentPref().then(setCreateWithAgent);
   }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
+      if ((e.key === 'Tab' || (e.key === 'ArrowRight' && e.metaKey)) && suggestion) {
+        e.preventDefault();
+        acceptSuggestion();
+      }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [onClose]);
+  }, [onClose, suggestion, acceptSuggestion]);
 
   const persistSync = (next: boolean) => {
     setSyncToNostr(next);
     void LocalEngine.cacheSet('f_sync_to_nostr_pref', next);
+  };
+
+  const persistAgent = (next: boolean) => {
+    if (next && !isPro) {
+      openPro();
+      return;
+    }
+    setCreateWithAgent(next);
+    void saveMomentAgentPref(next);
   };
 
   const handleAttach = () => {
@@ -208,7 +249,6 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     const finalAttachments = attachments.length ? [...attachments] : null;
     const shouldSyncNostr = syncToNostr && !isVaultLocked && !!identity;
 
-    // 1. Optimistic LocalEngine cache creation so user sees moment instantly in feed
     const tempId = `temp_moment_${Date.now()}`;
     const optimisticMoment: any = {
       $id: tempId,
@@ -238,14 +278,12 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
       } catch {}
     })();
 
-    // 2. Instant UI feedback & dismissal (0ms UI lag)
     toast.success('Publishing moment in background...');
     setContent('');
     setAttachments([]);
     setPublishing(false);
     onClose();
 
-    // 3. Background execution pipeline for Nostr broadcast and remote TablesDB persistence
     void (async () => {
       let nostrId: string | null = null;
       let nostrSynced = false;
@@ -290,6 +328,12 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('kylrix:moment-created', { detail: createdMoment }));
           }
+          // Refresh voice twin after a successful post
+          if (createWithAgent) {
+            void import('@/lib/agentic/moment-doppelganger-local').then((m) =>
+              m.refreshMomentDoppelgangerVoice(user.$id),
+            );
+          }
         }
 
         toast.success(
@@ -307,6 +351,14 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   if (!mounted) return null;
 
   const canPost = Boolean(content.trim() || attachments.length);
+  const learningLabel =
+    learningStatus === 'initializing'
+      ? 'Setting up smart writing…'
+      : learningStatus === 'ready'
+        ? 'Learning from your posts for smart writing'
+        : learningStatus === 'empty'
+          ? 'Ready — will learn as you post'
+          : null;
 
   const sheet = (
     <div className="fixed inset-0 z-[10000] flex justify-center overflow-hidden pointer-events-none">
@@ -326,7 +378,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
       >
         <div className="p-5 pb-3 flex items-center justify-between border-b border-[#34322F] flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 rounded-xl bg-[#0A0908] border border-[#34322F] text-[#F59E0B] flex items-center justify-center">
+            <div className="p-2 rounded-xl bg-[#000000] border border-white/20 text-[#F59E0B] flex items-center justify-center">
               <Sparkles className="w-5 h-5" />
             </div>
             <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight">
@@ -354,28 +406,81 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
           </div>
         </div>
 
-
-
         <form
           onSubmit={handlePublish}
           className="flex-1 min-h-0 flex flex-col p-5 pt-3 gap-3 overflow-hidden"
         >
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="What's happening?"
-            className={`w-full flex-1 min-h-[100px] bg-transparent border-none text-white text-[17px] leading-relaxed focus:outline-none resize-none placeholder:text-white/30 font-satoshi ${
-              isExpanded ? 'text-xl' : ''
-            }`}
-            autoFocus
-          />
+          <div className="relative flex-1 min-h-[100px] flex flex-col">
+            {/* Ghost autocomplete overlay */}
+            <div
+              aria-hidden
+              className={`absolute inset-0 pointer-events-none whitespace-pre-wrap break-words font-satoshi leading-relaxed ${
+                isExpanded ? 'text-xl' : 'text-[17px]'
+              }`}
+            >
+              <span className="text-transparent">{content}</span>
+              {createWithAgent && suggestion ? (
+                <span className="text-white/28">{suggestion}</span>
+              ) : null}
+            </div>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="What's happening?"
+              className={`relative w-full flex-1 min-h-[100px] bg-transparent border-none text-white leading-relaxed focus:outline-none resize-none placeholder:text-white/30 font-satoshi caret-[#F59E0B] ${
+                isExpanded ? 'text-xl' : 'text-[17px]'
+              }`}
+              autoFocus
+            />
+
+            {createWithAgent && (suggestion || showWand) ? (
+              <div className="absolute right-0 bottom-0 flex items-center gap-1.5">
+                {suggestion ? (
+                  <button
+                    type="button"
+                    onClick={acceptSuggestion}
+                    disabled={agentBusy}
+                    className="w-8 h-8 rounded-full bg-[#000000] border-2 border-white/20 text-[#F59E0B] hover:border-[#F59E0B]/60 flex items-center justify-center transition-colors cursor-pointer"
+                    title="Accept suggestion"
+                    aria-label="Accept suggestion"
+                  >
+                    <ArrowRight size={16} strokeWidth={2.5} />
+                  </button>
+                ) : null}
+                {showWand ? (
+                  <button
+                    type="button"
+                    onClick={() => void runTakeover()}
+                    disabled={agentBusy}
+                    className="w-8 h-8 rounded-full bg-[#F59E0B] border-2 border-[#F59E0B] text-black hover:bg-amber-400 flex items-center justify-center transition-colors cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.35)]"
+                    title="Write full post in your style"
+                    aria-label="Write full post in your style"
+                  >
+                    <Wand2 size={15} strokeWidth={2.5} />
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          {createWithAgent && learningLabel ? (
+            <p className="text-[10px] font-bold text-white/40 flex items-center gap-1.5 shrink-0 -mt-1">
+              {learningStatus === 'initializing' ? (
+                <span className="w-2.5 h-2.5 rounded-full border border-[#F59E0B]/40 border-t-[#F59E0B] animate-spin" />
+              ) : (
+                <Sparkles size={11} className="text-[#F59E0B]/70" />
+              )}
+              <span>{learningLabel}</span>
+              {agentBusy ? <span className="text-white/25">· writing…</span> : null}
+            </p>
+          ) : null}
 
           {attachments.length > 0 ? (
             <div className="flex flex-wrap gap-2 shrink-0">
               {attachments.map((a) => (
                 <span
                   key={a.id}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0A0908] border border-white/[0.06] text-[11px] font-bold text-white/70"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#000000] border border-white/20 text-[11px] font-bold text-white"
                 >
                   {a.label}
                   <button
@@ -391,39 +496,27 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
             </div>
           ) : null}
 
-          {/* Sync to Nostr — preference row (LocalEngine); vault-gated */}
-          <div className="rounded-xl bg-[#0A0908] border border-white/[0.06] p-3 flex items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                className={`p-2 rounded-lg border ${
-                  syncToNostr && !isVaultLocked
-                    ? 'bg-[#161412] border-[#F59E0B]/30 text-[#F59E0B]'
-                    : 'bg-[#161412] border-white/[0.06] text-white/40'
-                }`}
-              >
-                <Globe size={16} />
+          {/* Compact toggles: Nostr sync + Create with agent */}
+          <div className="grid grid-cols-2 gap-2 shrink-0">
+            <div className="rounded-xl bg-[#000000] border border-white/20 p-2.5 flex items-center justify-between gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Globe
+                  size={14}
+                  className={syncToNostr && !isVaultLocked ? 'text-[#F59E0B] shrink-0' : 'text-white/40 shrink-0'}
+                />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-extrabold text-white truncate">Nostr sync</p>
+                  {isVaultLocked ? (
+                    <button
+                      type="button"
+                      onClick={() => void unlockAndLoad()}
+                      className="text-[9px] font-bold text-[#F59E0B] flex items-center gap-0.5"
+                    >
+                      <Lock size={9} /> Unlock
+                    </button>
+                  ) : null}
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-extrabold text-white truncate">Sync to Nostr</p>
-                {isVaultLocked ? (
-                  <p className="text-[10px] font-bold text-[#F59E0B]/90 flex items-center gap-1 mt-0.5">
-                    <Lock size={10} /> Unlock vault to sync to Nostr
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-white/40 mt-0.5">Also post to public relays</p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {isVaultLocked ? (
-                <button
-                  type="button"
-                  onClick={() => void unlockAndLoad()}
-                  className="px-2 py-1 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[#F59E0B] text-[10px] font-bold"
-                >
-                  Unlock
-                </button>
-              ) : null}
               <button
                 type="button"
                 role="switch"
@@ -433,13 +526,38 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
                   if (isVaultLocked) return;
                   persistSync(!syncToNostr);
                 }}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors disabled:opacity-40 ${
                   syncToNostr ? 'bg-[#F59E0B]' : 'bg-white/10'
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-                    syncToNostr ? 'translate-x-5' : 'translate-x-0'
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
+                    syncToNostr ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="rounded-xl bg-[#000000] border border-white/20 p-2.5 flex items-center justify-between gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Sparkles
+                  size={14}
+                  className={createWithAgent ? 'text-[#F59E0B] shrink-0' : 'text-white/40 shrink-0'}
+                />
+                <p className="text-[11px] font-extrabold text-white truncate">Create with agent</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={createWithAgent}
+                onClick={() => persistAgent(!createWithAgent)}
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                  createWithAgent ? 'bg-[#F59E0B]' : 'bg-white/10'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
+                    createWithAgent ? 'translate-x-4' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -450,7 +568,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
             <button
               type="button"
               onClick={handleAttach}
-              className="p-2.5 rounded-xl bg-[#0A0908] border border-white/[0.06] text-white/60 hover:text-[#F59E0B] hover:border-[#F59E0B]/30 transition-colors"
+              className="p-2.5 rounded-xl bg-[#000000] border border-white/20 text-white/60 hover:text-[#F59E0B] hover:border-[#F59E0B]/40 transition-colors"
               title="Attach object"
               aria-label="Attach object"
             >
@@ -462,7 +580,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
               className={`p-2.5 rounded-xl border transition-colors ${
                 isRecording
                   ? 'bg-red-500/15 border-red-500/30 text-red-400'
-                  : 'bg-[#0A0908] border-white/[0.06] text-white/60 hover:text-white'
+                  : 'bg-[#000000] border border-white/20 text-white/60 hover:text-white'
               }`}
               title={isRecording ? 'Stop recording' : 'Voice note'}
               aria-label="Voice note"

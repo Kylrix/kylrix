@@ -1993,7 +1993,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   <span>No past sessions in this workspace. Click + above to start a fresh chat.</span>
                 </div>
               ) : (
-                workspaceFilteredSessions.map((sess) => {
+                workspaceFilteredSessions
+                  .filter((sess) => String((sess as any).targetType || '') !== 'momentDoppelganger')
+                  .map((sess) => {
                   const isObjectSession = Boolean((sess as any).targetType && (sess as any).targetId);
                   const isSelected = sess.id === activeSessionId;
                   const objectIcon = (() => {

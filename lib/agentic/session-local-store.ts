@@ -86,6 +86,13 @@ function activeSessionKey(userId: string) {
   return `f_agent_active_session_${userId}`;
 }
 
+/** Deterministic Moments voice-twin session id (instant local fetch). */
+export function momentDoppelgangerSessionId(userId: string): string {
+  return `moment_doppelganger_${userId}`;
+}
+
+export const MOMENT_DOPPELGANGER_TARGET_TYPE = 'momentDoppelganger' as const;
+
 export const AgenticSessionLocalStore = {
   sessionsListKey,
   sessionKey,
@@ -252,6 +259,34 @@ export const AgenticSessionLocalStore = {
       ],
     };
 
+    await this.upsertSession(newSession);
+    return newSession;
+  },
+
+  /**
+   * Moments voice twin — one durable session per account (no chat UI).
+   * Stable id for instant local fetch: `moment_doppelganger_${userId}`.
+   */
+  async getOrCreateMomentDoppelgangerSession(userId: string): Promise<AgenticLocalSession> {
+    const sessionId = momentDoppelgangerSessionId(userId);
+    const existing = await this.getSession(sessionId);
+    if (existing) return existing;
+
+    const list = await this.getSessionsList(userId);
+    const byType = list.find((s) => s.targetType === 'momentDoppelganger' && (s.targetId === userId || s.targetId === 'self'));
+    if (byType) {
+      const full = await this.getSession(byType.id);
+      if (full) return full;
+    }
+
+    const newSession: AgenticLocalSession = {
+      id: sessionId,
+      userId,
+      targetType: 'momentDoppelganger',
+      targetId: userId,
+      context: 'Moment voice twin — learns from your posts to draft in your style. No chat UI.',
+      chatHistory: [],
+    };
     await this.upsertSession(newSession);
     return newSession;
   },
