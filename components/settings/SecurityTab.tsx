@@ -444,9 +444,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3.5">
+    <section className="rounded-[22px] bg-[#161412] border-2 border-white/20 p-5 space-y-3.5 shadow-xl">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55 font-satoshi">
+        <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/70 font-satoshi">
           {title}
         </h3>
         {action}
@@ -468,8 +468,8 @@ function Row({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[16px] bg-[#0A0908] border border-white/[0.04] px-3.5 py-3.5">
-      <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0">
+    <div className="flex items-center gap-3 rounded-[16px] bg-[#0A0908] border-2 border-white/15 px-3.5 py-3.5 hover:border-white/30 transition-colors">
+      <div className="p-2 rounded-xl bg-[#161412] border-2 border-white/20 text-[#6366F1] shrink-0">
         {icon}
       </div>
       <div className="min-w-0 flex-1">

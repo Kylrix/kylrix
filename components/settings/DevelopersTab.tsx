@@ -40,9 +40,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3.5">
+    <section className="rounded-[22px] bg-[#161412] border-2 border-white/20 p-5 space-y-3.5 shadow-xl">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55 font-satoshi">
+        <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/70 font-satoshi">
           {title}
         </h3>
         {action}
@@ -73,7 +73,7 @@ function SkillRow({
   };
 
   return (
-    <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5 space-y-2.5">
+    <div className="rounded-2xl bg-[#0A0908] border-2 border-white/15 p-3.5 space-y-2.5 hover:border-white/30 transition-colors">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-bold text-white">{title}</p>
         <Link
@@ -85,13 +85,13 @@ function SkillRow({
         </Link>
       </div>
       <div className="flex items-center gap-2">
-        <code className="flex-1 min-w-0 text-[11px] font-mono text-white/70 bg-[#161412] border border-white/[0.06] rounded-xl px-3 py-2.5 break-all select-all">
+        <code className="flex-1 min-w-0 text-[11px] font-mono text-white/70 bg-[#161412] border-2 border-white/15 rounded-xl px-3 py-2.5 break-all select-all">
           {install}
         </code>
         <button
           type="button"
           onClick={() => void copy()}
-          className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer shrink-0"
+          className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer shrink-0 border-2 border-[#6366F1]"
         >
           <Copy size={14} />
           Copy

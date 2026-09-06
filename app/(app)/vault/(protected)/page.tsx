@@ -467,13 +467,13 @@ function DashboardPageContent() {
           <div>
             {/* Tab Switcher */}
             <div className="px-4 md:px-12 mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border border-white/[0.08] rounded-2xl w-fit select-none shadow-md">
+              <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border-2 border-white/20 rounded-2xl w-fit select-none shadow-md">
                 <button
                   onClick={() => setActiveTab('secrets')}
                   className={`flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'secrets'
-                      ? 'bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)]'
-                      : 'text-white/70 hover:text-white hover:bg-white/[0.06]'
+                      ? 'bg-[#10B981] text-black border-2 border-[#10B981] shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                      : 'text-white/70 border-2 border-transparent hover:text-white hover:bg-white/[0.06] hover:border-white/20'
                   }`}
                   title="Secrets"
                   aria-label="Secrets"
@@ -485,8 +485,8 @@ function DashboardPageContent() {
                   onClick={() => setActiveTab('totp')}
                   className={`flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'totp'
-                      ? 'bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)]'
-                      : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
+                      ? 'bg-[#10B981] text-black border-2 border-[#10B981] shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                      : 'text-white/60 border-2 border-transparent hover:text-white hover:bg-white/[0.06] hover:border-white/20'
                   }`}
                   title="TOTP"
                   aria-label="TOTP"
@@ -514,7 +514,7 @@ function DashboardPageContent() {
                   <div className="flex items-center gap-3.5 mb-8">
                     <button 
                       onClick={() => router.back()} 
-                      className="p-2 text-white bg-[#161412] border border-[#1C1A18] rounded-xl hover:bg-[#1C1A18] transition-colors"
+                      className="p-2 text-white bg-[#000000] border-2 border-white/20 rounded-xl hover:border-white/40 hover:bg-[#1C1A18] transition-colors"
                     >
                       <ArrowLeft size={20} />
                     </button>
@@ -525,7 +525,7 @@ function DashboardPageContent() {
                     <div className="ml-auto flex items-center gap-2">
                       <button
                         onClick={handleAdd}
-                        className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-xl transition-colors text-xs shadow-[0_4px_12px_rgba(16,185,129,0.25)]"
+                        className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-xl transition-colors text-xs border-2 border-[#10B981] shadow-[0_0_12px_rgba(16,185,129,0.3)]"
                       >
                         <Plus size={16} />
                         Add Secret
@@ -533,9 +533,9 @@ function DashboardPageContent() {
 
                       <button
                         onClick={() => setVaultBlurEnabled(!isVaultBlurEnabled)}
-                        className={`p-2 border border-[#1C1A18] rounded-xl transition-colors ${
-                          isVaultBlurEnabled ? 'text-white/40 bg-[#161412]' : 'text-[#10B981] bg-[#161412]'
-                        } hover:bg-[#1C1A18]`}
+                        className={`p-2 border-2 border-white/20 rounded-xl transition-colors ${
+                          isVaultBlurEnabled ? 'text-white/40 bg-[#000000]' : 'text-[#10B981] bg-[#000000] border-[#10B981]/50'
+                        } hover:border-white/40 hover:bg-[#1C1A18]`}
                         title="Toggle secret blur visibility"
                       >
                         {isVaultBlurEnabled ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -543,7 +543,7 @@ function DashboardPageContent() {
 
                       <button
                         onClick={() => setShowPorterDrawer(true)}
-                        className="p-2 border border-[#1C1A18] rounded-xl text-white/60 bg-[#161412] hover:text-white hover:bg-[#1C1A18] transition-colors"
+                        className="p-2 border-2 border-white/20 rounded-xl text-white/70 bg-[#000000] hover:text-white hover:border-white/40 hover:bg-[#1C1A18] transition-colors"
                         title="Import/Export Vault Data"
                       >
                         <ArrowUpDown size={16} />
@@ -560,8 +560,8 @@ function DashboardPageContent() {
                         ))}
                       </div>
                     ) : workspaceScopedCredentials.length === 0 ? (
-                      <div className="p-16 text-center rounded-[32px] bg-[#000000] border border-white/[0.08] flex flex-col items-center justify-center">
-                        <Lock className="h-12 w-12 text-white/20 mb-4" />
+                      <div className="p-16 text-center rounded-[32px] bg-[#000000] border-2 border-white/20 flex flex-col items-center justify-center shadow-xl">
+                        <Lock className="h-12 w-12 text-white/30 mb-4" />
                         <h2 className="text-xl font-black text-white mb-2 font-clash">
                           No Secrets Found
                         </h2>
@@ -571,7 +571,7 @@ function DashboardPageContent() {
                         <div className="flex items-center gap-3">
                           <button
                             onClick={handleAdd}
-                            className="inline-flex items-center gap-2 px-6 h-12 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-2xl transition-colors"
+                            className="inline-flex items-center gap-2 px-6 h-12 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-2xl transition-colors border-2 border-[#10B981] shadow-[0_0_12px_rgba(16,185,129,0.3)]"
                           >
                             <Plus size={18} />
                             Add Secret
@@ -589,7 +589,7 @@ function DashboardPageContent() {
                               } catch {}
                               void loadAllCredentials();
                             }}
-                            className="inline-flex items-center gap-2 px-4 h-12 bg-[#161412] hover:bg-[#1C1A18] text-white/80 hover:text-white border border-white/[0.08] font-bold rounded-2xl text-xs transition-colors"
+                            className="inline-flex items-center gap-2 px-4 h-12 bg-[#000000] hover:bg-[#1C1A18] text-white/80 hover:text-white border-2 border-white/20 hover:border-white/40 font-bold rounded-2xl text-xs transition-colors"
                           >
                             <RefreshCw size={15} />
                             Sync Remote

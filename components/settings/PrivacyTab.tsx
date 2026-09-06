@@ -82,9 +82,9 @@ export function PrivacyTab() {
         <p className="text-xs text-white/40 font-semibold mt-1">Control who sees your activity and how link previews render in direct chats. Changes take effect immediately.</p>
       </div>
 
-      <div className="bg-[#161412] border border-white/5 rounded-[28px] p-6 md:p-8 space-y-6">
+      <div className="bg-[#161412] border-2 border-white/20 rounded-[28px] p-6 md:p-8 space-y-6 shadow-xl">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center"><ShieldCheck size={18} /></div>
+          <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 border-2 border-[#6366F1]/30 text-[#6366F1] flex items-center justify-center"><ShieldCheck size={18} /></div>
           <div>
             <h3 className="text-white font-black text-sm">Connect — Direct Chats & Rich Media</h3>
             <p className="text-white/40 text-xs">Applies to 1:1 hangouts and messages. Custom previews for Kylrix ecosystem links remain enabled.</p>
@@ -92,9 +92,9 @@ export function PrivacyTab() {
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+          <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/60"><Keyboard size={16} /></div>
+              <div className="w-8 h-8 rounded-xl bg-[#161412] border-2 border-white/20 flex items-center justify-center text-white/70"><Keyboard size={16} /></div>
               <div className="min-w-0">
                 <div className="text-white font-bold text-sm">Typing indicators</div>
                 <div className="text-white/40 text-xs leading-relaxed">Show when you are typing and see when partner is typing</div>
@@ -104,16 +104,16 @@ export function PrivacyTab() {
               type="button"
               disabled={!!saving}
               onClick={() => toggle('typingEnabled', !prefs.typingEnabled)}
-              className={`relative w-[48px] h-[28px] rounded-full transition-all shrink-0 ${prefs.typingEnabled ? 'bg-[#6366F1]' : 'bg-white/10'}`}
+              className={`relative w-[48px] h-[28px] rounded-full transition-all shrink-0 border-2 ${prefs.typingEnabled ? 'bg-[#6366F1] border-[#6366F1]' : 'bg-white/10 border-white/20'}`}
               aria-pressed={!!prefs.typingEnabled}
             >
-              <span className={`absolute top-[3px] w-[22px] h-[22px] rounded-full bg-white shadow transition-all ${prefs.typingEnabled ? 'left-[23px]' : 'left-[3px]'}`} />
+              <span className={`absolute top-[1px] w-[22px] h-[22px] rounded-full bg-white shadow transition-all ${prefs.typingEnabled ? 'left-[21px]' : 'left-[1px]'}`} />
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+          <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/60"><Circle size={16} /></div>
+              <div className="w-8 h-8 rounded-xl bg-[#161412] border-2 border-white/20 flex items-center justify-center text-white/70"><Circle size={16} /></div>
               <div className="min-w-0">
                 <div className="text-white font-bold text-sm">Online presence</div>
                 <div className="text-white/40 text-xs leading-relaxed">Show when you are online and see partner online (Appwrite presence)</div>
@@ -123,16 +123,16 @@ export function PrivacyTab() {
               type="button"
               disabled={!!saving}
               onClick={() => toggle('onlineEnabled', !prefs.onlineEnabled)}
-              className={`relative w-[48px] h-[28px] rounded-full transition-all shrink-0 ${prefs.onlineEnabled ? 'bg-[#6366F1]' : 'bg-white/10'}`}
+              className={`relative w-[48px] h-[28px] rounded-full transition-all shrink-0 border-2 ${prefs.onlineEnabled ? 'bg-[#6366F1] border-[#6366F1]' : 'bg-white/10 border-white/20'}`}
               aria-pressed={!!prefs.onlineEnabled}
             >
-              <span className={`absolute top-[3px] w-[22px] h-[22px] rounded-full bg-white shadow transition-all ${prefs.onlineEnabled ? 'left-[23px]' : 'left-[3px]'}`} />
+              <span className={`absolute top-[1px] w-[22px] h-[22px] rounded-full bg-white shadow transition-all ${prefs.onlineEnabled ? 'left-[21px]' : 'left-[1px]'}`} />
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+          <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/60"><ExternalLink size={16} /></div>
+              <div className="w-8 h-8 rounded-xl bg-[#161412] border-2 border-white/20 flex items-center justify-center text-white/70"><ExternalLink size={16} /></div>
               <div className="min-w-0">
                 <div className="text-white font-bold text-sm">External link previews</div>
                 <div className="text-white/40 text-xs leading-relaxed">Show rich previews for external web links in messages. Ecosystem links (kylrix.space & app domain) always show rich cards.</div>
@@ -142,15 +142,15 @@ export function PrivacyTab() {
               type="button"
               disabled={!!saving}
               onClick={() => toggle('linkPreviewsEnabled', !prefs.linkPreviewsEnabled)}
-              className={`relative w-[48px] h-[28px] rounded-full transition-all shrink-0 ${prefs.linkPreviewsEnabled ? 'bg-[#6366F1]' : 'bg-white/10'}`}
+              className={`relative w-[48px] h-[28px] rounded-full transition-all shrink-0 border-2 ${prefs.linkPreviewsEnabled ? 'bg-[#6366F1] border-[#6366F1]' : 'bg-white/10 border-white/20'}`}
               aria-pressed={!!prefs.linkPreviewsEnabled}
             >
-              <span className={`absolute top-[3px] w-[22px] h-[22px] rounded-full bg-white shadow transition-all ${prefs.linkPreviewsEnabled ? 'left-[23px]' : 'left-[3px]'}`} />
+              <span className={`absolute top-[1px] w-[22px] h-[22px] rounded-full bg-white shadow transition-all ${prefs.linkPreviewsEnabled ? 'left-[21px]' : 'left-[1px]'}`} />
             </button>
           </div>
         </div>
 
-        <p className="text-[11px] text-white/30 leading-relaxed">Stored in your profile `preferences` JSON (`typingEnabled`, `onlineEnabled`, `linkPreviewsEnabled`). Ecosystem links are exempt from link preview toggling.</p>
+        <p className="text-[11px] text-white/40 leading-relaxed">Stored in your profile `preferences` JSON (`typingEnabled`, `onlineEnabled`, `linkPreviewsEnabled`). Ecosystem links are exempt from link preview toggling.</p>
       </div>
     </div>
   );

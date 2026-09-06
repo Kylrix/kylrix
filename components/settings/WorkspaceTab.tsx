@@ -223,8 +223,8 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
   if (!isCustomWorkspace) {
     return (
       <div className="space-y-6 max-w-4xl mx-auto font-satoshi">
-        <div className="p-8 md:p-10 text-center rounded-[24px] bg-[#161412] border border-white/10 shadow-xl">
-          <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/10 text-white/30 grid place-items-center mx-auto mb-4">
+        <div className="p-8 md:p-10 text-center rounded-[24px] bg-[#161412] border-2 border-white/20 shadow-xl">
+          <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border-2 border-white/20 text-white/40 grid place-items-center mx-auto mb-4">
             <FolderKanban className="h-7 w-7" />
           </div>
           <h3 className="text-base md:text-lg font-black text-white mb-1.5 font-clash">Personal Workspace Active</h3>
@@ -234,19 +234,19 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
         </div>
 
         {/* Workspace Keys — disabled for personal workspace */}
-        <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-white/10 shadow-xl space-y-4">
+        <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border-2 border-white/20 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-black text-white font-clash m-0">Workspace Keys</h2>
               <p className="text-xs text-white/40 mt-0.5 m-0">Tokens scoped exclusively to a specific workspace</p>
             </div>
-            <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 grid place-items-center text-[#818CF8]">
+            <div className="w-8 h-8 rounded-xl bg-[#0A0908] border-2 border-white/20 grid place-items-center text-[#818CF8]">
               <KeyRound size={15} />
             </div>
           </div>
 
-          <div className="p-6 rounded-[20px] bg-[#0A0908] border border-dashed border-white/10 flex flex-col items-center gap-2.5 text-center">
-            <div className="w-10 h-10 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center text-[#818CF8]">
+          <div className="p-6 rounded-[20px] bg-[#0A0908] border-2 border-dashed border-white/20 flex flex-col items-center gap-2.5 text-center">
+            <div className="w-10 h-10 rounded-2xl bg-[#6366F1]/10 border-2 border-[#6366F1]/30 flex items-center justify-center text-[#818CF8]">
               <KeyRound size={18} />
             </div>
             <p className="text-xs font-bold text-white/80 m-0">Not available in Personal Workspace</p>
@@ -256,7 +256,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
             <button
               type="button"
               onClick={() => onGoToDevelopers?.()}
-              className="mt-2 inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer shadow-md"
+              className="mt-2 inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer border-2 border-[#6366F1] shadow-md"
             >
               <Code2 size={13} />
               <span>Go to Settings &rsaquo; Developers</span>

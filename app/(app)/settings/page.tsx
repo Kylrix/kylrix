@@ -599,7 +599,7 @@ function SettingsPageInner() {
             {/* Back Button */}
             <button
                 onClick={handleBack}
-                className="mb-6 h-9 px-4 rounded-xl border border-white/10 hover:border-white/20 bg-white/2 hover:bg-white/5 text-white/80 font-bold text-xs flex items-center justify-center gap-1.5 transition-all select-none"
+                className="mb-6 h-9 px-4 rounded-xl border-2 border-white/20 hover:border-white/40 bg-[#000000] hover:bg-[#161412] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all select-none"
             >
                 <ArrowLeft size={16} />
                 <span>Back</span>
@@ -611,7 +611,7 @@ function SettingsPageInner() {
                     const username = getEffectiveUsername(user);
                     if (username) router.push(`/u/${username}`);
                 }}
-                className="mb-6 p-5 sm:p-6 bg-[#000000] border border-white/[0.08] rounded-[24px] shadow-2xl overflow-hidden relative group cursor-pointer hover:border-white/20 transition-all"
+                className="mb-6 p-5 sm:p-6 bg-[#000000] border-2 border-white/20 rounded-[24px] shadow-2xl overflow-hidden relative group cursor-pointer hover:border-white/40 transition-all"
             >
                 <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#6366F1]/10 rounded-full pointer-events-none" />
                 
@@ -648,7 +648,7 @@ function SettingsPageInner() {
                                 e.stopPropagation();
                                 setIsEditModalOpen(true);
                             }}
-                            className="py-2.5 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg select-none w-full md:w-auto cursor-pointer"
+                            className="py-2.5 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center justify-center gap-1.5 border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)] select-none w-full md:w-auto cursor-pointer"
                         >
                             <Edit3 size={14} />
                             <span>Edit Profile</span>
@@ -666,7 +666,7 @@ function SettingsPageInner() {
                             </span>
                         </div>
                         
-                        <div className="h-2 w-full bg-[#161412] rounded-full overflow-hidden border border-white/[0.08]">
+                        <div className="h-2.5 w-full bg-[#161412] rounded-full overflow-hidden border-2 border-white/20">
                             <motion.div 
                                 initial={{ width: 0 }}
                                 animate={{ width: `${100 - (computeBalance?.percent ?? 100)}%` }}
@@ -684,7 +684,7 @@ function SettingsPageInner() {
             <div className={`grid grid-cols-1 gap-6 items-start ${isRightRailPushing ? 'xl:grid-cols-[220px_1fr] xl:gap-6' : 'lg:grid-cols-[240px_1fr] lg:gap-8'} min-w-0 w-full`}>
                 {/* Desktop vertical nav — hidden on mobile, sticky, aware of right rail */}
                 <aside className={`${isRightRailPushing ? 'hidden xl:block' : 'hidden lg:block'} sticky top-[96px] self-start z-10 min-w-0`}>
-                    <nav className="flex flex-col gap-1.5 p-2 bg-[#000000] border border-white/[0.08] rounded-2xl shadow-xl">
+                    <nav className="flex flex-col gap-1.5 p-2 bg-[#000000] border-2 border-white/20 rounded-2xl shadow-xl">
                         {tabsList.map((t) => {
                             const Icon = t.icon;
                             const isActive = activeTab === t.id;
@@ -695,8 +695,8 @@ function SettingsPageInner() {
                                     onClick={() => setActiveTab(t.id as any)}
                                     className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-left w-full cursor-pointer ${
                                         isActive
-                                            ? 'bg-[#6366F1] text-white shadow-lg'
-                                            : 'text-white/70 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                                            ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]'
+                                            : 'text-white/70 hover:text-white hover:bg-white/[0.06] border-2 border-transparent hover:border-white/20'
                                     }`}
                                 >
                                     <Icon size={16} className={isActive ? 'text-white' : 'text-white/60'} />
@@ -705,14 +705,14 @@ function SettingsPageInner() {
                             );
                         })}
                     </nav>
-                    <div className="mt-4 p-3 bg-[#000000] border border-white/[0.08] rounded-xl">
+                    <div className="mt-4 p-3 bg-[#000000] border-2 border-white/20 rounded-xl shadow-md">
                         <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Tip</p>
                         <p className="text-xs text-white/70 leading-relaxed mt-1">Right sidebar pushes this layout — no overlay. Resize to see fluid reflow.</p>
                     </div>
                 </aside>
 
                 {/* Mobile horizontal tabs — visible below aside breakpoint */}
-                <div className={`${isRightRailPushing ? 'xl:hidden' : 'lg:hidden'} col-span-1 -mx-3 md:-mx-4 px-3 md:px-4 flex gap-2 overflow-x-auto pb-3 border-b border-white/[0.08] scrollbar-none select-none snap-x snap-mandatory`}>
+                <div className={`${isRightRailPushing ? 'xl:hidden' : 'lg:hidden'} col-span-1 -mx-3 md:-mx-4 px-3 md:px-4 flex gap-2 overflow-x-auto pb-3 border-b-2 border-white/20 scrollbar-none select-none snap-x snap-mandatory`}>
                     {tabsList.map((t) => {
                         const Icon = t.icon;
                         const isActive = activeTab === t.id;
@@ -723,8 +723,8 @@ function SettingsPageInner() {
                                 onClick={() => setActiveTab(t.id as any)}
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 cursor-pointer snap-start ${
                                     isActive 
-                                        ? 'bg-[#6366F1] text-white border border-[#6366F1] shadow-lg' 
-                                        : 'bg-[#000000] hover:bg-[#161412] text-white/70 border border-white/[0.08]'
+                                        ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]' 
+                                        : 'bg-[#000000] hover:bg-[#161412] text-white/70 border-2 border-white/20 hover:border-white/40'
                                 }`}
                             >
                                 <Icon size={14} />
@@ -749,10 +749,10 @@ function SettingsPageInner() {
                         {/* Left Column: Discoverability, Integrations & Feedback */}
                         <div className="flex flex-col gap-8">
                             {/* Referral Program */}
-                            <div className="p-5 md:p-6 bg-[#000000] border border-white/[0.08] rounded-[22px] shadow-2xl flex flex-col gap-4 max-w-full overflow-hidden">
+                            <div className="p-5 md:p-6 bg-[#000000] border-2 border-white/20 rounded-[22px] shadow-2xl flex flex-col gap-4 max-w-full overflow-hidden">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center shrink-0">
+                                        <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border-2 border-[#6366F1]/30 text-[#818CF8] flex items-center justify-center shrink-0">
                                             <Users size={18} />
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -772,11 +772,11 @@ function SettingsPageInner() {
 
                                     {/* Inset Metric Badges */}
                                     <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                                        <div className="bg-[#161412] border border-white/[0.08] rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[70px]">
+                                        <div className="bg-[#161412] border-2 border-white/20 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[70px]">
                                             <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest font-mono">Referred</span>
                                             <span className="text-white font-black text-xs font-mono">{referralStats?.totalReferred ?? 0}</span>
                                         </div>
-                                        <div className="bg-[#161412] border border-emerald-500/20 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[85px]">
+                                        <div className="bg-[#161412] border-2 border-emerald-500/30 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[85px]">
                                             <span className="text-[9px] font-bold text-emerald-400/80 uppercase tracking-widest font-mono">Earned</span>
                                             <span className="text-emerald-400 font-black text-xs font-mono">+{referralStats?.totalTokensEarned ?? '0.0'} $KYL</span>
                                         </div>
@@ -784,7 +784,7 @@ function SettingsPageInner() {
                                 </div>
 
                                 {/* Shareable Link Box */}
-                                <div className="flex items-center gap-2 bg-[#161412] p-1.5 pl-3 rounded-xl border border-white/[0.08] max-w-full min-w-0">
+                                <div className="flex items-center gap-2 bg-[#161412] p-1.5 pl-3 rounded-xl border-2 border-white/20 max-w-full min-w-0">
                                     <input 
                                         type="text"
                                         readOnly
@@ -803,7 +803,7 @@ function SettingsPageInner() {
                             </div>
 
                             {/* Daily Token Mint */}
-                            <div className="p-6 bg-[#000000] border border-white/[0.08] rounded-[28px] shadow-2xl flex flex-col gap-3">
+                            <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col gap-3">
                                 <h4 className="text-white font-black text-base font-mono">Daily Token Mint</h4>
                                 <p className="text-white/60 text-xs font-semibold leading-relaxed">
                                     Manually trigger your daily token minting reward.
@@ -812,7 +812,7 @@ function SettingsPageInner() {
                                     type="button"
                                     onClick={handleManualMint}
                                     disabled={minting}
-                                    className="h-11 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all select-none disabled:opacity-40 w-fit cursor-pointer"
+                                    className="h-11 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all select-none disabled:opacity-40 w-fit cursor-pointer border-2 border-[#6366F1]"
                                 >
                                     {minting ? <SpinnerIcon className="animate-spin text-white" size={16} /> : <RefreshCw size={16} />}
                                     <span>{minting ? 'Minting...' : 'Mint Daily Tokens'}</span>
@@ -825,7 +825,7 @@ function SettingsPageInner() {
                                     <Lightbulb size={20} className="text-[#6366F1]" />
                                     <span>Feedback & Intelligence</span>
                                 </h3>
-                                <div className="p-6 bg-[#000000] border border-white/[0.08] rounded-[28px] shadow-2xl hover:border-white/20 transition-all duration-300">
+                                <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl hover:border-white/40 transition-all duration-300">
                                     <div className="flex items-center justify-between gap-4 flex-wrap">
                                         <div className="min-w-0">
                                             <h4 className="text-white font-extrabold text-sm truncate">
@@ -838,7 +838,7 @@ function SettingsPageInner() {
                                         <button
                                             type="button"
                                             onClick={() => openDrawer('form', { formId: FEATURE_FORM_ID })}
-                                            className="h-10 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center transition-all w-full md:w-auto cursor-pointer"
+                                            className="h-10 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center transition-all w-full md:w-auto cursor-pointer border-2 border-[#6366F1]"
                                         >
                                             Open Portal
                                         </button>
@@ -853,10 +853,10 @@ function SettingsPageInner() {
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('agents')}
-                                className="w-full text-left p-6 bg-[#000000] border border-white/[0.08] hover:border-white/20 rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
+                                className="w-full text-left p-6 bg-[#000000] border-2 border-white/20 hover:border-white/40 rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
                             >
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-11 h-11 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                    <div className="w-11 h-11 rounded-xl bg-[#6366F1]/10 text-[#6366F1] border-2 border-[#6366F1]/30 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
                                         <Bot size={22} />
                                     </div>
                                     <div className="min-w-0">
@@ -875,10 +875,10 @@ function SettingsPageInner() {
                             <button
                                 type="button"
                                 onClick={() => openDrawer('trash')}
-                                className="w-full text-left p-6 bg-[#000000] border border-white/[0.08] hover:border-white/20 rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
+                                className="w-full text-left p-6 bg-[#000000] border-2 border-white/20 hover:border-white/40 rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
                             >
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-11 h-11 rounded-xl bg-[#EF4444]/10 text-[#EF4444] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                    <div className="w-11 h-11 rounded-xl bg-[#EF4444]/10 text-[#EF4444] border-2 border-[#EF4444]/30 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
                                         <Trash2 size={22} />
                                     </div>
                                     <div className="min-w-0">
@@ -894,10 +894,10 @@ function SettingsPageInner() {
                             </button>
 
                             {/* Telegram panel */}
-                            <div className="p-6 bg-[#000000] border border-white/[0.08] rounded-[28px] shadow-2xl flex flex-col gap-5">
-                                <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                            <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col gap-5">
+                                <div className="flex items-center justify-between border-b-2 border-white/10 pb-3">
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-9 h-9 rounded-xl bg-[#0088cc]/10 text-[#0088cc] flex items-center justify-center">
+                                        <div className="w-9 h-9 rounded-xl bg-[#0088cc]/10 text-[#0088cc] border border-[#0088cc]/30 flex items-center justify-center">
                                             <TelegramIcon />
                                         </div>
                                         <div>
@@ -916,14 +916,14 @@ function SettingsPageInner() {
                                 <button
                                     type="button"
                                     onClick={() => setTgDrawerOpen(true)}
-                                    className="py-3 px-5 rounded-xl border border-white/[0.08] text-white hover:text-white font-extrabold text-xs hover:border-white/20 transition-all text-center w-full bg-transparent cursor-pointer"
+                                    className="py-3 px-5 rounded-xl border-2 border-white/20 text-white hover:text-white font-extrabold text-xs hover:border-white/40 transition-all text-center w-full bg-transparent cursor-pointer"
                                 >
                                     {telegramConnected ? 'Manage Link' : 'Link Telegram Bot'}
                                 </button>
                             </div>
 
                             {/* Primary Account Email Card */}
-                            <div className="p-6 bg-[#000000] border border-white/[0.08] rounded-[28px] shadow-2xl flex flex-col gap-3">
+                            <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col gap-3">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                     <div>
                                         <span className="text-[10px] text-white/50 font-bold font-mono uppercase tracking-wider block mb-1">
@@ -940,7 +940,7 @@ function SettingsPageInner() {
                                                 navigator.clipboard.writeText(String(user.email));
                                                 toast.success('Email copied');
                                             }}
-                                            className="py-2 px-4 rounded-xl border border-white/[0.08] text-white font-bold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all cursor-pointer flex-shrink-0"
+                                            className="py-2 px-4 rounded-xl border-2 border-white/20 text-white font-bold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/10 transition-all cursor-pointer flex-shrink-0"
                                         >
                                             Copy Email
                                         </button>
