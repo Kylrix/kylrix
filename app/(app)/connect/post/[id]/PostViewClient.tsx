@@ -17,7 +17,7 @@ import { UsersService } from '@/lib/services/users';
 import { fetchNostrEventById } from '@/lib/nostr/thread';
 import type { NostrEvent } from '@/lib/nostr/nostr';
 import {
-  ArrowLeft, Globe, Heart, Lock, MessageCircle, PenLine,
+  ArrowLeft, Globe, Heart, MessageCircle, PenLine,
   Repeat2, Shield, Zap, X, Share2
 } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
