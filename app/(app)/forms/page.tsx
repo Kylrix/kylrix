@@ -458,26 +458,26 @@ export default function FormsDashboard() {
                                             <div 
                                                 key={draft.id}
                                                 onClick={() => handleEditDraft(draft)}
-                                                className="bg-[#000000] border border-white/[0.08] hover:border-[#FFB020]/40 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer group"
+                                                className="bg-[#000000] border-2 border-white/20 hover:border-white/40 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer group"
                                             >
                                                 <div>
                                                     <div className="flex justify-between items-center mb-3">
                                                         <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border border-[#FFB020]/40 text-[#FFB020] bg-[#FFB020]/10 tracking-wider">
                                                             LOCAL DRAFT
                                                         </span>
-                                                        <span className="text-xs text-white opacity-60 font-mono">
+                                                        <span className="text-xs text-white opacity-70 font-mono">
                                                             {new Date(draft.updatedAt).toLocaleTimeString()}
                                                         </span>
                                                     </div>
                                                     <h2 className="text-base font-bold text-white font-clash tracking-tight truncate group-hover:text-[#FFB020] transition-colors">
                                                         {draft.title || 'Untitled Draft'}
                                                     </h2>
-                                                    <p className="text-white opacity-60 text-xs font-satoshi line-clamp-2 mt-1">
+                                                    <p className="text-white opacity-70 text-xs font-satoshi line-clamp-2 mt-1">
                                                         Unsynced changes stored in device engine.
                                                     </p>
                                                 </div>
 
-                                                <div className="pt-4 mt-4 border-t border-white/[0.08] flex items-center justify-between">
+                                                <div className="pt-4 mt-4 border-t-2 border-white/20 flex items-center justify-between">
                                                     <span className="text-xs font-bold text-[#FFB020] font-satoshi">
                                                         Resume Draft
                                                     </span>
@@ -612,12 +612,12 @@ function FormCard({
         <div 
             onClick={onSelect}
             onContextMenu={handleRightClick}
-            className="group relative bg-[#000000] hover:bg-[#080808] border border-white/[0.08] hover:border-[#6366F1]/50 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer select-none"
+            className="group relative bg-[#000000] hover:bg-[#080808] border-2 border-white/20 hover:border-white/40 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer select-none shadow-sm"
         >
             <div className="space-y-3">
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-[#161412] border border-white/10 flex items-center justify-center text-[#6366F1] shrink-0 group-hover:border-[#6366F1]/40 transition-colors">
+                        <div className="w-8 h-8 rounded-xl bg-[#161412] border-2 border-white/20 flex items-center justify-center text-[#6366F1] shrink-0 group-hover:border-[#6366F1]/60 transition-colors">
                             <FileText size={15} />
                         </div>
                         <h3 className="font-clash font-extrabold text-white text-base tracking-tight group-hover:text-[#6366F1] transition-colors truncate">
@@ -642,8 +642,8 @@ function FormCard({
                 </p>
             </div>
 
-            <div className="pt-4 mt-4 border-t border-white/[0.08] flex items-center justify-between">
-                <div className="text-[11px] text-white opacity-60 font-mono">
+            <div className="pt-4 mt-4 border-t-2 border-white/20 flex items-center justify-between">
+                <div className="text-[11px] text-white opacity-70 font-mono">
                     {new Date(form.updatedAt || form.$createdAt).toLocaleDateString()}
                 </div>
 
@@ -654,11 +654,11 @@ function FormCard({
                             e.stopPropagation();
                             onEdit(form);
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-[#161412] border border-white/10 hover:border-[#6366F1] text-[11px] font-bold text-white hover:bg-[#6366F1]/15 transition-colors font-satoshi cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-[#161412] border-2 border-white/20 hover:border-white/40 text-[11px] font-bold text-white hover:bg-[#6366F1]/15 transition-colors font-satoshi cursor-pointer"
                     >
                         Edit
                     </button>
-                    <div className="text-white opacity-40 group-hover:opacity-100 transition-opacity">
+                    <div className="text-white opacity-50 group-hover:opacity-100 transition-opacity">
                         <ChevronRight size={14} />
                     </div>
                 </div>

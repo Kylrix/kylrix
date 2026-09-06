@@ -264,10 +264,10 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                                 key={opt}
                                 type="button"
                                 onClick={() => handleSingleChoiceSelect(field.id, opt)}
-                                className={`w-full text-left px-4 py-3.5 rounded-2xl border text-sm font-satoshi font-semibold transition-all flex items-center justify-between cursor-pointer ${
+                                className={`w-full text-left px-4 py-3.5 rounded-2xl border-2 text-sm font-satoshi font-bold transition-all flex items-center justify-between cursor-pointer ${
                                     formData[field.id] === opt 
-                                        ? 'bg-[#6366F1]/12 border-[#6366F1] text-white shadow-[0_0_16px_rgba(99,102,241,0.12)]' 
-                                        : 'bg-[#0B0A09] border-white/5 text-zinc-400 hover:border-white/10 hover:text-white'
+                                        ? 'bg-[#6366F1]/15 border-[#6366F1] text-white shadow-[0_0_16px_rgba(99,102,241,0.2)]' 
+                                        : 'bg-[#000000] border-white/20 text-white hover:border-white/40'
                                 }`}
                             >
                                 <span>{opt}</span>
@@ -286,15 +286,15 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                                     key={opt}
                                     type="button"
                                     onClick={() => handleCheckboxChange(field.id, opt, !isChecked)}
-                                    className={`w-full text-left px-4 py-3.5 rounded-2xl border text-sm font-satoshi font-semibold transition-all flex items-center justify-between cursor-pointer ${
+                                    className={`w-full text-left px-4 py-3.5 rounded-2xl border-2 text-sm font-satoshi font-bold transition-all flex items-center justify-between cursor-pointer ${
                                         isChecked 
-                                            ? 'bg-[#6366F1]/12 border-[#6366F1] text-white shadow-[0_0_16px_rgba(99,102,241,0.12)]' 
-                                            : 'bg-[#0B0A09] border-white/5 text-zinc-400 hover:border-white/10 hover:text-white'
+                                            ? 'bg-[#6366F1]/15 border-[#6366F1] text-white shadow-[0_0_16px_rgba(99,102,241,0.2)]' 
+                                            : 'bg-[#000000] border-white/20 text-white hover:border-white/40'
                                     }`}
                                 >
                                     <span>{opt}</span>
-                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-                                        isChecked ? 'bg-[#6366F1] border-[#6366F1]' : 'border-white/10'
+                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                                        isChecked ? 'bg-[#6366F1] border-[#6366F1]' : 'border-white/30 bg-[#161412]'
                                     }`}>
                                         {isChecked && (
                                             <svg className="w-3.5 h-3.5 text-[#050505] stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -314,7 +314,7 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                         required={field.required}
                         value={formData[field.id] || ''}
                         onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                        className="w-full px-4 py-3.5 rounded-2xl bg-[#0B0A09] border border-white/5 text-white focus:outline-none focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]/30 hover:border-white/10 transition-all resize-none font-satoshi leading-relaxed text-sm md:text-base"
+                        className="w-full px-4 py-3.5 rounded-2xl bg-[#000000] border-2 border-white/20 text-white focus:outline-none focus:border-[#6366F1] hover:border-white/40 transition-all resize-none font-satoshi leading-relaxed text-sm md:text-base placeholder:text-white/40"
                         placeholder="Type response here…"
                         autoFocus
                     />
@@ -324,24 +324,24 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                 return (
                     <div className="flex flex-col gap-2.5 w-full">
                         {selectedFile ? (
-                            <div className="flex items-center justify-between p-4 rounded-2xl bg-[#0B0A09] border border-white/5 transition-all">
+                            <div className="flex items-center justify-between p-4 rounded-2xl bg-[#000000] border-2 border-white/20 transition-all">
                                 <div className="flex items-center gap-2.5 min-w-0">
                                     <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                                    <span className="text-xs font-bold text-zinc-200 truncate max-w-[220px] font-satoshi">
+                                    <span className="text-xs font-bold text-white truncate max-w-[220px] font-satoshi">
                                         {selectedFile.originalName || 'File uploaded'}
                                     </span>
                                 </div>
                                 <button 
                                     type="button" 
                                     onClick={() => handleFieldChange(field.id, null)} 
-                                    className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                                    className="p-1.5 text-white/60 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
                                 >
                                     <XIcon size={16} />
                                 </button>
                             </div>
                         ) : (
                             <label
-                                className={`w-full py-4 px-5 rounded-2xl border border-dashed border-white/10 bg-[#0B0A09] hover:bg-white/[0.02] hover:border-[#6366F1] transition-all cursor-pointer flex items-center justify-center gap-2.5 text-xs font-bold text-zinc-400 hover:text-white font-satoshi ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`w-full py-4 px-5 rounded-2xl border-2 border-dashed border-white/20 bg-[#000000] hover:bg-white/[0.04] hover:border-white/40 transition-all cursor-pointer flex items-center justify-center gap-2.5 text-xs font-bold text-white font-satoshi ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {submitting ? (
                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
@@ -391,7 +391,7 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                         required={field.required}
                         value={formData[field.id] || ''}
                         onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                        className="w-full px-4 py-3.5 rounded-2xl bg-[#0B0A09] border border-white/5 text-white focus:outline-none focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]/30 hover:border-white/10 transition-all font-satoshi text-sm md:text-base"
+                        className="w-full px-4 py-3.5 rounded-2xl bg-[#000000] border-2 border-white/20 text-white focus:outline-none focus:border-[#6366F1] hover:border-white/40 transition-all font-satoshi text-sm md:text-base placeholder:text-white/40"
                         placeholder="Type response…"
                         autoFocus
                     />

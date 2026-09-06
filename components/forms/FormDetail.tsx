@@ -221,8 +221,8 @@ export function FormDetail({
         {activeTab === 'overview' && (
           <div className="space-y-5">
             {/* Description Tile */}
-            <div className="p-4 bg-[#000000] border border-white/[0.08] rounded-2xl">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white opacity-60 block mb-1.5">
+            <div className="p-4 bg-[#000000] border-2 border-white/20 rounded-2xl">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white opacity-70 block mb-1.5">
                 Description
               </span>
               <p className="text-sm font-satoshi text-white leading-relaxed">
@@ -231,16 +231,16 @@ export function FormDetail({
             </div>
 
             {/* Quick Share Link Tile */}
-            <div className="p-4 bg-[#000000] border border-white/[0.08] rounded-2xl space-y-3">
+            <div className="p-4 bg-[#000000] border-2 border-white/20 rounded-2xl space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white opacity-60">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white opacity-70">
                   Public Intake URL
                 </span>
-                <span className="text-[10px] font-mono text-white opacity-70">
+                <span className="text-[10px] font-mono text-white opacity-80">
                   {form.isPublic ? '🌐 Publicly Accessible' : '🔒 Private / Org Only'}
                 </span>
               </div>
-              <div className="flex items-center gap-2 bg-[#161412] border border-white/10 rounded-xl px-3 py-2">
+              <div className="flex items-center gap-2 bg-[#161412] border-2 border-white/20 rounded-xl px-3 py-2">
                 <span className="text-xs font-mono text-white truncate flex-1">
                   {shareUrl || `forms/${form.$id}`}
                 </span>
@@ -257,16 +257,16 @@ export function FormDetail({
 
             {/* Metadata Badges */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3.5 bg-[#000000] border border-white/[0.08] rounded-2xl">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white opacity-60 block mb-1">
+              <div className="p-3.5 bg-[#000000] border-2 border-white/20 rounded-2xl">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white opacity-70 block mb-1">
                   Anonymous Fill
                 </span>
                 <span className="text-xs font-satoshi font-bold text-white">
                   {form.isGuest ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
-              <div className="p-3.5 bg-[#000000] border border-white/[0.08] rounded-2xl">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white opacity-60 block mb-1">
+              <div className="p-3.5 bg-[#000000] border-2 border-white/20 rounded-2xl">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white opacity-70 block mb-1">
                   Created Date
                 </span>
                 <span className="text-xs font-satoshi font-bold text-white">
@@ -305,31 +305,31 @@ export function FormDetail({
         {activeTab === 'schema' && (
           <div className="space-y-3">
             {fields.length === 0 ? (
-              <div className="py-12 text-center bg-[#000000] border border-dashed border-white/10 rounded-2xl">
-                <FileText size={24} className="mx-auto text-white/20 mb-2" />
-                <p className="text-xs font-mono text-white opacity-60">No fields added to this schema yet.</p>
+              <div className="py-12 text-center bg-[#000000] border-2 border-dashed border-white/20 rounded-2xl">
+                <FileText size={24} className="mx-auto text-white/40 mb-2" />
+                <p className="text-xs font-mono text-white opacity-70">No fields added to this schema yet.</p>
               </div>
             ) : (
               fields.map((field: any, idx: number) => (
                 <div
                   key={field.id || idx}
-                  className="p-3.5 bg-[#000000] border border-white/[0.08] rounded-2xl flex items-center justify-between gap-3"
+                  className="p-3.5 bg-[#000000] border-2 border-white/20 rounded-2xl flex items-center justify-between gap-3"
                 >
                   <div className="min-w-0 flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-lg bg-[#161412] border border-white/10 text-white flex items-center justify-center text-[11px] font-mono shrink-0">
+                    <span className="w-6 h-6 rounded-lg bg-[#161412] border-2 border-white/20 text-white flex items-center justify-center text-[11px] font-mono shrink-0 font-bold">
                       {idx + 1}
                     </span>
                     <div className="min-w-0">
                       <span className="text-xs font-satoshi font-bold text-white block truncate">
                         {field.label || 'Untitled Field'}
                       </span>
-                      <span className="text-[10px] font-mono text-white opacity-60 uppercase">
+                      <span className="text-[10px] font-mono text-white opacity-70 uppercase">
                         {field.type || 'text'} {field.required ? '• Required' : ''}
                       </span>
                     </div>
                   </div>
 
-                  <span className="px-2 py-0.5 rounded-lg bg-[#161412] border border-white/8 text-[10px] font-mono text-white opacity-70 shrink-0">
+                  <span className="px-2 py-0.5 rounded-lg bg-[#161412] border-2 border-white/20 text-[10px] font-mono text-white font-bold shrink-0">
                     {field.type}
                   </span>
                 </div>
@@ -340,7 +340,7 @@ export function FormDetail({
 
         {activeTab === 'preview' && (
           <div className="space-y-4">
-            <div className="p-5 bg-[#000000] border border-white/[0.08] rounded-2xl space-y-4">
+            <div className="p-5 bg-[#000000] border-2 border-white/20 rounded-2xl space-y-4">
               <div>
                 <h3 className="font-clash font-bold text-lg text-white mb-1">{form.title}</h3>
                 <p className="text-xs font-satoshi text-white opacity-70">{form.description}</p>
@@ -349,13 +349,13 @@ export function FormDetail({
               <div className="space-y-3 pt-2">
                 {fields.map((f: any, idx: number) => (
                   <div key={f.id || idx} className="space-y-1.5">
-                    <label className="text-xs font-satoshi font-bold text-white/80 block">
+                    <label className="text-xs font-satoshi font-bold text-white block">
                       {f.label} {f.required && <span className="text-red-400">*</span>}
                     </label>
                     <input
                       disabled
                       placeholder={f.placeholder || `Enter ${f.label}...`}
-                      className="w-full bg-[#161412] border border-white/10 rounded-xl px-3 py-2 text-xs text-white/40 placeholder-white/20 cursor-not-allowed"
+                      className="w-full bg-[#161412] border-2 border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/40 cursor-not-allowed"
                     />
                   </div>
                 ))}
@@ -364,7 +364,7 @@ export function FormDetail({
               <button
                 disabled
                 type="button"
-                className="w-full py-2.5 rounded-xl bg-[#6366F1]/50 text-white/70 font-satoshi font-bold text-xs cursor-not-allowed text-center"
+                className="w-full py-2.5 rounded-xl bg-[#6366F1]/50 text-white font-satoshi font-bold text-xs cursor-not-allowed text-center"
               >
                 Submit Response (Preview Mode)
               </button>
