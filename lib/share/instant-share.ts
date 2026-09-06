@@ -11,6 +11,7 @@ function toUrlSafeBase64(base64: string): string {
 
 export interface InstantShareOptions extends PublicUrlOptions {
   dek?: string | null;
+  /** Current known local flags (for UI only — never skips remote publish). */
   isPublic?: boolean;
   isGuest?: boolean;
   resourceTitle?: string;
@@ -22,30 +23,26 @@ export interface InstantShareResult {
   success: boolean;
   url: string;
   copied: boolean;
+  /** True only after Appwrite isPublic+isGuest columns confirmed via secure-ops. */
+  published?: boolean;
+  isPublic?: boolean;
+  isGuest?: boolean;
   requiresAuth?: boolean;
   requiresMasterpass?: boolean;
+  error?: string;
 }
 
 /**
- * Universally unblocks getting and copying share links instantly for any object.
- *
- * 1. Computes the share link immediately from the object state & resource ID.
- *    - If the object has a DEK or is encrypted, attempts to unwrap using MEK.
- *    - If MEK is not yet unlocked, signals to prompt masterpass unlock.
- * 2. Copies the link to clipboard with zero artificial delay.
- * 3. Immediately triggers prioritized background synchronization:
- *    - Flushes pending sync payloads for the object if not yet remote.
- *    - Ensures `isPublic: true` and `isGuest: true` are persisted.
- *    - If user is not logged in, opens the auth drawer with dynamic object context.
+ * Share link + publish. Link may copy early; `published` / `success` only after
+ * remote `isPublic`+`isGuest` are confirmed. Never treat local optimism as truth.
  */
 export async function executeInstantShare(
   resourceType: PublicResourceType,
   resourceId: string,
   options: InstantShareOptions = {}
 ): Promise<InstantShareResult> {
-  const { dek, isPublic, isGuest, resourceTitle, openLoginDrawer, openMasterpassPrompt, projectId } = options;
+  const { dek, resourceTitle, openLoginDrawer, openMasterpassPrompt, projectId } = options;
 
-  // 1. Verify User Authentication for cloud sharing
   const currentUser = getCurrentUserSnapshot();
   if (!currentUser?.$id && resourceType !== 'moment') {
     if (openLoginDrawer) {
@@ -60,11 +57,11 @@ export async function executeInstantShare(
       success: false,
       url: '',
       copied: false,
+      published: false,
       requiresAuth: true,
     };
   }
 
-  // 2. Build URL & resolve encryption DEK fragment
   let keyFragment = '';
   let requiresMasterpass = false;
 
@@ -90,7 +87,6 @@ export async function executeInstantShare(
   const baseUrl = buildPublicResourceUrl(resourceType, resourceId, { projectId });
   const finalUrl = keyFragment ? `${baseUrl}${keyFragment}` : baseUrl;
 
-  // 3. Unblock Instant Copying
   let copied = false;
   try {
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
@@ -101,71 +97,88 @@ export async function executeInstantShare(
     console.warn('[InstantShare] Clipboard copy warning:', clipErr);
   }
 
-  // 4. Aggressive Background Synchronizer
-  // Ensures the object is flushed upstream FIRST before publishing permissions
-  void (async () => {
+  // Flush row first, then ALWAYS publish columns (idempotent). Never skip on local flags.
+  try {
     try {
-      // 4a. Force-enqueue live local copy (fixes first-create never queued), then flush now
-      try {
-        if (resourceType === 'note' || resourceType === 'idea') {
-          const { getLiveNoteForSync } = await import('@/lib/sync/pending-sync-bridge');
-          const live = getLiveNoteForSync(resourceId);
-          const stamped = {
-            ...(live || { $id: resourceId }),
-            $id: resourceId,
-            isPublic: true,
-            isGuest: true,
-            updatedAt: new Date().toISOString(),
-            $updatedAt: new Date().toISOString(),
-          };
-          autonomicSyncEngine.markPending(resourceId, stamped.updatedAt, stamped, { force: true });
-        } else if (resourceType === 'goal' || resourceType === 'task') {
-          const { getLiveGoalForSync } = await import('@/lib/sync/pending-sync-bridge');
-          const live = getLiveGoalForSync(resourceId);
-          if (live) {
-            const { goalPendingKey } = await import('@/lib/sync/goal-keys');
-            autonomicSyncEngine.markPending(
-              goalPendingKey(resourceId),
-              new Date().toISOString(),
-              { ...live, isPublic: true, isGuest: true },
-              { force: true },
-            );
-          } else {
-            autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), undefined, {
-              force: true,
-            });
-          }
-        } else if (!autonomicSyncEngine.isPending(resourceId)) {
+      if (resourceType === 'note' || resourceType === 'idea') {
+        const { getLiveNoteForSync } = await import('@/lib/sync/pending-sync-bridge');
+        const live = getLiveNoteForSync(resourceId);
+        const stamped = {
+          ...(live || { $id: resourceId }),
+          $id: resourceId,
+          isPublic: true,
+          isGuest: true,
+          updatedAt: new Date().toISOString(),
+          $updatedAt: new Date().toISOString(),
+        };
+        autonomicSyncEngine.markPending(resourceId, stamped.updatedAt, stamped, { force: true });
+      } else if (resourceType === 'goal' || resourceType === 'task') {
+        const { getLiveGoalForSync } = await import('@/lib/sync/pending-sync-bridge');
+        const live = getLiveGoalForSync(resourceId);
+        if (live) {
+          const { goalPendingKey } = await import('@/lib/sync/goal-keys');
+          autonomicSyncEngine.markPending(
+            goalPendingKey(resourceId),
+            new Date().toISOString(),
+            { ...live, isPublic: true, isGuest: true },
+            { force: true },
+          );
+        } else {
           autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), undefined, {
             force: true,
           });
         }
-      } catch (enqueueErr) {
-        console.warn('[InstantShare] force enqueue warning:', enqueueErr);
-      }
-
-      await autonomicSyncEngine.runCycle().catch(() => {});
-
-      // 4b. Now that the row should exist upstream, ensure public & guest flags are active
-      if (!isPublic || !isGuest) {
-        await toggleResourcePublicGuest({
-          resourceType,
-          resourceId,
-          mode: 'publish',
-          projectId,
-        }).catch((err) => {
-          console.warn('[InstantShare] toggleResourcePublicGuest warning:', err);
+      } else if (!autonomicSyncEngine.isPending(resourceId)) {
+        autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), undefined, {
+          force: true,
         });
       }
-    } catch (syncErr) {
-      console.error('[InstantShare] Background share sync error:', syncErr);
+    } catch (enqueueErr) {
+      console.warn('[InstantShare] force enqueue warning:', enqueueErr);
     }
-  })();
 
-  return {
-    success: true,
-    url: finalUrl,
-    copied,
-    requiresMasterpass,
-  };
+    await autonomicSyncEngine.runCycle().catch(() => {});
+
+    const publishRes = await toggleResourcePublicGuest({
+      resourceType,
+      resourceId,
+      mode: 'publish',
+      projectId,
+    });
+
+    if (!publishRes?.success || !publishRes.isPublic || !publishRes.isGuest) {
+      return {
+        success: false,
+        url: finalUrl,
+        copied,
+        published: false,
+        isPublic: publishRes?.isPublic === true,
+        isGuest: publishRes?.isGuest === true,
+        requiresMasterpass,
+        error: 'Could not confirm public sharing on the server',
+      };
+    }
+
+    return {
+      success: true,
+      url: publishRes.publicUrl || finalUrl,
+      copied,
+      published: true,
+      isPublic: true,
+      isGuest: true,
+      requiresMasterpass,
+    };
+  } catch (syncErr) {
+    const message =
+      syncErr instanceof Error ? syncErr.message : 'Share sync failed';
+    console.error('[InstantShare] Share publish error:', syncErr);
+    return {
+      success: false,
+      url: finalUrl,
+      copied,
+      published: false,
+      requiresMasterpass,
+      error: message,
+    };
+  }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Share2 } from 'lucide-react';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { useToast } from '@/hooks/useToast';
@@ -25,8 +25,7 @@ interface ShareLockButtonProps {
 }
 
 /**
- * Ruthless Instant Sharing: One-tap unblocked share button.
- * Immediately copies share link and proactively syncs state in background.
+ * One-tap share: awaits remote isPublic+isGuest confirm before updating UI.
  */
 export function ShareLockButton({
   resourceType,
@@ -45,12 +44,13 @@ export function ShareLockButton({
   const { showError } = useToast();
   const { open } = useUnifiedDrawer();
   const { user } = useAuth();
+  const [busy, setBusy] = useState(false);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (busy) return;
 
-    // 1. If not authenticated, prompt contextual login drawer
     if (!user?.$id) {
       const friendlyName = resourceTitle ? `"${resourceTitle}"` : resourceType;
       open('login', {
@@ -61,53 +61,64 @@ export function ShareLockButton({
       return;
     }
 
-    // 2. Check hard blockages if any
     if (!canPublish && !isPublic) {
       showError('Cannot share: ' + (blockReason || 'This resource cannot be shared publicly.'));
       return;
     }
 
-    // 3. Trigger immediate aggressive sync flush and mark local states as published optimistically
+    setBusy(true);
     try {
-      void executeInstantShare(resourceType, resourceId, {
+      const res = await executeInstantShare(resourceType, resourceId, {
         dek,
-        isPublic: true,
-        isGuest: true,
+        isPublic,
+        isGuest,
         resourceTitle,
         projectId,
       });
+
+      if (!res.success || !res.published) {
+        showError(res.error || 'Sharing did not save. Try again.');
+        return;
+      }
+
       onPublished?.({
         isPublic: true,
         isGuest: true,
-        publicUrl: '',
+        publicUrl: res.url || '',
       });
-    } catch {}
 
-    // 4. Open the native Share Context Sheet
-    open('share-context', {
-      resourceType,
-      resourceId,
-      resourceTitle,
-      isPublic: true,
-      isGuest: true,
-      dek,
-      projectId,
-      accentColor,
-    });
+      open('share-context', {
+        resourceType,
+        resourceId,
+        resourceTitle,
+        isPublic: true,
+        isGuest: true,
+        dek,
+        projectId,
+        accentColor,
+      });
+    } catch (err: any) {
+      showError(err?.message || 'Sharing did not save. Try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const isActive = isPublic || isGuest;
-  const tip = !canPublish && !isActive
-    ? (blockReason || 'Cannot share')
-    : isActive
-      ? 'Copy public link'
-      : 'Share publicly';
+  const tip = busy
+    ? 'Confirming share…'
+    : !canPublish && !isActive
+      ? (blockReason || 'Cannot share')
+      : isActive
+        ? 'Copy public link'
+        : 'Share publicly';
 
   return (
     <IconButton
       onClick={handleToggle}
       title={tip}
       aria-label={tip}
+      disabled={busy}
       sx={{
         width: 32,
         height: 32,
@@ -117,6 +128,7 @@ export function ShareLockButton({
             ? `color-mix(in srgb, ${accentColor} 50%, transparent)` 
             : 'rgba(255, 255, 255, 0.15)',
         transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        opacity: busy ? 0.5 : 1,
         '&:hover': {
           color: isPublic && isGuest 
             ? accentColor 
