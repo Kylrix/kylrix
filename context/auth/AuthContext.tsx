@@ -198,18 +198,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       void initProfile();
 
-      // 5. Silent Attribution & Referral Claiming
+      // 5. Silent Attribution & Referral Claiming (new + existing accounts, once)
       const claimAttribution = async () => {
         try {
-          const match = document.cookie.match(/(?:^|;\s*)attribution_payload=([^;]+)/);
-          if (match && match[1]) {
-            const raw = atob(decodeURIComponent(match[1]));
-            const payload = JSON.parse(raw);
-            if (payload && payload.ref) {
-              const { claimReferralAction } = await import('@/lib/actions/referrals');
-              await claimReferralAction(payload);
-              document.cookie = 'attribution_payload=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
-            }
+          const { claimPendingReferralAttribution } = await import('@/lib/services/referral-client');
+          let res = await claimPendingReferralAttribution();
+          // Session cookie/JWT may still be warming on first paint
+          if (res.attempted && !res.ok && !res.alreadyReferred && !/self-referral|invalid/i.test(String(res.error || ''))) {
+            await new Promise((r) => setTimeout(r, 1200));
+            res = await claimPendingReferralAttribution();
           }
         } catch (claimErr) {
           console.warn('[AuthContext] Background referral claim:', claimErr);

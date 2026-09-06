@@ -55,59 +55,49 @@ export function middleware(request: NextRequest) {
     const src = searchParams.get('src') || (ref.startsWith('agt_') ? 'agent' : (ref.startsWith('org_') ? 'org' : (ref.startsWith('cmp_') ? 'campaign' : 'user')));
     const origin = searchParams.get('origin') || 'direct';
     const attributionData = JSON.stringify({
-      ref,
+      ref: String(ref).slice(0, 128),
       src,
       origin,
       timestamp: Date.now(),
     });
-    attributionCookieValue = Buffer.from(attributionData).toString('base64');
+    // URI-encode so +/= in base64 survive cookie round-trips
+    attributionCookieValue = encodeURIComponent(Buffer.from(attributionData).toString('base64'));
   }
+
+  const attachAttribution = (response: NextResponse) => {
+    if (!attributionCookieValue) return response;
+    response.cookies.set({
+      name: 'attribution_payload',
+      value: attributionCookieValue,
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: '/',
+      sameSite: 'lax',
+    });
+    return response;
+  };
 
   // Handle Root URL ('/')
   if (pathname === '/' || pathname === '') {
     const isSelfHosted = isSelfHostedDeployment();
 
     if (isSelfHosted) {
-      // In self-hosted mode, brand landing page is completely disabled.
-      // Always route to the last active app route or /app.
+      // Self-host: no brand landing — still preserve ?ref= into attribution cookie
       const lastRoute = readResumePathFromCookie(request);
       const target = (lastRoute && lastRoute.startsWith('/') && lastRoute !== '/')
         ? lastRoute
         : DEFAULT_AUTHENTICATED_ROUTE;
-      return NextResponse.redirect(new URL(target, request.url));
+      return attachAttribution(NextResponse.redirect(new URL(target, request.url)));
     }
 
     if (ref) {
-      // If referral link clicked:
       if (hasAuthSessionHint(request)) {
-        // Logged-in user: redirect to app to auto-claim referral
-        const response = NextResponse.redirect(new URL('/app', request.url));
-        if (attributionCookieValue) {
-          response.cookies.set({
-            name: 'attribution_payload',
-            value: attributionCookieValue,
-            maxAge: 60 * 60 * 24 * 30, // 30 days
-            path: '/',
-            sameSite: 'lax',
-          });
-        }
-        return response;
-      } else {
-        // Guest user: stay on landing page and pop open auth drawer
-        const landingWithAuth = new URL('/', request.url);
-        landingWithAuth.searchParams.set('auth', 'open');
-        const response = NextResponse.redirect(landingWithAuth);
-        if (attributionCookieValue) {
-          response.cookies.set({
-            name: 'attribution_payload',
-            value: attributionCookieValue,
-            maxAge: 60 * 60 * 24 * 30, // 30 days
-            path: '/',
-            sameSite: 'lax',
-          });
-        }
-        return response;
+        // Logged-in (new or existing): send to app to claim once
+        return attachAttribution(NextResponse.redirect(new URL('/app', request.url)));
       }
+      // Guest: landing + auth open; cookie persists for claim after sign-in
+      const landingWithAuth = new URL('/', request.url);
+      landingWithAuth.searchParams.set('auth', 'open');
+      return attachAttribution(NextResponse.redirect(landingWithAuth));
     }
 
     if (searchParams.has('stay')) {
@@ -133,17 +123,7 @@ export function middleware(request: NextRequest) {
     cleanUrl.searchParams.delete('src');
     cleanUrl.searchParams.delete('origin');
 
-    const response = NextResponse.redirect(cleanUrl);
-    if (attributionCookieValue) {
-      response.cookies.set({
-        name: 'attribution_payload',
-        value: attributionCookieValue,
-        maxAge: 60 * 60 * 24 * 30,
-        path: '/',
-        sameSite: 'lax',
-      });
-    }
-    return response;
+    return attachAttribution(NextResponse.redirect(cleanUrl));
   }
 
   // Skip static assets — but protect API and MCP surfaces from IP pounding.

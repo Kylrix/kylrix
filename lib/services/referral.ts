@@ -120,13 +120,17 @@ export const ReferralService = {
 
     // 3. Username Referrals: u_<username> or @<username>
     if (cleanCode.startsWith('u_') || cleanCode.startsWith('@')) {
-      const targetUsername = cleanCode.replace(/^(@|u_)/, '').toLowerCase();
+      const targetUsername = cleanCode.replace(/^(@|u_)/, '').toLowerCase().trim();
+      if (!targetUsername) return null;
       try {
         const profileRows = await tables.listRows({
           databaseId: DB,
           tableId: PROFILES_TABLE,
           queries: [
-            Query.equal('username', targetUsername),
+            Query.or([
+              Query.equal('username', targetUsername),
+              Query.equal('username', `@${targetUsername}`),
+            ]),
             Query.limit(1)
           ]
         });
