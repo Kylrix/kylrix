@@ -107,6 +107,19 @@ export async function refreshMomentDoppelgangerVoice(
     chatHistory: session.chatHistory || [],
   });
 
+  // Fire-and-forget remote never-dup ensure (Pro users will also hit this on complete)
+  try {
+    const { account } = await import('@/lib/appwrite/client');
+    const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+    if (jwt) {
+      const { ensureMomentDoppelgangerSessionAction } = await import('@/lib/actions/moment-doppelganger');
+      void ensureMomentDoppelgangerSessionAction({
+        jwt,
+        contextSnippet: `${VOICE_CONTEXT_PREFIX}${JSON.stringify(samples).slice(0, 1500)}`,
+      });
+    }
+  } catch {}
+
   const fresh = (await AgenticSessionLocalStore.getSession(momentDoppelgangerSessionId(userId))) || session;
   return {
     session: fresh,

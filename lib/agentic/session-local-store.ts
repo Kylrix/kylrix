@@ -91,6 +91,15 @@ export function momentDoppelgangerSessionId(userId: string): string {
   return `moment_doppelganger_${userId}`;
 }
 
+/**
+ * Appwrite row ids max 36 chars — short deterministic remote id.
+ * Local id stays `moment_doppelganger_${userId}` for LocalEngine.
+ */
+export function momentDoppelgangerRemoteRowId(userId: string): string {
+  const raw = `mdg_${String(userId || '').replace(/[^a-zA-Z0-9._-]/g, '_')}`.slice(0, 36);
+  return raw || `mdg_${Date.now().toString(36)}`.slice(0, 36);
+}
+
 export const MOMENT_DOPPELGANGER_TARGET_TYPE = 'momentDoppelganger' as const;
 
 export const AgenticSessionLocalStore = {
@@ -266,23 +275,77 @@ export const AgenticSessionLocalStore = {
   /**
    * Moments voice twin — one durable session per account (no chat UI).
    * Stable id for instant local fetch: `moment_doppelganger_${userId}`.
+   * Prunes any stray duplicate list entries for the same target.
    */
   async getOrCreateMomentDoppelgangerSession(userId: string): Promise<AgenticLocalSession> {
     const sessionId = momentDoppelgangerSessionId(userId);
-    const existing = await this.getSession(sessionId);
-    if (existing) return existing;
-
     const list = await this.getSessionsList(userId);
-    const byType = list.find((s) => s.targetType === 'momentDoppelganger' && (s.targetId === userId || s.targetId === 'self'));
-    if (byType) {
+    const dupes = list.filter(
+      (s) =>
+        s.targetType === MOMENT_DOPPELGANGER_TARGET_TYPE &&
+        (s.targetId === userId || s.targetId === 'self' || s.id === sessionId),
+    );
+
+    // Collapse list duplicates → keep canonical id only
+    if (dupes.length > 1 || (dupes.length === 1 && dupes[0].id !== sessionId)) {
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      for (const d of dupes) {
+        if (d.id === sessionId) continue;
+        await LocalEngine.cacheDelete(sessionKey(d.id)).catch(() => {});
+      }
+      await this.setSessionsList(
+        userId,
+        list.filter(
+          (s) =>
+            !(
+              s.targetType === MOMENT_DOPPELGANGER_TARGET_TYPE &&
+              (s.targetId === userId || s.targetId === 'self') &&
+              s.id !== sessionId
+            ),
+        ),
+      );
+    }
+
+    const existing = await this.getSession(sessionId);
+    if (existing) {
+      if (
+        existing.targetType !== MOMENT_DOPPELGANGER_TARGET_TYPE ||
+        existing.targetId !== userId
+      ) {
+        await this.upsertSession({
+          ...existing,
+          id: sessionId,
+          userId,
+          targetType: MOMENT_DOPPELGANGER_TARGET_TYPE,
+          targetId: userId,
+        });
+        return (await this.getSession(sessionId)) || existing;
+      }
+      return existing;
+    }
+
+    // Migrate legacy list row with wrong id into canonical cache key
+    const byType = dupes.find((s) => s.id !== sessionId) || dupes[0];
+    if (byType && byType.id !== sessionId) {
       const full = await this.getSession(byType.id);
-      if (full) return full;
+      if (full) {
+        await this.upsertSession({
+          ...full,
+          id: sessionId,
+          userId,
+          targetType: MOMENT_DOPPELGANGER_TARGET_TYPE,
+          targetId: userId,
+        });
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        await LocalEngine.cacheDelete(sessionKey(byType.id)).catch(() => {});
+        return (await this.getSession(sessionId))!;
+      }
     }
 
     const newSession: AgenticLocalSession = {
       id: sessionId,
       userId,
-      targetType: 'momentDoppelganger',
+      targetType: MOMENT_DOPPELGANGER_TARGET_TYPE,
       targetId: userId,
       context: 'Moment voice twin — learns from your posts to draft in your style. No chat UI.',
       chatHistory: [],
