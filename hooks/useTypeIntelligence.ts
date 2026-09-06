@@ -12,12 +12,8 @@ import {
   pickCompletionSource,
   recordAiInference,
 } from '@/lib/agentic/offline-complete';
-import {
-  lookupCachedSuggestion,
-  lookupCachedTakeover,
-  rememberSuggestion,
-  rememberTakeover,
-} from '@/lib/agentic/suggestion-cache';
+
+const loadSuggestCache = () => import('@/lib/agentic/suggestion-cache');
 
 type LearningStatus = 'off' | 'initializing' | 'ready' | 'empty';
 type SuggestionSource = 'offline' | 'ai';
@@ -96,6 +92,7 @@ export function useTypeIntelligence(opts: {
         const myReq = ++reqIdRef.current;
         const scope = `type_intel_${kind}`;
 
+        const { lookupCachedSuggestion, rememberSuggestion } = await loadSuggestCache();
         // Local cache first — absorb delete/retype without AI or offline recompute
         const cached = await lookupCachedSuggestion({
           scope,
@@ -215,6 +212,7 @@ export function useTypeIntelligence(opts: {
     const scope = `type_intel_takeover_${kind}`;
     setBusy(true);
     try {
+      const { lookupCachedTakeover, rememberTakeover } = await loadSuggestCache();
       const cached = await lookupCachedTakeover({ scope, userId, draft });
       if (cached) {
         setDraft(cached);

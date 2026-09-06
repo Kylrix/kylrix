@@ -3,8 +3,6 @@
  * Exact draft hits + near-prefix recovery. Persisted in LocalEngine per scope.
  */
 
-import { LocalEngine } from '@/lib/services/LocalEngine';
-
 const MAX_ENTRIES = 120;
 const TTL_MS = 1000 * 60 * 60 * 24 * 14; // 14 days
 const PREFIX_SLACK = 28; // chars deleted from end still reuse nearest longer/shorter hit
@@ -19,6 +17,11 @@ type CacheEntry = {
 type CacheBlob = { entries: CacheEntry[]; updatedAt: number };
 
 const memory = new Map<string, CacheEntry[]>();
+
+async function engine() {
+  const { LocalEngine } = await import('@/lib/services/LocalEngine');
+  return LocalEngine;
+}
 
 function persistKey(scope: string, userId?: string): string {
   const uid = String(userId || 'anon').trim() || 'anon';
@@ -53,6 +56,7 @@ async function loadEntries(scope: string, userId?: string): Promise<CacheEntry[]
   const key = persistKey(scope, userId);
   if (memory.has(key)) return memory.get(key)!;
   try {
+    const LocalEngine = await engine();
     const blob = await LocalEngine.cacheGet<CacheBlob>(key);
     const entries = prune(Array.isArray(blob?.entries) ? blob!.entries : []);
     memory.set(key, entries);
@@ -68,6 +72,7 @@ async function saveEntries(scope: string, userId: string | undefined, entries: C
   const next = prune(entries);
   memory.set(key, next);
   try {
+    const LocalEngine = await engine();
     await LocalEngine.cacheSet(key, { entries: next, updatedAt: Date.now() } satisfies CacheBlob);
   } catch {}
 }
