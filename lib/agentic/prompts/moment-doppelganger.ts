@@ -72,3 +72,39 @@ export function buildMomentTakeoverPrompt(params: {
     .filter(Boolean)
     .join('\n\n');
 }
+
+/**
+ * Reply assist — proactive when empty; suffix when draft has kickoff words.
+ */
+export function buildMomentReplySuggestPrompt(params: {
+  draft: string;
+  parentSnippet?: string;
+  voiceSamples: MomentVoiceSample[];
+  coldStartHints?: string[];
+}): string {
+  const samples = params.voiceSamples
+    .slice(0, 24)
+    .map((s, i) => `${i + 1}. ${s.text}`)
+    .join('\n');
+  const hints = (params.coldStartHints || []).filter(Boolean).slice(0, 8).join(' · ');
+  const draft = String(params.draft || '').trim();
+  const parent = String(params.parentSnippet || '').trim().slice(0, 400);
+  const empty = draft.length === 0;
+
+  return [
+    empty
+      ? 'MODE: proactive reply. Draft is empty — write ONE short reply the user can accept as-is (plain text only).'
+      : 'MODE: reply autocomplete. Return ONLY the continuation suffix to append after the draft (not the draft again).',
+    'Stay in the user voice from VOICE SAMPLES. Respond to the PARENT post — concrete, human, no corporate tone.',
+    'Keep it short (about 6–36 words). No quotes, no markdown, no "here is a reply".',
+    'Do not invent private facts. Do not spam empty praise like "Great post!" unless samples do that.',
+    samples ? `VOICE SAMPLES:\n${samples}` : 'VOICE SAMPLES: (none)',
+    hints ? `COLD START HINTS:\n${hints}` : '',
+    parent ? `PARENT POST:\n${parent}` : 'PARENT POST: (unavailable)',
+    empty
+      ? 'EMPTY DRAFT — output a full short reply:'
+      : `DRAFT SO FAR:\n${draft}\n\nSUFFIX:`,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}

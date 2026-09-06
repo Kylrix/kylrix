@@ -11,14 +11,25 @@ import {
   completeOfflineSuffix,
   pickCompletionSource,
   recordAiInference,
+  suggestOfflineReply,
 } from '@/lib/agentic/offline-complete';
 
 const loadSuggestCache = () => import('@/lib/agentic/suggestion-cache');
 
 type LearningStatus = 'off' | 'initializing' | 'ready' | 'empty';
 type SuggestionSource = 'offline' | 'ai';
+export type MomentIntelMode = 'create' | 'reply';
 
 const PREF_KEY = 'f_moment_create_with_agent';
+
+/** empty → proactive; warming → wait for a few kickoff words; ready → normal complete */
+function replyKickoffPhase(draft: string): 'empty' | 'warming' | 'ready' {
+  const t = String(draft || '').trim();
+  if (!t) return 'empty';
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length < 2 && t.length < 12) return 'warming';
+  return 'ready';
+}
 
 export function useMomentIntelligence(opts: {
   userId?: string;
@@ -28,8 +39,24 @@ export function useMomentIntelligence(opts: {
   isPro: boolean;
   onOpenPro: () => void;
   setDraft: (next: string) => void;
+  /** Reply composers suggest before typing; create stays conservative. */
+  mode?: MomentIntelMode;
+  parentSnippet?: string;
+  parentMomentId?: string;
 }) {
-  const { userId, displayName, draft, enabled, isPro, onOpenPro, setDraft } = opts;
+  const {
+    userId,
+    displayName,
+    draft,
+    enabled,
+    isPro,
+    onOpenPro,
+    setDraft,
+    mode = 'create',
+    parentSnippet = '',
+    parentMomentId = '',
+  } = opts;
+  const isReply = mode === 'reply';
 
   const [learningStatus, setLearningStatus] = useState<LearningStatus>('off');
   const [suggestion, setSuggestion] = useState('');
@@ -42,24 +69,31 @@ export function useMomentIntelligence(opts: {
   const reqIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sourceRef = useRef<SuggestionSource>('offline');
+  const voiceReadyRef = useRef(false);
 
   useEffect(() => {
     if (!enabled || !userId) {
       setLearningStatus('off');
       setSuggestion('');
+      voiceReadyRef.current = false;
       return;
     }
     let cancelled = false;
     setLearningStatus('initializing');
+    voiceReadyRef.current = false;
     void (async () => {
       try {
         const res = await refreshMomentDoppelgangerVoice(userId);
         if (cancelled) return;
         samplesRef.current = res.samples;
         hintsRef.current = res.hints;
+        voiceReadyRef.current = true;
         setLearningStatus(res.status === 'ready' ? 'ready' : 'empty');
       } catch {
-        if (!cancelled) setLearningStatus('empty');
+        if (!cancelled) {
+          voiceReadyRef.current = true;
+          setLearningStatus('empty');
+        }
       }
     })();
     return () => {
@@ -74,22 +108,53 @@ export function useMomentIntelligence(opts: {
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
+    const phase = isReply ? replyKickoffPhase(draft) : null;
     const trimmed = draft.trimEnd();
-    if (trimmed.length < 3) {
-      setSuggestion('');
-      return;
+
+    // Create mode: wait until a few characters exist
+    if (!isReply) {
+      if (trimmed.length < 3) {
+        setSuggestion('');
+        return;
+      }
+    } else {
+      // Reply warming: user started typing — clear stale empty suggestion and wait
+      if (phase === 'warming') {
+        setSuggestion('');
+      }
+      // Wait for voice hydrate before empty proactive (discretion: avoid blank spam)
+      if (phase === 'empty' && !voiceReadyRef.current && learningStatus === 'initializing') {
+        return;
+      }
     }
+
+    const delayMs = !isReply
+      ? 380
+      : phase === 'empty'
+        ? 220
+        : phase === 'warming'
+          ? 900
+          : 420;
 
     debounceRef.current = setTimeout(() => {
       void (async () => {
+        // Re-check warming after wait — only fire once kickoff is ready or still empty
+        if (isReply) {
+          const after = replyKickoffPhase(draft);
+          if (after === 'warming') return;
+        }
+
         const myReq = ++reqIdRef.current;
-        const scope = 'moment_doppelganger';
+        const scope = isReply
+          ? `moment_reply_${parentMomentId || 'x'}`
+          : 'moment_doppelganger';
+        const cacheDraft = isReply && !trimmed ? `__empty__:${(parentSnippet || '').slice(0, 80)}` : draft;
 
         const { lookupCachedSuggestion, rememberSuggestion } = await loadSuggestCache();
         const cached = await lookupCachedSuggestion({
           scope,
           userId,
-          draft,
+          draft: cacheDraft,
         });
         if (myReq !== reqIdRef.current) return;
         if (cached) {
@@ -99,15 +164,25 @@ export function useMomentIntelligence(opts: {
           return;
         }
 
-        const offline = completeOfflineSuffix(draft, samplesRef.current, {
-          niche: 'connect',
-          minConfidence: 0.5,
-        });
-        const source = await pickCompletionSource({
-          scope,
-          offlineSuffix: offline,
-          allowAi: isPro,
-        });
+        const offline = isReply
+          ? suggestOfflineReply(draft, parentSnippet, samplesRef.current)
+          : completeOfflineSuffix(draft, samplesRef.current, {
+              niche: 'connect',
+              minConfidence: 0.5,
+            });
+
+        const afterPhase = isReply ? replyKickoffPhase(draft) : 'ready';
+        // Empty reply + parent + Pro: prefer parent-aware AI; offline is fallback only
+        const preferReplyAi =
+          isReply && afterPhase === 'empty' && isPro && parentSnippet.trim().length >= 8;
+
+        const source = preferReplyAi
+          ? 'ai'
+          : await pickCompletionSource({
+              scope,
+              offlineSuffix: offline,
+              allowAi: isPro,
+            });
 
         if (myReq !== reqIdRef.current) return;
 
@@ -116,13 +191,17 @@ export function useMomentIntelligence(opts: {
           const text = offline.trim();
           setSuggestion(text);
           setBusy(false);
-          if (text) void rememberSuggestion({ scope, userId, draft, suggestion: text });
+          if (text) void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: text });
           return;
         }
 
-        if (source !== 'ai') {
-          setSuggestion('');
+        if (source !== 'ai' || !isPro) {
+          sourceRef.current = 'offline';
+          setSuggestion(offline.trim());
           setBusy(false);
+          if (offline.trim()) {
+            void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: offline.trim() });
+          }
           return;
         }
 
@@ -137,6 +216,8 @@ export function useMomentIntelligence(opts: {
             coldStartHints: hintsRef.current,
             displayName,
             jwt,
+            replyMode: isReply,
+            parentSnippet: isReply ? parentSnippet : undefined,
           });
           if (myReq !== reqIdRef.current) return;
           if (!res.success) {
@@ -144,7 +225,7 @@ export function useMomentIntelligence(opts: {
             sourceRef.current = 'offline';
             setSuggestion(offline.trim());
             if (offline.trim()) {
-              void rememberSuggestion({ scope, userId, draft, suggestion: offline.trim() });
+              void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: offline.trim() });
             }
             return;
           }
@@ -152,12 +233,12 @@ export function useMomentIntelligence(opts: {
           if (aiText) {
             sourceRef.current = 'ai';
             setSuggestion(aiText);
-            void rememberSuggestion({ scope, userId, draft, suggestion: aiText });
+            void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: aiText });
           } else {
             sourceRef.current = 'offline';
             setSuggestion(offline.trim());
             if (offline.trim()) {
-              void rememberSuggestion({ scope, userId, draft, suggestion: offline.trim() });
+              void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: offline.trim() });
             }
           }
         } catch {
@@ -169,12 +250,23 @@ export function useMomentIntelligence(opts: {
           if (myReq === reqIdRef.current) setBusy(false);
         }
       })();
-    }, 380);
+    }, delayMs);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [draft, enabled, userId, isPro, displayName, onOpenPro]);
+  }, [
+    draft,
+    enabled,
+    userId,
+    isPro,
+    displayName,
+    onOpenPro,
+    isReply,
+    parentSnippet,
+    parentMomentId,
+    learningStatus,
+  ]);
 
   const acceptSuggestion = useCallback(() => {
     if (!suggestion) return;
@@ -201,7 +293,7 @@ export function useMomentIntelligence(opts: {
       onOpenPro();
       return;
     }
-    const scope = 'moment_takeover';
+    const scope = isReply ? `moment_reply_takeover_${parentMomentId || 'x'}` : 'moment_takeover';
     setBusy(true);
     try {
       const { lookupCachedTakeover, rememberTakeover } = await loadSuggestCache();
@@ -214,7 +306,32 @@ export function useMomentIntelligence(opts: {
       }
       await recordAiInference(scope);
       const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
-      const { generateMomentTakeoverAction } = await import('@/lib/actions/moment-doppelganger');
+      const { generateMomentTakeoverAction, completeMomentDraftAction } = await import(
+        '@/lib/actions/moment-doppelganger'
+      );
+
+      if (isReply) {
+        // Reply takeover: full parent-aware reply body
+        const res = await completeMomentDraftAction({
+          draft: '',
+          voiceSamples: samplesRef.current,
+          coldStartHints: hintsRef.current,
+          displayName,
+          jwt,
+          replyMode: true,
+          parentSnippet,
+        });
+        if (!res.success || !res.completion) {
+          if (String(res.error || '').toLowerCase().includes('pro')) onOpenPro();
+          return;
+        }
+        setDraft(res.completion);
+        setSuggestion('');
+        setAcceptStreak(0);
+        void rememberTakeover({ scope, userId, draft, body: res.completion });
+        return;
+      }
+
       const res = await generateMomentTakeoverAction({
         draft,
         voiceSamples: samplesRef.current,
@@ -233,7 +350,7 @@ export function useMomentIntelligence(opts: {
     } finally {
       setBusy(false);
     }
-  }, [userId, isPro, onOpenPro, draft, displayName, setDraft]);
+  }, [userId, isPro, onOpenPro, draft, displayName, setDraft, isReply, parentMomentId, parentSnippet]);
 
   return {
     learningStatus,

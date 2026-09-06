@@ -78,6 +78,47 @@ export function completeOfflineSuffix(
   return '';
 }
 
+/**
+ * Offline reply assist — empty drafts get a short voice-sample reply;
+ * partial drafts reuse normal suffix matching (looser confidence for Connect).
+ */
+export function suggestOfflineReply(
+  draft: string,
+  parentSnippet: string,
+  samples: VoiceSample[],
+): string {
+  const text = String(draft || '').trim();
+  if (text.length >= 2) {
+    return completeOfflineSuffix(draft, samples, {
+      niche: 'connect',
+      minConfidence: 0.42,
+    });
+  }
+
+  const parent = String(parentSnippet || '').trim();
+  const pool = (samples || [])
+    .map((s) => String(s?.text || '').trim())
+    .filter((s) => s.length >= 8 && s.length <= 160);
+
+  // Prefer short sample replies that do not echo the parent verbatim
+  for (const s of pool) {
+    if (parent && parent.slice(0, 40).toLowerCase() === s.slice(0, 40).toLowerCase()) continue;
+    if (/^(just shared|shared an update)/i.test(s)) continue;
+    return s.slice(0, 140);
+  }
+
+  if (!parent) return '';
+
+  // Soft topic hook from parent first words — restrained, not fake praise
+  const topic = parent
+    .replace(/\s+/g, ' ')
+    .slice(0, 48)
+    .replace(/[.!?].*$/, '')
+    .trim();
+  if (topic.length < 8) return '';
+  return `On that — ${topic}${topic.length >= 48 ? '…' : ''}`;
+}
+
 type BudgetState = { count: number; day: string };
 
 /**

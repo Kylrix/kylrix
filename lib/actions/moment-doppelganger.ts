@@ -6,6 +6,7 @@ import { generateAiSdkCompletion } from '@/lib/agentic/llm-provider';
 import {
   buildMomentCompletePrompt,
   buildMomentDoppelgangerSystemInstruction,
+  buildMomentReplySuggestPrompt,
   buildMomentTakeoverPrompt,
   type MomentVoiceSample,
 } from '@/lib/agentic/prompts/moment-doppelganger';
@@ -180,6 +181,9 @@ export async function completeMomentDraftAction(params: {
   coldStartHints?: string[];
   displayName?: string;
   jwt?: string;
+  /** Reply mode: allow empty draft + parent context */
+  replyMode?: boolean;
+  parentSnippet?: string;
 }): Promise<{ success: boolean; completion?: string; error?: string }> {
   try {
     const actor = await getActor(params.jwt);
@@ -187,24 +191,36 @@ export async function completeMomentDraftAction(params: {
     const hasAccess = await userHasPaidAiAccess(actor.$id);
     if (!hasAccess) return { success: false, error: AI_REQUIRES_PRO_MESSAGE };
 
-    // No remote ensure on live complete — LocalEngine voice samples are enough
-
     const draft = String(params.draft || '').slice(0, 4000);
-    if (draft.trim().length < 2) return { success: true, completion: '' };
+    const replyMode = Boolean(params.replyMode);
+    if (!replyMode && draft.trim().length < 2) return { success: true, completion: '' };
 
     const samples = (params.voiceSamples || []).slice(0, 24);
     const systemInstruction = buildMomentDoppelgangerSystemInstruction({
       displayName: params.displayName || actor.name || actor.email,
       hasVoiceSamples: samples.length > 0,
     });
-    const prompt = buildMomentCompletePrompt({
-      draft,
-      voiceSamples: samples,
-      coldStartHints: params.coldStartHints,
-    });
+
+    const prompt = replyMode
+      ? buildMomentReplySuggestPrompt({
+          draft,
+          parentSnippet: params.parentSnippet,
+          voiceSamples: samples,
+          coldStartHints: params.coldStartHints,
+        })
+      : buildMomentCompletePrompt({
+          draft,
+          voiceSamples: samples,
+          coldStartHints: params.coldStartHints,
+        });
 
     const raw = await generateAiSdkCompletion({ systemInstruction, prompt });
-    const completion = stripDraftPrefix(raw, draft).slice(0, 400);
+    const emptyDraft = draft.trim().length === 0;
+    const completion = (
+      replyMode && emptyDraft
+        ? cleanModelText(raw)
+        : stripDraftPrefix(raw, draft)
+    ).slice(0, replyMode && emptyDraft ? 280 : 400);
     return { success: true, completion };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Could not complete draft' };

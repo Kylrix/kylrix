@@ -390,7 +390,7 @@ export function PostViewClient({
       mode: 'reply',
       parentMomentId: momentId,
       source,
-      parentSnippet: snippet.slice(0, 120),
+      parentSnippet: snippet.slice(0, 280),
       rootPubkey: moment?.pubkey || nostrEvent?.pubkey,
       nostrId: (moment as any)?.nostrId || (source === 'nostr' ? momentId : undefined),
     });

@@ -97,6 +97,9 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     isPro,
     onOpenPro: openPro,
     setDraft: setContent,
+    mode,
+    parentSnippet,
+    parentMomentId,
   });
 
   useEffect(() => {
