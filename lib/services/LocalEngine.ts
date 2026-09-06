@@ -111,18 +111,35 @@ export const LocalEngine = {
 
   /** Check if a incoming payload has actual structural differences against its baseline snapshot. */
   hasObjectDiff(id: string, payload: any): boolean {
-    if (typeof window === 'undefined' || !id || !payload) return false;
+    // Fail open: missing id/payload must not block enqueue (sync death otherwise).
+    if (typeof window === 'undefined' || !id || !payload) return true;
     const baseline = (window as any)[`__kylrix_baseline_${id}`];
     if (!baseline) {
-      this.snapshotBaseline(id, payload);
-      return false;
+      // No baseline = never hydrated from remote / never ack'd.
+      // MUST return true so first create/edit enters the pending queue.
+      // Baseline is set only on ack / remote hydrate — never here.
+      return true;
     }
     try {
       const currentSnapshot = JSON.stringify(pickComparablePayload(payload));
       return currentSnapshot !== baseline;
     } catch {
-      return false;
+      return true;
     }
+  },
+
+  /** True when a remote/ack baseline exists for this id. */
+  hasBaseline(id: string): boolean {
+    if (typeof window === 'undefined' || !id) return false;
+    return Boolean((window as any)[`__kylrix_baseline_${id}`]);
+  },
+
+  /** Clear baseline (e.g. after local delete) so next write re-enqueues. */
+  clearBaseline(id: string): void {
+    if (typeof window === 'undefined' || !id) return;
+    try {
+      delete (window as any)[`__kylrix_baseline_${id}`];
+    } catch {}
   },
 
   // ── Unified Gateway — sole Appwrite touchpoint (UI must not import appwrite directly) ──

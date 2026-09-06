@@ -624,7 +624,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     // Sync engine is SoT for amber — enqueue live revision (never an Appwrite field).
     if (isPending) {
       autonomicSyncEngine.markPending(stamped.$id, stamped.updatedAt, stamped);
-      autonomicSyncEngine.nudge();
+      // Discrete nudge: microtask flush coalesce — typing still batches via markPending timer,
+      // but we never wait on a stuck empty queue.
+      autonomicSyncEngine.nudge(true);
     } else {
       autonomicSyncEngine.markConfirmed(stamped.$id);
     }

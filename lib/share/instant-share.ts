@@ -105,12 +105,48 @@ export async function executeInstantShare(
   // Ensures the object is flushed upstream FIRST before publishing permissions
   void (async () => {
     try {
-      // 4a. If object is pending in LocalEngine / SyncEngine, run the sync cycle immediately and wait for creation
-      if (autonomicSyncEngine.isPending(resourceId)) {
-        await autonomicSyncEngine.runCycle().catch(() => {});
+      // 4a. Force-enqueue live local copy (fixes first-create never queued), then flush now
+      try {
+        if (resourceType === 'note' || resourceType === 'idea') {
+          const { getLiveNoteForSync } = await import('@/lib/sync/pending-sync-bridge');
+          const live = getLiveNoteForSync(resourceId);
+          const stamped = {
+            ...(live || { $id: resourceId }),
+            $id: resourceId,
+            isPublic: true,
+            isGuest: true,
+            updatedAt: new Date().toISOString(),
+            $updatedAt: new Date().toISOString(),
+          };
+          autonomicSyncEngine.markPending(resourceId, stamped.updatedAt, stamped, { force: true });
+        } else if (resourceType === 'goal' || resourceType === 'task') {
+          const { getLiveGoalForSync } = await import('@/lib/sync/pending-sync-bridge');
+          const live = getLiveGoalForSync(resourceId);
+          if (live) {
+            const { goalPendingKey } = await import('@/lib/sync/goal-keys');
+            autonomicSyncEngine.markPending(
+              goalPendingKey(resourceId),
+              new Date().toISOString(),
+              { ...live, isPublic: true, isGuest: true },
+              { force: true },
+            );
+          } else {
+            autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), undefined, {
+              force: true,
+            });
+          }
+        } else if (!autonomicSyncEngine.isPending(resourceId)) {
+          autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), undefined, {
+            force: true,
+          });
+        }
+      } catch (enqueueErr) {
+        console.warn('[InstantShare] force enqueue warning:', enqueueErr);
       }
 
-      // 4b. Now that the row is guaranteed to exist upstream, ensure public & guest flags are active
+      await autonomicSyncEngine.runCycle().catch(() => {});
+
+      // 4b. Now that the row should exist upstream, ensure public & guest flags are active
       if (!isPublic || !isGuest) {
         await toggleResourcePublicGuest({
           resourceType,

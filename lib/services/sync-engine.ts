@@ -904,8 +904,9 @@ export const autonomicSyncEngine = {
   /**
    * Enqueue a live revision for push. Client-only — never an Appwrite field.
    * Also mirrors compose-draft membership for create-lifecycle helpers.
+   * @param opts.force — skip baseline-diff suppression (share / discrete publish).
    */
-  markPending(noteId: string, revision?: string | null, payload?: any) {
+  markPending(noteId: string, revision?: string | null, payload?: any, opts?: { force?: boolean }) {
     const rawId = String(noteId || '').trim();
     if (!rawId) return;
     const rev = String(revision || Date.now()).trim() || String(Date.now());
@@ -915,8 +916,16 @@ export const autonomicSyncEngine = {
       id = goalPendingKey(rawId);
     }
 
-    // Baseline diff engine check: if an existing object has zero structural changes, discard false pending mark
-    if (payload && !id.startsWith('live-') && !id.startsWith('thread-') && !LocalEngine.hasObjectDiff(rawId, payload)) {
+    // Baseline diff: suppress no-op re-marks only when we already have a remote/ack baseline.
+    // First create (no baseline) must ALWAYS enqueue — hasObjectDiff fails open.
+    if (
+      !opts?.force &&
+      payload &&
+      !id.startsWith('live-') &&
+      !id.startsWith('thread-') &&
+      LocalEngine.hasBaseline(rawId) &&
+      !LocalEngine.hasObjectDiff(rawId, payload)
+    ) {
       return;
     }
 
@@ -936,9 +945,8 @@ export const autonomicSyncEngine = {
     writePersistedQueue();
     notifyStatusListeners();
 
-    // Flush immediately if hard ceiling (2000ms continuous edit) is breached, otherwise schedule 150ms coalesce
     const duration = Date.now() - (firstPendingTimestamp || Date.now());
-    if (duration >= HARD_CEILING_MS) {
+    if (duration >= HARD_CEILING_MS || opts?.force) {
       firstPendingTimestamp = Date.now();
       scheduleDemandFlush({ immediate: true });
     } else {
@@ -1035,6 +1043,7 @@ export const autonomicSyncEngine = {
       markComposePersisted(id);
       markNotePersistedRemote(id);
     }
+    LocalEngine.clearBaseline(id);
     writePersistedQueue();
     notifyStatusListeners();
   },
