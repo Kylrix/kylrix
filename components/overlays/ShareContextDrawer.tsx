@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
-import { executeInstantShare } from '@/lib/share/instant-share';
+import { executeInstantShare, buildInstantShareUrl, ensureSharePublished } from '@/lib/share/instant-share';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { account } from '@/lib/appwrite/client';
@@ -35,6 +35,10 @@ export interface ShareContextData {
   startTime?: string;
   endTime?: string;
   location?: string;
+  /** Pre-built offline URL — skip “Creating link…” */
+  instantUrl?: string;
+  /** ShareLockButton already kicked confirm — only listen for settle */
+  confirmPending?: boolean;
 }
 
 interface ShareActionItem {
@@ -182,7 +186,8 @@ export function ShareContextDrawer() {
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [resolvedUrl, setResolvedUrl] = useState<string>('');
-  const [isResolving, setIsResolving] = useState(true);
+  const [isConfirming, setIsConfirming] = useState(() => !(drawerData?.isPublic && drawerData?.isGuest && !drawerData?.confirmPending));
+  const [shareLive, setShareLive] = useState(() => !!(drawerData?.isPublic && drawerData?.isGuest && !drawerData?.confirmPending));
   const [methodOrder, setMethodOrder] = useState<string[]>(['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'native']);
   const [showQR, setShowQR] = useState(false);
 
@@ -192,34 +197,83 @@ export function ShareContextDrawer() {
     resourceTitle: 'Untitled',
   };
 
-  const { resourceType, resourceId, resourceTitle = '', dek, projectId, isPublic = true, isGuest = true, content, description, startTime, endTime, location } = data;
+  const { resourceType, resourceId, resourceTitle = '', dek, projectId, isPublic = true, isGuest = true, content, description, startTime, endTime, location, instantUrl, confirmPending } = data;
   const friendlyTitle = resourceTitle || `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}`;
 
   useEffect(() => {
     let active = true;
     async function init() {
-      setIsResolving(true);
+      const quick =
+        (instantUrl && String(instantUrl).trim()) ||
+        (resourceId ? buildInstantShareUrl(resourceType, resourceId, { projectId }) : '');
+      if (active && quick) setResolvedUrl(quick);
+
       try {
         const methods = await getFrequentShareMethods(user?.$id);
         if (active) setMethodOrder(methods);
+      } catch {}
 
+      // ShareLockButton owns background publish
+      if (confirmPending) {
+        if (active) {
+          setIsConfirming(true);
+          setShareLive(false);
+        }
+        return;
+      }
+
+      // Already live — URL only, no re-publish wait
+      if (isPublic && isGuest) {
+        if (active) {
+          setIsConfirming(false);
+          setShareLive(true);
+        }
+        return;
+      }
+
+      if (!resourceId) {
+        if (active) setIsConfirming(false);
+        return;
+      }
+
+      if (active) setIsConfirming(true);
+      try {
         const res = await executeInstantShare(resourceType, resourceId, {
           dek,
           isPublic,
           isGuest,
           resourceTitle,
           projectId,
+          deferPublish: true,
           openLoginDrawer: (ctx) => open('login', ctx),
           openMasterpassPrompt: () => open('masterpass'),
+          onPublishSettled: (settled) => {
+            if (!active) return;
+            setIsConfirming(false);
+            if (settled.published && settled.success) {
+              setShareLive(true);
+              if (settled.url) setResolvedUrl(settled.url);
+            } else {
+              setShareLive(false);
+              toast.error(settled.error || 'Sharing did not save. Link may not work yet.');
+            }
+          },
         });
 
-        if (active && res.url) {
-          setResolvedUrl(res.url);
+        if (active && res.url) setResolvedUrl(res.url);
+        if (active && res.requiresAuth) {
+          setIsConfirming(false);
+          return;
+        }
+        if (active && res.published) {
+          setIsConfirming(false);
+          setShareLive(true);
         }
       } catch (err) {
         console.warn('[ShareContextDrawer] Error resolving share link:', err);
-      } finally {
-        if (active) setIsResolving(false);
+        if (active) {
+          setIsConfirming(false);
+        }
       }
     }
 
@@ -229,7 +283,39 @@ export function ShareContextDrawer() {
     return () => {
       active = false;
     };
-  }, [resourceType, resourceId, resourceTitle, dek, projectId, isPublic, isGuest, user?.$id, open]);
+  }, [resourceType, resourceId, resourceTitle, dek, projectId, isPublic, isGuest, user?.$id, open, instantUrl, confirmPending]);
+
+  // ShareLockButton background settle
+  useEffect(() => {
+    if (!confirmPending || !resourceId) return;
+    const onSettled = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail || {};
+      if (detail.resourceId !== resourceId || detail.resourceType !== resourceType) return;
+      setIsConfirming(false);
+      if (detail.ok) {
+        setShareLive(true);
+        if (detail.url) setResolvedUrl(String(detail.url));
+      } else {
+        setShareLive(false);
+        toast.error(detail.error || 'Sharing did not save. Link may not work yet.');
+      }
+    };
+    window.addEventListener('kylrix:share-published', onSettled);
+    // Safety: if event missed, poll ensure once after short delay
+    const t = window.setTimeout(() => {
+      void ensureSharePublished(resourceType, resourceId, { projectId }).then((res) => {
+        setIsConfirming(false);
+        if (res.published) {
+          setShareLive(true);
+          if (res.url) setResolvedUrl(res.url);
+        }
+      });
+    }, 12_000);
+    return () => {
+      window.removeEventListener('kylrix:share-published', onSettled);
+      window.clearTimeout(t);
+    };
+  }, [confirmPending, resourceId, resourceType, projectId]);
 
   const handleCopyLink = async () => {
     if (!resolvedUrl) return;
@@ -508,16 +594,21 @@ export function ShareContextDrawer() {
           <div className="flex-1 min-w-0">
             <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider block">
               Share Link
+              {isConfirming ? (
+                <span className="ml-2 text-[#F59E0B]/80 normal-case tracking-normal">· Confirming…</span>
+              ) : shareLive ? (
+                <span className="ml-2 text-[#10B981]/80 normal-case tracking-normal">· Live</span>
+              ) : null}
             </span>
             <p className="text-xs font-mono text-white/80 truncate m-0 mt-0.5">
-              {isResolving ? 'Creating link...' : resolvedUrl || 'https://www.kylrix.space/...'}
+              {resolvedUrl || 'https://www.kylrix.space/...'}
             </p>
           </div>
 
           <button
             type="button"
             onClick={handleCopyLink}
-            disabled={isResolving || !resolvedUrl}
+            disabled={!resolvedUrl}
             className={`px-3.5 py-2 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
               copied
                 ? 'bg-[#10B981] text-black shadow-lg shadow-[#10B981]/20'
@@ -553,7 +644,7 @@ export function ShareContextDrawer() {
                 key={action.id}
                 type="button"
                 onClick={() => action.execute(resolvedUrl, friendlyTitle)}
-                disabled={isResolving && action.id !== 'copy'}
+                disabled={!resolvedUrl && action.id !== 'copy'}
                 className="flex flex-col items-center gap-2 p-2.5 rounded-xl bg-[#0A0908] hover:bg-white/[0.04] border border-white/5 hover:border-white/15 transition-all cursor-pointer group text-center"
               >
                 <div

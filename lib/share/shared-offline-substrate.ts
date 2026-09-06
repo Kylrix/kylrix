@@ -223,49 +223,71 @@ export const SharedOfflineSubstrate = {
     } catch {}
 
     // 2. Inevitable Remote Synchronization & Visibility Revalidation
-    try {
-      const remoteData = await fetchRemote();
+    // Brief retries cover the race where the owner just opened share and
+    // isPublic/isGuest are still flushing to Appwrite.
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const maxAttempts = 4;
+    const delaysMs = [0, 350, 700, 1200];
 
-      if (!remoteData || (remoteData as any).isTrash === true || (remoteData as any).isDeleted === true) {
-        // Resource deleted or not found remotely -> purge local cache
-        await this.evictShared(kind, id);
-        onAccessRevoked('not-found');
+    let lastErr: any = null;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if (delaysMs[attempt]) await sleep(delaysMs[attempt]);
+      try {
+        const remoteData = await fetchRemote();
+
+        if (!remoteData || (remoteData as any).isTrash === true || (remoteData as any).isDeleted === true) {
+          lastErr = new Error('not found');
+          if (attempt < maxAttempts - 1) continue;
+          await this.evictShared(kind, id);
+          onAccessRevoked('not-found');
+          return;
+        }
+
+        if (isAccessibleRemote && !isAccessibleRemote(remoteData, currentUserId)) {
+          // May still be racing publish flags — retry a few times before deny
+          lastErr = new Error('no-access');
+          if (attempt < maxAttempts - 1) continue;
+          await this.evictShared(kind, id);
+          onAccessRevoked('no-access');
+          return;
+        }
+
+        const ownerId = resolveResourceOwnerId(remoteData as Record<string, unknown>);
+        const isOwner = Boolean(currentUserId && ownerId && currentUserId === ownerId);
+
+        await this.saveShared<T>(kind, id, remoteData);
+        onRemoteSuccess(remoteData, isOwner);
         return;
+      } catch (err: any) {
+        lastErr = err;
+        const msg = String(err?.message || '').toLowerCase();
+        const isNotFoundRace =
+          msg.includes('not found') || msg.includes('404');
+        const isHardDeny =
+          msg.includes('403') ||
+          msg.includes('unauthorized') ||
+          msg.includes('private');
+
+        if (isHardDeny) break;
+        if (isNotFoundRace && attempt < maxAttempts - 1) continue;
+        break;
       }
+    }
 
-      // Check custom access predicates (e.g. public toggle / status / expiry)
-      if (isAccessibleRemote && !isAccessibleRemote(remoteData, currentUserId)) {
-        await this.evictShared(kind, id);
-        onAccessRevoked('no-access');
-        return;
-      }
+    const msg = String(lastErr?.message || '').toLowerCase();
+    const isRevoked =
+      msg.includes('not found') ||
+      msg.includes('404') ||
+      msg.includes('403') ||
+      msg.includes('unauthorized') ||
+      msg.includes('no-access') ||
+      msg.includes('private');
 
-      const ownerId = resolveResourceOwnerId(remoteData as Record<string, unknown>);
-      const isOwner = Boolean(currentUserId && ownerId && currentUserId === ownerId);
-
-      // Save fresh data to isolated shared cache
-      await this.saveShared<T>(kind, id, remoteData);
-      onRemoteSuccess(remoteData, isOwner);
-    } catch (err: any) {
-      const msg = String(err?.message || '').toLowerCase();
-      const isRevoked =
-        msg.includes('not found') ||
-        msg.includes('404') ||
-        msg.includes('403') ||
-        msg.includes('unauthorized') ||
-        msg.includes('no-access') ||
-        msg.includes('private');
-
-      if (isRevoked) {
-        // Explicit access loss -> purge local cache and deny access
-        await this.evictShared(kind, id);
-        onAccessRevoked(msg.includes('404') || msg.includes('not found') ? 'not-found' : 'no-access');
-      } else if (!hadLocalHit) {
-        // Network/quota failure and had no local hit
-        onAccessRevoked('no-access');
-      }
-      // If we had a local hit and it was just a transient network failure,
-      // user continues to view their cached copy smoothly.
+    if (isRevoked) {
+      await this.evictShared(kind, id);
+      onAccessRevoked(msg.includes('404') || msg.includes('not found') ? 'not-found' : 'no-access');
+    } else if (!hadLocalHit) {
+      onAccessRevoked('no-access');
     }
   },
 };

@@ -5,7 +5,7 @@ import { Share2 } from 'lucide-react';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { useToast } from '@/hooks/useToast';
 import { IconButton } from '@/lib/openbricks/primitives';
-import { executeInstantShare } from '@/lib/share/instant-share';
+import { buildInstantShareUrl, ensureSharePublished } from '@/lib/share/instant-share';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 
@@ -25,7 +25,7 @@ interface ShareLockButtonProps {
 }
 
 /**
- * One-tap share: awaits remote isPublic+isGuest confirm before updating UI.
+ * One-tap share: open drawer instantly with offline URL; confirm publish in background.
  */
 export function ShareLockButton({
   resourceType,
@@ -66,39 +66,68 @@ export function ShareLockButton({
       return;
     }
 
+    const instantUrl = buildInstantShareUrl(resourceType, resourceId, { projectId });
+    const alreadyLive = isPublic && isGuest;
+
+    // Happy-go-lucky: drawer + URL first
+    open('share-context', {
+      resourceType,
+      resourceId,
+      resourceTitle,
+      isPublic: true,
+      isGuest: true,
+      dek,
+      projectId,
+      accentColor,
+      instantUrl,
+      confirmPending: !alreadyLive,
+    });
+
+    if (alreadyLive) {
+      onPublished?.({ isPublic: true, isGuest: true, publicUrl: instantUrl });
+      return;
+    }
+
     setBusy(true);
     try {
-      const res = await executeInstantShare(resourceType, resourceId, {
-        dek,
-        isPublic,
-        isGuest,
-        resourceTitle,
-        projectId,
-      });
-
+      const res = await ensureSharePublished(resourceType, resourceId, { projectId });
       if (!res.success || !res.published) {
         showError(res.error || 'Sharing did not save. Try again.');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:share-published', {
+              detail: { resourceType, resourceId, ok: false, error: res.error },
+            }),
+          );
+        }
         return;
       }
-
       onPublished?.({
         isPublic: true,
         isGuest: true,
-        publicUrl: res.url || '',
+        publicUrl: res.url || instantUrl,
       });
-
-      open('share-context', {
-        resourceType,
-        resourceId,
-        resourceTitle,
-        isPublic: true,
-        isGuest: true,
-        dek,
-        projectId,
-        accentColor,
-      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('kylrix:share-published', {
+            detail: {
+              resourceType,
+              resourceId,
+              url: res.url || instantUrl,
+              ok: true,
+            },
+          }),
+        );
+      }
     } catch (err: any) {
       showError(err?.message || 'Sharing did not save. Try again.');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('kylrix:share-published', {
+            detail: { resourceType, resourceId, ok: false, error: err?.message },
+          }),
+        );
+      }
     } finally {
       setBusy(false);
     }
