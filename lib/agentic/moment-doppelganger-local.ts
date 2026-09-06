@@ -1,6 +1,6 @@
 /**
  * Client-side Moments doppelganger helpers — local session + redacted voice ingest.
- * No chat UI. Post history is the learning substrate.
+ * No chat UI. Posts, replies, and Nostr voice cache are the learning substrate.
  */
 
 import {
@@ -46,7 +46,7 @@ export function parseVoiceSamplesFromSession(session: AgenticLocalSession | null
   }
 }
 
-/** Pull recent moments (+ optional idea/goal titles) into session context. */
+/** Pull recent moments (+ replies + Nostr voice cache + idea/goal titles) into session context. */
 export async function refreshMomentDoppelgangerVoice(
   userId: string,
 ): Promise<{ session: AgenticLocalSession; samples: MomentVoiceSample[]; hints: string[]; status: 'ready' | 'empty' }> {
@@ -60,20 +60,43 @@ export async function refreshMomentDoppelgangerVoice(
 
   const own = (Array.isArray(moments) ? moments : [])
     .filter((m) => String(m?.userId || m?.creatorId || '') === userId)
-    .slice(0, 40);
+    .sort((a, b) => {
+      const ta = Date.parse(String(a?.$createdAt || a?.createdAt || 0)) || 0;
+      const tb = Date.parse(String(b?.$createdAt || b?.createdAt || 0)) || 0;
+      return tb - ta;
+    })
+    .slice(0, 60);
 
   const samples: MomentVoiceSample[] = [];
+  const seen = new Set<string>();
+
+  const pushSample = (raw: string, at?: string) => {
+    const text = redactForMomentDoppelganger(raw);
+    if (text.length < 8) return;
+    const key = text.slice(0, 80).toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    samples.push({ text, at });
+  };
+
   for (const m of own) {
-    const text = redactForMomentDoppelganger(
+    // Learn from posts AND replies (social layer)
+    pushSample(
       String(m?.caption || m?.content || m?.searchTitle || ''),
+      String(m?.$createdAt || m?.createdAt || ''),
     );
-    if (text.length < 8) continue;
-    samples.push({
-      text,
-      at: String(m?.$createdAt || m?.createdAt || ''),
-    });
-    if (samples.length >= 24) break;
+    if (samples.length >= 28) break;
   }
+
+  // Own Nostr-published voice cache (when dual-synced from composer)
+  try {
+    const nostrSamples =
+      (await LocalEngine.cacheGet<any[]>(`f_nostr_voice_samples_${userId}`)) || [];
+    for (const row of Array.isArray(nostrSamples) ? nostrSamples.slice(0, 20) : []) {
+      pushSample(String(row?.text || ''), String(row?.at || ''));
+      if (samples.length >= 32) break;
+    }
+  } catch {}
 
   const hints: string[] = [];
   try {

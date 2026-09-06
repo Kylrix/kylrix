@@ -29,6 +29,7 @@ import {
   useMomentIntelligence,
 } from '@/hooks/useMomentIntelligence';
 import { TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import toast from 'react-hot-toast';
 
 interface MomentComposerDrawerProps {
@@ -42,11 +43,22 @@ type PendingAttach = {
   url?: string;
 };
 
+export type MomentComposerMode = 'create' | 'reply';
+
 /**
- * Bottom-sheet create moment — EventDialog gold standard:
+ * Bottom-sheet create / reply moment — EventDialog gold standard:
  * starts at ~60dvh, expands to true `inset-0 h-[100dvh]` fullscreen (no top gap).
+ * Reply mode reuses the same Kylie assist layer so posts and replies train the same voice.
  */
 export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
+  const { drawerData } = useUnifiedDrawer();
+  const mode: MomentComposerMode = drawerData?.mode === 'reply' ? 'reply' : 'create';
+  const parentMomentId = mode === 'reply' ? String(drawerData?.parentMomentId || '').trim() : '';
+  const replySource = (drawerData?.source === 'nostr' ? 'nostr' : 'ecosystem') as 'nostr' | 'ecosystem';
+  const parentSnippet = String(drawerData?.parentSnippet || '').trim();
+  const replyRootPubkey = drawerData?.rootPubkey ? String(drawerData.rootPubkey) : undefined;
+  const replyNostrId = drawerData?.nostrId ? String(drawerData.nostrId) : undefined;
+
   const { user } = useAuth();
   const { identity, isVaultLocked, unlockAndLoad } = useNostrIdentity();
   const { publishPost } = useNostrFeed();
@@ -234,7 +246,8 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() && !attachments.length) return;
-    if (!user?.$id) return;
+    if (!user?.$id && mode !== 'reply') return;
+    if (mode === 'reply' && replySource === 'ecosystem' && !user?.$id) return;
 
     setPublishing(true);
     const mediaIds = attachments.map((a) => a.id);
@@ -244,9 +257,89 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
         body = `${body}\n${a.url}`.trim();
       }
     }
-    const finalBody = body || 'Shared an update';
+    const finalBody = body || (mode === 'reply' ? '' : 'Shared an update');
+    if (!finalBody.trim()) {
+      setPublishing(false);
+      return;
+    }
     const finalAttachments = attachments.length ? [...attachments] : null;
     const shouldSyncNostr = syncToNostr && !isVaultLocked && !!identity;
+
+    // ── Reply path: same drawer + Kylie assist, posts via engagement API ──
+    if (mode === 'reply' && parentMomentId) {
+      if (replySource === 'nostr' && (isVaultLocked || !identity)) {
+        toast.error('Unlock vault to reply on Nostr');
+        void unlockAndLoad();
+        setPublishing(false);
+        return;
+      }
+
+      const text = finalBody;
+      setContent('');
+      setAttachments([]);
+      setPublishing(false);
+      onClose();
+      toast.success('Sending reply…');
+
+      void (async () => {
+        try {
+          const words = `${text} ${parentSnippet}`.toLowerCase().match(/#?\w{3,}/g) || [];
+          const topics = Array.from(new Set(words.slice(0, 10)));
+          void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) =>
+            recordFeedInteraction({ topics, searchWeight: 3, isConsciousAction: true }),
+          );
+
+          const { createMomentComment } = await import('@/lib/connect/moment-engagement');
+          const created = await createMomentComment({
+            source: replySource,
+            id: parentMomentId,
+            content: text,
+            userId: user?.$id,
+            privateKeyBytes: identity?.privateKeyBytes,
+            nsec: identity?.nsec,
+            rootPubkey: replyRootPubkey,
+            nostrId: replyNostrId,
+          });
+
+          // Seed voice twin with reply text (social layer learning)
+          if (user?.$id && createWithAgent) {
+            try {
+              const cachedMoments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
+              const replyRow = {
+                $id: created?.id || `temp_reply_${Date.now()}`,
+                userId: user.$id,
+                caption: text,
+                momentKind: 'reply',
+                sourceId: parentMomentId,
+                $createdAt: new Date().toISOString(),
+              };
+              await LocalEngine.cacheSet('f_moments_list', [replyRow, ...cachedMoments]);
+              void import('@/lib/agentic/moment-doppelganger-local').then((m) =>
+                m.refreshMomentDoppelgangerVoice(user.$id),
+              );
+            } catch {}
+          }
+
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('kylrix:moment-reply-created', {
+                detail: { parentMomentId, comment: created, content: text },
+              }),
+            );
+          }
+          toast.success('Reply posted');
+        } catch (err) {
+          console.error('[MomentComposer] Reply failed:', err);
+          toast.error('Could not post reply');
+        }
+      })();
+      return;
+    }
+
+    if (!user?.$id) {
+      setPublishing(false);
+      return;
+    }
 
     const tempId = `temp_moment_${Date.now()}`;
     const optimisticMoment: any = {
@@ -296,6 +389,15 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
           } else if (nostrRes === true as any) {
             nostrSynced = true;
           }
+          // Cache own Nostr voice samples for doppelganger
+          try {
+            const key = `f_nostr_voice_samples_${user.$id}`;
+            const prev = (await LocalEngine.cacheGet<any[]>(key)) || [];
+            await LocalEngine.cacheSet(key, [
+              { text: finalBody, at: new Date().toISOString(), nostrId },
+              ...(Array.isArray(prev) ? prev : []),
+            ].slice(0, 40));
+          } catch {}
         } catch (nostrErr) {
           console.warn('[MomentComposer] Background Nostr sync warning:', nostrErr);
         }
@@ -327,7 +429,6 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('kylrix:moment-created', { detail: createdMoment }));
           }
-          // Refresh voice twin after a successful post
           if (createWithAgent) {
             void import('@/lib/agentic/moment-doppelganger-local').then((m) =>
               m.refreshMomentDoppelgangerVoice(user.$id),
@@ -350,13 +451,23 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   if (!mounted) return null;
 
   const canPost = Boolean(content.trim() || attachments.length);
+  const headerTitle = mode === 'reply' ? 'Reply' : 'Create moment';
+  const placeholder =
+    mode === 'reply'
+      ? parentSnippet
+        ? `Reply to “${parentSnippet.slice(0, 48)}${parentSnippet.length > 48 ? '…' : ''}”`
+        : 'Write your reply…'
+      : "What's happening?";
+  const sendLabel = mode === 'reply' ? 'Reply' : 'Post';
   const learningLabel =
     learningStatus === 'initializing'
       ? 'Kylie is getting ready…'
       : learningStatus === 'ready'
-        ? 'Kylie is learning from your posts'
+        ? mode === 'reply'
+          ? 'Kylie is learning from your posts & replies'
+          : 'Kylie is learning from your posts'
         : learningStatus === 'empty'
-          ? 'Kylie assist ready — will learn as you post'
+          ? 'Kylie assist ready — will learn as you write'
           : null;
 
   const sheet = (
@@ -381,7 +492,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
               <Sparkles className="w-5 h-5" />
             </div>
             <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight">
-              Create moment
+              {headerTitle}
             </h3>
           </div>
 
@@ -424,7 +535,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
                   acceptSuggestion();
                 }
               }}
-              placeholder="What's happening?"
+              placeholder={placeholder}
               className={`relative w-full flex-1 min-h-[100px] bg-transparent border-none text-white leading-relaxed focus:outline-none resize-none placeholder:text-white/30 font-satoshi caret-[#F59E0B] ${
                 isExpanded ? 'text-xl' : 'text-[17px]'
               }`}
@@ -476,8 +587,9 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
             </div>
           ) : null}
 
-          {/* Compact toggles: Nostr sync + Kylie assist */}
-          <div className="grid grid-cols-2 gap-2 shrink-0">
+          {/* Compact toggles: Nostr sync (create only) + Kylie assist */}
+          <div className={`grid gap-2 shrink-0 ${mode === 'reply' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {mode !== 'reply' ? (
             <div className="rounded-xl bg-[#000000] border border-white/20 p-2.5 flex items-center justify-between gap-2 min-w-0">
               <div className="flex items-center gap-2 min-w-0">
                 <Globe
@@ -517,6 +629,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
                 />
               </button>
             </div>
+            ) : null}
 
             <div className="rounded-xl bg-[#000000] border border-white/20 p-2.5 flex items-center justify-between gap-2 min-w-0">
               <div className="flex items-center gap-2 min-w-0">
@@ -595,7 +708,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
               ) : (
                 <Send size={16} />
               )}
-              Post
+              {sendLabel}
             </button>
           </div>
         </form>

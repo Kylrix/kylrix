@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import {
-  createMomentComment,
   loadMomentEngagement,
   parseMomentRouteId,
   toggleMomentLike,
@@ -18,7 +17,7 @@ import { UsersService } from '@/lib/services/users';
 import { fetchNostrEventById } from '@/lib/nostr/thread';
 import type { NostrEvent } from '@/lib/nostr/nostr';
 import {
-  ArrowLeft, Globe, Heart, Lock, MessageCircle,
+  ArrowLeft, Globe, Heart, Lock, MessageCircle, PenLine,
   Repeat2, Shield, Zap, X, Share2
 } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -234,7 +233,6 @@ export function PostViewClient({
   const [reposts, setReposts] = useState(0);
   const [liked, setLiked] = useState(false);
   const [loading, setLoading] = useState(!preview?.content);
-  const [replyContent, setReplyContent] = useState('');
   const [busy, setBusy] = useState(false);
 
   // For Nostr event kind detection
@@ -372,42 +370,50 @@ export function PostViewClient({
     } finally { setBusy(false); }
   };
 
-  const sendReply = async () => {
-    const text = replyContent.trim();
-    if (!momentId || !text || busy) return;
+  const openReplyComposer = () => {
+    if (!momentId) return;
     if (source === 'nostr' && (isVaultLocked || !identity)) {
-      toast.error('Unlock vault to comment on Nostr'); void unlockAndLoad(); return;
+      toast.error('Unlock vault to reply on Nostr');
+      void unlockAndLoad();
+      return;
     }
-    if (source === 'ecosystem' && !user) return;
-    setBusy(true);
-    try {
-      const words = `${text} ${moment?.caption || moment?.content || ''}`.toLowerCase().match(/#?\w{3,}/g) || [];
-      const topics = Array.from(new Set(words.slice(0, 10)));
-      void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) =>
-        recordFeedInteraction({ topics, searchWeight: 3, isConsciousAction: true }),
-      );
-
-      const created = await createMomentComment({
-        source,
-        id: momentId,
-        content: text,
-        userId: user?.$id,
-        privateKeyBytes: identity?.privateKeyBytes,
-        nsec: identity?.nsec,
-        rootPubkey: moment?.pubkey || nostrEvent?.pubkey,
-        nostrId: (moment as any)?.nostrId,
+    if (source === 'ecosystem' && !user) {
+      openUnifiedDrawer('login', {
+        title: 'Reply to moment',
+        subtitle: 'Sign in to reply with Kylie assist.',
+        objectKind: 'moment',
       });
-      setReplyContent('');
-      if (created) {
-        setReplies(prev => [...prev, created]);
-      } else {
-        const refreshed = await loadMomentEngagement({ source, id: momentId, userId: user?.$id });
-        setReplies(refreshed.comments);
-      }
-    } catch (e) {
-      console.error(e); toast.error('Could not post reply');
-    } finally { setBusy(false); }
+      return;
+    }
+    const snippet = String(moment?.caption || moment?.content || preview?.content || '').trim();
+    openUnifiedDrawer('moment-composer', {
+      mode: 'reply',
+      parentMomentId: momentId,
+      source,
+      parentSnippet: snippet.slice(0, 120),
+      rootPubkey: moment?.pubkey || nostrEvent?.pubkey,
+      nostrId: (moment as any)?.nostrId || (source === 'nostr' ? momentId : undefined),
+    });
   };
+
+  useEffect(() => {
+    const onReply = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail || {};
+      if (String(detail.parentMomentId || '') !== String(momentId)) return;
+      if (detail.comment) {
+        setReplies((prev) => {
+          if (prev.some((r) => r.id === detail.comment.id)) return prev;
+          return [...prev, detail.comment];
+        });
+      } else {
+        void loadMomentEngagement({ source, id: momentId, userId: user?.$id }).then((eng) => {
+          setReplies(eng.comments);
+        });
+      }
+    };
+    window.addEventListener('kylrix:moment-reply-created', onReply);
+    return () => window.removeEventListener('kylrix:moment-reply-created', onReply);
+  }, [momentId, source, user?.$id]);
 
   const handleShare = () => {
     if (!momentId) return;
@@ -500,14 +506,9 @@ export function PostViewClient({
             </div>
           </article>
 
-          {/* Reply composer skeleton */}
-          <div className="flex gap-2 items-end min-w-0 max-w-full">
-            <div className="min-w-0 flex-1 h-[42px] rounded-xl bg-[#000000] border-2 border-white/20 px-4 flex items-center text-sm text-white/50 font-satoshi">
-              Write a reply…
-            </div>
-            <div className="shrink-0 h-[42px] px-4 rounded-xl bg-[#F59E0B]/30 text-black/70 font-extrabold text-sm flex items-center">
-              Reply
-            </div>
+          {/* Reply FAB skeleton */}
+          <div className="flex justify-end pt-2">
+            <div className="h-14 w-14 rounded-2xl bg-[#F59E0B]/40 border-2 border-white/10" />
           </div>
         </div>
       </div>
@@ -710,59 +711,25 @@ export function PostViewClient({
           </article>
         )}
 
-        {/* Reply composer — shown for posts and replies, not reactions/reposts */}
+        {/* Reply FAB → same create-moment drawer (Kylie assist) */}
         {!isReaction && !isRepost && (
-          <div className="flex gap-2 items-end min-w-0 max-w-full">
-            <textarea
-              value={replyContent}
-              onChange={e => {
-                setReplyContent(e.target.value);
-                const target = e.target;
-                target.style.height = 'auto';
-                target.style.height = `${Math.min(target.scrollHeight, 140)}px`;
-              }}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  void sendReply();
-                }
-              }}
-              rows={1}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              data-gramm="false"
-              placeholder={source === 'nostr' && isVaultLocked ? 'Unlock vault to reply…' : 'Write a reply…'}
-              className="min-w-0 flex-1 rounded-xl bg-[#000000] border-2 border-white/20 px-4 py-2.5 text-sm outline-none focus:border-white/40 resize-none max-h-[140px] leading-relaxed text-white font-satoshi placeholder:text-white/40"
-            />
-            {source === 'nostr' && isVaultLocked ? (
-              <button
-                type="button"
-                onClick={() => void unlockAndLoad()}
-                className="shrink-0 h-[42px] rounded-xl bg-[#F59E0B]/15 text-[#F59E0B] font-bold text-sm px-3 inline-flex items-center gap-1.5 border-2 border-[#F59E0B]/40"
-              >
-                <Lock size={14} /> Unlock
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={busy || !replyContent.trim() || (source === 'ecosystem' && !user)}
-                onClick={() => void sendReply()}
-                className="shrink-0 h-[42px] rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm px-4 disabled:opacity-40 transition-opacity cursor-pointer"
-              >
-                Reply
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={openReplyComposer}
+            className="fixed bottom-6 right-5 z-[40] h-14 w-14 rounded-2xl bg-[#F59E0B] text-black shadow-[0_8px_24px_rgba(245,158,11,0.35)] border-2 border-black/20 inline-flex items-center justify-center hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+            title="Reply"
+            aria-label="Reply with assist"
+          >
+            <PenLine size={22} strokeWidth={2.5} />
+          </button>
         )}
 
         {/* Replies list */}
         {!isReaction && !isRepost && (
-          <ul className="space-y-2 min-w-0 max-w-full list-none p-0 m-0">
+          <ul className="space-y-2 min-w-0 max-w-full list-none p-0 m-0 pb-24">
             {replies.length === 0 ? (
               <li className="rounded-[18px] border-2 border-white/20 bg-[#000000] px-4 py-8 text-center text-sm text-white/50">
-                No comments yet
+                No comments yet — tap the reply button to write with Kylie assist
               </li>
             ) : (
               replies.map(r => (
