@@ -157,25 +157,25 @@ export default function ConnectedIdentities() {
       ) : null}
 
       {/* Project Auth OAuth providers (Google / GitHub) — not Sign in with Kylrix */}
-      <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-4 space-y-3">
+      <section className="rounded-[24px] bg-[#000000] border-2 border-white/20 p-5 space-y-4 shadow-xl">
         <div>
-          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
+          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55 font-mono">
             Sign-in methods
           </h3>
-          <p className="text-[11px] text-white/35 mt-0.5">
+          <p className="text-[11px] text-white/40 mt-0.5">
             Ways to sign into Kylrix
           </p>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {PROJECT_SIGN_IN_PROVIDERS.map((p) => {
             const linked = identityFor(p.key);
             const busy = busyId === p.id || busyId === linked?.$id;
             return (
               <div
                 key={p.key}
-                className="flex items-center gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] px-3.5 py-3"
+                className="flex items-center gap-3 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 px-4 py-3 transition-colors"
               >
-                <div className="w-9 h-9 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-center text-white shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[#000000] border-2 border-white/20 flex items-center justify-center text-white shrink-0">
                   <ProviderMark name={p.name} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -191,7 +191,7 @@ export default function ConnectedIdentities() {
                     type="button"
                     disabled={!!busy}
                     onClick={() => void unlinkProvider(linked.$id)}
-                    className="px-3 py-1.5 rounded-xl text-[11px] font-extrabold border border-red-500/25 text-red-300 cursor-pointer disabled:opacity-40"
+                    className="px-3.5 py-1.5 rounded-xl text-[11px] font-extrabold border-2 border-red-500/40 hover:border-red-500/60 bg-red-500/10 text-red-300 cursor-pointer disabled:opacity-40 transition-all"
                   >
                     {busy ? '…' : 'Disconnect'}
                   </button>
@@ -200,7 +200,7 @@ export default function ConnectedIdentities() {
                     type="button"
                     disabled={!!busy}
                     onClick={() => void linkProvider(p.id)}
-                    className="px-3 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#6366F1] text-white cursor-pointer disabled:opacity-40"
+                    className="px-3.5 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#6366F1] hover:bg-[#5254E8] text-white cursor-pointer disabled:opacity-40 border-2 border-[#6366F1] transition-all shadow-md"
                   >
                     {busy ? '…' : 'Connect'}
                   </button>
@@ -212,12 +212,12 @@ export default function ConnectedIdentities() {
       </section>
 
       {/* Sign in with Kylrix — third-party OAuth2 server clients */}
-      <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-4 space-y-3">
+      <section className="rounded-[24px] bg-[#000000] border-2 border-white/20 p-5 space-y-4 shadow-xl">
         <div>
-          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
+          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55 font-mono">
             External apps
           </h3>
-          <p className="text-[11px] text-white/35 mt-0.5">
+          <p className="text-[11px] text-white/40 mt-0.5">
             Apps using Sign in with Kylrix
           </p>
         </div>
@@ -225,15 +225,15 @@ export default function ConnectedIdentities() {
         {externals.length === 0 ? (
           <p className="text-[12px] text-white/40 px-1 py-2">None yet</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {externals.map((row) => {
               const busy = busyId === row.identity.$id;
               return (
                 <div
                   key={row.identity.$id}
-                  className="flex items-center gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] px-3.5 py-3"
+                  className="flex items-center gap-3 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 px-4 py-3 transition-colors"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-center text-[#A5B4FC] shrink-0 overflow-hidden">
+                  <div className="w-10 h-10 rounded-xl bg-[#000000] border-2 border-white/20 flex items-center justify-center text-[#A5B4FC] shrink-0 overflow-hidden">
                     {row.app?.logoUri ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={row.app.logoUri} alt="" className="w-full h-full object-cover" />
@@ -251,7 +251,7 @@ export default function ConnectedIdentities() {
                     type="button"
                     disabled={busy}
                     onClick={() => void revokeExternal(row.identity.$id)}
-                    className="px-3 py-1.5 rounded-xl text-[11px] font-extrabold border border-red-500/25 text-red-300 cursor-pointer disabled:opacity-40"
+                    className="px-3.5 py-1.5 rounded-xl text-[11px] font-extrabold border-2 border-red-500/40 hover:border-red-500/60 bg-red-500/10 text-red-300 cursor-pointer disabled:opacity-40 transition-all"
                   >
                     {busy ? '…' : 'Revoke'}
                   </button>

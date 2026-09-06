@@ -145,8 +145,9 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
       {logs.length === 0 ? (
         <Box
           sx={{
-            backgroundColor: '#161514',
-            borderRadius: '12px',
+            backgroundColor: '#161412',
+            border: '2px solid rgba(255, 255, 255, 0.15)',
+            borderRadius: '16px',
             p: 4,
             textAlign: 'center'}}
         >
@@ -166,15 +167,15 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
               sx={{
                 flex: 1,
                 '& .ob-input-root': {
-                  backgroundColor: '#161514',
+                  backgroundColor: '#161412',
                   color: 'white',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   '& fieldset': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)'},
+                    border: '2px solid rgba(255, 255, 255, 0.15)'},
                   '&:hover fieldset': {
-                    borderColor: 'rgba(255, 255, 255, 0.3)'},
+                    border: '2px solid rgba(255, 255, 255, 0.3)'},
                   '&.ob-focused fieldset': {
-                    borderColor: '#6366F1'}},
+                    border: '2px solid #6366F1'}},
                 '& .ob-outlined-input::placeholder': {
                   color: 'rgba(255, 255, 255, 0.4)',
                   opacity: 1}}}
@@ -187,11 +188,11 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
                 color: 'white',
                 borderColor: 'rgba(255, 255, 255, 0.2)',
                 fontSize: '0.75rem',
-                fontWeight: 500,
+                fontWeight: 600,
                 textTransform: 'none',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                '&:hover': { borderColor: 'rgba(255, 255, 255, 0.3)' }}}
+                borderRadius: '10px',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                '&:hover': { borderColor: 'rgba(255, 255, 255, 0.4)' }}}
             >
               Refresh
             </Button>
@@ -199,14 +200,14 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
 
           <TableContainer
             sx={{
-              backgroundColor: '#161514',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
+              backgroundColor: '#161412',
+              border: '2px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '16px',
               overflow: 'hidden'}}
           >
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ backgroundColor: '#161514' }}>
+                <TableRow sx={{ backgroundColor: '#161412', borderBottom: '2px solid rgba(255, 255, 255, 0.15)' }}>
                   <TableCell sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Event</TableCell>
                   <TableCell sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>IP Address</TableCell>
                   <TableCell sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Location</TableCell>

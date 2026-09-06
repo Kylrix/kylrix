@@ -110,7 +110,7 @@ export function BillingContent() {
     <div className="space-y-4 pb-8">
 
           {/* Active Plan Card */}
-          <div className="bg-[#161412] border border-white/5 rounded-2xl p-5 space-y-4">
+          <div className="bg-[#000000] border-2 border-white/20 rounded-2xl p-5 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <CreditCard size={16} className="text-[#6366F1]" />
@@ -119,7 +119,7 @@ export function BillingContent() {
                   <p className="text-[10px] text-white/40">Active subscription privileges</p>
                 </div>
               </div>
-              <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 ${tierBadgeColor}`}>
+              <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 border border-white/10 ${tierBadgeColor}`}>
                 <Sparkles size={9} />
                 {planLoading ? '…' : currentTier}
               </span>
@@ -146,7 +146,7 @@ export function BillingContent() {
                 <button
                   type="button"
                   onClick={() => { openUnified('pricing'); }}
-                  className="px-4 py-2 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer border-2 border-[#6366F1] shadow-md"
                 >
                   <span>Upgrade</span>
                   <ArrowRight size={12} />
@@ -156,13 +156,13 @@ export function BillingContent() {
 
             {/* Pricing Reference */}
             {!isPro && !isTeams && !planLoading && (
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/5">
-                <div className="p-3 rounded-xl bg-[#6366F1]/5 border border-[#6366F1]/10">
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t-2 border-white/10">
+                <div className="p-3 rounded-xl bg-[#161412] border-2 border-[#6366F1]/30">
                   <span className="text-[10px] font-black text-[#6366F1] uppercase tracking-wider block">Pro</span>
                   <span className="text-lg font-black text-white">$10</span>
                   <span className="text-[9px] text-white/40 block">/month</span>
                 </div>
-                <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                <div className="p-3 rounded-xl bg-[#161412] border-2 border-amber-500/30">
                   <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">Teams</span>
                   <span className="text-lg font-black text-white">$50</span>
                   <span className="text-[9px] text-white/40 block">/month</span>
@@ -172,7 +172,7 @@ export function BillingContent() {
           </div>
 
           {/* Coupons — active only, clickable */}
-          <div className="bg-[#161412] border border-white/5 rounded-2xl p-5 space-y-4">
+          <div className="bg-[#000000] border-2 border-white/20 rounded-2xl p-5 space-y-4 shadow-xl">
             <div className="flex items-center gap-3">
               <Tag size={16} className="text-[#10B981]" />
               <div>
@@ -199,7 +199,7 @@ export function BillingContent() {
                       onClick={() => {
                         router.push(`/billing/coupon/${coupon.$id}`);
                       }}
-                      className="flex justify-between items-center bg-white/[0.02] border border-[#10B981]/20 hover:border-[#10B981]/40 hover:bg-[#10B981]/5 p-3.5 rounded-xl transition-all text-left cursor-pointer group w-full"
+                      className="flex justify-between items-center bg-[#161412] border-2 border-[#10B981]/30 hover:border-[#10B981] hover:bg-[#10B981]/5 p-3.5 rounded-xl transition-all text-left cursor-pointer group w-full"
                     >
                       <div className="min-w-0">
                         <span className="text-xs font-bold text-white font-mono uppercase tracking-wider truncate block">{title}</span>
@@ -226,7 +226,7 @@ export function BillingContent() {
           </div>
 
           {/* Gift Pro Tier */}
-          <div className="bg-[#161412] border border-white/5 rounded-2xl p-5 space-y-4">
+          <div className="bg-[#000000] border-2 border-white/20 rounded-2xl p-5 space-y-4 shadow-xl">
             <div className="flex items-center gap-3">
               <Gift size={16} className="text-[#EC4899]" />
               <div>
@@ -249,7 +249,7 @@ export function BillingContent() {
                       void handleGiftCheckout();
                     }
                   }}
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#6366F1] transition-all font-mono"
+                  className="w-full bg-[#161412] border-2 border-white/15 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#6366F1] transition-all font-mono"
                 />
               </div>
               {giftError && <p className="text-xs text-red-500 font-bold font-mono">{giftError}</p>}
@@ -257,7 +257,7 @@ export function BillingContent() {
                 type="button"
                 onClick={handleGiftCheckout}
                 disabled={giftLoading || !giftUsername.trim()}
-                className="w-full py-3 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs transition-all disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs transition-all disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2 border-2 border-[#6366F1] shadow-md"
               >
                 <span>{giftLoading ? 'Finding Recipient…' : 'Gift Pro Access'}</span>
                 <ArrowRight size={13} />

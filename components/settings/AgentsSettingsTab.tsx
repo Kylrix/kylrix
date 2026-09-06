@@ -177,7 +177,7 @@ export function AgentsSettingsTab() {
   return (
     <div className="space-y-6 font-satoshi">
       {/* Agent keys */}
-      <div className="p-6 bg-[#161412] border border-white/10 rounded-[28px] shadow-2xl space-y-4">
+      <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export function AgentsSettingsTab() {
           <button
             type="button"
             onClick={() => openAgentDrawer({ type: 'manage_provisioning_keys' })}
-            className="h-10 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0"
+            className="h-10 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 border-2 border-[#6366F1]"
           >
             <Plus size={13} />
             <span>Mint agent key</span>
@@ -203,11 +203,11 @@ export function AgentsSettingsTab() {
       </div>
 
       {/* Default assistant */}
-      <div className="p-5 bg-[#161412] border border-white/10 rounded-[22px] space-y-3">
+      <div className="p-5 bg-[#000000] border-2 border-white/20 rounded-[22px] space-y-3">
         <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-mono m-0">Default assistant</p>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/12 border border-[#F59E0B]/30 text-[#F59E0B] flex items-center justify-center text-lg shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/12 border-2 border-[#F59E0B]/40 text-[#F59E0B] flex items-center justify-center text-lg shrink-0">
               {isCustomDefault ? '🤖' : '✨'}
             </div>
             <div className="min-w-0">
@@ -226,7 +226,7 @@ export function AgentsSettingsTab() {
                   customAgents,
                 })
               }
-              className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              className="h-9 px-3 rounded-xl bg-[#161412] hover:bg-[#1C1A18] border-2 border-white/20 hover:border-white/40 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Radio size={13} />
               <span>Change</span>
@@ -239,7 +239,7 @@ export function AgentsSettingsTab() {
                   onCreated: () => void loadAgents(),
                 })
               }
-              className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              className="h-9 px-3 rounded-xl bg-[#161412] hover:bg-[#1C1A18] border-2 border-white/20 hover:border-white/40 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Plus size={13} />
               <span>New agent</span>
@@ -267,10 +267,10 @@ export function AgentsSettingsTab() {
                 onDeleteAgent: (id, name) => handleDeleteCustomAgent(undefined, id, name),
               })
             }
-            className="p-4 bg-[#161412] border border-white/10 hover:border-[#6366F1]/40 hover:bg-[#1C1A18] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
+            className="p-4 bg-[#000000] border-2 border-white/20 hover:border-[#6366F1] hover:bg-[#161412] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0 border border-[#6366F1]/20">
+              <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0 border-2 border-[#6366F1]/30">
                 <Bot size={16} />
               </div>
               <div className="min-w-0">
@@ -288,10 +288,10 @@ export function AgentsSettingsTab() {
                 onSelectAgent: (sa) => setSelectedAgentForAction(sa),
               })
             }
-            className="p-4 bg-[#161412] border border-white/10 hover:border-[#F59E0B]/40 hover:bg-[#1C1A18] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
+            className="p-4 bg-[#000000] border-2 border-white/20 hover:border-[#F59E0B] hover:bg-[#161412] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center shrink-0 border border-[#F59E0B]/20">
+              <div className="w-9 h-9 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center shrink-0 border-2 border-[#F59E0B]/30">
                 ✨
               </div>
               <div className="min-w-0">
@@ -304,10 +304,10 @@ export function AgentsSettingsTab() {
 
           <div
             onClick={() => openAgentDrawer({ type: 'manage_cli_skill' })}
-            className="p-4 bg-[#161412] border border-white/10 hover:border-white/25 hover:bg-[#1C1A18] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
+            className="p-4 bg-[#000000] border-2 border-white/20 hover:border-white/50 hover:bg-[#161412] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-white/5 text-white/70 flex items-center justify-center shrink-0 border border-white/10">
+              <div className="w-9 h-9 rounded-xl bg-white/5 text-white/70 flex items-center justify-center shrink-0 border-2 border-white/20">
                 <Terminal size={16} />
               </div>
               <div className="min-w-0">
@@ -315,7 +315,7 @@ export function AgentsSettingsTab() {
                 <p className="text-white/40 text-[11px] m-0">Skills & env exports</p>
               </div>
             </div>
-            <ChevronRight size={14} className="text-white/30 group-hover:text-white/60" />
+            <ChevronRight size={14} className="text-white/30 group-hover:text-white" />
           </div>
 
           <div
@@ -336,10 +336,10 @@ export function AgentsSettingsTab() {
                 },
               })
             }
-            className="p-4 bg-[#161412] border border-white/10 hover:border-emerald-500/40 hover:bg-[#1C1A18] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
+            className="p-4 bg-[#000000] border-2 border-white/20 hover:border-emerald-500 hover:bg-[#161412] rounded-[22px] flex items-center justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border-2 border-emerald-500/30">
                 <Zap size={16} />
               </div>
               <div className="min-w-0">

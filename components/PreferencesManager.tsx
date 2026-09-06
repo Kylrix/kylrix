@@ -162,7 +162,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
 
         <div className="space-y-2.5">
           {/* Developer Mode */}
-          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+          <div className="p-4 md:p-5 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 transition-colors flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-bold text-white m-0">Developer Mode & Tools</h4>
@@ -183,7 +183,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
           </div>
 
           {/* Demo Mode */}
-          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+          <div className="p-4 md:p-5 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 transition-colors flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-bold text-white m-0">Demo / Presentation Mode</h4>
@@ -204,7 +204,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
           </div>
 
           {/* Smart System History */}
-          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+          <div className="p-4 md:p-5 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 transition-colors flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <h4 className="text-sm font-bold text-white m-0">Smart Assistant Interaction Memory</h4>
               <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
@@ -230,7 +230,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
 
         <div className="space-y-2.5">
           {/* Theme Palette */}
-          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
+          <div className="p-4 md:p-5 rounded-2xl bg-[#161412] border-2 border-white/15 space-y-3">
             <div>
               <h4 className="text-sm font-bold text-white m-0">Color Scheme & Contrast</h4>
               <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
@@ -251,10 +251,10 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
                     key={item.id}
                     type="button"
                     onClick={() => updatePreference('theme', item.id)}
-                    className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#161412] border-[#6366F1] text-white shadow-lg'
-                        : 'bg-[#161412]/50 border-white/[0.06] text-white/50 hover:text-white hover:bg-[#161412]'
+                        ? 'bg-[#000000] border-[#6366F1] text-white shadow-lg shadow-[#6366F1]/20'
+                        : 'bg-[#000000] border-white/15 text-white/50 hover:text-white hover:border-white/30'
                     }`}
                   >
                     <Icon size={16} className={isSelected ? 'text-[#6366F1]' : 'text-white/40'} />
@@ -266,7 +266,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
           </div>
 
           {/* Compact Density */}
-          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+          <div className="p-4 md:p-5 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 transition-colors flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <h4 className="text-sm font-bold text-white m-0">Compact Information Density</h4>
               <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
@@ -292,7 +292,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
 
         <div className="space-y-2.5">
           {/* Sound FX */}
-          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+          <div className="p-4 md:p-5 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 transition-colors flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <h4 className="text-sm font-bold text-white m-0">Tactile Audio Feedback</h4>
               <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
@@ -306,7 +306,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
           </div>
 
           {/* Haptic Feedback */}
-          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+          <div className="p-4 md:p-5 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 transition-colors flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <h4 className="text-sm font-bold text-white m-0">Mobile Haptic Vibration</h4>
               <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
@@ -332,7 +332,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
 
         <div className="space-y-2.5">
           {/* Activity Notifications */}
-          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+          <div className="p-4 md:p-5 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 transition-colors flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <h4 className="text-sm font-bold text-white m-0">Account Activity Relay</h4>
               <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
@@ -346,7 +346,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
           </div>
 
           {/* Session Reminders */}
-          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+          <div className="p-4 md:p-5 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 transition-colors flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <h4 className="text-sm font-bold text-white m-0">New Session & Security Alerts</h4>
               <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">
@@ -360,7 +360,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
           </div>
 
           {/* Marketing Updates */}
-          <div className="p-4 md:p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-4">
+          <div className="p-4 md:p-5 rounded-2xl bg-[#161412] border-2 border-white/15 hover:border-white/30 transition-colors flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <h4 className="text-sm font-bold text-white m-0">Product Releases & Announcements</h4>
               <p className="text-xs text-white/40 font-medium leading-relaxed m-0 mt-0.5">

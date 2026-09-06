@@ -270,7 +270,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
   return (
     <div className="space-y-6 max-w-4xl mx-auto font-satoshi">
       {/* Overview & Metadata */}
-      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-white/10 shadow-xl space-y-6">
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border-2 border-white/20 shadow-xl space-y-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2">
@@ -290,41 +290,41 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
 
         <form onSubmit={handleSaveDetails} className="space-y-5">
           <div className="space-y-1.5">
-            <label className="text-[11px] font-mono font-bold text-white/50 uppercase tracking-wider">Workspace Title</label>
+            <label className="text-[11px] font-mono font-bold text-white/60 uppercase tracking-wider">Workspace Title</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full h-11 px-3.5 rounded-xl bg-[#0A0908] border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] text-xs font-medium transition-colors"
+              className="w-full h-11 px-3.5 rounded-xl bg-[#0A0908] border-2 border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] text-xs font-medium transition-colors"
               placeholder="Workspace Name"
               required
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[11px] font-mono font-bold text-white/50 uppercase tracking-wider">Description / Summary</label>
+            <label className="text-[11px] font-mono font-bold text-white/60 uppercase tracking-wider">Description / Summary</label>
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               rows={3}
-              className="w-full p-3.5 rounded-xl bg-[#0A0908] border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] text-xs font-medium resize-none transition-colors"
+              className="w-full p-3.5 rounded-xl bg-[#0A0908] border-2 border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] text-xs font-medium resize-none transition-colors"
               placeholder="What is this workspace focused on?"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[11px] font-mono font-bold text-white/50 uppercase tracking-wider">Visibility Mode</label>
+            <label className="text-[11px] font-mono font-bold text-white/60 uppercase tracking-wider">Visibility Mode</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setVisibility('private')}
-                className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
+                className={`p-3.5 rounded-xl border-2 text-left flex items-start gap-3 transition-all cursor-pointer ${
                   visibility === 'private'
-                    ? 'bg-[#6366F1]/10 border-[#6366F1]/50 text-white'
-                    : 'bg-[#0A0908] border-white/10 text-white/60 hover:border-white/20'
+                    ? 'bg-[#6366F1]/10 border-[#6366F1] text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]'
+                    : 'bg-[#0A0908] border-white/15 text-white/60 hover:border-white/30'
                 }`}
               >
-                <div className="w-8 h-8 rounded-lg bg-[#6366F1]/15 text-[#818CF8] grid place-items-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-[#6366F1]/15 text-[#818CF8] border border-[#6366F1]/30 grid place-items-center shrink-0">
                   <Lock size={15} />
                 </div>
                 <div className="min-w-0">
@@ -336,13 +336,13 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
               <button
                 type="button"
                 onClick={() => setVisibility('public')}
-                className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
+                className={`p-3.5 rounded-xl border-2 text-left flex items-start gap-3 transition-all cursor-pointer ${
                   visibility === 'public'
-                    ? 'bg-emerald-500/10 border-emerald-500/50 text-white'
-                    : 'bg-[#0A0908] border-white/10 text-white/60 hover:border-white/20'
+                    ? 'bg-emerald-500/10 border-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                    : 'bg-[#0A0908] border-white/15 text-white/60 hover:border-white/30'
                 }`}
               >
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 grid place-items-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 grid place-items-center shrink-0">
                   <Globe size={15} />
                 </div>
                 <div className="min-w-0">
@@ -357,7 +357,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 px-5 h-10 bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer shadow-md"
+              className="inline-flex items-center gap-2 px-5 h-10 bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer border-2 border-[#6366F1] shadow-md"
             >
               {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
               <span>{saving ? 'Saving...' : 'Save Workspace Changes'}</span>
@@ -367,7 +367,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
       </div>
 
       {/* Projects (sub-projects under this workspace) */}
-      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-white/10 shadow-xl space-y-5">
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border-2 border-white/20 shadow-xl space-y-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h2 className="text-base md:text-lg font-black text-white font-clash m-0">Projects</h2>
@@ -388,7 +388,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                 onCreated: () => { void refetchSubProjects(); },
               });
             }}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer shadow-md"
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer border-2 border-[#6366F1] shadow-md"
           >
             <Plus size={13} />
             <span>New Project</span>
@@ -400,7 +400,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
             <RefreshCw size={16} className="animate-spin text-[#6366F1] mr-2" /> Loading projects...
           </div>
         ) : subProjects.length === 0 ? (
-          <div className="p-6 rounded-2xl bg-[#0A0908] border border-dashed border-white/10 text-center">
+          <div className="p-6 rounded-2xl bg-[#0A0908] border-2 border-dashed border-white/15 text-center">
             <FolderKanban className="h-6 w-6 text-white/20 mx-auto mb-2" />
             <p className="text-xs font-bold text-white/70 m-0">No projects yet</p>
             <p className="text-xs text-white/40 mt-1 m-0">
@@ -412,7 +412,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
             {subProjects.map((p) => (
               <div
                 key={p.$id}
-                className="flex items-center justify-between p-3.5 rounded-xl bg-[#0A0908] border border-white/10 gap-3"
+                className="flex items-center justify-between p-3.5 rounded-xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors gap-3"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center shrink-0">
@@ -432,32 +432,32 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
       </div>
 
       {/* Members & Collaborators */}
-      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-white/10 shadow-xl space-y-5">
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border-2 border-white/20 shadow-xl space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base md:text-lg font-black text-white font-clash m-0">Members & Collaborators</h2>
             <p className="text-xs text-white/40 mt-0.5 m-0">Manage people with access to this workspace</p>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 grid place-items-center text-[#818CF8]">
+          <div className="w-8 h-8 rounded-xl bg-[#0A0908] border-2 border-white/15 grid place-items-center text-[#818CF8]">
             <Users size={15} />
           </div>
         </div>
 
         <form onSubmit={handleAddMember} className="flex gap-2.5">
           <div className="relative flex-1 min-w-0">
-            <Mail className="absolute left-3.5 top-3 h-4 w-4 text-white/30" />
+            <Mail className="absolute left-3.5 top-3 h-4 w-4 text-white/40" />
             <input
               type="text"
               value={newMemberEmail}
               onChange={(e) => setNewMemberEmail(e.target.value)}
               placeholder="Enter User ID or Email to invite..."
-              className="w-full h-10 pl-10 pr-3.5 rounded-xl bg-[#0A0908] border border-white/10 text-white text-xs placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] transition-colors"
+              className="w-full h-10 pl-10 pr-3.5 rounded-xl bg-[#0A0908] border-2 border-white/15 text-white text-xs placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] transition-colors"
             />
           </div>
           <button
             type="submit"
             disabled={addingMember || !newMemberEmail.trim()}
-            className="px-4 h-10 bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold rounded-xl transition-all disabled:opacity-40 inline-flex items-center gap-1.5 cursor-pointer shadow-md shrink-0"
+            className="px-4 h-10 bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold rounded-xl transition-all disabled:opacity-40 inline-flex items-center gap-1.5 cursor-pointer border-2 border-[#6366F1] shadow-md shrink-0"
           >
             <UserPlus size={13} />
             <span>{addingMember ? 'Adding...' : 'Add Member'}</span>
@@ -466,12 +466,12 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
 
         <div className="space-y-2">
           {collaborators.length === 0 ? (
-            <div className="p-4 text-center text-xs text-white/40 rounded-xl bg-[#0A0908] border border-white/10">
+            <div className="p-4 text-center text-xs text-white/40 rounded-xl bg-[#0A0908] border-2 border-white/15">
               No additional collaborators registered. You are the sole workspace owner.
             </div>
           ) : (
             collaborators.map((c) => (
-              <div key={c.$id || c.entityId || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border border-white/10 gap-3">
+              <div key={c.$id || c.entityId || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center text-xs font-mono font-bold shrink-0">
                     {(c.userId || c.entityId || '?').charAt(0).toUpperCase()}
@@ -497,7 +497,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
       </div>
 
       {/* Workspace Keys */}
-      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-white/10 shadow-xl space-y-5">
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border-2 border-white/20 shadow-xl space-y-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h2 className="text-base md:text-lg font-black text-white font-clash m-0">Workspace Keys</h2>
@@ -506,7 +506,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
           <button
             type="button"
             onClick={() => setCreatePatOpen(true)}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer shadow-md"
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer border-2 border-[#6366F1] shadow-md"
           >
             <Plus size={13} />
             <span>Create Key</span>
@@ -518,7 +518,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
             <RefreshCw size={16} className="animate-spin text-[#6366F1] mr-2" /> Loading keys...
           </div>
         ) : pats.length === 0 ? (
-          <div className="p-6 rounded-2xl bg-[#0A0908] border border-dashed border-white/10 text-center">
+          <div className="p-6 rounded-2xl bg-[#0A0908] border-2 border-dashed border-white/15 text-center">
             <KeyRound className="h-6 w-6 text-white/20 mx-auto mb-2" />
             <p className="text-xs font-bold text-white/70 m-0">No workspace keys yet</p>
             <p className="text-xs text-white/40 mt-1 m-0">Create a key to interact with this workspace via the API</p>
@@ -526,7 +526,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
         ) : (
           <div className="space-y-2">
             {pats.map((p) => (
-              <div key={p.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#0A0908] border border-white/10 gap-3">
+              <div key={p.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-xs font-bold text-white font-clash m-0 truncate">{p.name}</p>
@@ -567,18 +567,18 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
       />
 
       {/* Danger Zone */}
-      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border border-red-500/30 space-y-4">
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border-2 border-red-500/40 space-y-4 shadow-xl">
         <div className="flex items-center gap-2 text-red-400">
           <AlertTriangle size={16} />
           <h2 className="text-base font-bold font-clash m-0">Danger Zone</h2>
         </div>
-        <p className="text-xs text-white/50 m-0">Archive or permanently purge this workspace and detach objects.</p>
+        <p className="text-xs text-white/60 m-0">Archive or permanently purge this workspace and detach objects.</p>
 
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             type="button"
             onClick={handleArchiveWorkspace}
-            className="flex-1 h-10 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold text-xs rounded-xl transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
+            className="flex-1 h-10 border-2 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold text-xs rounded-xl transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
           >
             <Archive size={14} />
             <span>{status === 'active' ? 'Archive Workspace' : 'Restore Workspace'}</span>
@@ -587,7 +587,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
           <button
             type="button"
             onClick={handleDeleteWorkspace}
-            className="flex-1 h-10 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs rounded-xl transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
+            className="flex-1 h-10 border-2 border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs rounded-xl transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
           >
             <Trash2 size={14} />
             <span>Purge Workspace</span>

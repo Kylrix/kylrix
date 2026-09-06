@@ -157,8 +157,9 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
       {sessions.length === 0 ? (
         <Box
           sx={{
-            backgroundColor: '#161514',
-            borderRadius: '12px',
+            backgroundColor: '#161412',
+            border: '2px solid rgba(255, 255, 255, 0.15)',
+            borderRadius: '16px',
             p: 4,
             textAlign: 'center'}}
         >
@@ -181,13 +182,13 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                   color: 'white',
                   borderColor: 'rgba(255, 255, 255, 0.2)',
                   fontSize: '0.75rem',
-                  fontWeight: 500,
+                  fontWeight: 600,
                   textTransform: 'none',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '10px',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
                   boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.2)',
                   '&:hover': {
-                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    borderColor: 'rgba(255, 255, 255, 0.4)',
                     boxShadow: '0 2px 4px 0 rgb(0 0 0 / 0.3)'}}}
               >
                 Refresh
@@ -197,17 +198,17 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                   onClick={handleDeleteAllSessions}
                   sx={{
                     color: '#ef4444',
-                    borderColor: 'rgba(239, 68, 68, 0.3)',
+                    borderColor: 'rgba(239, 68, 68, 0.4)',
                     backgroundColor: 'rgba(239, 68, 68, 0.1)',
                     fontSize: '0.75rem',
-                    fontWeight: 500,
+                    fontWeight: 600,
                     textTransform: 'none',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '10px',
+                    border: '2px solid rgba(239, 68, 68, 0.4)',
                     boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.2)',
                     '&:hover': {
                       backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                      borderColor: 'rgba(239, 68, 68, 0.5)',
+                      borderColor: 'rgba(239, 68, 68, 0.6)',
                       boxShadow: '0 2px 4px 0 rgb(0 0 0 / 0.3)'}}}
                 >
                   Logout All
@@ -221,9 +222,10 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
               <Box
                 key={session.$id}
                 sx={{
-                  backgroundColor: '#161514',
-                  borderRadius: '12px',
-                  p: 2,
+                  backgroundColor: '#161412',
+                  borderRadius: '16px',
+                  border: '2px solid rgba(255, 255, 255, 0.15)',
+                  p: 2.5,
                   display: 'flex',
                   alignItems: 'flex-start',
                   justifyContent: 'space-between',
@@ -231,7 +233,8 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                   overflow: 'hidden',
                   transition: 'all 0.2s ease-out',
                   '&:hover': {
-                    backgroundColor: '#1F1D1B'}
+                    backgroundColor: '#1C1A18',
+                    borderColor: 'rgba(255, 255, 255, 0.3)'}
                 }}
               >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -243,8 +246,9 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                         justifyContent: 'center',
                         width: 44,
                         height: 44,
-                        borderRadius: '10px',
+                        borderRadius: '12px',
                         backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                        border: '2px solid rgba(99, 102, 241, 0.3)',
                         color: dynamicColors.primary,
                         flexShrink: 0}}
                     >
@@ -284,9 +288,10 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                         sx={{
                           backgroundColor: 'rgba(34, 197, 94, 0.2)',
                           color: '#22c55e',
+                          border: '1px solid rgba(34, 197, 94, 0.4)',
                           fontSize: '0.65rem',
-                          fontWeight: 500,
-                          height: 20,
+                          fontWeight: 700,
+                          height: 22,
                           borderRadius: '0.375rem'}}
                       />
                     )}
@@ -302,13 +307,13 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                     margin: 0,
                     flexShrink: 0,
                     color: '#EF4444',
-                    borderRadius: '8px',
+                    borderRadius: '10px',
                     backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    border: '2px solid rgba(239, 68, 68, 0.3)',
                     transition: 'all 0.2s ease-out',
                     '&:hover': {
-                      backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                      borderColor: 'rgba(239, 68, 68, 0.4)'}}}
+                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                      borderColor: 'rgba(239, 68, 68, 0.6)'}}}
                 >
                   <DeleteIcon sx={{ fontSize: 20 }} />
                 </IconButton>

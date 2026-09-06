@@ -1095,7 +1095,7 @@ function SettingsPageInner() {
                         <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
                             Sessions
                         </h2>
-                        <div className="bg-[#161412] border border-white/5 rounded-[32px] p-6 md:p-10">
+                        <div className="bg-[#000000] border-2 border-white/20 rounded-[28px] p-6 md:p-8 shadow-2xl">
                             <SessionsManager />
                         </div>
                     </div>
@@ -1106,7 +1106,7 @@ function SettingsPageInner() {
                         <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
                             Activity
                         </h2>
-                        <div className="bg-[#161412] border border-white/5 rounded-[32px] p-6 md:p-10">
+                        <div className="bg-[#000000] border-2 border-white/20 rounded-[28px] p-6 md:p-8 shadow-2xl">
                             <ActivityLogs />
                         </div>
                     </div>
@@ -1126,7 +1126,7 @@ function SettingsPageInner() {
                         <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
                             Preferences
                         </h2>
-                        <div className="bg-[#161412] border border-white/5 rounded-[32px] p-6 md:p-10">
+                        <div className="bg-[#000000] border-2 border-white/20 rounded-[28px] p-6 md:p-8 shadow-2xl">
                             <PreferencesManager />
                         </div>
                     </div>
@@ -1144,9 +1144,9 @@ function SettingsPageInner() {
                         </div>
 
                         {/* Export & Data Sovereignty Card */}
-                        <div className="p-6 md:p-7 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl space-y-5">
+                        <div className="p-6 md:p-7 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl space-y-5">
                             <div className="flex items-start gap-4">
-                                <div className="w-11 h-11 rounded-2xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center shrink-0 border border-[#6366F1]/20">
+                                <div className="w-11 h-11 rounded-2xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center shrink-0 border-2 border-[#6366F1]/30">
                                     <Download size={20} />
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -1154,7 +1154,7 @@ function SettingsPageInner() {
                                         <h3 className="text-base font-black text-white font-clash m-0">
                                             Export Sovereign Account Archive
                                         </h3>
-                                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-mono text-white/60 font-bold uppercase">
+                                        <span className="px-2 py-0.5 rounded bg-white/5 border-2 border-white/15 text-[9px] font-mono text-white/60 font-bold uppercase">
                                             JSON
                                         </span>
                                     </div>
@@ -1164,8 +1164,8 @@ function SettingsPageInner() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 rounded-2xl bg-[#0A0908] border border-white/[0.06]">
-                                <div className="p-2.5 rounded-xl bg-[#161412]/50 border border-white/[0.04]">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 rounded-2xl bg-[#161412] border-2 border-white/15">
+                                <div className="p-2.5 rounded-xl bg-[#000000] border-2 border-white/10">
                                     <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
                                         Portability
                                     </span>
@@ -1173,7 +1173,7 @@ function SettingsPageInner() {
                                         100% Sovereign
                                     </span>
                                 </div>
-                                <div className="p-2.5 rounded-xl bg-[#161412]/50 border border-white/[0.04]">
+                                <div className="p-2.5 rounded-xl bg-[#000000] border-2 border-white/10">
                                     <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
                                         Encryption
                                     </span>
@@ -1181,7 +1181,7 @@ function SettingsPageInner() {
                                         Client Sealed
                                     </span>
                                 </div>
-                                <div className="p-2.5 rounded-xl bg-[#161412]/50 border border-white/[0.04]">
+                                <div className="p-2.5 rounded-xl bg-[#000000] border-2 border-white/10">
                                     <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
                                         Format
                                     </span>
@@ -1194,7 +1194,7 @@ function SettingsPageInner() {
                             <button
                                 type="button"
                                 onClick={triggerExport}
-                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#6366F1]/10"
+                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#6366F1]/10 border-2 border-[#6366F1]"
                             >
                                 <Download size={14} />
                                 <span>Download Account Archive</span>
@@ -1202,9 +1202,9 @@ function SettingsPageInner() {
                         </div>
 
                         {/* Irreversible Account Purge (Danger Zone) */}
-                        <div className="p-6 md:p-7 bg-[#161412] border border-rose-500/20 rounded-[28px] shadow-2xl space-y-5">
+                        <div className="p-6 md:p-7 bg-[#000000] border-2 border-rose-500/40 rounded-[28px] shadow-2xl space-y-5">
                             <div className="flex items-start gap-4">
-                                <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/20">
+                                <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0 border-2 border-rose-500/40">
                                     <AlertTriangle size={20} />
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -1212,7 +1212,7 @@ function SettingsPageInner() {
                                         <h3 className="text-base font-black text-rose-400 font-clash m-0">
                                             Permanent Master Purge
                                         </h3>
-                                        <span className="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-[9px] font-mono text-rose-300 font-bold uppercase">
+                                        <span className="px-2 py-0.5 rounded bg-rose-500/10 border-2 border-rose-500/30 text-[9px] font-mono text-rose-300 font-bold uppercase">
                                             No Undo
                                         </span>
                                     </div>
@@ -1222,8 +1222,8 @@ function SettingsPageInner() {
                                 </div>
                             </div>
 
-                            <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2">
-                                <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-white/40 m-0">
+                            <div className="p-4 rounded-2xl bg-[#161412] border-2 border-rose-500/20 space-y-2">
+                                <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-rose-400/80 m-0">
                                     Purge Scope Breakdown
                                 </p>
                                 <ul className="text-xs text-white/70 space-y-1.5 list-disc pl-4 m-0 font-medium leading-relaxed">
@@ -1236,7 +1236,7 @@ function SettingsPageInner() {
                             <button
                                 type="button"
                                 onClick={triggerDeleteAccount}
-                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-600/10"
+                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-600/20 border-2 border-rose-500"
                             >
                                 <Trash2 size={14} />
                                 <span>Initiate Account Purge</span>
