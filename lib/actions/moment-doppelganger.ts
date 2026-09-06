@@ -187,7 +187,7 @@ export async function completeMomentDraftAction(params: {
     const hasAccess = await userHasPaidAiAccess(actor.$id);
     if (!hasAccess) return { success: false, error: AI_REQUIRES_PRO_MESSAGE };
 
-    await ensureMomentDoppelgangerSessionAction({ jwt: params.jwt });
+    // No remote ensure on live complete — LocalEngine voice samples are enough
 
     const draft = String(params.draft || '').slice(0, 4000);
     if (draft.trim().length < 2) return { success: true, completion: '' };

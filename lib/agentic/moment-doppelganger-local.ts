@@ -107,16 +107,23 @@ export async function refreshMomentDoppelgangerVoice(
     chatHistory: session.chatHistory || [],
   });
 
-  // Fire-and-forget remote never-dup ensure (Pro users will also hit this on complete)
+  // Remote never-dup ensure at most once per day (LocalEngine gate)
   try {
-    const { account } = await import('@/lib/appwrite/client');
-    const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
-    if (jwt) {
-      const { ensureMomentDoppelgangerSessionAction } = await import('@/lib/actions/moment-doppelganger');
-      void ensureMomentDoppelgangerSessionAction({
-        jwt,
-        contextSnippet: `${VOICE_CONTEXT_PREFIX}${JSON.stringify(samples).slice(0, 1500)}`,
-      });
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const ensureGateKey = `f_moment_remote_ensure_${userId}`;
+    const lastEnsure = Number((await LocalEngine.cacheGet<number>(ensureGateKey)) || 0);
+    const ENSURE_TTL_MS = 24 * 60 * 60 * 1000;
+    if (!lastEnsure || Date.now() - lastEnsure > ENSURE_TTL_MS) {
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+      if (jwt) {
+        const { ensureMomentDoppelgangerSessionAction } = await import('@/lib/actions/moment-doppelganger');
+        void ensureMomentDoppelgangerSessionAction({
+          jwt,
+          contextSnippet: `${VOICE_CONTEXT_PREFIX}${JSON.stringify(samples).slice(0, 1500)}`,
+        });
+        void LocalEngine.cacheSet(ensureGateKey, Date.now());
+      }
     }
   } catch {}
 

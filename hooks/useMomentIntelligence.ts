@@ -7,8 +7,14 @@ import {
   refreshMomentDoppelgangerVoice,
 } from '@/lib/agentic/moment-doppelganger-local';
 import type { MomentVoiceSample } from '@/lib/agentic/prompts/moment-doppelganger';
+import {
+  completeOfflineSuffix,
+  pickCompletionSource,
+  recordAiInference,
+} from '@/lib/agentic/offline-complete';
 
 type LearningStatus = 'off' | 'initializing' | 'ready' | 'empty';
+type SuggestionSource = 'offline' | 'ai';
 
 const PREF_KEY = 'f_moment_create_with_agent';
 
@@ -33,8 +39,8 @@ export function useMomentIntelligence(opts: {
   const hintsRef = useRef<string[]>([]);
   const reqIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sourceRef = useRef<SuggestionSource>('offline');
 
-  // Boot / refresh voice twin when enabled
   useEffect(() => {
     if (!enabled || !userId) {
       setLearningStatus('off');
@@ -59,7 +65,6 @@ export function useMomentIntelligence(opts: {
     };
   }, [enabled, userId]);
 
-  // Live complete while typing
   useEffect(() => {
     if (!enabled || !userId) {
       setSuggestion('');
@@ -75,10 +80,35 @@ export function useMomentIntelligence(opts: {
 
     debounceRef.current = setTimeout(() => {
       void (async () => {
-        if (!isPro) return;
         const myReq = ++reqIdRef.current;
+        const offline = completeOfflineSuffix(draft, samplesRef.current, {
+          niche: 'connect',
+          minConfidence: 0.5,
+        });
+        const source = await pickCompletionSource({
+          scope: 'moment_doppelganger',
+          offlineSuffix: offline,
+          allowAi: isPro,
+        });
+
+        if (myReq !== reqIdRef.current) return;
+
+        if (source === 'offline') {
+          sourceRef.current = 'offline';
+          setSuggestion(offline.trim());
+          setBusy(false);
+          return;
+        }
+
+        if (source !== 'ai') {
+          setSuggestion('');
+          setBusy(false);
+          return;
+        }
+
         setBusy(true);
         try {
+          await recordAiInference('moment_doppelganger');
           const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
           const { completeMomentDraftAction } = await import('@/lib/actions/moment-doppelganger');
           const res = await completeMomentDraftAction({
@@ -91,17 +121,28 @@ export function useMomentIntelligence(opts: {
           if (myReq !== reqIdRef.current) return;
           if (!res.success) {
             if (String(res.error || '').toLowerCase().includes('pro')) onOpenPro();
-            setSuggestion('');
+            sourceRef.current = 'offline';
+            setSuggestion(offline.trim());
             return;
           }
-          setSuggestion(String(res.completion || '').trim());
+          const aiText = String(res.completion || '').trim();
+          if (aiText) {
+            sourceRef.current = 'ai';
+            setSuggestion(aiText);
+          } else {
+            sourceRef.current = 'offline';
+            setSuggestion(offline.trim());
+          }
         } catch {
-          if (myReq === reqIdRef.current) setSuggestion('');
+          if (myReq === reqIdRef.current) {
+            sourceRef.current = 'offline';
+            setSuggestion(offline.trim());
+          }
         } finally {
           if (myReq === reqIdRef.current) setBusy(false);
         }
       })();
-    }, 420);
+    }, 380);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -110,7 +151,7 @@ export function useMomentIntelligence(opts: {
 
   const acceptSuggestion = useCallback(() => {
     if (!suggestion) return;
-    if (!isPro) {
+    if (sourceRef.current === 'ai' && !isPro) {
       onOpenPro();
       return;
     }
@@ -135,6 +176,7 @@ export function useMomentIntelligence(opts: {
     }
     setBusy(true);
     try {
+      await recordAiInference('moment_takeover');
       const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
       const { generateMomentTakeoverAction } = await import('@/lib/actions/moment-doppelganger');
       const res = await generateMomentTakeoverAction({
@@ -169,7 +211,7 @@ export function useMomentIntelligence(opts: {
 
 export async function loadMomentAgentPref(): Promise<boolean> {
   const pref = await LocalEngine.cacheGet<boolean>(PREF_KEY);
-  if (pref === null || pref === undefined) return true; // enabled by default
+  if (pref === null || pref === undefined) return true;
   return Boolean(pref);
 }
 

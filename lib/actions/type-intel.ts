@@ -197,7 +197,7 @@ export async function completeTypeIntelDraftAction(params: {
     if (!hasAccess) return { success: false, error: AI_REQUIRES_PRO_MESSAGE };
 
     const kind = assertKind(params.kind);
-    await ensureTypeIntelSessionAction({ kind, jwt: params.jwt });
+    // No ensureTypeIntelSessionAction here — live complete stays AI-light; ensure only on takeover / ambient
 
     const draft = String(params.draft || '').slice(0, 4000);
     if (draft.trim().length < 2) return { success: true, completion: '' };
@@ -286,8 +286,7 @@ export async function generateWorkspaceIntelNudgeAction(params: {
     const hasAccess = await userHasPaidAiAccess(actor.$id);
     if (!hasAccess) return { success: false, error: AI_REQUIRES_PRO_MESSAGE };
 
-    // Touch type-intel project session once (never-dup) — no object table reads
-    await ensureTypeIntelSessionAction({ kind: 'project', jwt: params.jwt });
+    // Samples already LocalEngine-sourced — skip remote session ensure on ambient tips
 
     const samples = (params.samples || []).slice(0, 8);
     if (!samples.length) return { success: false, error: 'No samples' };

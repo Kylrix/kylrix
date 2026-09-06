@@ -352,11 +352,11 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   const canPost = Boolean(content.trim() || attachments.length);
   const learningLabel =
     learningStatus === 'initializing'
-      ? 'Setting up smart writing…'
+      ? 'Kylie is getting ready…'
       : learningStatus === 'ready'
-        ? 'Learning from your posts for smart writing'
+        ? 'Kylie is learning from your posts'
         : learningStatus === 'empty'
-          ? 'Ready — will learn as you post'
+          ? 'Kylie assist ready — will learn as you post'
           : null;
 
   const sheet = (
@@ -476,7 +476,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
             </div>
           ) : null}
 
-          {/* Compact toggles: Nostr sync + Create with agent */}
+          {/* Compact toggles: Nostr sync + Kylie assist */}
           <div className="grid grid-cols-2 gap-2 shrink-0">
             <div className="rounded-xl bg-[#000000] border border-white/20 p-2.5 flex items-center justify-between gap-2 min-w-0">
               <div className="flex items-center gap-2 min-w-0">
@@ -524,7 +524,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
                   size={14}
                   className={createWithAgent ? 'text-[#F59E0B] shrink-0' : 'text-white/40 shrink-0'}
                 />
-                <p className="text-[11px] font-extrabold text-white truncate">Create with agent</p>
+                <p className="text-[11px] font-extrabold text-white truncate">Kylie assist</p>
               </div>
               <button
                 type="button"

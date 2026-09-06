@@ -114,15 +114,22 @@ export async function refreshTypeIntelVoice(
   });
 
   try {
-    const { account } = await import('@/lib/appwrite/client');
-    const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
-    if (jwt) {
-      const { ensureTypeIntelSessionAction } = await import('@/lib/actions/type-intel');
-      void ensureTypeIntelSessionAction({
-        kind,
-        jwt,
-        contextSnippet: `${prefix}${JSON.stringify(samples).slice(0, 1500)}`,
-      });
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const ensureGateKey = `f_type_intel_remote_ensure_${kind}_${userId}`;
+    const lastEnsure = Number((await LocalEngine.cacheGet<number>(ensureGateKey)) || 0);
+    const ENSURE_TTL_MS = 24 * 60 * 60 * 1000;
+    if (!lastEnsure || Date.now() - lastEnsure > ENSURE_TTL_MS) {
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+      if (jwt) {
+        const { ensureTypeIntelSessionAction } = await import('@/lib/actions/type-intel');
+        void ensureTypeIntelSessionAction({
+          kind,
+          jwt,
+          contextSnippet: `${prefix}${JSON.stringify(samples).slice(0, 1500)}`,
+        });
+        void LocalEngine.cacheSet(ensureGateKey, Date.now());
+      }
     }
   } catch {}
 

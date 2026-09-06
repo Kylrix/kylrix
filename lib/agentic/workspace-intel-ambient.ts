@@ -207,30 +207,36 @@ export async function maybeEmitWorkspaceIntelNudge(opts: {
     };
   } else if (isPro && navigator.onLine) {
     try {
-      const { account } = await import('@/lib/appwrite/client');
-      const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
-      if (jwt) {
-        const { generateWorkspaceIntelNudgeAction } = await import('@/lib/actions/type-intel');
-        const res = await generateWorkspaceIntelNudgeAction({
-          jwt,
-          displayName,
-          samples: samples.map((s) => ({
-            kind: s.kind,
-            title: s.title,
-            blurb: s.blurb,
-          })),
-        });
-        if (res.success && res.title && res.message) {
-          nudge = {
-            title: res.title,
-            message: res.message,
-            actionHref: res.actionHref || nudge?.actionHref || '/workspaces',
-          };
-          await LocalEngine.cacheSet(AI_CACHE_KEY(userId), {
-            ...nudge,
-            at: now,
-            sampleKey,
-          } satisfies CachedAiNudge);
+      const { shouldAllowAiInference, recordAiInference } = await import(
+        '@/lib/agentic/offline-complete'
+      );
+      if (await shouldAllowAiInference('workspace_ambient')) {
+        const { account } = await import('@/lib/appwrite/client');
+        const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+        if (jwt) {
+          await recordAiInference('workspace_ambient');
+          const { generateWorkspaceIntelNudgeAction } = await import('@/lib/actions/type-intel');
+          const res = await generateWorkspaceIntelNudgeAction({
+            jwt,
+            displayName,
+            samples: samples.map((s) => ({
+              kind: s.kind,
+              title: s.title,
+              blurb: s.blurb,
+            })),
+          });
+          if (res.success && res.title && res.message) {
+            nudge = {
+              title: res.title,
+              message: res.message,
+              actionHref: res.actionHref || nudge?.actionHref || '/workspaces',
+            };
+            await LocalEngine.cacheSet(AI_CACHE_KEY(userId), {
+              ...nudge,
+              at: now,
+              sampleKey,
+            } satisfies CachedAiNudge);
+          }
         }
       }
     } catch {

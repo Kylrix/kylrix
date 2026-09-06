@@ -15,7 +15,7 @@ type ToggleProps = {
   className?: string;
 };
 
-/** Compact “Create with agent” switch — lives under the field, not in the typing plane. */
+/** Compact “Kylie assist” switch — lives under the field, not in the typing plane. */
 export function TypeIntelToggle({
   enabled,
   onToggle,
@@ -34,7 +34,7 @@ export function TypeIntelToggle({
             className="shrink-0"
             style={{ color: enabled ? accent : 'rgba(255,255,255,0.4)' }}
           />
-          <p className="text-[11px] font-extrabold text-white truncate">Create with agent</p>
+          <p className="text-[11px] font-extrabold text-white truncate">Kylie assist</p>
         </div>
         <button
           type="button"

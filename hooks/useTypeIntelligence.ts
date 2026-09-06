@@ -7,8 +7,22 @@ import { refreshTypeIntelVoice } from '@/lib/agentic/type-intel-local';
 import type { TypeIntelVoiceSample } from '@/lib/agentic/prompts/type-intel';
 import type { TypeIntelKind } from '@/lib/agentic/type-intel-kinds';
 import { TYPE_INTEL_KINDS, typeIntelPrefKey } from '@/lib/agentic/type-intel-kinds';
+import {
+  completeOfflineSuffix,
+  pickCompletionSource,
+  recordAiInference,
+} from '@/lib/agentic/offline-complete';
 
 type LearningStatus = 'off' | 'initializing' | 'ready' | 'empty';
+type SuggestionSource = 'offline' | 'ai';
+
+const NICHE_BY_KIND: Record<TypeIntelKind, 'productivity' | 'connect' | 'workspace'> = {
+  note: 'productivity',
+  goal: 'productivity',
+  event: 'connect',
+  form: 'productivity',
+  project: 'workspace',
+};
 
 export function useTypeIntelligence(opts: {
   kind: TypeIntelKind;
@@ -32,6 +46,7 @@ export function useTypeIntelligence(opts: {
   const hintsRef = useRef<string[]>([]);
   const reqIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sourceRef = useRef<SuggestionSource>('offline');
 
   useEffect(() => {
     if (!enabled || !userId) {
@@ -72,10 +87,34 @@ export function useTypeIntelligence(opts: {
 
     debounceRef.current = setTimeout(() => {
       void (async () => {
-        if (!isPro) return;
         const myReq = ++reqIdRef.current;
+        const offline = completeOfflineSuffix(draft, samplesRef.current, {
+          niche: NICHE_BY_KIND[kind],
+        });
+        const source = await pickCompletionSource({
+          scope: `type_intel_${kind}`,
+          offlineSuffix: offline,
+          allowAi: isPro,
+        });
+
+        if (myReq !== reqIdRef.current) return;
+
+        if (source === 'offline') {
+          sourceRef.current = 'offline';
+          setSuggestion(offline.trim());
+          setBusy(false);
+          return;
+        }
+
+        if (source !== 'ai') {
+          setSuggestion('');
+          setBusy(false);
+          return;
+        }
+
         setBusy(true);
         try {
+          await recordAiInference(`type_intel_${kind}`);
           const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
           const { completeTypeIntelDraftAction } = await import('@/lib/actions/type-intel');
           const res = await completeTypeIntelDraftAction({
@@ -89,17 +128,29 @@ export function useTypeIntelligence(opts: {
           if (myReq !== reqIdRef.current) return;
           if (!res.success) {
             if (String(res.error || '').toLowerCase().includes('pro')) onOpenPro();
-            setSuggestion('');
+            // Fall back to offline if AI failed
+            sourceRef.current = 'offline';
+            setSuggestion(offline.trim());
             return;
           }
-          setSuggestion(String(res.completion || '').trim());
+          const aiText = String(res.completion || '').trim();
+          if (aiText) {
+            sourceRef.current = 'ai';
+            setSuggestion(aiText);
+          } else {
+            sourceRef.current = 'offline';
+            setSuggestion(offline.trim());
+          }
         } catch {
-          if (myReq === reqIdRef.current) setSuggestion('');
+          if (myReq === reqIdRef.current) {
+            sourceRef.current = 'offline';
+            setSuggestion(offline.trim());
+          }
         } finally {
           if (myReq === reqIdRef.current) setBusy(false);
         }
       })();
-    }, 420);
+    }, 380);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -108,7 +159,7 @@ export function useTypeIntelligence(opts: {
 
   const acceptSuggestion = useCallback(() => {
     if (!suggestion) return;
-    if (!isPro) {
+    if (sourceRef.current === 'ai' && !isPro) {
       onOpenPro();
       return;
     }
@@ -135,6 +186,7 @@ export function useTypeIntelligence(opts: {
     try {
       const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
       const { generateTypeIntelTakeoverAction } = await import('@/lib/actions/type-intel');
+      await recordAiInference(`type_intel_takeover_${kind}`);
       const res = await generateTypeIntelTakeoverAction({
         kind,
         draft,
@@ -171,11 +223,11 @@ export function useTypeIntelligence(opts: {
   const label = TYPE_INTEL_KINDS[kind].label;
   const learningLabel =
     learningStatus === 'initializing'
-      ? 'Setting up smart writing…'
+      ? 'Kylie is getting ready…'
       : learningStatus === 'ready'
-        ? `Learning from your ${label}s for smart writing`
+        ? `Kylie is learning from your ${label}s`
         : learningStatus === 'empty'
-          ? `Ready — will learn as you create ${label}s`
+          ? `Kylie assist ready — will learn as you create ${label}s`
           : null;
 
   return {
