@@ -80,11 +80,11 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
   return (
     <div className={
       isDesktop
-        ? "flex flex-col h-full min-h-0 w-full max-w-full bg-[#000000] text-white overflow-hidden select-none"
-        : "fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-200"
+        ? "flex flex-col h-full min-h-0 w-full max-w-full bg-[#161412] text-white overflow-hidden select-none"
+        : "fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#161412] text-white overflow-hidden select-none animate-in fade-in duration-200"
     }>
       {/* Top Header Chrome */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-[#0A0908] shrink-0">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/20 bg-[#0E0D0C] shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-[#F59E0B]/15 border border-[#F59E0B]/30 flex items-center justify-center text-[#F59E0B]">
             <Radio size={16} />
@@ -107,7 +107,7 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
           <button
             type="button"
             onClick={handleOpenSettings}
-            className="p-1.5 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl bg-[#161412] border border-white/20 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
             title="Settings"
             aria-label="Settings"
           >
@@ -118,7 +118,7 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer ml-1"
+              className="p-1.5 rounded-xl bg-[#161412] border border-white/20 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer ml-1"
               title="Close"
               aria-label="Close"
             >

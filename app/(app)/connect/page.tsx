@@ -17,7 +17,7 @@ function ConnectHomeContent() {
   }, [openUnified, searchParams]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#000000] text-white overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-[#161412] text-white overflow-hidden">
       <MomentsDrawer onClose={() => router.push('/app')} />
     </div>
   );

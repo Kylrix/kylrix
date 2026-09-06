@@ -467,7 +467,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
           handleCardClick();
         }
       }}
-      className="w-full text-left rounded-[26px] bg-[#000000] border border-white/[0.08] hover:border-white/20 hover:bg-[#000000] hover:-translate-y-px p-5 space-y-3.5 transition-all duration-200 shadow-sm cursor-pointer select-none relative focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
+      className="w-full text-left rounded-2xl bg-[#000000] border-2 border-white/20 hover:border-white/40 hover:bg-[#000000] hover:-translate-y-px p-3.5 sm:p-4 space-y-2.5 transition-all duration-200 shadow-sm cursor-pointer select-none relative focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
@@ -483,10 +483,10 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
               <img
                 src={item.authorAvatar}
                 alt=""
-                className="w-8 h-8 rounded-xl object-cover border border-white/10"
+                className="w-7 h-7 rounded-lg object-cover border border-white/20"
               />
             ) : (
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500/20 to-pink-500/20 border border-white/10 flex items-center justify-center text-white text-xs font-bold font-clash">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500/20 to-pink-500/20 border border-white/20 flex items-center justify-center text-white text-[11px] font-bold font-clash">
                 {initials(item.authorName)}
               </div>
             )}
@@ -497,11 +497,11 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
               <button
                 type="button"
                 onClick={openProfilePreview}
-                className="text-sm font-bold text-white truncate hover:underline hover:text-emerald-400 text-left transition-colors"
+                className="text-xs sm:text-sm font-bold text-white truncate hover:underline hover:text-emerald-400 text-left transition-colors"
               >
                 {item.authorName.replace(/^@/, '')}
               </button>
-              <span className="text-xs text-white/40 truncate font-mono">{handle}</span>
+              <span className="text-[11px] text-white/40 truncate font-mono">{handle}</span>
             </div>
             <span className="text-[10px] text-white/30 font-mono">
               {formatRelative(item.createdAt)}
@@ -511,18 +511,18 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
 
         <div className="flex items-center gap-1.5 shrink-0">
           <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0A0908] border border-white/[0.06] text-[10px] font-bold uppercase tracking-wider text-white/45"
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[#161412] border border-white/20 text-[10px] font-bold uppercase tracking-wider text-white/70"
             title={isNostr ? 'From Nostr relays' : isSyncedToNostr ? 'Kylrix + Nostr Synced' : 'From Kylrix'}
           >
             {isNostr ? (
-              <Globe size={11} className="text-[#F59E0B]" />
+              <Globe size={10} className="text-[#F59E0B]" />
             ) : isSyncedToNostr ? (
               <>
-                <Shield size={11} className="text-emerald-400" />
-                <Globe size={10} className="text-[#F59E0B]" />
+                <Shield size={10} className="text-emerald-400" />
+                <Globe size={9} className="text-[#F59E0B]" />
               </>
             ) : (
-              <Shield size={11} className="text-emerald-400" />
+              <Shield size={10} className="text-emerald-400" />
             )}
             <span>{isNostr ? 'Nostr' : isSyncedToNostr ? 'Synced' : 'Kylrix'}</span>
           </span>
@@ -544,7 +544,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
 
       {/* Content */}
       {preview ? (
-        <p className="text-sm text-white/90 leading-relaxed break-words whitespace-pre-wrap font-satoshi m-0">
+        <p className="text-xs sm:text-sm text-white/90 leading-relaxed break-words whitespace-pre-wrap font-satoshi m-0">
           {preview}
         </p>
       ) : null}
@@ -552,7 +552,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
       {/* Media Attachments */}
       {images.length > 0 ? (
         <div
-          className={`rounded-xl overflow-hidden border border-white/[0.06] bg-[#0A0908] grid ${
+          className={`rounded-xl overflow-hidden border border-white/20 bg-[#161412] grid ${
             images.length > 1 ? 'grid-cols-2 gap-1' : 'grid-cols-1'
           }`}
           onClick={(e) => e.stopPropagation()}
@@ -563,7 +563,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
               key={src || i}
               src={src}
               alt=""
-              className="w-full h-36 sm:h-44 object-cover bg-white/5"
+              className="w-full h-28 sm:h-36 object-cover bg-white/5"
               loading="lazy"
               decoding="async"
               onError={(e) => {
@@ -576,7 +576,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
 
       {/* Interactive Action Strip */}
       <div
-        className="flex items-center justify-between pt-2 border-t border-white/[0.06] text-white/40 text-xs"
+        className="flex items-center justify-between pt-2 border-t border-white/20 text-white/40 text-xs"
         onClick={(e) => e.stopPropagation()}
       >
         <button
