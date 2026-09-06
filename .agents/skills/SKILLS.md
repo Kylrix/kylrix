@@ -4,7 +4,7 @@
 
 Hard policy also lives in repo-root `AGENTS.md` (Table/Row terms, single DB `passwordManagerDb`, no new in-app `app/api` routes, pnpm only, `/flows` + `/workspaces` routing).
 
-_Catalog covers 87 skills._
+_Catalog covers 88 skills._
 
 ## How to pick a skill
 
@@ -112,6 +112,7 @@ _Catalog covers 87 skills._
 |-------|------------|
 | `billing.blockbee-pro` | Kylrix Pro/Teams billing via BlockBee hosted checkout, coupons, and subscription ledger. Use for pricing, checkout, success, and admin Pro grants. |
 | `blockbee.hosted-checkout` | BlockBee hosted checkout for Pro/Teams billing. Use when editing pricing, checkout server actions, BlockBee URLs, IPN fulfillment, or yearly discount charging. |
+| `vercel` | Safe Vercel CLI workflows (inspect, logs, preview/prod deploy). Never mutate Vercel env unless the user explicitly asks. Local commerce = `.env.local`, not Vercel. |
 | `system.token-ledger-minting` | Explains the internal Kylrix Token ledger architecture. Explains micro-denomination conversions, supply restrictions, risk tightening, and activity-based mint d |
 | `token.ops-security` | Hardens $KYLRIX token operations with append-only ledger discipline, singleton state-row gating, and server-admin security boundaries. Use when editing token mi |
 
