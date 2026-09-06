@@ -85,19 +85,28 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const mapProjectRows = useCallback(
     (rows: unknown): WorkspaceItem[] =>
       normalizeProjectsList(rows)
-        .filter((p: any) => isWorkspaceRecord(p))
+        .filter((p: any) => {
+          // Switcher-shaped LocalEngine rows (id, not $id) — never treat as nested projects
+          if (p && typeof p.isPersonal === 'boolean' && p.id && !p.$id && !p.kind && !p.parentProjectId) {
+            return p.isPersonal !== true;
+          }
+          return isWorkspaceRecord(p);
+        })
         .map((p: any) => {
           const id = String(p.$id || p.id || '').trim();
           const ownerId = p.ownerId || p.userId || '';
           const isAgentic = p.isAgentic === true || String(p.isAgentic) === 'true';
-          const isOwned = ownerId === userId || (!ownerId && userId !== 'guest');
-          const isShared = !isOwned || p.isShared === true || (p.collabStatus && p.collabStatus !== 'owner');
+          const isOwned = !ownerId || ownerId === userId || userId === 'guest';
+          const isShared =
+            Boolean(p.isShared === true && !isOwned) ||
+            Boolean(!isOwned && !isAgentic) ||
+            Boolean(p.collabStatus && p.collabStatus !== 'owner' && !isOwned);
           return {
             id,
             title: p.title || p.name || 'Untitled Workspace',
             ownerId: ownerId || userId,
             isPersonal: false as const,
-            isShared: isShared && !isAgentic,
+            isShared: Boolean(isShared && !isAgentic),
             isAgentic,
             agentId: p.agentId || null,
             isPublic: !!p.isPublic,
@@ -151,10 +160,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(`kylrix_workspaces_${uid}`, JSON.stringify(items));
         localStorage.setItem('kylrix_all_cached_workspaces', JSON.stringify(items));
       }
+      // Never write WorkspaceItem[] into f_projects_list — that pollutes project rows and
+      // can cascade-filter the switcher down to personal-only after a bad refresh.
       import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
         LocalEngine.cacheSet(`kylrix_workspaces_${uid}`, items).catch(() => {});
-        LocalEngine.cacheSet(`f_projects_list_${uid}`, items).catch(() => {});
-        LocalEngine.cacheSet('f_projects_list', items).catch(() => {});
+        LocalEngine.cacheSet('kylrix_all_cached_workspaces', items).catch(() => {});
       }).catch(() => {});
     } catch {}
   }, []);
@@ -165,7 +175,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
       clearSessionProjectsList();
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      const [rows, localShared, directUserProjects, globalProjects, customCached] = await Promise.all([
+      const [rowsInitial, localShared, directUserProjects, globalProjects, customCached] = await Promise.all([
         warmProjectsList({
           userId: userId || 'guest',
           getCachedDataAsync,
@@ -177,13 +187,27 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         LocalEngine.cacheGet<any[]>(`kylrix_workspaces_${userId}`).catch(() => []),
       ]);
 
+      let rows = rowsInitial;
+      // Heal: empty/poisoned LocalEngine (bad sub-project filter wrote [] or WorkspaceItem[])
+      if (!Array.isArray(rows) || rows.length === 0 || !rows.some((p: any) => p?.$id)) {
+        rows = await warmProjectsList({
+          userId: userId || 'guest',
+          getCachedDataAsync,
+          fetchOptimized,
+          force: true,
+        }).catch(() => rowsInitial);
+      }
+
+      // Prefer real project rows; switcher cache is last resort (may be personal-only after a bad filter)
       const candidateRows = (Array.isArray(rows) && rows.length > 0)
         ? rows
-        : (Array.isArray(customCached) && customCached.length > 0)
-          ? customCached
-          : (Array.isArray(directUserProjects) && directUserProjects.length > 0)
-            ? directUserProjects
-            : (Array.isArray(globalProjects) ? globalProjects : []);
+        : (Array.isArray(directUserProjects) && directUserProjects.length > 0 && directUserProjects.some((p) => p?.$id))
+          ? directUserProjects
+          : (Array.isArray(globalProjects) && globalProjects.some((p) => p?.$id))
+            ? globalProjects
+            : (Array.isArray(customCached) && customCached.length > 0)
+              ? customCached
+              : [];
 
       const mapped = mapProjectRows(candidateRows);
       const mappedLocal = Array.isArray(localShared)

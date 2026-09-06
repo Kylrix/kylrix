@@ -38,13 +38,27 @@ export function getParentProjectId(project: Partial<Projects> | null | undefined
 
 export function isSubProjectRecord(project: Partial<Projects> | null | undefined): boolean {
   if (!project) return false;
-  if (getProjectKind(project) === 'project') return true;
-  if (getParentProjectId(project)) return true;
+  const kind = getProjectKind(project);
+  const parentId = getParentProjectId(project);
   const meta = parseProjectMetadata(project.metadata);
-  return meta.isSubProject === true || Boolean(meta.parentWorkspaceId);
+
+  // Canonical nested project: kind=project AND parent workspace id
+  if (kind === 'project' && parentId) return true;
+
+  // Legacy metadata sub-project flag (requires a parent pointer)
+  if (meta.isSubProject === true && (parentId || meta.parentWorkspaceId)) return true;
+
+  // parentProjectId set on a non-workspace row → nested
+  if (parentId && kind !== 'workspace') return true;
+
+  // kind=project with NO parent is a mis-tagged legacy workspace (schema default) — NOT a sub-project
+  return false;
 }
 
 export function isWorkspaceRecord(project: Partial<Projects> | null | undefined): boolean {
+  if (!project) return false;
+  // Explicit workspace kind always counts (even if stale parentProjectId noise)
+  if (getProjectKind(project) === 'workspace') return true;
   return !isSubProjectRecord(project);
 }
 
