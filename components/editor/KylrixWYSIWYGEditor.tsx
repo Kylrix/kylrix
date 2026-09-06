@@ -1,10 +1,21 @@
 'use client';
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { EditorView, keymap, placeholder as cmPlaceholder, WidgetType, Decoration, DecorationSet } from '@codemirror/view';
-import { EditorState, StateField, Range } from '@codemirror/state';
+import {
+  EditorView,
+  keymap,
+  placeholder as cmPlaceholder,
+  WidgetType,
+  Decoration,
+  DecorationSet,
+  ViewPlugin,
+  type ViewUpdate,
+} from '@codemirror/view';
+import { EditorState, StateField, Range, RangeSetBuilder } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
+import { HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 import { parseObjectBlocks, serializeObjectBlock, type SecondaryObjectPayload } from '@/lib/note-object-secondary';
 import { Mic, Paperclip, Loader2 } from 'lucide-react';
 import { StorageService } from '@/lib/services/storage';
@@ -14,6 +25,80 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import toast from 'react-hot-toast';
+
+/** Markdown punctuation nodes to hide while the caret is outside that construct. */
+const MARKDOWN_MARK_NODES = new Set([
+  'HeaderMark',
+  'EmphasisMark',
+  'StrongMark',
+  'CodeMark',
+  'LinkMark',
+  'StrikethroughMark',
+]);
+
+const liveMarkdownHighlight = HighlightStyle.define([
+  { tag: tags.heading1, fontSize: '1.75rem', fontWeight: '800', fontFamily: 'var(--font-clash), sans-serif', color: '#FFFFFF', lineHeight: '1.3' },
+  { tag: tags.heading2, fontSize: '1.4rem', fontWeight: '800', fontFamily: 'var(--font-clash), sans-serif', color: '#FFFFFF', lineHeight: '1.35' },
+  { tag: tags.heading3, fontSize: '1.15rem', fontWeight: '700', fontFamily: 'var(--font-clash), sans-serif', color: '#FFFFFF', lineHeight: '1.4' },
+  { tag: tags.heading4, fontSize: '1.05rem', fontWeight: '700', color: '#FFFFFF' },
+  { tag: tags.heading5, fontSize: '1rem', fontWeight: '700', color: '#FFFFFF' },
+  { tag: tags.heading6, fontSize: '0.95rem', fontWeight: '700', color: '#FFFFFF' },
+  { tag: tags.strong, fontWeight: '800', color: '#FFFFFF' },
+  { tag: tags.emphasis, fontStyle: 'italic', color: '#FFFFFF' },
+  { tag: tags.strikethrough, textDecoration: 'line-through', color: 'rgba(255,255,255,0.72)' },
+  { tag: tags.link, color: '#818CF8', textDecoration: 'underline', textUnderlineOffset: '3px' },
+  { tag: tags.url, color: '#818CF8', opacity: 0.85 },
+  { tag: tags.monospace, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: '0.9em', color: '#A5B4FC', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '4px' },
+  { tag: tags.quote, color: 'rgba(255,255,255,0.78)', fontStyle: 'italic' },
+  { tag: tags.list, color: '#FFFFFF' },
+  { tag: tags.meta, color: 'rgba(255,255,255,0.35)' },
+  { tag: tags.processingInstruction, color: 'rgba(255,255,255,0.35)' },
+  { tag: tags.contentSeparator, color: 'rgba(255,255,255,0.2)' },
+]);
+
+const hiddenMarkDeco = Decoration.replace({});
+
+/** Hide markdown punctuation unless the selection intersects that mark's parent. */
+function buildHiddenMarkdownMarks(view: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  const selection = view.state.selection.main;
+  const editable = view.state.facet(EditorView.editable);
+
+  for (const { from, to } of view.visibleRanges) {
+    syntaxTree(view.state).iterate({
+      from,
+      to,
+      enter(node) {
+        if (!MARKDOWN_MARK_NODES.has(node.name)) return;
+        if (editable) {
+          const parent = node.node.parent;
+          const regionFrom = parent ? parent.from : node.from;
+          const regionTo = parent ? parent.to : node.to;
+          // Keep marks visible while editing inside the same construct.
+          if (selection.from <= regionTo && selection.to >= regionFrom) return;
+        }
+        builder.add(node.from, node.to, hiddenMarkDeco);
+      },
+    });
+  }
+
+  return builder.finish();
+}
+
+const liveMarkdownMarkHider = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = buildHiddenMarkdownMarks(view);
+    }
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.selectionSet || update.viewportChanged) {
+        this.decorations = buildHiddenMarkdownMarks(update.view);
+      }
+    }
+  },
+  { decorations: (v) => v.decorations }
+);
 
 interface KylrixWYSIWYGEditorProps {
   value: string;
@@ -247,7 +332,7 @@ export function KylrixWYSIWYGEditor({
       '&': {
         height: '100%',
         backgroundColor: 'transparent',
-        color: 'rgba(255, 255, 255, 0.92)',
+        color: '#FFFFFF',
         fontFamily: 'inherit',
         fontSize: '15px',
       },
@@ -257,7 +342,7 @@ export function KylrixWYSIWYGEditor({
         caretColor: '#6366F1',
       },
       '.cm-line': {
-        padding: '0',
+        padding: '0.15em 0',
       },
       '&.cm-focused': {
         outline: 'none',
@@ -302,6 +387,8 @@ export function KylrixWYSIWYGEditor({
         history(),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown({ base: markdownLanguage }),
+        syntaxHighlighting(liveMarkdownHighlight),
+        liveMarkdownMarkHider,
         cmPlaceholder(placeholder),
         customTheme,
         objectBlockField,
