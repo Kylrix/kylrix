@@ -538,7 +538,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
                   acceptSuggestion();
                 }
               }}
-              placeholder={placeholder}
+              placeholder={suggestion ? '' : placeholder}
               className={`relative w-full flex-1 min-h-[100px] bg-transparent border-none text-white leading-relaxed focus:outline-none resize-none placeholder:text-white/30 font-satoshi caret-[#F59E0B] ${
                 isExpanded ? 'text-xl' : 'text-[17px]'
               }`}
