@@ -36,6 +36,10 @@ function walletsKey(userId: string) {
 function metaKey(userId: string) {
   return `${PREFIX}_meta_${userId}`;
 }
+/** Post-WebAuthn kwrap seed cache (not MEK). Used only after a successful assertion. */
+function passkeyFallbackSeedKey(userId: string, credentialId: string) {
+  return `${PREFIX}_passkey_seed_${userId}_${credentialId}`;
+}
 
 /** Legacy keys written by older vault/client paths */
 const LEGACY_KEYCHAIN = (userId: string) => [
@@ -136,6 +140,18 @@ export const SecurityEnclave = {
   async getPasskeyEntries(userId: string): Promise<any[]> {
     const rows = await this.getKeychain(userId);
     return rows.filter((r) => r?.type === 'passkey');
+  },
+
+  /** Cached wrapping-seed (base64) for a passkey — avoids blocking unlock on server HMAC. */
+  async getPasskeyFallbackSeed(userId: string, credentialId: string): Promise<string | null> {
+    if (!userId || !credentialId) return null;
+    const hit = await LocalEngine.cacheGet<string>(passkeyFallbackSeedKey(userId, credentialId));
+    return typeof hit === 'string' && hit.trim() ? hit : null;
+  },
+
+  async setPasskeyFallbackSeed(userId: string, credentialId: string, seedBase64: string): Promise<void> {
+    if (!userId || !credentialId || !seedBase64) return;
+    await LocalEngine.cacheSet(passkeyFallbackSeedKey(userId, credentialId), seedBase64);
   },
 
   async getUserDoc(userId: string): Promise<any | null> {

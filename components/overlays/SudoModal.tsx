@@ -175,17 +175,22 @@ export default function SudoModal({
         return () => clearInterval(interval);
     }, [migrationStatus]);
 
-    const handleSuccessWithSync = useCallback(async () => {
-        if (user?.$id) {
-            try {
-                // Sudo Hook: Ensure E2E Identity is created and published upon successful MasterPass unlock
-                console.log("[Kylrix] Synchronizing Identity...");
-                await ecosystemSecurity.ensureE2EIdentity(user.$id);
-            } catch (err) {
-                console.warn("[Kylrix] Non-blocking Identity Sync failure:", err);
-            }
-        }
+    const handleSuccessWithSync = useCallback(() => {
+        // Unlock UI immediately — identity / enclave sync must never gate the vault session.
         onSuccessRef.current();
+        if (user?.$id) {
+            void (async () => {
+                try {
+                    await ecosystemSecurity.ensureE2EIdentity(user.$id);
+                } catch (err) {
+                    console.warn("[Kylrix] Background identity sync failure:", err);
+                }
+                try {
+                    const { SecurityEnclave } = await import('@/lib/security/enclave');
+                    await SecurityEnclave.hydrateFromRemote(user.$id);
+                } catch {}
+            })();
+        }
     }, [user?.$id]);
 
     const handleRedirectToVaultSetup = useCallback(() => {
@@ -273,7 +278,10 @@ export default function SudoModal({
                     // If local probe returned empty but device is online, attempt AppwriteService fetch as secondary verification
                     if (entriesRes.length === 0 && typeof navigator !== 'undefined' && navigator.onLine !== false) {
                         try {
-                            const remoteEntries = await AppwriteService.listKeychainEntries(userId);
+                            const remoteEntries = await Promise.race([
+                                AppwriteService.listKeychainEntries(userId),
+                                new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 3500)),
+                            ]);
                             if (remoteEntries.length > 0) {
                                 entriesRes = remoteEntries;
                                 await SecurityEnclave.setKeychain(userId, remoteEntries);

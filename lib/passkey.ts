@@ -10,9 +10,48 @@ import { bufferToBase64Url } from '@/lib/webauthn-utils';
 import toast from 'react-hot-toast';
 import { getPasskeyRegisterFallbackSeedAction } from '@/lib/actions/auth-actions';
 
+function seedBase64ToBuffer(seed: string): ArrayBuffer {
+  return new Uint8Array(atob(seed).split('').map((c) => c.charCodeAt(0))).buffer;
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise.then((v) => v).catch(() => null),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function tryUnwrapMek(
+  kwrapSeed: ArrayBuffer,
+  wrappedKeyBytes: Uint8Array,
+): Promise<ArrayBuffer | null> {
+  try {
+    const kwrap = await crypto.subtle.importKey(
+      'raw',
+      kwrapSeed,
+      { name: 'AES-GCM' },
+      false,
+      ['decrypt'],
+    );
+    const iv = wrappedKeyBytes.slice(0, 12);
+    const ciphertext = wrappedKeyBytes.slice(12);
+    return await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, kwrap, ciphertext);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Unlocks the ecosystem security (MEK) using a registered passkey.
  * signal allows SudoModal to abort cleanly when switching to password — abort is not a failure.
+ * MEK unwrap stays local; server seed / keychain fetch never gate unlock longer than a short timeout.
  */
 export async function unlockWithPasskey(userId: string, signal?: AbortSignal): Promise<boolean> {
   try {
@@ -21,8 +60,12 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
     let passkeyEntries = await SecurityEnclave.getPasskeyEntries(userId);
 
     if (passkeyEntries.length === 0) {
-      const entries = await AppwriteService.listKeychainEntries(userId);
-      passkeyEntries = entries.filter((k: any) => k.type === 'passkey');
+      // Soft-timeout remote fill — never hang unlock on a dead socket
+      const entries = await withTimeout(AppwriteService.listKeychainEntries(userId), 4000);
+      if (entries?.length) {
+        passkeyEntries = entries.filter((k: any) => k.type === 'passkey');
+        void SecurityEnclave.setKeychain(userId, entries).catch(() => {});
+      }
     }
 
     if (passkeyEntries.length === 0) {
@@ -46,8 +89,16 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
       userVerification: 'preferred' as UserVerificationRequirement,
       timeout: 60000};
 
-    const hasAnyAuthPasskey = passkeyEntries.some((entry: any) => entry.authPasskey);
-    if (hasAnyAuthPasskey) {
+    const wantsPrf = passkeyEntries.some((entry: any) => {
+      if (entry.authPasskey) return true;
+      try {
+        const paramsObj = typeof entry.params === 'string' ? JSON.parse(entry.params) : entry.params;
+        return !!paramsObj?.prf;
+      } catch {
+        return false;
+      }
+    });
+    if (wantsPrf) {
       authOptions.extensions = {
         prf: {
           eval: {
@@ -73,9 +124,11 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
       return false;
     }
 
-    // 5. Derive the wrapping key
-    let kwrapSeed: ArrayBuffer;
+    const wrappedKeyBytes = new Uint8Array(
+      atob(matchingEntry.wrappedKey).split('').map((c) => c.charCodeAt(0)),
+    );
 
+    // 5. Resolve kwrap seed locally first (PRF → cached → digest), server only as last resort
     let usePrf = false;
     if (matchingEntry.params) {
       try {
@@ -84,62 +137,69 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
       } catch (_e) {}
     }
 
+    const seedCandidates: ArrayBuffer[] = [];
+
     if (usePrf) {
       const extensionResults = authResp.clientExtensionResults as any;
       const prfBuffer = extensionResults?.prf?.results?.first;
       if (prfBuffer) {
-        kwrapSeed = prfBuffer;
-      } else {
-        const fallbackRes = await getPasskeyRegisterFallbackSeedAction(matchingEntry.credentialId);
-        if (fallbackRes.success && fallbackRes.seed) {
-          kwrapSeed = new Uint8Array(
-            atob(fallbackRes.seed).split("").map(c => c.charCodeAt(0))
-          ).buffer;
-        } else {
-          const encoder = new TextEncoder();
-          const credentialData = encoder.encode(authResp.id + userId);
-          kwrapSeed = await crypto.subtle.digest("SHA-256", credentialData);
-        }
-      }
-    } else {
-      const fallbackRes = await getPasskeyRegisterFallbackSeedAction(matchingEntry.credentialId);
-      if (fallbackRes.success && fallbackRes.seed) {
-        kwrapSeed = new Uint8Array(
-          atob(fallbackRes.seed).split("").map(c => c.charCodeAt(0))
-        ).buffer;
-      } else {
-        const encoder = new TextEncoder();
-        const credentialData = encoder.encode(authResp.id + userId);
-        kwrapSeed = await crypto.subtle.digest("SHA-256", credentialData);
+        seedCandidates.push(
+          prfBuffer instanceof ArrayBuffer
+            ? prfBuffer
+            : (prfBuffer as Uint8Array).buffer.slice(
+                (prfBuffer as Uint8Array).byteOffset,
+                (prfBuffer as Uint8Array).byteOffset + (prfBuffer as Uint8Array).byteLength,
+              ),
+        );
       }
     }
 
-    const kwrap = await crypto.subtle.importKey(
-      "raw",
-      kwrapSeed,
-      { name: "AES-GCM" },
-      false,
-      ["decrypt"]);
+    const cachedSeed = await SecurityEnclave.getPasskeyFallbackSeed(userId, matchingEntry.credentialId);
+    if (cachedSeed) {
+      seedCandidates.push(seedBase64ToBuffer(cachedSeed));
+    }
 
-    // 6. Unwrap the Master Encryption Key (MEK)
-    const wrappedKeyBytes = new Uint8Array(
-      atob(matchingEntry.wrappedKey).split("").map(c => c.charCodeAt(0))
-    );
+    // Legacy local digest (offline last resort before / after timed-out server)
+    {
+      const encoder = new TextEncoder();
+      const credentialData = encoder.encode(authResp.id + userId);
+      seedCandidates.push(await crypto.subtle.digest('SHA-256', credentialData));
+    }
 
-    const iv = wrappedKeyBytes.slice(0, 12);
-    const ciphertext = wrappedKeyBytes.slice(12);
+    let mekBytes: ArrayBuffer | null = null;
+    for (const seed of seedCandidates) {
+      mekBytes = await tryUnwrapMek(seed, wrappedKeyBytes);
+      if (mekBytes) break;
+    }
 
-    const mekBytes = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: iv },
-      kwrap,
-      ciphertext
-    );
+    if (!mekBytes) {
+      const fallbackRes = await withTimeout(
+        getPasskeyRegisterFallbackSeedAction(matchingEntry.credentialId),
+        4000,
+      );
+      if (fallbackRes?.success && fallbackRes.seed) {
+        mekBytes = await tryUnwrapMek(seedBase64ToBuffer(fallbackRes.seed), wrappedKeyBytes);
+        if (mekBytes) {
+          void SecurityEnclave.setPasskeyFallbackSeed(
+            userId,
+            matchingEntry.credentialId,
+            fallbackRes.seed,
+          ).catch(() => {});
+        }
+      }
+    }
 
-    // 7. Import the MEK into ecosystemSecurity
+    if (!mekBytes) {
+      toast.error('Passkey unlock failed: could not unwrap vault key');
+      return false;
+    }
+
+    // 6. Import the MEK into ecosystemSecurity — unlock is complete once this succeeds
     const success = await ecosystemSecurity.importMasterKey(mekBytes);
 
     if (success) {
-      toast.success("Vault unlocked via Passkey");
+      // Warm identity/enclave in background — never block unlock UX
+      void SecurityEnclave.hydrateFromRemote(userId).catch(() => {});
       return true;
     }
 
