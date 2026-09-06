@@ -1,6 +1,6 @@
 'use server';
 
-import { generateLLMCompletion } from '@/lib/agentic/llm-provider';
+import { generateAiSdkCompletion } from '@/lib/agentic/llm-provider';
 import {
   buildMomentCompletePrompt,
   buildMomentDoppelgangerSystemInstruction,
@@ -29,6 +29,12 @@ function stripDraftPrefix(completion: string, draft: string): string {
   const d = draft.trim();
   if (d && out.startsWith(d)) {
     out = out.slice(d.length).replace(/^\s+/, '');
+  }
+  if (out.startsWith('{')) {
+    try {
+      const j = JSON.parse(out);
+      out = String(j.suffix || j.completion || j.post || j.text || '').trim() || out;
+    } catch {}
   }
   return out;
 }
@@ -60,10 +66,7 @@ export async function completeMomentDraftAction(params: {
       coldStartHints: params.coldStartHints,
     });
 
-    const raw = await generateLLMCompletion({
-      systemInstruction,
-      prompt,
-    });
+    const raw = await generateAiSdkCompletion({ systemInstruction, prompt });
     const completion = stripDraftPrefix(raw, draft).slice(0, 400);
     return { success: true, completion };
   } catch (err: any) {
@@ -95,11 +98,14 @@ export async function generateMomentTakeoverAction(params: {
       coldStartHints: params.coldStartHints,
     });
 
-    const raw = await generateLLMCompletion({
-      systemInstruction,
-      prompt,
-    });
-    const post = cleanModelText(raw).slice(0, 2000);
+    const raw = await generateAiSdkCompletion({ systemInstruction, prompt });
+    let post = cleanModelText(raw).slice(0, 2000);
+    if (post.startsWith('{')) {
+      try {
+        const j = JSON.parse(post);
+        post = String(j.post || j.text || j.content || '').trim() || post;
+      } catch {}
+    }
     if (!post) return { success: false, error: 'Empty draft from agent' };
     return { success: true, post };
   } catch (err: any) {
