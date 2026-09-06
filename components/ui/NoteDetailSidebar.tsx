@@ -1153,8 +1153,8 @@ export function NoteDetailSidebar({
   if (awaitingLocalCopy) {
     return (
       <div
-        className={`note-detail-sidebar-root flex flex-col bg-[#0A0908] overflow-hidden text-white w-full ${
-          isPageLayout ? 'min-h-0' : 'h-full bg-[#161412]'
+        className={`note-detail-sidebar-root flex flex-col overflow-hidden text-white w-full ${
+          isPageLayout ? 'min-h-0 bg-[#000000]' : 'h-full bg-[#161412]'
         }`}
       >
         <div className="flex-1 flex flex-col gap-3 p-5 animate-pulse">
@@ -1170,13 +1170,15 @@ export function NoteDetailSidebar({
 
   return (
     <div
-      className={`note-detail-sidebar-root flex flex-col bg-[#161412] text-white w-full ${
-        isPageLayout ? 'min-h-screen overflow-visible' : 'h-full overflow-hidden'
+      className={`note-detail-sidebar-root flex flex-col text-white w-full ${
+        isPageLayout
+          ? 'min-h-screen overflow-visible bg-[#000000]'
+          : 'h-full overflow-hidden bg-[#161412]'
       }`}
     >
       {/* Header */}
       <div
-        className={`flex flex-col gap-3 border-b border-white/[0.08] bg-[#161412] shrink-0 ${
+        className={`flex flex-col gap-3 border-b-2 border-white/20 bg-[#161412] shrink-0 ${
           isPageLayout ? 'px-4 md:px-5 pt-1 pb-3' : 'p-4 pb-3'
         }`}
       >
@@ -1402,7 +1404,7 @@ export function NoteDetailSidebar({
         }`}
       >
         {/* Unified WYSIWYG Editor */}
-        <div className="flex flex-col rounded-[24px] bg-[#000000] border border-white/20 overflow-hidden flex-shrink-0">
+        <div className="flex flex-col rounded-[24px] bg-[#000000] border-2 border-white/20 overflow-hidden flex-shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-5 pt-4 pb-3 border-b border-white/5">
             <div className="min-w-0 flex flex-col gap-0.5">
               <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash">

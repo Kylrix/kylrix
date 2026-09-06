@@ -292,7 +292,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
   // Loading
   if (access.role === 'loading' || authLoading) {
     return (
-      <div className="min-h-screen bg-[#0A0908] flex items-center justify-center">
+      <div className="min-h-screen bg-[#000000] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 rounded-full border-2 border-[#6366F1]/30 border-t-[#6366F1] animate-spin" />
           <p className="text-white/40 text-sm font-semibold">Loading note…</p>
@@ -308,7 +308,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
     const needsLogin = !isAuthenticated && !isExpired && !isNotFound;
 
     return (
-      <div className="min-h-screen bg-[#0A0908] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-[#000000] flex items-center justify-center px-6">
         <div className="max-w-md w-full text-center space-y-8">
           {/* Icon */}
           <div className="relative mx-auto w-20 h-20">
@@ -381,7 +381,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
   const showExpand = false; // page layout — no expand button needed
 
   return (
-    <div className="min-h-screen bg-[#0A0908] flex flex-col">
+    <div className="min-h-screen bg-[#000000] flex flex-col">
       <NoteDetailSidebar
         note={note}
         onUpdate={handleNoteUpdate}
