@@ -12,6 +12,12 @@ import {
   pickCompletionSource,
   recordAiInference,
 } from '@/lib/agentic/offline-complete';
+import {
+  lookupCachedSuggestion,
+  lookupCachedTakeover,
+  rememberSuggestion,
+  rememberTakeover,
+} from '@/lib/agentic/suggestion-cache';
 
 type LearningStatus = 'off' | 'initializing' | 'ready' | 'empty';
 type SuggestionSource = 'offline' | 'ai';
@@ -88,11 +94,27 @@ export function useTypeIntelligence(opts: {
     debounceRef.current = setTimeout(() => {
       void (async () => {
         const myReq = ++reqIdRef.current;
+        const scope = `type_intel_${kind}`;
+
+        // Local cache first — absorb delete/retype without AI or offline recompute
+        const cached = await lookupCachedSuggestion({
+          scope,
+          userId,
+          draft,
+        });
+        if (myReq !== reqIdRef.current) return;
+        if (cached) {
+          sourceRef.current = 'offline';
+          setSuggestion(cached);
+          setBusy(false);
+          return;
+        }
+
         const offline = completeOfflineSuffix(draft, samplesRef.current, {
           niche: NICHE_BY_KIND[kind],
         });
         const source = await pickCompletionSource({
-          scope: `type_intel_${kind}`,
+          scope,
           offlineSuffix: offline,
           allowAi: isPro,
         });
@@ -101,8 +123,10 @@ export function useTypeIntelligence(opts: {
 
         if (source === 'offline') {
           sourceRef.current = 'offline';
-          setSuggestion(offline.trim());
+          const text = offline.trim();
+          setSuggestion(text);
           setBusy(false);
+          if (text) void rememberSuggestion({ scope, userId, draft, suggestion: text });
           return;
         }
 
@@ -114,7 +138,7 @@ export function useTypeIntelligence(opts: {
 
         setBusy(true);
         try {
-          await recordAiInference(`type_intel_${kind}`);
+          await recordAiInference(scope);
           const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
           const { completeTypeIntelDraftAction } = await import('@/lib/actions/type-intel');
           const res = await completeTypeIntelDraftAction({
@@ -128,18 +152,24 @@ export function useTypeIntelligence(opts: {
           if (myReq !== reqIdRef.current) return;
           if (!res.success) {
             if (String(res.error || '').toLowerCase().includes('pro')) onOpenPro();
-            // Fall back to offline if AI failed
             sourceRef.current = 'offline';
             setSuggestion(offline.trim());
+            if (offline.trim()) {
+              void rememberSuggestion({ scope, userId, draft, suggestion: offline.trim() });
+            }
             return;
           }
           const aiText = String(res.completion || '').trim();
           if (aiText) {
             sourceRef.current = 'ai';
             setSuggestion(aiText);
+            void rememberSuggestion({ scope, userId, draft, suggestion: aiText });
           } else {
             sourceRef.current = 'offline';
             setSuggestion(offline.trim());
+            if (offline.trim()) {
+              void rememberSuggestion({ scope, userId, draft, suggestion: offline.trim() });
+            }
           }
         } catch {
           if (myReq === reqIdRef.current) {
@@ -182,11 +212,19 @@ export function useTypeIntelligence(opts: {
       onOpenPro();
       return;
     }
+    const scope = `type_intel_takeover_${kind}`;
     setBusy(true);
     try {
+      const cached = await lookupCachedTakeover({ scope, userId, draft });
+      if (cached) {
+        setDraft(cached);
+        setSuggestion('');
+        setAcceptStreak(0);
+        return;
+      }
       const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
       const { generateTypeIntelTakeoverAction } = await import('@/lib/actions/type-intel');
-      await recordAiInference(`type_intel_takeover_${kind}`);
+      await recordAiInference(scope);
       const res = await generateTypeIntelTakeoverAction({
         kind,
         draft,
@@ -202,6 +240,7 @@ export function useTypeIntelligence(opts: {
       setDraft(res.draft);
       setSuggestion('');
       setAcceptStreak(0);
+      void rememberTakeover({ scope, userId, draft, body: res.draft });
     } finally {
       setBusy(false);
     }

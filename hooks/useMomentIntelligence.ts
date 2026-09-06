@@ -12,6 +12,12 @@ import {
   pickCompletionSource,
   recordAiInference,
 } from '@/lib/agentic/offline-complete';
+import {
+  lookupCachedSuggestion,
+  lookupCachedTakeover,
+  rememberSuggestion,
+  rememberTakeover,
+} from '@/lib/agentic/suggestion-cache';
 
 type LearningStatus = 'off' | 'initializing' | 'ready' | 'empty';
 type SuggestionSource = 'offline' | 'ai';
@@ -81,12 +87,27 @@ export function useMomentIntelligence(opts: {
     debounceRef.current = setTimeout(() => {
       void (async () => {
         const myReq = ++reqIdRef.current;
+        const scope = 'moment_doppelganger';
+
+        const cached = await lookupCachedSuggestion({
+          scope,
+          userId,
+          draft,
+        });
+        if (myReq !== reqIdRef.current) return;
+        if (cached) {
+          sourceRef.current = 'offline';
+          setSuggestion(cached);
+          setBusy(false);
+          return;
+        }
+
         const offline = completeOfflineSuffix(draft, samplesRef.current, {
           niche: 'connect',
           minConfidence: 0.5,
         });
         const source = await pickCompletionSource({
-          scope: 'moment_doppelganger',
+          scope,
           offlineSuffix: offline,
           allowAi: isPro,
         });
@@ -95,8 +116,10 @@ export function useMomentIntelligence(opts: {
 
         if (source === 'offline') {
           sourceRef.current = 'offline';
-          setSuggestion(offline.trim());
+          const text = offline.trim();
+          setSuggestion(text);
           setBusy(false);
+          if (text) void rememberSuggestion({ scope, userId, draft, suggestion: text });
           return;
         }
 
@@ -108,7 +131,7 @@ export function useMomentIntelligence(opts: {
 
         setBusy(true);
         try {
-          await recordAiInference('moment_doppelganger');
+          await recordAiInference(scope);
           const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
           const { completeMomentDraftAction } = await import('@/lib/actions/moment-doppelganger');
           const res = await completeMomentDraftAction({
@@ -123,15 +146,22 @@ export function useMomentIntelligence(opts: {
             if (String(res.error || '').toLowerCase().includes('pro')) onOpenPro();
             sourceRef.current = 'offline';
             setSuggestion(offline.trim());
+            if (offline.trim()) {
+              void rememberSuggestion({ scope, userId, draft, suggestion: offline.trim() });
+            }
             return;
           }
           const aiText = String(res.completion || '').trim();
           if (aiText) {
             sourceRef.current = 'ai';
             setSuggestion(aiText);
+            void rememberSuggestion({ scope, userId, draft, suggestion: aiText });
           } else {
             sourceRef.current = 'offline';
             setSuggestion(offline.trim());
+            if (offline.trim()) {
+              void rememberSuggestion({ scope, userId, draft, suggestion: offline.trim() });
+            }
           }
         } catch {
           if (myReq === reqIdRef.current) {
@@ -174,9 +204,17 @@ export function useMomentIntelligence(opts: {
       onOpenPro();
       return;
     }
+    const scope = 'moment_takeover';
     setBusy(true);
     try {
-      await recordAiInference('moment_takeover');
+      const cached = await lookupCachedTakeover({ scope, userId, draft });
+      if (cached) {
+        setDraft(cached);
+        setSuggestion('');
+        setAcceptStreak(0);
+        return;
+      }
+      await recordAiInference(scope);
       const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
       const { generateMomentTakeoverAction } = await import('@/lib/actions/moment-doppelganger');
       const res = await generateMomentTakeoverAction({
@@ -193,6 +231,7 @@ export function useMomentIntelligence(opts: {
       setDraft(res.post);
       setSuggestion('');
       setAcceptStreak(0);
+      void rememberTakeover({ scope, userId, draft, body: res.post });
     } finally {
       setBusy(false);
     }
