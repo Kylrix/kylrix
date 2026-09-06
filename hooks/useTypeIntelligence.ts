@@ -12,6 +12,7 @@ import {
   pickCompletionSource,
   recordAiInference,
 } from '@/lib/agentic/offline-complete';
+import { asSuggestionSuffix } from '@/lib/agentic/suggestion-suffix';
 
 const loadSuggestCache = () => import('@/lib/agentic/suggestion-cache');
 
@@ -40,6 +41,11 @@ export function useTypeIntelligence(opts: {
 
   const [learningStatus, setLearningStatus] = useState<LearningStatus>('off');
   const [suggestion, setSuggestion] = useState('');
+  const applySuggestion = useCallback((raw: string, forDraft: string) => {
+    const cleaned = asSuggestionSuffix(forDraft, raw);
+    setSuggestion(cleaned);
+    return cleaned;
+  }, []);
   const [busy, setBusy] = useState(false);
   const [acceptStreak, setAcceptStreak] = useState(0);
   const [showWand, setShowWand] = useState(false);
@@ -102,7 +108,7 @@ export function useTypeIntelligence(opts: {
         if (myReq !== reqIdRef.current) return;
         if (cached) {
           sourceRef.current = 'offline';
-          setSuggestion(cached);
+          applySuggestion(cached, draft);
           setBusy(false);
           return;
         }
@@ -121,7 +127,7 @@ export function useTypeIntelligence(opts: {
         if (source === 'offline') {
           sourceRef.current = 'offline';
           const text = offline.trim();
-          setSuggestion(text);
+          applySuggestion(text, draft);
           setBusy(false);
           if (text) void rememberSuggestion({ scope, userId, draft, suggestion: text });
           return;
@@ -150,7 +156,7 @@ export function useTypeIntelligence(opts: {
           if (!res.success) {
             if (String(res.error || '').toLowerCase().includes('pro')) onOpenPro();
             sourceRef.current = 'offline';
-            setSuggestion(offline.trim());
+            applySuggestion(offline, draft);
             if (offline.trim()) {
               void rememberSuggestion({ scope, userId, draft, suggestion: offline.trim() });
             }
@@ -159,11 +165,11 @@ export function useTypeIntelligence(opts: {
           const aiText = String(res.completion || '').trim();
           if (aiText) {
             sourceRef.current = 'ai';
-            setSuggestion(aiText);
+            applySuggestion(aiText, draft);
             void rememberSuggestion({ scope, userId, draft, suggestion: aiText });
           } else {
             sourceRef.current = 'offline';
-            setSuggestion(offline.trim());
+            applySuggestion(offline, draft);
             if (offline.trim()) {
               void rememberSuggestion({ scope, userId, draft, suggestion: offline.trim() });
             }
@@ -171,7 +177,7 @@ export function useTypeIntelligence(opts: {
         } catch {
           if (myReq === reqIdRef.current) {
             sourceRef.current = 'offline';
-            setSuggestion(offline.trim());
+            applySuggestion(offline, draft);
           }
         } finally {
           if (myReq === reqIdRef.current) setBusy(false);

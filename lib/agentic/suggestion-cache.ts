@@ -3,6 +3,8 @@
  * Exact draft hits + near-prefix recovery. Persisted in LocalEngine per scope.
  */
 
+import { asSuggestionSuffix } from '@/lib/agentic/suggestion-suffix';
+
 const MAX_ENTRIES = 120;
 const TTL_MS = 1000 * 60 * 60 * 24 * 14; // 14 days
 const PREFIX_SLACK = 28; // chars deleted from end still reuse nearest longer/shorter hit
@@ -94,7 +96,7 @@ function pickBest(entries: CacheEntry[], draftNorm: string, kind: CacheEntry['ki
   if (bestLonger) {
     // Reconstruct: remaining typed chars from the longer draft + original suggestion
     const remainder = bestLonger.draft.slice(draftNorm.length);
-    const rebuilt = `${remainder}${bestLonger.suggestion}`;
+    const rebuilt = asSuggestionSuffix(draftNorm, `${remainder}${bestLonger.suggestion}`);
     if (rebuilt.trim().length >= 2) {
       return { ...bestLonger, draft: draftNorm, suggestion: rebuilt };
     }
@@ -111,8 +113,9 @@ function pickBest(entries: CacheEntry[], draftNorm: string, kind: CacheEntry['ki
     const sug = e.suggestion;
     if (sug.startsWith(extra) || sug.replace(/^\s+/, '').startsWith(extra.replace(/^\s+/, ''))) {
       const rest = sug.startsWith(extra) ? sug.slice(extra.length) : sug.replace(/^\s+/, '').slice(extra.replace(/^\s+/, '').length);
-      if (rest.trim().length >= 2) {
-        const candidate = { ...e, draft: draftNorm, suggestion: rest };
+      const cleaned = asSuggestionSuffix(draftNorm, rest);
+      if (cleaned.trim().length >= 2) {
+        const candidate = { ...e, draft: draftNorm, suggestion: cleaned };
         if (!bestShorter || e.draft.length > bestShorter.draft.length) bestShorter = candidate;
       }
     }
@@ -130,7 +133,9 @@ export async function lookupCachedSuggestion(opts: {
   if (draftNorm.length < 3) return null;
   const entries = await loadEntries(opts.scope, opts.userId);
   const hit = pickBest(entries, draftNorm, 'suffix');
-  return hit?.suggestion?.trim() ? hit.suggestion : null;
+  if (!hit?.suggestion?.trim()) return null;
+  const cleaned = asSuggestionSuffix(opts.draft, hit.suggestion);
+  return cleaned.trim() ? cleaned : null;
 }
 
 /** Persist a live suffix suggestion (offline or AI). */
@@ -141,7 +146,7 @@ export async function rememberSuggestion(opts: {
   suggestion: string;
 }): Promise<void> {
   const draftNorm = normalizeSuggestDraft(opts.draft);
-  const suggestion = String(opts.suggestion || '').trim();
+  const suggestion = asSuggestionSuffix(opts.draft, String(opts.suggestion || ''));
   if (draftNorm.length < 3 || suggestion.length < 2) return;
   const entries = await loadEntries(opts.scope, opts.userId);
   entries.unshift({

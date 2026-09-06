@@ -5,6 +5,7 @@
 
 import { predictiveAutocomplete } from '@/lib/contextual-engine/predictive-autocomplete';
 import type { ContextualNiche } from '@/lib/contextual-engine/types';
+import { asSuggestionSuffix } from '@/lib/agentic/suggestion-suffix';
 
 const AI_ALLOW_RATIO = 0.4; // at most ~40% of fallbacks may hit AI
 const MIN_AI_GAP_MS = 14_000;
@@ -36,15 +37,17 @@ export function completeOfflineSuffix(
   const text = String(draft || '');
   if (text.trim().length < 2) return '';
 
+  const finish = (raw: string) => asSuggestionSuffix(text, raw);
+
   try {
     const pred = predictiveAutocomplete.predict(text, text.length, {
       niche: options.niche || 'productivity',
       minConfidence: options.minConfidence ?? 0.55,
     });
-    const inline = String(pred.inlineSuffix || '').trim();
+    const inline = finish(String(pred.inlineSuffix || ''));
     if (inline.length >= 2) return inline.slice(0, 120);
-    const top = pred.suggestions?.[0]?.text;
-    if (top && String(top).trim().length >= 2) return String(top).trim().slice(0, 120);
+    const top = finish(String(pred.suggestions?.[0]?.text || ''));
+    if (top.length >= 2) return top.slice(0, 120);
   } catch {}
 
   const words = text.trim().split(/\s+/);
@@ -54,23 +57,22 @@ export function completeOfflineSuffix(
       const body = String(s?.text || '');
       const idx = body.toLowerCase().indexOf(tail);
       if (idx >= 0) {
-        const rest = body.slice(idx + tail.length).replace(/^\s+/, '');
+        const rest = finish(body.slice(idx + tail.length));
         if (rest.length >= 4) return rest.slice(0, 100);
       }
     }
   }
 
-  // Weak cold-start: borrow a short fragment from a sample that shares a word
-  const lastWord = (words[words.length - 1] || '').toLowerCase().replace(/[^a-z0-9]/gi, '');
+  // Weak cold-start: only remainder after shared opening with draft (never restate draft)
+  const lastWord = (words[words.length - 1] || '').toLowerCase().replace(/[^a-z0-9']/gi, '');
   if (lastWord.length >= 4) {
     for (const s of samples) {
-      const body = String(s?.text || '');
-      if (body.toLowerCase().includes(lastWord)) {
-        const parts = body.split(/[.!?\n]/).map((p) => p.trim()).filter((p) => p.length > 12);
-        const pick = parts[0];
-        if (pick && !text.toLowerCase().includes(pick.toLowerCase().slice(0, 20))) {
-          return pick.slice(0, 80);
-        }
+      const body = String(s?.text || '').trim();
+      if (!body.toLowerCase().includes(lastWord)) continue;
+      const parts = body.split(/[.!?\n]/).map((p) => p.trim()).filter((p) => p.length > 12);
+      for (const pick of parts) {
+        const suffix = finish(pick);
+        if (suffix.length >= 4) return suffix.slice(0, 80);
       }
     }
   }
@@ -100,7 +102,6 @@ export function suggestOfflineReply(
     .map((s) => String(s?.text || '').trim())
     .filter((s) => s.length >= 8 && s.length <= 160);
 
-  // Prefer short sample replies that do not echo the parent verbatim
   for (const s of pool) {
     if (parent && parent.slice(0, 40).toLowerCase() === s.slice(0, 40).toLowerCase()) continue;
     if (/^(just shared|shared an update)/i.test(s)) continue;
@@ -109,7 +110,6 @@ export function suggestOfflineReply(
 
   if (!parent) return '';
 
-  // Soft topic hook from parent first words — restrained, not fake praise
   const topic = parent
     .replace(/\s+/g, ' ')
     .slice(0, 48)
@@ -160,9 +160,7 @@ export async function pickCompletionSource(opts: {
   allowAi: boolean;
 }): Promise<'offline' | 'ai' | 'none'> {
   if (opts.offlineSuffix.trim().length >= 2) {
-    // Even with offline hit, rarely skip to AI only if offline is tiny AND budget — prefer offline
     if (opts.offlineSuffix.trim().length >= 6) return 'offline';
-    // Short offline: still prefer offline 70%
     if (Math.random() < 0.7) return 'offline';
   }
   if (!opts.allowAi) return opts.offlineSuffix.trim() ? 'offline' : 'none';

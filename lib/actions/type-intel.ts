@@ -19,6 +19,7 @@ import type { TypeIntelKind } from '@/lib/agentic/type-intel-kinds';
 import { TYPE_INTEL_KINDS } from '@/lib/agentic/type-intel-kinds';
 import { AI_REQUIRES_PRO_MESSAGE } from '@/lib/agentic/access';
 import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
+import { asSuggestionSuffix } from '@/lib/agentic/suggestion-suffix';
 
 async function getActor(jwt?: string) {
   const { getActor } = await import('./secure-ops');
@@ -36,17 +37,13 @@ function cleanModelText(raw: string): string {
 
 function stripDraftPrefix(completion: string, draft: string): string {
   let out = cleanModelText(completion);
-  const d = draft.trim();
-  if (d && out.startsWith(d)) {
-    out = out.slice(d.length).replace(/^\s+/, '');
-  }
   if (out.startsWith('{')) {
     try {
       const j = JSON.parse(out);
       out = String(j.suffix || j.completion || j.post || j.text || j.content || '').trim() || out;
     } catch {}
   }
-  return out;
+  return asSuggestionSuffix(draft, out);
 }
 
 function assertKind(kind: string): TypeIntelKind {

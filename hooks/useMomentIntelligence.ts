@@ -13,6 +13,7 @@ import {
   recordAiInference,
   suggestOfflineReply,
 } from '@/lib/agentic/offline-complete';
+import { asSuggestionSuffix } from '@/lib/agentic/suggestion-suffix';
 
 const loadSuggestCache = () => import('@/lib/agentic/suggestion-cache');
 
@@ -63,6 +64,12 @@ export function useMomentIntelligence(opts: {
   const [busy, setBusy] = useState(false);
   const [acceptStreak, setAcceptStreak] = useState(0);
   const [showWand, setShowWand] = useState(false);
+
+  const applySuggestion = useCallback((raw: string, forDraft: string) => {
+    const cleaned = asSuggestionSuffix(forDraft, raw);
+    setSuggestion(cleaned);
+    return cleaned;
+  }, []);
 
   const samplesRef = useRef<MomentVoiceSample[]>([]);
   const hintsRef = useRef<string[]>([]);
@@ -159,7 +166,7 @@ export function useMomentIntelligence(opts: {
         if (myReq !== reqIdRef.current) return;
         if (cached) {
           sourceRef.current = 'offline';
-          setSuggestion(cached);
+          applySuggestion(cached, draft);
           setBusy(false);
           return;
         }
@@ -189,7 +196,7 @@ export function useMomentIntelligence(opts: {
         if (source === 'offline') {
           sourceRef.current = 'offline';
           const text = offline.trim();
-          setSuggestion(text);
+          applySuggestion(text, draft);
           setBusy(false);
           if (text) void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: text });
           return;
@@ -197,7 +204,7 @@ export function useMomentIntelligence(opts: {
 
         if (source !== 'ai' || !isPro) {
           sourceRef.current = 'offline';
-          setSuggestion(offline.trim());
+          applySuggestion(offline, draft);
           setBusy(false);
           if (offline.trim()) {
             void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: offline.trim() });
@@ -223,7 +230,7 @@ export function useMomentIntelligence(opts: {
           if (!res.success) {
             if (String(res.error || '').toLowerCase().includes('pro')) onOpenPro();
             sourceRef.current = 'offline';
-            setSuggestion(offline.trim());
+            applySuggestion(offline, draft);
             if (offline.trim()) {
               void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: offline.trim() });
             }
@@ -232,11 +239,11 @@ export function useMomentIntelligence(opts: {
           const aiText = String(res.completion || '').trim();
           if (aiText) {
             sourceRef.current = 'ai';
-            setSuggestion(aiText);
+            applySuggestion(aiText, draft);
             void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: aiText });
           } else {
             sourceRef.current = 'offline';
-            setSuggestion(offline.trim());
+            applySuggestion(offline, draft);
             if (offline.trim()) {
               void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: offline.trim() });
             }
@@ -244,7 +251,7 @@ export function useMomentIntelligence(opts: {
         } catch {
           if (myReq === reqIdRef.current) {
             sourceRef.current = 'offline';
-            setSuggestion(offline.trim());
+            applySuggestion(offline, draft);
           }
         } finally {
           if (myReq === reqIdRef.current) setBusy(false);
