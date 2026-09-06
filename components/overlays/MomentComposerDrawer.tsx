@@ -80,7 +80,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     runTakeover,
   } = useMomentIntelligence({
     userId: user?.$id,
-    displayName: user?.name || user?.email,
+    displayName: user?.name || user?.email || undefined,
     draft: content,
     enabled: createWithAgent,
     isPro,
