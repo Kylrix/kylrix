@@ -108,12 +108,13 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = '';
+      flushReinforce();
       if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
     };
-  }, []);
+  }, [flushReinforce]);
 
   useEffect(() => {
     void LocalEngine.cacheGet<boolean>('f_sync_to_nostr_pref').then((pref) => {
