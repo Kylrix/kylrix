@@ -449,13 +449,13 @@ export function PostViewClient({
 
   if (loading && !moment && !preview?.content) {
     return (
-      <div className="h-full w-full max-w-full min-w-0 overflow-x-hidden overflow-y-auto text-white bg-[#0A0908]">
+      <div className="h-full w-full max-w-full min-w-0 overflow-x-hidden overflow-y-auto text-white bg-[#161412]">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-[#0A0908] border-b border-[#34322F]">
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-[#161412] border-b-2 border-white/20">
           <button
             type="button"
             onClick={handleBack}
-            className="p-2 rounded-xl bg-[#161412] border border-[#34322F] text-white/60 hover:text-white shrink-0"
+            className="p-2 rounded-xl bg-[#000000] border-2 border-white/20 text-white/70 hover:text-white shrink-0"
             aria-label="Back"
           >
             <ArrowLeft size={18} />
@@ -467,34 +467,34 @@ export function PostViewClient({
 
         <div className="px-3 sm:px-4 py-4 space-y-3 min-w-0 max-w-full">
           {/* Main post article skeleton */}
-          <article className="rounded-[22px] border border-[#34322F] bg-[#161412] p-4 space-y-3 min-w-0 max-w-full overflow-hidden">
+          <article className="rounded-[22px] border-2 border-white/20 bg-[#000000] p-4 space-y-3 min-w-0 max-w-full overflow-hidden">
             <div className="flex items-start gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-full shrink-0 bg-[#0A0908] border border-white/[0.06] flex items-center justify-center text-[11px] font-black text-white/20">
+              <div className="w-11 h-11 rounded-full shrink-0 bg-[#161412] border border-white/20 flex items-center justify-center text-[11px] font-black text-white/40">
                 ••
               </div>
               <div className="min-w-0 flex-1 overflow-hidden space-y-2 pt-1">
-                <div className="h-3.5 w-32 rounded-md bg-white/[0.06]" />
-                <div className="h-2.5 w-20 rounded-md bg-white/[0.03]" />
+                <div className="h-3.5 w-32 rounded-md bg-white/10" />
+                <div className="h-2.5 w-20 rounded-md bg-white/5" />
               </div>
             </div>
 
             <div className="space-y-2 py-1">
-              <div className="h-4 w-full rounded-md bg-white/[0.05]" />
-              <div className="h-4 w-5/6 rounded-md bg-white/[0.05]" />
-              <div className="h-4 w-2/3 rounded-md bg-white/[0.05]" />
+              <div className="h-4 w-full rounded-md bg-white/10" />
+              <div className="h-4 w-5/6 rounded-md bg-white/10" />
+              <div className="h-4 w-2/3 rounded-md bg-white/10" />
             </div>
 
-            <div className="flex items-center gap-4 sm:gap-6 pt-3 border-t border-white/[0.06] min-w-0">
-              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/30">
+            <div className="flex items-center gap-4 sm:gap-6 pt-3 border-t-2 border-white/20 min-w-0">
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/50">
                 <Heart size={16} /> <span className="font-mono">0</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/30">
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/50">
                 <MessageCircle size={16} /> <span className="font-mono">0</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/30">
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/50">
                 <Repeat2 size={16} /> <span className="font-mono">0</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/30">
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/50">
                 <Zap size={16} /> <span className="font-mono">0</span>
               </span>
             </div>
@@ -502,10 +502,10 @@ export function PostViewClient({
 
           {/* Reply composer skeleton */}
           <div className="flex gap-2 items-end min-w-0 max-w-full">
-            <div className="min-w-0 flex-1 h-[42px] rounded-xl bg-[#161412] border border-[#34322F] px-4 flex items-center text-sm text-white/30 font-satoshi">
+            <div className="min-w-0 flex-1 h-[42px] rounded-xl bg-[#000000] border-2 border-white/20 px-4 flex items-center text-sm text-white/50 font-satoshi">
               Write a reply…
             </div>
-            <div className="shrink-0 h-[42px] px-4 rounded-xl bg-[#F59E0B]/30 text-black/50 font-bold text-sm flex items-center">
+            <div className="shrink-0 h-[42px] px-4 rounded-xl bg-[#F59E0B]/30 text-black/70 font-extrabold text-sm flex items-center">
               Reply
             </div>
           </div>
@@ -524,13 +524,13 @@ export function PostViewClient({
   }
 
   return (
-    <div className="h-full w-full max-w-full min-w-0 overflow-x-hidden overflow-y-auto text-white bg-[#0A0908]">
+    <div className="h-full w-full max-w-full min-w-0 overflow-x-hidden overflow-y-auto text-white bg-[#161412]">
       {/* Header */}
-      <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-[#0A0908] border-b border-[#34322F]">
+      <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-[#161412] border-b-2 border-white/20">
         <button
           type="button"
           onClick={handleBack}
-          className="p-2 rounded-xl bg-[#161412] border border-[#34322F] text-white/60 hover:text-white shrink-0"
+          className="p-2 rounded-xl bg-[#000000] border-2 border-white/20 text-white/70 hover:text-white shrink-0"
           aria-label="Back"
         >
           <ArrowLeft size={18} />
@@ -545,7 +545,7 @@ export function PostViewClient({
           <Repeat2 size={16} className="ml-auto text-[#00BA7C]" />
         )}
         {isReply && (
-          <div className="ml-auto flex items-center gap-1 text-[11px] text-white/40 font-mono">
+          <div className="ml-auto flex items-center gap-1 text-[11px] text-white/60 font-mono">
             <MessageCircle size={12} /> Reply thread
           </div>
         )}
@@ -561,8 +561,8 @@ export function PostViewClient({
         {/* Connecting thread pip between parent and current post */}
         {showParent && (
           <div className="flex items-center gap-2 pl-5 py-1">
-            <div className="h-4 w-[2px] bg-white/[0.10] rounded-full ml-[14px]" />
-            <span className="text-[10px] text-white/30 font-mono">
+            <div className="h-4 w-[2px] bg-white/20 rounded-full ml-[14px]" />
+            <span className="text-[10px] text-white/50 font-mono">
               {isReaction ? 'reacted to' : isRepost ? 'reposted' : 'replied to'}
             </span>
           </div>
@@ -573,14 +573,14 @@ export function PostViewClient({
           <button
             type="button"
             onClick={() => setEngagementDrawer({ open: true, kind: isReaction ? 'reaction' : 'repost', content: reactionContent })}
-            className="w-full flex items-center gap-3 rounded-[18px] border border-[#34322F] bg-[#161412] px-4 py-3 hover:bg-[#1C1A18] transition-colors"
+            className="w-full flex items-center gap-3 rounded-[18px] border-2 border-white/20 bg-[#000000] px-4 py-3 hover:border-white/40 transition-colors"
           >
             {isReaction ? (
               <>
                 <span className="text-3xl leading-none">{reactionEmoji(reactionContent || '+')}</span>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="text-sm font-bold text-white font-satoshi m-0">{who}</p>
-                  <p className="text-xs text-white/40 m-0">reacted · tap for details</p>
+                  <p className="text-xs text-white/60 m-0">reacted · tap for details</p>
                 </div>
               </>
             ) : (
@@ -588,7 +588,7 @@ export function PostViewClient({
                 <Repeat2 size={20} className="text-[#00BA7C] shrink-0" />
                 <div className="min-w-0 flex-1 text-left">
                   <p className="text-sm font-bold text-white font-satoshi m-0">{who}</p>
-                  <p className="text-xs text-white/40 m-0">reposted · tap for details</p>
+                  <p className="text-xs text-white/60 m-0">reposted · tap for details</p>
                 </div>
               </>
             )}
@@ -597,10 +597,10 @@ export function PostViewClient({
 
         {/* Main post article — always shown (for reaction/repost this shows the actor; the parent above shows the content) */}
         {(!isReaction && !isRepost) && (
-          <article className="rounded-[22px] border border-[#34322F] bg-[#161412] p-4 space-y-3 min-w-0 max-w-full overflow-hidden">
+          <article className="rounded-[22px] border-2 border-white/20 bg-[#000000] p-4 space-y-3 min-w-0 max-w-full overflow-hidden">
             <div className="flex items-start gap-3 min-w-0">
               <div
-                className="w-11 h-11 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black border border-white/[0.06] overflow-hidden bg-[#0A0908]"
+                className="w-11 h-11 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black border-2 border-white/20 overflow-hidden bg-[#161412]"
                 style={{ color: isNostr ? '#F59E0B' : '#34D399' }}
               >
                 {avatarUrl ? (
@@ -613,25 +613,25 @@ export function PostViewClient({
               <div className="min-w-0 flex-1 overflow-hidden">
                 <div className="flex items-center gap-2 min-w-0">
                   <p className="text-[15px] font-extrabold text-white font-satoshi truncate m-0">{who}</p>
-                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0A0908] border border-white/[0.06] text-[10px] font-bold uppercase tracking-wider text-white/45">
+                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#161412] border border-white/20 text-[10px] font-bold uppercase tracking-wider text-white">
                     {isNostr ? <Globe size={11} className="text-[#F59E0B]" /> : <Shield size={11} className="text-emerald-400" />}
                     {isNostr ? 'Nostr' : 'Kylrix'}
                   </span>
                 </div>
-                <p className="text-[13px] text-white/40 font-medium truncate m-0 mt-0.5">
+                <p className="text-[13px] text-white/60 font-medium truncate m-0 mt-0.5">
                   {handle.startsWith('@') || handle.startsWith('npub') ? handle : `@${handle}`}
                 </p>
               </div>
             </div>
 
             {body ? (
-              <p className="text-[16px] leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-satoshi text-white/[0.92] m-0 max-w-full">
+              <p className="text-[16px] leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-satoshi text-white m-0 max-w-full">
                 {body}
               </p>
             ) : null}
 
             {images.length > 0 ? (
-              <div className={`w-full max-w-full rounded-xl overflow-hidden border border-white/[0.06] bg-[#0A0908] grid ${images.length > 1 ? 'grid-cols-2 gap-1' : 'grid-cols-1'}`}>
+              <div className={`w-full max-w-full rounded-xl overflow-hidden border border-white/20 bg-[#161412] grid ${images.length > 1 ? 'grid-cols-2 gap-1' : 'grid-cols-1'}`}>
                 {images.map(src => (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -668,32 +668,32 @@ export function PostViewClient({
                     }
                   }));
                 }}
-                className="w-full max-w-full max-h-[65vh] rounded-xl border border-white/[0.06] object-contain bg-[#0A0908] cursor-pointer hover:opacity-95 transition-opacity"
+                className="w-full max-w-full max-h-[65vh] rounded-xl border border-white/20 object-contain bg-[#161412] cursor-pointer hover:opacity-95 transition-opacity"
               />
             ) : null}
 
-            <div className="flex items-center gap-4 sm:gap-6 pt-3 border-t border-white/[0.06] min-w-0 flex-wrap">
+            <div className="flex items-center gap-4 sm:gap-6 pt-3 border-t-2 border-white/20 min-w-0 flex-wrap">
               <button
                 type="button"
                 disabled={busy}
                 onClick={() => void toggleLike()}
-                className={`inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold disabled:opacity-40 shrink-0 ${liked ? 'text-[#F91880]' : 'text-white/60 hover:text-[#F91880]'}`}
+                className={`inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold disabled:opacity-40 shrink-0 ${liked ? 'text-[#F91880]' : 'text-white hover:text-[#F91880]'}`}
               >
                 <Heart size={16} className={liked ? 'fill-[#F91880]' : ''} />
                 <span className="font-mono">{likes}</span>
               </button>
-              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/40 shrink-0">
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white shrink-0">
                 <MessageCircle size={16} />
                 <span className="font-mono">{replies.length}</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/40 shrink-0">
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white shrink-0">
                 <Repeat2 size={16} />
                 <span className="font-mono">{reposts}</span>
               </span>
               <button
                 type="button"
                 onClick={() => setEngagementDrawer({ open: true, kind: 'zap' })}
-                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/40 hover:text-[#F59E0B] shrink-0"
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white hover:text-[#F59E0B] shrink-0"
               >
                 <Zap size={16} className={zaps > 0 ? 'text-[#F59E0B] fill-[#F59E0B]' : ''} />
                 <span className="font-mono">{zaps}</span>
@@ -701,7 +701,7 @@ export function PostViewClient({
               <button
                 type="button"
                 onClick={handleShare}
-                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/60 hover:text-white ml-auto shrink-0 cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white hover:text-white/80 ml-auto shrink-0 cursor-pointer"
               >
                 <Share2 size={16} />
                 <span className="hidden sm:inline">Share</span>
@@ -734,13 +734,13 @@ export function PostViewClient({
               spellCheck={false}
               data-gramm="false"
               placeholder={source === 'nostr' && isVaultLocked ? 'Unlock vault to reply…' : 'Write a reply…'}
-              className="min-w-0 flex-1 rounded-xl bg-[#161412] border border-[#34322F] px-4 py-2.5 text-sm outline-none focus:border-white/20 resize-none max-h-[140px] leading-relaxed text-white font-satoshi"
+              className="min-w-0 flex-1 rounded-xl bg-[#000000] border-2 border-white/20 px-4 py-2.5 text-sm outline-none focus:border-white/40 resize-none max-h-[140px] leading-relaxed text-white font-satoshi placeholder:text-white/40"
             />
             {source === 'nostr' && isVaultLocked ? (
               <button
                 type="button"
                 onClick={() => void unlockAndLoad()}
-                className="shrink-0 h-[42px] rounded-xl bg-[#F59E0B]/15 text-[#F59E0B] font-bold text-sm px-3 inline-flex items-center gap-1.5 border border-[#F59E0B]/30"
+                className="shrink-0 h-[42px] rounded-xl bg-[#F59E0B]/15 text-[#F59E0B] font-bold text-sm px-3 inline-flex items-center gap-1.5 border-2 border-[#F59E0B]/40"
               >
                 <Lock size={14} /> Unlock
               </button>
@@ -749,7 +749,7 @@ export function PostViewClient({
                 type="button"
                 disabled={busy || !replyContent.trim() || (source === 'ecosystem' && !user)}
                 onClick={() => void sendReply()}
-                className="shrink-0 h-[42px] rounded-xl bg-[#F59E0B] text-black font-bold text-sm px-4 disabled:opacity-40 transition-opacity"
+                className="shrink-0 h-[42px] rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm px-4 disabled:opacity-40 transition-opacity cursor-pointer"
               >
                 Reply
               </button>
@@ -761,17 +761,17 @@ export function PostViewClient({
         {!isReaction && !isRepost && (
           <ul className="space-y-2 min-w-0 max-w-full list-none p-0 m-0">
             {replies.length === 0 ? (
-              <li className="rounded-[18px] border border-[#34322F] bg-[#161412] px-4 py-8 text-center text-sm text-white/35">
+              <li className="rounded-[18px] border-2 border-white/20 bg-[#000000] px-4 py-8 text-center text-sm text-white/50">
                 No comments yet
               </li>
             ) : (
               replies.map(r => (
                 <li
                   key={r.id}
-                  className="rounded-[18px] border border-[#34322F] bg-[#161412] px-4 py-3.5 min-w-0 max-w-full overflow-hidden"
+                  className="rounded-[18px] border-2 border-white/20 bg-[#000000] px-4 py-3.5 min-w-0 max-w-full overflow-hidden"
                 >
-                  <div className="text-[11px] font-bold text-white/40 mb-1 truncate">{r.authorName}</div>
-                  <p className="text-[14px] text-white/85 whitespace-pre-wrap break-words [overflow-wrap:anywhere] m-0 font-satoshi max-w-full">
+                  <div className="text-[11px] font-extrabold text-white/60 mb-1 truncate">{r.authorName}</div>
+                  <p className="text-[14px] text-white whitespace-pre-wrap break-words [overflow-wrap:anywhere] m-0 font-satoshi max-w-full">
                     {r.content}
                   </p>
                 </li>

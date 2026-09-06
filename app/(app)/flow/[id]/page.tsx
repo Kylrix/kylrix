@@ -101,23 +101,23 @@ export default function FlowSharePage({ params }: { params: Promise<{ id: string
   };
 
   return (
-    <div className="flex-1 min-h-screen font-satoshi text-white">
+    <div className="flex-1 min-h-screen font-satoshi text-white bg-[#161412]">
       <div className="w-full max-w-[640px] mx-auto p-4 md:p-8 space-y-5">
         <button
           type="button"
           onClick={() => router.push('/flows')}
-          className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-white/60 hover:text-white cursor-pointer"
+          className="p-2 rounded-xl bg-[#000000] border-2 border-white/20 text-white/70 hover:text-white cursor-pointer"
         >
           <ArrowLeft size={16} />
         </button>
 
         {loading ? (
-          <div className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-8 text-center text-sm text-white/40">
+          <div className="rounded-[22px] bg-[#000000] border-2 border-white/20 p-8 text-center text-sm text-white/50">
             Loading…
           </div>
         ) : error || !flow ? (
-          <div className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-8 text-center space-y-3">
-            <p className="text-sm font-bold text-white/50">{error || 'Flow not found'}</p>
+          <div className="rounded-[22px] bg-[#000000] border-2 border-white/20 p-8 text-center space-y-3">
+            <p className="text-sm font-bold text-white/70">{error || 'Flow not found'}</p>
             <button
               type="button"
               onClick={() => router.push('/flows')}
@@ -128,26 +128,26 @@ export default function FlowSharePage({ params }: { params: Promise<{ id: string
           </div>
         ) : (
           <>
-            <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-4">
+            <section className="rounded-[22px] bg-[#161412] border-2 border-white/20 p-5 space-y-4">
               <div className="flex items-start gap-3">
-                <div className="p-3 rounded-2xl bg-[#0A0908] border border-white/[0.06] text-[#A855F7]">
+                <div className="p-3 rounded-2xl bg-[#000000] border-2 border-white/20 text-[#A855F7]">
                   <Layers size={22} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="font-clash text-2xl font-semibold tracking-tight truncate">
+                  <h1 className="font-clash text-2xl font-semibold tracking-tight truncate text-white">
                     {flow.name}
                   </h1>
                   {publisher && (
-                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-white/50">
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-white/60">
                       <span className="font-bold">{publisher.handle}</span>
                       <VerifiedMark kind={publisher.verified} />
                       {flow.isPublic && (
-                        <span className="text-white/30">· Discover</span>
+                        <span className="text-white/40">· Discover</span>
                       )}
                     </div>
                   )}
                   {flow.description ? (
-                    <p className="mt-3 text-sm text-white/45">{flow.description}</p>
+                    <p className="mt-3 text-sm text-white/70">{flow.description}</p>
                   ) : null}
                 </div>
               </div>
@@ -156,7 +156,7 @@ export default function FlowSharePage({ params }: { params: Promise<{ id: string
                 <button
                   type="button"
                   onClick={() => void handleShare()}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#0A0908] border border-white/[0.08] text-white cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#000000] border-2 border-white/20 text-white cursor-pointer hover:border-white/40"
                 >
                   <Share2 size={14} />
                   Share
@@ -174,7 +174,7 @@ export default function FlowSharePage({ params }: { params: Promise<{ id: string
                   <button
                     type="button"
                     onClick={() => router.push('/flows')}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#0A0908] border border-white/[0.08] text-white/60 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#000000] border-2 border-white/20 text-white/70 cursor-pointer"
                   >
                     Installed
                   </button>
@@ -191,14 +191,14 @@ export default function FlowSharePage({ params }: { params: Promise<{ id: string
               </div>
             </section>
 
-            <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-2.5">
-              <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
+            <section className="rounded-[22px] bg-[#161412] border-2 border-white/20 p-5 space-y-2.5">
+              <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white">
                 Steps
               </h3>
               {flow.steps.map((step, idx) => (
                 <div
                   key={`${step.actionId}-${idx}`}
-                  className="rounded-xl bg-[#0A0908] border border-white/[0.05] px-3 py-2.5 text-[11px] font-mono text-white/55 truncate"
+                  className="rounded-xl bg-[#000000] border-2 border-white/20 px-3 py-2.5 text-[11px] font-mono text-white/75 truncate"
                 >
                   {step.actionId}
                 </div>

@@ -50,7 +50,7 @@ export async function generateMetadata(props: {
 /** Canonical share surface: /moment/[id] (also accepts nostr_<hex>). */
 export default function MomentSharePage() {
   return (
-    <div className="min-h-[100dvh] bg-[#000000] pt-6 pb-16">
+    <div className="min-h-[100dvh] bg-[#161412] pt-6 pb-16">
       <PostViewClient />
     </div>
   );

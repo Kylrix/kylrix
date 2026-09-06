@@ -501,9 +501,9 @@ export function HangoutsDrawer({
   };
 
   return (
-    <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-[#000000] text-white select-none">
+    <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-[#161412] text-white select-none">
       {/* Slim top controls */}
-      <div className="flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-[#0A0908] px-4 sm:px-6 py-3">
+      <div className="flex shrink-0 items-center justify-between border-b-2 border-white/20 bg-[#161412] px-4 sm:px-6 py-3">
         <span className="truncate text-xs font-mono font-bold uppercase tracking-wider text-[#A855F7]">
           {mode === 'share' ? 'Share to Hangout' : 'Hangouts'}
         </span>
@@ -512,7 +512,7 @@ export function HangoutsDrawer({
             <button
               type="button"
               onClick={() => setShowCreateChat(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#000000] border-2 border-white/20 text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
               title="New hangout"
             >
               <Plus size={15} />
@@ -522,7 +522,7 @@ export function HangoutsDrawer({
             <button
               type="button"
               onClick={onToggleExpand}
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#000000] border-2 border-white/20 text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
               title={isExpanded ? 'Dock drawer' : 'Expand'}
             >
               {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
@@ -531,7 +531,7 @@ export function HangoutsDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer ml-1"
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#000000] border-2 border-white/20 text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer ml-1"
             title="Close"
           >
             <X size={16} />
@@ -545,7 +545,7 @@ export function HangoutsDrawer({
           <h2 className="m-0 truncate font-clash text-lg font-black text-white">
             {mode === 'share' && object ? `Share "${object.title || 'Item'}"` : 'Hangouts & Chats'}
           </h2>
-          <p className="m-0 mt-1 truncate font-satoshi text-xs font-bold text-white/45">
+          <p className="m-0 mt-1 truncate font-satoshi text-xs font-bold text-white/60">
             {mode === 'share'
               ? 'Pick hangouts to send this to'
               : currentWorkspaceTitle
@@ -558,17 +558,17 @@ export function HangoutsDrawer({
       {mode === 'browse' && (
         <div className="shrink-0 space-y-2.5 px-4 pb-3 pt-2">
           <div className="relative flex items-center">
-            <Search size={14} className="pointer-events-none absolute left-3.5 text-white/30" />
+            <Search size={14} className="pointer-events-none absolute left-3.5 text-white/50" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search hangouts..."
-              className="h-10 w-full rounded-2xl border border-white/[0.08] bg-[#0A0908] pl-9 pr-3 text-xs text-white placeholder:text-white/25 focus:border-[#A855F7]/50 focus:outline-none"
+              className="h-10 w-full rounded-2xl border-2 border-white/20 bg-[#000000] pl-9 pr-3 text-xs text-white placeholder:text-white/40 focus:border-[#A855F7] focus:outline-none"
             />
           </div>
 
-          <div className="flex gap-0.5 rounded-2xl border border-white/[0.08] bg-[#0A0908] p-1">
+          <div className="flex gap-0.5 rounded-2xl border-2 border-white/20 bg-[#000000] p-1">
             {(
               [
                 { id: 'all', label: 'All' },
@@ -583,8 +583,8 @@ export function HangoutsDrawer({
                 onClick={() => setFilterTab(tab.id)}
                 className={`min-w-0 flex-1 rounded-xl px-2 py-1.5 text-[11px] font-extrabold transition-all ${
                   filterTab === tab.id
-                    ? 'bg-[#161412] text-white shadow-sm'
-                    : 'text-white/40 hover:text-white/70'
+                    ? 'bg-[#161412] text-white shadow-sm border border-white/20'
+                    : 'text-white/60 hover:text-white'
                 }`}
               >
                 {tab.label}
@@ -628,7 +628,7 @@ export function HangoutsDrawer({
             )}
           </div>
         ) : (
-          <div>
+          <div className="space-y-2 px-4 py-2">
             {filteredTargets.map((target) => {
               const isSelected = selected.has(target.id);
               const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !isVaultUnlocked;
@@ -667,11 +667,11 @@ export function HangoutsDrawer({
                     }
                   }}
                   disabled={mode === 'share' && isSecureLocked}
-                  className={`flex w-full max-w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                  className={`flex w-full max-w-full items-center gap-3.5 p-3.5 rounded-2xl bg-[#000000] border-2 border-white/20 text-left transition-all ${
                     isSecureLocked
                       ? 'cursor-not-allowed opacity-45'
-                      : 'hover:bg-white/[0.04] active:bg-white/[0.06]'
-                  } ${mode === 'share' && isSelected ? 'bg-[#A855F7]/10' : ''}`}
+                      : 'hover:border-white/40 hover:bg-white/[0.04] active:scale-[0.99]'
+                  } ${mode === 'share' && isSelected ? 'border-[#A855F7] bg-[#A855F7]/10' : ''}`}
                 >
                   <div className="relative shrink-0">
                     {target.kind === 'secure' ? (
@@ -681,21 +681,21 @@ export function HangoutsDrawer({
                         fallback={(target.label || '?').charAt(0).toUpperCase()}
                       />
                     ) : (
-                      <div className="grid h-12 w-12 place-items-center rounded-full bg-[#0A0908] border border-white/[0.08] text-[#A855F7]">
+                      <div className="grid h-12 w-12 place-items-center rounded-full bg-[#161412] border border-white/20 text-[#A855F7]">
                         <MessageCircleMore size={20} />
                       </div>
                     )}
                     {target.isWorkspace && (
-                      <div className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-[#161412] bg-[#A855F7]">
+                      <div className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-[#000000] bg-[#A855F7]">
                         <Sparkles size={8} className="text-white" />
                       </div>
                     )}
                   </div>
 
-                  <div className="min-w-0 flex-1 border-b border-white/[0.06] pb-2.5">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                        <span className="truncate text-[15px] font-semibold leading-tight text-white">
+                        <span className="truncate text-[15px] font-bold leading-tight text-white">
                           {target.label}
                         </span>
                         {target.isEncrypted && (
@@ -703,13 +703,13 @@ export function HangoutsDrawer({
                         )}
                       </div>
                       {timeLabel ? (
-                        <span className="shrink-0 text-[11px] text-white/35">{timeLabel}</span>
+                        <span className="shrink-0 text-[11px] font-semibold text-white/50">{timeLabel}</span>
                       ) : null}
                     </div>
-                    <p className="m-0 mt-0.5 truncate text-[13px] leading-snug text-white/45">
+                    <p className="m-0 mt-1 truncate text-[13px] leading-snug text-white/70">
                       {previewIsEncrypted ? (
                         <span className="inline-flex items-center gap-1">
-                          <Lock size={12} className="text-white/35" />
+                          <Lock size={12} className="text-white/50" />
                           <span>{displayPreview}</span>
                         </span>
                       ) : (
@@ -721,10 +721,10 @@ export function HangoutsDrawer({
 
                   {mode === 'share' && (
                     <div
-                      className={`mb-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
                         isSelected
                           ? 'border-[#A855F7] bg-[#A855F7] text-white'
-                          : 'border-white/25 text-transparent'
+                          : 'border-white/30 text-transparent'
                       }`}
                     >
                       <Check size={12} strokeWidth={3} />

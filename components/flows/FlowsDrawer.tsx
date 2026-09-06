@@ -71,14 +71,14 @@ function FlowRow({
   recentlyUpdated?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-[#000000] border border-white/[0.08] overflow-hidden h-full shadow-sm hover:border-white/15 transition-all">
+    <div className="rounded-2xl bg-[#000000] border-2 border-white/20 overflow-hidden h-full shadow-sm hover:border-white/40 transition-all">
       <div className="flex items-center gap-3.5 p-4">
         <button
           type="button"
           onClick={onOpen}
           className="flex items-center gap-3.5 min-w-0 flex-1 text-left cursor-pointer"
         >
-          <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.08] text-[#A855F7] shrink-0">
+          <div className="p-2.5 rounded-xl bg-[#161412] border border-white/20 text-[#A855F7] shrink-0">
             <Layers size={16} />
           </div>
           <div className="min-w-0 flex-1 pr-1.5">
@@ -346,13 +346,13 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
   return (
     <div className={
       isDesktop
-        ? "flex flex-col h-full min-h-0 w-full max-w-full bg-[#000000] text-white overflow-hidden select-none"
-        : "fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#000000] text-white overflow-hidden select-none animate-in fade-in duration-200"
+        ? "flex flex-col h-full min-h-0 w-full max-w-full bg-[#161412] text-white overflow-hidden select-none"
+        : "fixed inset-0 z-50 flex flex-col w-full h-[100dvh] max-h-[100dvh] bg-[#161412] text-white overflow-hidden select-none animate-in fade-in duration-200"
     }>
       {/* Top Header Chrome */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.08] bg-[#0A0908] shrink-0">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b-2 border-white/20 bg-[#161412] shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#A855F7]/15 border border-[#A855F7]/30 flex items-center justify-center text-[#A855F7]">
+          <div className="w-8 h-8 rounded-xl bg-[#000000] border border-[#A855F7]/40 flex items-center justify-center text-[#A855F7]">
             <GitFork size={16} />
           </div>
           <h2 className="text-base font-bold text-white tracking-tight m-0">
@@ -374,7 +374,7 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer ml-1"
+              className="p-1.5 rounded-xl bg-[#000000] border-2 border-white/20 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer ml-1"
               title="Close Flows"
               aria-label="Close Flows"
             >
@@ -388,7 +388,7 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
       <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 min-h-0 select-text w-full mx-auto space-y-6">
         {/* Navigation Tab Bar */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#161412] border border-white/[0.06] w-fit">
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#000000] border-2 border-white/20 w-fit">
             {(
               [
                 { id: 'discover', label: 'Discover', count: discoverList.length },
@@ -404,11 +404,11 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
                   className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-colors cursor-pointer ${
                     active
                       ? 'bg-[#A855F7] text-white'
-                      : 'text-white/45 hover:text-white hover:bg-white/[0.04]'
+                      : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
                   }`}
                 >
                   {f.label}
-                  <span className={`ml-1.5 ${active ? 'text-white/70' : 'text-white/25'}`}>
+                  <span className={`ml-1.5 ${active ? 'text-white/80' : 'text-white/35'}`}>
                     {f.count}
                   </span>
                 </button>
@@ -419,24 +419,24 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
 
         {/* Saved Drafts */}
         {drafts.length > 0 && (
-          <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3">
+          <section className="rounded-[22px] bg-[#161412] border-2 border-white/20 p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">Drafts</h3>
-              <span className="text-[10px] font-bold text-white/30">{drafts.length}</span>
+              <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white">Drafts</h3>
+              <span className="text-[10px] font-bold text-white/50">{drafts.length}</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {drafts.map((d) => (
-                <div key={d.id} className="rounded-2xl bg-[#000000] border border-white/[0.08] p-3.5 flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.08] text-white/70 shrink-0">
+                <div key={d.id} className="rounded-2xl bg-[#000000] border-2 border-white/20 p-3.5 flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-[#161412] border border-white/20 text-white/70 shrink-0">
                     <Workflow size={16} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-white truncate">{d.name || (d as any).title || 'Untitled'}</p>
-                    <p className="text-[11px] text-white/60 truncate">{d.niche} · {d.steps.length} steps{(d as any).ready ? ' · ready' : ''}</p>
+                    <p className="text-[11px] text-white/70 truncate">{d.niche} · {d.steps.length} steps{(d as any).ready ? ' · ready' : ''}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button type="button" onClick={() => void handleResumeDraft(d)} className="px-3 py-1.5 rounded-lg bg-[#A855F7] text-white text-[11px] font-extrabold cursor-pointer">Resume</button>
-                    <button type="button" onClick={() => void handleDeleteDraft(d.id)} className="p-2 rounded-lg bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white cursor-pointer"><Trash2 size={14} /></button>
+                    <button type="button" onClick={() => void handleDeleteDraft(d.id)} className="p-2 rounded-lg bg-[#161412] border border-white/20 text-white/70 hover:text-white cursor-pointer"><Trash2 size={14} /></button>
                   </div>
                 </div>
               ))}
@@ -445,24 +445,24 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
         )}
 
         {/* Flows Grid */}
-        <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-4">
-          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
+        <section className="rounded-[22px] bg-[#161412] border-2 border-white/20 p-5 space-y-4">
+          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white">
             {tab === 'discover' ? 'Discover' : 'Installed'}
           </h3>
 
           {list.length === 0 ? (
-            <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] px-4 py-10 text-center space-y-4">
-              <div className="mx-auto w-fit p-3 rounded-2xl bg-[#161412] border border-white/[0.06] text-[#A855F7]">
+            <div className="rounded-2xl bg-[#000000] border-2 border-white/20 px-4 py-10 text-center space-y-4">
+              <div className="mx-auto w-fit p-3 rounded-2xl bg-[#161412] border border-white/20 text-[#A855F7]">
                 <Workflow size={22} />
               </div>
-              <p className="text-sm font-bold text-white/50">
+              <p className="text-sm font-bold text-white/60">
                 {tab === 'discover' ? 'Nothing to discover yet' : 'No flows installed'}
               </p>
               {tab === 'installed' && (
                 <button
                   type="button"
                   onClick={() => setTab('discover')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#161412] border border-white/[0.08] text-white cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#161412] border-2 border-white/20 text-white cursor-pointer"
                 >
                   Browse Discover
                 </button>
