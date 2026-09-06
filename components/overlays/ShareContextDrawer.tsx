@@ -601,7 +601,7 @@ export function ShareContextDrawer() {
               ) : null}
             </span>
             <p className="text-xs font-mono text-white/80 truncate m-0 mt-0.5">
-              {resolvedUrl || 'https://www.kylrix.space/...'}
+              {resolvedUrl || '…'}
             </p>
           </div>
 

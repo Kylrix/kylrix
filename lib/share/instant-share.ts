@@ -143,7 +143,8 @@ export async function ensureSharePublished(
     if (!publishRes?.success || !publishRes.isPublic || !publishRes.isGuest) {
       return {
         success: false,
-        url: publishRes?.publicUrl || url,
+        // Always keep client-built URL — Server Actions resolve to kylrix.space
+        url,
         copied: false,
         published: false,
         pending: false,
@@ -155,7 +156,7 @@ export async function ensureSharePublished(
 
     return {
       success: true,
-      url: publishRes.publicUrl || url,
+      url,
       copied: false,
       published: true,
       pending: false,
