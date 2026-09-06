@@ -94,11 +94,13 @@ OpenBricks 4.0 evolves the Kylrix design language from rigid, corporate SaaS con
 - **Formalized Solid Outer Boundaries**:
   - Components, interactive cards, panels, and chrome must feature crisp, solid high-contrast outlines to separate them unambiguously from background surfaces (preventing "formless" black-on-ash mud):
     - Topbar Chrome: `borderBottom: '1px solid rgba(255, 255, 255, 0.18)'` to `0.22` with pitch black `#000000` surface.
-    - Bottom Navbar: Container `border-t-2 border-[#FFFFFF]/30`, with item icon containers `border border-[#FFFFFF]/40` (and `border-2 border-[#FFFFFF]` with drop-glow when active).
-    - Primary Cards & Wells (ObjectCard, TaskCard, FormCard): `border border-white/20` (hover: `border-white/50`, selected: `border-2 border-[#10B981]`).
-    - Tab Switchers & Filter Rows (e.g. Ideas/Forms switcher, Tag filter lists): Container `border border-white/20` on `#000000`, item buttons `border border-white/25` (active: `border-2 border-[#FFFFFF]` or accent, hover: `border-white/50`).
-    - Action Triggers (Flow, Moment, Hangout triggers): `border border-white/25` on `#161412` (hover: `border-white/60`, active: `border-[#FFFFFF]`).
+    - Bottom Navbar: Container `border-t-2 border-[#FFFFFF]/30`, with item icon containers `border border-[#FFFFFF]/40` on idle. For active states, **NEVER** use stark pure white outlines: active items MUST use their app-specific highlight color outline (`border-2` styled with the section highlight color, e.g. Note: `#EC4899`, Vault: `#10B981`, Goals: `#6366F1`/`#A855F7`, Settings/Root: `#6366F1`) with matching subtle color drop-glow (`boxShadow: 0 0 12px <color>33`).
+    - Primary Cards & Wells (ObjectCard, TaskCard, FormCard): `border border-white/20` (hover: `border-white/50`, selected: `border-2 border-[#10B981]` or resource highlight color).
+    - Tab Switchers & Filter Rows (e.g. Ideas/Forms switcher, Tag filter lists): Container `border border-white/20` on `#000000`, item buttons `border border-white/25` (active: `border-2` using the active item's highlight color, hover: `border-white/50`).
+    - Action Triggers (Flow, Moment, Hangout triggers): `border border-white/25` on `#161412` (hover: `border-white/60`, active: `border-2` using feature highlight color).
     - Desktop sidebars: `borderRight: '1px solid rgba(255, 255, 255, 0.18)'` (left nav), `borderLeft: '1px solid rgba(255, 255, 255, 0.18)'` (right rail).
+- **Active State Accent Highlight Mandate**:
+  - Rather than generic extreme white outlines wrapping components to indicate selection or active state, always use the item's semantic highlight color (Pink `#EC4899` for Notes/Ideas, Emerald `#10B981` for Vault, Amethyst `#A855F7` for Flows/Goals, Amber `#F59E0B` for Connect/Hangouts, Indigo `#6366F1` for Tasks/Settings/Root). This creates immediate visual recognition, clear hierarchy, and avoids harsh blinding white borders.
 - **Purpose**: Establishes unambiguous structural contouring and tactile form definition across opaque pitch-black and deep-ash surfaces without blurry glassmorphism or low-contrast washed-out hairlines.
 
 ---

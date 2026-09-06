@@ -102,6 +102,15 @@ export function UnifiedBottomBar() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isSelected = currentTab === item.key;
+            const itemColor =
+              item.key === 'vault'
+                ? '#10B981'
+                : item.key === 'goal'
+                ? '#A855F7'
+                : item.key === 'settings'
+                ? '#6366F1'
+                : '#EC4899';
+
             return (
               <Link
                 key={item.key}
@@ -114,7 +123,7 @@ export function UnifiedBottomBar() {
 
                 className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group"
                 style={{
-                  color: isSelected ? appColor : '#FFFFFF',
+                  color: isSelected ? itemColor : '#FFFFFF',
                   opacity: 1,
                   WebkitTapHighlightColor: 'transparent',
                 }}
@@ -122,29 +131,33 @@ export function UnifiedBottomBar() {
                 <div
                   className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all ${
                     isSelected
-                      ? 'bg-[#161412] border-2 border-[#FFFFFF] shadow-[0_0_12px_rgba(255,255,255,0.2)]'
+                      ? 'bg-[#161412] border-2 shadow-[0_0_12px_rgba(0,0,0,0.4)]'
                       : 'bg-[#161412] border border-[#FFFFFF]/40 hover:border-[#FFFFFF] hover:bg-[#201D1A]'
                   }`}
+                  style={{
+                    borderColor: isSelected ? itemColor : undefined,
+                    boxShadow: isSelected ? `0 0 12px ${itemColor}40` : undefined,
+                  }}
                 >
                   <Icon
                     size={20}
                     strokeWidth={isSelected ? 2.2 : 1.8}
                     className="transition-colors duration-200"
                     style={{
-                      color: isSelected ? appColor : '#FFFFFF',
+                      color: isSelected ? itemColor : '#FFFFFF',
                     }}
                   />
                   {isSelected && (
                     <div
                       className="absolute -bottom-1 w-1.5 h-1.5 rounded-full animate-fadeIn"
-                      style={{ backgroundColor: appColor }}
+                      style={{ backgroundColor: itemColor }}
                     />
                   )}
                 </div>
                 <span
                   className="text-[10px] font-bold mt-1 tracking-tight font-satoshi transition-colors"
                   style={{
-                    color: isSelected ? appColor : '#FFFFFF',
+                    color: isSelected ? itemColor : '#FFFFFF',
                     fontFamily: 'var(--font-satoshi)',
                   }}
                 >
