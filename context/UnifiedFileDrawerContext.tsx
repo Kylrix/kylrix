@@ -12,10 +12,27 @@ export interface SyncedMediaFile {
   fileUrl?: string;
 }
 
+export type UnifiedFileDrawerMainTab = 'objects' | 'synced' | 'upload';
+export type UnifiedFileDrawerObjectSubTab =
+  | 'goals'
+  | 'ideas'
+  | 'projects'
+  | 'threads'
+  | 'totps'
+  | 'forms'
+  | 'events'
+  | 'vault'
+  | 'tags'
+  | 'sessions';
+
 interface OpenFileDrawerOptions {
   onSelectFile: (file: SyncedMediaFile) => void;
   allowedBuckets?: string[];
   title?: string;
+  /** Open on Objects / Synced / Upload (default synced). */
+  initialTab?: UnifiedFileDrawerMainTab;
+  /** Objects sub-tab when initialTab is objects (default goals). */
+  initialSubTab?: UnifiedFileDrawerObjectSubTab;
 }
 
 interface UnifiedFileDrawerContextType {

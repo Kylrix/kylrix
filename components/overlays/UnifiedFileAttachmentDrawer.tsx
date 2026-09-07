@@ -115,6 +115,17 @@ export function UnifiedFileAttachmentDrawer() {
   const [activeSubTab, setActiveSubTab] = useState<ObjectSubTab>('goals');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Honor caller defaults each open (e.g. moment composer → Objects / Ideas).
+  useEffect(() => {
+    if (!isOpen) return;
+    setActiveTab(options?.initialTab || 'synced');
+    setActiveSubTab(options?.initialSubTab || 'goals');
+    setSearchQuery('');
+    setSelectedFile(null);
+    setSelectedMediaIds([]);
+    setPreviewFile(null);
+  }, [isOpen, options?.initialTab, options?.initialSubTab]);
+
   // Auto MasterPass when switching to encrypted sub-tabs — suppressed when unlock-on-demand (default).
   useEffect(() => {
     if (isOpen && activeTab === 'objects' && (activeSubTab === 'totps' || activeSubTab === 'vault')) {
@@ -521,7 +532,7 @@ export function UnifiedFileAttachmentDrawer() {
             </div>
             <div>
               <h3 className="font-clash font-extrabold text-xl text-[#F5F2ED]">
-                Attach
+                {options?.title || 'Attach'}
               </h3>
               <p className="text-xs text-[#9B9691] font-mono mt-0.5 capitalize">
                 Select {activeTab === 'objects' ? activeSubTab : activeTab} to attach

@@ -151,8 +151,61 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   const handleAttach = () => {
     openFileDrawer({
       title: 'Attach to moment',
+      initialTab: 'objects',
+      initialSubTab: 'ideas',
       onSelectFile: (file) => {
-        const isObject = file.mimeType === 'application/x-kylrix-object' || file.fileUrl?.startsWith('[[kylrix-object:');
+        const isObject =
+          file.mimeType === 'application/x-kylrix-object' ||
+          file.fileUrl?.startsWith('[[kylrix-object:');
+
+        if (isObject) {
+          void (async () => {
+            const { attachBucketToPublicResourceType } = await import('@/lib/share/resource-types');
+            const resourceType = attachBucketToPublicResourceType(file.bucketId);
+            if (!resourceType || !file.$id) {
+              setAttachments((prev) => {
+                if (prev.some((a) => a.id === file.$id)) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: file.$id,
+                    label: file.name || 'Attachment',
+                    kind: 'object',
+                    url: file.fileUrl,
+                  },
+                ];
+              });
+              return;
+            }
+
+            const { buildInstantShareUrl, ensureSharePublished } = await import(
+              '@/lib/share/instant-share'
+            );
+            const shareUrl = buildInstantShareUrl(resourceType, file.$id);
+            setAttachments((prev) => {
+              if (prev.some((a) => a.id === file.$id)) return prev;
+              return [
+                ...prev,
+                {
+                  id: file.$id,
+                  label: file.name || 'Attachment',
+                  kind: 'object',
+                  url: shareUrl,
+                },
+              ];
+            });
+            setContent((c) => (c.includes(shareUrl) ? c : `${c.trim()}\n${shareUrl}`.trim()));
+
+            // Instant public guest access so the moment link works for anyone.
+            void ensureSharePublished(resourceType, file.$id).then((res) => {
+              if (!res.success || !res.published) {
+                toast.error(res.error || 'Could not make that public yet — link is still in your post');
+              }
+            });
+          })();
+          return;
+        }
+
         setAttachments((prev) => {
           if (prev.some((a) => a.id === file.$id)) return prev;
           return [
@@ -160,12 +213,12 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
             {
               id: file.$id,
               label: file.name || 'Attachment',
-              kind: isObject ? 'object' : 'file',
+              kind: 'file',
               url: file.fileUrl,
             },
           ];
         });
-        if (file.fileUrl && /^https?:\/\//.test(file.fileUrl) && !isObject) {
+        if (file.fileUrl && /^https?:\/\//.test(file.fileUrl)) {
           setContent((c) => (c.includes(file.fileUrl!) ? c : `${c.trim()}\n${file.fileUrl}`.trim()));
         }
       },
