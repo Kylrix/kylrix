@@ -27,7 +27,9 @@ import { runOfflinePorterImport } from '@/lib/porter/offline';
 import { encryptExportData, generateEncryptedHtmlPage } from '@/utils/import/encrypted-html-exporter';
 import { porterExport } from '@/lib/data-porter';
 
-type PorterView = 'home' | 'import' | 'preview' | 'export';
+type PorterDirection = 'import' | 'export';
+type PorterDataKind = 'secrets' | 'totp' | 'mixed' | 'auto';
+type PorterView = 'home' | 'pick-kind' | 'import' | 'preview' | 'export-format';
 
 export type EcosystemPorterProps = {
   onClose?: () => void;
@@ -36,19 +38,106 @@ export type EcosystemPorterProps = {
   onImported?: () => void;
   /** Marker for Overlay / sidebar fullscreen detection */
   'data-porter'?: boolean;
+  /**
+   * Surface context — vault secrets/totp tabs bias the kind picker.
+   * Elsewhere omit for full ecosystem options.
+   */
+  surface?: 'vault-secrets' | 'vault-totp' | 'settings' | 'general';
 };
+
+const KIND_OPTIONS: Array<{
+  id: PorterDataKind;
+  label: string;
+  blurb: string;
+  icon: 'lock' | 'key' | 'both' | 'auto';
+  importOnly?: boolean;
+}> = [
+  {
+    id: 'secrets',
+    label: 'Secrets',
+    blurb: 'Logins, passwords, cards, env bundles',
+    icon: 'lock',
+  },
+  {
+    id: 'totp',
+    label: 'Smart codes',
+    blurb: 'One-time codes / authenticator entries',
+    icon: 'key',
+  },
+  {
+    id: 'mixed',
+    label: 'Secrets + codes',
+    blurb: 'Both tables — mixed dumps welcome',
+    icon: 'both',
+  },
+  {
+    id: 'auto',
+    label: 'Auto-detect',
+    blurb: 'We read the file and decide',
+    icon: 'auto',
+    importOnly: true,
+  },
+];
+
+function kindIcon(kind: (typeof KIND_OPTIONS)[number]['icon']) {
+  if (kind === 'lock') return <Lock className="w-5 h-5 text-[#10B981]" />;
+  if (kind === 'key') return <KeyRound className="w-5 h-5 text-[#10B981]" />;
+  if (kind === 'both') return <ArrowUpDown className="w-5 h-5 text-[#10B981]" />;
+  return <FileCode2 className="w-5 h-5 text-[#10B981]" />;
+}
+
+function filterDiscerned(
+  result: PorterDiscernResult,
+  kind: PorterDataKind,
+): PorterDiscernResult {
+  if (kind === 'auto' || kind === 'mixed') return result;
+  if (kind === 'secrets') {
+    return {
+      ...result,
+      totpSecrets: [],
+      summary: result.credentials.length
+        ? `${result.credentials.length} secret${result.credentials.length === 1 ? '' : 's'}`
+        : 'No secrets in this file for the Secrets filter',
+      warnings: [
+        ...result.warnings,
+        ...(result.totpSecrets.length
+          ? [`Hid ${result.totpSecrets.length} smart code(s) — Secrets selected.`]
+          : []),
+      ],
+    };
+  }
+  return {
+    ...result,
+    credentials: [],
+    folders: [],
+    summary: result.totpSecrets.length
+      ? `${result.totpSecrets.length} smart code${result.totpSecrets.length === 1 ? '' : 's'}`
+      : 'No smart codes in this file for the Codes filter',
+    warnings: [
+      ...result.warnings,
+      ...(result.credentials.length
+        ? [`Hid ${result.credentials.length} secret(s) — Smart codes selected.`]
+        : []),
+    ],
+  };
+}
 
 export default function EcosystemPorter({
   onClose,
   embedded = false,
   onImported,
   'data-porter': _porterMarker = true,
+  surface = 'general',
 }: EcosystemPorterProps) {
   const { user } = useAppwriteVault();
   const { requestSudo } = useSudo();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [view, setView] = useState<PorterView>('home');
+  const [direction, setDirection] = useState<PorterDirection>('import');
+  const [dataKind, setDataKind] = useState<PorterDataKind>(() =>
+    surface === 'vault-totp' ? 'totp' : surface === 'vault-secrets' ? 'secrets' : 'mixed',
+  );
   const [rawText, setRawText] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
   const [discerned, setDiscerned] = useState<PorterDiscernResult | null>(null);
@@ -60,32 +149,86 @@ export default function EcosystemPorter({
 
   const userId = user?.$id || '';
 
+  const visibleKinds = useMemo(() => {
+    const vaultSurface = surface === 'vault-secrets' || surface === 'vault-totp';
+    return KIND_OPTIONS.filter((opt) => {
+      if (opt.importOnly && direction === 'export') return false;
+      // Vault always offers secrets + totp + mixed (+ auto on import)
+      if (vaultSurface) return true;
+      return true;
+    });
+  }, [direction, surface]);
+
   useEffect(() => {
     if (!userId) return;
     void (async () => {
       const draft = await loadPorterDraft(userId);
       if (draft?.result && (draft.result.credentials.length || draft.result.totpSecrets.length)) {
-        setDiscerned(draft.result);
+        setDiscerned(filterDiscerned(draft.result, dataKind));
+        setDirection('import');
         setView('preview');
       }
     })();
+    // Only hydrate draft once on mount / user change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const handleClose = useCallback(() => {
     onClose?.();
   }, [onClose]);
 
+  const goBack = () => {
+    setError(null);
+    if (view === 'home') {
+      handleClose();
+      return;
+    }
+    if (view === 'pick-kind') {
+      setView('home');
+      return;
+    }
+    if (view === 'import' || view === 'export-format') {
+      setView('pick-kind');
+      return;
+    }
+    if (view === 'preview') {
+      setView('import');
+      return;
+    }
+    setView('home');
+  };
+
+  const startDirection = (dir: PorterDirection) => {
+    setDirection(dir);
+    setError(null);
+    setDiscerned(null);
+    setRawText('');
+    setFileName(null);
+    if (dir === 'export' && dataKind === 'auto') {
+      setDataKind(surface === 'vault-totp' ? 'totp' : surface === 'vault-secrets' ? 'secrets' : 'mixed');
+    }
+    setView('pick-kind');
+  };
+
+  const confirmKind = (kind: PorterDataKind) => {
+    setDataKind(kind);
+    setError(null);
+    if (direction === 'import') setView('import');
+    else setView('export-format');
+  };
+
   const runDiscern = useCallback(
     async (text: string, name?: string | null) => {
       setError(null);
       setBusy(true);
       try {
-        const result = discernImportPayload(text, userId);
+        const raw = discernImportPayload(text, userId);
+        const result = filterDiscerned(raw, dataKind);
         setDiscerned(result);
         setFileName(name || null);
-        if (userId) await cachePorterDraft(userId, result);
+        if (userId) await cachePorterDraft(userId, raw);
         if (result.credentials.length + result.totpSecrets.length + result.folders.length === 0) {
-          setError(result.warnings[0] || 'Nothing recognized.');
+          setError(result.warnings[0] || 'Nothing matched the selected type.');
           setView('import');
         } else {
           setView('preview');
@@ -97,7 +240,7 @@ export default function EcosystemPorter({
         setBusy(false);
       }
     },
-    [userId],
+    [userId, dataKind],
   );
 
   const onFile = async (file: File | null) => {
@@ -176,7 +319,27 @@ export default function EcosystemPorter({
               finalData = await exportVaultOffline(userId);
             }
 
+            const vault = finalData?.data?.vault || {
+              folders: [],
+              credentials: [],
+              totpSecrets: [],
+            };
+            if (dataKind === 'secrets') {
+              vault.totpSecrets = [];
+            } else if (dataKind === 'totp') {
+              vault.credentials = [];
+              vault.folders = [];
+            }
+            finalData = {
+              ...finalData,
+              format: 'kylrix-vault',
+              exportKind: dataKind,
+              data: { vault },
+            };
+
             const jsonString = JSON.stringify(finalData, null, 2);
+            const suffix =
+              dataKind === 'secrets' ? 'secrets' : dataKind === 'totp' ? 'codes' : 'vault';
 
             if (exportFormat === 'encrypted-html') {
               if (!exportPassword.trim()) {
@@ -191,9 +354,9 @@ export default function EcosystemPorter({
                 encrypted.iv,
                 user?.email || 'Kylrix User',
               );
-              downloadBlob(htmlPage, 'kylrix-vault-backup-encrypted.html', 'text/html');
+              downloadBlob(htmlPage, `kylrix-${suffix}-backup-encrypted.html`, 'text/html');
             } else {
-              downloadBlob(jsonString, 'kylrix-vault-backup.json', 'application/json');
+              downloadBlob(jsonString, `kylrix-${suffix}-backup.json`, 'application/json');
             }
             toast.success('Export ready');
             handleClose();
@@ -225,11 +388,7 @@ export default function EcosystemPorter({
       <header className="shrink-0 px-5 py-4 flex items-center gap-3 border-b border-white/20">
         <button
           type="button"
-          onClick={() => {
-            if (view === 'home') handleClose();
-            else if (view === 'preview') setView('import');
-            else setView('home');
-          }}
+          onClick={goBack}
           className="p-2 rounded-xl bg-black border border-white/20 text-white hover:border-white/40 transition-colors"
           aria-label="Back"
         >
@@ -238,7 +397,13 @@ export default function EcosystemPorter({
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-black text-white font-clash truncate">Transfer</h1>
           <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white">
-            Import · Export · Offline-first
+            {view === 'pick-kind'
+              ? `${direction === 'import' ? 'Import' : 'Export'} · Choose type`
+              : view === 'export-format'
+                ? `Export · ${dataKind === 'totp' ? 'Smart codes' : dataKind === 'secrets' ? 'Secrets' : 'Mixed'}`
+                : view === 'import' || view === 'preview'
+                  ? `Import · ${dataKind === 'auto' ? 'Auto' : dataKind === 'totp' ? 'Smart codes' : dataKind === 'secrets' ? 'Secrets' : 'Mixed'}`
+                  : 'Import · Export · Offline-first'}
           </p>
         </div>
         <ArrowUpDown className="w-5 h-5 text-white shrink-0" />
@@ -255,7 +420,7 @@ export default function EcosystemPorter({
           <>
             <button
               type="button"
-              onClick={() => setView('import')}
+              onClick={() => startDirection('import')}
               className="w-full text-left rounded-2xl border border-white/20 bg-black px-5 py-5 hover:border-white/40 transition-colors"
             >
               <div className="flex items-center gap-3 mb-2">
@@ -265,13 +430,13 @@ export default function EcosystemPorter({
                 <span className="text-base font-black text-white font-clash">Import</span>
               </div>
               <p className="text-sm font-medium text-white">
-                Drop a file or paste. We figure out secrets, smart codes, or both.
+                Choose what you are bringing in, then drop a file or paste.
               </p>
             </button>
 
             <button
               type="button"
-              onClick={() => setView('export')}
+              onClick={() => startDirection('export')}
               className="w-full text-left rounded-2xl border border-white/20 bg-black px-5 py-5 hover:border-white/40 transition-colors"
             >
               <div className="flex items-center gap-3 mb-2">
@@ -281,9 +446,41 @@ export default function EcosystemPorter({
                 <span className="text-base font-black text-white font-clash">Export</span>
               </div>
               <p className="text-sm font-medium text-white">
-                Download a vault backup — plain JSON or password-locked HTML.
+                Choose secrets, smart codes, or both — then download.
               </p>
             </button>
+          </>
+        )}
+
+        {view === 'pick-kind' && (
+          <>
+            <p className="text-sm font-medium text-white">
+              What are you {direction === 'import' ? 'importing' : 'exporting'}?
+            </p>
+            {visibleKinds.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => confirmKind(opt.id)}
+                className={`w-full text-left rounded-2xl border px-5 py-4 transition-colors ${
+                  dataKind === opt.id
+                    ? 'border-[#10B981] bg-black'
+                    : 'border-white/20 bg-black hover:border-white/40'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-xl bg-[#161412] border border-white/20 flex items-center justify-center shrink-0">
+                    {kindIcon(opt.icon)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-base font-black text-white font-clash">{opt.label}</p>
+                    <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white">
+                      {opt.blurb}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
           </>
         )}
 
@@ -419,8 +616,22 @@ export default function EcosystemPorter({
           </>
         )}
 
-        {view === 'export' && (
+        {view === 'export-format' && (
           <>
+            <div className="rounded-2xl border border-white/20 bg-black px-4 py-3">
+              <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white">
+                Exporting
+              </p>
+              <p className="text-sm font-black text-white font-clash mt-1">
+                {dataKind === 'secrets'
+                  ? 'Secrets only'
+                  : dataKind === 'totp'
+                    ? 'Smart codes only'
+                    : 'Secrets + smart codes'}
+              </p>
+            </div>
+
+            <p className="text-sm font-medium text-white">File format</p>
             <div className="rounded-2xl border border-white/20 bg-black p-1 flex gap-1">
               <button
                 type="button"

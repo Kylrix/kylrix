@@ -238,7 +238,7 @@ function SettingsPageInner() {
     const [_profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [profile, setProfile] = useState<any>(null);
-    const openPorter = useOpenEcosystemPorter();
+    const openPorter = useOpenEcosystemPorter({ surface: 'settings' });
 
     const fetchProfile = useCallback(async () => {
         const username = getEffectiveUsername(user);

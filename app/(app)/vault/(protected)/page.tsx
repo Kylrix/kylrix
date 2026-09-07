@@ -269,8 +269,11 @@ function DashboardPageContent() {
     }
   }, [user?.$id]);
 
-  const openPorter = useOpenEcosystemPorter(() => {
-    void loadAllCredentials(true, null, true);
+  const openPorter = useOpenEcosystemPorter({
+    surface: activeTab === 'totp' ? 'vault-totp' : 'vault-secrets',
+    onImported: () => {
+      void loadAllCredentials(true, null, true);
+    },
   });
 
   const loadMoreCredentials = useCallback(() => {
