@@ -232,19 +232,21 @@ function discernCsv(text: string): PorterDiscernResult | null {
   if (rows.length < 2) return null;
 
   const mapping = detectColumnMapping(rows);
-  const mapped = mapRowsToItems(rows, mapping, true);
+  const headerProbe = rows[0].join(' ');
+  const isHeader = /name|title|login|user|pass|pwd|url|link|uri|note|comment|totp|otp|2fa|mfa/i.test(
+    headerProbe,
+  );
+  const mapped = mapRowsToItems(rows, mapping, isHeader);
 
   // Detect TOTP column
-  const header = rows[0].map((c) => c.toLowerCase());
+  const header = (isHeader ? rows[0] : []).map((c) => c.toLowerCase());
   const totpIdx = header.findIndex((c) => /totp|otpauth|otp|2fa|mfa|authenticator/i.test(c));
   const secretIdx = header.findIndex((c) => /secret.?key|totp.?secret/i.test(c));
 
   const credentials: PorterCredentialDraft[] = [];
   const totpSecrets: PorterTotpDraft[] = [];
 
-  const dataRows = /name|title|login|user|pass|url/i.test(rows[0].join(','))
-    ? rows.slice(1)
-    : rows;
+  const dataRows = isHeader ? rows.slice(1) : rows;
 
   mapped.forEach((item, i) => {
     const row = dataRows[i] || [];
