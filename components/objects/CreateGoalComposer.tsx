@@ -566,10 +566,6 @@ export function CreateGoalComposer({
             learningLabel={learningLabel}
             busy={agentBusy}
           />
-            learningStatus={learningStatus}
-            learningLabel={learningLabel}
-            busy={agentBusy}
-          />
         </div>
 
         {/* Metadata & Properties Card */}
