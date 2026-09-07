@@ -14,19 +14,16 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAppwriteVault } from '@/context/appwrite-context';
-import { useBackgroundTask } from '@/context/BackgroundTaskContext';
 import { useSudo } from '@/context/SudoContext';
 import {
-  bundleItemCount,
   cachePorterDraft,
   clearPorterDraft,
   discernImportPayload,
   exportVaultOffline,
   loadPorterDraft,
-  toImportBundle,
   type PorterDiscernResult,
 } from '@/lib/porter';
-import { bundleToKylrixVaultJson, runOfflinePorterImport } from '@/lib/porter/offline';
+import { runOfflinePorterImport } from '@/lib/porter/offline';
 import { encryptExportData, generateEncryptedHtmlPage } from '@/utils/import/encrypted-html-exporter';
 import { porterExport } from '@/lib/data-porter';
 
@@ -48,7 +45,6 @@ export default function EcosystemPorter({
   'data-porter': _porterMarker = true,
 }: EcosystemPorterProps) {
   const { user } = useAppwriteVault();
-  const { startImport, isImporting } = useBackgroundTask();
   const { requestSudo } = useSudo();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -126,39 +122,21 @@ export default function EcosystemPorter({
           setBusy(true);
           setProgressMsg('Importing offline-first…');
           try {
-            const bundle = toImportBundle(discerned);
-            // Prefer direct offline path for large mixed batches
-            if (bundleItemCount(bundle) <= 200) {
-              const result = await runOfflinePorterImport(discerned, userId, (msg) =>
-                setProgressMsg(msg),
+            const result = await runOfflinePorterImport(discerned, userId, (msg, processed, total) =>
+              setProgressMsg(total ? `${msg} (${processed}/${total})` : msg),
+            );
+            if (result.success) {
+              toast.success(
+                `Imported ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes`,
               );
-              if (result.success) {
-                toast.success(
-                  `Imported ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes`,
-                );
-              } else {
-                toast.error(result.errors[0] || 'Import finished with errors');
-              }
             } else {
-              const payload = bundleToKylrixVaultJson(bundle, userId);
-              await startImport('kylrixvault', payload, userId);
-              toast.success(`Importing ${bundleItemCount(bundle)} items in the background…`);
+              toast.error(result.errors[0] || 'Import finished with errors');
             }
             await clearPorterDraft(userId);
             onImported?.();
             handleClose();
           } catch (e: any) {
-            // Fallback to background task
-            try {
-              const bundle = toImportBundle(discerned);
-              await startImport('kylrixvault', bundleToKylrixVaultJson(bundle, userId), userId);
-              toast.success('Import started in background');
-              await clearPorterDraft(userId);
-              onImported?.();
-              handleClose();
-            } catch (err: any) {
-              setError(err?.message || e?.message || 'Import failed');
-            }
+            setError(e?.message || 'Import failed');
           } finally {
             setBusy(false);
             setProgressMsg(null);
@@ -430,11 +408,11 @@ export default function EcosystemPorter({
 
             <button
               type="button"
-              disabled={busy || isImporting || counts.secrets + counts.totp + counts.folders === 0}
+              disabled={busy || counts.secrets + counts.totp + counts.folders === 0}
               onClick={handleConfirmImport}
               className="w-full py-3 rounded-xl font-bold bg-[#10B981] text-black disabled:opacity-50 font-clash"
             >
-              {busy || isImporting
+              {busy
                 ? 'Importing…'
                 : `Import ${counts.secrets + counts.totp + counts.folders} items`}
             </button>
