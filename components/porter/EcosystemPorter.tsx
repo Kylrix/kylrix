@@ -514,6 +514,8 @@ export default function EcosystemPorter({
                   ? `Exported ${vault.credentials.length} secrets`
                   : 'Export ready',
             );
+            if (userId) await clearPorterDraft(userId);
+            setCachedSession(null);
             handleClose();
           } catch (e: any) {
             setError(e?.message || 'Export failed');
