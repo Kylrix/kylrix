@@ -51,3 +51,30 @@ export function measureEnvFieldsJson(fields: EnvField[]): number {
     return ENV_CUSTOM_FIELDS_SOFT_MAX_CHARS + 1;
   }
 }
+
+/** Decrypt/detail helper — accepts array, object map, or JSON string. */
+export function normalizeCustomFields(raw: unknown): EnvField[] {
+  if (!raw) return [];
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((f: any, i: number) => ({
+          id: String(f?.id || `cf-${i}`),
+          label: String(f?.label ?? f?.key ?? ''),
+          value: String(f?.value ?? ''),
+        }))
+        .filter((f) => f.label.trim() || f.value.trim());
+    }
+    if (parsed && typeof parsed === 'object') {
+      return Object.entries(parsed as Record<string, unknown>).map(([label, value], i) => ({
+        id: `cf-${i}`,
+        label,
+        value: String(value ?? ''),
+      }));
+    }
+  } catch {
+    /* not JSON / still encrypted */
+  }
+  return [];
+}

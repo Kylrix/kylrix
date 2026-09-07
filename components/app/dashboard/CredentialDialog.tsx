@@ -38,6 +38,7 @@ import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 import {
   ENV_CUSTOM_FIELDS_SOFT_MAX_CHARS,
   measureEnvFieldsJson,
+  normalizeCustomFields,
   parseEnvText,
   type EnvField,
 } from '@/lib/vault/parse-env';
@@ -48,30 +49,6 @@ const inputClass =
   'w-full bg-black text-white placeholder-white border border-white/20 rounded-xl px-4 py-3 text-sm font-satoshi focus:outline-none focus:border-white/40 transition-colors';
 const labelClass =
   'text-[0.72rem] font-bold text-white tracking-[0.08em] uppercase font-satoshi';
-
-function normalizeCustomFields(raw: unknown): CustomField[] {
-  if (!raw) return [];
-  try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (Array.isArray(parsed)) {
-      return parsed.map((f: any, i: number) => ({
-        id: String(f?.id || `cf-${i}`),
-        label: String(f?.label ?? f?.key ?? ''),
-        value: String(f?.value ?? ''),
-      }));
-    }
-    if (parsed && typeof parsed === 'object') {
-      return Object.entries(parsed).map(([label, value], i) => ({
-        id: `cf-${i}`,
-        label,
-        value: String(value ?? ''),
-      }));
-    }
-  } catch {
-    /* ignore */
-  }
-  return [];
-}
 
 export default function CredentialDialog({
   open,

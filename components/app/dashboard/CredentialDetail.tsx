@@ -1,18 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import type { Credentials } from '@/lib/appwrite/types';
 import { storage, deleteCredential } from '@/lib/appwrite';
 import { useSudo } from '@/context/SudoContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { 
-  ArrowLeft, 
-  X, 
-  Eye, 
-  EyeOff, 
-  Globe, 
-  ExternalLink, 
+import {
+  ArrowLeft,
+  X,
+  Eye,
+  EyeOff,
+  Globe,
+  ExternalLink,
   Folder,
   Share2,
   Lock,
@@ -20,20 +20,26 @@ import {
   Trash2,
   Info,
   Copy,
-  Check
+  Check,
+  FileCode2,
 } from 'lucide-react';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { looksEncrypted } from '@/lib/masterpass-crypto';
+import { normalizeCustomFields } from '@/lib/vault/parse-env';
 import toast from 'react-hot-toast';
+
+const labelClass =
+  'text-[0.72rem] font-bold text-white tracking-[0.08em] uppercase font-satoshi';
 
 export default function CredentialDetail({
   credential,
   onClose,
   isMobile,
-  inline = false}: {
+  inline = false,
+}: {
   credential: Credentials;
   onClose: () => void;
   isMobile: boolean;
@@ -46,7 +52,6 @@ export default function CredentialDetail({
   const [isPublic, setIsPublic] = useState(!!credential.isPublic);
   const { requestSudo } = useSudo();
   const { open: openUnified } = useUnifiedDrawer();
-
   const { activeWorkspace } = useWorkspace();
 
   useEffect(() => {
@@ -57,15 +62,16 @@ export default function CredentialDetail({
       try {
         const { masterPassCrypto, decryptField } = await import('@/lib/masterpass-crypto');
         const isAgentic = Boolean(activeWorkspace?.isAgentic || (credential as any).isAgentic);
-        const isShared = Boolean(activeWorkspace && !activeWorkspace.isPersonal && activeWorkspace.isShared);
-        
+        const isShared = Boolean(
+          activeWorkspace && !activeWorkspace.isPersonal && activeWorkspace.isShared,
+        );
+
         if (!masterPassCrypto.isVaultUnlocked() && !isAgentic) return;
 
         const fieldsToDecrypt = ['name', 'username', 'password', 'url', 'notes', 'customFields'];
         const updated = { ...credential };
         let changed = false;
 
-        // Personal non-agentic workspace: flat straight decrypt with user MEK
         if (!isAgentic && !isShared) {
           if (!masterPassCrypto.isVaultUnlocked()) return;
 
@@ -73,8 +79,18 @@ export default function CredentialDetail({
           if (credential.dek) {
             try {
               const dekBase64 = await decryptField(credential.dek);
-              const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
-              dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+              const rawKey = new Uint8Array(
+                atob(dekBase64)
+                  .split('')
+                  .map((c) => c.charCodeAt(0)),
+              );
+              dekKey = await crypto.subtle.importKey(
+                'raw',
+                rawKey,
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['decrypt'],
+              );
             } catch {}
           }
 
@@ -84,10 +100,16 @@ export default function CredentialDetail({
               try {
                 let plain: string | null = null;
                 if (dekKey) {
-                  const dataBytes = atob(val).split('').map((c) => c.charCodeAt(0));
+                  const dataBytes = atob(val)
+                    .split('')
+                    .map((c) => c.charCodeAt(0));
                   const dataIv = new Uint8Array(dataBytes.slice(0, 16));
                   const dataEncrypted = new Uint8Array(dataBytes.slice(16));
-                  const dec = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dataIv }, dekKey, dataEncrypted);
+                  const dec = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: dataIv },
+                    dekKey,
+                    dataEncrypted,
+                  );
                   plain = new TextDecoder().decode(dec);
                 } else {
                   plain = await decryptField(val);
@@ -100,20 +122,30 @@ export default function CredentialDetail({
             }
           }
 
-          if (changed && !isCancelled) {
-            setLiveCredential(updated);
-          }
+          if (changed && !isCancelled) setLiveCredential(updated);
           return;
         }
 
-        // Agentic / Shared workspace
         const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
         let dekKey: CryptoKey | null = null;
         if (credential.dek) {
           try {
-            const dekBase64 = await ecosystemSecurity.decryptWithWorkspace(credential.dek, activeWorkspace);
-            const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
-            dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+            const dekBase64 = await ecosystemSecurity.decryptWithWorkspace(
+              credential.dek,
+              activeWorkspace,
+            );
+            const rawKey = new Uint8Array(
+              atob(dekBase64)
+                .split('')
+                .map((c) => c.charCodeAt(0)),
+            );
+            dekKey = await crypto.subtle.importKey(
+              'raw',
+              rawKey,
+              { name: 'AES-GCM', length: 256 },
+              true,
+              ['decrypt'],
+            );
           } catch {}
         }
 
@@ -126,24 +158,28 @@ export default function CredentialDetail({
                 try {
                   plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
                 } catch {
-                  plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
+                  plain = await ecosystemSecurity.decryptWithWorkspace(
+                    val,
+                    activeWorkspace,
+                    credential.dek,
+                  );
                 }
               } else {
-                plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
+                plain = await ecosystemSecurity.decryptWithWorkspace(
+                  val,
+                  activeWorkspace,
+                  credential.dek,
+                );
               }
               if (plain && plain !== val) {
                 (updated as any)[field] = plain;
                 changed = true;
               }
-            } catch (_err) {
-              // Not encrypted or already plaintext
-            }
+            } catch {}
           }
         }
 
-        if (changed && !isCancelled) {
-          setLiveCredential(updated);
-        }
+        if (changed && !isCancelled) setLiveCredential(updated);
       } catch (e) {
         console.error('[CredentialDetail] Decryption error:', e);
       }
@@ -161,16 +197,14 @@ export default function CredentialDetail({
         const res = await toggleResourcePublicGuest({
           resourceType: 'credential',
           resourceId: credential.$id,
-          mode: 'publish'
+          mode: 'publish',
         });
         if (!res?.success) {
           toast.error('Failed to make credential public for sharing.');
           return;
         }
         setIsPublic(true);
-        if (credential) {
-          credential.isPublic = true;
-        }
+        if (credential) credential.isPublic = true;
       }
 
       let currentDek = credential.dek;
@@ -178,16 +212,16 @@ export default function CredentialDetail({
         const { decryptField, encryptField } = await import('@/lib/masterpass-crypto');
         const { VaultService } = await import('@/lib/appwrite/vault');
         const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
-        
+
         const newDek = await ecosystemSecurity.generateRandomMEK();
-        const rawKey = await crypto.subtle.exportKey("raw", newDek);
+        const rawKey = await crypto.subtle.exportKey('raw', newDek);
         const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
         const wrappedDek = await encryptField(dekBase64);
-        
+
         const plaintextFields: Record<string, any> = { dek: wrappedDek };
         const fieldsToProcess = ['name', 'url', 'username', 'password', 'notes', 'customFields'];
         for (const field of fieldsToProcess) {
-          const val = (credential as any)[field];
+          const val = (liveCredential as any)[field] ?? (credential as any)[field];
           if (val && typeof val === 'string' && val.length > 20 && /^[A-Za-z0-9+/=]+$/.test(val)) {
             try {
               plaintextFields[field] = await decryptField(val);
@@ -198,12 +232,9 @@ export default function CredentialDetail({
             plaintextFields[field] = val;
           }
         }
-        
+
         await VaultService.updateCredential(credential.$id, plaintextFields as any);
         credential.dek = wrappedDek;
-        for (const field of fieldsToProcess) {
-          if (plaintextFields[field] !== undefined) (credential as any)[field] = plaintextFields[field];
-        }
         currentDek = wrappedDek;
       }
 
@@ -214,7 +245,7 @@ export default function CredentialDetail({
         const urlSafeDek = dekBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
         keyFragment = `/${urlSafeDek}`;
       }
-      
+
       const baseUrl = buildPublicResourceUrl('credential', credential.$id);
       const fullUrl = keyFragment ? `${baseUrl}${keyFragment}` : baseUrl;
       await navigator.clipboard.writeText(fullUrl);
@@ -222,30 +253,12 @@ export default function CredentialDetail({
     } catch (err: any) {
       toast.error('Failed to copy share link: ' + err.message);
     }
-  }, [credential, isPublic]);
+  }, [credential, isPublic, liveCredential]);
 
-  if (!credential) return null;
-
-  const handleCopy = async (value: string | undefined | null, field: string) => {
-    let textToCopy = value ?? '';
-    if (!textToCopy) {
-      toast.error('Nothing to copy.');
-      return;
-    }
-
-    // If still ciphertext, attempt on-demand decryption
-    if (looksEncrypted(textToCopy)) {
-      try {
-        const { decryptField, masterPassCrypto } = await import('@/lib/masterpass-crypto');
-        if (masterPassCrypto.isVaultUnlocked()) {
-          const decrypted = await decryptField(textToCopy);
-          if (decrypted) textToCopy = decrypted;
-        }
-      } catch {}
-    }
-
+  const handleCopy = async (textToCopy: string | null | undefined, field: string) => {
+    if (!textToCopy) return;
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(textToCopy);
       } else {
         const textArea = document.createElement('textarea');
@@ -259,27 +272,29 @@ export default function CredentialDetail({
         document.body.removeChild(textArea);
       }
       setCopied(field);
-      toast.success('Copied to clipboard');
+      toast.success('Copied');
       setTimeout(() => setCopied(null), 1500);
-    } catch (err: any) {
-      console.error('Copy failed:', err);
-      toast.error('Failed to copy to clipboard');
+    } catch {
+      toast.error('Failed to copy');
     }
   };
 
-  let customFields: any[] = [];
-  try {
-    if (credential.customFields) {
-      customFields = JSON.parse(credential.customFields);
-    }
-  } catch {
-    customFields = [];
-  }
+  // BUGFIX: parse decrypted liveCredential, not encrypted prop
+  const customFields = useMemo(
+    () => normalizeCustomFields(liveCredential.customFields),
+    [liveCredential.customFields],
+  );
+
+  if (!credential) return null;
+
+  const isEnv =
+    Boolean(liveCredential.isEnv) ||
+    (customFields.length > 0 && !liveCredential.password && !liveCredential.username);
 
   let attachments: any[] = [];
   try {
-    if (credential.attachments) {
-      attachments = JSON.parse(credential.attachments);
+    if (liveCredential.attachments) {
+      attachments = JSON.parse(liveCredential.attachments as string);
     }
   } catch {
     attachments = [];
@@ -288,12 +303,13 @@ export default function CredentialDetail({
   const formatDate = (dateString: string) => {
     if (!dateString) return null;
     try {
-      return new Date(dateString).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"});
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     } catch {
       return dateString;
     }
@@ -302,26 +318,20 @@ export default function CredentialDetail({
   const getFaviconUrl = (url: string) => {
     if (!url) return null;
     try {
-      const domain = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+      return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=64`;
     } catch {
       return null;
     }
   };
 
-  const faviconUrl = getFaviconUrl(credential.url || "");
-
-  const FieldLabel = ({ label }: { label: string }) => (
-    <div className="flex items-center justify-between mb-1.5">
-      <span className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">
-        {label}
-      </span>
-    </div>
-  );
+  const faviconUrl = getFaviconUrl(liveCredential.url || '');
+  const shortId = liveCredential.$id
+    ? `${liveCredential.$id.slice(0, 6)}…${liveCredential.$id.slice(-4)}`
+    : '';
 
   const FieldValue = ({
     children,
-    className = "",
+    className = '',
     onClick,
     fieldId,
   }: {
@@ -333,7 +343,7 @@ export default function CredentialDetail({
     const isFieldCopied = copied === fieldId;
     return (
       <div
-        role={onClick ? "button" : undefined}
+        role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
         onClick={onClick}
         onKeyDown={(e) => {
@@ -342,40 +352,42 @@ export default function CredentialDetail({
             onClick();
           }
         }}
-        className={`relative group p-3.5 rounded-xl bg-[#141211] border transition-all font-mono text-sm text-[#F5F2ED] break-all ${
-          onClick
-            ? 'cursor-pointer hover:border-[#10B981]/50 hover:bg-[#1A1817]'
-            : 'cursor-default'
-        } ${isFieldCopied ? 'border-[#10B981] bg-[#10B981]/10 text-[#10B981]' : 'border-[#2C2A28]'} ${className}`}
+        className={`relative group p-3.5 rounded-xl bg-black border font-mono text-sm text-white break-all transition-colors ${
+          onClick ? 'cursor-pointer hover:border-white/40' : 'cursor-default'
+        } ${isFieldCopied ? 'border-[#10B981]' : 'border-white/20'} ${className}`}
       >
         {children}
-        {isFieldCopied ? (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold tracking-wider uppercase text-[#10B981] font-mono bg-[#141211]/90 px-2 py-0.5 rounded border border-[#10B981]/30">
-            Copied!
+        {onClick && (
+          <span className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            {isFieldCopied ? (
+              <Check className="w-3.5 h-3.5 text-[#10B981]" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 text-white" />
+            )}
           </span>
-        ) : null}
+        )}
       </div>
     );
   };
 
   const content = (
-    <div className={`h-full flex flex-col ${inline ? 'bg-transparent' : 'bg-[#161412]'} w-full min-h-0 text-[#F5F2ED]`}>
-      {/* Header Bar matching TaskDetails / NoteDetailSidebar */}
-      <div className="px-5 py-4 flex flex-col gap-3 border-b border-[#2C2A28] shrink-0 bg-[#161412]">
-        {/* Row 1: Back/Close & Action Buttons */}
-        <div className="flex items-center justify-between min-w-0">
-          <div className="flex items-center gap-2">
-            <button 
+    <div
+      className={`h-full flex flex-col ${inline ? 'bg-transparent' : 'bg-[#161412]'} w-full min-h-0 text-white`}
+    >
+      <div className="px-5 py-4 flex flex-col gap-2.5 shrink-0 bg-[#161412]">
+        <div className="flex items-center justify-between min-w-0 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
               type="button"
-              onClick={onClose} 
-              className="p-2 rounded-xl text-[#9B9691] hover:text-white hover:bg-white/5 transition-colors"
+              onClick={onClose}
+              className="p-2 rounded-full bg-black border border-white/20 text-white hover:border-white/40 transition-colors shrink-0"
               title="Back"
             >
               {isMobile ? <ArrowLeft className="w-4 h-4" /> : <X className="w-4 h-4" />}
             </button>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#10B981]/10 border border-[#10B981]/20 text-[10px] font-bold text-[#10B981] uppercase tracking-wider font-mono">
-              <Lock className="w-3 h-3" />
-              <span>Vault Secret</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black border border-[#10B981]/40 text-[0.65rem] font-bold text-white uppercase tracking-wider font-satoshi shrink-0">
+              {isEnv ? <FileCode2 className="w-3 h-3 text-[#10B981]" /> : <Lock className="w-3 h-3 text-[#10B981]" />}
+              <span>{isEnv ? 'Env' : 'Secret'}</span>
             </span>
             {liveCredential.$id && (
               <button
@@ -384,116 +396,126 @@ export default function CredentialDetail({
                   e.stopPropagation();
                   handleCopy(liveCredential.$id, 'header-id');
                 }}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-all group cursor-pointer ${
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border font-mono text-[0.65rem] transition-colors shrink-0 ${
                   copied === 'header-id'
-                    ? 'bg-[#10B981]/20 border-[#10B981]/40 text-[#10B981]'
-                    : 'bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white border-white/10'
+                    ? 'bg-black border-[#10B981] text-white'
+                    : 'bg-black border-white/20 text-white hover:border-white/40'
                 }`}
-                title="Click to copy Item ID"
+                title="Copy full ID"
               >
                 {copied === 'header-id' ? (
-                  <Check className="w-3 h-3 text-[#10B981]" />
+                  <Check className="w-2.5 h-2.5 text-[#10B981]" />
                 ) : (
-                  <Copy className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+                  <Copy className="w-2.5 h-2.5" />
                 )}
-                <span className="truncate max-w-[120px]">{liveCredential.$id}</span>
+                <span className="tracking-tight">{shortId}</span>
               </button>
             )}
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            <button 
+            <button
               type="button"
-              onClick={handleShareLink} 
-              className={`p-2 rounded-xl transition-all border ${
-                isPublic 
-                  ? 'text-[#10B981] bg-[#10B981]/15 border-[#10B981]/30 hover:bg-[#10B981]/25' 
-                  : 'text-[#9B9691] bg-white/5 border-[#2C2A28] hover:bg-white/10 hover:text-white'
+              onClick={handleShareLink}
+              className={`p-2 rounded-xl border transition-colors ${
+                isPublic
+                  ? 'text-white bg-black border-[#10B981]/50'
+                  : 'text-white bg-black border-white/20 hover:border-white/40'
               }`}
-              title={isPublic ? "Copy Sharing Link" : "Publish & Share Link"}
+              title={isPublic ? 'Copy share link' : 'Publish & share'}
             >
               <Share2 className="w-4 h-4" />
             </button>
-            <button 
+            <button
               type="button"
-              onClick={() => setShowProjectLinker(true)} 
-              className="p-2 rounded-xl text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 hover:bg-[#10B981]/20 transition-all"
-              title="Link Project"
+              onClick={() => setShowProjectLinker(true)}
+              className="p-2 rounded-xl text-white bg-black border border-white/20 hover:border-white/40 transition-colors"
+              title="Link project"
             >
               <Folder className="w-4 h-4" />
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => {
                 openUnified('delete-confirm', {
                   title: 'Delete Vault Secret?',
-                  description: `Are you sure you want to permanently delete "${credential.name}"?`,
+                  description: `Permanently delete "${credential.name}"?`,
                   onConfirm: async () => {
                     await deleteCredential(credential.$id);
                     toast.success('Secret deleted.');
                     onClose();
-                  }
+                  },
                 });
               }}
-              className="p-2 text-[#9B9691] hover:text-red-400 rounded-xl hover:bg-white/5 transition-all"
-              title="Delete Secret"
+              className="p-2 text-white hover:bg-black rounded-xl border border-transparent hover:border-white/20 transition-colors"
+              title="Delete"
             >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Row 2: Full-bleed Title & Sync Status Indicator matching TaskDetails / NoteDetailSidebar */}
-        <div className="w-full min-w-0 flex flex-col gap-1.5 pt-1">
+        <div className="w-full min-w-0 flex flex-col gap-1.5 pt-0.5">
           <h2
-            onClick={() => handleCopy(looksEncrypted(liveCredential.name) ? '' : (liveCredential.name || ''), "title")}
+            onClick={() =>
+              handleCopy(looksEncrypted(liveCredential.name) ? '' : liveCredential.name || '', 'title')
+            }
             title="Click to copy title"
-            className="w-full min-w-0 text-lg md:text-xl font-black font-clash text-[#10B981] tracking-tight uppercase break-words [overflow-wrap:anywhere] cursor-pointer hover:underline"
+            className="w-full min-w-0 text-lg md:text-xl font-black font-clash text-white tracking-tight break-words [overflow-wrap:anywhere] cursor-pointer hover:underline"
           >
             {looksEncrypted(liveCredential.name) ? 'Encrypted Secret' : liveCredential.name}
-            {copied === 'title' ? <span className="ml-2 text-xs font-mono text-[#10B981] lowercase">(copied!)</span> : null}
           </h2>
           <div className="flex items-center gap-2 shrink-0">
-            <SyncStatusDot resourceId={liveCredential.$id} kind="secret" row={liveCredential as unknown as Record<string, unknown>} />
-            <SyncStatusLabel resourceId={liveCredential.$id} kind="secret" row={liveCredential as unknown as Record<string, unknown>} />
+            <SyncStatusDot
+              resourceId={liveCredential.$id}
+              kind="secret"
+              row={liveCredential as unknown as Record<string, unknown>}
+            />
+            <SyncStatusLabel
+              resourceId={liveCredential.$id}
+              kind="secret"
+              row={liveCredential as unknown as Record<string, unknown>}
+            />
           </div>
         </div>
       </div>
 
-      <ProjectLinker 
-        open={showProjectLinker} 
-        onClose={() => setShowProjectLinker(false)} 
-        entityId={liveCredential.$id} 
-        entityKind="password" 
+      <ProjectLinker
+        open={showProjectLinker}
+        onClose={() => setShowProjectLinker(false)}
+        entityId={liveCredential.$id}
+        entityKind="password"
       />
 
-      {/* Main Body with Deep Ash Balances */}
-      <div className="flex-1 overflow-y-auto overscroll-contain p-5 flex flex-col gap-5">
-        {/* Favicon & URL Hero Surface */}
+      <div className="flex-1 overflow-y-auto overscroll-contain p-5 flex flex-col gap-4 font-satoshi">
         {liveCredential.url && !looksEncrypted(liveCredential.url) && (
-          <div className="p-4 rounded-2xl bg-[#1C1A18] border border-[#2C2A28] flex items-start gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-[#141211] flex items-center justify-center border border-[#34322F] shrink-0 overflow-hidden">
+          <div className="p-4 rounded-2xl bg-black border border-white/20 flex items-start gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-[#161412] flex items-center justify-center border border-white/20 shrink-0 overflow-hidden">
               {faviconUrl ? (
-                <img src={faviconUrl} className="w-7 h-7 object-contain" alt="" />
+                <img src={faviconUrl} className="w-6 h-6 object-contain" alt="" />
               ) : (
-                <span className="text-xl font-black text-[#10B981] font-clash">
-                  {liveCredential.name?.charAt(0)?.toUpperCase() || "?"}
+                <span className="text-lg font-black text-white font-clash">
+                  {liveCredential.name?.charAt(0)?.toUpperCase() || '?'}
                 </span>
               )}
             </div>
             <div className="min-w-0 flex-1 flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">Website Domain</span>
-              <a 
-                href={liveCredential.url} 
-                target="_blank" 
+              <span className={labelClass}>Website</span>
+              <a
+                href={liveCredential.url}
+                target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#10B981] hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-white hover:underline"
               >
-                <Globe className="w-3.5 h-3.5" />
+                <Globe className="w-3.5 h-3.5 text-[#10B981]" />
                 <span className="truncate">
                   {(() => {
                     try {
-                      const u = liveCredential.url.startsWith('http://') || liveCredential.url.startsWith('https://') ? liveCredential.url : `https://${liveCredential.url}`;
+                      const u =
+                        liveCredential.url.startsWith('http://') ||
+                        liveCredential.url.startsWith('https://')
+                          ? liveCredential.url
+                          : `https://${liveCredential.url}`;
                       return new URL(u).hostname;
                     } catch {
                       return liveCredential.url;
@@ -506,78 +528,112 @@ export default function CredentialDetail({
           </div>
         )}
 
-        {/* Fields List */}
         <div className="flex flex-col gap-4">
-          <div>
-            <FieldLabel label="Username / Email" />
-            <FieldValue
-              fieldId="username"
-              onClick={() => handleCopy(liveCredential.username || credential.username, "username")}
-            >
-              {looksEncrypted(liveCredential.username) ? '••••••••' : (liveCredential.username || "N/A")}
-            </FieldValue>
-          </div>
-
-          {/* Secret Password Value */}
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">
-                Secret Password
-              </span>
-              <div className="flex gap-2">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    if (!showPassword) {
-                      requestSudo({ onSuccess: () => setShowPassword(true) });
-                    } else {
-                      setShowPassword(false);
+          {!isEnv && (
+            <>
+              {(liveCredential.username || !customFields.length) && (
+                <div>
+                  <div className="mb-1.5">
+                    <span className={labelClass}>Username / Email</span>
+                  </div>
+                  <FieldValue
+                    fieldId="username"
+                    onClick={() =>
+                      handleCopy(liveCredential.username || credential.username, 'username')
                     }
-                  }}
-                  className="h-6 text-[10px] font-bold px-2 rounded-lg hover:bg-[#10B981]/10 flex items-center gap-1.5 transition-colors text-[#10B981]"
+                  >
+                    {looksEncrypted(liveCredential.username)
+                      ? '••••••••'
+                      : liveCredential.username || '—'}
+                  </FieldValue>
+                </div>
+              )}
+
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={labelClass}>Secret</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!showPassword) {
+                        requestSudo({ onSuccess: () => setShowPassword(true) });
+                      } else {
+                        setShowPassword(false);
+                      }
+                    }}
+                    className="h-6 text-[0.72rem] font-bold px-2 rounded-lg hover:bg-black flex items-center gap-1.5 transition-colors text-white border border-white/20"
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <span>{showPassword ? 'Hide' : 'Show'}</span>
+                  </button>
+                </div>
+                <FieldValue
+                  fieldId="password"
+                  onClick={() =>
+                    requestSudo({
+                      onSuccess: () =>
+                        handleCopy(liveCredential.password || credential.password, 'password'),
+                    })
+                  }
+                  className={showPassword ? '' : 'tracking-[0.25em]'}
                 >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  <span>{showPassword ? "Hide" : "Show"}</span>
-                </button>
+                  {liveCredential.password
+                    ? showPassword
+                      ? liveCredential.password
+                      : '••••••••••••••••'
+                    : '—'}
+                </FieldValue>
+              </div>
+            </>
+          )}
+
+          {customFields.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <span className={labelClass}>{isEnv ? 'Variables' : 'Custom Fields'}</span>
+              <div className="flex flex-col gap-2.5">
+                {customFields.map((field, index) => (
+                  <div key={field.id || index} className="flex flex-col gap-1">
+                    <span className="text-[0.72rem] font-medium text-white tracking-wide font-mono">
+                      {field.label || `Field ${index + 1}`}
+                    </span>
+                    <FieldValue
+                      fieldId={`custom-${index}`}
+                      onClick={() => handleCopy(field.value || '', `custom-${index}`)}
+                      className="text-xs"
+                    >
+                      {field.value || 'Empty'}
+                    </FieldValue>
+                  </div>
+                ))}
               </div>
             </div>
-            <FieldValue
-              fieldId="password"
-              onClick={() =>
-                requestSudo({
-                  onSuccess: () =>
-                    handleCopy(liveCredential.password || credential.password, "password"),
-                })
-              }
-              className={showPassword ? 'text-white' : 'text-white/40 tracking-[0.3em]'}
-            >
-              {liveCredential.password ? (showPassword ? liveCredential.password : "••••••••••••••••") : "N/A"}
-            </FieldValue>
-          </div>
+          )}
 
-          {/* Notes */}
-          {liveCredential.notes && (
+          {liveCredential.notes && !looksEncrypted(liveCredential.notes) && (
             <div>
-              <FieldLabel label="Notes" />
+              <div className="mb-1.5">
+                <span className={labelClass}>Notes</span>
+              </div>
               <FieldValue
                 fieldId="notes"
-                onClick={() => handleCopy(liveCredential.notes || credential.notes, "notes")}
-                className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-[#D6D1CA]"
+                onClick={() => handleCopy(liveCredential.notes || credential.notes, 'notes')}
+                className="whitespace-pre-wrap font-sans text-xs leading-relaxed"
               >
-                {looksEncrypted(liveCredential.notes) ? 'Encrypted Notes' : liveCredential.notes}
+                {liveCredential.notes}
               </FieldValue>
             </div>
           )}
 
-          {/* Tags */}
           {credential.tags && credential.tags.length > 0 && (
             <div>
-              <FieldLabel label="Tags" />
-              <div className="flex flex-wrap gap-2 mt-1">
+              <div className="mb-1.5">
+                <span className={labelClass}>Tags</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
                 {credential.tags.map((tag: string, index: number) => (
-                  <span 
-                    key={index} 
-                    className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-[#1C1A18] border border-[#2C2A28] text-white/80 inline-flex items-center gap-1.5"
+                  <span
+                    key={index}
+                    className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-black border border-white/20 text-white inline-flex items-center gap-1.5"
                   >
                     <TagIcon size={10} className="text-[#10B981]" />
                     <span>{tag}</span>
@@ -587,128 +643,55 @@ export default function CredentialDetail({
             </div>
           )}
 
-          {/* Custom Fields */}
-          {customFields.length > 0 && (
-            <div className="flex flex-col gap-3">
-              <FieldLabel label="Custom Fields" />
-              <div className="flex flex-col gap-3">
-                {customFields.map((field: { id?: string; label?: string; value?: string }, index: number) => (
-                  <div key={field.id || index} className="flex flex-col">
-                    <FieldLabel 
-                      label={field.label || `Field ${index + 1}`} 
-                    />
-                    <FieldValue
-                      fieldId={`custom-${index}`}
-                      onClick={() => handleCopy(field.value || "", `custom-${index}`)}
-                    >
-                      {field.value || "Empty"}
-                    </FieldValue>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Secure Attachments */}
           {attachments.length > 0 && (
-            <div className="flex flex-col gap-3">
-              <FieldLabel label="Secure Attachments" />
-              <div className="flex flex-col gap-3">
-                {attachments.map((att: any, index: number) => {
-                  let fileUrl = "";
-                  try {
-                    const res = storage.getFileView('vault_attachments', att.id);
-                    fileUrl = String(res);
-                  } catch (err) {
-                    console.error("Failed to generate preview URL:", err);
-                  }
-
-                  return (
-                    <div key={att.id || index} className="p-3.5 rounded-xl border border-[#2C2A28] bg-[#141211]">
-                      <div className="flex justify-between items-start gap-2 mb-1.5">
-                        <p className="text-xs font-bold text-white break-all">
-                          {att.name}
-                        </p>
-                        <a 
-                          href={fileUrl} 
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1 rounded-md text-[#10B981] hover:bg-[#10B981]/10 transition-colors shrink-0"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      </div>
-                      <p className="text-[10px] text-[#9B9691]">
-                        {(att.size / 1024).toFixed(1)} KB • {att.mime || 'application/octet-stream'}
-                      </p>
+            <div className="flex flex-col gap-2.5">
+              <span className={labelClass}>Attachments</span>
+              {attachments.map((att: any, index: number) => {
+                let fileUrl = '';
+                try {
+                  fileUrl = String(storage.getFileView('vault_attachments', att.id));
+                } catch {}
+                return (
+                  <div
+                    key={att.id || index}
+                    className="p-3.5 rounded-xl border border-white/20 bg-black"
+                  >
+                    <div className="flex justify-between items-start gap-2 mb-1">
+                      <p className="text-xs font-bold text-white break-all">{att.name}</p>
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1 rounded-md text-[#10B981] hover:bg-[#161412] shrink-0"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
                     </div>
-                  );
-                })}
-              </div>
+                    <p className="text-[0.72rem] text-white uppercase tracking-wide">
+                      {(att.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           )}
 
-          <div className="h-px bg-[#2C2A28] my-1" />
-
-          {/* Item ID Highlight Box */}
-          {credential.$id && (
-            <div>
-              <FieldLabel label="Item ID" />
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => handleCopy(credential.$id, 'id')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleCopy(credential.$id, 'id');
-                  }
-                }}
-                className={`relative group p-3.5 rounded-xl border transition-all font-mono text-xs cursor-pointer flex items-center justify-between gap-3 select-none ${
-                  copied === 'id'
-                    ? 'border-[#10B981] bg-[#10B981]/15 text-[#10B981]'
-                    : 'bg-[#141211] border-[#2C2A28] text-[#F5F2ED] hover:border-[#10B981]/50 hover:bg-[#1A1817]'
-                }`}
-                title="Click to copy Item ID"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-[10px] uppercase font-bold text-white/40 tracking-wider">ID</span>
-                  <span className="truncate">{credential.$id}</span>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {copied === 'id' ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase text-[#10B981] bg-[#10B981]/20 px-2.5 py-1 rounded-lg border border-[#10B981]/40">
-                      <Check className="w-3 h-3" />
-                      Copied
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[11px] text-[#9B9691] group-hover:text-white bg-white/5 px-2.5 py-1 rounded-lg border border-white/5 transition-colors">
-                      <Copy className="w-3 h-3 opacity-60 group-hover:opacity-100" />
-                      Copy
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Metadata & Audit Info */}
           <div>
-            <span className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase mb-2.5 flex items-center gap-1.5 font-clash">
+            <span className={`${labelClass} mb-2.5 flex items-center gap-1.5`}>
               <Info className="w-3.5 h-3.5 text-[#10B981]" />
               <span>Timestamps</span>
             </span>
-            <div className="flex flex-col gap-1.5 text-xs text-[#9B9691]">
+            <div className="flex flex-col gap-1.5 text-xs text-white bg-black border border-white/20 rounded-xl p-3.5">
               {credential.createdAt && (
-                <p className="flex justify-between">
-                  <span>Created:</span>
-                  <span className="text-white/80">{formatDate(credential.createdAt)}</span>
+                <p className="flex justify-between gap-3">
+                  <span className="font-medium uppercase tracking-wide text-[0.72rem]">Created</span>
+                  <span className="font-bold">{formatDate(credential.createdAt)}</span>
                 </p>
               )}
               {credential.updatedAt && (
-                <p className="flex justify-between">
-                  <span>Updated:</span>
-                  <span className="text-white/80">{formatDate(credential.updatedAt)}</span>
+                <p className="flex justify-between gap-3">
+                  <span className="font-medium uppercase tracking-wide text-[0.72rem]">Updated</span>
+                  <span className="font-bold">{formatDate(credential.updatedAt)}</span>
                 </p>
               )}
             </div>
@@ -718,22 +701,12 @@ export default function CredentialDetail({
     </div>
   );
 
-  if (inline) {
-    return content;
-  }
+  if (inline) return content;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end overflow-hidden">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/80 transition-opacity duration-300 animate-in fade-in"
-        onClick={onClose}
-      />
-      
-      {/* Drawer sheet */}
-      <div 
-        className="relative z-10 w-full sm:w-[480px] h-full bg-[#161412] border-l border-[#2C2A28] flex flex-col shadow-2xl animate-in slide-in-from-right duration-300"
-      >
+      <div className="absolute inset-0 bg-black/80 animate-in fade-in" onClick={onClose} />
+      <div className="relative z-10 w-full sm:w-[480px] h-full bg-[#161412] border-l border-white/20 flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
         {content}
       </div>
     </div>

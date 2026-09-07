@@ -34,7 +34,9 @@ interface DecryptedCredential {
   password: string | null;
   url: string | null;
   notes: string | null;
+  customFields: Array<{ id: string; label: string; value: string }>;
   itemType: string;
+  isEnv?: boolean;
   $createdAt?: string;
   $updatedAt?: string;
 }
@@ -66,6 +68,7 @@ async function decryptWithDek(ciphertext: string, dek: CryptoKey): Promise<strin
 }
 
 import { looksEncrypted } from '@/lib/masterpass-crypto';
+import { normalizeCustomFields } from '@/lib/vault/parse-env';
 
 export default function SharedVaultClient({ credentialId, dekFragment, rawCredential }: SharedVaultClientProps & { rawCredential: any }) {
   const [credential, setCredential] = useState<DecryptedCredential | null>(null);
@@ -106,9 +109,12 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
             password: null,
             url: null,
             notes: null,
+            customFields: [],
             itemType: raw.itemType || 'login',
+            isEnv: Boolean(raw.isEnv),
             $createdAt: raw.$createdAt,
-            $updatedAt: raw.$updatedAt});
+            $updatedAt: raw.$updatedAt,
+          });
           return;
         }
 
@@ -122,6 +128,7 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
           return decryptWithDek(val, dek);
         };
 
+        const customFieldsRaw = await decrypt(raw.customFields);
         const decrypted: DecryptedCredential = {
           $id: raw.$id,
           name: (await decrypt(raw.name)) || 'Shared Item',
@@ -129,9 +136,12 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
           password: await decrypt(raw.password),
           url: await decrypt(raw.url),
           notes: await decrypt(raw.notes),
+          customFields: normalizeCustomFields(customFieldsRaw),
           itemType: raw.itemType || 'login',
+          isEnv: Boolean(raw.isEnv),
           $createdAt: raw.$createdAt,
-          $updatedAt: raw.$updatedAt};
+          $updatedAt: raw.$updatedAt,
+        };
 
         if (!cancelled) setCredential(decrypted);
       } catch (err: any) {
@@ -199,7 +209,9 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
             </div>
             <span className="svc-badge">
               <Globe size={11} />
-              Shared Password
+              {credential.isEnv || (credential.customFields?.length && !credential.password)
+                ? 'Shared Env'
+                : 'Shared Secret'}
             </span>
           </div>
         </div>
@@ -268,6 +280,33 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
               </div>
             </div>
           )}
+
+          {credential.customFields?.length > 0 && (
+            <div className="svc-field">
+              <label>{credential.isEnv || (!credential.password && !credential.username) ? 'Variables' : 'Custom Fields'}</label>
+              <div className="svc-custom-fields">
+                {credential.customFields.map((field, index) => (
+                  <div key={field.id || index} className="svc-custom-row">
+                    <span className="svc-custom-key">{field.label || `Field ${index + 1}`}</span>
+                    <div className="svc-field-value">
+                      <span className="password-val">{field.value || '—'}</span>
+                      <button
+                        className="svc-btn icon-btn"
+                        onClick={() => copyToClipboard(field.value || '', `cf-${index}`)}
+                        title="Copy"
+                      >
+                        {copied === `cf-${index}` ? (
+                          <CheckCircle2 size={14} className="copied" />
+                        ) : (
+                          <Copy size={14} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Timestamps */}
@@ -324,17 +363,16 @@ const sharedVaultStyles = `
     align-items: center;
     justify-content: center;
     padding: 24px 16px;
-    background: #0a0a0c;
+    background: #161412;
   }
 
   .shared-vault-card {
     width: 100%;
     max-width: 480px;
-    background: #111115;
-    border: 1px solid rgba(255,255,255,0.08);
+    background: #000000;
+    border: 1px solid rgba(255,255,255,0.2);
     border-radius: 20px;
-    padding: 32px;
-    box-shadow: 0 0 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    padding: 28px;
   }
 
   .svc-header {
@@ -412,9 +450,9 @@ const sharedVaultStyles = `
 
   .svc-field label {
     display: block;
-    font-size: 11px;
-    font-weight: 600;
-    color: #666;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #ffffff;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-bottom: 6px;
@@ -425,16 +463,16 @@ const sharedVaultStyles = `
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 10px;
+    background: #161412;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
     padding: 10px 12px;
     min-height: 42px;
   }
 
   .svc-field-value span {
     font-size: 14px;
-    color: #e0e0e0;
+    color: #ffffff;
     word-break: break-all;
     flex: 1;
     min-width: 0;
@@ -445,8 +483,28 @@ const sharedVaultStyles = `
     align-items: flex-start;
   }
 
+  .svc-custom-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .svc-custom-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .svc-custom-key {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #ffffff;
+    font-family: ui-monospace, monospace;
+    letter-spacing: 0.02em;
+  }
+
   .password-val {
-    font-family: 'Courier New', monospace;
+    font-family: ui-monospace, 'Courier New', monospace;
     letter-spacing: 0.05em;
   }
 
