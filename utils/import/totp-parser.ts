@@ -119,4 +119,8 @@ function extractIssuerFromName(name: string): string {
   return cleanName || name;
 }
 
+/** Public parser for otpauth URIs and bare base32 secrets. */
+export function parseTotpData(input: string): TotpParseResult | null {
+  return parseTotpUri(String(input || '').trim());
+}
 

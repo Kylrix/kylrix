@@ -29,13 +29,14 @@ import {
     Check,
     Download,
     AlertTriangle,
+    ArrowUpDown,
 } from 'lucide-react';
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
 import { AgentsSettingsTab } from '@/components/settings/AgentsSettingsTab';
-import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { SecurityTab } from '@/components/settings/SecurityTab';
 import { PrivacyTab } from '@/components/settings/PrivacyTab';
 import { DevelopersTab } from '@/components/settings/DevelopersTab';
+import { useOpenEcosystemPorter } from '@/components/porter/useOpenEcosystemPorter';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
 import { KeychainService } from '@/lib/appwrite/keychain';
@@ -235,9 +236,9 @@ function SettingsPageInner() {
     const [_demoModeEnabled, setDemoModeEnabled] = useState(false);
     const [computeBalance, setComputeBalance] = useState<{ balance: number; maxBalance: number; tier: string; percent: number } | null>(null);
     const [_profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
-    const [showPorterDrawer, setShowPorterDrawer] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [profile, setProfile] = useState<any>(null);
+    const openPorter = useOpenEcosystemPorter();
 
     const fetchProfile = useCallback(async () => {
         const username = getEffectiveUsername(user);
@@ -1199,6 +1200,15 @@ function SettingsPageInner() {
                                 <Download size={14} />
                                 <span>Download Account Archive</span>
                             </button>
+
+                            <button
+                                type="button"
+                                onClick={openPorter}
+                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#000000] hover:bg-[#161412] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-2 border-white/20"
+                            >
+                                <ArrowUpDown size={14} />
+                                <span>Transfer Secrets &amp; Codes</span>
+                            </button>
                         </div>
 
                         {/* Irreversible Account Purge (Danger Zone) */}
@@ -1295,10 +1305,6 @@ function SettingsPageInner() {
                 }}
             />
         )}
-        <VaultPorterDrawer
-            isOpen={showPorterDrawer}
-            onClose={() => setShowPorterDrawer(false)}
-        />
         {profile && (
             <EditProfileModal
                 open={isEditModalOpen}

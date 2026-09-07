@@ -13,6 +13,7 @@ const SELF_CONTAINED_PANEL_KEYS = new Set([
   'task-detail',
   'event-detail',
   'pinned-notes',
+  'ecosystem-porter',
 ]);
 
 const FULLSCREEN_PANEL_KEYS = new Set([
@@ -20,6 +21,7 @@ const FULLSCREEN_PANEL_KEYS = new Set([
   'task-detail',
   'event-detail',
   'pinned-notes',
+  'ecosystem-porter',
 ]);
 
 function panelTypeName(content: React.ReactNode): string | null {
@@ -75,6 +77,7 @@ export function DynamicSidebar() {
     typeName === 'CommObjectDetail' ||
     typeName === 'TaskDetails' ||
     typeName === 'EventDetails' ||
+    typeName === 'EcosystemPorter' ||
     typeName === 'MomentObjectDetail' ||
     typeName === 'PricingDrawer' ||
     typeName === 'TagObjectDetail' ||

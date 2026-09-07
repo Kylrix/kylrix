@@ -19,13 +19,13 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw, Lock, KeyRound } from 'lucide-react';
 
 import { useFAB } from '@/context/FABContext';
-import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { TOTPPageContent } from './totp/page';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
+import { useOpenEcosystemPorter } from '@/components/porter/useOpenEcosystemPorter';
 
 
 
@@ -69,20 +69,8 @@ function DashboardPageContent() {
   
   // Master password modal — only auto-open when unlock-on-demand is off
   const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
-  const [showPorterDrawer, setShowPorterDrawer] = useState(false);
-  const [_isDevMode, _setIsDevMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'secrets' | 'totp'>('secrets');
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { account } = await import('@/lib/appwrite/client');
-        const prefs = await account.getPrefs();
-        if ((prefs as any)?.developerMode) _setIsDevMode(true);
-      } catch {}
-    })();
-  }, []);
-  
   // State for all credentials, fetched once
   const [allCredentials, setAllCredentials] = useState<Credentials[]>([]);
   const [loading, setLoading] = useState(true);
@@ -280,6 +268,10 @@ function DashboardPageContent() {
       setLoadingMore(false);
     }
   }, [user?.$id]);
+
+  const openPorter = useOpenEcosystemPorter(() => {
+    void loadAllCredentials(true, null, true);
+  });
 
   const loadMoreCredentials = useCallback(() => {
     if (loadingMore || !hasMore || !nextCursor) return;
@@ -564,9 +556,9 @@ function DashboardPageContent() {
                       </button>
 
                       <button
-                        onClick={() => setShowPorterDrawer(true)}
+                        onClick={openPorter}
                         className="p-2 border-2 border-white/20 rounded-xl text-white/70 bg-[#000000] hover:text-white hover:border-white/40 hover:bg-[#1C1A18] transition-colors"
-                        title="Import/Export Vault Data"
+                        title="Import / Export"
                       >
                         <ArrowUpDown size={16} />
                       </button>
@@ -735,11 +727,6 @@ function DashboardPageContent() {
           onCancel={() => { }}
         />
       )}
-
-      <VaultPorterDrawer
-        isOpen={showPorterDrawer}
-        onClose={() => setShowPorterDrawer(false)}
-      />
     </div>
   );
 }
