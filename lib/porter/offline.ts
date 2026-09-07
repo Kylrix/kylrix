@@ -18,6 +18,8 @@ export type PorterSessionDraft = {
   fileName?: string | null;
   result?: PorterDiscernResult | null;
   exportFormat?: 'json' | 'encrypted-html';
+  /** Last UI step so resume lands in the right place */
+  view?: 'home' | 'pick-kind' | 'import' | 'preview' | 'export-format';
   savedAt: string;
 };
 
@@ -78,7 +80,22 @@ function normalizeDiscernWorkspaces(result: PorterDiscernResult): PorterDiscernR
           kind: 'workspace' as const,
         }))
       : []);
-  return { ...result, workspaces };
+  return {
+    ...result,
+    credentials: Array.isArray(anyResult.credentials) ? anyResult.credentials : [],
+    totpSecrets: Array.isArray(anyResult.totpSecrets) ? anyResult.totpSecrets : [],
+    workspaces,
+    warnings: Array.isArray(anyResult.warnings) ? anyResult.warnings : [],
+  };
+}
+
+/** True when a draft still has reviewable import items. */
+export function draftHasImportPreview(draft: PorterSessionDraft | null | undefined): boolean {
+  if (!draft?.result) return false;
+  const r = draft.result;
+  return (
+    (r.credentials?.length || 0) + (r.totpSecrets?.length || 0) + (r.workspaces?.length || 0) > 0
+  );
 }
 
 export async function clearPorterDraft(userId: string): Promise<void> {

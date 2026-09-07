@@ -24,6 +24,7 @@ import {
   exportVaultPlaintext,
   loadExistingVaultForDedupe,
   loadPorterDraft,
+  draftHasImportPreview,
   type PorterDiscernResult,
   type PorterSessionDraft,
 } from '@/lib/porter';
@@ -196,12 +197,18 @@ export default function EcosystemPorter({
   const persistSession = useCallback(
     async (partial: Partial<PorterSessionDraft> & { direction: PorterDirection; dataKind: PorterDataKind }) => {
       if (!userId) return;
+      // Never clobber a saved preview with an empty result unless caller clears explicitly
+      const keepResult =
+        partial.result === undefined
+          ? discerned
+          : partial.result;
       const next: Omit<PorterSessionDraft, 'savedAt'> = {
         direction: partial.direction,
         dataKind: partial.dataKind,
-        fileName: partial.fileName ?? fileName,
-        result: partial.result !== undefined ? partial.result : discerned,
+        fileName: partial.fileName !== undefined ? partial.fileName : fileName,
+        result: keepResult,
         exportFormat: partial.exportFormat ?? exportFormat,
+        view: partial.view,
       };
       await cachePorterDraft(userId, next);
       setCachedSession({ ...next, savedAt: new Date().toISOString() });
@@ -209,49 +216,61 @@ export default function EcosystemPorter({
     [userId, fileName, discerned, exportFormat],
   );
 
-  const cancelCachedSession = useCallback(async () => {
-    if (userId) await clearPorterDraft(userId);
-    setCachedSession(null);
-    setDiscerned(null);
-    setRawText('');
-    setFileName(null);
-    setError(null);
-    setConfirmKind(null);
-    setView('home');
-  }, [userId]);
-
   const resumeCachedSession = useCallback(async () => {
-    if (!cachedSession) return;
-    setDirection(cachedSession.direction);
-    setDataKind(cachedSession.dataKind);
-    setFileName(cachedSession.fileName || null);
-    if (cachedSession.exportFormat) setExportFormat(cachedSession.exportFormat);
-
-    if (cachedSession.direction === 'export') {
-      setView('export-format');
-      return;
-    }
-
-    let result = cachedSession.result || null;
-    if (result && userId) {
-      try {
-        const existing = await loadExistingVaultForDedupe(userId);
-        result = annotatePorterDiscernResult(filterDiscerned(result, cachedSession.dataKind), existing);
-      } catch {
-        result = filterDiscerned(result, cachedSession.dataKind);
+    setBusy(true);
+    setError(null);
+    try {
+      // Always re-read from LocalEngine so resume is not stuck on stale React state
+      const draft = userId ? (await loadPorterDraft(userId)) || cachedSession : cachedSession;
+      if (!draft) {
+        setError('No saved transfer found.');
+        setView('home');
+        return;
       }
-    }
-    setDiscerned(result);
-    if (
-      result &&
-      (result.credentials?.length || 0) +
-        (result.totpSecrets?.length || 0) +
-        (result.workspaces?.length || 0) >
-        0
-    ) {
-      setView('preview');
-    } else {
-      setView('import');
+      setCachedSession(draft);
+      setDirection(draft.direction);
+      setDataKind(draft.dataKind);
+      setFileName(draft.fileName || null);
+      if (draft.exportFormat) setExportFormat(draft.exportFormat);
+
+      if (draft.direction === 'export') {
+        setView(draft.view === 'export-format' || !draft.view ? 'export-format' : draft.view);
+        return;
+      }
+
+      let result = draft.result || null;
+      if (result) {
+        result = filterDiscerned(result, draft.dataKind);
+        if (userId) {
+          try {
+            const existing = await loadExistingVaultForDedupe(userId);
+            result = annotatePorterDiscernResult(result, existing);
+          } catch {
+            /* keep filtered result */
+          }
+        }
+      }
+      setDiscerned(result);
+
+      const hasItems =
+        !!result &&
+        (result.credentials?.length || 0) +
+          (result.totpSecrets?.length || 0) +
+          (result.workspaces?.length || 0) >
+          0;
+
+      if (hasItems || draft.view === 'preview') {
+        setView('preview');
+      } else if (draft.view === 'import' || draft.view === 'pick-kind') {
+        setView(draft.view === 'pick-kind' ? 'pick-kind' : 'import');
+      } else {
+        setView(hasItems ? 'preview' : 'import');
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Could not open the saved transfer.');
+      setView('home');
+    } finally {
+      setBusy(false);
     }
   }, [cachedSession, userId]);
 
@@ -281,6 +300,9 @@ export default function EcosystemPorter({
     }
     if (view === 'pick-kind') {
       setView('home');
+      if (userId) {
+        void loadPorterDraft(userId).then((d) => setCachedSession(d));
+      }
       return;
     }
     if (view === 'import' || view === 'export-format') {
@@ -301,6 +323,23 @@ export default function EcosystemPorter({
   };
 
   const startDirection = (dir: PorterDirection) => {
+    // Already have work in the other direction — ask to cancel first
+    if (cachedSession && cachedSession.direction !== dir) {
+      setError(
+        `You have an in-progress ${cachedSession.direction}. Open it, or cancel it first.`,
+      );
+      return;
+    }
+
+    // Same direction with saved work → resume details
+    if (
+      cachedSession?.direction === dir &&
+      (dir === 'export' || draftHasImportPreview(cachedSession) || cachedSession.view)
+    ) {
+      void resumeCachedSession();
+      return;
+    }
+
     setDirection(dir);
     setError(null);
     setDiscerned(null);
@@ -316,16 +355,27 @@ export default function EcosystemPorter({
             : 'mixed'
         : dataKind;
     if (nextKind !== dataKind) setDataKind(nextKind);
-    void persistSession({ direction: dir, dataKind: nextKind, result: null, fileName: null });
+    void persistSession({
+      direction: dir,
+      dataKind: nextKind,
+      result: null,
+      fileName: null,
+      view: 'pick-kind',
+    });
     setView('pick-kind');
   };
 
   const confirmKindPick = (kind: PorterDataKind) => {
     setDataKind(kind);
     setError(null);
-    void persistSession({ direction, dataKind: kind, result: discerned });
-    if (direction === 'import') setView('import');
-    else setView('export-format');
+    const nextView = direction === 'import' ? 'import' : 'export-format';
+    void persistSession({
+      direction,
+      dataKind: kind,
+      result: discerned ?? cachedSession?.result ?? null,
+      view: nextView,
+    });
+    setView(nextView);
   };
 
   const runDiscern = useCallback(
@@ -344,11 +394,17 @@ export default function EcosystemPorter({
         setDiscerned(result);
         setFileName(name || null);
         if (userId) {
+          const hasItems =
+            (result.credentials?.length || 0) +
+              (result.totpSecrets?.length || 0) +
+              (result.workspaces?.length || 0) >
+            0;
           await persistSession({
             direction: 'import',
             dataKind,
             result,
             fileName: name || null,
+            view: hasItems ? 'preview' : 'import',
           });
         }
         if (
@@ -734,7 +790,12 @@ export default function EcosystemPorter({
         {view === 'home' && (
           <>
             {cachedSession && (
-              <div className="rounded-2xl border border-[#10B981]/40 bg-black px-5 py-4 space-y-3">
+              <button
+                type="button"
+                onClick={() => void resumeCachedSession()}
+                disabled={busy}
+                className="w-full text-left rounded-2xl border border-[#10B981]/40 bg-black px-5 py-4 space-y-3 hover:border-[#10B981] transition-colors disabled:opacity-50"
+              >
                 <div>
                   <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white">
                     In progress
@@ -745,30 +806,41 @@ export default function EcosystemPorter({
                   </p>
                   <p className="text-sm font-medium text-white mt-1">
                     {cachedSession.direction === 'import'
-                      ? cachedSession.result
-                        ? `${(cachedSession.result.credentials?.length || 0) + (cachedSession.result.totpSecrets?.length || 0)} item(s) ready to review`
+                      ? draftHasImportPreview(cachedSession)
+                        ? `${(cachedSession.result?.credentials?.length || 0) + (cachedSession.result?.totpSecrets?.length || 0)} item(s) ready to review`
                         : 'Started — pick up where you left off'
                       : `Backup as ${cachedSession.exportFormat === 'encrypted-html' ? 'locked HTML' : 'JSON'}`}
                     {cachedSession.fileName ? ` · ${cachedSession.fileName}` : ''}
                   </p>
+                  <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-[#10B981] mt-2">
+                    {busy ? 'Opening…' : 'Tap to open details'}
+                  </p>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void resumeCachedSession()}
-                    className="flex-1 py-2.5 rounded-xl font-bold bg-[#10B981] text-black font-clash"
-                  >
+                  <span className="flex-1 py-2.5 rounded-xl font-bold bg-[#10B981] text-black font-clash text-center">
                     Open details
-                  </button>
-                  <button
-                    type="button"
-                    onClick={requestLeaveFlow}
-                    className="flex-1 py-2.5 rounded-xl font-bold bg-black border border-white/20 text-white font-clash"
+                  </span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      requestLeaveFlow();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        requestLeaveFlow();
+                      }
+                    }}
+                    className="flex-1 py-2.5 rounded-xl font-bold bg-black border border-white/20 text-white font-clash text-center cursor-pointer"
                   >
                     Cancel
-                  </button>
+                  </span>
                 </div>
-              </div>
+              </button>
             )}
 
             <button

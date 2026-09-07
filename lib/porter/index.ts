@@ -19,6 +19,7 @@ export {
   bundleToKylrixVaultJson,
   cachePorterDraft,
   clearPorterDraft,
+  draftHasImportPreview,
   exportVaultOffline,
   exportVaultPlaintext,
   loadPorterDraft,
