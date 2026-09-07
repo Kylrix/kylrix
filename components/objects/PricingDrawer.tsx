@@ -26,7 +26,7 @@ import { createBillingCheckoutSessionAction } from '@/lib/actions/billing/billin
 import { recordPaymentIntentAction } from '@/lib/actions/billing/payment-intent';
 import { calculateTotalSubscriptionPrice, getBundledFreeMonths, getYearlyDiscountedPrice, getYearlyListPrice } from '@/lib/subscription/ppp';
 import { getPublicProductName } from '@/lib/config/product-client';
-import { getPublicPricingPlans, type PublicPricingPlan } from '@/lib/config/pricing-plans-client';
+import { getPublicPricingPlansOrDefault, type PublicPricingPlan } from '@/lib/config/pricing-plans-client';
 
 const CHECKOUT_CACHE_KEY = 'kylrix_pricing_checkout_v1';
 
@@ -69,7 +69,7 @@ export function PricingDrawer({
   giftRecipientName,
   isGift = false,
 }: PricingDrawerProps) {
-  const pricingPlans = useMemo(() => getPublicPricingPlans(), []);
+  const pricingPlans = useMemo(() => getPublicPricingPlansOrDefault(), []);
   const defaultLedger = pricingPlans[0]?.ledgerKey || 'PRO';
 
   const { isAuthenticated, user } = useAuth();

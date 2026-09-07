@@ -59,7 +59,7 @@ export function CreateEventComposer({
   const { openProUpgrade } = useProUpgrade();
   const isPro = hasPaidKylrixPlan(user);
   const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('event');
-  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
+  const openPro = useCallback(() => openProUpgrade('Kylie Assist'), [openProUpgrade]);
   const ownerId = user?.$id || 'guest';
   const cacheKey = 'f_events_list';
 
@@ -420,8 +420,8 @@ export function CreateEventComposer({
           <TypeIntelGhostLayer
             draft={content}
             suggestion={ghostSuggestion}
-            enabled={Boolean(ghostSuggestion) || (createWithAgent && showWand)}
-            showWand={createWithAgent && showWand}
+            enabled={Boolean(ghostSuggestion) || createWithAgent}
+            showWand={createWithAgent}
             busy={agentBusy}
             accent={agentAccent}
             onAccept={acceptGhost}
@@ -431,6 +431,8 @@ export function CreateEventComposer({
           <TypeIntelToggle
             enabled={createWithAgent}
             onToggle={persistAgent}
+            locked={!isPro}
+            onLockedAttempt={openPro}
             accent={agentAccent}
             learningStatus={learningStatus}
             learningLabel={learningLabel}

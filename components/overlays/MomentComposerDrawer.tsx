@@ -80,7 +80,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   const audioChunksRef = useRef<Blob[]>([]);
   const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
+  const openPro = useCallback(() => openProUpgrade('Kylie Assist'), [openProUpgrade]);
 
   const {
     learningStatus,
@@ -550,8 +550,8 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
             <TypeIntelGhostLayer
               draft={content}
               suggestion={suggestion}
-              enabled={createWithAgent && Boolean(suggestion || showWand)}
-              showWand={showWand}
+              enabled={createWithAgent}
+              showWand={createWithAgent}
               busy={agentBusy}
               accent="#F59E0B"
               onAccept={acceptSuggestion}
@@ -644,13 +644,18 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
                   className={createWithAgent ? 'text-[#F59E0B] shrink-0' : 'text-white/40 shrink-0'}
                 />
                 <p className="text-[11px] font-extrabold text-white truncate">Kylie assist</p>
+                {!isPro && !createWithAgent ? (
+                  <span className="text-[8px] font-mono font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#6366F1]/15 text-[#6366F1] border border-[#6366F1]/25 shrink-0">
+                    Pro
+                  </span>
+                ) : null}
               </div>
               <button
                 type="button"
                 role="switch"
                 aria-checked={createWithAgent}
                 onClick={() => persistAgent(!createWithAgent)}
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors cursor-pointer ${
                   createWithAgent ? 'bg-[#F59E0B]' : 'bg-white/10'
                 }`}
               >

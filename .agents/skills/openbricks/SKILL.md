@@ -47,9 +47,16 @@ A single component / section uses **one continuous fill**. Do **not** split a ca
 - **Pure White Text Rule (STRICT)**: All text is pure `#FFFFFF`. Prohibit `rgba(255,255,255,0.45)`, `text-white/50`, or gray text.
 - Secondary / meta markers: smaller size (`0.72rem`), font-weight (`500` vs `800`), uppercase with letter-spacing (`letterSpacing: '0.08em'`).
 
+## Plan gating (STRICT)
+
+- **Do not hide** features a free plan lacks. Show every feature button/toggle (Kylie assist, voice, uploads, etc.).
+- **On attempt / enable / use**, open the Pro upgrade drawer — never silently remove the control.
+- Same convention on Moments, object composers, agent panel, and file tools. Detail: `brand.openbricks-4.0` §12.
+
 ## Related pointers
 
 - Chrome hosts: `ui.chrome-surfaces`
 - Drawer ↔ sidebar sizes: `ui.drawer-sidebar-desktop-translation`
 - Brand hues: `colors`
 - Interaction safety: `ui.interactivity-safety`, `ui.interaction-design`
+- OpenBricks 4 tactile + plan rules: `brand.openbricks-4.0`

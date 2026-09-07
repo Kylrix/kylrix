@@ -315,7 +315,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const { openProUpgrade } = useProUpgrade();
   const isPro = hasPaidKylrixPlan(user);
   const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('form');
-  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
+  const openPro = useCallback(() => openProUpgrade('Kylie Assist'), [openProUpgrade]);
   const { invalidate } = useDataNexus();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const { setIsDrawerOpen } = useDrawerState();
@@ -800,8 +800,8 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                   <TypeIntelGhostLayer
                     draft={description}
                     suggestion={ghostSuggestion}
-                    enabled={Boolean(ghostSuggestion) || (createWithAgent && showWand)}
-                    showWand={createWithAgent && showWand}
+                    enabled={Boolean(ghostSuggestion) || createWithAgent}
+                    showWand={createWithAgent}
                     busy={agentBusy}
                     accent={agentAccent}
                     onAccept={acceptGhost}
@@ -812,6 +812,8 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                 <TypeIntelToggle
                   enabled={createWithAgent}
                   onToggle={persistAgent}
+                  locked={!isPro}
+                  onLockedAttempt={openPro}
                   accent={agentAccent}
                   learningStatus={learningStatus}
                   learningLabel={learningLabel}

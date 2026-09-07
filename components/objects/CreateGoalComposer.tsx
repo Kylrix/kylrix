@@ -58,7 +58,7 @@ export function CreateGoalComposer({
   const { openProUpgrade } = useProUpgrade();
   const isPro = hasPaidKylrixPlan(user);
   const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('goal');
-  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
+  const openPro = useCallback(() => openProUpgrade('Kylie Assist'), [openProUpgrade]);
   const ownerId = user?.$id || userId || 'guest';
   const { closeSidebar } = useDynamicSidebar();
   const { getCachedData, setCachedData } = useDataNexus();
@@ -547,8 +547,8 @@ export function CreateGoalComposer({
             <TypeIntelGhostLayer
               draft={content}
               suggestion={ghostSuggestion}
-              enabled={Boolean(ghostSuggestion) || (createWithAgent && showWand)}
-              showWand={createWithAgent && showWand}
+              enabled={Boolean(ghostSuggestion) || createWithAgent}
+              showWand={createWithAgent}
               busy={agentBusy}
               accent={agentAccent}
               onAccept={acceptGhost}
@@ -559,7 +559,13 @@ export function CreateGoalComposer({
           <TypeIntelToggle
             enabled={createWithAgent}
             onToggle={persistAgent}
+            locked={!isPro}
+            onLockedAttempt={openPro}
             accent={agentAccent}
+            learningStatus={learningStatus}
+            learningLabel={learningLabel}
+            busy={agentBusy}
+          />
             learningStatus={learningStatus}
             learningLabel={learningLabel}
             busy={agentBusy}

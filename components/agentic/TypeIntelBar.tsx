@@ -13,6 +13,9 @@ type ToggleProps = {
   learningLabel?: string | null;
   busy?: boolean;
   className?: string;
+  /** Plan lacks this feature — still show control; enable attempt opens upgrade. */
+  locked?: boolean;
+  onLockedAttempt?: () => void;
 };
 
 /** Compact “Kylie assist” switch — lives under the field, not in the typing plane. */
@@ -24,6 +27,8 @@ export function TypeIntelToggle({
   learningLabel,
   busy,
   className = '',
+  locked = false,
+  onLockedAttempt,
 }: ToggleProps) {
   return (
     <div className={`flex flex-col gap-1 shrink-0 ${className}`}>
@@ -35,13 +40,24 @@ export function TypeIntelToggle({
             style={{ color: enabled ? accent : 'rgba(255,255,255,0.4)' }}
           />
           <p className="text-[11px] font-extrabold text-white truncate">Kylie assist</p>
+          {locked && !enabled ? (
+            <span className="text-[8px] font-mono font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#6366F1]/15 text-[#6366F1] border border-[#6366F1]/25 shrink-0">
+              Pro
+            </span>
+          ) : null}
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={enabled}
-          onClick={() => onToggle(!enabled)}
-          className="relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors"
+          onClick={() => {
+            if (!enabled && locked) {
+              onLockedAttempt?.();
+              return;
+            }
+            onToggle(!enabled);
+          }}
+          className="relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors cursor-pointer"
           style={{ backgroundColor: enabled ? accent : 'rgba(255,255,255,0.1)' }}
         >
           <span
@@ -52,17 +68,17 @@ export function TypeIntelToggle({
         </button>
       </div>
       {enabled && learningLabel ? (
-        <p className="text-[10px] font-bold text-white/40 flex items-center gap-1.5 px-0.5">
+        <p className="text-[10px] font-bold text-white flex items-center gap-1.5 px-0.5">
           {learningStatus === 'initializing' ? (
             <span
               className="w-2.5 h-2.5 rounded-full border border-t-transparent animate-spin"
               style={{ borderColor: `${accent}66`, borderTopColor: accent }}
             />
           ) : (
-            <Sparkles size={11} style={{ color: `${accent}b3` }} />
+            <Sparkles size={11} style={{ color: accent }} />
           )}
           <span>{learningLabel}</span>
-          {busy ? <span className="text-white/25">· writing…</span> : null}
+          {busy ? <span className="text-white">· writing…</span> : null}
         </p>
       ) : null}
     </div>

@@ -223,3 +223,14 @@ Drawer top action bars must follow a strict 3-slot button order:
 | **CTA Rows** | Full-width single buttons stacked vertically | Dynamic 2-column compact grid for complementary CTAs |
 | **Copy Tone** | Corporate wizard steps & jargon | Plain English, crisp, action-oriented labels |
 | **Text Overflow** | Text pushing container outside viewport | Strict `minWidth: 0` + `textOverflow: 'ellipsis'` |
+| **Plan-gated features** | Hide buttons free users cannot use | **Always show** the control; attempt/enable opens Pro upgrade drawer |
+
+---
+
+## 12. Plan Gating — Show Everything, Gate on Attempt (STRICT)
+
+- **Never hide** feature buttons, toggles, or assist controls because the current plan lacks them (Kylie assist, voice, uploads, projects, etc.).
+- **Always render** the same chrome for free and paid users so discovery stays honest.
+- **On contact / enable / use** of a paid capability: open the Pro upgrade drawer (`openProUpgrade('…')`) instead of silently no-oping or removing the control.
+- Free users may keep the toggle off; turning it **on**, tapping wand/takeover, or invoking AI still routes through the upgrade drawer.
+- Applies product-wide: Moments, notes/goals/events/forms composers, agent panel tools, file uploads, collaboration.

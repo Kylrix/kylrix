@@ -98,7 +98,7 @@ export default function CreateNoteForm({
   const { openFileDrawer } = useUnifiedFileDrawer();
   const isPro = hasPaidKylrixPlan(user);
   const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('note');
-  const openPro = useCallback(() => openProUpgrade('AI features'), [openProUpgrade]);
+  const openPro = useCallback(() => openProUpgrade('Kylie Assist'), [openProUpgrade]);
 
   const [title, setTitle] = useState(initialContent?.title || '');
   const [content, setContent] = useState(initialContent?.content || '');
@@ -1357,8 +1357,8 @@ export default function CreateNoteForm({
             <TypeIntelGhostLayer
               draft={content}
               suggestion={ghostSuggestion}
-              enabled={Boolean(ghostSuggestion) || (createWithAgent && showWand)}
-              showWand={createWithAgent && showWand}
+              enabled={Boolean(ghostSuggestion) || createWithAgent}
+              showWand={createWithAgent}
               busy={agentBusy}
               accent={agentAccent}
               onAccept={acceptGhost}
@@ -1369,6 +1369,8 @@ export default function CreateNoteForm({
             <TypeIntelToggle
               enabled={createWithAgent}
               onToggle={persistAgent}
+              locked={!isPro}
+              onLockedAttempt={openPro}
               accent={agentAccent}
               learningStatus={learningStatus}
               learningLabel={learningLabel}
