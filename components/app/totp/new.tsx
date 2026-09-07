@@ -2,7 +2,7 @@
 
 import { createTotpSecret, updateTotpSecret } from '@/lib/appwrite';
 import { useAppwriteVault } from '@/context/appwrite-context';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { Drawer, Box, IconButton } from '@/lib/openbricks/primitives';
 import { X, Shield } from 'lucide-react';
@@ -12,6 +12,12 @@ import { masterPassCrypto } from '@/lib/masterpass-crypto';
 
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
+import {
+  clearSealedVaultDraft,
+  readSealedVaultDraft,
+  wipeLegacyPlainVaultDrafts,
+  writeSealedVaultDraft,
+} from '@/lib/vault/sealed-draft';
 
 const DRAWER_SX_MOBILE = {
   borderTopLeftRadius: '24px',
@@ -68,6 +74,8 @@ export default function NewTotpDialog({
     period: 30});
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -82,7 +90,13 @@ export default function NewTotpDialog({
   }, [open, setIsDrawerOpen]);
 
   useEffect(() => {
-    if (initialData) {
+    wipeLegacyPlainVaultDrafts();
+  }, []);
+
+  // Edit: load initial. Create: sealed draft hydrate.
+  useEffect(() => {
+    if (!open) return;
+    if (initialData?.$id) {
       setForm({
         issuer: initialData.issuer || "",
         accountName: initialData.accountName || "",
@@ -91,17 +105,60 @@ export default function NewTotpDialog({
         algorithm: initialData.algorithm || "SHA1",
         digits: initialData.digits || 6,
         period: initialData.period || 30});
-    } else {
-      setForm({
-        issuer: "",
-        accountName: "",
-        secretKey: "",
-        folderId: "",
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30});
+      setDraftReady(true);
+      return;
     }
-  }, [initialData, open]);
+    if (!user?.$id) {
+      setDraftReady(true);
+      return;
+    }
+    let cancelled = false;
+    setDraftReady(false);
+    (async () => {
+      const empty = () =>
+        setForm({
+          issuer: "",
+          accountName: "",
+          secretKey: "",
+          folderId: "",
+          algorithm: "SHA1",
+          digits: 6,
+          period: 30,
+        });
+      if (!masterPassCrypto.isVaultUnlocked()) {
+        if (!cancelled) {
+          empty();
+          setDraftReady(true);
+        }
+        return;
+      }
+      const draft = await readSealedVaultDraft(user.$id, 'totp');
+      if (cancelled) return;
+      if (!draft) {
+        empty();
+        setDraftReady(true);
+        return;
+      }
+      setForm(draft.form);
+      if (typeof draft.showAdvanced === 'boolean') setShowAdvanced(draft.showAdvanced);
+      setDraftReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialData, open, user?.$id]);
+
+  useEffect(() => {
+    if (!open || initialData?.$id || !draftReady || !user?.$id) return;
+    if (!masterPassCrypto.isVaultUnlocked()) return;
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      void writeSealedVaultDraft(user.$id, 'totp', { form, showAdvanced });
+    }, 450);
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
+  }, [open, initialData?.$id, draftReady, user?.$id, form, showAdvanced]);
 
   const handleClose = useCallback(() => {
     setIsDrawerOpen(false);
@@ -148,6 +205,7 @@ export default function NewTotpDialog({
         if (isCustomWorkspace && (created?.$id || (created as any)?.id)) {
           void attachEntityToActiveWorkspace('totp', created.$id || (created as any).id);
         }
+        await clearSealedVaultDraft(user.$id, 'totp');
         toast.success("Smart Code added!");
         onSaved?.(created);
       }

@@ -43,6 +43,12 @@ import {
   parseEnvText,
   type EnvField,
 } from '@/lib/vault/parse-env';
+import {
+  clearSealedVaultDraft,
+  readSealedVaultDraft,
+  wipeLegacyPlainVaultDrafts,
+  writeSealedVaultDraft,
+} from '@/lib/vault/sealed-draft';
 
 type CustomField = EnvField;
 
@@ -116,21 +122,24 @@ export default function CredentialDialog({
   const [attachments, setAttachments] = useState<any[]>([]);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [envHint, setEnvHint] = useState<string | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Vault secrets: NEVER persist drafts to localStorage / disk (plain text leak).
-  // Wipe any legacy draft key left from older builds.
+  // Wipe legacy plaintext drafts once.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.removeItem('kylrix:draft:secret');
-    } catch {}
+    wipeLegacyPlainVaultDrafts();
   }, []);
 
+  // Create-only: hydrate sealed draft (MEK) into RAM form.
   useEffect(() => {
+    if (!open || initial || !user?.$id) {
+      setDraftReady(!open || Boolean(initial));
+      return;
+    }
     let cancelled = false;
-
-    const hydrate = async () => {
-      if (!initial) {
+    setDraftReady(false);
+    (async () => {
+      const empty = () => {
         setForm({
           name: prefill?.name || '',
           username: prefill?.username || '',
@@ -151,13 +160,90 @@ export default function CredentialDialog({
         setAttachments([]);
         setEnvHint(null);
         setError(null);
+      };
+
+      if (!masterPassCrypto.isVaultUnlocked()) {
+        if (!cancelled) {
+          empty();
+          setDraftReady(true);
+        }
         return;
       }
+      const draft = await readSealedVaultDraft(user.$id, 'secret');
+      if (cancelled) return;
+      if (!draft) {
+        empty();
+        setDraftReady(true);
+        return;
+      }
+      setForm((f) => ({
+        ...f,
+        name: '',
+        username: '',
+        password: '',
+        url: '',
+        notes: '',
+        tags: '',
+        cardNumber: '',
+        cardholderName: '',
+        cardExpiry: '',
+        cardCVV: '',
+        cardPIN: '',
+        cardType: '',
+        ...draft.form,
+      }));
+      setCustomFields(draft.customFields || []);
+      setIsEnvMode(Boolean(draft.isEnvMode));
+      setIsNameManuallyEdited(Boolean(draft.isNameManuallyEdited));
+      setAttachments([]);
+      setEnvHint(null);
+      setError(null);
+      setDraftReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, initial, user?.$id, prefill?.name, prefill?.username, prefill?.url]);
 
-      // Form state is RAM-only. Decrypt ciphertext rows for editing without writing back to LocalEngine.
+  // Create-only: debounce seal → LocalEngine draft key (never plaintext).
+  useEffect(() => {
+    if (!open || initial || !draftReady || !user?.$id) return;
+    if (!masterPassCrypto.isVaultUnlocked()) return;
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      void writeSealedVaultDraft(user.$id, 'secret', {
+        form,
+        customFields,
+        isEnvMode,
+        isNameManuallyEdited,
+        defaultType,
+      });
+    }, 450);
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
+  }, [
+    open,
+    initial,
+    draftReady,
+    user?.$id,
+    form,
+    customFields,
+    isEnvMode,
+    isNameManuallyEdited,
+    defaultType,
+  ]);
+
+  // Edit-only: decrypt row into RAM form (never write decrypted to LocalEngine).
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrate = async () => {
+      if (!initial || !open) return;
+
       let row: any = { ...initial };
       try {
-        const { looksEncrypted, decryptField, masterPassCrypto } = await import('@/lib/masterpass-crypto');
+        const { looksEncrypted, decryptField } = await import('@/lib/masterpass-crypto');
         if (masterPassCrypto.isVaultUnlocked()) {
           let dekKey: CryptoKey | null = null;
           if (row.dek) {
@@ -218,7 +304,7 @@ export default function CredentialDialog({
     return () => {
       cancelled = true;
     };
-  }, [initial, open, prefill]);
+  }, [initial, open]);
 
   const applyEnvText = useCallback((text: string) => {
     const parsed = parseEnvText(text);
@@ -445,6 +531,7 @@ export default function CredentialDialog({
             created.$id || (created as any).id,
           );
         }
+        if (user?.$id) await clearSealedVaultDraft(user.$id, 'secret');
         onSaved(created as any);
       }
       handleClose();
@@ -471,6 +558,7 @@ export default function CredentialDialog({
         saved = await updateCredential(initial.$id, credentialData);
       } else {
         saved = await createCredential(credentialData);
+        if (user?.$id) await clearSealedVaultDraft(user.$id, 'secret');
       }
       onSaved();
       if (saved && (saved.$id || saved.id)) {
