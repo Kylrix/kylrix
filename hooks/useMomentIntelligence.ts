@@ -408,7 +408,7 @@ export function useMomentIntelligence(opts: {
           }
         }
       })();
-    }, 1600);
+    }, 2400);
 
     return () => {
       if (reinforceTimerRef.current) clearTimeout(reinforceTimerRef.current);
