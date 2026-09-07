@@ -12,7 +12,7 @@ import { MomentObjectDetail } from '@/components/objects/MomentObjectDetail';
 import type { MomentSource } from '@/lib/connect/moment-engagement';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSurfaceScroll } from '@/hooks/useSurfaceScroll';
-import { scrollScope, writeSurfaceActive } from '@/lib/ui/surface-memory';
+import { scrollScope } from '@/lib/ui/surface-memory';
 
 export interface MomentsDrawerProps {
   onClose?: () => void;
@@ -35,14 +35,6 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
     scope: user?.$id ? scrollScope('moments-drawer', 'feed') : null,
     enabled: !selectedMoment,
   });
-
-  useEffect(() => {
-    if (!user?.$id) return;
-    void writeSurfaceActive(user.$id, 'moments-drawer', {
-      id: selectedMoment?.momentId || 'feed',
-      meta: selectedMoment ? { source: selectedMoment.source } : { view: 'feed' },
-    });
-  }, [user?.$id, selectedMoment?.momentId, selectedMoment?.source]);
 
   const handleOpenComposer = useCallback(() => {
     openUnified('moment-composer');

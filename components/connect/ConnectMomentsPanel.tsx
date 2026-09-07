@@ -10,7 +10,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useConnectPersonalTab } from '@/hooks/useConnectPersonalTab';
 import { useAuth } from '@/context/auth/AuthContext';
-import { readSurfaceActive, writeSurfaceActive } from '@/lib/ui/surface-memory';
+import { readSurfacePref, writeSurfacePref } from '@/lib/ui/surface-memory';
 
 export type ConnectTab = 'moments' | 'replies' | 'likes' | 'bookmarks';
 
@@ -70,7 +70,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
       return;
     }
     let cancelled = false;
-    void readSurfaceActive(user.$id, 'connect-moments-tab').then((hit) => {
+    void readSurfacePref(user.$id, 'connect-moments-tab').then((hit) => {
       if (cancelled) return;
       const id = String(hit?.id || '');
       if (id === 'replies' || id === 'likes' || id === 'bookmarks' || id === 'moments') {
@@ -85,7 +85,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
 
   useEffect(() => {
     if (!tabReady || !user?.$id) return;
-    void writeSurfaceActive(user.$id, 'connect-moments-tab', { id: tab });
+    void writeSurfacePref(user.$id, 'connect-moments-tab', { id: tab });
   }, [tab, tabReady, user?.$id]);
 
   const activeFeed =

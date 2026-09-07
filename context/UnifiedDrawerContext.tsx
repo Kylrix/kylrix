@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
-import { writeSurfaceActive } from '@/lib/ui/surface-memory';
+import { writeSurfaceForeground } from '@/lib/ui/surface-memory';
 
 type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'share-context' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'add-to-project' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'agent-create' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'pricing' | 'tags' | 'trash' | 'project-invite' | 'form' | 'form-response-detail' | 'sanitize' | 'agentic-preview' | 'project-settings' | 'project-visibility' | 'project-auto-sweep' | 'project-join-request-confirm' | 'moment-composer' | 'access-control' | 'milestone-details' | 'ecosystem-send' | 'hangouts' | 'moments' | 'flows' | 'profile-preview' | 'zap' | 'reaction-detail';
 
@@ -29,6 +29,22 @@ function drawerMemoryId(content: DrawerContent, data: any): string | null {
   return null;
 }
 
+/** Surfaces that count as exclusive route foreground (not ephemeral confirm sheets). */
+function isForegroundDrawer(content: DrawerContent): boolean {
+  return (
+    content === 'moments' ||
+    content === 'moment-composer' ||
+    content === 'hangouts' ||
+    content === 'flows' ||
+    content === 'note' ||
+    content === 'agentic' ||
+    content === 'wallet' ||
+    content === 'tags' ||
+    content === 'trash' ||
+    content === 'form'
+  );
+}
+
 export function UnifiedDrawerProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [activeContent, setActiveContent] = useState<DrawerContent>('navbar');
@@ -38,8 +54,10 @@ export function UnifiedDrawerProvider({ children }: { children: ReactNode }) {
     (content: DrawerContent, data?: any) => {
       setDrawerData(data || null);
       setActiveContent(content);
-      if (user?.$id && content !== 'navbar') {
-        void writeSurfaceActive(user.$id, 'unified-drawer', {
+      // Exclusive last-wins foreground — opening moments replaces note/etc. for this route.
+      if (user?.$id && isForegroundDrawer(content)) {
+        void writeSurfaceForeground(user.$id, {
+          kind: `unified:${content}`,
           id: drawerMemoryId(content, data) || content,
           meta: {
             content,
@@ -52,21 +70,14 @@ export function UnifiedDrawerProvider({ children }: { children: ReactNode }) {
   );
 
   const close = useCallback(() => {
+    const wasForeground = isForegroundDrawer(activeContent);
     setActiveContent('navbar');
     setDrawerData(null);
-    if (user?.$id) {
-      void writeSurfaceActive(user.$id, 'unified-drawer', { open: false });
+    // Clear exclusive slot only if we were the foreground — don't wipe prefs.
+    if (user?.$id && wasForeground) {
+      void writeSurfaceForeground(user.$id, null);
     }
-  }, [user?.$id]);
-
-  // Remember last non-navbar drawer kind for cross-session continuity (payload restored by callers via drafts)
-  useEffect(() => {
-    if (!user?.$id || activeContent === 'navbar') return;
-    void writeSurfaceActive(user.$id, 'unified-drawer', {
-      id: drawerMemoryId(activeContent, drawerData) || activeContent,
-      meta: { content: activeContent },
-    });
-  }, [user?.$id, activeContent, drawerData]);
+  }, [user?.$id, activeContent]);
 
   return (
     <UnifiedDrawerContext.Provider value={{ activeContent, drawerData, open, close }}>

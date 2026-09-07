@@ -1,6 +1,12 @@
 /**
  * Cross-surface UI memory (LocalEngine-first).
  * Mirrors native sidebar memory: instant local restore, optional later remote sync.
+ *
+ * Exclusive rule (STRICT):
+ *   One route → at most ONE foreground surface (note detail XOR moments XOR hangouts…).
+ *   Do NOT stack mutually exclusive UIs as “open”. Tabs/prefs are separate and not restored as open overlays.
+ *   Stackable chrome (rare: sudo on top of a surface) is not stored here — live stack only.
+ *
  * Hard size caps so payloads stay cross-platform safe.
  */
 
@@ -13,7 +19,8 @@ export const SURFACE_MEMORY_MAX_BYTES = 48_000;
 export const SURFACE_DRAFT_MAX_CHARS = 8_000;
 export const SURFACE_MAX_DRAFTS = 48;
 export const SURFACE_MAX_SCROLLS = 64;
-export const SURFACE_MAX_ACTIVE = 24;
+export const SURFACE_MAX_ROUTES = 40;
+export const SURFACE_MAX_PREFS = 32;
 
 export type SurfaceDraftEntry = {
   text: string;
@@ -29,9 +36,12 @@ export type SurfaceScrollEntry = {
 };
 
 export type SurfaceActiveEntry = {
-  /** e.g. unified:moments | unified:moment-composer | rail:native | hangouts */
+  /**
+   * Exclusive foreground kind for a route, e.g.
+   * unified:moments | unified:moment-composer | unified:hangouts | rail:note | rail:goal
+   */
   kind: string;
-  /** Stable discriminator — parent moment id, chat id, etc. */
+  /** Stable discriminator — parent moment id, note id, etc. */
   id?: string | null;
   route?: string | null;
   updatedAt: number;
@@ -39,15 +49,43 @@ export type SurfaceActiveEntry = {
 };
 
 export type SurfaceMemoryDoc = {
-  version: 1;
+  version: 2;
   drafts: Record<string, SurfaceDraftEntry>;
   scrolls: Record<string, SurfaceScrollEntry>;
-  active: Record<string, SurfaceActiveEntry>;
+  /**
+   * Last-wins exclusive foreground per route.
+   * Opening moments replaces note detail for that route — never both.
+   */
+  foregroundByRoute: Record<string, SurfaceActiveEntry>;
+  /**
+   * Non-exclusive prefs (feed tab, collapsed flags). NEVER treated as “open this overlay”.
+   */
+  prefs: Record<string, SurfaceActiveEntry>;
   updatedAt: number;
 };
 
 export function emptySurfaceMemory(): SurfaceMemoryDoc {
-  return { version: 1, drafts: {}, scrolls: {}, active: {}, updatedAt: Date.now() };
+  return {
+    version: 2,
+    drafts: {},
+    scrolls: {},
+    foregroundByRoute: {},
+    prefs: {},
+    updatedAt: Date.now(),
+  };
+}
+
+/** Collapse dynamic ids so memory keys stay stable across similar screens. */
+export function surfaceRouteKey(pathname?: string | null): string {
+  if (typeof pathname === 'string' && pathname) {
+    return pathname
+      .replace(/\/[a-f0-9]{8,}(?:-[a-f0-9]+)*$/i, '/:id')
+      .replace(/\/\d+$/g, '/:id');
+  }
+  if (typeof window !== 'undefined' && window.location?.pathname) {
+    return surfaceRouteKey(window.location.pathname);
+  }
+  return '/';
 }
 
 /** Moment create = one global draft; reply drafts are per parent moment. */
@@ -68,8 +106,8 @@ export function scrollScope(kind: string, id?: string | null): string {
   return `scroll:${kind}${id ? `:${id}` : ''}`;
 }
 
-export function activeScope(kind: string): string {
-  return `active:${kind}`;
+export function prefScope(kind: string): string {
+  return `pref:${kind}`;
 }
 
 function approxBytes(doc: SurfaceMemoryDoc): number {
@@ -80,12 +118,30 @@ function approxBytes(doc: SurfaceMemoryDoc): number {
   }
 }
 
+function migrateFromV1(raw: any): SurfaceMemoryDoc {
+  const base = emptySurfaceMemory();
+  if (!raw || typeof raw !== 'object') return base;
+  base.drafts = raw.drafts || {};
+  base.scrolls = raw.scrolls || {};
+  // v1 stored many active:* keys — keep only the newest as a single global foreground
+  const actives = Object.values(raw.active || {}) as SurfaceActiveEntry[];
+  if (actives.length) {
+    const newest = [...actives].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+    if (newest?.kind) {
+      const route = newest.route || '/';
+      base.foregroundByRoute[route] = { ...newest, route, updatedAt: newest.updatedAt || Date.now() };
+    }
+  }
+  return pruneDoc(base);
+}
+
 function pruneDoc(doc: SurfaceMemoryDoc): SurfaceMemoryDoc {
   const next: SurfaceMemoryDoc = {
-    version: 1,
+    version: 2,
     drafts: { ...doc.drafts },
     scrolls: { ...doc.scrolls },
-    active: { ...doc.active },
+    foregroundByRoute: { ...doc.foregroundByRoute },
+    prefs: { ...doc.prefs },
     updatedAt: Date.now(),
   };
 
@@ -94,8 +150,7 @@ function pruneDoc(doc: SurfaceMemoryDoc): SurfaceMemoryDoc {
     max: number,
   ): Record<string, T> => {
     const entries = Object.entries(map).sort((a, b) => b[1].updatedAt - a[1].updatedAt);
-    const kept = entries.slice(0, max);
-    return Object.fromEntries(kept);
+    return Object.fromEntries(entries.slice(0, max));
   };
 
   for (const [k, d] of Object.entries(next.drafts)) {
@@ -109,9 +164,9 @@ function pruneDoc(doc: SurfaceMemoryDoc): SurfaceMemoryDoc {
 
   next.drafts = trimMap(next.drafts, SURFACE_MAX_DRAFTS);
   next.scrolls = trimMap(next.scrolls, SURFACE_MAX_SCROLLS);
-  next.active = trimMap(next.active, SURFACE_MAX_ACTIVE);
+  next.foregroundByRoute = trimMap(next.foregroundByRoute, SURFACE_MAX_ROUTES);
+  next.prefs = trimMap(next.prefs, SURFACE_MAX_PREFS);
 
-  // Byte budget — drop oldest drafts then scrolls
   let guard = 0;
   while (approxBytes(next) > SURFACE_MEMORY_MAX_BYTES && guard++ < 80) {
     const draftKeys = Object.keys(next.drafts).sort(
@@ -141,11 +196,23 @@ export async function loadSurfaceMemory(userId: string): Promise<SurfaceMemoryDo
   const uid = userId || 'guest';
   if (memoryCache?.userId === uid) return memoryCache.doc;
   try {
-    const hit = await LocalEngine.cacheGet<SurfaceMemoryDoc>(SURFACE_MEMORY_KEY(uid));
-    const doc =
-      hit && hit.version === 1
-        ? pruneDoc({ ...emptySurfaceMemory(), ...hit, drafts: hit.drafts || {}, scrolls: hit.scrolls || {}, active: hit.active || {} })
-        : emptySurfaceMemory();
+    const hit = await LocalEngine.cacheGet<any>(SURFACE_MEMORY_KEY(uid));
+    let doc: SurfaceMemoryDoc;
+    if (hit?.version === 2) {
+      doc = pruneDoc({
+        ...emptySurfaceMemory(),
+        ...hit,
+        drafts: hit.drafts || {},
+        scrolls: hit.scrolls || {},
+        foregroundByRoute: hit.foregroundByRoute || {},
+        prefs: hit.prefs || {},
+      });
+    } else if (hit?.version === 1 || hit?.active) {
+      doc = migrateFromV1(hit);
+      void LocalEngine.cacheSet(SURFACE_MEMORY_KEY(uid), doc);
+    } else {
+      doc = emptySurfaceMemory();
+    }
     memoryCache = { userId: uid, doc };
     return doc;
   } catch {
@@ -237,17 +304,57 @@ export async function writeSurfaceScroll(
   schedulePersist(userId, doc);
 }
 
-export async function writeSurfaceActive(
+/**
+ * Set the single exclusive foreground for a route (replaces whatever was there).
+ * Pass null / open:false to clear — never leave two overlays “enabled”.
+ */
+export async function writeSurfaceForeground(
+  userId: string,
+  entry:
+    | (Omit<SurfaceActiveEntry, 'updatedAt' | 'route'> & {
+        route?: string | null;
+        open?: boolean;
+      })
+    | null,
+  routePath?: string | null,
+): Promise<void> {
+  const doc = await loadSurfaceMemory(userId);
+  const route = surfaceRouteKey(entry?.route ?? routePath);
+  if (!entry || entry.open === false) {
+    delete doc.foregroundByRoute[route];
+  } else {
+    doc.foregroundByRoute[route] = {
+      kind: entry.kind,
+      id: entry.id ?? null,
+      route,
+      meta: entry.meta,
+      updatedAt: Date.now(),
+    };
+  }
+  doc.updatedAt = Date.now();
+  schedulePersist(userId, doc);
+}
+
+export async function readSurfaceForeground(
+  userId: string,
+  routePath?: string | null,
+): Promise<SurfaceActiveEntry | null> {
+  const doc = await loadSurfaceMemory(userId);
+  return doc.foregroundByRoute[surfaceRouteKey(routePath)] || null;
+}
+
+/** Non-exclusive prefs (tabs, toggles) — never restore as open stacks. */
+export async function writeSurfacePref(
   userId: string,
   kind: string,
   entry: Omit<SurfaceActiveEntry, 'kind' | 'updatedAt'> & { open?: boolean },
 ): Promise<void> {
   const doc = await loadSurfaceMemory(userId);
-  const key = activeScope(kind);
+  const key = prefScope(kind);
   if (entry.open === false) {
-    delete doc.active[key];
+    delete doc.prefs[key];
   } else {
-    doc.active[key] = {
+    doc.prefs[key] = {
       kind,
       id: entry.id ?? null,
       route: entry.route ?? null,
@@ -259,10 +366,48 @@ export async function writeSurfaceActive(
   schedulePersist(userId, doc);
 }
 
-export async function readSurfaceActive(
+export async function readSurfacePref(
   userId: string,
   kind: string,
 ): Promise<SurfaceActiveEntry | null> {
   const doc = await loadSurfaceMemory(userId);
-  return doc.active[activeScope(kind)] || null;
+  return doc.prefs[prefScope(kind)] || null;
+}
+
+/**
+ * @deprecated Use writeSurfaceForeground (exclusive) or writeSurfacePref (tabs).
+ * Kept as a thin adapter so old call sites don't stack kinds in a free-for-all map.
+ */
+export async function writeSurfaceActive(
+  userId: string,
+  kind: string,
+  entry: Omit<SurfaceActiveEntry, 'kind' | 'updatedAt'> & { open?: boolean },
+): Promise<void> {
+  // Tabs / nested chrome → prefs. Everything else → exclusive foreground.
+  if (kind.includes('-tab') || kind.endsWith(':tab') || kind.startsWith('pref:')) {
+    await writeSurfacePref(userId, kind, entry);
+    return;
+  }
+  if (entry.open === false) {
+    await writeSurfaceForeground(userId, { kind, open: false, route: entry.route });
+    return;
+  }
+  await writeSurfaceForeground(userId, {
+    kind,
+    id: entry.id,
+    route: entry.route,
+    meta: entry.meta,
+  });
+}
+
+/** @deprecated Use readSurfaceForeground or readSurfacePref. */
+export async function readSurfaceActive(
+  userId: string,
+  kind: string,
+): Promise<SurfaceActiveEntry | null> {
+  if (kind.includes('-tab') || kind.endsWith(':tab') || kind.startsWith('pref:')) {
+    return readSurfacePref(userId, kind);
+  }
+  const fg = await readSurfaceForeground(userId);
+  return fg?.kind === kind ? fg : null;
 }

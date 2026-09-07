@@ -31,7 +31,6 @@ import {
 import { useMomentDraftMemory } from '@/hooks/useSurfaceDraft';
 import { TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { writeSurfaceActive } from '@/lib/ui/surface-memory';
 import toast from 'react-hot-toast';
 
 interface MomentComposerDrawerProps {
@@ -118,24 +117,15 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   useEffect(() => {
     setMounted(true);
     document.body.style.overflow = 'hidden';
-    if (user?.$id) {
-      void writeSurfaceActive(user.$id, 'moment-composer', {
-        id: mode === 'reply' ? parentMomentId : 'create',
-        meta: { mode },
-      });
-    }
     return () => {
       document.body.style.overflow = '';
       flushReinforce();
-      if (user?.$id) {
-        void writeSurfaceActive(user.$id, 'moment-composer', { open: false });
-      }
       if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
     };
-  }, [flushReinforce, user?.$id, mode, parentMomentId]);
+  }, [flushReinforce]);
 
   useEffect(() => {
     void LocalEngine.cacheGet<boolean>('f_sync_to_nostr_pref').then((pref) => {
