@@ -472,12 +472,14 @@ export default function CredentialDialog({
       credentialData.url = null;
       credentialData.isEnv = true;
     } else if (type === 'login') {
-      credentialData.username = form.username.trim();
-      credentialData.password = form.password.trim();
+      credentialData.username = form.username.trim() || null;
+      credentialData.password = form.password.trim() || null;
       if (form.url && form.url.trim()) credentialData.url = form.url.trim();
       if (customFields.length > 0) {
         credentialData.customFields = JSON.stringify(customFields);
       }
+      if (!resolveSecretName()) throw new Error('Title is required.');
+      credentialData.name = resolveSecretName();
     } else if (type === 'card') {
       credentialData.cardNumber = form.cardNumber.trim();
       credentialData.cardholderName = form.cardholderName.trim();
