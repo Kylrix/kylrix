@@ -661,8 +661,8 @@ function DashboardPageContent() {
           prefill={dialogPrefill}
           defaultType={dialogType}
           onSaved={async (saved: any) => {
-            // RAM-only optimistic paint. Do NOT LocalEngine.cacheSet decrypted rows —
-            // disk must stay ciphertext; refresh reloads raw Appwrite rows.
+            // saved is RAW ciphertext (LocalEngine already mirrored in VaultService).
+            // RAM list paint only — never decrypt-then-cacheSet.
             if (saved && (saved as any).$id) {
               setAllCredentials((prev) => {
                 const exists = prev.find((c) => c.$id === (saved as any).$id);

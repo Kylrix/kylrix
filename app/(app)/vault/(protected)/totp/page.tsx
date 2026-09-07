@@ -703,6 +703,14 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
             setEditingTotp(null);
           }}
           initialData={editingTotp || undefined}
+          onSaved={(row) => {
+            if (!row?.$id) return;
+            setTotpCodes((prev) => {
+              const exists = prev.some((t) => t.$id === row.$id);
+              if (exists) return prev.map((t) => (t.$id === row.$id ? row : t));
+              return [row, ...prev];
+            });
+          }}
         />
       )}
 

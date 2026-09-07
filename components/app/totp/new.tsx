@@ -35,7 +35,9 @@ const _DRAWER_SX_DESKTOP = {
 export default function NewTotpDialog({
   open,
   onClose,
-  initialData}: {
+  initialData,
+  onSaved,
+}: {
   open: boolean;
   onClose: () => void;
   initialData?: {
@@ -48,6 +50,8 @@ export default function NewTotpDialog({
     algorithm?: string | null;
     folderId?: string | null;
   };
+  /** Called with RAW ciphertext row (LocalEngine mirror already updated). */
+  onSaved?: (row?: any) => void;
 }) {
   const { user } = useAppwriteVault();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
@@ -124,10 +128,11 @@ export default function NewTotpDialog({
       const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
 
       if (initialData && initialData.$id) {
-        await updateTotpSecret(initialData.$id, {
+        const updated = await updateTotpSecret(initialData.$id, {
           ...form,
           updatedAt: new Date().toISOString()});
         toast.success("Smart Code updated!");
+        onSaved?.(updated);
       } else {
         const created = await createTotpSecret({
           userId: user.$id,
@@ -144,6 +149,7 @@ export default function NewTotpDialog({
           void attachEntityToActiveWorkspace('totp', created.$id || (created as any).id);
         }
         toast.success("Smart Code added!");
+        onSaved?.(created);
       }
       handleClose();
       setLoading(false);

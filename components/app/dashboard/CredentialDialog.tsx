@@ -127,47 +127,97 @@ export default function CredentialDialog({
   }, []);
 
   useEffect(() => {
-    if (initial) {
+    let cancelled = false;
+
+    const hydrate = async () => {
+      if (!initial) {
+        setForm({
+          name: prefill?.name || '',
+          username: prefill?.username || '',
+          password: '',
+          url: prefill?.url || '',
+          notes: '',
+          tags: '',
+          cardNumber: '',
+          cardholderName: '',
+          cardExpiry: '',
+          cardCVV: '',
+          cardPIN: '',
+          cardType: '',
+        });
+        setCustomFields([]);
+        setIsEnvMode(false);
+        setIsNameManuallyEdited(Boolean(prefill?.name));
+        setAttachments([]);
+        setEnvHint(null);
+        setError(null);
+        return;
+      }
+
+      // Form state is RAM-only. Decrypt ciphertext rows for editing without writing back to LocalEngine.
+      let row: any = { ...initial };
+      try {
+        const { looksEncrypted, decryptField, masterPassCrypto } = await import('@/lib/masterpass-crypto');
+        if (masterPassCrypto.isVaultUnlocked()) {
+          let dekKey: CryptoKey | null = null;
+          if (row.dek) {
+            try {
+              const dekBase64 = await decryptField(row.dek);
+              const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
+              dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+            } catch {}
+          }
+          const fields = ['name', 'username', 'password', 'url', 'notes', 'customFields', 'cardNumber', 'cardholderName', 'cardExpiry', 'cardCVV', 'cardPIN'];
+          for (const field of fields) {
+            const val = row[field];
+            if (typeof val === 'string' && val && looksEncrypted(val)) {
+              try {
+                if (dekKey) {
+                  const dataBytes = atob(val).split('').map((c: string) => c.charCodeAt(0));
+                  const dataIv = new Uint8Array(dataBytes.slice(0, 16));
+                  const dataEncrypted = new Uint8Array(dataBytes.slice(16));
+                  const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: dataIv }, dekKey, dataEncrypted);
+                  row[field] = new TextDecoder().decode(dec);
+                } else {
+                  row[field] = await decryptField(val);
+                }
+              } catch {}
+            }
+          }
+        }
+      } catch {}
+
+      if (cancelled) return;
       setForm({
-        name: initial.name || '',
-        username: initial.username || '',
-        password: initial.password || '',
-        url: initial.url || '',
-        notes: initial.notes || '',
-        tags: initial.tags ? initial.tags.join(', ') : '',
-        cardNumber: initial.cardNumber || '',
-        cardholderName: initial.cardholderName || '',
-        cardExpiry: initial.cardExpiry || '',
-        cardCVV: initial.cardCVV || '',
-        cardPIN: initial.cardPIN || '',
-        cardType: initial.cardType || '',
+        name: row.name || '',
+        username: row.username || '',
+        password: row.password || '',
+        url: row.url || '',
+        notes: row.notes || '',
+        tags: row.tags ? row.tags.join(', ') : '',
+        cardNumber: row.cardNumber || '',
+        cardholderName: row.cardholderName || '',
+        cardExpiry: row.cardExpiry || '',
+        cardCVV: row.cardCVV || '',
+        cardPIN: row.cardPIN || '',
+        cardType: row.cardType || '',
       });
-      setCustomFields(normalizeCustomFields(initial.customFields));
-      setIsEnvMode(Boolean(initial.isEnv));
+      setCustomFields(normalizeCustomFields(row.customFields));
+      setIsEnvMode(Boolean(row.isEnv));
       setIsNameManuallyEdited(true);
-      setAttachments(initial.attachments ? JSON.parse(initial.attachments) : []);
-    } else {
-      setForm({
-        name: prefill?.name || '',
-        username: prefill?.username || '',
-        password: '',
-        url: prefill?.url || '',
-        notes: '',
-        tags: '',
-        cardNumber: '',
-        cardholderName: '',
-        cardExpiry: '',
-        cardCVV: '',
-        cardPIN: '',
-        cardType: '',
-      });
-      setCustomFields([]);
-      setIsEnvMode(false);
-      setIsNameManuallyEdited(Boolean(prefill?.name));
-      setAttachments([]);
-    }
-    setEnvHint(null);
-    setError(null);
+      try {
+        setAttachments(row.attachments ? JSON.parse(row.attachments) : []);
+      } catch {
+        setAttachments([]);
+      }
+      setEnvHint(null);
+      setError(null);
+    };
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
   }, [initial, open, prefill]);
 
   const applyEnvText = useCallback((text: string) => {

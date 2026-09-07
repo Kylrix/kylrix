@@ -515,7 +515,37 @@ export class VaultService {
       total: resp.total ?? 0,
       rows: (resp.rows ?? resp.items ?? []) as unknown as T[]};
   }
-  // Create with automatic encryption
+  /**
+   * LocalEngine is a 1:1 ciphertext mirror of Appwrite — never write decrypted vault rows.
+   * Predictive create: seal → mirror locally → sync remote with the same id/payload.
+   */
+  private static async mirrorRawCredential(userId: string, row: Record<string, unknown> & { $id: string }) {
+    try {
+      const { LocalEngine } = await import("@/lib/services/LocalEngine");
+      await LocalEngine.cacheSet(`vault_credential_${row.$id}`, row);
+      const listKey = `vault_credentials_${userId}`;
+      const prev = (await LocalEngine.cacheGet<any[]>(listKey)) || [];
+      const arr = Array.isArray(prev) ? prev : [];
+      await LocalEngine.cacheSet(listKey, [row, ...arr.filter((r) => r && r.$id !== row.$id)]);
+    } catch {
+      /* offline / first run */
+    }
+  }
+
+  private static async mirrorRawTotp(userId: string, row: Record<string, unknown> & { $id: string }) {
+    try {
+      const { LocalEngine } = await import("@/lib/services/LocalEngine");
+      await LocalEngine.cacheSet(`vault_totp_row_${row.$id}`, row);
+      const listKey = `vault_totp_${userId}`;
+      const prev = (await LocalEngine.cacheGet<any[]>(listKey)) || [];
+      const arr = Array.isArray(prev) ? prev : [];
+      await LocalEngine.cacheSet(listKey, [row, ...arr.filter((r) => r && r.$id !== row.$id)]);
+    } catch {
+      /* offline / first run */
+    }
+  }
+
+  // Create with automatic encryption — returns RAW ciphertext row (UI decrypts for display).
   static async createCredential(
     data: CredentialsCreate,
     options?: { linkedNoteIds?: string[] }): Promise<Credentials> {
@@ -538,32 +568,36 @@ export class VaultService {
       throw new Error("Password is required for login credentials. It may be empty or encryption failed.");
     }
 
-    console.log("[AppwriteService] Creating Credential...", {
-      dbId: APPWRITE_DATABASE_ID,
-      collId: APPWRITE_COLLECTION_CREDENTIALS_ID,
-      userId: data.userId,
-      permissions: [
-        Permission.read(Role.user(data.userId))]
-    });
+    const rowId = ID.unique();
+    const now = new Date().toISOString();
+    if (!encryptedData.createdAt) encryptedData.createdAt = now;
+    encryptedData.updatedAt = now;
+
+    const predictiveRow = {
+      ...encryptedData,
+      $id: rowId,
+      $createdAt: now,
+      $updatedAt: now,
+    } as Record<string, unknown> & { $id: string };
+
+    // Seal → LocalEngine (ciphertext) → Appwrite — same shape as pull.
+    await this.mirrorRawCredential(String(data.userId), predictiveRow);
 
     try {
       const doc = await appwriteDatabases.createRow(
         APPWRITE_DATABASE_ID,
         APPWRITE_COLLECTION_CREDENTIALS_ID,
-        ID.unique(),
+        rowId,
         encryptedData,
         [
           Permission.read(Role.user(data.userId))]
       );
-      console.log("[AppwriteService] Credential Created Successfully:", doc.$id);
       this.clearCredentialCache(data.userId);
-      // Invalidate ecosystem security snapshot
       const { ecosystemSecurity } = await import("../ecosystem/security");
       ecosystemSecurity.fetchSecuritySnapshot(data.userId, true);
-
-      return (await this.decryptRowFields(
-        doc,
-        "credentials")) as Credentials;
+      const raw = doc as unknown as Credentials & { $id: string };
+      await this.mirrorRawCredential(String(data.userId), raw as any);
+      return raw;
     } catch (createError) {
       console.error("[AppwriteService] Create Credential FAILED:", createError);
       throw createError;
@@ -579,18 +613,32 @@ export class VaultService {
       sanitizedData.tags = Array.from(new Set([...(sanitizedData.tags || []), ...linkedTags]));
     }
     const encryptedData = await this.encryptRowFields(sanitizedData, "totpSecrets");
+    const rowId = ID.unique();
+    const now = new Date().toISOString();
+    if (!encryptedData.createdAt) encryptedData.createdAt = now;
+    encryptedData.updatedAt = now;
+
+    const predictiveRow = {
+      ...encryptedData,
+      $id: rowId,
+      $createdAt: now,
+      $updatedAt: now,
+    } as Record<string, unknown> & { $id: string };
+
+    await this.mirrorRawTotp(String(data.userId), predictiveRow);
+
     const doc = await appwriteDatabases.createRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_TOTPSECRETS_ID,
-      ID.unique(),
+      rowId,
       encryptedData,
       [
         Permission.read(Role.user(data.userId))]
     );
     this.clearCredentialCache(data.userId);
-    return (await this.decryptRowFields(
-      doc,
-      "totpSecrets")) as unknown as TotpSecrets;
+    const raw = doc as unknown as TotpSecrets & { $id: string };
+    await this.mirrorRawTotp(String(data.userId), raw as any);
+    return raw as unknown as TotpSecrets;
   }
 
   static async createKeyMapping(
@@ -1318,7 +1366,11 @@ export class VaultService {
     const cacheKey = `${userId}:${JSON.stringify(queries)}`;
     const cached = this.credentialsListCache.get(cacheKey);
     if (cached) {
-      return cached.map((doc) => ({ ...doc }));
+      // Cache holds RAW ciphertext; decrypt in RAM for callers only.
+      return Promise.all(
+        cached.map(
+          (doc) =>
+            this.decryptRowFields(doc, "credentials") as Promise<Credentials>));
     }
 
     const pending = this.credentialsListInflight.get(cacheKey);
@@ -1336,18 +1388,15 @@ export class VaultService {
           queries),
         queries);
 
-      const rows = await Promise.all(
+      // Persist raw only — never cache decrypted vault rows.
+      this.credentialsListCache.set(cacheKey, mergedRows as unknown as Credentials[]);
+
+      return Promise.all(
         mergedRows.map(
           (doc: Models.Row) =>
             this.decryptRowFields(
               doc,
-              "credentials") as unknown as Credentials));
-
-      const { masterPassCrypto } = await import("../masterpass-crypto");
-      if (masterPassCrypto.isVaultUnlocked()) {
-        this.credentialsListCache.set(cacheKey, rows);
-      }
-      return rows;
+              "credentials") as Promise<Credentials>));
     })().finally(() => {
       this.credentialsListInflight.delete(cacheKey);
     });
@@ -1397,7 +1446,10 @@ export class VaultService {
     const cacheKey = `${userId}:${JSON.stringify(queries)}`;
     const cached = this.totpSecretsCache.get(cacheKey);
     if (cached) {
-      return cached.map((doc) => ({ ...doc }));
+      return Promise.all(
+        cached.map(
+          (doc) =>
+            this.decryptRowFields(doc, "totpSecrets") as Promise<TotpSecrets>));
     }
 
     const pending = this.totpSecretsInflight.get(cacheKey);
@@ -1414,14 +1466,14 @@ export class VaultService {
           filterQueries,
           queries),
         queries);
-      const decryptedSecrets = await Promise.all(
+      // Persist raw only — decrypt on read for UI callers.
+      this.totpSecretsCache.set(cacheKey, mergedRows as unknown as TotpSecrets[]);
+      return Promise.all(
         mergedRows.map(
           (doc: Models.Row) =>
             this.decryptRowFields(
               doc,
               "totpSecrets") as Promise<TotpSecrets>));
-      this.totpSecretsCache.set(cacheKey, decryptedSecrets);
-      return decryptedSecrets;
     })().finally(() => {
       this.totpSecretsInflight.delete(cacheKey);
     });
@@ -1467,15 +1519,30 @@ export class VaultService {
       sanitizedData.dek = existing.dek;
     }
     const encryptedData = await this.encryptRowFields(sanitizedData, "credentials");
+    // Prefer raw LocalEngine row as base so we never re-mirror decrypted getCredential() fields.
+    let baseRaw: Record<string, unknown> = {};
+    try {
+      const { LocalEngine } = await import("@/lib/services/LocalEngine");
+      baseRaw = ((await LocalEngine.cacheGet<any>(`vault_credential_${id}`)) || {}) as any;
+    } catch {}
+    const predictive = {
+      ...baseRaw,
+      ...encryptedData,
+      $id: id,
+      userId: existing.userId,
+      $updatedAt: new Date().toISOString(),
+    } as Record<string, unknown> & { $id: string };
+    await this.mirrorRawCredential(String(existing.userId), predictive);
+
     const doc = await appwriteDatabases.updateRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_CREDENTIALS_ID,
       id,
       encryptedData);
     this.clearCredentialCache(existing.userId);
-    return (await this.decryptRowFields(
-      doc,
-      "credentials")) as Credentials;
+    const raw = doc as unknown as Credentials & { $id: string };
+    await this.mirrorRawCredential(String(existing.userId), raw as any);
+    return raw;
   }
 
   static async updateTOTPSecret(
@@ -1492,15 +1559,29 @@ export class VaultService {
       sanitizedData.dek = existing.dek;
     }
     const encryptedData = await this.encryptRowFields(sanitizedData, "totpSecrets");
+    let baseRaw: Record<string, unknown> = {};
+    try {
+      const { LocalEngine } = await import("@/lib/services/LocalEngine");
+      baseRaw = ((await LocalEngine.cacheGet<any>(`vault_totp_row_${id}`)) || {}) as any;
+    } catch {}
+    const predictive = {
+      ...baseRaw,
+      ...encryptedData,
+      $id: id,
+      userId: existing.userId,
+      $updatedAt: new Date().toISOString(),
+    } as Record<string, unknown> & { $id: string };
+    await this.mirrorRawTotp(String(existing.userId), predictive);
+
     const doc = await appwriteDatabases.updateRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_TOTPSECRETS_ID,
       id,
       encryptedData);
     this.clearCredentialCache(existing.userId);
-    return (await this.decryptRowFields(
-      doc,
-      "totpSecrets")) as unknown as TotpSecrets;
+    const raw = doc as unknown as TotpSecrets & { $id: string };
+    await this.mirrorRawTotp(String(existing.userId), raw as any);
+    return raw as unknown as TotpSecrets;
   }
 
   static async updateFolder(
