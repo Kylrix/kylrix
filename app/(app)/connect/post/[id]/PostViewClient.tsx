@@ -122,6 +122,146 @@ function ParentPostStub({
   );
 }
 
+/** Comment = full moment object — same engagement surface as the parent post. */
+function CommentMomentRow({
+  comment,
+  userId,
+  identity,
+  isVaultLocked,
+  unlockAndLoad,
+  onReply,
+  onOpenProfile,
+}: {
+  comment: MomentComment;
+  userId?: string;
+  identity: ReturnType<typeof useNostrIdentity>['identity'];
+  isVaultLocked: boolean;
+  unlockAndLoad: () => void;
+  onReply: (comment: MomentComment) => void;
+  onOpenProfile: (comment: MomentComment) => void;
+}) {
+  const { open: openUnifiedDrawer } = useUnifiedDrawer();
+  const [liked, setLiked] = useState(Boolean(comment.isLiked));
+  const [likes, setLikes] = useState(Number(comment.likesCount || 0));
+  const [busy, setBusy] = useState(false);
+  const isNostr = comment.source === 'nostr';
+  const avatarUrl = comment.authorAvatar;
+
+  const toggleLike = async () => {
+    if (busy) return;
+    if (isNostr) {
+      if (isVaultLocked || !identity) {
+        toast.error('Unlock vault to like on Nostr');
+        void unlockAndLoad();
+        return;
+      }
+    } else if (!userId) {
+      toast.error('Sign in to like');
+      return;
+    }
+    setBusy(true);
+    const prevLiked = liked;
+    const prevLikes = likes;
+    setLiked(!prevLiked);
+    setLikes(prevLiked ? Math.max(0, prevLikes - 1) : prevLikes + 1);
+    try {
+      await toggleMomentLike({
+        source: comment.source,
+        id: comment.id,
+        userId,
+        creatorId: comment.authorUserId,
+        contentSnippet: comment.content.slice(0, 80),
+        privateKeyBytes: identity?.privateKeyBytes,
+        nsec: identity?.nsec,
+        rootPubkey: comment.authorPubkey,
+      });
+    } catch (err) {
+      setLiked(prevLiked);
+      setLikes(prevLikes);
+      console.error(err);
+      toast.error('Could not update like');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <li className="rounded-[18px] border-2 border-white/20 bg-[#000000] px-4 py-3.5 min-w-0 max-w-full overflow-hidden list-none">
+      <div className="flex items-start gap-3 min-w-0">
+        <button
+          type="button"
+          onClick={() => onOpenProfile(comment)}
+          className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black border-2 border-white/20 overflow-hidden bg-[#161412] cursor-pointer"
+          style={{ color: isNostr ? '#F59E0B' : '#34D399' }}
+          aria-label={`Open ${comment.authorName} profile`}
+        >
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            initials(comment.authorName)
+          )}
+        </button>
+        <div className="min-w-0 flex-1 overflow-hidden space-y-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => onOpenProfile(comment)}
+              className="text-[14px] font-extrabold text-white font-satoshi truncate m-0 cursor-pointer hover:underline text-left bg-transparent border-0 p-0"
+            >
+              {comment.authorName}
+            </button>
+            <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#161412] border border-white/15 text-[9px] font-bold uppercase tracking-wider text-white/70">
+              {isNostr ? <Globe size={10} className="text-[#F59E0B]" /> : <Shield size={10} className="text-emerald-400" />}
+              {isNostr ? 'Nostr' : 'Kylrix'}
+            </span>
+            <span className="ml-auto text-[10px] text-white/35 font-mono shrink-0">
+              {formatTs(comment.createdAt)}
+            </span>
+          </div>
+          <p className="text-[14px] text-white whitespace-pre-wrap break-words [overflow-wrap:anywhere] m-0 font-satoshi max-w-full">
+            {comment.content}
+          </p>
+          <div className="flex items-center gap-4 pt-2 border-t border-white/15 min-w-0 flex-wrap">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void toggleLike()}
+              className={`inline-flex items-center gap-1.5 text-xs font-bold disabled:opacity-40 shrink-0 ${liked ? 'text-[#F91880]' : 'text-white hover:text-[#F91880]'}`}
+            >
+              <Heart size={14} className={liked ? 'fill-[#F91880]' : ''} />
+              <span className="font-mono">{likes}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onReply(comment)}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white hover:text-[#F59E0B] shrink-0"
+            >
+              <MessageCircle size={14} />
+              <span className="font-mono">{comment.repliesCount || 0}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                openUnifiedDrawer('share-context', {
+                  resourceType: 'moment',
+                  resourceId: isNostr ? `nostr_${comment.id}` : comment.id,
+                  resourceTitle: `${comment.authorName.replace(/^@/, '')}'s comment`,
+                  content: comment.content,
+                  accentColor: '#F59E0B',
+                })
+              }
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white/70 hover:text-white ml-auto shrink-0"
+            >
+              <Share2 size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+}
+
 /** Bottom drawer shown for reactions and zaps to display the specific detail. */
 function EngagementDetailDrawer({
   open,
@@ -370,14 +510,16 @@ export function PostViewClient({
     } finally { setBusy(false); }
   };
 
-  const openReplyComposer = () => {
-    if (!momentId) return;
-    if (source === 'nostr' && (isVaultLocked || !identity)) {
+  const openReplyComposer = (parent?: MomentComment) => {
+    const targetId = parent?.id || momentId;
+    if (!targetId) return;
+    const targetSource = parent?.source || source;
+    if (targetSource === 'nostr' && (isVaultLocked || !identity)) {
       toast.error('Unlock vault to reply on Nostr');
       void unlockAndLoad();
       return;
     }
-    if (source === 'ecosystem' && !user) {
+    if (targetSource === 'ecosystem' && !user) {
       openUnifiedDrawer('login', {
         title: 'Reply to moment',
         subtitle: 'Sign in to reply with Kylie assist.',
@@ -385,14 +527,31 @@ export function PostViewClient({
       });
       return;
     }
-    const snippet = String(moment?.caption || moment?.content || preview?.content || '').trim();
+    const snippet = parent
+      ? String(parent.content || '').trim()
+      : String(moment?.caption || moment?.content || preview?.content || '').trim();
     openUnifiedDrawer('moment-composer', {
       mode: 'reply',
-      parentMomentId: momentId,
-      source,
+      parentMomentId: targetId,
+      source: targetSource,
       parentSnippet: snippet.slice(0, 280),
-      rootPubkey: moment?.pubkey || nostrEvent?.pubkey,
-      nostrId: (moment as any)?.nostrId || (source === 'nostr' ? momentId : undefined),
+      rootPubkey: parent?.authorPubkey || moment?.pubkey || nostrEvent?.pubkey,
+      nostrId:
+        parent?.source === 'nostr'
+          ? parent.id
+          : (moment as any)?.nostrId || (source === 'nostr' ? momentId : undefined),
+    });
+  };
+
+  const openCommentProfile = (comment: MomentComment) => {
+    openUnifiedDrawer('profile-preview', {
+      userId: comment.authorUserId,
+      username: comment.authorName,
+      name: comment.authorName,
+      avatar: comment.authorAvatar,
+      npub: comment.source === 'nostr' ? comment.authorName : undefined,
+      pubkey: comment.authorPubkey,
+      source: comment.source,
     });
   };
 
@@ -600,9 +759,22 @@ export function PostViewClient({
         {(!isReaction && !isRepost) && (
           <article className="rounded-[22px] border-2 border-white/20 bg-[#000000] p-4 space-y-3 min-w-0 max-w-full overflow-hidden">
             <div className="flex items-start gap-3 min-w-0">
-              <div
-                className="w-11 h-11 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black border-2 border-white/20 overflow-hidden bg-[#161412]"
+              <button
+                type="button"
+                onClick={() =>
+                  openUnifiedDrawer('profile-preview', {
+                    userId: moment?.userId || moment?.creatorId || creator?.$id || creator?.userId,
+                    username: creator?.username || handle,
+                    name: who,
+                    avatar: avatarUrl,
+                    npub: source === 'nostr' ? handle : undefined,
+                    pubkey: moment?.pubkey || nostrEvent?.pubkey,
+                    source,
+                  })
+                }
+                className="w-11 h-11 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black border-2 border-white/20 overflow-hidden bg-[#161412] cursor-pointer"
                 style={{ color: isNostr ? '#F59E0B' : '#34D399' }}
+                aria-label={`Open ${who} profile`}
               >
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -610,10 +782,26 @@ export function PostViewClient({
                 ) : (
                   initials(who)
                 )}
-              </div>
+              </button>
               <div className="min-w-0 flex-1 overflow-hidden">
                 <div className="flex items-center gap-2 min-w-0">
-                  <p className="text-[15px] font-extrabold text-white font-satoshi truncate m-0">{who}</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openUnifiedDrawer('profile-preview', {
+                        userId: moment?.userId || moment?.creatorId || creator?.$id || creator?.userId,
+                        username: creator?.username || handle,
+                        name: who,
+                        avatar: avatarUrl,
+                        npub: source === 'nostr' ? handle : undefined,
+                        pubkey: moment?.pubkey || nostrEvent?.pubkey,
+                        source,
+                      })
+                    }
+                    className="text-[15px] font-extrabold text-white font-satoshi truncate m-0 cursor-pointer hover:underline text-left bg-transparent border-0 p-0"
+                  >
+                    {who}
+                  </button>
                   <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#161412] border border-white/20 text-[10px] font-bold uppercase tracking-wider text-white">
                     {isNostr ? <Globe size={11} className="text-[#F59E0B]" /> : <Shield size={11} className="text-emerald-400" />}
                     {isNostr ? 'Nostr' : 'Kylrix'}
@@ -715,7 +903,7 @@ export function PostViewClient({
         {!isReaction && !isRepost && (
           <button
             type="button"
-            onClick={openReplyComposer}
+            onClick={() => openReplyComposer()}
             className="fixed bottom-6 right-5 z-[40] h-14 w-14 rounded-2xl bg-[#F59E0B] text-black shadow-[0_8px_24px_rgba(245,158,11,0.35)] border-2 border-black/20 inline-flex items-center justify-center hover:scale-105 active:scale-95 transition-transform cursor-pointer"
             title="Reply"
             aria-label="Reply with assist"
@@ -724,27 +912,37 @@ export function PostViewClient({
           </button>
         )}
 
-        {/* Replies list */}
+        {/* Comments section — clear divide from the post */}
         {!isReaction && !isRepost && (
-          <ul className="space-y-2 min-w-0 max-w-full list-none p-0 m-0 pb-24">
-            {replies.length === 0 ? (
-              <li className="rounded-[18px] border-2 border-white/20 bg-[#000000] px-4 py-8 text-center text-sm text-white/50">
-                No comments yet — tap the reply button to write with Kylie assist
-              </li>
-            ) : (
-              replies.map(r => (
-                <li
-                  key={r.id}
-                  className="rounded-[18px] border-2 border-white/20 bg-[#000000] px-4 py-3.5 min-w-0 max-w-full overflow-hidden"
-                >
-                  <div className="text-[11px] font-extrabold text-white/60 mb-1 truncate">{r.authorName}</div>
-                  <p className="text-[14px] text-white whitespace-pre-wrap break-words [overflow-wrap:anywhere] m-0 font-satoshi max-w-full">
-                    {r.content}
-                  </p>
+          <section className="min-w-0 max-w-full pb-24 pt-2">
+            <div className="flex items-center gap-3 mb-3 px-0.5">
+              <div className="h-px flex-1 bg-white/20" />
+              <h3 className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/55 font-mono shrink-0">
+                Comments · {replies.length}
+              </h3>
+              <div className="h-px flex-1 bg-white/20" />
+            </div>
+            <ul className="space-y-2.5 min-w-0 max-w-full list-none p-0 m-0">
+              {replies.length === 0 ? (
+                <li className="rounded-[18px] border-2 border-dashed border-white/20 bg-[#000000]/60 px-4 py-8 text-center text-sm text-white/50 list-none">
+                  No comments yet — tap the reply button to write with Kylie assist
                 </li>
-              ))
-            )}
-          </ul>
+              ) : (
+                replies.map((r) => (
+                  <CommentMomentRow
+                    key={r.id}
+                    comment={r}
+                    userId={user?.$id}
+                    identity={identity}
+                    isVaultLocked={isVaultLocked}
+                    unlockAndLoad={unlockAndLoad}
+                    onReply={openReplyComposer}
+                    onOpenProfile={openCommentProfile}
+                  />
+                ))
+              )}
+            </ul>
+          </section>
         )}
       </div>
 

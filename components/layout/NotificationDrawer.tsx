@@ -38,6 +38,10 @@ import { npubToBytes, bytesToHex, bytesToNpub, hexToBytes } from '@/lib/nostr/cr
 import { queueNostrProfileFetch, getCachedNostrProfile } from '@/lib/nostr/metadata';
 import { getNostrReadRelays } from '@/lib/connect/feed-settings';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { openMomentObjectDetail } from '@/components/objects/MomentObjectDetail';
+import { parseMomentRouteId } from '@/lib/connect/moment-engagement';
 
 export type NotificationCategory = 'all' | 'replies' | 'likes' | 'zaps' | 'follows' | 'system';
 
@@ -620,6 +624,36 @@ export function NotificationDrawer({
   };
 
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
+
+  const openMomentFromNotification = useCallback(
+    (rawId: string, actor?: KylrixNotification['actor']) => {
+      const cleaned = String(rawId || '')
+        .replace(/^\/moment\//, '')
+        .split(/[?#]/)[0]
+        .trim();
+      if (!cleaned) return false;
+      const { source, id } = parseMomentRouteId(cleaned);
+      if (!id) return false;
+      openMomentObjectDetail({
+        momentId: id,
+        source,
+        preview: actor
+          ? {
+              authorName: actor.name,
+              authorAvatar: actor.avatar,
+            }
+          : undefined,
+        openSidebar,
+        openOverlay,
+        closeSidebar,
+        closeOverlay,
+      });
+      return true;
+    },
+    [openSidebar, openOverlay, closeSidebar, closeOverlay],
+  );
 
   const isFollowingActor = useCallback(
     (actor?: KylrixNotification['actor']) => {
@@ -739,17 +773,22 @@ export function NotificationDrawer({
       return;
     }
 
-    if (notif.actionHref) {
-      router.push(sanitizeInAppHref(notif.actionHref));
+    const href = notif.actionHref ? sanitizeInAppHref(notif.actionHref) : '';
+    if (href.startsWith('/moment/')) {
+      openMomentFromNotification(href, notif.actor);
       return;
     }
 
     if (notif.id.includes('moment')) {
       const parts = notif.id.split('_');
       const momentId = parts[parts.length - 1];
-      if (momentId) {
-        router.push(`/moment/${momentId}`);
+      if (momentId && openMomentFromNotification(momentId, notif.actor)) {
+        return;
       }
+    }
+
+    if (href) {
+      router.push(href);
     }
   };
 

@@ -17,9 +17,14 @@ export interface MomentComment {
   id: string;
   source: MomentSource;
   authorName: string;
+  authorAvatar?: string;
+  authorUserId?: string;
   authorPubkey?: string;
   content: string;
   createdAt: number;
+  likesCount?: number;
+  repliesCount?: number;
+  isLiked?: boolean;
   raw?: unknown;
 }
 
@@ -49,8 +54,13 @@ function mapKylrixReply(row: any): MomentComment {
     id: row.$id || row.id,
     source: 'ecosystem',
     authorName: row.userName || row.user?.name || row.username || 'Someone',
+    authorAvatar: row.userAvatar || row.avatar || row.user?.avatar || row.avatarUrl || undefined,
+    authorUserId: row.userId || row.creatorId || row.authorId || undefined,
     content: row.caption || row.content || row.text || '',
     createdAt: new Date(row.$createdAt || row.createdAt || Date.now()).getTime(),
+    likesCount: row.stats?.likes ?? row.likeCount ?? 0,
+    repliesCount: row.stats?.replies ?? row.replyCount ?? 0,
+    isLiked: Boolean(row.isLiked),
     raw: row,
   };
 }
@@ -89,6 +99,60 @@ async function publishToNostr(
   await pool.publishAndClose(signed);
 }
 
+async function hydrateCommentAvatars(comments: MomentComment[]): Promise<MomentComment[]> {
+  if (!comments.length) return comments;
+  let next = comments;
+
+  const ecoIds = [
+    ...new Set(
+      next
+        .filter((c) => c.source === 'ecosystem' && c.authorUserId && !c.authorAvatar)
+        .map((c) => String(c.authorUserId)),
+    ),
+  ];
+  if (ecoIds.length) {
+    try {
+      const { UsersService } = await import('@/lib/services/users');
+      const profiles = await UsersService.getUsersByIds(ecoIds);
+      const byId = new Map(
+        profiles.map((p: any) => [String(p.userId || p.$id || p.id), p] as const),
+      );
+      next = next.map((c) => {
+        if (c.authorAvatar || !c.authorUserId) return c;
+        const p = byId.get(String(c.authorUserId));
+        if (!p) return c;
+        return {
+          ...c,
+          authorAvatar: p.avatarUrl || p.avatar || p.prefs?.avatarUrl || undefined,
+          authorName:
+            c.authorName && c.authorName !== 'Someone'
+              ? c.authorName
+              : p.displayName || p.name || p.username || c.authorName,
+        };
+      });
+    } catch {}
+  }
+
+  try {
+    const { getCachedNostrProfile, queueNostrProfileFetch } = await import('@/lib/nostr/metadata');
+    next = next.map((c) => {
+      if (c.source !== 'nostr' || !c.authorPubkey || c.authorAvatar) return c;
+      const cached = getCachedNostrProfile(c.authorPubkey);
+      if (!cached) {
+        void queueNostrProfileFetch(c.authorPubkey);
+        return c;
+      }
+      return {
+        ...c,
+        authorAvatar: cached.picture || undefined,
+        authorName: cached.display_name || cached.name || c.authorName,
+      };
+    });
+  } catch {}
+
+  return next;
+}
+
 export async function loadMomentEngagement(opts: {
   source: MomentSource;
   id: string;
@@ -102,7 +166,9 @@ export async function loadMomentEngagement(opts: {
       SocialService.getMomentById(id, userId).catch(() => null),
       userId ? SocialService.isLiked(userId, id).catch(() => false) : Promise.resolve(false),
     ]);
-    const comments = (Array.isArray(replies) ? replies : []).map(mapKylrixReply);
+    const comments = await hydrateCommentAvatars(
+      (Array.isArray(replies) ? replies : []).map(mapKylrixReply),
+    );
     return {
       comments,
       repliesCount: comments.length,
@@ -115,7 +181,7 @@ export async function loadMomentEngagement(opts: {
 
   const thread = await fetchNostrThread(id);
   return {
-    comments: thread.replies.map(mapNostrReply),
+    comments: await hydrateCommentAvatars(thread.replies.map(mapNostrReply)),
     repliesCount: thread.replyCount,
     likesCount: thread.likeCount,
     zapsCount: thread.zapCount,

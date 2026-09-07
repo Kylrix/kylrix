@@ -79,6 +79,7 @@ import { useSidebar } from '@/components/ui/SidebarContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { openMomentObjectDetail } from '@/components/objects/MomentObjectDetail';
 import { useSection } from '@/context/SectionContext';
 import { executeInstantShare } from '@/lib/share/instant-share';
 
@@ -1081,7 +1082,20 @@ export default function ConnectTopbar({
                         component="button"
                         onClick={() => {
                           handleCloseAll();
-                          router.push(`/moment/${moment.$id || moment.id}`);
+                          const mid = String(moment.$id || moment.id || '');
+                          if (!mid) return;
+                          openMomentObjectDetail({
+                            momentId: mid,
+                            source: 'ecosystem',
+                            preview: {
+                              authorName: moment.userName || moment.username,
+                              content: moment.caption || moment.content,
+                            },
+                            openSidebar,
+                            openOverlay,
+                            closeSidebar,
+                            closeOverlay,
+                          });
                         }}
                         sx={{
                           width: '100%',
