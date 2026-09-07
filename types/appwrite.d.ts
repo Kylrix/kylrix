@@ -344,7 +344,7 @@ export type Credentials = Models.Row & {
     isTrash: boolean;
     isWorkspace: boolean;
     isAgentic: boolean;
-    isEnv?: boolean | null;
+    isEnv: boolean;
 }
 
 export type Identities = Models.Row & {
