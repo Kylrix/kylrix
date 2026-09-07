@@ -402,7 +402,7 @@ export class ImportService {
           const cleanCred = this.cleanCredentialForCreate(cred, folderIdMapping, userId);
           await VaultService.stageCredentialImport(cleanCred as any, { batchId });
           result.summary.credentialsCreated++;
-          if (result.summary.credentialsCreated % 24 === 0) kickImportSync(userId);
+          if (result.summary.credentialsCreated % 8 === 0) kickImportSync(userId);
 
           this.updateProgress({
             stage: "credentials",
@@ -463,7 +463,7 @@ export class ImportService {
 
           await VaultService.stageTotpImport(cleanTotp as any, { batchId });
           result.summary.totpSecretsCreated++;
-          if (result.summary.totpSecretsCreated % 24 === 0) kickImportSync(userId);
+          if (result.summary.totpSecretsCreated % 8 === 0) kickImportSync(userId);
 
           this.updateProgress({
             stage: "totp",
@@ -605,7 +605,7 @@ export class ImportService {
 
         await VaultService.stageCredentialImport(cleanCred as any, { batchId });
         created++;
-        if (userId && created % 24 === 0) kickImportSync(userId);
+        if (userId && created % 8 === 0) kickImportSync(userId);
 
         this.updateProgress({
           stage: "credentials",
@@ -651,7 +651,7 @@ export class ImportService {
 
         await VaultService.stageTotpImport(totpSecret as any, { batchId });
         created++;
-        if (userId && created % 24 === 0) kickImportSync(userId);
+        if (userId && created % 8 === 0) kickImportSync(userId);
 
         this.updateProgress({
           stage: "totp",

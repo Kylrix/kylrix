@@ -333,11 +333,13 @@ export function annotatePorterDiscernResult(
 
   const credentials: PorterCredentialDraft[] = safeCreds.map((c) => {
     const row = { ...c, $id: c.sourceId, id: c.sourceId } as Record<string, unknown>;
+    const force = Boolean(c._forceImport);
     if (c._status === 'invalid' || isUnimportableCredential(row)) {
       return {
         ...c,
         _status: 'invalid' as const,
         _skipReason: c._skipReason || "Can't import — this item is unreadable",
+        _forceImport: force || undefined,
       };
     }
     if (matchesIndex(credentialFingerprints(row), credIndex)) {
@@ -345,18 +347,21 @@ export function annotatePorterDiscernResult(
         ...c,
         _status: 'duplicate' as const,
         _skipReason: 'Already in your vault',
+        _forceImport: force || undefined,
       };
     }
-    return { ...c, _status: 'new' as const, _skipReason: undefined };
+    return { ...c, _status: 'new' as const, _skipReason: undefined, _forceImport: undefined };
   });
 
   const totpSecrets: PorterTotpDraft[] = safeTotps.map((t) => {
     const row = { ...t, $id: t.sourceId, id: t.sourceId } as Record<string, unknown>;
+    const force = Boolean(t._forceImport);
     if (t._status === 'invalid' || isUnimportableTotp(row)) {
       return {
         ...t,
         _status: 'invalid' as const,
         _skipReason: t._skipReason || "Can't import — this code is unreadable",
+        _forceImport: force || undefined,
       };
     }
     if (matchesIndex(totpFingerprints(row), totpIndex)) {
@@ -364,19 +369,20 @@ export function annotatePorterDiscernResult(
         ...t,
         _status: 'duplicate' as const,
         _skipReason: 'Already in your vault',
+        _forceImport: force || undefined,
       };
     }
-    return { ...t, _status: 'new' as const, _skipReason: undefined };
+    return { ...t, _status: 'new' as const, _skipReason: undefined, _forceImport: undefined };
   });
 
-  const importableCreds = credentials.filter((c) => c._status === 'new').length;
-  const importableTotp = totpSecrets.filter((t) => t._status === 'new').length;
+  const importableCreds = credentials.filter((c) => isPorterRowImportable(c)).length;
+  const importableTotp = totpSecrets.filter((t) => isPorterRowImportable(t)).length;
   const skippedDup =
-    credentials.filter((c) => c._status === 'duplicate').length +
-    totpSecrets.filter((t) => t._status === 'duplicate').length;
+    credentials.filter((c) => c._status === 'duplicate' && !c._forceImport).length +
+    totpSecrets.filter((t) => t._status === 'duplicate' && !t._forceImport).length;
   const skippedInvalid =
-    credentials.filter((c) => c._status === 'invalid').length +
-    totpSecrets.filter((t) => t._status === 'invalid').length;
+    credentials.filter((c) => c._status === 'invalid' && !c._forceImport).length +
+    totpSecrets.filter((t) => t._status === 'invalid' && !t._forceImport).length;
 
   const warnings = [...(result.warnings || [])];
   if (skippedDup > 0) {
@@ -408,15 +414,30 @@ export function annotatePorterDiscernResult(
   };
 }
 
-/** Only rows that should be written. */
+export function isPorterRowImportable(row: {
+  _status?: string;
+  _forceImport?: boolean;
+}): boolean {
+  if (row._forceImport) return true;
+  return !row._status || row._status === 'new' || row._status === 'merged';
+}
+
+export function isPorterRowSkipped(row: {
+  _status?: string;
+  _forceImport?: boolean;
+}): boolean {
+  return (row._status === 'duplicate' || row._status === 'invalid') && !row._forceImport;
+}
+
+/** Only rows that should be written (includes user-enabled disputes). */
 export function filterImportableDiscern(result: PorterDiscernResult): PorterDiscernResult {
   const credentials = Array.isArray(result.credentials) ? result.credentials : [];
   const totpSecrets = Array.isArray(result.totpSecrets) ? result.totpSecrets : [];
   const workspaces = Array.isArray(result.workspaces) ? result.workspaces : [];
   return {
     ...result,
-    credentials: credentials.filter((c) => !c._status || c._status === 'new' || c._status === 'merged'),
-    totpSecrets: totpSecrets.filter((t) => !t._status || t._status === 'new' || t._status === 'merged'),
+    credentials: credentials.filter((c) => isPorterRowImportable(c)),
+    totpSecrets: totpSecrets.filter((t) => isPorterRowImportable(t)),
     workspaces,
   };
 }

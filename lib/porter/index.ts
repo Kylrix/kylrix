@@ -32,6 +32,8 @@ export {
 export {
   annotatePorterDiscernResult,
   filterImportableDiscern,
+  isPorterRowImportable,
+  isPorterRowSkipped,
   isUnimportableCredential,
   isUnimportableText,
   isUnimportableTotp,

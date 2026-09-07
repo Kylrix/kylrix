@@ -19,7 +19,7 @@ export type PorterSessionDraft = {
   result?: PorterDiscernResult | null;
   exportFormat?: 'json' | 'encrypted-html';
   /** Last UI step so resume lands in the right place */
-  view?: 'home' | 'pick-kind' | 'import' | 'preview' | 'export-format';
+  view?: 'home' | 'pick-kind' | 'import' | 'preview' | 'review-skipped' | 'export-format';
   savedAt: string;
 };
 
@@ -110,10 +110,10 @@ export async function clearPorterDraft(userId: string): Promise<void> {
 /** Build payload ImportService / background task understands. */
 export function bundleToKylrixVaultJson(bundle: PorterImportBundle, userId: string): string {
   const creds = bundle.credentials.filter(
-    (c) => !c._status || c._status === 'new' || c._status === 'merged',
+    (c) => c._forceImport || !c._status || c._status === 'new' || c._status === 'merged',
   );
   const totps = bundle.totpSecrets.filter(
-    (t) => !t._status || t._status === 'new' || t._status === 'merged',
+    (t) => t._forceImport || !t._status || t._status === 'new' || t._status === 'merged',
   );
   return JSON.stringify({
     version: 2,
@@ -201,11 +201,11 @@ export async function runOfflinePorterImport(
 
   if (total === 0) {
     const skippedInvalid =
-      annotated.credentials.filter((c) => c._status === 'invalid').length +
-      annotated.totpSecrets.filter((t) => t._status === 'invalid').length;
+      annotated.credentials.filter((c) => c._status === 'invalid' && !c._forceImport).length +
+      annotated.totpSecrets.filter((t) => t._status === 'invalid' && !t._forceImport).length;
     const skippedExisting =
-      annotated.credentials.filter((c) => c._status === 'duplicate').length +
-      annotated.totpSecrets.filter((t) => t._status === 'duplicate').length;
+      annotated.credentials.filter((c) => c._status === 'duplicate' && !c._forceImport).length +
+      annotated.totpSecrets.filter((t) => t._status === 'duplicate' && !t._forceImport).length;
     return {
       success: true,
       summary: {

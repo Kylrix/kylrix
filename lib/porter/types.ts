@@ -30,6 +30,8 @@ export interface PorterCredentialDraft {
   _status?: 'new' | 'duplicate' | 'merged' | 'invalid';
   _skipReason?: string;
   _sourceHint?: string;
+  /** User disputed skip — import anyway */
+  _forceImport?: boolean;
 }
 
 export interface PorterTotpDraft {
@@ -45,6 +47,8 @@ export interface PorterTotpDraft {
   _status?: 'new' | 'duplicate' | 'merged' | 'invalid';
   _skipReason?: string;
   _sourceHint?: string;
+  /** User disputed skip — import anyway */
+  _forceImport?: boolean;
 }
 
 /** Named workspace grouping in Transfer payloads (replaces legacy “folder”). */

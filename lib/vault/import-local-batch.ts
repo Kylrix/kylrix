@@ -1,6 +1,10 @@
 /**
  * Local-only import batch earmarks + high-priority outbox.
  * Never written to Appwrite — LocalEngine substrate only.
+ *
+ * Durability: every sealed row is enqueued in IndexedDB before remote create.
+ * Tab close mid-flush is safe — outbox + earmarks survive; next kick drains leftovers.
+ * Stuck "syncing" earmarks are reset to "local" on resume so partial flushes retry.
  */
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
@@ -48,6 +52,7 @@ export const IMPORT_SYNC_PRIORITY = 10_000;
 
 const flushLocks = new Map<string, Promise<void>>();
 const kickInflight = new Set<string>();
+const lifecycleInstalled = new Set<string>();
 
 export async function startImportBatch(userId: string): Promise<string> {
   const batchId = ID.unique();
@@ -105,8 +110,8 @@ export async function enqueueImportOutbox(item: ImportOutboxItem): Promise<void>
   const key = OUTBOX_KEY(item.userId);
   const prev = ((await LocalEngine.cacheGet<ImportOutboxItem[]>(key)) || []) as ImportOutboxItem[];
   const next = [item, ...prev.filter((p) => p.rowId !== item.rowId)];
-  // Highest priority first
   next.sort((a, b) => b.priority - a.priority || a.enqueuedAt.localeCompare(b.enqueuedAt));
+  // Await IndexedDB write before caller returns — seals must survive instant tab close
   await LocalEngine.cacheSet(key, next);
   await setImportEarmark({
     batchId: item.batchId,
@@ -135,6 +140,11 @@ export async function listImportOutbox(userId: string): Promise<ImportOutboxItem
   return [...rows].sort((a, b) => b.priority - a.priority || a.enqueuedAt.localeCompare(b.enqueuedAt));
 }
 
+export async function countImportOutbox(userId: string): Promise<number> {
+  const rows = await listImportOutbox(userId);
+  return rows.length;
+}
+
 async function removeFromOutbox(userId: string, rowId: string): Promise<void> {
   const key = OUTBOX_KEY(userId);
   const prev = ((await LocalEngine.cacheGet<ImportOutboxItem[]>(key)) || []) as ImportOutboxItem[];
@@ -142,6 +152,25 @@ async function removeFromOutbox(userId: string, rowId: string): Promise<void> {
     key,
     prev.filter((p) => p.rowId !== rowId),
   );
+}
+
+/** Mid-flush tab close can leave earmarks stuck at syncing — reset for retry. */
+export async function recoverStaleImportSyncing(userId: string): Promise<number> {
+  const queue = await listImportOutbox(userId);
+  let fixed = 0;
+  for (const item of queue) {
+    const mark = await getImportEarmark(item.rowId);
+    if (mark?.status === 'syncing') {
+      await setImportEarmark({
+        ...mark,
+        status: 'local',
+        error: undefined,
+        updatedAt: new Date().toISOString(),
+      });
+      fixed++;
+    }
+  }
+  return fixed;
 }
 
 /**
@@ -167,7 +196,7 @@ export async function flushImportOutbox(
   let flushed = 0;
   let errors = 0;
   try {
-    const concurrency = Math.max(2, Math.min(opts?.concurrency ?? 6, 12));
+    const concurrency = Math.max(4, Math.min(opts?.concurrency ?? 12, 16));
     const queue = await listImportOutbox(userId);
     const slice = typeof opts?.maxItems === 'number' ? queue.slice(0, opts.maxItems) : queue;
     if (!slice.length) return { flushed: 0, errors: 0 };
@@ -209,6 +238,7 @@ export async function flushImportOutbox(
           flushed++;
         } catch (e: any) {
           errors++;
+          // Keep in outbox for retry — only mark error
           await setImportEarmark({
             batchId: item.batchId,
             kind: item.kind,
@@ -243,19 +273,60 @@ export function kickImportSync(userId: string): void {
   kickInflight.add(userId);
   void (async () => {
     try {
-      for (let i = 0; i < 40; i++) {
+      await recoverStaleImportSyncing(userId);
+      let emptyFlushStreak = 0;
+      for (let i = 0; i < 80; i++) {
         const left = await listImportOutbox(userId);
         if (!left.length) break;
-        await flushImportOutbox(userId, { concurrency: 8, maxItems: 48 });
-        await new Promise((r) => setTimeout(r, 16));
+        const { flushed } = await flushImportOutbox(userId, { concurrency: 12, maxItems: 96 });
+        if (flushed === 0) {
+          emptyFlushStreak++;
+          // Remaining rows are erroring — stop spinning; lifecycle/visibility will retry
+          if (emptyFlushStreak >= 2) break;
+          await new Promise((r) => setTimeout(r, 400));
+        } else {
+          emptyFlushStreak = 0;
+          await new Promise((r) => setTimeout(r, 8));
+        }
       }
     } finally {
       kickInflight.delete(userId);
-      // One more pass if enqueue raced the drain
       const left = await listImportOutbox(userId);
       if (left.length) {
-        kickImportSync(userId);
+        window.setTimeout(() => kickImportSync(userId), 3000);
       }
     }
   })();
+}
+
+/**
+ * Resume leftovers after reload / reopen. Installs pagehide flush so closing
+ * the tab mid-sync still pushes as many outbox rows as the browser allows.
+ */
+export function installImportSyncLifecycle(userId: string): () => void {
+  if (!userId || typeof window === 'undefined') return () => {};
+  if (lifecycleInstalled.has(userId)) {
+    kickImportSync(userId);
+    return () => {};
+  }
+  lifecycleInstalled.add(userId);
+
+  const urgentFlush = () => {
+    void flushImportOutbox(userId, { concurrency: 16, maxItems: 200 });
+  };
+
+  const onVisibility = () => {
+    if (document.visibilityState === 'hidden') urgentFlush();
+    else kickImportSync(userId);
+  };
+
+  window.addEventListener('pagehide', urgentFlush);
+  window.addEventListener('visibilitychange', onVisibility);
+  kickImportSync(userId);
+
+  return () => {
+    lifecycleInstalled.delete(userId);
+    window.removeEventListener('pagehide', urgentFlush);
+    window.removeEventListener('visibilitychange', onVisibility);
+  };
 }

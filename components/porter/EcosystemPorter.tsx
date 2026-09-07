@@ -22,6 +22,8 @@ import {
   clearPorterDraft,
   discernImportPayload,
   exportVaultPlaintext,
+  isPorterRowImportable,
+  isPorterRowSkipped,
   loadExistingVaultForDedupe,
   loadPorterDraft,
   draftHasImportPreview,
@@ -29,6 +31,8 @@ import {
   type PorterSessionDraft,
 } from '@/lib/porter';
 import { runOfflinePorterImport } from '@/lib/porter/offline';
+import PorterSkippedReview from '@/components/porter/PorterSkippedReview';
+import { installImportSyncLifecycle } from '@/lib/vault/import-local-batch';
 import {
   generateEncryptedHtmlPage,
   sealPlaintextExport,
@@ -38,7 +42,7 @@ import { porterExport } from '@/lib/data-porter';
 
 type PorterDirection = 'import' | 'export';
 type PorterDataKind = 'secrets' | 'totp' | 'mixed' | 'auto';
-type PorterView = 'home' | 'pick-kind' | 'import' | 'preview' | 'export-format';
+type PorterView = 'home' | 'pick-kind' | 'import' | 'preview' | 'review-skipped' | 'export-format';
 type ConfirmKind = 'import' | 'export' | 'leave' | null;
 
 export type EcosystemPorterProps = {
@@ -184,6 +188,11 @@ export default function EcosystemPorter({
 
   useEffect(() => {
     if (!userId) return;
+    return installImportSyncLifecycle(userId);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
     void (async () => {
       const draft = await loadPorterDraft(userId);
       setCachedSession(draft);
@@ -259,7 +268,9 @@ export default function EcosystemPorter({
           (result.workspaces?.length || 0) >
           0;
 
-      if (hasItems || draft.view === 'preview') {
+      if (draft.view === 'review-skipped' && hasItems) {
+        setView('review-skipped');
+      } else if (hasItems || draft.view === 'preview') {
         setView('preview');
       } else if (draft.view === 'import' || draft.view === 'pick-kind') {
         setView(draft.view === 'pick-kind' ? 'pick-kind' : 'import');
@@ -311,6 +322,10 @@ export default function EcosystemPorter({
     }
     if (view === 'preview') {
       setView('import');
+      return;
+    }
+    if (view === 'review-skipped') {
+      setView('preview');
       return;
     }
     setView('home');
@@ -608,27 +623,43 @@ export default function EcosystemPorter({
   };
 
   const counts = useMemo(() => {
-    if (!discerned) return { secrets: 0, totp: 0, workspaces: 0, importable: 0, skipped: 0 };
+    if (!discerned) return { secrets: 0, totp: 0, workspaces: 0, importable: 0, skipped: 0, forced: 0 };
     const creds = Array.isArray(discerned.credentials) ? discerned.credentials : [];
     const totps = Array.isArray(discerned.totpSecrets) ? discerned.totpSecrets : [];
     const spaces = Array.isArray(discerned.workspaces) ? discerned.workspaces : [];
-    const secretsNew = creds.filter(
-      (c) => !c._status || c._status === 'new' || c._status === 'merged',
-    ).length;
-    const totpNew = totps.filter(
-      (t) => !t._status || t._status === 'new' || t._status === 'merged',
-    ).length;
+    const secretsNew = creds.filter((c) => isPorterRowImportable(c)).length;
+    const totpNew = totps.filter((t) => isPorterRowImportable(t)).length;
     const skipped =
-      creds.filter((c) => c._status === 'duplicate' || c._status === 'invalid').length +
-      totps.filter((t) => t._status === 'duplicate' || t._status === 'invalid').length;
+      creds.filter((c) => isPorterRowSkipped(c)).length +
+      totps.filter((t) => isPorterRowSkipped(t)).length;
+    const forced =
+      creds.filter((c) => c._forceImport && (c._status === 'duplicate' || c._status === 'invalid'))
+        .length +
+      totps.filter((t) => t._forceImport && (t._status === 'duplicate' || t._status === 'invalid'))
+        .length;
     return {
       secrets: creds.length,
       totp: totps.length,
       workspaces: spaces.length,
       importable: secretsNew + totpNew + spaces.length,
       skipped,
+      forced,
     };
   }, [discerned]);
+
+  const persistDiscerned = useCallback(
+    (next: PorterDiscernResult) => {
+      setDiscerned(next);
+      void persistSession({
+        direction: 'import',
+        dataKind,
+        result: next,
+        view: 'review-skipped',
+        fileName,
+      });
+    },
+    [persistSession, dataKind, fileName],
+  );
 
   const shellClass = embedded
     ? 'flex h-full min-h-0 w-full flex-col bg-[#161412] overflow-hidden'
@@ -680,7 +711,12 @@ export default function EcosystemPorter({
                 </p>
                 {counts.skipped > 0 && (
                   <p className="text-sm font-medium text-white">
-                    {counts.skipped} item{counts.skipped === 1 ? '' : 's'} will be skipped.
+                    {counts.skipped} item{counts.skipped === 1 ? '' : 's'} still skipped.
+                  </p>
+                )}
+                {counts.forced > 0 && (
+                  <p className="text-sm font-medium text-[#10B981]">
+                    {counts.forced} disputed item{counts.forced === 1 ? '' : 's'} will import anyway.
                   </p>
                 )}
                 <div className="rounded-2xl border border-white/20 bg-black px-4 py-3 space-y-1">
@@ -762,7 +798,9 @@ export default function EcosystemPorter({
                 ? `${direction === 'import' ? 'Import' : 'Export'} · Choose type`
                 : view === 'export-format'
                   ? `Export · ${dataKind === 'totp' ? 'Smart codes' : dataKind === 'secrets' ? 'Secrets' : 'Mixed'}`
-                  : view === 'import' || view === 'preview'
+                  : view === 'review-skipped'
+                    ? 'Import · Review held back'
+                    : view === 'import' || view === 'preview'
                     ? `Import · ${dataKind === 'auto' ? 'Auto' : dataKind === 'totp' ? 'Smart codes' : dataKind === 'secrets' ? 'Secrets' : 'Mixed'}`
                     : 'Import · Export'}
           </p>
@@ -987,11 +1025,31 @@ export default function EcosystemPorter({
               <StatTile icon={<FileCode2 className="w-4 h-4" />} label="Workspaces" value={counts.workspaces} />
             </div>
 
-            {counts.skipped > 0 && (
-              <p className="text-sm font-medium text-white">
-                {counts.skipped} item{counts.skipped === 1 ? '' : 's'} will be skipped (already
-                present or unreadable).
-              </p>
+            {(counts.skipped > 0 || counts.forced > 0) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setView('review-skipped');
+                  void persistSession({
+                    direction: 'import',
+                    dataKind,
+                    result: discerned,
+                    view: 'review-skipped',
+                  });
+                }}
+                className="w-full text-left rounded-2xl border border-white/20 bg-black px-5 py-4 hover:border-[#10B981] transition-colors"
+              >
+                <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-[#A3A3A3]">
+                  More info
+                </p>
+                <p className="text-base font-black text-white font-clash mt-1">
+                  {counts.skipped + counts.forced} held back
+                  {counts.forced > 0 ? ` · ${counts.forced} enabled by you` : ''}
+                </p>
+                <p className="text-sm font-medium text-white mt-1">
+                  See why, inspect values, and turn import back on if you disagree.
+                </p>
+              </button>
             )}
 
             {discerned.warnings.length > 0 && (
@@ -1006,33 +1064,37 @@ export default function EcosystemPorter({
 
             <div className="rounded-2xl border border-white/20 bg-black max-h-[240px] overflow-y-auto divide-y divide-white/10">
               {discerned.credentials.slice(0, 40).map((c, i) => {
-                const disabled = c._status === 'duplicate' || c._status === 'invalid';
+                const skipped = isPorterRowSkipped(c);
+                const forced = Boolean(c._forceImport) && (c._status === 'duplicate' || c._status === 'invalid');
                 return (
                   <div
                     key={`c-${i}`}
-                    className={`px-4 py-3 flex items-center gap-3 ${disabled ? 'opacity-40' : ''}`}
+                    className={`px-4 py-3 flex items-center gap-3 ${skipped ? 'opacity-40' : ''}`}
                   >
                     <Lock className="w-3.5 h-3.5 text-white shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-white truncate">{c.name}</p>
                       <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white truncate">
-                        {disabled
-                          ? c._skipReason ||
-                            (c._status === 'duplicate' ? 'Already in vault' : "Can't import")
-                          : c.isEnv
-                            ? 'Env bundle'
-                            : c.username || c.url || 'Secret'}
+                        {forced
+                          ? 'Import enabled by you'
+                          : skipped
+                            ? c._skipReason ||
+                              (c._status === 'duplicate' ? 'Already in vault' : "Can't import")
+                            : c.isEnv
+                              ? 'Env bundle'
+                              : c.username || c.url || 'Secret'}
                       </p>
                     </div>
                   </div>
                 );
               })}
               {discerned.totpSecrets.slice(0, 40).map((t, i) => {
-                const disabled = t._status === 'duplicate' || t._status === 'invalid';
+                const skipped = isPorterRowSkipped(t);
+                const forced = Boolean(t._forceImport) && (t._status === 'duplicate' || t._status === 'invalid');
                 return (
                   <div
                     key={`t-${i}`}
-                    className={`px-4 py-3 flex items-center gap-3 ${disabled ? 'opacity-40' : ''}`}
+                    className={`px-4 py-3 flex items-center gap-3 ${skipped ? 'opacity-40' : ''}`}
                   >
                     <KeyRound className="w-3.5 h-3.5 text-white shrink-0" />
                     <div className="min-w-0 flex-1">
@@ -1040,10 +1102,12 @@ export default function EcosystemPorter({
                         {t.issuer} · {t.accountName}
                       </p>
                       <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white truncate">
-                        {disabled
-                          ? t._skipReason ||
-                            (t._status === 'duplicate' ? 'Already in vault' : "Can't import")
-                          : 'Smart code'}
+                        {forced
+                          ? 'Import enabled by you'
+                          : skipped
+                            ? t._skipReason ||
+                              (t._status === 'duplicate' ? 'Already in vault' : "Can't import")
+                            : 'Smart code'}
                       </p>
                     </div>
                   </div>
@@ -1072,9 +1136,25 @@ export default function EcosystemPorter({
             >
               {counts.importable === 0
                 ? 'Nothing new to import'
-                : `Continue · ${counts.importable} new item${counts.importable === 1 ? '' : 's'}`}
+                : `Continue · ${counts.importable} item${counts.importable === 1 ? '' : 's'}`}
             </button>
           </>
+        )}
+
+        {view === 'review-skipped' && discerned && (
+          <PorterSkippedReview
+            discerned={discerned}
+            onChange={persistDiscerned}
+            onDone={() => {
+              setView('preview');
+              void persistSession({
+                direction: 'import',
+                dataKind,
+                result: discerned,
+                view: 'preview',
+              });
+            }}
+          />
         )}
 
         {view === 'export-format' && (
