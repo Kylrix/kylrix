@@ -290,9 +290,9 @@ export class ImportService {
       const existing = await loadExistingVaultForDedupe(userId);
       const sanitized = sanitizeImportBundle(parsedData, existing);
 
-      let folders = sanitized.workspaces;
-      let credentials = sanitized.credentials;
-      let totpSecrets = sanitized.totpSecrets;
+      let folders = sanitized.workspaces as any[];
+      let credentials = sanitized.credentials as any[];
+      let totpSecrets = sanitized.totpSecrets as any[];
 
       result.summary.skipped = sanitized.skippedInvalid;
       result.summary.skippedExisting =
@@ -347,7 +347,7 @@ export class ImportService {
       for (const folder of folders) {
         await this.throttle();
         try {
-          const folderName = folder.name ? folder.name.trim() : "";
+          const folderName = folder.name ? String(folder.name).trim() : "";
           let folderId: string;
 
           if (folderName && existingFoldersMap.has(folderName)) {
@@ -355,7 +355,7 @@ export class ImportService {
           } else {
               // Clean folder object for creation
               const cleanFolder = {
-                name: folder.name,
+                name: folderName || String(folder.name || 'Workspace'),
                 // userId is handled by createFolder using current user
               };
               const created = await createFolder({
@@ -368,8 +368,9 @@ export class ImportService {
           }
 
           // Map old ID to new ID
-          if (folder.$id) {
-            folderIdMapping.set(folder.$id, folderId);
+          const sourceFolderId = folder.$id != null ? String(folder.$id) : '';
+          if (sourceFolderId) {
+            folderIdMapping.set(sourceFolderId, folderId);
           }
         } catch (e: unknown) {
           console.error("Failed to restore folder", e);

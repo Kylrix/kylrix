@@ -25,7 +25,10 @@ export function useSurfaceDraft(opts: {
   const [meta, setMeta] = useState<SurfaceDraftEntry['meta']>();
   const textRef = useRef('');
   const scopeRef = useRef(scope);
-  scopeRef.current = scope;
+
+  useEffect(() => {
+    scopeRef.current = scope;
+  }, [scope]);
 
   useEffect(() => {
     setHydrated(false);

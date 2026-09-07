@@ -66,7 +66,7 @@ export function UnifiedDrawerProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [user?.$id],
+    [user],
   );
 
   const close = useCallback(() => {
@@ -77,7 +77,7 @@ export function UnifiedDrawerProvider({ children }: { children: ReactNode }) {
     if (user?.$id && wasForeground) {
       void writeSurfaceForeground(user.$id, null);
     }
-  }, [user?.$id, activeContent]);
+  }, [user, activeContent]);
 
   return (
     <UnifiedDrawerContext.Provider value={{ activeContent, drawerData, open, close }}>

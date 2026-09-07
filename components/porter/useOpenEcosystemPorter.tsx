@@ -6,7 +6,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useSudo } from '@/context/SudoContext';
 
-function useIsDesktopPorter() {
+function isDesktopPorter(): boolean {
   if (typeof window === 'undefined') return false;
   return window.matchMedia('(min-width: 768px)').matches;
 }
@@ -39,7 +39,7 @@ export function useOpenEcosystemPorter(opts?: OpenPorterOpts | (() => void)) {
     typeof opts === 'function' ? { onImported: opts } : opts || {};
 
   const openPorterSurface = useCallback(() => {
-    const isDesktop = useIsDesktopPorter();
+    const isDesktop = isDesktopPorter();
     const surface = normalized.surface || 'general';
     if (isDesktop) {
       openSidebar(

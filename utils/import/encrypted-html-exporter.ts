@@ -11,14 +11,6 @@ function bytesToB64(bytes: Uint8Array): string {
   return btoa(s);
 }
 
-function b64ToBytes(b64: string): Uint8Array {
-  return new Uint8Array(
-    atob(b64)
-      .split('')
-      .map((c) => c.charCodeAt(0)),
-  );
-}
-
 async function derivePasswordKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
