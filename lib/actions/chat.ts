@@ -27,7 +27,7 @@ import {
 export async function createMessageAction(payload: any) {
   // Rigorous runtime validation
   const validated = ChatMessageSchema.parse(payload);
-  const validatedJwt = JWTSchema.parse(payload.jwt);
+  const validatedJwt = JWTSchema.parse(payload.jwt ?? undefined);
 
   // Retrieve the authenticated actor securely on the server
   const { getActor } = await import('./secure-ops');

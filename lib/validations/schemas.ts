@@ -3,7 +3,10 @@ import { z } from 'zod';
 export const IDSchema = z.string().min(1).max(128);
 const DatabaseIDSchema = z.string().min(1).max(128);
 const TableIDSchema = z.string().min(1).max(128);
-export const JWTSchema = z.string().optional();
+export const JWTSchema = z.preprocess(
+  (v) => (v === null || v === '' ? undefined : v),
+  z.string().optional(),
+);
 
 export const CRUDParamsSchema = z.object({
   databaseId: DatabaseIDSchema,

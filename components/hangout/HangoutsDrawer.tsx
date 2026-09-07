@@ -24,7 +24,10 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   peekChatsListMemory,
   peekThreadsListMemory,
+  peekMessagesMemory,
+  patchConversationListPreview,
   readChatsListLocal,
+  readMessagesLocal,
   readThreadsListLocal,
   writeChatsListLocal,
 } from '@/lib/chat/local-chat-cache';
@@ -181,10 +184,43 @@ export function HangoutsDrawer({
         readThreadsListLocal(),
       ]);
 
+      // Enrich list previews from per-conversation message LocalEngine cache (ciphertext-safe)
+      const enrichFromMessageCache = async (rows: any[]) => {
+        const next = [...rows];
+        await Promise.all(
+          next.map(async (row, i) => {
+            const id = String(row?.$id || row?.id || '');
+            if (!id) return;
+            const msgs = peekMessagesMemory(id);
+            const localMsgs = msgs.length ? msgs : await readMessagesLocal(id);
+            if (!localMsgs.length) return;
+            const latest = localMsgs[localMsgs.length - 1];
+            const at = String(latest?.$createdAt || latest?.createdAt || '');
+            const text = String(latest?.content || '');
+            const rowAt = String(row.lastMessageAt || '');
+            if (at && (!rowAt || new Date(at).getTime() >= new Date(rowAt).getTime())) {
+              next[i] = {
+                ...row,
+                lastMessageAt: at || row.lastMessageAt,
+                lastMessageText: row.isEncrypted
+                  ? isLikelyChatCiphertext(text)
+                    ? text
+                    : row.lastMessageText
+                  : text || row.lastMessageText,
+                lastMessageId: latest?.$id || row.lastMessageId,
+              };
+            }
+          }),
+        );
+        return next;
+      };
+
       let hasAnyLocal = false;
       if (cachedChats?.length) {
-        const decryptedCached = await hydrateDecryptedSecureChats(cachedChats);
+        const enriched = await enrichFromMessageCache(cachedChats);
+        const decryptedCached = await hydrateDecryptedSecureChats(enriched);
         startTransition(() => setSecureChats(decryptedCached));
+        void writeChatsListLocal(enriched);
         hasAnyLocal = true;
       }
       if (cachedThreads?.length) {
@@ -200,9 +236,10 @@ export function HangoutsDrawer({
           const res = await ChatService.getConversations(user.$id, { forceRefresh: !hasAnyLocal });
           const rows = Array.isArray(res) ? res : res?.rows || [];
           if (rows.length) {
-            const decryptedRows = await hydrateDecryptedSecureChats(rows);
+            const enriched = await enrichFromMessageCache(rows);
+            const decryptedRows = await hydrateDecryptedSecureChats(enriched);
             startTransition(() => setSecureChats(decryptedRows));
-            void writeChatsListLocal(decryptedRows);
+            void writeChatsListLocal(enriched);
           }
           markEmptyEscapeHatchRan('chats', user.$id);
         } catch (fetchErr) {
@@ -316,6 +353,13 @@ export function HangoutsDrawer({
       if (touchesMessages) {
         const convId = payload.conversationId;
         if (convId) {
+          const listHit = peekChatsListMemory().find((c: any) => (c.$id || c.id) === convId);
+          patchConversationListPreview(convId, {
+            lastMessageText: String(payload.content || ''),
+            lastMessageAt: String(payload.$createdAt || payload.createdAt || new Date().toISOString()),
+            lastMessageId: String(payload.$id || ''),
+            isEncrypted: Boolean(listHit?.isEncrypted),
+          });
           startTransition(() => {
             setSecureChats((prev) => {
               const idx = prev.findIndex((c: any) => (c.$id || c.id) === convId);
@@ -323,9 +367,15 @@ export function HangoutsDrawer({
                 void refreshChats();
                 return prev;
               }
+              const encrypted = Boolean(prev[idx]?.isEncrypted);
+              const rawText = String(payload.content || '');
               const updated = {
                 ...prev[idx],
-                lastMessageText: payload.content || prev[idx].lastMessageText,
+                // Display: encrypted chats keep prior decrypted preview until hydrate; list cache uses ciphertext via patch
+                lastMessageText:
+                  encrypted && rawText && !(rawText.length > 40 && !rawText.includes(' '))
+                    ? prev[idx].lastMessageText
+                    : rawText || prev[idx].lastMessageText,
                 lastMessageAt:
                   payload.$createdAt || payload.createdAt || new Date().toISOString(),
               };
@@ -336,7 +386,6 @@ export function HangoutsDrawer({
                   new Date(b.lastMessageAt || b.updatedAt || b.createdAt || 0).getTime() -
                   new Date(a.lastMessageAt || a.updatedAt || a.createdAt || 0).getTime(),
               );
-              void writeChatsListLocal(next);
               return next;
             });
           });

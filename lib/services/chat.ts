@@ -304,9 +304,18 @@ async function getAuth(auth?: { jwt?: string; cookie?: string }) {
     if (auth?.jwt) return auth.jwt;
     try {
         const session = await account.createJWT().catch(() => null);
-        return session?.jwt || null;
+        const jwt = session?.jwt;
+        if (jwt) return jwt;
     } catch {
-        return null;
+        /* fall through */
+    }
+    // Second chance — session cookie may still be establishing
+    try {
+        await new Promise((r) => setTimeout(r, 120));
+        const session = await account.createJWT().catch(() => null);
+        return session?.jwt || undefined;
+    } catch {
+        return undefined;
     }
 }
 
@@ -324,6 +333,9 @@ async function callMessageCreateApi(
     auth?: { jwt?: string; cookie?: string }
 ) {
     const jwt = await getAuth(auth);
+    if (!jwt) {
+        throw new Error('Not signed in — refresh and try again');
+    }
     return await createMessageAction({
         conversationId: payload.conversationId as string,
         senderId: payload.senderId as string,
@@ -332,7 +344,8 @@ async function callMessageCreateApi(
         attachments: payload.attachments as string[],
         replyTo: payload.replyTo as string,
         isBookmark: payload.isBookmark as boolean | undefined,
-        jwt: jwt as any});
+        jwt,
+    });
 }
 
 async function callMessageReactionApi(

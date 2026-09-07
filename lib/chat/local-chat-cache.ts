@@ -22,6 +22,79 @@ export function chatMessagesCacheKey(conversationId: string) {
   return `f_chat_messages_${conversationId}`;
 }
 
+/** In-memory message mirrors — open chat paints at 0ms before RxDB/network. */
+const memoryMessagesByConv = new Map<string, any[]>();
+
+export function peekMessagesMemory(conversationId: string): any[] {
+  if (!conversationId) return [];
+  const rows = memoryMessagesByConv.get(conversationId);
+  return rows?.length ? [...rows] : [];
+}
+
+export async function readMessagesLocal(conversationId: string): Promise<any[]> {
+  if (!conversationId) return [];
+  const mem = memoryMessagesByConv.get(conversationId);
+  if (mem?.length) return [...mem];
+  const cached = await LocalEngine.cacheGet<any[]>(chatMessagesCacheKey(conversationId));
+  if (cached?.length) {
+    memoryMessagesByConv.set(conversationId, cached);
+    return [...cached];
+  }
+  return [];
+}
+
+/**
+ * Persist messages for a conversation.
+ * Encrypted chats: never write decrypted plaintext — sanitizeMessagesForRest strips it.
+ */
+export function writeMessagesLocal(
+  conversationId: string,
+  messages: any[],
+  isEncrypted: boolean,
+): void {
+  if (!conversationId) return;
+  const safe = sanitizeMessagesForRest(messages || [], isEncrypted);
+  memoryMessagesByConv.set(conversationId, safe);
+  void LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), safe);
+}
+
+/** Patch hangout list preview from latest local message (ciphertext-safe). */
+export function patchConversationListPreview(
+  conversationId: string,
+  preview: {
+    lastMessageText?: string;
+    lastMessageAt?: string;
+    lastMessageId?: string;
+    isEncrypted?: boolean;
+  },
+): void {
+  if (!conversationId) return;
+  const list = memoryChatsList ? [...memoryChatsList] : [];
+  const idx = list.findIndex((c: any) => (c.$id || c.id) === conversationId);
+  if (idx < 0) return;
+  const row = { ...list[idx] };
+  if (preview.lastMessageAt) row.lastMessageAt = preview.lastMessageAt;
+  if (preview.lastMessageId) row.lastMessageId = preview.lastMessageId;
+  if (typeof preview.lastMessageText === 'string') {
+    // Encrypted: only keep ciphertext (or empty) at rest
+    if (preview.isEncrypted || row.isEncrypted) {
+      if (!preview.lastMessageText || isLikelyCiphertext(preview.lastMessageText)) {
+        row.lastMessageText = preview.lastMessageText || '';
+      }
+      // else leave prior ciphertext / empty — never store plaintext
+    } else {
+      row.lastMessageText = preview.lastMessageText;
+    }
+  }
+  list[idx] = row;
+  list.sort(
+    (a: any, b: any) =>
+      new Date(b.lastMessageAt || b.updatedAt || 0).getTime() -
+      new Date(a.lastMessageAt || a.updatedAt || 0).getTime(),
+  );
+  writeChatsListLocal(list);
+}
+
 function isLikelyCiphertext(val: unknown): boolean {
   if (typeof val !== 'string' || !val.trim()) return false;
   const trimmed = val.trim();

@@ -40,6 +40,8 @@ import {
     Pin,
     Lock,
     Zap,
+    EyeOff,
+    Eye,
 } from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
@@ -70,8 +72,11 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import {
     chatConversationCacheKey,
     chatMessagesCacheKey,
-    sanitizeMessagesForRest,
     peekChatsListMemory,
+    peekMessagesMemory,
+    patchConversationListPreview,
+    readMessagesLocal,
+    writeMessagesLocal,
 } from '@/lib/chat/local-chat-cache';
 import type { ChatMessage, ChatReaction, SenderProfile } from './chat-types';
 import { MessagesType } from './chat-types';
@@ -153,12 +158,12 @@ export const ChatWindow = ({
     const [_partnerPresence, setPartnerPresence] = useState<any>(null);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>(() => peekMessagesMemory(conversationId) as ChatMessage[]);
     const [conversation, setConversation] = useState<any>(() =>
         seedConversationFromList(conversationId, seedTitle, user?.$id),
     );
     const [_loading, setLoading] = useState(false);
-    const [messagesLoading, setMessagesLoading] = useState(true);
+    const [messagesLoading, setMessagesLoading] = useState(() => peekMessagesMemory(conversationId).length === 0);
     const [sending, setSending] = useState(false);
     const [attachment, setAttachment] = useState<File | null>(null);
     const [pendingObject, setPendingObject] = useState<ChatPendingObject | null>(null);
@@ -174,6 +179,8 @@ export const ChatWindow = ({
     const { promptSudo } = useSudo();
     const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
     const [messageAnchorEl, setMessageAnchorEl] = useState<{ el: HTMLElement, msg: ChatMessage } | null>(null);
+    /** Session-only UI blur for screenshots — never persisted */
+    const [blurredMessageIds, setBlurredMessageIds] = useState<Set<string>>(() => new Set());
     const [partnerProfile, setPartnerProfile] = useState<any | null>(null);
     const [partnerVerification, setPartnerVerification] = useState(() => getVerificationState(null));
     const [conversationReadAt, setConversationReadAt] = useState(0);
@@ -550,12 +557,16 @@ export const ChatWindow = ({
 
     const loadMessages = React.useCallback(async () => {
         if (!conversationId) return;
-        console.log('[ChatWindow] loadMessages start for:', conversationId);
         try {
-            // Paint ciphertext cache immediately — never block shell on decrypt / network
-            const cachedMessages = await LocalEngine.cacheGet<ChatMessage[]>(
-                chatMessagesCacheKey(conversationId),
-            );
+            // 0ms memory → LocalEngine paint, then network refresh
+            const mem = peekMessagesMemory(conversationId) as ChatMessage[];
+            if (mem.length) {
+                startTransition(() => setMessages(mem));
+                setMessagesLoading(false);
+            }
+            const cachedMessages = mem.length
+                ? mem
+                : ((await readMessagesLocal(conversationId)) as ChatMessage[]);
             if (cachedMessages?.length) {
                 startTransition(() => setMessages(cachedMessages));
                 setMessagesLoading(false);
@@ -575,7 +586,7 @@ export const ChatWindow = ({
                             )) as ChatMessage[];
                             startTransition(() => setMessages(hydrated));
                         } catch {
-                            /* keep ciphertext until network */
+                            /* keep cache until network */
                         }
                     })();
                 }
@@ -591,19 +602,14 @@ export const ChatWindow = ({
             try {
               conv = await ChatService.getConversationById(conversationId, user?.$id);
             } catch {}
-            // Fix: always fetch messages even if conv is null (permission/typing bug hid messages while preview worked). Participants both have read perms on create.
             let response: any = null;
             try {
-              console.log('[ChatWindow] loadMessages: conversation fetched:', conv?.$id || 'null — still fetching messages');
               response = await ChatService.getMessages(conversationId, 50, 0, user?.$id, {
                   prefetchedConversation: conv || undefined});
             } catch (e) {
               console.warn('[ChatWindow] getMessages failed, will try thread fallback', e);
             }
-            if (response) console.log('[ChatWindow] loadMessages: getMessages returned rows:', response?.rows?.length);
-            // Thread fallback — canonical threads substrate (notes → threads/thread_messages, not conversations)
-            // Use client-ops (server actions via Registry/JWT), NOT direct ThreadService (which needs APPWRITE_API system client)
-            // Bookmarks/discussion hangouts are thread notes (isthreadChat) bridged to threads via scopeKey parentKind:parentId:channel + legacyNoteId
+            // Thread fallback — canonical threads substrate
             if (!response || !Array.isArray(response.rows)) {
               try {
                 const { getOrCreateThread, listThreadMessages } = await import('@/lib/actions/client-ops');
@@ -612,8 +618,8 @@ export const ChatWindow = ({
                 const isSelfBookmarks = !!(conversation as any)?.isSelfBookmarks || (!!(conversation as any)?.isthreadChat && Array.isArray((conversation as any)?.collaborators) && (conversation as any).collaborators.length===1);
                 const fallbackIsSelf = !isSelfBookmarks && !conv && conversationId && (() => {
                   try {
-                    const mem: any[] = ((): any[] => { try { return (require('@/lib/chat/local-chat-cache') as any).peekThreadsListMemory?.() || []; } catch { return []; } })();
-                    const hit = mem.find((c: any) => c.$id===conversationId || c.id===conversationId);
+                    const memList: any[] = ((): any[] => { try { return (require('@/lib/chat/local-chat-cache') as any).peekThreadsListMemory?.() || []; } catch { return []; } })();
+                    const hit = memList.find((c: any) => c.$id===conversationId || c.id===conversationId);
                     return !!hit?.isSelfBookmarks;
                   } catch { return false; }
                 })();
@@ -643,24 +649,20 @@ export const ChatWindow = ({
                   response = { rows, atRestRows: rows };
                   if (!conv) {
                     conv = { $id: threadId, id: threadId, settings: null, isEncrypted: !!t?.isEncrypted, isThreadFallback: true, isthreadChat: true, isSelfBookmarks: useSelf } as any;
-                    console.log('[ChatWindow] loadMessages: thread fallback fetched:', conv.$id, 'rows:', rows.length);
                   }
                 }
               } catch {}
             }
             if (!response || !Array.isArray(response.rows)) {
-              console.warn('[ChatWindow] loadMessages: no response rows for', conversationId);
               setMessagesLoading(false);
               setLoading(false);
               return;
             }
 
-            // Filter by clearedAt if exists in settings
             let displayMessages = response.rows;
             let atRest = (response as any).atRestRows || response.rows;
             if (user && conv?.settings) {
                 try {
-                    // Guard: settings may be plaintext JSON or empty; decrypt only if looks encrypted and vault unlocked
                     const settingsRaw: string = String(conv.settings);
                     const looksEncrypted = settingsRaw.length > 40 && !settingsRaw.includes(' ') && ecosystemSecurity.status.isUnlocked;
                     const decryptedSettings = looksEncrypted ? await ecosystemSecurity.decrypt(settingsRaw) : settingsRaw;
@@ -670,22 +672,26 @@ export const ChatWindow = ({
                         const cutoff = new Date(myClearedAt);
                         displayMessages = displayMessages.filter((m: any) => new Date(m.createdAt || m.$createdAt) > cutoff);
                         atRest = atRest.filter((m: any) => new Date(m.createdAt || m.$createdAt) > cutoff);
-                        console.log('[ChatWindow] loadMessages: Filtered by clearedAt. Remaining:', displayMessages.length);
                     }
                 } catch (_e: unknown) { }
             }
 
-            // Reverse once for display order (bottom is newest)
             const ordered = displayMessages.reverse() as unknown as ChatMessage[];
             const atRestOrdered = [...atRest].reverse();
             startTransition(() => {
                 setMessages(ordered);
             });
-            // Persist ciphertext only for encrypted chats — never decrypted plaintext at rest
-            void LocalEngine.cacheSet(
-                chatMessagesCacheKey(conversationId),
-                sanitizeMessagesForRest(atRestOrdered, Boolean(conv?.isEncrypted)),
-            );
+            const encrypted = Boolean(conv?.isEncrypted || conversation?.isEncrypted);
+            writeMessagesLocal(conversationId, atRestOrdered, encrypted);
+            const latest = atRestOrdered[atRestOrdered.length - 1] || ordered[ordered.length - 1];
+            if (latest) {
+              patchConversationListPreview(conversationId, {
+                lastMessageText: String((latest as any).content || ''),
+                lastMessageAt: String((latest as any).$createdAt || (latest as any).createdAt || new Date().toISOString()),
+                lastMessageId: String((latest as any).$id || ''),
+                isEncrypted: encrypted,
+              });
+            }
             void loadReactions();
         } catch (error: unknown) {
             console.error('[ChatWindow] loadMessages failed:', error);
@@ -693,7 +699,7 @@ export const ChatWindow = ({
             setMessagesLoading(false);
             setLoading(false);
         }
-    }, [conversationId, loadReactions, user, startTransition]);
+    }, [conversationId, loadReactions, user, startTransition, conversation]);
 
     const openReactionPopover = React.useCallback((event: React.MouseEvent<HTMLElement>, messageId: string) => {
         setReactionPopoverAnchorEl(event.currentTarget);
@@ -953,8 +959,15 @@ export const ChatWindow = ({
 
         if (initialLoadRef.current !== conversationId) {
             initialLoadRef.current = conversationId;
-            setMessages([]);
-            setMessagesLoading(true);
+            setBlurredMessageIds(new Set());
+            const mem = peekMessagesMemory(conversationId) as ChatMessage[];
+            if (mem.length) {
+                setMessages(mem);
+                setMessagesLoading(false);
+            } else {
+                setMessages([]);
+                setMessagesLoading(true);
+            }
             const fromList = peekChatsListMemory().find(
                 (c: any) => c.$id === conversationId || c.id === conversationId,
             );
@@ -1055,7 +1068,18 @@ export const ChatWindow = ({
                                             return true;
                                         });
                                         if (withoutOptimistic.some((m) => m.$id === payload.$id)) return withoutOptimistic;
-                                        return [...withoutOptimistic, payload];
+                                        const next = [...withoutOptimistic, payload];
+                                        const encrypted = Boolean(conversation?.isEncrypted);
+                                        writeMessagesLocal(conversationId, next, encrypted);
+                                        patchConversationListPreview(conversationId, {
+                                            lastMessageText: String(payload.content || ''),
+                                            lastMessageAt: String(
+                                                payload.$createdAt || payload.createdAt || new Date().toISOString(),
+                                            ),
+                                            lastMessageId: String(payload.$id || ''),
+                                            isEncrypted: encrypted,
+                                        });
+                                        return next;
                                     });
                                 });
                                 setTimeout(() => scrollToBottom(), 100);
@@ -1442,7 +1466,36 @@ export const ChatWindow = ({
                 status: 'sent',
             } as unknown as ChatMessage;
             startTransition(() => {
-                setMessages(prev => prev.map(m => m.$id === optimisticId ? messageForState : m));
+                setMessages((prev) => {
+                    const next = prev.map((m) => (m.$id === optimisticId ? messageForState : m));
+                    const encrypted = Boolean(conversation?.isEncrypted);
+                    // At-rest: ciphertext from server for encrypted; plaintext OK for open chats
+                    const atRestRow = encrypted
+                        ? { ...sentMessage, status: 'sent' }
+                        : messageForState;
+                    writeMessagesLocal(
+                        conversationId,
+                        next.map((m) =>
+                            m.$id === messageForState.$id || m.$id === (sentMessage as any)?.$id
+                                ? atRestRow
+                                : m,
+                        ),
+                        encrypted,
+                    );
+                    patchConversationListPreview(conversationId, {
+                        lastMessageText: encrypted
+                            ? String((sentMessage as any)?.content || '')
+                            : finalText,
+                        lastMessageAt: String(
+                            (sentMessage as any)?.$createdAt ||
+                                (sentMessage as any)?.createdAt ||
+                                new Date().toISOString(),
+                        ),
+                        lastMessageId: String((sentMessage as any)?.$id || ''),
+                        isEncrypted: encrypted,
+                    });
+                    return next;
+                });
             });
         } catch (error: unknown) {
             console.error('Failed to send message:', error);
@@ -1453,6 +1506,8 @@ export const ChatWindow = ({
             setAttachment(file);
             setPendingObject(objectAttach);
             setReplyingTo(previousReplyingTo);
+            const errMsg = error instanceof Error ? error.message : 'Failed to send';
+            toast.error(errMsg);
             return false;
         } finally {
             setSending(false);
@@ -2051,7 +2106,13 @@ export const ChatWindow = ({
                                                         </span>
                                                     </button>
                                                 )}
-                                                <div className="min-w-0 [overflow-wrap:anywhere] text-[0.9375rem] leading-[1.45] font-satoshi font-medium text-[#F5F2ED]">
+                                                <div
+                                                    className={`min-w-0 [overflow-wrap:anywhere] text-[0.9375rem] leading-[1.45] font-satoshi font-medium text-[#F5F2ED] ${
+                                                        blurredMessageIds.has(String(msg.$id))
+                                                            ? 'select-none blur-[7px] pointer-events-none'
+                                                            : ''
+                                                    }`}
+                                                >
                                                     <ChatMessageContent
                                                         msg={msg}
                                                         isUnlocked={isUnlocked}
@@ -2066,6 +2127,24 @@ export const ChatWindow = ({
                                                         }
                                                     />
                                                 </div>
+                                                {blurredMessageIds.has(String(msg.$id)) ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setBlurredMessageIds((prev) => {
+                                                                const next = new Set(prev);
+                                                                next.delete(String(msg.$id));
+                                                                return next;
+                                                            });
+                                                        }}
+                                                        className="absolute inset-0 z-[3] flex items-center justify-center gap-1.5 rounded-[18px] bg-[#0A0908] text-[11px] font-bold uppercase tracking-wide text-white border border-white/20"
+                                                        aria-label="Show message"
+                                                    >
+                                                        <Eye size={14} />
+                                                        Show
+                                                    </button>
+                                                ) : null}
                                             </div>
                                             {(() => {
                                                 const reactionGroups = sortReactionGroups(reactionsByMessageId[msg.$id] || [], user?.$id).slice(0, 3);
@@ -2378,6 +2457,33 @@ export const ChatWindow = ({
                             >
                                 <Copy size={16} className="text-white/60" />
                                 <span>Copy Text</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const id = String(messageAnchorEl.msg.$id || '');
+                                    if (!id) return;
+                                    setBlurredMessageIds((prev) => {
+                                        const next = new Set(prev);
+                                        if (next.has(id)) next.delete(id);
+                                        else next.add(id);
+                                        return next;
+                                    });
+                                    setMessageAnchorEl(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A0908] border border-white/[0.04] text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+                            >
+                                {blurredMessageIds.has(String(messageAnchorEl.msg.$id)) ? (
+                                    <Eye size={16} className="text-white/60" />
+                                ) : (
+                                    <EyeOff size={16} className="text-white/60" />
+                                )}
+                                <span>
+                                    {blurredMessageIds.has(String(messageAnchorEl.msg.$id))
+                                        ? 'Show message'
+                                        : 'Blur for screenshot'}
+                                </span>
                             </button>
 
                             <button
