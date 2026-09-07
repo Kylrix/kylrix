@@ -93,12 +93,6 @@ import {
   serializeObjectBlock,
   type ParsedObjectBlock} from '@/lib/note-object-secondary';
 import { storage } from '@/lib/appwrite/client';
-import { NoteDetailSidebarView } from './NoteDetailSidebarSections/NoteDetailSidebarView';
-import { healDecryption as healDecryption_ext } from './NoteDetailSidebarSections/healDecryption';
-import { renderContextActionsContent as renderContextActionsContent_ext } from './NoteDetailSidebarSections/renderContextActionsContent';
-
-
-
 
 export type NoteAccessRole = 'owner' | 'write-collab' | 'read-collab' | 'guest' | 'public';
 
@@ -385,7 +379,21 @@ export function NoteDetailSidebar({
   // Automatically heal T4 encrypted state if vault is unlocked
   useEffect(() => {
     if (isEncryptedNote && vaultUnlocked) {
-      const healDecryption = (..._args: any[]) => healDecryption_ext({ _attachedObjects, _hasCollaborators, _isAttachingObject, _isLoadingEvents, _isLoadingSecrets, _isLoadingTasks, _linkedEvents, _linkedSecrets, _linkedTasks, _setIsPublic, allNotesRef, attachPickedObject, audioChunksRef, awaitingLocalCopy, canAttachSecondaryObject, closeContextActions, collaboratorProfiles, content, contentTextareaRef, crossSuggestions, displayTags, durationIntervalRef, getCursorLineNumber, handleAddToProject, handleBackClick, handleConfirmedRotate, handleContentChange, handleCopyShareLink, handleCreateTaskFromNote, handleDelete, handleDismiss, handlePinToggle, handleTagsChange, handleTitleChange, handleTogglePublic, hasRestoredScrollRef, healDecryption, insertObjectBlockAtCursor, isAttachObjectPickerOpen, isContextDrawerOpen, isCreatingTaskFromNote, isDesktop, isEncryptedNote, isExportDrawerOpen, isLoadingCollaborators, isLoadingSuggestions, isLocallyDecrypted, isObjectPermissionInfoOpen, isPageLayout, isPinnedFunc, isPublic, isRecording, isRotating, isT4Encrypted, isTagSelectorOpen, linkedCredentialIds, linkedEventIds, linkedTaskIds, liveNote, liveNoteRef, mediaRecorderRef, noteLinks, noteMeta, noteRef, objectUploadInputRef, onPickExternalFile, pendingBlockDelete, pendingSelRef, pinNoteFunc, previousContentRef, recordingDuration, recordingTimerRef, renderContextActionsContent, replaceContentWithSave, rotateNoteLink, scrollContainerRef, setAttachedObjects, setCollaboratorProfiles, setContent, setCrossSuggestions, setIsAttachObjectPickerOpen, setIsAttachingObject, setIsContextDrawerOpen, setIsCreatingTaskFromNote, setIsDesktop, setIsExportDrawerOpen, setIsLoadingCollaborators, setIsLoadingEvents, setIsLoadingSecrets, setIsLoadingSuggestions, setIsLoadingTasks, setIsLocallyDecrypted, setIsObjectPermissionInfoOpen, setIsRecording, setIsRotating, setIsTagSelectorOpen, setLinkedEvents, setLinkedSecrets, setLinkedTasks, setPendingBlockDelete, setRecordingDuration, setShowActionHub, setShowProjectLinker, setShowRotateConfirm, setTags, setTitle, setVaultUnlocked, shouldMaskEncrypted, showActionHub, showProjectLinker, showRotateConfirm, tags, title, toggleRecording, unpinNoteFunc, updateLocalAndParentNote, vaultUnlocked });
+      const healDecryption = async () => {
+        try {
+          const decrypted = await decryptPublicEncryptedNote(liveNote);
+          if (decrypted) {
+            setTitle(decrypted.title || '');
+            setContent(decrypted.content || '');
+            setTags(decrypted.tags?.join(', ') || '');
+            setIsLocallyDecrypted(true);
+            updateLocalAndParentNote(decrypted);
+            showSuccess('Note decrypted', 'Content is now visible.');
+          }
+        } catch (err) {
+          console.error('[NoteSidebar] Auto-decryption failed:', err);
+        }
+      };
       void healDecryption();
     }
   }, [isEncryptedNote, vaultUnlocked, liveNote, updateLocalAndParentNote, showSuccess]);
@@ -691,7 +699,223 @@ export function NoteDetailSidebar({
   const previousContentRef = useRef(content);
   const isPageLayout = layout === 'page';
 
-  const renderContextActionsContent = useCallback((..._args: any[]) => renderContextActionsContent_ext({ _attachedObjects, _hasCollaborators, _isAttachingObject, _isLoadingEvents, _isLoadingSecrets, _isLoadingTasks, _linkedEvents, _linkedSecrets, _linkedTasks, _setIsPublic, allNotesRef, attachPickedObject, audioChunksRef, awaitingLocalCopy, canAttachSecondaryObject, closeContextActions, collaboratorProfiles, content, contentTextareaRef, crossSuggestions, displayTags, durationIntervalRef, getCursorLineNumber, handleAddToProject, handleBackClick, handleConfirmedRotate, handleContentChange, handleCopyShareLink, handleCreateTaskFromNote, handleDelete, handleDismiss, handlePinToggle, handleTagsChange, handleTitleChange, handleTogglePublic, hasRestoredScrollRef, insertObjectBlockAtCursor, isAttachObjectPickerOpen, isContextDrawerOpen, isCreatingTaskFromNote, isDesktop, isEncryptedNote, isExportDrawerOpen, isLoadingCollaborators, isLoadingSuggestions, isLocallyDecrypted, isObjectPermissionInfoOpen, isPageLayout, isPinnedFunc, isPublic, isRecording, isRotating, isT4Encrypted, isTagSelectorOpen, linkedCredentialIds, linkedEventIds, linkedTaskIds, liveNote, liveNoteRef, mediaRecorderRef, noteLinks, noteMeta, noteRef, objectUploadInputRef, onPickExternalFile, pendingBlockDelete, pendingSelRef, pinNoteFunc, previousContentRef, recordingDuration, recordingTimerRef, renderContextActionsContent, replaceContentWithSave, rotateNoteLink, scrollContainerRef, setAttachedObjects, setCollaboratorProfiles, setContent, setCrossSuggestions, setIsAttachObjectPickerOpen, setIsAttachingObject, setIsContextDrawerOpen, setIsCreatingTaskFromNote, setIsDesktop, setIsExportDrawerOpen, setIsLoadingCollaborators, setIsLoadingEvents, setIsLoadingSecrets, setIsLoadingSuggestions, setIsLoadingTasks, setIsLocallyDecrypted, setIsObjectPermissionInfoOpen, setIsRecording, setIsRotating, setIsTagSelectorOpen, setLinkedEvents, setLinkedSecrets, setLinkedTasks, setPendingBlockDelete, setRecordingDuration, setShowActionHub, setShowProjectLinker, setShowRotateConfirm, setTags, setTitle, setVaultUnlocked, shouldMaskEncrypted, showActionHub, showProjectLinker, showRotateConfirm, tags, title, toggleRecording, unpinNoteFunc, updateLocalAndParentNote, vaultUnlocked }, ..._args), [content, liveNote, note, canAttachSecondaryObject, openFileDrawer, openUnified, showSuccess, showError, closeContextActions]);
+  const renderContextActionsContent = useCallback(() => (
+    <div className="flex flex-col gap-3 p-5 md:p-6 bg-[#161412] text-white select-none max-h-[60vh] md:max-h-none md:h-full overflow-y-auto">
+      {/* Mobile drawer handle only */}
+      <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-2 md:hidden" aria-hidden />
+
+      {/* Header */}
+      <div className="flex items-center justify-between pb-2.5 border-b border-white/5">
+        <div className="flex items-center gap-2">
+          <ActionIcon className="w-4 h-4 text-[#6366F1]" />
+          <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash">
+            Text Actions
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={closeContextActions}
+          className="w-7 h-7 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white transition-colors flex items-center justify-center cursor-pointer"
+        >
+          <CloseIcon size={14} />
+        </button>
+      </div>
+
+      {/* Actions List */}
+      <div className="flex flex-col gap-2.5 pt-1">
+        {/* Zap Idea */}
+        <button
+          type="button"
+          onClick={() => {
+            closeContextActions();
+            openUnified('zap', {
+              targetId: liveNote.$id,
+              source: 'ecosystem',
+              targetKind: 'note',
+              targetOwnerId: (liveNote as any).userId || (note as any).userId,
+              authorName: (liveNote as any).userName || (liveNote as any).title || 'Creator',
+            });
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-amber-400/20 hover:border-amber-400/40 hover:bg-amber-400/5 transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
+            <Zap size={18} className="fill-current" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-amber-300">Zap Idea (Send rix)</span>
+            <span className="text-[11px] font-semibold text-amber-400/60">Tip creator with instant tokens</span>
+          </div>
+        </button>
+
+        {/* Copy All Content */}
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard.writeText(content);
+            showSuccess('Copied', 'Entire note content copied to clipboard.');
+            closeContextActions();
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 group-hover:scale-105 transition-transform shrink-0">
+            <CopyIcon size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white group-hover:text-pink-300 transition-colors">Copy All Content</span>
+            <span className="text-[11px] font-semibold text-[#9B9691]">Copy markdown body to clipboard</span>
+          </div>
+        </button>
+
+        {/* Select All */}
+        <button
+          type="button"
+          onClick={() => {
+            closeContextActions();
+            setTimeout(() => {
+              const textarea = contentTextareaRef.current;
+              if (textarea) {
+                textarea.focus();
+                textarea.select();
+              }
+            }, 100);
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform shrink-0">
+            <TaskIcon size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">Select All</span>
+            <span className="text-[11px] font-semibold text-[#9B9691]">Highlight entire editor buffer</span>
+          </div>
+        </button>
+
+        {/* Paste Clipboard */}
+        <button
+          type="button"
+          onClick={async () => {
+            closeContextActions();
+            try {
+              const text = await navigator.clipboard.readText();
+              const textarea = contentTextareaRef.current;
+              if (textarea) {
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                if (start === 0 && end === textarea.value.length) {
+                  setContent(text);
+                } else {
+                  const nextContent = content.substring(0, start) + text + content.substring(end);
+                  setContent(nextContent);
+                  setTimeout(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + text.length, start + text.length);
+                  }, 50);
+                }
+                showSuccess('Pasted', 'Text pasted from clipboard.');
+              }
+            } catch (_err) {
+              showError('Paste Failed', 'Could not read from clipboard.');
+            }
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
+            <Clipboard size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">Paste Clipboard</span>
+            <span className="text-[11px] font-semibold text-[#9B9691]">Insert text at current cursor</span>
+          </div>
+        </button>
+
+        {/* Attach Object or Media */}
+        {canAttachSecondaryObject && (
+          <button
+            type="button"
+            onClick={() => {
+              closeContextActions();
+              openFileDrawer({
+                title: 'Attach Object or Media',
+                onSelectFile: (file) => {
+                  const block = file.fileUrl?.startsWith('[[kylrix-object:')
+                    ? file.fileUrl
+                    : serializeObjectBlock({
+                        childId: file.$id,
+                        childKind: file.mimeType?.startsWith('image/') ? 'image' : 'file',
+                        bucketId: file.bucketId,
+                        label: file.name,
+                        appTheme: 'idea',
+                        metadata: { mimeType: file.mimeType, fileName: file.name, fileUrl: file.fileUrl },
+                      });
+                  insertObjectBlockAtCursor(block);
+                },
+              });
+            }}
+            className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-[#6366F1]/20 hover:border-[#6366F1]/40 hover:bg-[#6366F1]/5 transition-all text-left cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center text-[#6366F1] group-hover:scale-105 transition-transform shrink-0">
+              <Plus size={18} />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold text-white group-hover:text-[#6366F1] transition-colors">Attach Object</span>
+              <span className="text-[11px] font-semibold text-[#9B9691]">Link media, files, or ecosystem items</span>
+            </div>
+          </button>
+        )}
+
+        {/* Disable/Enable Previews */}
+        <button
+          type="button"
+          onClick={async () => {
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            const userId = (liveNote as any).userId || (note as any).userId || 'guest';
+            try {
+              const { getDisablePreviews, setDisablePreviews } = await import('@/lib/link-preview/settings');
+              const cur = await getDisablePreviews(userId);
+              await setDisablePreviews(userId, !cur);
+              showSuccess(
+                cur ? 'Previews enabled' : 'Previews disabled',
+                cur ? 'External link previews will show again.' : 'External previews hidden. Kylrix previews still show.'
+              );
+            } catch {
+              const raw = await LocalEngine.cacheGet<boolean>('kylrix_disable_link_previews').catch(() => null);
+              const next = !raw;
+              await LocalEngine.cacheSet('kylrix_disable_link_previews', next);
+              (window as any).__KylrixDisableLinkPreviews = next;
+            }
+            closeContextActions();
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-slate-500/10 border border-slate-500/20 flex items-center justify-center text-slate-400 group-hover:scale-105 transition-transform shrink-0">
+            <EyeOffIcon size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white group-hover:text-slate-300 transition-colors">Toggle Previews</span>
+            <span className="text-[11px] font-semibold text-[#9B9691]">Show or hide external web preview cards</span>
+          </div>
+        </button>
+
+        {/* Export Document */}
+        <button
+          type="button"
+          onClick={() => {
+            closeContextActions();
+            setIsExportDrawerOpen(true);
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
+            <OpenIcon size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">Export Note</span>
+            <span className="text-[11px] font-semibold text-[#9B9691]">Download or share markdown file</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  ), [content, liveNote, note, canAttachSecondaryObject, openFileDrawer, openUnified, showSuccess, showError, closeContextActions]);
 
   useEffect(() => {
     // Mobile bottom drawer only — desktop opens native right rail directly from the More button.
@@ -944,5 +1168,849 @@ export function NoteDetailSidebar({
     );
   }
 
-  return <NoteDetailSidebarView {...({ _attachedObjects, _hasCollaborators, _isAttachingObject, _isLoading, _isLoadingEvents, _isLoadingSecrets, _isLoadingTasks, _linkedEvents, _linkedSecrets, _linkedTasks, _setIsPublic, accessRole, active, allNotesRef, attachPickedObject, audioBlob, audioChunksRef, audioFile, awaitingLocalCopy, beforeCursor, block, bucketId, canAttachSecondaryObject, channel, childKind, closeContextActions, collaboratorProfiles, content, contentTextareaRef, crossSuggestions, cur, cursor, data, decrypted, displayTags, durationIntervalRef, end, exists, fetchCollaborators, fetchEvents, fetchObjects, fetchSecrets, fetchSuggest, fetchTasks, file, getCursorLineNumber, handleAddToProject, handleBackClick, handleConfirmedRotate, handleContentChange, handleCopyShareLink, handleCreateTaskFromNote, handleDelete, handleDismiss, handlePinToggle, handleTagsChange, handleTitleChange, handleTogglePublic, hasRestoredScrollRef, hasSeedBody, healDecryption, inContext, insertObjectBlockAtCursor, insertion, isAttachObjectPickerOpen, isContextDrawerOpen, isCreatingTaskFromNote, isDesktop, isDirty, isEncryptedNote, isExportDrawerOpen, isLoadingCollaborators, isLoadingSuggestions, isLocallyDecrypted, isObjectPermissionInfoOpen, isPageLayout, isPinnedFunc, isPublic, isRecording, isRotating, isT4Encrypted, isTagSelectorOpen, lastEdit, layout, line, linkedCredentialIds, linkedEventIds, linkedTaskIds, liveNote, liveNoteRef, m, mediaRecorder, mediaRecorderRef, needsLeadingBreak, needsTrailingBreak, next, nextContent, normalizedTags, note, noteId, noteLinks, noteMeta, noteRef, objectUploadInputRef, on, onBack, onClose, onDelete, onPickExternalFile, onUpdate, options, pendingBlockDelete, pendingSelRef, pinNoteFunc, pinned, previous, previousContentRef, raw, readOnly, recordingDuration, recordingTimerRef, relation, remoteNewer, removedBlocks, renderContextActionsContent, replaceContentWithSave, resolved, rotateNoteLink, rows, saved, scrollContainerRef, seed, selectionStart, setAttachedObjects, setCollaboratorProfiles, setContent, setCrossSuggestions, setIsAttachObjectPickerOpen, setIsAttachingObject, setIsContextDrawerOpen, setIsCreatingTaskFromNote, setIsDesktop, setIsExportDrawerOpen, setIsLoadingCollaborators, setIsLoadingEvents, setIsLoadingSecrets, setIsLoadingSuggestions, setIsLoadingTasks, setIsLocallyDecrypted, setIsObjectPermissionInfoOpen, setIsRecording, setIsRotating, setIsTagSelectorOpen, setLinkedEvents, setLinkedSecrets, setLinkedTasks, setPendingBlockDelete, setRecordingDuration, setShowActionHub, setShowProjectLinker, setShowRotateConfirm, setTags, setTitle, setVaultUnlocked, shareUrl, shouldMaskEncrypted, showActionHub, showExpandButton, showHeaderDeleteButton, showProjectLinker, showRotateConfirm, start, stream, tags, task, text, textarea, theme, title, titleActive, toggleRecording, unlocked, unpinNoteFunc, unsub, updateLocalAndParentNote, updated, uploaded, url, userId, value, vaultUnlocked })} />;
+  return (
+    <div
+      className={`note-detail-sidebar-root flex flex-col text-white w-full ${
+        isPageLayout
+          ? 'min-h-screen overflow-visible bg-[#000000]'
+          : 'h-full overflow-hidden bg-[#161412]'
+      }`}
+    >
+      {/* Header */}
+      <div
+        className={`flex flex-col gap-3 border-b-2 border-white/20 bg-[#161412] shrink-0 ${
+          isPageLayout ? 'px-4 md:px-5 pt-1 pb-3' : 'p-4 pb-3'
+        }`}
+      >
+        {/* Row 1: Back + title */}
+        <div className="flex items-center justify-between gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={handleBackClick}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white/55 hover:text-white hover:bg-white/[0.05] border border-white/5 flex-shrink-0 transition-colors"
+              aria-label="Back to ideas"
+            >
+              <BackIcon className="w-4 h-4" />
+            </button>
+
+            {isEncryptedNote ? (
+              <button
+                type="button"
+                onClick={() => !vaultUnlocked && promptSudo()}
+                className="min-w-0 flex-1 text-left"
+              >
+                <span className="text-[#6366F1] font-extrabold font-clash text-lg leading-tight truncate block">
+                  {vaultUnlocked ? 'Decrypting secure note…' : 'Locked note'}
+                </span>
+              </button>
+            ) : readOnly ? (
+              <span className="w-full min-w-0 text-[#6366F1] font-extrabold text-lg font-clash tracking-tight leading-tight truncate block">
+                {title || 'Untitled note'}
+              </span>
+            ) : (
+              <BareMetalInput
+                key={`title-${liveNote.$id}`}
+                defaultValue={title}
+                value={title}
+                onValueChange={handleTitleChange}
+                enableLocalEngine={false}
+                className="w-full min-w-0 bg-transparent text-[#6366F1] font-extrabold text-lg font-clash tracking-tight leading-tight border-none focus:outline-none placeholder:text-white/25"
+                placeholder="Untitled note"
+                aria-label="Note title"
+              />
+            )}
+          </div>
+
+          {!onBack && !isPageLayout && (
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white/55 hover:text-white hover:bg-white/[0.05] border border-white/5 hidden sm:inline-flex shrink-0 transition-colors"
+              title="Close"
+            >
+              <CloseIcon className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Row 2: Action Buttons Row */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Copyable Object ID & Workspace ID Badges */}
+          {liveNote?.$id && (
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(liveNote.$id);
+                showSuccess('Copied Object ID', liveNote.$id);
+              }}
+              className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-white/70 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+              title="Click to copy Object ID"
+            >
+              <span className="text-white/40 select-none">ID:</span>
+              <span className="truncate max-w-[100px]">{liveNote.$id}</span>
+            </button>
+          )}
+
+          {activeWorkspace && !activeWorkspace.isPersonal && (
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(activeWorkspace.id);
+                showSuccess('Copied Workspace ID', activeWorkspace.id);
+              }}
+              className="px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-[11px] font-mono text-indigo-300 hover:text-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
+              title="Click to copy Workspace ID"
+            >
+              <span className="text-indigo-400/50 select-none">WS:</span>
+              <span className="truncate max-w-[100px]">{activeWorkspace.id}</span>
+            </button>
+          )}
+          {/* Public/Private visibility status toggle — only for owner */}
+          {!readOnly && (
+            <ShareLockButton 
+              resourceType="note"
+              resourceId={note.$id}
+              isPublic={!!isPublic}
+              isGuest={!!(note as any).isGuest}
+              accentColor={isPublic ? '#10B981' : '#A855F7'}
+              onPublished={({ isPublic, isGuest }) => {
+                  const updated = { ...note, isPublic, isGuest };
+                  onUpdate(updated);
+              }}
+              canPublish={true}
+            />
+          )}
+
+          {/* Action Hub — only for editors */}
+          {!readOnly && (
+            <button 
+              type="button"
+              onClick={() => setShowActionHub(true)} 
+              className="p-1.5 rounded-lg bg-pink-500/15 border border-pink-500/25 text-pink-400 hover:bg-pink-500/25 transition-colors flex items-center justify-center"
+              title="Action Hub"
+            >
+              <ActionIcon className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Agentic Diff Badge indicator when object has agentic edits */}
+          {liveNote && (liveNote as any).agenticDiffs && (liveNote as any).agenticDiffs.length > 0 ? (
+            <div className="w-full mt-2">
+              <AgenticDiffViewer changes={(liveNote as any).agenticDiffs} />
+            </div>
+          ) : null}
+
+          {/* Voice recorder — only for editors */}
+          {!readOnly && !shouldMaskEncrypted && (
+            <button 
+              type="button"
+              onClick={toggleRecording} 
+              className={`p-1.5 rounded-lg transition-all flex items-center justify-center border voice-recorder-btn ${
+                isRecording 
+                  ? 'bg-red-500/15 border-red-500/25 text-red-400 animate-pulse' 
+                  : 'bg-white/5 border-white/5 text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+              title={isRecording ? `Stop (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}) & Insert` : "Record Voice Note"}
+            >
+              {isRecording ? <Square className="w-4 h-4 fill-red-500 text-red-500" /> : <Mic className="w-4 h-4" />}
+            </button>
+          )}
+
+          {/* Copy link — available to all (share link reading) */}
+          {showExpandButton && isPublic && (
+            <button
+              type="button"
+              onClick={handleCopyShareLink}
+              className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+              title="Copy Share Link"
+            >
+              <LinkIcon className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Pin — only for editors */}
+          {!readOnly && (
+            <button 
+              type="button"
+              onClick={handlePinToggle} 
+              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                isPinnedFunc(liveNote.$id) 
+                  ? 'bg-indigo-500/15 border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/25' 
+                  : 'bg-white/5 border-white/5 text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+              title={isPinnedFunc(liveNote.$id) ? 'Unpin' : 'Pin'}
+            >
+              <PinIcon className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* More actions — always available for export / details */}
+          <button 
+            type="button"
+            onClick={() => {
+              if (isDesktop) {
+                openNativeSidebar(renderContextActionsContent(), 'note-context-actions', { hideHeader: true });
+              } else {
+                setIsContextDrawerOpen(true);
+              }
+            }} 
+            className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+            title="More Actions"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+
+          {/* Read-only badge */}
+          {readOnly && (
+            <span className="ml-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-[10px] font-black text-white/40 tracking-wider uppercase">
+              Read only
+            </span>
+          )}
+
+          {/* Header Delete — only for owner */}
+          {!readOnly && showHeaderDeleteButton && (
+            <button 
+              type="button"
+              onClick={() => openUnified('delete-confirm', {
+                title: `Delete "${title || 'Untitled'}"?`,
+                description: 'Are you sure you want to delete this idea? This action is permanent and cannot be undone.',
+                resourceName: 'this idea',
+                confirmLabel: 'Delete Idea',
+                onConfirm: async () => { await handleDelete(); },
+              })}
+              className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-colors flex items-center justify-center ml-auto"
+              title="Delete"
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content Scroll Area — stable, isolated scroll; local-copy-first, no jitter on attachment/preview loads */}
+      <div
+        ref={scrollContainerRef}
+        onScroll={(e) => {
+          if (liveNote?.$id) {
+            persistScrollPosition(`note_detail:${liveNote.$id}`, e.currentTarget.scrollTop);
+          }
+        }}
+        style={{ overflowAnchor: 'none' } as React.CSSProperties}
+        className={`flex flex-col gap-5 ${
+          isPageLayout
+            ? 'flex-1 overflow-visible px-4 md:px-5 py-4'
+            : 'flex-1 min-h-0 overflow-y-auto scrollbar-thin overscroll-contain p-4 gap-4'
+        }`}
+      >
+        {/* Unified WYSIWYG Editor */}
+        <div className="flex flex-col rounded-[24px] bg-[#000000] border-2 border-white/20 overflow-hidden flex-shrink-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-5 pt-4 pb-3 border-b border-white/5">
+            <div className="min-w-0 flex flex-col gap-0.5">
+              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash">
+                Content
+              </span>
+              {!readOnly && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <SyncStatusDot noteId={liveNote.$id} kind="note" row={liveNote as unknown as Record<string, unknown>} />
+                  <SyncStatusLabel noteId={liveNote.$id} kind="note" row={liveNote as unknown as Record<string, unknown>} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Copy button — always visible */}
+              {!shouldMaskEncrypted && content && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(content);
+                    showSuccess('Copied', 'Note content copied to clipboard');
+                  }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0B0A09] border border-white/8 text-white/55 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer"
+                  title="Copy content"
+                >
+                  <CopyIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="px-4 md:px-5 py-4 md:py-5 min-h-[280px]">
+            {isEncryptedNote ? (
+              <button
+                type="button"
+                onClick={() => !vaultUnlocked && promptSudo()}
+                className="min-h-[200px] w-full text-left cursor-pointer"
+              >
+                <p className="text-[#9B9691] text-sm font-semibold leading-relaxed">
+                  {vaultUnlocked
+                    ? 'Decrypting secure note, please wait…'
+                    : 'Secure content hidden. Unlock your vault to view and edit this note.'}
+                </p>
+              </button>
+            ) : (
+              <KylrixWYSIWYGEditor
+                value={content}
+                onChange={handleContentChange}
+                parentId={liveNote.$id}
+                parentKind="note"
+                readOnly={readOnly || shouldMaskEncrypted}
+                placeholder="Write in markdown — headings, lists, links, voice notes, and attachments are rendered live."
+                minHeight="280px"
+              />
+            )}
+
+            {!shouldMaskEncrypted && (
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/5 text-[10px] text-[#9B9691] font-semibold select-none">
+                <span>{liveNote.article ? 'Article' : 'Note'} · Live Markdown</span>
+                <span>{content.length.toLocaleString()} characters</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="shrink-0">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash">Tags</span>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => setIsTagSelectorOpen(true)}
+                className="w-7 h-7 rounded-lg hover:bg-white/[0.04] text-[#6366F1]/60 hover:text-[#6366F1] transition-colors flex items-center justify-center"
+                title="Edit tags"
+              >
+                <Plus size={14} />
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {displayTags.length > 0 ? (
+              displayTags.map((tag: string) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#6366F1] text-xs font-extrabold"
+                >
+                  {tag}
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newTags = displayTags.filter((t) => t !== tag);
+                        handleTagsChange(newTags.join(', '));
+                      }}
+                      className="hover:text-white"
+                    >
+                      <CloseIcon size={10} />
+                    </button>
+                  )}
+                </span>
+              ))
+            ) : (
+              <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">No tags yet</span>
+            )}
+          </div>
+        </div>
+
+        {/* Collaborators */}
+        <div className="shrink-0 min-h-[44px]">
+          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-pink-400 font-clash block mb-2.5">
+            Collaborators
+          </span>
+          {isLoadingCollaborators ? (
+            <div className="h-[44px] text-xs text-[#9B9691] font-semibold flex items-center gap-2">
+              <div className="w-3.5 h-3.5 border border-pink-500 border-t-transparent rounded-full animate-spin" />
+              <span>Loading…</span>
+            </div>
+          ) : collaboratorProfiles.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {collaboratorProfiles.map((p: any) => (
+                <button
+                  key={p.$id || p.userId}
+                  type="button"
+                  onClick={() =>
+                    openUnified('share-note', {
+                      noteId: liveNote.$id,
+                      noteTitle: liveNote.title,
+                      initialCollaborator: p})
+                  }
+                  className="w-full p-3 rounded-[16px] bg-[#161412] border border-white/5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors text-left min-w-0"
+                >
+                  <IdentityAvatar
+                    fileId={p.avatar}
+                    alt={p.username}
+                    fallback={p.username?.[0]?.toUpperCase()}
+                    size={34}
+                    verified={p.tier === 'admin' || p.verified}
+                  />
+                  <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                    <span className="text-sm font-extrabold text-white leading-tight truncate">
+                      {p.displayName || p.username}
+                    </span>
+                    <span className="text-[11px] font-semibold text-[#9B9691] leading-snug truncate">
+                      @{p.username}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-pink-500/10 text-pink-400 flex-shrink-0">
+                    {p.permissionLevel || 'Viewer'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">No collaborators</span>
+          )}
+        </div>
+
+        {/* Timestamps */}
+        <div className="pt-3 border-t border-white/5 text-[11px] font-semibold text-[#9B9691] flex flex-col gap-1 shrink-0">
+          <span>Created {formatNoteCreatedDate(liveNote)}</span>
+          <span>Updated {formatNoteUpdatedDate(liveNote)}</span>
+        </div>
+      </div>
+
+      {/* Action Hub overlay */}
+      {showActionHub && (
+        <div className="fixed inset-0 z-[11050] flex items-start justify-center bg-black/70 animate-in fade-in duration-200" onClick={() => setShowActionHub(false)}>
+          <div className="w-full max-w-lg md:max-w-[420px] md:ml-auto md:mr-0 md:h-full md:rounded-none rounded-b-[24px] bg-[#161412] border-b md:border-b-0 md:border-l border-white/5 p-5 shadow-2xl flex flex-col gap-4 animate-in slide-in-from-top-1/3 md:slide-in-from-right duration-200" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center">
+              <h3 className="font-extrabold font-space-grotesk text-indigo-400 text-sm uppercase tracking-wide">Action Hub</h3>
+              <button type="button" onClick={() => setShowActionHub(false)} className="p-1.5 text-white/60 hover:text-white rounded-lg hover:bg-white/5"><CloseIcon className="w-4 h-4" /></button>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowActionHub(false); void handleTogglePublic(); }}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs font-mono font-bold text-white hover:bg-white/5 hover:text-white transition-colors"
+              >
+                {isPublic ? <LockIcon className="w-4 h-4" /> : <UnlockIcon className="w-4 h-4" />}
+                <span>{isPublic ? 'Make Private' : 'Make Public'}</span>
+              </button>
+
+              <button 
+                type="button"
+                onClick={handleCreateTaskFromNote} 
+                disabled={isCreatingTaskFromNote} 
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 text-black font-extrabold text-xs font-mono uppercase transition-colors hover:bg-indigo-500 disabled:opacity-50"
+              >
+                <TaskIcon className="w-4 h-4 text-black" />
+                <span>Create Goal</span>
+              </button>
+
+              <button 
+                type="button"
+                onClick={() => { setShowActionHub(false); setShowProjectLinker(true); }} 
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs font-mono font-bold text-white hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <FolderKanban className="w-4 h-4" />
+                <span>Add to Workspace</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAddToProject}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs font-mono font-bold text-white hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <FolderKanban className="w-4 h-4" />
+                <span>Add to Project</span>
+              </button>
+
+              <button 
+                type="button"
+                onClick={() => { setShowActionHub(false); rotateNoteLink(); }} 
+                disabled={!isPublic} 
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs font-mono font-bold text-white hover:bg-white/5 hover:text-white transition-colors disabled:opacity-40"
+              >
+                <LockIcon className="w-4 h-4" />
+                <span>Rotate Link</span>
+              </button>
+            </div>
+
+            <div className="border-t border-white/5 pt-3">
+              <span className="text-xs font-mono font-bold tracking-wider text-white/45 uppercase block mb-2.5">Suggestions</span>
+              {isLoadingSuggestions ? (
+                <div className="px-2 py-1 text-xs text-white/40 font-mono flex items-center gap-2">
+                  <div className="w-3.5 h-3.5 border border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Loading suggestions...</span>
+                </div>
+              ) : crossSuggestions.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {crossSuggestions.map(s => (
+                    <div key={s.id} className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl flex justify-between items-center">
+                      <div>
+                        <span className="text-xs font-bold text-white/85 block">{s.label}</span>
+                        <span className="text-xs font-sans text-white/40 block mt-0.5">{s.description}</span>
+                      </div>
+                      <button type="button" onClick={() => window.open(`https://kylrix.space/integrations?action=${s.id}`, '_blank')} className="px-2.5 py-1 bg-indigo-500 hover:bg-indigo-400 text-black font-extrabold text-xs font-mono rounded-lg transition-colors">
+                        USE
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-xs font-mono text-white/30 italic">No suggestions available</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete uses unified chrome: bottom drawer on mobile, right sidebar on desktop (ui.chrome-surfaces) — local fixed modal retired */}
+
+      <ConfirmationDialog 
+        open={showRotateConfirm} 
+        title="Rotate public link?" 
+        message="The previous link will become permanently invalid. Anyone with the old link will lose access." 
+        confirmLabel={isRotating ? "Rotating..." : "Rotate Link"} 
+        isDestructive={true} 
+        isLoading={isRotating} 
+        onClose={() => setShowRotateConfirm(false)} 
+        onConfirm={handleConfirmedRotate} 
+      />
+      
+      <ProjectLinker 
+        open={showProjectLinker} 
+        onClose={() => setShowProjectLinker(false)} 
+        entityId={liveNote.$id} 
+        entityKind="note" 
+      />
+
+      {/* Tag Selector Sub-Drawer */}
+      <Drawer
+        anchor="bottom"
+        open={isTagSelectorOpen}
+        onClose={() => setIsTagSelectorOpen(false)}
+        disablePortal={false}
+        keepMounted={false}
+        ModalProps={{ keepMounted: false, disableScrollLock: false }}
+        sx={{
+          zIndex: 11000,
+          '& .ob-drawer-panel': {
+            bgcolor: '#161412',
+            borderTopLeftRadius: '24px',
+            borderTopRightRadius: '24px',
+            border: '1px solid #34322F',
+            borderBottom: 0,
+            pb: 'max(24px, env(safe-area-inset-bottom))',
+            pt: 2,
+            px: { xs: 2.25, sm: 2.75 },
+            maxWidth: '600px',
+            mx: 'auto'}
+        }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <TagIcon size={20} color="#6366F1" />
+            <Typography sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
+              Select Tags
+            </Typography>
+          </Stack>
+          <IconButton
+            onClick={() => setIsTagSelectorOpen(false)}
+            sx={{
+              color: '#E8E6E3',
+              bgcolor: '#0A0908',
+              border: '1px solid #34322F',
+              '&:hover': { bgcolor: '#1C1A18' }}}
+          >
+            <CloseIcon size={18} />
+          </IconButton>
+        </Stack>
+
+        <Box sx={{ maxHeight: '40dvh', overflowY: 'auto', pr: 0.5 }}>
+          <List sx={{ py: 0 }}>
+            <ListItem disablePadding sx={{ mb: 1 }}>
+              <ListItemButton 
+                onClick={() => {
+                  setIsTagSelectorOpen(false);
+                  openUnified('new-tag', { 
+                    onSuccess: async () => {
+                      await refreshEcosystemTags();
+                    } 
+                    // @ts-ignore
+                  });
+                }}
+                sx={{ 
+                  borderRadius: '12px', 
+                  bgcolor: alpha('#6366F1', 0.1),
+                  border: `1px dashed ${alpha('#6366F1', 0.3)}`,
+                  py: 1.5,
+                  '&:hover': { bgcolor: alpha('#6366F1', 0.15) }
+                }}
+              >
+                <Plus size={18} color="#6366F1" style={{ marginRight: '12px' }} />
+                <ListItemText 
+                  primary="Create New Tag" 
+                  primaryTypographyProps={{ sx: { color: '#6366F1', fontWeight: 800, fontSize: '0.9rem' } }}
+                />
+              </ListItemButton>
+            </ListItem>
+
+            {(() => {
+              const seenLower = new Set<string>();
+              const uniqueTags = (ecosystemTags || []).filter((tag) => {
+                const key = String(tag.name || '').trim().toLowerCase();
+                if (!key || seenLower.has(key)) return false;
+                seenLower.add(key);
+                return true;
+              });
+
+              return uniqueTags.map((tag) => {
+                const currentTagsArray = tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+                const tagLower = (tag.name || '').trim().toLowerCase();
+                const isSelected = currentTagsArray.some((t) => t.toLowerCase() === tagLower);
+                const color = (tag as any).color || '#9B9691';
+
+                return (
+                  <ListItem key={tag.$id} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton 
+                      onClick={() => {
+                        let nextTagsArray = [...currentTagsArray];
+                        if (!isSelected && tag.name) {
+                          nextTagsArray.push(tag.name.trim());
+                        } else if (isSelected && tag.name) {
+                          nextTagsArray = nextTagsArray.filter((n) => n.toLowerCase() !== tagLower);
+                        }
+                        setTags(nextTagsArray.join(', '));
+                        setIsTagSelectorOpen(false);
+                      }}
+                    sx={{ 
+                      borderRadius: '12px', 
+                      py: 1.5,
+                      border: '1px solid transparent',
+                      borderColor: isSelected ? color : 'transparent',
+                      bgcolor: isSelected ? alpha(color, 0.1) : 'transparent',
+                      '&:hover': { bgcolor: '#1C1A18' }
+                    }}
+                  >
+                    <Box 
+                      sx={{ 
+                        width: 12, 
+                        height: 12, 
+                        borderRadius: '4px', 
+                        bgcolor: color, 
+                        mr: 2,
+                        boxShadow: `0 0 10px ${alpha(color, 0.4)}`
+                      }} 
+                    />
+                    <ListItemText 
+                      primary={(tag.name || '').toUpperCase()} 
+                      primaryTypographyProps={{ 
+                        sx: { 
+                          color: isSelected ? 'white' : '#9B9691', 
+                          fontWeight: 900, 
+                          fontSize: '0.8rem',
+                          fontFamily: 'var(--font-mono)',
+                          letterSpacing: '0.05em'
+                        } 
+                      }}
+                    />
+                    {isSelected && (
+                      <Typography sx={{ color: color, fontWeight: 900, fontSize: '0.7rem', opacity: 0.8 }}>
+                        SELECTED
+                      </Typography>
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              );
+            })
+          })()}
+          </List>
+        </Box>
+      </Drawer>
+
+      {!isDesktop && isContextDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isContextDrawerOpen}
+          onClose={closeContextActions}
+          disablePortal={false}
+          keepMounted={false}
+          sx={{ zIndex: 11000 }}
+          PaperProps={{
+            sx: {
+              position: 'fixed !important',
+              bottom: '0 !important',
+              left: '0 !important',
+              right: '0 !important',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              bgcolor: '#161412',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              backgroundImage: 'none',
+              maxWidth: 580,
+              width: '100%',
+              maxHeight: '60vh',
+              mx: 'auto',
+              p: 0,
+              overflow: 'hidden',
+              pointerEvents: 'auto',
+            },
+          }}
+          ModalProps={{
+            keepMounted: false,
+            disableScrollLock: false,
+          }}
+        >
+          {renderContextActionsContent()}
+        </Drawer>
+      )}
+
+      {isExportDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isExportDrawerOpen}
+          onClose={() => setIsExportDrawerOpen(false)}
+          disablePortal={false}
+          keepMounted={false}
+          sx={{ zIndex: 11000 }}
+          PaperProps={{
+            sx: {
+              position: 'fixed !important',
+              bottom: '0 !important',
+              left: '0 !important',
+              right: '0 !important',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              bgcolor: '#161412',
+              borderTop: '1px solid #34322F',
+              backgroundImage: 'none',
+              maxWidth: 720,
+              width: '100%',
+              mx: 'auto',
+              p: 2,
+              pb: 4,
+              pointerEvents: 'auto'}
+          }}
+          ModalProps={{
+            keepMounted: false,
+            disableScrollLock: false}}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pointerEvents: 'auto' }}>
+            <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36', mx: 'auto', mb: 1 }} aria-hidden />
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', tracking: '0.05em', fontFamily: 'var(--font-mono)', mb: 1, textAlign: 'center' }}>
+              Export
+            </Typography>
+            <button
+              type="button"
+              onClick={() => {
+                setIsExportDrawerOpen(false);
+                exportToMarkdown(liveNote.title || 'Note', content || '');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <span>Markdown (.md)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsExportDrawerOpen(false);
+                exportToPDF(liveNote.title || 'Note', content || '');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <span>PDF (.pdf)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsExportDrawerOpen(false);
+                exportToDOCX(liveNote.title || 'Note', content || '');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <span>Word (.doc)</span>
+            </button>
+          </Box>
+        </Drawer>
+      )}
+
+      <ProjectAddObjectModal
+        open={isAttachObjectPickerOpen}
+        onClose={() => setIsAttachObjectPickerOpen(false)}
+        mode="resource"
+        title="Attach object"
+        onAttachResource={attachPickedObject}
+        initialTab={0}
+      />
+
+      {pendingBlockDelete && (
+        <Drawer
+          anchor={isDesktop ? 'right' : 'bottom'}
+          open={Boolean(pendingBlockDelete)}
+          onClose={() => setPendingBlockDelete(null)}
+          ModalProps={{ keepMounted: false, disablePortal: false }}
+          slotProps={{ backdrop: { sx: { bgcolor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' } } } as any}
+          PaperProps={{ sx: isDesktop ? { bgcolor: '#161412', borderLeft: '1px solid #34322F', width: 420, maxWidth: '92vw', height: '100%', p: 2.5, zIndex: 1400 } as any : { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2, zIndex: 1400 } as any }}
+        >
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-white">Remove this {pendingBlockDelete.payload.childKind} object?</p>
+            <p className="text-xs text-white/60">This removes the object block from markdown and detaches the relation row.</p>
+            <div className="flex items-center gap-2">
+              <button type="button" className="h-9 px-3 rounded-lg border border-white/10 text-white/80" onClick={() => setPendingBlockDelete(null)}>Cancel</button>
+              <button
+                type="button"
+                className="h-9 px-3 rounded-lg bg-red-500/15 border border-red-500/35 text-red-300"
+                onClick={async () => {
+                  const block = pendingBlockDelete;
+                  if (!block) return;
+                  const next = content.slice(0, block.start) + content.slice(block.end);
+                  await replaceContentWithSave(next);
+                  try {
+                    const { detachObjectByRelation, getObjectsByParent } = await import('@/lib/actions/client-ops');
+                    await detachObjectByRelation({ parentId: liveNote.$id, childId: block.payload.childId });
+                    setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
+                  } catch {}
+                  setPendingBlockDelete(null);
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </Drawer>
+      )}
+
+      {isObjectPermissionInfoOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isObjectPermissionInfoOpen}
+          onClose={() => setIsObjectPermissionInfoOpen(false)}
+          ModalProps={{ keepMounted: false, disablePortal: true }}
+          PaperProps={{ sx: { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2.25 } }}
+        >
+          <div className="space-y-2.5">
+            <p className="text-sm font-black text-white">Attached object permissions</p>
+            <p className="text-xs text-white/70 leading-relaxed">
+              Every secondary object attached to this note keeps the permission system of its own primary object.
+              If someone cannot access that primary object, they will see no access here too.
+            </p>
+            <p className="text-xs text-white/55 leading-relaxed">
+              Projects are the only place with granular overrides. Notes do not override attached object permissions.
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                className="h-9 px-3 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5"
+                onClick={() => setIsObjectPermissionInfoOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Drawer>
+      )}
+
+      <input
+        ref={objectUploadInputRef}
+        type="file"
+        className="hidden"
+        onChange={onPickExternalFile}
+      />
+
+    </div>
+  );
 }

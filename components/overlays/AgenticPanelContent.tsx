@@ -1,4 +1,5 @@
 'use client';
+
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -55,6 +56,7 @@ import {
   Workflow,
   X,
   Zap} from 'lucide-react';
+
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
@@ -94,22 +96,10 @@ import {
   parseBlocksFromToolSummary,
   type AgenticMessageBlock} from '@/lib/agentic/message-blocks';
 import {
-import { loadSessionHistory as loadSessionHistory_ext } from './AgenticPanelContentSections/loadSessionHistory';
-import { handleSelectSession as handleSelectSession_ext } from './AgenticPanelContentSections/handleSelectSession';
-import { handleStartNewSession as handleStartNewSession_ext } from './AgenticPanelContentSections/handleStartNewSession';
-import { formatHistoryMessages as formatHistoryMessages_ext } from './AgenticPanelContentSections/formatHistoryMessages';
-import { handleApprovePayment as handleApprovePayment_ext } from './AgenticPanelContentSections/handleApprovePayment';
-import { handleShareSession as handleShareSession_ext } from './AgenticPanelContentSections/handleShareSession';
-import { recordToolCall as recordToolCall_ext } from './AgenticPanelContentSections/recordToolCall';
-import { handleOpenSessions as handleOpenSessions_ext } from './AgenticPanelContentSections/handleOpenSessions';
-import { AgenticPanelContentView } from './AgenticPanelContentSections/AgenticPanelContentView';
-import { handleDeleteSession as handleDeleteSession_ext } from './AgenticPanelContentSections/handleDeleteSession';
-import { handleToggleSessionPinned as handleToggleSessionPinned_ext } from './AgenticPanelContentSections/handleToggleSessionPinned';
-import { recordSessionObject as recordSessionObject_ext } from './AgenticPanelContentSections/recordSessionObject';
-import { handleInputChange as handleInputChange_ext } from './AgenticPanelContentSections/handleInputChange';
   AgenticSessionLocalStore,
   subscribeAgenticLocalStore,
   type AgenticSyncStatus} from '@/lib/agentic/session-local-store';
+
 interface ToolCallDisplay {
   toolKey: string;
   specifier?: string | null;
@@ -117,10 +107,12 @@ interface ToolCallDisplay {
   resultSummary?: string | null;
   args?: string | null;
 }
+
 interface NextStepSuggestion {
   label: string;
   prompt: string;
 }
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -132,6 +124,7 @@ interface ChatMessage {
   tools?: ToolCallDisplay[];
   nextSteps?: NextStepSuggestion[];
 }
+
 /** Strip behind-the-hood prompt templates so the UI shows the user's exact words. */
 function visibleChatContent(role: string, content: unknown): string {
   const raw = typeof content === 'string' ? content : '';
@@ -142,6 +135,7 @@ function visibleChatContent(role: string, content: unknown): string {
   }
   return raw.trim();
 }
+
 function normalizeNextSteps(raw: unknown): NextStepSuggestion[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -151,7 +145,52 @@ function normalizeNextSteps(raw: unknown): NextStepSuggestion[] {
     .filter((s) => s.label && s.prompt)
     .slice(0, 4);
 }
-const formatHistoryMessages = (..._args: any[]) => formatHistoryMessages_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, formatHistoryMessages, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadSessionHistory, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordToolCall, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, toolsByConversation, touchStartPosRef, workflows });
+
+function formatHistoryMessages(
+  historyArr: any[],
+  toolCalls: Array<{
+    conversationId: string;
+    toolKey: string;
+    specifier?: string | null;
+    status?: string | null;
+    resultSummary?: string | null;
+    args?: string | null;
+  }> = []): ChatMessage[] {
+  const toolsByConversation = new Map<string, ToolCallDisplay[]>();
+  for (const tc of toolCalls) {
+    if (!tc.conversationId) continue;
+    const list = toolsByConversation.get(tc.conversationId) || [];
+    list.push({
+      toolKey: tc.toolKey,
+      specifier: tc.specifier,
+      status: tc.status,
+      resultSummary: tc.resultSummary,
+      args: tc.args});
+    toolsByConversation.set(tc.conversationId, list);
+  }
+
+  return (Array.isArray(historyArr) ? historyArr : []).map((h: any, idx: number) => {
+    const id = typeof h.id === 'string' && h.id ? h.id : `hist-${idx}`;
+    const role = h.role === 'assistant' ? 'assistant' : 'user';
+    const tools = role === 'assistant' ? toolsByConversation.get(id) : undefined;
+    const blocksFromTools =
+      tools
+        ?.map((t) => parseBlocksFromToolSummary(t.resultSummary))
+        .filter((b): b is AgenticMessageBlock[] => Array.isArray(b) && b.length > 0)
+        .flat() || [];
+    return {
+      id,
+      role,
+      content: visibleChatContent(role, h.content),
+      blocks: blocksFromTools.length ? blocksFromTools : undefined,
+      syncStatus: h.syncStatus === 'pending' || h.syncStatus === 'error' ? h.syncStatus : 'synced',
+      isPublic: h.isPublic === true,
+      isGuest: h.isGuest === true,
+      tools,
+      nextSteps: role === 'assistant' ? normalizeNextSteps(h.nextSteps) : undefined};
+  });
+}
+
 const QUICK_ICON_MAP: Record<string, ComponentType<{ size?: number; strokeWidth?: number }>> = {
   'pen-line': PenLine,
   sparkles: Sparkles,
@@ -193,6 +232,7 @@ const QUICK_ICON_MAP: Record<string, ComponentType<{ size?: number; strokeWidth?
   search: Search,
   milestone: Milestone,
   wallet: Wallet};
+
 function zoneLabel(zone: string): string {
   const labels: Record<string, string> = {
     note: 'Ideas',
@@ -205,10 +245,12 @@ function zoneLabel(zone: string): string {
     accounts: 'Accounts'};
   return labels[zone] || 'Workspace';
 }
+
 interface AgenticPanelContentProps {
   onClose: () => void;
   isDesktop: boolean;
 }
+
 export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentProps) {
   const { consumePendingPrompt } = useAgenticDrawer();
   const { open: openUnified } = useUnifiedDrawer();
@@ -226,9 +268,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const pathname = usePathname() || '/';
   const router = useRouter();
   const isPro = userMayUsePaidAi(user);
+
   const pageContext = useMemo(() => resolveAgenticPageContext(pathname), [pathname]);
   const accent = useMemo(() => getAppColor(pageContext.accentApp), [pageContext.accentApp]);
   const workflows = useMemo(() => getQuickWorkflows(pageContext), [pageContext]);
+
   const [chatInput, setChatInput] = useState('');
   const [pendingObject, setPendingObject] = useState<ChatPendingObject | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -240,12 +284,14 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     enabled: !executing && chatInput.trim().length >= 2});
   const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
   const [agentCount, setAgentCount] = useState(0);
+
   const [pendingPayment, setPendingPayment] = useState<{ agentId: string; amount: number; intentId: string; chainId: number; phase?: 'review' | 'processing' | 'done' } | null>(null);
   const [signing, setSigning] = useState(false);
   const [pendingToolAuth, setPendingToolAuth] = useState<{ toolKey: string; name: string; specifier?: string; args?: any; assistantId?: string } | null>(null);
   const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const { filteredItems: workspaceFilteredSessions } = useWorkspaceFilteredItems(sessions, 'agent_session');
+
   const isWorkspaceReadOnly = Boolean(
     activeWorkspace &&
       !activeWorkspace.isPersonal &&
@@ -254,10 +300,13 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       activeWorkspace.role !== 'editor' &&
       activeWorkspace.role !== 'admin'
   );
+
+  // Eagerly pull custom workspace agent sessions into local state when switching workspaces
   useEffect(() => {
     if (!activeWorkspace || activeWorkspace.isPersonal) return;
     const wsId = activeWorkspace.id;
     let cancelled = false;
+
     void (async () => {
       try {
         const { ProjectsService } = await import('@/lib/appwrite/projects');
@@ -274,10 +323,12 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         }
       } catch {}
     })();
+
     return () => {
       cancelled = true;
     };
   }, [activeWorkspace?.id]);
+
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [showSessionActionsDrawer, setShowSessionActionsDrawer] = useState(false);
@@ -289,7 +340,24 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const sessionLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const composerLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
-  const handleInputChange = (..._args: any[]) => handleInputChange_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordSessionObject, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, touchStartPosRef, workflows });
+
+  const handleInputChange = (val: string) => {
+    setChatInput(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kylrix_kylie_live_input', val);
+    }
+    
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        const currentPrefs = await account.getPrefs().catch(() => ({}));
+        await account.updatePrefs({ ...currentPrefs, kylie_live_input: val });
+      } catch (err) {
+        console.error('Failed to sync kylie live input to remote settings:', err);
+      }
+    }, 1500);
+  };
+
   useEffect(() => {
     const handlePaymentRequest = (e: CustomEvent) => {
       const { agentId, amount, intentId, chainId } = e.detail;
@@ -298,29 +366,306 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     window.addEventListener('kylrix:request-payment' as any, handlePaymentRequest);
     return () => window.removeEventListener('kylrix:request-payment' as any, handlePaymentRequest);
   }, []);
-  const handleApprovePayment = (..._args: any[]) => handleApprovePayment_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, formatHistoryMessages, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadSessionHistory, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordToolCall, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, toolsByConversation, touchStartPosRef, workflows });
-  const handleStartNewSession = (..._args: any[]) => handleStartNewSession_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, formatHistoryMessages, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadSessionHistory, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordToolCall, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, toolsByConversation, touchStartPosRef, workflows });
+
+  const handleApprovePayment = async () => {
+    if (!pendingPayment || !user?.$id) return;
+    setSigning(true);
+    setPendingPayment((prev) => (prev ? { ...prev, phase: 'processing' } : prev));
+    try {
+      const privKey = await WalletService.derivePrivateKey(user.$id, 'arbitrum');
+      const signature = `0x${privKey.slice(0, 10)}...mock_signature...${Date.now()}`;
+      const { submitGasRelayAction } = await import('@/lib/actions/secure-ops/arbitrum-rail');
+      const { jwt } = await account.createJWT().catch(() => ({ jwt: null }));
+      
+      const result = await submitGasRelayAction({
+        jwt: jwt || undefined,
+        intentId: pendingPayment.intentId,
+        signature: signature,
+        userAddress: '0x' + user.$id.slice(-40),
+        targetAddress: '0x' + pendingPayment.agentId.slice(-40),
+        amount: pendingPayment.amount,
+        chainId: pendingPayment.chainId
+      });
+
+      toast.success('Agent funded successfully!');
+      window.dispatchEvent(new CustomEvent('kylrix:payment-completed', {
+        detail: {
+          intentId: pendingPayment.intentId,
+          txHash: result.txHash,
+          agentId: pendingPayment.agentId
+        }
+      }));
+
+      setMessages(prev => [...prev, {
+        id: Math.random().toString(),
+        role: 'assistant',
+        content: `✅ Agent payment of ${pendingPayment.amount} ARB approved. On-chain Stream funded! Tx: ${result.txHash}`
+      }]);
+      setPendingPayment((prev) => (prev ? { ...prev, phase: 'done' } : prev));
+      setTimeout(() => setPendingPayment(null), 900);
+    } catch (err: any) {
+      toast.error(err.message || 'Payment approval failed');
+      setPendingPayment((prev) => (prev ? { ...prev, phase: 'review' } : prev));
+    } finally {
+      setSigning(false);
+    }
+  };
+
+  const handleStartNewSession = async () => {
+    if (isWorkspaceReadOnly) {
+      toast.error('Cannot start sessions in a view-only shared workspace. Switch to your personal workspace to create.');
+      return;
+    }
+    try {
+      if (user?.$id) {
+        // 1. Scan LocalEngine and prune redundant empty sessions
+        const { reusableSessionId } = await AgenticSessionLocalStore.findAndPruneEmptySessions(
+          user.$id,
+          activeSessionId
+        );
+
+        if (reusableSessionId) {
+          setActiveSessionId(reusableSessionId);
+          await AgenticSessionLocalStore.setActiveSessionId(user.$id, reusableSessionId);
+          const local = await AgenticSessionLocalStore.getSession(reusableSessionId);
+          setMessages((local?.chatHistory as any) || []);
+          try {
+            const { account } = await import('@/lib/appwrite/client');
+            const prefs = await account.getPrefs().catch(() => ({}));
+            await account.updatePrefs({ ...prefs, activeAgentSessionId: reusableSessionId }).catch(() => {});
+          } catch {}
+          toast.success('Switched to clean session.');
+          return;
+        }
+      }
+
+      // 2. Otherwise request fresh session from server action (which also reuses/prunes empty)
+      const { startNewAgentSession } = await import('@/lib/actions/agentic');
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+      const res = await startNewAgentSession(jwt);
+      if (res?.sessionId) {
+        setActiveSessionId(res.sessionId);
+        if (user?.$id) {
+          await AgenticSessionLocalStore.setActiveSessionId(user.$id, res.sessionId);
+        }
+        if (activeWorkspace && !activeWorkspace.isPersonal) {
+          void attachEntityToActiveWorkspace('agent_session', res.sessionId);
+        }
+      }
+      setMessages([]);
+      toast.success('Started a new conversation session.');
+    } catch (err) {
+      console.error('Failed to start new session:', err);
+      toast.error('Could not start new session.');
+    }
+  };
+
   const handleCreateNewSessionFromDrawer = async () => {
     await handleStartNewSession();
     setShowSessionsDrawer(false);
   };
-  const handleOpenSessions = (..._args: any[]) => handleOpenSessions_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, formatHistoryMessages, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadSessionHistory, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordToolCall, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, toolsByConversation, touchStartPosRef, workflows });
-  const handleSelectSession = (..._args: any[]) => handleSelectSession_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, formatHistoryMessages, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadSessionHistory, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordToolCall, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, toolsByConversation, touchStartPosRef, workflows });
-  const handleDeleteSession = (..._args: any[]) => handleDeleteSession_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordSessionObject, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, touchStartPosRef, workflows });
-  const handleShareSession = (..._args: any[]) => handleShareSession_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, formatHistoryMessages, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadSessionHistory, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordToolCall, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, toolsByConversation, touchStartPosRef, workflows });
-  const handleToggleSessionPinned = (..._args: any[]) => handleToggleSessionPinned_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordSessionObject, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, touchStartPosRef, workflows });
+
+  const handleOpenSessions = async () => {
+    setShowSessionsDrawer(true);
+    let hadLocal = false;
+    if (user?.$id) {
+      // Clean up any empty duplicates before listing
+      await AgenticSessionLocalStore.findAndPruneEmptySessions(user.$id, activeSessionId);
+      const local = await AgenticSessionLocalStore.getSessionsList(user.$id);
+      if (local.length) {
+        hadLocal = true;
+        setSessions(local);
+      }
+    }
+    setLoadingSessions(!hadLocal);
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return;
+    }
+    try {
+      const { listAgentSessions } = await import('@/lib/actions/agentic');
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+      const list = await listAgentSessions(jwt);
+      setSessions(list);
+      if (user?.$id) await AgenticSessionLocalStore.setSessionsList(user.$id, list);
+    } catch (err) {
+      console.error(err);
+      if (!sessions.length) toast.error('Failed to load sessions list');
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    try {
+      const local = await AgenticSessionLocalStore.getSession(sessionId);
+      if (local?.chatHistory?.length) {
+        setActiveSessionId(sessionId);
+        if (user?.$id) await AgenticSessionLocalStore.setActiveSessionId(user.$id, sessionId);
+        setMessages(
+          local.chatHistory.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            blocks: m.blocks,
+            syncStatus: m.syncStatus || 'synced',
+            isPublic: m.isPublic,
+            isGuest: m.isGuest,
+            nextSteps: m.nextSteps})));
+        setShowSessionsDrawer(false);
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      }
+
+      const { selectAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+      const res = await selectAgentSession(sessionId, jwt);
+      if (res.success) {
+        setActiveSessionId(sessionId);
+        if (user?.$id) await AgenticSessionLocalStore.setActiveSessionId(user.$id, sessionId);
+        const historyArr = JSON.parse(res.session.chatHistory || '[]');
+        const toolCalls = await listAgentToolCallsAction(sessionId, jwt).catch(() => []);
+        const formatted = formatHistoryMessages(historyArr, toolCalls);
+        setMessages(formatted);
+        if (user?.$id) {
+          await AgenticSessionLocalStore.upsertSession({
+            id: sessionId,
+            userId: user.$id,
+            chatHistory: formatted.map((m) => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              blocks: m.blocks,
+              syncStatus: m.syncStatus || 'synced',
+              isPublic: m.isPublic,
+              isGuest: m.isGuest,
+              nextSteps: m.nextSteps})),
+            isPublic: res.session.isPublic,
+            isGuest: res.session.isGuest,
+            isPinned: res.session.isPinned,
+            createdAt: res.session.createdAt,
+            updatedAt: res.session.updatedAt});
+        }
+        setShowSessionsDrawer(false);
+        toast.success('Switched agent session.');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to select session');
+    }
+  };
+
+  const handleDeleteSession = (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    openUnified('delete-confirm', {
+      title: 'Delete this chat with Kylie?',
+      description:
+        'This permanently removes the session and every message in it, including tool history. This cannot be undone.',
+      resourceName: 'chat session',
+      confirmLabel: 'Delete session',
+      onConfirm: async () => {
+        try {
+          const { deleteAgentSession } = await import('@/lib/actions/agentic');
+          const { account } = await import('@/lib/appwrite/client');
+          const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+          await deleteAgentSession(sessionId, jwt);
+          if (user?.$id) await AgenticSessionLocalStore.removeSession(sessionId, user.$id);
+          setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+          if (activeSessionId === sessionId) {
+            setMessages([]);
+            setActiveSessionId(null);
+          }
+          toast.success('Session deleted.');
+        } catch (err) {
+          console.error(err);
+          toast.error('Failed to delete session');
+        }
+      }});
+  };
+
+  const handleShareSession = async (e: React.MouseEvent, sessionId: string, currentlyShared: boolean) => {
+    e.stopPropagation();
+    try {
+      const { toggleAgentSessionShareAction } = await import('@/lib/actions/agentic');
+      const { getResourcePublicGuestSecure } = await import('@/lib/actions/secure-ops/misc');
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+      const mode = currentlyShared ? 'make_private' : 'publish';
+      const shareRes = await toggleAgentSessionShareAction(sessionId, mode, jwt);
+      const status = await getResourcePublicGuestSecure({
+        resourceType: 'agent_session',
+        resourceId: sessionId,
+        jwt});
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? { ...s, isPublic: status.isPublic === true, isGuest: status.isGuest === true }
+            : s));
+      if (user?.$id) {
+        await AgenticSessionLocalStore.patchSessionMeta(user.$id, sessionId, {
+          isPublic: status.isPublic === true,
+          isGuest: status.isGuest === true});
+      }
+      const didPublish = status.isPublic === true || status.isGuest === true;
+      if (mode === 'publish' && !didPublish) {
+        throw new Error('Session share did not persist on the server yet.');
+      }
+      if (!currentlyShared && didPublish) {
+        const url = (shareRes as any)?.publicUrl || `https://www.kylrix.space/agents/session/${sessionId}`;
+        try {
+          await navigator.clipboard.writeText(url);
+          toast.success('Session link copied');
+        } catch {
+          toast.success('Session is now public');
+        }
+      } else if (mode === 'make_private' && !didPublish) {
+        toast.success('Session is private again');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update session sharing');
+    }
+  };
+
+  const handleToggleSessionPinned = async (sessionId: string, pinned: boolean) => {
+    try {
+      const { setAgentSessionPinnedAction } = await import('@/lib/actions/agentic');
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+      await setAgentSessionPinnedAction(sessionId, pinned, jwt);
+      const nextSessions = sessions
+        .map((s) => (s.id === sessionId ? { ...s, isPinned: pinned } : s))
+        .sort((a, b) => {
+          const pinDelta = Number(b.isPinned === true) - Number(a.isPinned === true);
+          if (pinDelta !== 0) return pinDelta;
+          return new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime();
+        });
+      setSessions(nextSessions);
+      if (user?.$id) {
+        await AgenticSessionLocalStore.patchSessionMeta(user.$id, sessionId, { isPinned: pinned });
+      }
+      toast.success(pinned ? 'Session pinned.' : 'Session unpinned.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not update pin state');
+    }
+  };
+
   const openSessionActionsDrawer = useCallback((sess: any) => {
     setSelectedSessionActionTarget(sess);
     setShowSessionActionsDrawer(true);
   }, []);
+
   const clearSessionLongPress = useCallback(() => {
     if (sessionLongPressTimerRef.current) {
       clearTimeout(sessionLongPressTimerRef.current);
       sessionLongPressTimerRef.current = null;
     }
   }, []);
+
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
     if (!user?.$id) {
       setAgentCount(0);
@@ -329,15 +674,108 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     void AgenticService.listMyAgents(user.$id)
       .then((rows) => setAgentCount(rows.length))
       .catch(() => setAgentCount(0));
-    const loadSessionHistory = (..._args: any[]) => loadSessionHistory_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, formatHistoryMessages, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadSessionHistory, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordToolCall, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, toolsByConversation, touchStartPosRef, workflows });
+
+    // Load session chat history on panel open (local copy first, general only — object sidekick sessions not default)
+    const loadSessionHistory = async () => {
+      if (!user?.$id) return;
+      try {
+        const activeId = await AgenticSessionLocalStore.getActiveSessionId(user.$id);
+        if (activeId) {
+          const localSession: any = await AgenticSessionLocalStore.getSession(activeId);
+          if (localSession?.chatHistory?.length && !localSession?.targetType && !localSession?.targetId) {
+            setActiveSessionId(activeId);
+            setMessages(
+              localSession.chatHistory.map((m: any) => ({
+                id: m.id,
+                role: m.role,
+                content: m.content,
+                blocks: m.blocks,
+                syncStatus: m.syncStatus || 'synced',
+                isPublic: m.isPublic,
+                isGuest: m.isGuest,
+                nextSteps: m.nextSteps})));
+          } else if (localSession?.targetType) {
+            // Active is object sidekick — find latest general session instead
+            const list = await AgenticSessionLocalStore.getSessionsList(user.$id);
+            const general = list.find((s: any) => !s.targetType && !s.targetId);
+            if (general) {
+              const genSession: any = await AgenticSessionLocalStore.getSession(general.id);
+              if (genSession?.chatHistory?.length) {
+                setActiveSessionId(general.id);
+                setMessages(
+                  genSession.chatHistory.map((m: any) => ({
+                    id: m.id,
+                    role: m.role,
+                    content: m.content,
+                    blocks: m.blocks,
+                    syncStatus: m.syncStatus || 'synced',
+                    isPublic: m.isPublic,
+                    isGuest: m.isGuest,
+                    nextSteps: m.nextSteps})));
+                await AgenticSessionLocalStore.setActiveSessionId(user.$id, general.id);
+                try {
+                  const { account } = await import('@/lib/appwrite/client');
+                  const prefs = await account.getPrefs().catch(() => ({}));
+                  await account.updatePrefs({ ...prefs, activeAgentSessionId: general.id }).catch(() => {});
+                } catch {}
+              }
+            }
+          }
+        }
+      } catch {
+        /* non-fatal */
+      }
+      try {
+        const { account } = await import('@/lib/appwrite/client');
+        const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+        const { getAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
+        const session: any = await getAgentSession(jwt);
+        // General Kylie sidebar must not auto-adopt object Sidekick session as default
+        if (session?.targetType || session?.targetId) {
+          // skip — keep current general messages, don't overwrite with Sidekick
+          return;
+        }
+        if (session.rowId) setActiveSessionId(session.rowId);
+        const historyArr = JSON.parse(session.chatHistory || '[]');
+        if (Array.isArray(historyArr) && historyArr.length > 0) {
+          const sessionId = session.rowId || '';
+          const toolCalls = sessionId
+            ? await listAgentToolCallsAction(sessionId, jwt).catch(() => [])
+            : [];
+          const formatted = formatHistoryMessages(historyArr, toolCalls);
+          setMessages(formatted);
+          if (user?.$id && session.rowId) {
+            await AgenticSessionLocalStore.upsertSession({
+              id: session.rowId,
+              userId: user.$id,
+              chatHistory: formatted.map((m) => ({
+                id: m.id,
+                role: m.role,
+                content: m.content,
+                blocks: m.blocks,
+                syncStatus: m.syncStatus || 'synced',
+                isPublic: m.isPublic,
+                isGuest: m.isGuest,
+                nextSteps: m.nextSteps})),
+              isPinned: (session as any).isPinned === true});
+            await AgenticSessionLocalStore.setActiveSessionId(user.$id, session.rowId);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load session history on client:', err);
+      }
+    };
     void loadSessionHistory();
   }, [user?.$id]);
+
   useEffect(() => {
     if (!showSessionsDrawer || !user?.$id) return;
     return subscribeAgenticLocalStore(() => {
       void AgenticSessionLocalStore.getSessionsList(user.$id).then((rows) => setSessions(rows));
     });
   }, [showSessionsDrawer, user?.$id]);
+
+  // Load local copy of draft prompt instantly on mount via LocalEngine
   useEffect(() => {
     if (typeof window !== 'undefined') {
       import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
@@ -347,6 +785,8 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       });
     }
   }, []);
+
+  // Fetch remote backup from user settings preferences in the background
   useEffect(() => {
     const fetchRemoteDraft = async () => {
       try {
@@ -360,11 +800,13 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     };
     if (user?.$id) void fetchRemoteDraft();
   }, [user?.$id]);
+
   useEffect(() => {
     const node = chatScrollRef.current;
     if (!node) return;
     node.scrollTop = node.scrollHeight;
   }, [messages, executing]);
+
   const appendMessage = useCallback((
     role: ChatMessage['role'],
     content: string,
@@ -387,17 +829,21 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         isGuest: opts?.isGuest},
     ]);
   }, []);
+
   const runPrompt = useCallback(
     async (rawPrompt: string) => {
       const trimmed = rawPrompt.trim();
       if (!trimmed) return;
+
       if (!isPro) {
         openProUpgrade(AI_UPGRADE_LABEL);
         return;
       }
+
       const promptWithAttachment = pendingObject
         ? `${trimmed}\n\n[Attached: ${pendingObject.payload.label || 'Object'} (${pendingObject.payload.childKind || 'item'}) - ID: ${pendingObject.payload.childId}]`
         : trimmed;
+
       const userMsgId = `msg_u_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       appendMessage('user', promptWithAttachment, { syncStatus: 'pending', id: userMsgId });
       const draftSessionId = activeSessionId || `session_${Date.now()}`;
@@ -417,6 +863,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         account.updatePrefs({ ...currentPrefs, kylie_live_input: '' }).catch(() => {});
       }).catch(() => {});
       setExecuting(true);
+
       try {
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
         const contextualPrompt = buildInstantPrompt(trimmed, pageContext);
@@ -432,6 +879,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             resourceId: pageContext.resourceId,
             userMessage: trimmed},
           userMessage: trimmed});
+
         if (res.success) {
           if (res.sessionId) {
             setActiveSessionId(res.sessionId);
@@ -447,7 +895,39 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           const executedTools: ToolCallDisplay[] = [];
           const sessionIdForObjects = res.sessionId as string | undefined;
           const conversationId = res.conversationId as string | undefined;
-          const recordToolCall = (..._args: any[]) => recordToolCall_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, formatHistoryMessages, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadSessionHistory, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordToolCall, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, toolsByConversation, touchStartPosRef, workflows });
+
+          const recordToolCall = async (
+            call: { toolKey: string; specifier?: string; args?: Record<string, unknown> },
+            status: string,
+            resultSummary?: string) => {
+            const display: ToolCallDisplay = {
+              toolKey: call.toolKey,
+              specifier: call.specifier || null,
+              status,
+              resultSummary: resultSummary || null,
+              args: call.args ? JSON.stringify(call.args) : null};
+            const hideFromToolRail = resultSummary?.startsWith('__KYLIX_BLOCKS__:');
+            if (call.toolKey !== 'suggest_next_steps' && !hideFromToolRail) {
+              executedTools.push(display);
+            }
+            if (!sessionIdForObjects || !conversationId) return;
+            try {
+              const { recordAgentToolCallAction } = await import('@/lib/actions/agentic');
+              await recordAgentToolCallAction(
+                {
+                  sessionId: sessionIdForObjects,
+                  conversationId,
+                  toolKey: call.toolKey,
+                  specifier: call.specifier,
+                  args: call.args || null,
+                  status,
+                  resultSummary},
+                jwt);
+            } catch (recordErr) {
+              console.warn('[agentic] Failed to record tool call:', recordErr);
+            }
+          };
+
           setMessages((prev) => [
             ...prev,
             {
@@ -458,7 +938,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               tools: [],
               nextSteps: normalizeNextSteps(res.nextSteps)},
           ]);
+
           let liveNextSteps = normalizeNextSteps(res.nextSteps);
+
           if (Array.isArray(res.toolCalls) && res.toolCalls.length > 0) {
             for (const call of res.toolCalls) {
               const { AGENTIC_TOOLS_REGISTRY } = await import('@/lib/agentic/tools-registry');
@@ -474,9 +956,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   await recordToolCall(call, 'success', `${steps.length} next steps`);
                   continue;
                 }
+
                 if (toolDef.requiresAuthorization) {
                   let isPreAuthorized = false;
                   const hardVerification = isHardVerificationEnabled();
+
                   if (!hardVerification && isVaultUnlocked) {
                     isPreAuthorized = true;
                   } else {
@@ -487,6 +971,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       isPreAuthorized = !toolRequiresAuthorization(call.toolKey, agentPrefs, toolDef.requiresAuthorization);
                     } catch {}
                   }
+
                   if (!isPreAuthorized) {
                     setMessages((prev) =>
                       prev.map((m) =>
@@ -517,6 +1002,8 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     break;
                   }
                 }
+
+                // If tool is a sensitive transaction requiring sudo/MasterPass unlock
                 if (call.toolKey === 'wallet_send_tokens') {
                   const unlocked = await promptSudo('unlock', false, false);
                   if (!unlocked) {
@@ -525,8 +1012,30 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     continue;
                   }
                 }
+
                 try {
-                  const recordSessionObject = (..._args: any[]) => recordSessionObject_ext({ accent, activeSessionId, agentCount, appendMessage, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, executing, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, isPro, isWorkspaceReadOnly, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, pendingObject, pendingPayment, pendingToolAuth, raw, recordSessionObject, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, signing, syncTimeoutRef, textareaRef, touchStartPosRef, workflows });
+                  const recordSessionObject = async (payload: {
+                    objectId: string;
+                    objectType: string;
+                    title?: string | null;
+                    toolKey: string;
+                  }) => {
+                    if (!sessionIdForObjects || !payload.objectId) return;
+                    try {
+                      const { recordAgentSessionObjectAction } = await import('@/lib/actions/agentic');
+                      await recordAgentSessionObjectAction(
+                        {
+                          sessionId: sessionIdForObjects,
+                          objectId: payload.objectId,
+                          objectType: payload.objectType,
+                          title: payload.title,
+                          toolKey: payload.toolKey},
+                        jwt);
+                    } catch (recordErr) {
+                      console.warn('[agentic] Failed to record session object:', recordErr);
+                    }
+                  };
+
                   const { executeAgenticToolCallWithToast } = await import('@/lib/agentic/client-executor');
                   const result = await executeAgenticToolCallWithToast(
                     call,
@@ -587,6 +1096,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 }
               }
             }
+
             if (executedTools.length > 0 || liveNextSteps.length > 0) {
               setMessages((prev) =>
                 prev.map((m) =>
@@ -597,6 +1107,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                         nextSteps: liveNextSteps.length ? liveNextSteps : m.nextSteps}
                     : m));
             }
+
             const sid = (res.sessionId as string) || activeSessionId;
             if (sid && user?.$id) {
               setMessages((prev) => {
@@ -630,6 +1141,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       }
     },
     [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, deleteTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote, user, onClose, router, openUnified, setCachedData, tasks, allNotes, activeSessionId, pendingObject]);
+
   useEffect(() => {
     const pending = consumePendingPrompt();
     if (pending?.prompt) {
@@ -638,6 +1150,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       else textareaRef.current?.focus();
     }
   }, [consumePendingPrompt, runPrompt]);
+
   const handleSubmit = useCallback(
     (e?: FormEvent) => {
       e?.preventDefault();
@@ -648,6 +1161,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       void runPrompt(chatInput);
     },
     [chatInput, runPrompt, isWorkspaceReadOnly]);
+
   const handleWorkflow = useCallback(
     async (action: QuickWorkflowAction) => {
       if (action.kind === 'navigate' && action.href) {
@@ -655,12 +1169,14 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         router.push(action.href);
         return;
       }
+
       const prompt = action.prompt || '';
       if (action.kind === 'prompt') {
         setChatInput(prompt);
         textareaRef.current?.focus();
         return;
       }
+
       if (!prompt) return;
       setChatInput(prompt);
       if (action.autoRun) {
@@ -669,22 +1185,26 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       }
     },
     [onClose, router, runPrompt]);
+
   const handleComposerKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
   };
+
   const openMessageMenu = useCallback((msg: ChatMessage) => {
     setComposerMenuOpen(false);
     setMessageMenuTarget(msg);
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
   }, []);
+
   const openComposerMenu = useCallback(() => {
     setMessageMenuTarget(null);
     setComposerMenuOpen(true);
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
   }, []);
+
   const handleMessageTouchStart = useCallback(
     (e: React.TouchEvent, msg: ChatMessage) => {
       const touch = e.touches[0];
@@ -693,6 +1213,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       longPressTimerRef.current = setTimeout(() => openMessageMenu(msg), 500);
     },
     [openMessageMenu]);
+
   const handleMessageTouchMove = useCallback((e: React.TouchEvent) => {
     if (!touchStartPosRef.current) return;
     const touch = e.touches[0];
@@ -704,6 +1225,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       touchStartPosRef.current = null;
     }
   }, []);
+
   const handleMessageTouchEnd = useCallback(() => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
@@ -711,12 +1233,14 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     }
     touchStartPosRef.current = null;
   }, []);
+
   useEffect(() => {
     return () => {
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
       if (composerLongPressTimerRef.current) clearTimeout(composerLongPressTimerRef.current);
     };
   }, []);
+
   const handleComposerTouchStart = useCallback(
     (e: React.TouchEvent) => {
       const touch = e.touches[0];
@@ -725,6 +1249,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       composerLongPressTimerRef.current = setTimeout(() => openComposerMenu(), 500);
     },
     [openComposerMenu]);
+
   const handleComposerTouchMove = useCallback((e: React.TouchEvent) => {
     if (!touchStartPosRef.current) return;
     const touch = e.touches[0];
@@ -736,6 +1261,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       touchStartPosRef.current = null;
     }
   }, []);
+
   const handleComposerTouchEnd = useCallback(() => {
     if (composerLongPressTimerRef.current) {
       clearTimeout(composerLongPressTimerRef.current);
@@ -743,6 +1269,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     }
     touchStartPosRef.current = null;
   }, []);
+
   const handleComposerPaste = useCallback(async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -770,6 +1297,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       setComposerMenuOpen(false);
     }
   }, [chatInput, handleInputChange]);
+
   const handleComposerSelectAll = useCallback(() => {
     const el = textareaRef.current;
     if (!el || !chatInput) return;
@@ -777,29 +1305,35 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     el.select();
     setComposerMenuOpen(false);
   }, [chatInput]);
+
   const handleComposerCopyAll = useCallback(() => {
     if (!chatInput) return;
     void navigator.clipboard.writeText(chatInput);
     toast.success('Copied to clipboard');
     setComposerMenuOpen(false);
   }, [chatInput]);
+
   const handleComposerClear = useCallback(() => {
     handleInputChange('');
     setComposerMenuOpen(false);
     textareaRef.current?.focus();
   }, [handleInputChange]);
+
   const handleCopyMessage = useCallback((content: string) => {
     void navigator.clipboard.writeText(content);
     toast.success('Copied to clipboard');
     setMessageMenuTarget(null);
   }, []);
+
   const handleRetryMessage = useCallback(
     async (msg: ChatMessage) => {
       setMessageMenuTarget(null);
       const idx = messages.findIndex((m) => m.id === msg.id);
       if (idx < 0) return;
+
       let promptText = '';
       let truncateTo = idx;
+
       if (msg.role === 'user') {
         promptText = msg.content;
       } else {
@@ -817,7 +1351,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         promptText = messages[userIdx].content;
         truncateTo = userIdx;
       }
+
       if (!promptText.trim()) return;
+
       try {
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
         const { flagAgentConversationPointAction } = await import('@/lib/actions/agentic');
@@ -831,15 +1367,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       } catch (err) {
         console.warn('[agentic] Failed to flag conversation point:', err);
       }
+
       setMessages((prev) => prev.slice(0, truncateTo));
       await runPrompt(promptText);
     },
     [activeSessionId, messages, runPrompt]);
+
   const handleStartConversationFromPrompt = useCallback(
     async (msg: ChatMessage, carryContext: boolean) => {
       setMessageMenuTarget(null);
       const starter = msg.content?.trim();
       if (!starter) return;
+
       try {
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
         const { startNewAgentSessionFromPromptAction } = await import('@/lib/actions/agentic');
@@ -853,12 +1392,14 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           toast.error('Could not start a new conversation.');
           return;
         }
+
         setActiveSessionId(res.sessionId || null);
         setMessages([]);
         if (typeof window !== 'undefined' && user?.$id) {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
           void LocalEngine.cacheSet(`kylrix_agentic_chat_history_${user.$id}`, []);
         }
+
         toast.success(
           carryContext
             ? 'New conversation started with compressed context.'
@@ -870,6 +1411,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       }
     },
     [activeSessionId, runPrompt, user?.$id]);
+
   const messageMenuItems = useMemo(() => {
     if (!messageMenuTarget) return [];
     if (messageMenuTarget.role === 'user') {
@@ -904,6 +1446,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     handleRetryMessage,
     handleStartConversationFromPrompt,
   ]);
+
   const composerMenuItems = useMemo(() => {
     const hasText = Boolean(chatInput);
     const items: Array<{
@@ -949,6 +1492,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     handleComposerCopyAll,
     handleComposerClear,
   ]);
+
   const handleExportSession = useCallback(() => {
     if (!messages.length) {
       toast.error('No conversation messages to export');
@@ -982,5 +1526,888 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       toast.error('Failed to export conversation');
     }
   }, [messages, activeSessionId]);
-  return <AgenticPanelContentView {...({ NoteDetailSidebar, a, accent, activeSessionId, agentCount, agentPrefs, appPrefs, appendMessage, assistantId, blob, byId, cancelled, chatInput, chatScrollRef, clearSessionLongPress, composerHints, composerLongPressTimerRef, composerMenuItems, composerMenuOpen, contextualPrompt, conversationId, currentPrefs, draftSessionId, dx, dy, el, end, executing, fetchRemoteDraft, handleApprovePayment, handleComposerClear, handleComposerCopyAll, handleComposerKeyDown, handleComposerPaste, handleComposerSelectAll, handleComposerTouchEnd, handleComposerTouchMove, handleComposerTouchStart, handleCopyMessage, handleCreateNewSessionFromDrawer, handleDeleteSession, handleExportSession, handleInputChange, handleMessageTouchEnd, handleMessageTouchMove, handleMessageTouchStart, handleOpenSessions, handlePaymentRequest, handleRetryMessage, handleSelectSession, handleShareSession, handleStartConversationFromPrompt, handleStartNewSession, handleSubmit, handleToggleSessionPinned, handleWorkflow, hardVerification, hasText, id, idx, isDesktop, isPreAuthorized, isPro, isWorkspaceReadOnly, jsonStr, jwt, liveNextSteps, loadSessionHistory, loadingSessions, longPressTimerRef, messageMenuItems, messageMenuTarget, messages, next, nextSessions, node, onClose, openComposerMenu, openMessageMenu, openSessionActionsDrawer, pageContext, pathname, payload, pending, pendingObject, pendingPayment, pendingToolAuth, pinDelta, pos, prompt, promptText, promptWithAttachment, recordSessionObject, recordToolCall, remoteDraft, res, result, router, runPrompt, runningWorkflowId, selectedSessionActionTarget, sessionIdForObjects, sessionLongPressTimerRef, sessions, setActiveSessionId, setAgentCount, setChatInput, setComposerMenuOpen, setExecuting, setLoadingSessions, setMessageMenuTarget, setMessages, setPendingObject, setPendingPayment, setPendingToolAuth, setRunningWorkflowId, setSelectedSessionActionTarget, setSessions, setShowSessionActionsDrawer, setShowSessionsDrawer, setSigning, showSessionActionsDrawer, showSessionsDrawer, sid, signing, start, starter, steps, syncTimeoutRef, synced, tagged, targetNote, text, textareaRef, toolDef, touch, touchStartPosRef, trimmed, truncateTo, unlocked, url, userIdx, userMsgId, workflows, wsId })} />;
+
+  return (
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[#161412]">
+      {/* Sticky header */}
+      <div className="flex-shrink-0 px-4 sm:px-5 pt-2.5 pb-3.5 border-b border-white/20 bg-[#0E0D0C] relative overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-90"
+          style={{
+            background: `radial-gradient(ellipse 80% 120% at 0% 0%, ${accent}18 0%, transparent 55%)`}}
+        />
+        <div className="relative flex items-center gap-3 min-w-0">
+          <div
+            className="w-10 h-10 rounded-[14px] flex items-center justify-center flex-shrink-0 border-2 shadow-[0_8px_20px_rgba(0,0,0,0.35)]"
+            style={{ borderColor: `${accent}70`, backgroundColor: `${accent}18`, color: accent }}
+          >
+            <span className="font-clash font-black text-[16px] leading-none tracking-tight">K</span>
+          </div>
+          <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+            <h2 className="text-white font-extrabold text-[16px] font-clash tracking-tight leading-tight truncate">
+              Kylie
+            </h2>
+            <p className="text-[#9B9691] text-xs font-semibold leading-snug truncate">
+              Here for {zoneLabel(pageContext.zone).toLowerCase()}
+              {agentCount > 0 ? ` · ${agentCount} helper${agentCount === 1 ? '' : 's'}` : ''}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleOpenSessions}
+            title="Past chats with Kylie"
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-white/60 hover:text-white bg-[#161412] hover:bg-white/[0.08] border border-white/20 flex-shrink-0 transition-colors cursor-pointer"
+          >
+            <History size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={handleExportSession}
+            title="Export session conversation as JSON"
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-white/60 hover:text-white bg-[#161412] hover:bg-white/[0.08] border border-white/20 flex-shrink-0 transition-colors cursor-pointer"
+          >
+            <Download size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-white/60 hover:text-white bg-[#161412] hover:bg-white/[0.08] border border-white/20 flex-shrink-0 transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <p className="relative mt-2 text-[#9B9691] text-xs font-semibold leading-relaxed line-clamp-2">
+          {pageContext.subtitle}
+        </p>
+      </div>
+
+      {/* Sticky quick actions — grid scrolls inside band; header + composer stay put */}
+      {messages.length === 0 && (
+        <div className="flex-shrink-0 border-b border-white/20 bg-[#161412] px-4 sm:px-5 py-3 flex flex-col min-h-0 max-h-[min(240px,36%)]">
+          <div className="flex items-center justify-between gap-2 mb-2.5 flex-shrink-0">
+            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#9B9691] font-clash">
+              Try with Kylie
+            </span>
+            <span className="text-[10px] font-semibold text-white/40">{workflows.length} actions</span>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1 pb-0.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {workflows.map((action) => {
+                const Icon = QUICK_ICON_MAP[action.icon] || Sparkles;
+                const isRunning = runningWorkflowId === action.id;
+
+                return (
+                  <button
+                    key={action.id}
+                    type="button"
+                    disabled={isRunning || executing}
+                    onClick={() => void handleWorkflow(action)}
+                    title={action.description}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl bg-[#000000] border-2 border-white/20 hover:border-white/40 transition disabled:opacity-50 text-left cursor-pointer"
+                  >
+                    <div
+                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border border-white/20"
+                      style={{ color: accent, borderColor: `${accent}50`, backgroundColor: `${accent}15` }}
+                    >
+                      {isRunning ? (
+                        <RefreshCw size={15} className="animate-spin" />
+                      ) : (
+                        <Icon size={15} strokeWidth={2.2} />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                      <span className="text-white text-[13px] font-extrabold font-clash leading-tight">
+                        {action.label}
+                      </span>
+                      <span className="text-[#9B9691] text-[11px] font-semibold leading-snug line-clamp-2">
+                        {action.description}
+                      </span>
+                    </div>
+                    <ChevronRight size={14} className="text-white/30 flex-shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scrollable chat only */}
+      <div ref={chatScrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 py-4 flex flex-col gap-3">
+        {messages.length === 0 && !executing && (
+          <div className="rounded-2xl border-2 border-white/20 bg-[#000000] px-4 py-3.5">
+            <p className="text-white text-[13px] font-bold font-clash leading-snug mb-1">
+              Hey — I&apos;m Kylie.
+            </p>
+            <p className="text-[#9B9691] text-xs font-semibold leading-relaxed">
+              Pick a suggestion above or just ask. I&apos;ll keep this chat right here.
+            </p>
+          </div>
+        )}
+
+        {messages.filter((m: any) => !m.isHiddenFromUI).map((msg) => (
+          <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}>
+            {msg.role === 'assistant' && (
+              <div
+                className="mt-1 w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border border-white/20 text-[11px] font-clash font-black"
+                style={{ borderColor: `${accent}60`, backgroundColor: `${accent}15`, color: accent }}
+              >
+                K
+              </div>
+            )}
+            <div
+              role="button"
+              tabIndex={0}
+              className={`max-w-[88%] min-w-0 rounded-2xl px-4 py-3 select-none break-words [word-break:break-word] overflow-hidden ${
+                msg.role === 'user'
+                  ? 'bg-[#1C1A18] border-2 border-white/25 text-white'
+                  : 'bg-[#000000] border-2 border-white/20 text-white/95'
+              }`}
+              style={
+                msg.role === 'assistant'
+                  ? { boxShadow: `inset 3px 0 0 0 ${accent}70` }
+                  : undefined
+              }
+              onContextMenu={(e) => {
+                e.preventDefault();
+                openMessageMenu(msg);
+              }}
+              onTouchStart={(e) => handleMessageTouchStart(e, msg)}
+              onTouchMove={handleMessageTouchMove}
+              onTouchEnd={handleMessageTouchEnd}
+              onTouchCancel={handleMessageTouchEnd}
+            >
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <p className="text-[10px] font-black tracking-wider text-[#9B9691] leading-none">
+                  {msg.role === 'user' ? 'You' : 'Kylie'}
+                </p>
+                <AgenticMessageActions
+                  messageId={msg.id}
+                  sessionId={activeSessionId}
+                  isPublic={msg.isPublic}
+                  isGuest={msg.isGuest}
+                  syncStatus={msg.syncStatus || 'synced'}
+                  accent={accent}
+                  onShareChange={(next) => {
+                    setMessages((prev) =>
+                      prev.map((m) => (m.id === msg.id ? { ...m, ...next } : m)));
+                  }}
+                />
+              </div>
+              <AgenticMessageBody
+                content={msg.content}
+                blocks={msg.blocks}
+                onPickHit={(hit) => {
+                  void runPrompt(`Load "${hit.title}" (${hit.id}) and explain its core details and interesting parts in plain language.`);
+                }}
+                onSelectChain={(chain) => {
+                  void runPrompt(`Fetch my ${chain} wallet balance and address`);
+                }}
+              />
+              {msg.role === 'assistant' && msg.tools && msg.tools.length > 0 && (
+                <div className="mt-2.5 flex flex-col gap-1.5">
+                  {msg.tools.map((tool, toolIdx) => (
+                    <div
+                      key={`${msg.id}-tool-${toolIdx}`}
+                      className="rounded-xl border border-white/20 bg-black/40 px-2.5 py-2 text-left"
+                    >
+                      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#9B9691]">
+                        <Zap size={11} style={{ color: accent }} />
+                        <span>Tool · {tool.toolKey}</span>
+                        {tool.status ? (
+                          <span className={tool.status === 'success' ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                            {tool.status}
+                          </span>
+                        ) : null}
+                      </div>
+                      {tool.specifier ? (
+                        <p className="mt-1 text-[10px] font-mono text-white/50 truncate">Target: {tool.specifier}</p>
+                      ) : null}
+                      {tool.resultSummary ? (
+                        <p className="mt-1 text-[11px] font-semibold text-white/80 leading-snug">{tool.resultSummary}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {msg.role === 'assistant' && msg.nextSteps && msg.nextSteps.length > 0 && (
+                <div className="mt-3 flex flex-col gap-1.5">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[#9B9691]">
+                    Next with Kylie
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    {msg.nextSteps.map((step, stepIdx) => (
+                      <button
+                        key={`${msg.id}-step-${stepIdx}`}
+                        type="button"
+                        disabled={executing}
+                        onClick={() => void runPrompt(step.prompt)}
+                        className="w-full text-left px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/25 transition text-xs font-semibold text-white/90 disabled:opacity-50"
+                      >
+                        {step.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {executing && (
+          <div className="flex justify-start gap-2">
+            <div
+              className="mt-1 w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border border-white/20 text-[11px] font-clash font-black"
+              style={{ borderColor: `${accent}60`, backgroundColor: `${accent}15`, color: accent }}
+            >
+              K
+            </div>
+            <div className="rounded-2xl px-4 py-3 bg-[#000000] border-2 border-white/20 flex items-center gap-2">
+              <RefreshCw size={14} className="animate-spin" style={{ color: accent }} />
+              <span className="text-[#9B9691] text-xs font-semibold leading-snug">Kylie is on it…</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Sticky composer */}
+      <div className="flex-shrink-0 border-t border-white/20 bg-[#0E0D0C] px-3 sm:px-5 pt-2.5 pb-[max(1.25rem,env(safe-area-inset-bottom,20px))]">
+        {pendingPayment ? (
+          <div className="mb-3 p-4 rounded-2xl bg-[#000000] border-2 border-white/20 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                <Wallet size={16} />
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="text-white text-xs font-bold leading-tight">Authorize Agent Funding</h3>
+                <p className="text-[#9B9691] text-[10px] leading-snug mt-0.5">
+                  Deposit {pendingPayment.amount} ARB to fund Agent {pendingPayment.agentId.substring(0, 8)}...
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={signing}
+                onClick={handleApprovePayment}
+                className="flex-1 py-2 px-3 rounded-xl bg-white text-black text-xs font-black hover:bg-zinc-200 transition disabled:opacity-50 cursor-pointer"
+              >
+                {signing ? 'Signing with MEK...' : 'Sign & Fund Stream'}
+              </button>
+              <button
+                type="button"
+                disabled={signing}
+                onClick={() => setPendingPayment(null)}
+                className="py-2 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/20 text-white text-xs font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {isWorkspaceReadOnly ? (
+          <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-300 text-xs font-semibold">
+            <Lock size={16} className="shrink-0 text-amber-400" />
+            <span className="leading-relaxed">
+              Viewing agentic session in shared workspace (read-only). Switch to your personal workspace or request edit access to chat.
+            </span>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+            {composerHints.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {composerHints.map((hint) => (
+                  <button
+                    key={hint.id}
+                    type="button"
+                    onClick={() => {
+                      if (hint.route) {
+                        router.push(hint.route);
+                        return;
+                      }
+                      if (hint.prompt) handleInputChange(hint.prompt);
+                    }}
+                    className="px-2.5 py-1 rounded-lg border border-white/20 bg-[#000000] text-[10px] font-bold text-white/70 hover:text-white hover:border-white/40 transition cursor-pointer"
+                  >
+                    {hint.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {/* Pending Attachment Preview */}
+            {pendingObject ? (
+              <div className="mb-1">
+                <ChatObjectPreview payload={pendingObject.payload} onRemove={() => setPendingObject(null)} />
+              </div>
+            ) : null}
+
+            {/* OpenBricks 4.0 Pill Composer with Attachment Button */}
+            <div
+              className="flex items-end gap-1 rounded-[22px] bg-[#000000] border-2 border-white/20 pl-1.5 pr-1.5 py-1.5 transition-all focus-within:border-white/50 focus-within:ring-1 focus-within:ring-white/20"
+              style={{ boxShadow: executing ? `0 0 0 2px ${accent}60` : undefined }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                openComposerMenu();
+              }}
+              onTouchStart={handleComposerTouchStart}
+              onTouchMove={handleComposerTouchMove}
+              onTouchEnd={handleComposerTouchEnd}
+              onTouchCancel={handleComposerTouchEnd}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  openFileDrawer({
+                    title: 'Attach to Kylie',
+                    onSelectFile: (file: any) => {
+                      const parsed = parseChatAttachFile(file);
+                      if (parsed) setPendingObject(parsed);
+                    },
+                  });
+                }}
+                aria-label="Attach to chat"
+                title="Attach object, file, or media"
+                className="shrink-0 w-9 h-9 mb-0.5 rounded-full inline-flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+              >
+                <Paperclip size={18} strokeWidth={2} />
+              </button>
+
+              <textarea
+                ref={textareaRef}
+                value={chatInput}
+                onChange={(e) => handleInputChange(e.target.value)}
+                onKeyDown={handleComposerKeyDown}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  openComposerMenu();
+                }}
+                placeholder="Ask Kylie to help you with anything…"
+                disabled={executing}
+                rows={1}
+                className="flex-1 min-w-0 resize-none bg-transparent border-0 outline-none shadow-none ring-0 focus:ring-0 focus:outline-none text-[0.9375rem] leading-[1.45] text-white font-satoshi font-medium placeholder:text-white/35 py-2 px-1 disabled:opacity-50 max-h-[120px]"
+              />
+
+              <button
+                type="submit"
+                disabled={executing || (!chatInput.trim() && !pendingObject)}
+                className="shrink-0 w-9 h-9 mb-0.5 rounded-full inline-flex items-center justify-center transition-colors cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: (chatInput.trim() || pendingObject) && !executing ? (accent || '#F59E0B') : 'rgba(255,255,255,0.06)',
+                  color: (chatInput.trim() || pendingObject) && !executing ? '#000000' : 'rgba(255,255,255,0.3)',
+                }}
+                aria-label="Send"
+              >
+                {executing ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} strokeWidth={2.5} className={(chatInput.trim() || pendingObject) ? 'translate-x-[1px]' : ''} />}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span className="text-[10px] text-white/40 font-semibold leading-snug">
+                Enter to send · Shift+Enter for new line
+              </span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {!isPro && (
+                  <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                    Pro
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    router.push('/settings/agents');
+                  }}
+                  className="text-[10px] font-bold text-white/40 hover:text-white transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={12} />
+                  Agents
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {composerMenuOpen && (
+        <ContextMenu
+          x={0}
+          y={0}
+          onCloseAction={() => setComposerMenuOpen(false)}
+          items={composerMenuItems}
+        />
+      )}
+
+      {messageMenuTarget && (
+        <ContextMenu
+          x={0}
+          y={0}
+          onCloseAction={() => setMessageMenuTarget(null)}
+          items={messageMenuItems}
+        />
+      )}
+
+      {/* Sessions Bottom Drawer (Capped at 60% height permanently) */}
+      {showSessionsDrawer && (
+        <div className="absolute inset-0 bg-black/60 z-50 flex flex-col justify-end transition-opacity duration-300">
+          <div className="bg-[#0B0A09] border-t border-white/10 rounded-t-[20px] w-full max-h-[60%] min-h-[40%] flex flex-col overflow-hidden animate-slide-up">
+            {/* Header */}
+            <div className="flex-shrink-0 px-5 py-4 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <History size={16} style={{ color: accent }} />
+                <h3 className="text-white font-extrabold text-[14px] font-clash tracking-tight">
+                  Agentic sessions
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCreateNewSessionFromDrawer}
+                  title="New Session"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/60 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/5"
+                >
+                  <Plus size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSessionsDrawer(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/45 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/5"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+              {loadingSessions && workspaceFilteredSessions.length === 0 ? (
+                <div className="flex items-center justify-center py-12 gap-2.5">
+                  <RefreshCw size={15} className="animate-spin text-[#9B9691]" />
+                  <span className="text-[#9B9691] text-xs font-semibold">Loading past chats…</span>
+                </div>
+              ) : workspaceFilteredSessions.length === 0 ? (
+                <div className="text-center py-12 text-[#9B9691] text-xs font-medium flex flex-col items-center gap-2">
+                  <History size={24} className="text-white/20" />
+                  <span>No past sessions in this workspace. Click + above to start a fresh chat.</span>
+                </div>
+              ) : (
+                workspaceFilteredSessions
+                  .filter((sess) => String((sess as any).targetType || '') !== 'momentDoppelganger')
+                  .map((sess) => {
+                  const isObjectSession = Boolean((sess as any).targetType && (sess as any).targetId);
+                  const isSelected = sess.id === activeSessionId;
+                  const objectIcon = (() => {
+                    const t = String((sess as any).targetType || '');
+                    if (t === 'idea' || t === 'note') return '💡';
+                    if (t === 'goal' || t === 'task') return '🎯';
+                    if (t === 'project') return '📦';
+                    if (t === 'form') return '📝';
+                    if (t === 'vault' || t === 'credential') return '🔐';
+                    if (t === 'event') return '📅';
+                    return '🔗';
+                  })();
+                  let previewText = 'Empty conversation';
+                  let titleText = `Chat from ${new Date(sess.createdAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+                  try {
+                    const parsed = JSON.parse(sess.chatHistory || '[]');
+                    const firstUser = parsed.find((m: any) => m.role === 'user');
+                    const lastMsg = parsed[parsed.length - 1];
+                    if (firstUser?.content) {
+                      titleText = visibleChatContent('user', firstUser.content).slice(0, 80) || titleText;
+                    }
+                    if (lastMsg) {
+                      let body = visibleChatContent(lastMsg.role, lastMsg.content);
+                      if (isObjectSession) {
+                        try {
+                          const j = JSON.parse(body);
+                          if (j?.oneLiner) body = j.oneLiner;
+                          else if (j?.response) body = String(j.response).slice(0, 80);
+                          else if (typeof j === 'object') body = j.oneLiner || j.title || 'Sidekick session';
+                        } catch {}
+                      }
+                      body = body.replace(/\s+/g, ' ').trim().slice(0, 110);
+                      previewText = `${lastMsg.role === 'user' ? 'You' : 'Kylie'}: ${body}`;
+                    }
+                  } catch {}
+
+                  return (
+                    <div
+                      key={sess.id}
+                      onClick={() => {
+                        if (isObjectSession) {
+                          const t = (sess as any).targetType as string;
+                          const id = (sess as any).targetId as string;
+                          setShowSessionsDrawer(false);
+                          onClose();
+                          window.dispatchEvent(new CustomEvent('kylrix:open-sidekick', { detail: { type: t, id } }));
+                          return;
+                        }
+                        handleSelectSession(sess.id);
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openSessionActionsDrawer(sess);
+                      }}
+                      onTouchStart={() => {
+                        clearSessionLongPress();
+                        sessionLongPressTimerRef.current = setTimeout(() => {
+                          openSessionActionsDrawer(sess);
+                        }, 450);
+                      }}
+                      onTouchEnd={clearSessionLongPress}
+                      onTouchMove={clearSessionLongPress}
+                      onTouchCancel={clearSessionLongPress}
+                      className={`w-full flex items-center justify-between gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer text-left group select-none ${
+                        isSelected
+                          ? 'bg-white/[0.08] border-[#A855F7]/40 ring-1 ring-[#A855F7]/30'
+                          : isObjectSession
+                          ? 'bg-[#A855F7]/10 border-[#A855F7]/20 hover:bg-[#A855F7]/15 hover:border-[#A855F7]/35'
+                          : 'bg-[#141210] border-white/8 hover:bg-[#1A1816] hover:border-white/15'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1 flex flex-col gap-1.5 overflow-hidden">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isObjectSession && <span className="shrink-0 text-xs">{objectIcon}</span>}
+                          <span className="text-white text-xs font-bold font-clash leading-tight truncate">
+                            {titleText}
+                          </span>
+                          {isObjectSession && (
+                            <span className="shrink-0 px-2 py-0.5 rounded-md bg-[#A855F7]/20 text-[#E9D5FF] text-[9px] font-black uppercase tracking-wider font-mono">
+                              {String((sess as any).targetType)}
+                            </span>
+                          )}
+                          {((sess as any).isPublic === true || (sess as any).isGuest === true) && (
+                            <span className="shrink-0 px-2 py-0.5 rounded-md bg-indigo-500/15 text-[#818CF8] text-[9px] font-black border border-indigo-500/20 font-mono">
+                              SHARED
+                            </span>
+                          )}
+                          {sess.isPinned === true && (
+                            <span className="shrink-0 text-[10px] text-[#F59E0B] font-black font-mono">
+                              PINNED
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[#9B9691] text-[11px] font-satoshi leading-relaxed truncate m-0">
+                          {previewText}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleShareSession(e, sess.id, sess.isPublic === true || sess.isGuest === true)}
+                          title={sess.isPublic || sess.isGuest ? 'Session is shared' : 'Share session'}
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-colors ${
+                            sess.isPublic || sess.isGuest
+                              ? 'text-[#818CF8] bg-indigo-500/15 border-indigo-500/20'
+                              : 'text-white/40 hover:text-white hover:bg-white/[0.08] border-transparent'
+                          }`}
+                        >
+                          <Share2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openSessionActionsDrawer(sess);
+                          }}
+                          title="More options"
+                          className="w-8 h-8 rounded-xl flex items-center justify-center text-white/40 hover:text-white hover:bg-white/[0.08] border border-transparent transition-colors"
+                        >
+                          <MoreHorizontal size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {showSessionActionsDrawer && selectedSessionActionTarget && (
+        <div className="absolute inset-0 bg-black/70 z-[60] flex flex-col justify-end">
+          <div className="bg-[#161412] border-t border-white/10 rounded-t-[24px] w-full max-h-[60dvh] px-5 py-4 flex flex-col gap-3 animate-slide-up">
+            <div className="w-10 h-1 rounded-full bg-white/10 mx-auto" />
+            <div className="text-center">
+              <div className="text-white text-sm font-extrabold">Session actions</div>
+              <div className="text-[#9B9691] text-[11px] mt-1 line-clamp-1">
+                {selectedSessionActionTarget.context || 'Manage this chat thread'}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                handleShareSession(
+                  e as any,
+                  selectedSessionActionTarget.id,
+                  selectedSessionActionTarget.isPublic === true || selectedSessionActionTarget.isGuest === true);
+                setShowSessionActionsDrawer(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/5 text-white text-sm font-bold"
+            >
+              <Share2 size={16} />
+              <span>{selectedSessionActionTarget.isPublic || selectedSessionActionTarget.isGuest ? 'Copy shared link / make private' : 'Share session'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void handleToggleSessionPinned(
+                  selectedSessionActionTarget.id,
+                  !(selectedSessionActionTarget.isPinned === true));
+                setShowSessionActionsDrawer(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/5 text-white text-sm font-bold"
+            >
+              <Flag size={16} />
+              <span>{selectedSessionActionTarget.isPinned === true ? 'Unpin session' : 'Pin session'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                handleDeleteSession(e as any, selectedSessionActionTarget.id);
+                setShowSessionActionsDrawer(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold hover:bg-red-500/20 transition-colors"
+            >
+              <Trash2 size={16} />
+              <span>Delete session</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSessionActionsDrawer(false)}
+              className="w-full flex items-center justify-center px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-white/70 text-sm font-bold"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Top z-index Agentic Confirmation Bottom Drawer */}
+      {pendingToolAuth && (
+        <div className="absolute inset-0 bg-black/80 z-[80] flex flex-col justify-end">
+          <div className="bg-[#161412] border-t border-white/10 rounded-t-[28px] w-full h-[60dvh] max-h-[60dvh] p-6 flex flex-col justify-between shadow-2xl animate-slide-up">
+            <div className="flex flex-col gap-4 overflow-y-auto">
+              <div className="w-12 h-1.5 rounded-full bg-white/15 mx-auto shrink-0" />
+
+              <div className="flex items-center gap-3.5 shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-[#6366F1]/15 border border-[#6366F1]/30 flex items-center justify-center text-[#6366F1] shrink-0">
+                  {pendingToolAuth.toolKey.startsWith('wallet_') ? <Wallet size={20} /> : <Shield size={20} />}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-white text-sm font-bold font-satoshi truncate">
+                      {pendingToolAuth.toolKey.startsWith('wallet_') ? 'Agentic Wallet Access' : 'Authorize Action'}
+                    </h3>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#6366F1]/20 text-[#818cf8]">
+                      Kylie Inbuilt
+                    </span>
+                  </div>
+                  <p className="text-white/60 text-xs font-satoshi mt-0.5">
+                    Allow <strong>Kylie</strong> {pendingToolAuth.toolKey === 'wallet_get_balance' ? 'to read your wallet balances and on-chain addresses?' : `to execute ${pendingToolAuth.name}?`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Permissions & Scope Overview */}
+              <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2.5 text-left shrink-0">
+                <div className="text-[11px] font-extrabold text-white/50 uppercase tracking-wider font-satoshi">
+                  Requested Scope & Chains
+                </div>
+                {(() => {
+                  const rawToken = String(pendingToolAuth.args?.token || pendingToolAuth.args?.chain || 'ALL').toUpperCase();
+                  const isAll = rawToken === 'ALL';
+                  return (
+                    <div className="grid grid-cols-2 gap-2 text-xs font-satoshi">
+                      <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/80 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                        <span className="truncate">{isAll ? 'Kylrix Ledger' : `${rawToken} Network`}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/80 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                        <span className="truncate">{isAll ? 'Solana & EVM Chains' : 'Read Balance & Address'}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+                {pendingToolAuth.args && (
+                  <div className="text-[11px] text-white/40 font-mono pt-2 border-t border-white/[0.04] truncate">
+                    Intent: {pendingToolAuth.toolKey} {JSON.stringify(pendingToolAuth.args)}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-white/5 space-y-2 shrink-0">
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 mt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const auth = pendingToolAuth;
+                    setPendingToolAuth(null);
+                    toast.success(`Authorized ${auth.name}`);
+                    try {
+                      const { executeAgenticToolCallWithToast } = await import('@/lib/agentic/client-executor');
+                      const result = await executeAgenticToolCallWithToast(
+                        { toolKey: auth.toolKey, specifier: auth.specifier, args: auth.args },
+                        {
+                          user,
+                          router,
+                          onClose,
+                          setActiveWorkspaceId,
+                          tasks,
+                          notes: allNotes,
+                          setCachedData,
+                          pushLiveNote,
+                          removeNote,
+                          registerComposeSession,
+                          unregisterComposeSession,
+                          migrateDraftNoteId,
+                          addTask,
+                          updateTask: async (id: string, patch: any) => { updateTask(id, patch); },
+                          deleteTask: async (id: string) => { deleteTask(id); },
+                          appendMessage,
+                          openDrawer: (type: string, payload?: Record<string, unknown>) => { openUnified(type as any, payload); },
+                          openWalletWithIntent,
+                        },
+                        auth.name
+                      );
+
+                      if (auth.assistantId) {
+                        setMessages((prev) =>
+                          prev.map((m) =>
+                            m.id === auth.assistantId
+                              ? {
+                                  ...m,
+                                  blocks: [
+                                    ...(m.blocks || []).map((b) =>
+                                      b.type === 'pending_auth' && b.toolKey === auth.toolKey
+                                        ? { ...b, status: 'authorized' as const }
+                                        : b
+                                    ),
+                                    ...(result.messageBlocks || []),
+                                  ],
+                                }
+                              : m
+                          )
+                        );
+                      }
+                    } catch (execErr: any) {
+                      console.error('Failed to run authorized tool:', execErr);
+                      toast.error(`Execution failed: ${execErr?.message || 'Unknown error'}`);
+                    }
+                  }}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-[#6366F1] hover:bg-[#4f46e5] text-white text-xs font-black transition cursor-pointer"
+                >
+                  Allow Access
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const auth = pendingToolAuth;
+                    setPendingToolAuth(null);
+                    try {
+                      const current = await account.getPrefs();
+                      const whitelist = Array.isArray(current?.authorizedTools) ? current.authorizedTools : [];
+                      if (!whitelist.includes(auth.toolKey)) {
+                        whitelist.push(auth.toolKey);
+                      }
+                      await account.updatePrefs({ ...current, authorizedTools: whitelist });
+                      toast.success(`Always allow whitelisted for ${auth.name}`);
+
+                      const { executeAgenticToolCallWithToast } = await import('@/lib/agentic/client-executor');
+                      const result = await executeAgenticToolCallWithToast(
+                        { toolKey: auth.toolKey, specifier: auth.specifier, args: auth.args },
+                        {
+                          user,
+                          router,
+                          onClose,
+                          setActiveWorkspaceId,
+                          tasks,
+                          notes: allNotes,
+                          setCachedData,
+                          pushLiveNote,
+                          removeNote,
+                          registerComposeSession,
+                          unregisterComposeSession,
+                          migrateDraftNoteId,
+                          addTask,
+                          updateTask: async (id: string, patch: any) => { updateTask(id, patch); },
+                          deleteTask: async (id: string) => { deleteTask(id); },
+                          appendMessage,
+                          openDrawer: (type: string, payload?: Record<string, unknown>) => { openUnified(type as any, payload); },
+                          openWalletWithIntent,
+                        },
+                        auth.name
+                      );
+
+                      if (auth.assistantId) {
+                        setMessages((prev) =>
+                          prev.map((m) =>
+                            m.id === auth.assistantId
+                              ? {
+                                  ...m,
+                                  blocks: [
+                                    ...(m.blocks || []).map((b) =>
+                                      b.type === 'pending_auth' && b.toolKey === auth.toolKey
+                                        ? { ...b, status: 'authorized' as const }
+                                        : b
+                                    ),
+                                    ...(result.messageBlocks || []),
+                                  ],
+                                }
+                              : m
+                          )
+                        );
+                      }
+                    } catch (err) {
+                      console.error('Failed to whitelist/execute:', err);
+                    }
+                  }}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-white text-xs font-bold transition cursor-pointer"
+                >
+                  Always Allow
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingToolAuth.assistantId) {
+                      setMessages((prev) =>
+                        prev.map((m) =>
+                          m.id === pendingToolAuth.assistantId
+                            ? {
+                                ...m,
+                                blocks: (m.blocks || []).map((b) =>
+                                  b.type === 'pending_auth' && b.toolKey === pendingToolAuth.toolKey
+                                    ? { ...b, status: 'rejected' }
+                                    : b
+                                ),
+                              }
+                            : m
+                        )
+                      );
+                    }
+                    setPendingToolAuth(null);
+                  }}
+                  className="w-full sm:w-auto py-3 px-4 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-white/50 hover:text-white text-xs transition cursor-pointer"
+                >
+                  Deny
+                </button>
+              </div>
+
+              <div className="text-[10px] text-center text-white/40 pt-1">
+                Protected by Kylrix MasterPass & Security Enclave.{' '}
+                <Link href="/settings/agents" className="text-[#818cf8] hover:underline">
+                  Manage agent permissions
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
