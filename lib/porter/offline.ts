@@ -118,7 +118,7 @@ export async function runOfflinePorterImport(
   return service.importKylrixVaultData(json, userId);
 }
 
-/** Local vault export when server function is unavailable. */
+/** Local-first vault export — LocalEngine mirror first, then VaultService lists. */
 export async function exportVaultOffline(userId: string): Promise<{
   version: number;
   format: string;
@@ -127,22 +127,41 @@ export async function exportVaultOffline(userId: string): Promise<{
   data: { vault: { folders: unknown[]; credentials: unknown[]; totpSecrets: unknown[] } };
 }> {
   const { VaultService } = await import('@/lib/appwrite/vault-service');
-  const [credentials, totpSecrets, folders] = await Promise.all([
-    VaultService.listAllCredentials(userId).catch(() => []),
-    VaultService.listTOTPSecrets(userId).catch(() => []),
-    VaultService.listFolders(userId).catch(() => []),
+
+  // Prefer the same LocalEngine list keys the vault UI paints from.
+  let creds =
+    ((await LocalEngine.cacheGet<any[]>(`vault_credentials_${userId}`).catch(() => null)) as any[]) ||
+    [];
+  let totps =
+    ((await LocalEngine.cacheGet<any[]>(`vault_totp_${userId}`).catch(() => null)) as any[]) || [];
+  let folders: any[] = [];
+
+  const [remoteCreds, remoteTotps, remoteFolders] = await Promise.all([
+    VaultService.listAllCredentials(userId).catch(() => [] as any[]),
+    VaultService.listTOTPSecrets(userId).catch(() => [] as any[]),
+    VaultService.listFolders(userId).catch(() => [] as any[]),
   ]);
 
-  // Also try LocalEngine list mirrors if remote empty (offline)
-  let creds = credentials;
-  let totps = totpSecrets;
-  if (!creds.length) {
-    const cached = await LocalEngine.cacheGet<any[]>(`vault_credentials_${userId}`);
-    if (Array.isArray(cached) && cached.length) creds = cached as any;
+  if (!creds.length && Array.isArray(remoteCreds) && remoteCreds.length) creds = remoteCreds;
+  if (!totps.length && Array.isArray(remoteTotps) && remoteTotps.length) totps = remoteTotps;
+  folders = Array.isArray(remoteFolders) ? remoteFolders : [];
+
+  // Merge remote into local by $id when both exist (remote may be fresher for a subset).
+  if (Array.isArray(remoteCreds) && remoteCreds.length && creds.length) {
+    const byId = new Map<string, any>();
+    for (const row of [...creds, ...remoteCreds]) {
+      const id = row?.$id || row?.id;
+      if (id) byId.set(id, row);
+    }
+    creds = Array.from(byId.values());
   }
-  if (!totps.length) {
-    const cached = await LocalEngine.cacheGet<any[]>(`vault_totp_${userId}`);
-    if (Array.isArray(cached) && cached.length) totps = cached as any;
+  if (Array.isArray(remoteTotps) && remoteTotps.length && totps.length) {
+    const byId = new Map<string, any>();
+    for (const row of [...totps, ...remoteTotps]) {
+      const id = row?.$id || row?.id;
+      if (id) byId.set(id, row);
+    }
+    totps = Array.from(byId.values());
   }
 
   return {
@@ -152,9 +171,9 @@ export async function exportVaultOffline(userId: string): Promise<{
     userId,
     data: {
       vault: {
-        folders: folders as any[],
-        credentials: creds as any[],
-        totpSecrets: totps as any[],
+        folders,
+        credentials: creds,
+        totpSecrets: totps,
       },
     },
   };

@@ -297,32 +297,39 @@ export default function EcosystemPorter({
           setBusy(true);
           setError(null);
           try {
-            let finalData: any;
-            try {
-              const result = await porterExport(userId);
-              finalData = {
-                version: 2,
-                format: 'kylrix-vault',
-                exportedAt: new Date().toISOString(),
-                userId,
-                data: {
-                  vault:
-                    result.data.data?.vault ||
-                    (result.data as any).vault || {
-                      folders: result.data.folders || [],
-                      credentials: result.data.credentials || [],
-                      totpSecrets: result.data.totpSecrets || [],
-                    },
-                },
-              };
-            } catch {
-              finalData = await exportVaultOffline(userId);
+            // Local-first: UI list mirrors are SoT. Server porter often returns empty vault.
+            let finalData = await exportVaultOffline(userId);
+            const localVault = finalData.data.vault;
+            const localEmpty =
+              !(localVault.credentials?.length || localVault.totpSecrets?.length || localVault.folders?.length);
+
+            if (localEmpty) {
+              try {
+                const result = await porterExport(userId);
+                finalData = {
+                  version: 2,
+                  format: 'kylrix-vault',
+                  exportedAt: new Date().toISOString(),
+                  userId,
+                  data: {
+                    vault:
+                      result.data.data?.vault ||
+                      (result.data as any).vault || {
+                        folders: result.data.folders || [],
+                        credentials: result.data.credentials || [],
+                        totpSecrets: result.data.totpSecrets || [],
+                      },
+                  },
+                } as any;
+              } catch {
+                /* keep local empty snapshot */
+              }
             }
 
-            const vault = finalData?.data?.vault || {
-              folders: [],
-              credentials: [],
-              totpSecrets: [],
+            const vault = {
+              folders: [...(finalData?.data?.vault?.folders || [])],
+              credentials: [...(finalData?.data?.vault?.credentials || [])],
+              totpSecrets: [...(finalData?.data?.vault?.totpSecrets || [])],
             };
             if (dataKind === 'secrets') {
               vault.totpSecrets = [];
@@ -330,14 +337,26 @@ export default function EcosystemPorter({
               vault.credentials = [];
               vault.folders = [];
             }
-            finalData = {
+
+            if (dataKind === 'totp' && vault.totpSecrets.length === 0) {
+              setError('No smart codes found to export. Open the Codes tab once, then try again.');
+              setBusy(false);
+              return;
+            }
+            if (dataKind === 'secrets' && vault.credentials.length === 0) {
+              setError('No secrets found to export.');
+              setBusy(false);
+              return;
+            }
+
+            const payload = {
               ...finalData,
               format: 'kylrix-vault',
               exportKind: dataKind,
               data: { vault },
             };
 
-            const jsonString = JSON.stringify(finalData, null, 2);
+            const jsonString = JSON.stringify(payload, null, 2);
             const suffix =
               dataKind === 'secrets' ? 'secrets' : dataKind === 'totp' ? 'codes' : 'vault';
 
@@ -358,7 +377,13 @@ export default function EcosystemPorter({
             } else {
               downloadBlob(jsonString, `kylrix-${suffix}-backup.json`, 'application/json');
             }
-            toast.success('Export ready');
+            toast.success(
+              dataKind === 'totp'
+                ? `Exported ${vault.totpSecrets.length} smart codes`
+                : dataKind === 'secrets'
+                  ? `Exported ${vault.credentials.length} secrets`
+                  : 'Export ready',
+            );
             handleClose();
           } catch (e: any) {
             setError(e?.message || 'Export failed');
