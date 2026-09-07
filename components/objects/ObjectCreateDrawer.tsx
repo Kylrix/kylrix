@@ -226,6 +226,7 @@ export function ObjectCreateDrawer({
 
             {kind === 'goal' ? (
               <CreateGoalComposer
+                initialContent={initContent}
                 onGoalCreated={onGoalC}
                 onRegisterClose={(close) => {
                   composerCloseRef.current = close;
@@ -238,6 +239,7 @@ export function ObjectCreateDrawer({
 
             {kind === 'event' ? (
               <CreateEventComposer
+                initialData={initContent}
                 onEventCreated={onEventC}
                 onLiveEvent={onLiveE}
                 onCommitEvent={onCommitE}
@@ -326,6 +328,7 @@ export function ObjectCreateDrawer({
 
               {kind === 'goal' ? (
                 <CreateGoalComposer
+                  initialContent={initialContent}
                   onGoalCreated={onGoalCreated}
                   onRegisterClose={(close) => {
                     composerCloseRef.current = close;
@@ -338,6 +341,7 @@ export function ObjectCreateDrawer({
 
               {kind === 'event' ? (
                 <CreateEventComposer
+                  initialData={initialContent}
                   onEventCreated={onEventCreated}
                   onLiveEvent={onLiveEvent}
                   onCommitEvent={onCommitEvent}

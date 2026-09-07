@@ -52,7 +52,7 @@ export function CreateEventComposer({
   onLiveEvent,
   onCommitEvent,
   onCancel: _onCancel,
-  initialData: _initialData,
+  initialData,
 }: Props) {
   const { user } = useAuth();
   const { pushLiveEvent } = useEvents();
@@ -64,9 +64,9 @@ export function CreateEventComposer({
   const cacheKey = 'f_events_list';
 
   const [isDateDrawerOpen, setIsDateDrawerOpen] = useState(false);
-  const [content, setContent] = useState('');
-  const [title, setTitle] = useState('');
-  const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
+  const [content, setContent] = useState(() => String(initialData?.content || initialData?.description || ''));
+  const [title, setTitle] = useState(() => String(initialData?.title || ''));
+  const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(() => Boolean(initialData?.title));
   const [startTime, setStartTime] = useState(() => toLocalInputValue(new Date()));
   const [endTime, setEndTime] = useState(() => toLocalInputValue(addHours(new Date(), 1)));
   const [location, setLocation] = useState('');

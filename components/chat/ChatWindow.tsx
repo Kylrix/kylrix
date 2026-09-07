@@ -42,9 +42,19 @@ import {
     Zap,
     EyeOff,
     Eye,
+    Lightbulb,
+    Target,
+    Calendar,
 } from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
+import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
+import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
+import {
+    messageTitleFromContent,
+    parseSecretPrefillFromMessage,
+    type ParsedSecretPrefill,
+} from '@/lib/chat/message-to-objects';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import SudoModal from '../overlays/SudoModal';
@@ -180,6 +190,12 @@ export const ChatWindow = ({
     const [messageAnchorEl, setMessageAnchorEl] = useState<{ el: HTMLElement, msg: ChatMessage } | null>(null);
     /** Session-only UI blur for screenshots — never persisted */
     const [blurredMessageIds, setBlurredMessageIds] = useState<Set<string>>(() => new Set());
+    const [createFromMessage, setCreateFromMessage] = useState<{
+        kind: 'note' | 'goal' | 'event';
+        title: string;
+        content: string;
+    } | null>(null);
+    const [secretFromMessage, setSecretFromMessage] = useState<ParsedSecretPrefill | null>(null);
     const [partnerProfile, setPartnerProfile] = useState<any | null>(null);
     const [partnerVerification, setPartnerVerification] = useState(() => getVerificationState(null));
     const [conversationReadAt, setConversationReadAt] = useState(0);
@@ -188,6 +204,7 @@ export const ChatWindow = ({
     const [reactionPopoverAnchorEl, setReactionPopoverAnchorEl] = useState<HTMLElement | null>(null);
     const [reactionPopoverMessageId, setReactionPopoverMessageId] = useState<string | null>(null);
     const initialLoadRef = useRef<string | null>(null);
+    const messageLongPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { openFileDrawer } = useUnifiedFileDrawer();
     const { open: openUnifiedDrawer } = useUnifiedDrawer();
     const { openSidebar, closeSidebar } = useDynamicSidebar();
@@ -1313,6 +1330,22 @@ export const ChatWindow = ({
         setMessageAnchorEl({ el: e.currentTarget as HTMLElement, msg });
     };
 
+    const clearMessageLongPress = () => {
+        if (messageLongPressRef.current) {
+            clearTimeout(messageLongPressRef.current);
+            messageLongPressRef.current = null;
+        }
+    };
+
+    const handleMessageTouchStart = (e: React.TouchEvent, msg: ChatMessage) => {
+        clearMessageLongPress();
+        const el = e.currentTarget as HTMLElement;
+        messageLongPressRef.current = setTimeout(() => {
+            messageLongPressRef.current = null;
+            setMessageAnchorEl({ el, msg });
+        }, 480);
+    };
+
     const handleReply = (msg: ChatMessage) => {
         setReplyingTo(msg);
         setMessageAnchorEl(null);
@@ -1325,6 +1358,23 @@ export const ChatWindow = ({
         navigator.clipboard.writeText(content);
         toast.success("Copied to clipboard");
         setMessageAnchorEl(null);
+    };
+
+    const openCreateAsFromMessage = (
+        kind: 'note' | 'goal' | 'event' | 'secret',
+        msg: ChatMessage,
+    ) => {
+        const content = String(msg.content || '').trim();
+        setMessageAnchorEl(null);
+        if (kind === 'secret') {
+            setSecretFromMessage(parseSecretPrefillFromMessage(content));
+            return;
+        }
+        setCreateFromMessage({
+            kind,
+            title: messageTitleFromContent(content),
+            content,
+        });
     };
 
     const handleReact = async (emoji: string) => {
@@ -2076,6 +2126,10 @@ export const ChatWindow = ({
                                                 role="button"
                                                 tabIndex={0}
                                                 onContextMenu={(e: React.MouseEvent) => handleMessageContextMenu(e, msg)}
+                                                onTouchStart={(e: React.TouchEvent) => handleMessageTouchStart(e, msg)}
+                                                onTouchEnd={clearMessageLongPress}
+                                                onTouchMove={clearMessageLongPress}
+                                                onTouchCancel={clearMessageLongPress}
                                                 className={`relative w-fit max-w-full rounded-[18px] px-3.5 py-2.5 text-left ${
                                                     isOutgoing
                                                         ? 'bg-[#161412] border border-white/[0.06] rounded-br-md'
@@ -2368,9 +2422,9 @@ export const ChatWindow = ({
                 }}
             />
 
-            {/* OpenBricks Message Actions Bottom Drawer */}
+            {/* OpenBricks 4.0 Message Actions */}
             <Drawer
-                anchor="bottom"
+                anchor={isMobile ? 'bottom' : 'right'}
                 open={Boolean(messageAnchorEl)}
                 onClose={() => setMessageAnchorEl(null)}
                 keepMounted={false}
@@ -2378,139 +2432,246 @@ export const ChatWindow = ({
                 sx={{ zIndex: 11000 }}
                 PaperProps={{
                     sx: {
-                        position: 'fixed !important',
-                        bottom: '0 !important',
-                        left: '0 !important',
-                        right: '0 !important',
-                        borderTopLeftRadius: '24px',
-                        borderTopRightRadius: '24px',
                         bgcolor: '#161412',
-                        borderTop: '1px solid #34322F',
                         backgroundImage: 'none',
-                        maxWidth: 600,
-                        width: '100%',
-                        mx: 'auto',
-                        p: 2.5,
-                        pb: 'max(24px, env(safe-area-inset-bottom))',
-                        pointerEvents: 'auto'
-                    }
+                        color: '#fff',
+                        pointerEvents: 'auto',
+                        boxSizing: 'border-box',
+                        overflowX: 'hidden',
+                        ...(isMobile
+                            ? {
+                                  position: 'fixed !important',
+                                  bottom: '0 !important',
+                                  left: '0 !important',
+                                  right: '0 !important',
+                                  height: '60dvh',
+                                  maxHeight: '60dvh',
+                                  width: '100%',
+                                  maxWidth: 720,
+                                  mx: 'auto',
+                                  borderTopLeftRadius: '24px',
+                                  borderTopRightRadius: '24px',
+                                  borderTop: '1px solid rgba(255,255,255,0.18)',
+                                  p: 0,
+                              }
+                            : {
+                                  width: { xs: '100%', md: 460 },
+                                  maxWidth: 520,
+                                  height: '100%',
+                                  borderLeft: '1px solid rgba(255,255,255,0.18)',
+                                  borderRadius: 0,
+                                  p: 0,
+                              }),
+                    },
                 }}
                 ModalProps={{
                     keepMounted: false,
-                    disableScrollLock: false
+                    disableScrollLock: false,
                 }}
             >
                 {messageAnchorEl?.msg && (
-                    <div className="flex flex-col gap-3.5 select-none font-satoshi">
-                        <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-1" aria-hidden />
-
-                        {/* Scrollable Quick Reactions Row */}
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                            {['👍', '❤️', '🔥', '⚡', '😂', '😮', '😢', '👏', '🎉', '🚀', '💯'].map((emoji) => (
-                                <button
-                                    key={emoji}
-                                    type="button"
-                                    onClick={() => handleReact(emoji)}
-                                    className="h-10 w-10 shrink-0 rounded-2xl bg-[#0A0908] border border-white/[0.06] hover:border-amber-400/40 hover:bg-white/5 flex items-center justify-center text-lg transition-all"
-                                >
-                                    {emoji}
-                                </button>
-                            ))}
+                    <div className="flex h-full min-h-0 flex-col font-satoshi select-none text-white">
+                        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/20 px-5 py-3.5">
+                            <div className="min-w-0 flex-1">
+                                <p className="m-0 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-white">
+                                    Message
+                                </p>
+                                <p className="m-0 mt-0.5 truncate text-[0.9rem] font-black text-white">
+                                    Actions
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setMessageAnchorEl(null)}
+                                aria-label="Close"
+                                title="Close"
+                                className="flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/25 bg-black text-white hover:border-white/50"
+                            >
+                                <X size={15} />
+                            </button>
                         </div>
 
-                        {/* Actions List */}
-                        <div className="space-y-1.5 pt-1">
-                            {/* Zap Message */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const msg = messageAnchorEl.msg;
-                                    setMessageAnchorEl(null);
-                                    openUnifiedDrawer('zap', {
-                                        targetId: msg.$id,
-                                        source: 'ecosystem',
-                                        targetKind: 'chat',
-                                        targetOwnerId: msg.senderId,
-                                        authorName: conversationDisplayName || 'Message Author',
-                                    });
-                                }}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-400/10 border border-amber-400/30 text-sm font-bold text-amber-300 hover:bg-amber-400/20 transition-all text-left cursor-pointer"
-                            >
-                                <Zap size={16} className="text-amber-400 fill-current" />
-                                <span>Zap Message (Send rix)</span>
-                            </button>
+                        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 py-4 pb-[max(20px,env(safe-area-inset-bottom))]">
+                            <div className="mb-4 rounded-2xl border border-white/20 bg-black p-3">
+                                <p className="mb-2.5 m-0 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-white">
+                                    React
+                                </p>
+                                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                                    {['👍', '❤️', '🔥', '⚡', '😂', '😮', '😢', '👏', '🎉', '🚀', '💯'].map((emoji) => (
+                                        <button
+                                            key={emoji}
+                                            type="button"
+                                            onClick={() => handleReact(emoji)}
+                                            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-white/25 bg-[#161412] text-lg transition-colors hover:border-[#F59E0B]"
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
-                            <button
-                                type="button"
-                                onClick={() => handleReply(messageAnchorEl.msg)}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A0908] border border-white/[0.04] text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
-                            >
-                                <Reply size={16} className="text-white/60" />
-                                <span>Reply</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => handleCopy(messageAnchorEl.msg.content as string)}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A0908] border border-white/[0.04] text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
-                            >
-                                <Copy size={16} className="text-white/60" />
-                                <span>Copy Text</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const id = String(messageAnchorEl.msg.$id || '');
-                                    if (!id) return;
-                                    setBlurredMessageIds((prev) => {
-                                        const next = new Set(prev);
-                                        if (next.has(id)) next.delete(id);
-                                        else next.add(id);
-                                        return next;
-                                    });
-                                    setMessageAnchorEl(null);
-                                }}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A0908] border border-white/[0.04] text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
-                            >
-                                {blurredMessageIds.has(String(messageAnchorEl.msg.$id)) ? (
-                                    <Eye size={16} className="text-white/60" />
-                                ) : (
-                                    <EyeOff size={16} className="text-white/60" />
-                                )}
-                                <span>
-                                    {blurredMessageIds.has(String(messageAnchorEl.msg.$id))
-                                        ? 'Show message'
-                                        : 'Blur for screenshot'}
-                                </span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={handleTogglePinMessage}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A0908] border border-white/[0.04] text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
-                            >
-                                <Pin size={16} className={messageAnchorEl.msg.isPinned ? 'text-[#F59E0B]' : 'text-white/60'} />
-                                <span>{messageAnchorEl.msg.isPinned ? 'Unpin message' : 'Pin message'}</span>
-                            </button>
-
-                            {messageAnchorEl.msg.senderId === user?.$id && (
+                            <div className="mb-4 grid grid-cols-2 gap-1.5">
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        _handleDeleteMessage(messageAnchorEl.msg.$id, true);
+                                        const msg = messageAnchorEl.msg;
+                                        setMessageAnchorEl(null);
+                                        openUnifiedDrawer('zap', {
+                                            targetId: msg.$id,
+                                            source: 'ecosystem',
+                                            targetKind: 'chat',
+                                            targetOwnerId: msg.senderId,
+                                            authorName: conversationDisplayName || 'Message Author',
+                                        });
+                                    }}
+                                    className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#F59E0B]/50 bg-black px-2 py-3 text-sm font-bold text-white hover:border-[#F59E0B]"
+                                >
+                                    <Zap size={16} className="shrink-0 text-[#F59E0B]" />
+                                    <span className="truncate">Zap</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleReply(messageAnchorEl.msg)}
+                                    className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/20 bg-black px-2 py-3 text-sm font-bold text-white hover:border-white/50"
+                                >
+                                    <Reply size={16} className="shrink-0 text-white" />
+                                    <span className="truncate">Reply</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleCopy(messageAnchorEl.msg.content as string)}
+                                    className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/20 bg-black px-2 py-3 text-sm font-bold text-white hover:border-white/50"
+                                >
+                                    <Copy size={16} className="shrink-0 text-white" />
+                                    <span className="truncate">Copy</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const id = String(messageAnchorEl.msg.$id || '');
+                                        if (!id) return;
+                                        setBlurredMessageIds((prev) => {
+                                            const next = new Set(prev);
+                                            if (next.has(id)) next.delete(id);
+                                            else next.add(id);
+                                            return next;
+                                        });
                                         setMessageAnchorEl(null);
                                     }}
-                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm font-bold text-red-400 hover:bg-red-500/20 transition-all text-left cursor-pointer"
+                                    className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/20 bg-black px-2 py-3 text-sm font-bold text-white hover:border-white/50"
                                 >
-                                    <Trash2 size={16} className="text-red-400" />
-                                    <span>Delete</span>
+                                    {blurredMessageIds.has(String(messageAnchorEl.msg.$id)) ? (
+                                        <Eye size={16} className="shrink-0 text-white" />
+                                    ) : (
+                                        <EyeOff size={16} className="shrink-0 text-white" />
+                                    )}
+                                    <span className="truncate">
+                                        {blurredMessageIds.has(String(messageAnchorEl.msg.$id))
+                                            ? 'Show'
+                                            : 'Blur'}
+                                    </span>
                                 </button>
-                            )}
+                                <button
+                                    type="button"
+                                    onClick={handleTogglePinMessage}
+                                    className={`flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border bg-black px-2 py-3 text-sm font-bold text-white ${
+                                        messageAnchorEl.msg.isPinned
+                                            ? 'border-[#F59E0B]'
+                                            : 'border-white/20 hover:border-white/50'
+                                    }`}
+                                >
+                                    <Pin
+                                        size={16}
+                                        className={`shrink-0 ${messageAnchorEl.msg.isPinned ? 'text-[#F59E0B]' : 'text-white'}`}
+                                    />
+                                    <span className="truncate">
+                                        {messageAnchorEl.msg.isPinned ? 'Unpin' : 'Pin'}
+                                    </span>
+                                </button>
+                                {messageAnchorEl.msg.senderId === user?.$id ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            _handleDeleteMessage(messageAnchorEl.msg.$id, true);
+                                            setMessageAnchorEl(null);
+                                        }}
+                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-black px-2 py-3 text-sm font-bold text-white hover:border-red-400"
+                                    >
+                                        <Trash2 size={16} className="shrink-0 text-red-400" />
+                                        <span className="truncate">Delete</span>
+                                    </button>
+                                ) : (
+                                    <div aria-hidden className="min-h-[46px]" />
+                                )}
+                            </div>
+
+                            <div className="rounded-2xl border border-white/20 bg-black p-3">
+                                <p className="mb-2.5 m-0 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-white">
+                                    Create as
+                                </p>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => openCreateAsFromMessage('note', messageAnchorEl.msg)}
+                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#EC4899]/45 bg-[#161412] px-2 py-3 text-sm font-bold text-white hover:border-[#EC4899]"
+                                    >
+                                        <Lightbulb size={16} className="shrink-0 text-[#EC4899]" />
+                                        <span className="truncate">Idea</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => openCreateAsFromMessage('goal', messageAnchorEl.msg)}
+                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#A855F7]/45 bg-[#161412] px-2 py-3 text-sm font-bold text-white hover:border-[#A855F7]"
+                                    >
+                                        <Target size={16} className="shrink-0 text-[#A855F7]" />
+                                        <span className="truncate">Goal</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => openCreateAsFromMessage('event', messageAnchorEl.msg)}
+                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#6366F1]/45 bg-[#161412] px-2 py-3 text-sm font-bold text-white hover:border-[#6366F1]"
+                                    >
+                                        <Calendar size={16} className="shrink-0 text-[#6366F1]" />
+                                        <span className="truncate">Event</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => openCreateAsFromMessage('secret', messageAnchorEl.msg)}
+                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#10B981]/45 bg-[#161412] px-2 py-3 text-sm font-bold text-white hover:border-[#10B981]"
+                                    >
+                                        <Key size={16} className="shrink-0 text-[#10B981]" />
+                                        <span className="truncate">Secret</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
             </Drawer>
+
+            {createFromMessage ? (
+                <ObjectCreateDrawer
+                    open
+                    kind={createFromMessage.kind}
+                    initialContent={{
+                        title: createFromMessage.title,
+                        content: createFromMessage.content,
+                    }}
+                    onClose={() => setCreateFromMessage(null)}
+                    onNoteCreated={() => setCreateFromMessage(null)}
+                    onGoalCreated={() => setCreateFromMessage(null)}
+                    onEventCreated={() => setCreateFromMessage(null)}
+                />
+            ) : null}
+
+            {secretFromMessage ? (
+                <CredentialDialog
+                    open
+                    prefill={secretFromMessage}
+                    onClose={() => setSecretFromMessage(null)}
+                    onSaved={() => setSecretFromMessage(null)}
+                />
+            ) : null}
         </Box>
     );
 };

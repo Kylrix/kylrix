@@ -69,7 +69,7 @@ export default function CredentialDialog({
   onClose: () => void;
   initial?: Credentials | null;
   onSaved: (saved?: Credentials) => void;
-  prefill?: { name?: string; url?: string; username?: string };
+  prefill?: { name?: string; url?: string; username?: string; password?: string; notes?: string };
   defaultType?: string;
 }) {
   const [isMobile, setIsMobile] = useState(false);
@@ -143,9 +143,9 @@ export default function CredentialDialog({
         setForm({
           name: prefill?.name || '',
           username: prefill?.username || '',
-          password: '',
+          password: prefill?.password || '',
           url: prefill?.url || '',
-          notes: '',
+          notes: prefill?.notes || '',
           tags: '',
           cardNumber: '',
           cardholderName: '',
@@ -171,7 +171,10 @@ export default function CredentialDialog({
       }
       const draft = await readSealedVaultDraft(user.$id, 'secret');
       if (cancelled) return;
-      if (!draft) {
+      const hasPrefill = Boolean(
+        prefill?.name || prefill?.username || prefill?.password || prefill?.url || prefill?.notes,
+      );
+      if (!draft || hasPrefill) {
         empty();
         setDraftReady(true);
         return;
@@ -203,7 +206,7 @@ export default function CredentialDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, initial, user?.$id, prefill?.name, prefill?.username, prefill?.url]);
+  }, [open, initial, user?.$id, prefill?.name, prefill?.username, prefill?.url, prefill?.password, prefill?.notes]);
 
   // Create-only: debounce seal → LocalEngine draft key (never plaintext).
   useEffect(() => {
