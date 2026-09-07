@@ -85,7 +85,6 @@ export default function CredentialDialog({
   const handleClose = () => {
     onClose();
     setIsExpanded(false);
-    setIsHydrated(false);
     setIsNameManuallyEdited(false);
   };
 
@@ -112,7 +111,6 @@ export default function CredentialDialog({
     cardPIN: '',
     cardType: '',
   });
-  const [isHydrated, setIsHydrated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
@@ -127,15 +125,6 @@ export default function CredentialDialog({
       localStorage.removeItem('kylrix:draft:secret');
     } catch {}
   }, []);
-
-  useEffect(() => {
-    if (!open) {
-      setIsHydrated(false);
-      return;
-    }
-    // Create flow: start clean in RAM only (no disk hydrate of secrets).
-    if (!initial) setIsHydrated(true);
-  }, [open, initial]);
 
   useEffect(() => {
     if (initial) {
@@ -428,9 +417,6 @@ export default function CredentialDialog({
         saved = await updateCredential(initial.$id, credentialData);
       } else {
         saved = await createCredential(credentialData);
-      }
-      if (!initial) {
-        // no draft to clear — secrets never hit localStorage
       }
       onSaved();
       if (saved && (saved.$id || saved.id)) {
