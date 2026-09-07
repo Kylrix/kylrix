@@ -131,7 +131,6 @@ export function totpFingerprints(t: Record<string, unknown>): string[] {
   if (secret && issuer) keys.add(`isk:${issuer}|${secret}`);
   if (secret && account) keys.add(`ask:${account}|${secret}`);
   if (issuer && account && secret) keys.add(`ias:${issuer}|${account}|${secret}`);
-  if (issuer && account) keys.add(`ia:${issuer}|${account}`);
   return Array.from(keys);
 }
 
