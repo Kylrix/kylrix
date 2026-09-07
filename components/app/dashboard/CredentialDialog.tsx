@@ -359,8 +359,11 @@ export default function CredentialDialog({
 
   const syncNameFromUsername = useCallback(
     (username: string) => {
-      if (isNameManuallyEdited) return;
-      setForm((f) => ({ ...f, username, name: username.trim() }));
+      setForm((f) => ({
+        ...f,
+        username,
+        name: isNameManuallyEdited ? f.name : username.trim(),
+      }));
     },
     [isNameManuallyEdited],
   );
@@ -620,6 +623,25 @@ export default function CredentialDialog({
 
       <div className="px-5 pb-5 flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 font-satoshi">
         {currentType === 'login' && (
+          <div className="flex flex-col gap-2 w-full">
+            <label className={labelClass}>
+              Title <span className="text-[#ef4444]">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder={isEnvMode ? 'e.g. Production API' : 'e.g. GitHub, Gmail'}
+              value={form.name}
+              onChange={(e) => {
+                setIsNameManuallyEdited(true);
+                setForm({ ...form, name: e.target.value });
+              }}
+              required
+              className={inputClass}
+            />
+          </div>
+        )}
+
+        {currentType === 'login' && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-white/20 bg-black px-4 py-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <FileCode2 className="w-4 h-4 text-white shrink-0" />
@@ -659,25 +681,6 @@ export default function CredentialDialog({
                 style={{ height: 22, width: 22 }}
               />
             </button>
-          </div>
-        )}
-
-        {isEnvMode && currentType === 'login' && (
-          <div className="flex flex-col gap-2 w-full">
-            <label className={labelClass}>
-              Title <span className="text-[#ef4444]">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Production API"
-              value={form.name}
-              onChange={(e) => {
-                setIsNameManuallyEdited(true);
-                setForm({ ...form, name: e.target.value });
-              }}
-              required
-              className={inputClass}
-            />
           </div>
         )}
 
@@ -763,9 +766,7 @@ export default function CredentialDialog({
         {showLoginFields && (
           <>
             <div className="flex flex-col gap-2 w-full">
-              <label className={labelClass}>
-                Username / Email <span className="text-[#ef4444]">*</span>
-              </label>
+              <label className={labelClass}>Username / Email</label>
               <div className="relative w-full">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white pointer-events-none" />
                 <input
@@ -773,16 +774,13 @@ export default function CredentialDialog({
                   placeholder="you@example.com"
                   value={form.username}
                   onChange={(e) => syncNameFromUsername(e.target.value)}
-                  required
                   className={`${inputClass} pl-11`}
                 />
               </div>
             </div>
 
             <div className="flex flex-col gap-2 w-full">
-              <label className={labelClass}>
-                Secret <span className="text-[#ef4444]">*</span>
-              </label>
+              <label className={labelClass}>Secret</label>
               <div className="flex gap-2 items-center">
                 <div className="relative flex-1">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white pointer-events-none" />
@@ -791,7 +789,6 @@ export default function CredentialDialog({
                     placeholder="Secret"
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    required
                     className={`${inputClass} pl-11 pr-11`}
                   />
                   <button
