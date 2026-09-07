@@ -523,7 +523,7 @@ export function ShareContextDrawer() {
         }
       },
     },
-  }), [copied, copiedText, resourceType, resolvedUrl, user?.$id, close, handleCopyText, handleDownload]);
+  }), [copied, copiedText, resourceType, resolvedUrl, user?.$id, close, handleCopyText, handleDownload, handleCopyLink]);
 
   const orderedActions = useMemo(() => {
     const defaultKeys = ['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'qr', 'email', 'native'];
