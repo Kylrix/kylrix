@@ -41,7 +41,7 @@ function looksLikeMarkdown(text: string): boolean {
 
 export function ChatMarkdownContent({
   content,
-  linkPreviewsEnabled = true,
+  linkPreviewsEnabled: _linkPreviewsEnabled = true,
 }: {
   content: string;
   linkPreviewsEnabled?: boolean;

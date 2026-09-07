@@ -543,9 +543,9 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
         </div>
       </div>
 
-      {/* Content */}
-      {preview ? (
-        <EcosystemRichText text={preview} proseClassName="text-xs sm:text-sm" />
+      {/* Content — kylrix URLs become engineered object cards */}
+      {bodyText ? (
+        <EcosystemRichText text={bodyText} proseClassName="text-xs sm:text-sm" />
       ) : null}
 
       {/* Media Attachments */}
