@@ -975,8 +975,16 @@ export const ChatWindow = ({
             void loadMessages();
             void loadConversation();
         }
-        let unsub: { close?: () => Promise<void>; unsubscribe?: () => void } | (() => void) | null = null;
+        let unsub: any = null;
         let closed = false;
+        const closeSub = async (handle: any) => {
+            if (!handle) return;
+            try {
+                if (typeof handle.close === 'function') await handle.close();
+                else if (typeof handle.unsubscribe === 'function') handle.unsubscribe();
+                else if (typeof handle === 'function') handle();
+            } catch { /* ignore */ }
+        };
         const initRealtime = async () => {
             const sub = await realtime.subscribe(
                 [
@@ -1065,27 +1073,17 @@ export const ChatWindow = ({
                 }
             );
             if (closed) {
-                try {
-                    if (typeof sub === 'function') (sub as any)();
-                    else if ((sub as any)?.close) await (sub as any).close();
-                    else if ((sub as any)?.unsubscribe) (sub as any).unsubscribe();
-                } catch { /* ignore */ }
+                await closeSub(sub);
                 return;
             }
-            unsub = sub as any;
+            unsub = sub;
         };
 
         void initRealtime();
 
         return () => {
             closed = true;
-            void (async () => {
-                try {
-                    if (typeof unsub === 'function') unsub();
-                    else if (unsub?.close) await unsub.close();
-                    else if (unsub?.unsubscribe) unsub.unsubscribe();
-                } catch { /* ignore */ }
-            })();
+            void closeSub(unsub);
         };
     }, [conversationId, user?.$id, startTransition, applyDisplayName, loadReactions]);
 
@@ -1111,8 +1109,16 @@ export const ChatWindow = ({
     useEffect(() => {
         if (!conversationId || !user?.$id) return;
 
-        let unsub: { close?: () => Promise<void>; unsubscribe?: () => void } | (() => void) | null = null;
+        let unsub: any = null;
         let closed = false;
+        const closeSub = async (handle: any) => {
+            if (!handle) return;
+            try {
+                if (typeof handle.close === 'function') await handle.close();
+                else if (typeof handle.unsubscribe === 'function') handle.unsubscribe();
+                else if (typeof handle === 'function') handle();
+            } catch { /* ignore */ }
+        };
         const initRealtime = async () => {
             const sub = await realtime.subscribe(
                 [
@@ -1153,27 +1159,17 @@ export const ChatWindow = ({
                 }
             );
             if (closed) {
-                try {
-                    if (typeof sub === 'function') (sub as any)();
-                    else if ((sub as any)?.close) await (sub as any).close();
-                    else if ((sub as any)?.unsubscribe) (sub as any).unsubscribe();
-                } catch { /* ignore */ }
+                await closeSub(sub);
                 return;
             }
-            unsub = sub as any;
+            unsub = sub;
         };
 
         void initRealtime();
 
         return () => {
             closed = true;
-            void (async () => {
-                try {
-                    if (typeof unsub === 'function') unsub();
-                    else if (unsub?.close) await unsub.close();
-                    else if (unsub?.unsubscribe) unsub.unsubscribe();
-                } catch { /* ignore */ }
-            })();
+            void closeSub(unsub);
         };
     }, [conversationId, user?.$id, startTransition]);
 

@@ -254,7 +254,18 @@ export function HangoutsDrawer({
     ];
 
     let closed = false;
-    let sub: { close?: () => Promise<void>; unsubscribe?: () => void } | (() => void) | null = null;
+    let sub: any = null;
+
+    const closeSub = async (handle: any) => {
+      if (!handle) return;
+      try {
+        if (typeof handle.close === 'function') await handle.close();
+        else if (typeof handle.unsubscribe === 'function') handle.unsubscribe();
+        else if (typeof handle === 'function') handle();
+      } catch {
+        /* ignore */
+      }
+    };
 
     void realtime.subscribe(channels, (event: any) => {
       const payload = event.payload;
@@ -333,29 +344,15 @@ export function HangoutsDrawer({
       }
     }).then((s) => {
       if (closed) {
-        void (async () => {
-          try {
-            if (typeof s === 'function') s();
-            else if (s?.close) await s.close();
-            else if (s?.unsubscribe) s.unsubscribe();
-          } catch { /* ignore */ }
-        })();
+        void closeSub(s);
         return;
       }
-      sub = s as any;
+      sub = s;
     });
 
     return () => {
       closed = true;
-      void (async () => {
-        try {
-          if (typeof sub === 'function') sub();
-          else if (sub?.close) await sub.close();
-          else if (sub?.unsubscribe) sub.unsubscribe();
-        } catch (e) {
-          console.warn('[HangoutsDrawer] Realtime unsubscribe error:', e);
-        }
-      })();
+      void closeSub(sub);
     };
   }, [user?.$id, refreshChats]);
 

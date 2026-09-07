@@ -231,12 +231,12 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         let unsubChat: any = null;
         let unsubActivity: any = null;
 
-        const closeSub = async (sub: any) => {
+        const closeSub = async (handle: any) => {
             try {
-                if (!sub) return;
-                if (typeof sub === 'function') sub();
-                else if (sub.close) await sub.close();
-                else if (sub.unsubscribe) sub.unsubscribe();
+                if (!handle) return;
+                if (typeof handle.close === 'function') await handle.close();
+                else if (typeof handle.unsubscribe === 'function') handle.unsubscribe();
+                else if (typeof handle === 'function') handle();
             } catch { /* ignore */ }
         };
 

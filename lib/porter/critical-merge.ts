@@ -140,12 +140,10 @@ export function classifyFieldRelation(
   let onlyIn = 0;
   let onlyEx = 0;
   let conflict = 0;
-  let shared = 0;
 
   for (const [k, v] of incoming) {
     if (!existing.has(k)) onlyIn++;
     else if (existing.get(k) !== v) conflict++;
-    else shared++;
   }
   for (const [k] of existing) {
     if (!incoming.has(k)) onlyEx++;
