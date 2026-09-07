@@ -234,9 +234,10 @@ export default function CredentialDialog({
     setIsEnvMode(true);
     setEnvHint(`${parsed.length} variable${parsed.length === 1 ? '' : 's'} ready`);
     setError(null);
+    const autoTitle = parsed[0]?.label?.trim() || 'Env';
     setForm((f) => {
       if (isNameManuallyEdited && f.name.trim()) return f;
-      return { ...f, name: parsed[0]?.label || 'Env' };
+      return { ...f, name: autoTitle };
     });
   }, [isNameManuallyEdited]);
 
@@ -362,7 +363,7 @@ export default function CredentialDialog({
       lastAccessedAt: initial?.lastAccessedAt || null,
       passwordChangedAt: initial?.passwordChangedAt || null,
       password: null,
-      isEnv: isEnvMode,
+      isEnv: Boolean(isEnvMode),
       createdAt:
         initial && initial.createdAt ? initial.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -374,10 +375,13 @@ export default function CredentialDialog({
       if (measureEnvFieldsJson(usable) > ENV_CUSTOM_FIELDS_SOFT_MAX_CHARS) {
         throw new Error('Environment bundle is too large. Split into smaller secrets.');
       }
+      if (!resolveSecretName()) throw new Error('Title is required.');
+      credentialData.name = resolveSecretName();
       credentialData.customFields = JSON.stringify(usable);
       credentialData.password = null;
       credentialData.username = null;
       credentialData.url = null;
+      credentialData.isEnv = true;
     } else if (type === 'login') {
       credentialData.username = form.username.trim();
       credentialData.password = form.password.trim();
@@ -545,7 +549,14 @@ export default function CredentialDialog({
               role="switch"
               aria-checked={isEnvMode}
               onClick={() => {
-                setIsEnvMode((v) => !v);
+                setIsEnvMode((v) => {
+                  const next = !v;
+                  if (next && !isNameManuallyEdited) {
+                    const first = customFields.find((f) => f.label.trim())?.label.trim();
+                    if (first) setForm((f) => ({ ...f, name: first }));
+                  }
+                  return next;
+                });
                 setEnvHint(null);
                 setError(null);
               }}
@@ -560,6 +571,25 @@ export default function CredentialDialog({
                 style={{ height: 22, width: 22 }}
               />
             </button>
+          </div>
+        )}
+
+        {isEnvMode && currentType === 'login' && (
+          <div className="flex flex-col gap-2 w-full">
+            <label className={labelClass}>
+              Title <span className="text-[#ef4444]">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Production API"
+              value={form.name}
+              onChange={(e) => {
+                setIsNameManuallyEdited(true);
+                setForm({ ...form, name: e.target.value });
+              }}
+              required
+              className={inputClass}
+            />
           </div>
         )}
 

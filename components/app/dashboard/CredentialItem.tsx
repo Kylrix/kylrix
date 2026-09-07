@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Credentials } from '@/lib/appwrite/types';
-import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Share2, ShieldCheck } from 'lucide-react';
+import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Share2, ShieldCheck, FileCode2 } from 'lucide-react';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { useSelection } from '@/context/SelectionContext';
@@ -354,18 +354,38 @@ export default function CredentialItem({
           {pinned && <Pin className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 fill-[#F59E0B]" />}
           <span className="font-black text-white leading-tight font-clash text-base truncate flex-1 min-w-0">
             {looksEncrypted((displayCredential as any).name)
-              ? 'Encrypted Secret'
+              ? (credential.isEnv ? 'Encrypted Env' : 'Encrypted Secret')
               : (displayCredential as any).name}
           </span>
+          {Boolean(credential.isEnv) && (
+            <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-black border border-[#10B981]/50 text-[0.62rem] font-bold text-white uppercase tracking-wider">
+              <FileCode2 className="w-2.5 h-2.5 text-[#10B981]" />
+              Env
+            </span>
+          )}
           <SyncStatusDot resourceId={credential.$id} kind="secret" row={displayCredential as unknown as Record<string, unknown>} />
         </div>
         <span 
           className="text-white/70 font-medium text-[0.85rem] leading-[1.35] font-satoshi truncate transition-[filter] duration-300"
           style={{ filter: isBlurEnabled ? 'blur(4.5px)' : 'none' }}
         >
-          {looksEncrypted((displayCredential as any).username)
-            ? '••••••••'
-            : (displayCredential as any).username}
+          {credential.isEnv
+            ? (() => {
+                try {
+                  const fields = displayCredential.customFields
+                    ? JSON.parse(String(displayCredential.customFields))
+                    : null;
+                  const n = Array.isArray(fields) ? fields.length : fields && typeof fields === 'object' ? Object.keys(fields).length : 0;
+                  return n > 0 ? `${n} variable${n === 1 ? '' : 's'}` : 'Environment bundle';
+                } catch {
+                  return looksEncrypted(String(displayCredential.customFields || ''))
+                    ? 'Environment bundle'
+                    : 'Environment bundle';
+                }
+              })()
+            : looksEncrypted((displayCredential as any).username)
+              ? '••••••••'
+              : (displayCredential as any).username}
         </span>
         {(credential as any).sharedFrom && (
           <div className="mt-1 h-5 text-[0.62rem] font-black bg-[#10B981]/10 text-[#10B981] rounded-[6px] px-2 py-0.5 uppercase tracking-[0.02em] inline-flex items-center w-fit">
