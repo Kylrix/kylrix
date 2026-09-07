@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
   ArrowUpDown,
@@ -22,7 +23,6 @@ import {
   discernImportPayload,
   exportVaultPlaintext,
   loadExistingVaultForDedupe,
-  loadPorterDraft,
   type PorterDiscernResult,
 } from '@/lib/porter';
 import { runOfflinePorterImport } from '@/lib/porter/offline';
@@ -36,6 +36,7 @@ import { porterExport } from '@/lib/data-porter';
 type PorterDirection = 'import' | 'export';
 type PorterDataKind = 'secrets' | 'totp' | 'mixed' | 'auto';
 type PorterView = 'home' | 'pick-kind' | 'import' | 'preview' | 'export-format';
+type ConfirmKind = 'import' | 'export' | null;
 
 export type EcosystemPorterProps = {
   onClose?: () => void;
@@ -138,6 +139,7 @@ export default function EcosystemPorter({
   const { user } = useAppwriteVault();
   const { requestSudo } = useSudo();
   const fileRef = useRef<HTMLInputElement>(null);
+  const pasteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [view, setView] = useState<PorterView>('home');
   const [direction, setDirection] = useState<PorterDirection>('import');
@@ -153,39 +155,21 @@ export default function EcosystemPorter({
   const [exportPassword, setExportPassword] = useState('');
   const [lockWithPasskey, setLockWithPasskey] = useState(true);
   const [progressMsg, setProgressMsg] = useState<string | null>(null);
+  const [confirmKind, setConfirmKind] = useState<ConfirmKind>(null);
+  const [portalReady, setPortalReady] = useState(false);
 
   const userId = user?.$id || '';
 
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
   const visibleKinds = useMemo(() => {
-    const vaultSurface = surface === 'vault-secrets' || surface === 'vault-totp';
     return KIND_OPTIONS.filter((opt) => {
       if (opt.importOnly && direction === 'export') return false;
-      // Vault always offers secrets + totp + mixed (+ auto on import)
-      if (vaultSurface) return true;
       return true;
     });
-  }, [direction, surface]);
-
-  useEffect(() => {
-    if (!userId) return;
-    void (async () => {
-      const draft = await loadPorterDraft(userId);
-      if (draft?.result && (draft.result.credentials.length || draft.result.totpSecrets.length)) {
-        let result = filterDiscerned(draft.result, dataKind);
-        try {
-          const existing = await loadExistingVaultForDedupe(userId);
-          result = annotatePorterDiscernResult(result, existing);
-        } catch {
-          /* preview without live dedupe */
-        }
-        setDiscerned(result);
-        setDirection('import');
-        setView('preview');
-      }
-    })();
-    // Only hydrate draft once on mount / user change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [direction]);
 
   const handleClose = useCallback(() => {
     onClose?.();
@@ -193,6 +177,7 @@ export default function EcosystemPorter({
 
   const goBack = () => {
     setError(null);
+    setConfirmKind(null);
     if (view === 'home') {
       handleClose();
       return;
@@ -218,13 +203,14 @@ export default function EcosystemPorter({
     setDiscerned(null);
     setRawText('');
     setFileName(null);
+    setConfirmKind(null);
     if (dir === 'export' && dataKind === 'auto') {
       setDataKind(surface === 'vault-totp' ? 'totp' : surface === 'vault-secrets' ? 'secrets' : 'mixed');
     }
     setView('pick-kind');
   };
 
-  const confirmKind = (kind: PorterDataKind) => {
+  const confirmKindPick = (kind: PorterDataKind) => {
     setDataKind(kind);
     setError(null);
     if (direction === 'import') setView('import');
@@ -233,10 +219,12 @@ export default function EcosystemPorter({
 
   const runDiscern = useCallback(
     async (text: string, name?: string | null) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
       setError(null);
       setBusy(true);
       try {
-        const raw = discernImportPayload(text, userId);
+        const raw = discernImportPayload(trimmed, userId);
         let result = filterDiscerned(raw, dataKind);
         if (userId) {
           const existing = await loadExistingVaultForDedupe(userId);
@@ -261,6 +249,22 @@ export default function EcosystemPorter({
     [userId, dataKind],
   );
 
+  const scheduleDiscernFromPaste = useCallback(
+    (text: string) => {
+      if (pasteTimer.current) clearTimeout(pasteTimer.current);
+      pasteTimer.current = setTimeout(() => {
+        void runDiscern(text);
+      }, 250);
+    },
+    [runDiscern],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (pasteTimer.current) clearTimeout(pasteTimer.current);
+    };
+  }, []);
+
   const onFile = async (file: File | null) => {
     if (!file) return;
     setBusy(true);
@@ -275,13 +279,14 @@ export default function EcosystemPorter({
     }
   };
 
-  const handleConfirmImport = () => {
+  const executeImport = () => {
     if (!discerned || !userId) return;
+    setConfirmKind(null);
     requestSudo({
       onSuccess: () => {
         void (async () => {
           setBusy(true);
-          setProgressMsg('Importing offline-first…');
+          setProgressMsg('Importing…');
           try {
             const result = await runOfflinePorterImport(discerned, userId, (msg, processed, total) =>
               setProgressMsg(total ? `${msg} (${processed}/${total})` : msg),
@@ -310,24 +315,26 @@ export default function EcosystemPorter({
     });
   };
 
-  const handleExport = () => {
+  const executeExport = () => {
     if (!userId) return;
+    setConfirmKind(null);
     requestSudo({
       onSuccess: () => {
         void (async () => {
           setBusy(true);
           setError(null);
           try {
-            // Always decrypt to plaintext before any download.
             let finalData = await exportVaultPlaintext(userId);
             const localVault = finalData.data.vault;
-            const localEmpty =
-              !(localVault.credentials?.length || localVault.totpSecrets?.length || localVault.folders?.length);
+            const localEmpty = !(
+              localVault.credentials?.length ||
+              localVault.totpSecrets?.length ||
+              localVault.folders?.length
+            );
 
             if (localEmpty) {
               try {
                 const result = await porterExport(userId);
-                // Server payload may still be ciphertext — only use as last resort ids, then decrypt via plaintext path already failed empty
                 const vault =
                   result.data.data?.vault ||
                   (result.data as any).vault || {
@@ -387,7 +394,6 @@ export default function EcosystemPorter({
                 setBusy(false);
                 return;
               }
-              // Optional passkey wrap (PRF) — password always works.
               const passkeyWrap = lockWithPasskey
                 ? await tryCreatePasskeyWrapKey().catch(() => null)
                 : null;
@@ -421,10 +427,15 @@ export default function EcosystemPorter({
 
   const counts = useMemo(() => {
     if (!discerned) return { secrets: 0, totp: 0, folders: 0, importable: 0, skipped: 0 };
-    const secretsNew = discerned.credentials.filter((c) => !c._status || c._status === 'new' || c._status === 'merged').length;
-    const totpNew = discerned.totpSecrets.filter((t) => !t._status || t._status === 'new' || t._status === 'merged').length;
+    const secretsNew = discerned.credentials.filter(
+      (c) => !c._status || c._status === 'new' || c._status === 'merged',
+    ).length;
+    const totpNew = discerned.totpSecrets.filter(
+      (t) => !t._status || t._status === 'new' || t._status === 'merged',
+    ).length;
     const skipped =
-      discerned.credentials.filter((c) => c._status === 'duplicate' || c._status === 'invalid').length +
+      discerned.credentials.filter((c) => c._status === 'duplicate' || c._status === 'invalid')
+        .length +
       discerned.totpSecrets.filter((t) => t._status === 'duplicate' || t._status === 'invalid').length;
     return {
       secrets: discerned.credentials.length,
@@ -438,6 +449,98 @@ export default function EcosystemPorter({
   const shellClass = embedded
     ? 'flex h-full min-h-0 w-full flex-col bg-[#161412] overflow-hidden'
     : 'flex h-[100dvh] max-h-[100dvh] w-full flex-col bg-[#161412] overflow-hidden';
+
+  const confirmDrawer =
+    portalReady &&
+    confirmKind &&
+    createPortal(
+      <div className="fixed inset-0 z-[9999999] flex flex-col justify-end sm:flex-row sm:justify-end pointer-events-auto">
+        <button
+          type="button"
+          className="absolute inset-0 bg-black/70 border-0 cursor-default"
+          aria-label="Dismiss"
+          onClick={() => setConfirmKind(null)}
+        />
+        <div
+          className="relative z-[9999999] w-full sm:w-[420px] sm:h-full max-h-[60dvh] sm:max-h-none bg-[#161412] border border-white/20 border-b-0 sm:border-b sm:border-r-0 sm:border-l rounded-t-[28px] sm:rounded-none sm:rounded-l-[28px] flex flex-col overflow-hidden shadow-2xl"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="shrink-0 px-5 py-4 border-b border-white/20 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white">
+                Confirm
+              </p>
+              <p className="text-base font-black text-white font-clash truncate">
+                {confirmKind === 'import' ? 'Import into vault' : 'Download backup'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setConfirmKind(null)}
+              className="p-2 rounded-xl bg-black border border-white/20 text-white"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-3 font-satoshi">
+            {confirmKind === 'import' ? (
+              <>
+                <p className="text-sm font-medium text-white">
+                  Add {counts.importable} new item{counts.importable === 1 ? '' : 's'} to your vault.
+                </p>
+                {counts.skipped > 0 && (
+                  <p className="text-sm font-medium text-white">
+                    {counts.skipped} item{counts.skipped === 1 ? '' : 's'} will be skipped.
+                  </p>
+                )}
+                <div className="rounded-2xl border border-white/20 bg-black px-4 py-3 space-y-1">
+                  <p className="text-sm font-bold text-white">{counts.secrets} secrets in file</p>
+                  <p className="text-sm font-bold text-white">{counts.totp} smart codes in file</p>
+                  <p className="text-sm font-bold text-white">{counts.folders} folders in file</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-white">
+                  Download{' '}
+                  {dataKind === 'secrets'
+                    ? 'secrets'
+                    : dataKind === 'totp'
+                      ? 'smart codes'
+                      : 'secrets and smart codes'}{' '}
+                  as {exportFormat === 'json' ? 'readable JSON' : 'locked HTML'}.
+                </p>
+                {exportFormat === 'json' && (
+                  <p className="text-sm font-medium text-white">
+                    JSON is plaintext — keep the file private.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+          <div className="shrink-0 px-5 py-4 border-t border-white/20 flex flex-col gap-2">
+            <button
+              type="button"
+              disabled={busy || (confirmKind === 'import' && counts.importable === 0)}
+              onClick={() => (confirmKind === 'import' ? executeImport() : executeExport())}
+              className="w-full py-3 rounded-xl font-bold bg-[#10B981] text-black disabled:opacity-50 font-clash"
+            >
+              {confirmKind === 'import' ? 'Yes, import' : 'Yes, download'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmKind(null)}
+              className="w-full py-3 rounded-xl font-bold bg-black border border-white/20 text-white font-clash"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
 
   return (
     <div className={shellClass}>
@@ -453,13 +556,15 @@ export default function EcosystemPorter({
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-black text-white font-clash truncate">Transfer</h1>
           <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white">
-            {view === 'pick-kind'
-              ? `${direction === 'import' ? 'Import' : 'Export'} · Choose type`
-              : view === 'export-format'
-                ? `Export · ${dataKind === 'totp' ? 'Smart codes' : dataKind === 'secrets' ? 'Secrets' : 'Mixed'}`
-                : view === 'import' || view === 'preview'
-                  ? `Import · ${dataKind === 'auto' ? 'Auto' : dataKind === 'totp' ? 'Smart codes' : dataKind === 'secrets' ? 'Secrets' : 'Mixed'}`
-                  : 'Import · Export · Offline-first'}
+            {view === 'home'
+              ? 'Import · Export'
+              : view === 'pick-kind'
+                ? `${direction === 'import' ? 'Import' : 'Export'} · Choose type`
+                : view === 'export-format'
+                  ? `Export · ${dataKind === 'totp' ? 'Smart codes' : dataKind === 'secrets' ? 'Secrets' : 'Mixed'}`
+                  : view === 'import' || view === 'preview'
+                    ? `Import · ${dataKind === 'auto' ? 'Auto' : dataKind === 'totp' ? 'Smart codes' : dataKind === 'secrets' ? 'Secrets' : 'Mixed'}`
+                    : 'Import · Export'}
           </p>
         </div>
         <ArrowUpDown className="w-5 h-5 text-white shrink-0" />
@@ -486,7 +591,7 @@ export default function EcosystemPorter({
                 <span className="text-base font-black text-white font-clash">Import</span>
               </div>
               <p className="text-sm font-medium text-white">
-                Choose what you are bringing in, then drop a file or paste.
+                Bring secrets or smart codes in from a file or paste.
               </p>
             </button>
 
@@ -502,7 +607,7 @@ export default function EcosystemPorter({
                 <span className="text-base font-black text-white font-clash">Export</span>
               </div>
               <p className="text-sm font-medium text-white">
-                Choose secrets, smart codes, or both — then download.
+                Download a backup of secrets, smart codes, or both.
               </p>
             </button>
           </>
@@ -517,7 +622,7 @@ export default function EcosystemPorter({
               <button
                 key={opt.id}
                 type="button"
-                onClick={() => confirmKind(opt.id)}
+                onClick={() => confirmKindPick(opt.id)}
                 className={`w-full text-left rounded-2xl border px-5 py-4 transition-colors ${
                   dataKind === opt.id
                     ? 'border-[#10B981] bg-black'
@@ -572,20 +677,28 @@ export default function EcosystemPorter({
               </div>
               <textarea
                 value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setRawText(next);
+                  if (next.trim().length >= 8) scheduleDiscernFromPaste(next);
+                }}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData('text');
+                  if (!pasted?.trim()) return;
+                  e.preventDefault();
+                  const el = e.currentTarget;
+                  const start = el.selectionStart ?? rawText.length;
+                  const end = el.selectionEnd ?? rawText.length;
+                  const next = rawText.slice(0, start) + pasted + rawText.slice(end);
+                  setRawText(next);
+                  scheduleDiscernFromPaste(next);
+                }}
                 placeholder="Paste JSON, CSV, otpauth links, or KEY=VALUE env lines…"
                 className="w-full min-h-[160px] bg-black px-4 py-3 text-sm text-white outline-none resize-y font-satoshi"
               />
             </div>
 
-            <button
-              type="button"
-              disabled={busy || !rawText.trim()}
-              onClick={() => void runDiscern(rawText)}
-              className="w-full py-3 rounded-xl font-bold bg-[#10B981] text-black disabled:opacity-50 font-clash"
-            >
-              {busy ? 'Understanding…' : 'Detect & preview'}
-            </button>
+            {busy && <p className="text-sm font-bold text-white">Checking file…</p>}
           </>
         )}
 
@@ -602,9 +715,6 @@ export default function EcosystemPorter({
                   {fileName}
                 </p>
               )}
-              <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white mt-1">
-                Confidence {Math.round(discerned.confidence * 100)}%
-              </p>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
@@ -615,7 +725,8 @@ export default function EcosystemPorter({
 
             {counts.skipped > 0 && (
               <p className="text-sm font-medium text-white">
-                {counts.skipped} item{counts.skipped === 1 ? '' : 's'} will be skipped (already present or unreadable).
+                {counts.skipped} item{counts.skipped === 1 ? '' : 's'} will be skipped (already
+                present or unreadable).
               </p>
             )}
 
@@ -642,7 +753,8 @@ export default function EcosystemPorter({
                       <p className="text-sm font-bold text-white truncate">{c.name}</p>
                       <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white truncate">
                         {disabled
-                          ? c._skipReason || (c._status === 'duplicate' ? 'Already in vault' : "Can't import")
+                          ? c._skipReason ||
+                            (c._status === 'duplicate' ? 'Already in vault' : "Can't import")
                           : c.isEnv
                             ? 'Env bundle'
                             : c.username || c.url || 'Secret'}
@@ -665,7 +777,8 @@ export default function EcosystemPorter({
                       </p>
                       <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white truncate">
                         {disabled
-                          ? t._skipReason || (t._status === 'duplicate' ? 'Already in vault' : "Can't import")
+                          ? t._skipReason ||
+                            (t._status === 'duplicate' ? 'Already in vault' : "Can't import")
                           : 'Smart code'}
                       </p>
                     </div>
@@ -679,21 +792,17 @@ export default function EcosystemPorter({
               )}
             </div>
 
-            {progressMsg && (
-              <p className="text-sm font-bold text-white">{progressMsg}</p>
-            )}
+            {progressMsg && <p className="text-sm font-bold text-white">{progressMsg}</p>}
 
             <button
               type="button"
               disabled={busy || counts.importable === 0}
-              onClick={handleConfirmImport}
+              onClick={() => setConfirmKind('import')}
               className="w-full py-3 rounded-xl font-bold bg-[#10B981] text-black disabled:opacity-50 font-clash"
             >
-              {busy
-                ? 'Importing…'
-                : counts.importable === 0
-                  ? 'Nothing new to import'
-                  : `Import ${counts.importable} new item${counts.importable === 1 ? '' : 's'}`}
+              {counts.importable === 0
+                ? 'Nothing new to import'
+                : `Continue · ${counts.importable} new item${counts.importable === 1 ? '' : 's'}`}
             </button>
           </>
         )}
@@ -765,15 +874,17 @@ export default function EcosystemPorter({
 
             <button
               type="button"
-              disabled={busy}
-              onClick={handleExport}
+              disabled={busy || (exportFormat === 'encrypted-html' && !exportPassword.trim())}
+              onClick={() => setConfirmKind('export')}
               className="w-full py-3 rounded-xl font-bold bg-[#10B981] text-black disabled:opacity-50 font-clash"
             >
-              {busy ? 'Preparing…' : 'Download backup'}
+              Continue to download
             </button>
           </>
         )}
       </div>
+
+      {confirmDrawer}
     </div>
   );
 }
