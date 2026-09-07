@@ -615,9 +615,15 @@ export class VaultService {
    * Remote create is high-priority outbox only (local batch earmarks never hit DB).
    */
   static async stageCredentialImport(
-    data: CredentialsCreate,
+    data: CredentialsCreate & { _mergeTargetId?: string },
     opts: { batchId: string },
   ): Promise<Credentials> {
+    const mergeTargetId = String((data as any)._mergeTargetId || '').trim();
+    if (mergeTargetId) {
+      const { _mergeTargetId: _drop, ...rest } = data as any;
+      return this.updateCredential(mergeTargetId, rest);
+    }
+
     const sanitizedData = this.sanitizeCredentialData(data);
     const encryptedData = await this.encryptRowFields(sanitizedData, "credentials");
     if (!encryptedData.itemType) encryptedData.itemType = "login";
@@ -653,9 +659,15 @@ export class VaultService {
   }
 
   static async stageTotpImport(
-    data: TotpSecretsCreate,
+    data: TotpSecretsCreate & { _mergeTargetId?: string },
     opts: { batchId: string },
   ): Promise<TotpSecrets> {
+    const mergeTargetId = String((data as any)._mergeTargetId || '').trim();
+    if (mergeTargetId) {
+      const { _mergeTargetId: _drop, ...rest } = data as any;
+      return this.updateTOTPSecret(mergeTargetId, rest);
+    }
+
     const sanitizedData = this.sanitizeTotpData(data);
     const encryptedData = await this.encryptRowFields(sanitizedData, "totpSecrets");
     const rowId = ID.unique();

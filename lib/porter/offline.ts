@@ -3,6 +3,7 @@
  */
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import { looksEncrypted as masterLooksEncrypted } from '@/lib/masterpass-crypto';
 import type { PorterDiscernResult, PorterImportBundle } from './types';
 import { bundleItemCount, toImportBundle } from './discern';
 
@@ -122,6 +123,7 @@ export function bundleToKylrixVaultJson(bundle: PorterImportBundle, userId: stri
     userId,
     credentials: creds.map((c) => ({
       ...(c.sourceId ? { $id: c.sourceId, id: c.sourceId } : {}),
+      ...(c._mergeTargetId ? { _mergeTargetId: c._mergeTargetId } : {}),
       userId,
       name: c.name,
       username: c.username ?? null,
@@ -139,6 +141,7 @@ export function bundleToKylrixVaultJson(bundle: PorterImportBundle, userId: stri
     })),
     totpSecrets: totps.map((t) => ({
       ...(t.sourceId ? { $id: t.sourceId, id: t.sourceId } : {}),
+      ...(t._mergeTargetId ? { _mergeTargetId: t._mergeTargetId } : {}),
       userId,
       secretKey: t.secretKey,
       issuer: t.issuer,
@@ -284,8 +287,7 @@ function shapePlainTotp(row: Record<string, unknown>) {
 
 function looksEncrypted(val: unknown): boolean {
   if (typeof val !== 'string' || !val.trim()) return false;
-  // Vault ciphertext is base64-ish and longer than typical plaintext labels
-  return val.length > 40 && /^[A-Za-z0-9+/=]+$/.test(val.replace(/\s/g, ''));
+  return masterLooksEncrypted(val);
 }
 
 /** Plaintext vault export — decrypts before write. Requires unlocked vault. */

@@ -1091,6 +1091,7 @@ export default function EcosystemPorter({
               {discerned.totpSecrets.slice(0, 40).map((t, i) => {
                 const skipped = isPorterRowSkipped(t);
                 const forced = Boolean(t._forceImport) && (t._status === 'duplicate' || t._status === 'invalid');
+                const merged = t._status === 'merged';
                 return (
                   <div
                     key={`t-${i}`}
@@ -1106,8 +1107,10 @@ export default function EcosystemPorter({
                           ? 'Import enabled by you'
                           : skipped
                             ? t._skipReason ||
-                              (t._status === 'duplicate' ? 'Already in vault' : "Can't import")
-                            : 'Smart code'}
+                              (t._status === 'duplicate' ? 'Same secret in vault' : "Can't import")
+                            : merged
+                              ? t._skipReason || 'Merging related details'
+                              : 'Smart code'}
                       </p>
                     </div>
                   </div>

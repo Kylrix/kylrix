@@ -32,6 +32,8 @@ export interface PorterCredentialDraft {
   _sourceHint?: string;
   /** User disputed skip — import anyway */
   _forceImport?: boolean;
+  /** Existing vault row to update when merging a richer copy */
+  _mergeTargetId?: string;
 }
 
 export interface PorterTotpDraft {
@@ -49,6 +51,8 @@ export interface PorterTotpDraft {
   _sourceHint?: string;
   /** User disputed skip — import anyway */
   _forceImport?: boolean;
+  /** Existing vault row to update when merging a richer copy */
+  _mergeTargetId?: string;
 }
 
 /** Named workspace grouping in Transfer payloads (replaces legacy “folder”). */

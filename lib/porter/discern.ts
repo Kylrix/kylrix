@@ -15,10 +15,11 @@ import type {
   PorterTotpDraft,
 } from './types';
 import { isUnimportableText } from './sanitize-import';
+import { isPlausibleTotpSecret, normalizeTotpSecret } from './critical-merge';
 
 const OTP_URI_RE = /otpauth:\/\/(?:totp|hotp)\/[^\s"'<>]+/gi;
 const OTP_MIGRATION_RE = /otpauth-migration:\/\/[^\s"'<>]+/gi;
-const BASE32_RE = /^[A-Z2-7=]{16,}$/i;
+const BASE32_RE = /^[A-Z2-7=]{8,}$/i;
 const ENV_LINE_RE = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/;
 
 function stripBom(text: string): string {
@@ -386,15 +387,18 @@ function asCredential(c: Record<string, unknown>, source: string): PorterCredent
 }
 
 function asTotp(t: Record<string, unknown>, source: string): PorterTotpDraft | null {
-  const secretKey = String(t.secretKey || t.secret || t.token || '').trim();
-  if (!secretKey) return null;
+  const secretKeyRaw = String(t.secretKey || t.secret || t.token || '').trim();
+  if (!secretKeyRaw) return null;
   const sourceId = String(t.$id || t.id || '').trim() || undefined;
-  if (isUnimportableText(secretKey) || isUnimportableText(t.issuer) || isUnimportableText(t.accountName)) {
+  const issuer = String(t.issuer || t.name || 'Import');
+  const accountName = String(t.accountName || t.username || t.account || 'Account');
+
+  if (isUnimportableText(secretKeyRaw)) {
     return {
       kind: 'totp',
-      secretKey,
-      issuer: String(t.issuer || t.name || 'Import'),
-      accountName: String(t.accountName || t.username || t.account || 'Account'),
+      secretKey: secretKeyRaw,
+      issuer,
+      accountName,
       algorithm: String(t.algorithm || 'SHA1'),
       digits: Number(t.digits || 6),
       period: Number(t.period || 30),
@@ -404,32 +408,37 @@ function asTotp(t: Record<string, unknown>, source: string): PorterTotpDraft | n
       _sourceHint: source,
     };
   }
+
+  // Don't invalidate on blank issuer/account — other apps often omit labels
   const parsed = parseTotpData(
-    /^otpauth:\/\//i.test(secretKey)
-      ? secretKey
-      : `otpauth://totp/${encodeURIComponent(String(t.issuer || t.name || 'Import'))}:${encodeURIComponent(String(t.accountName || t.username || t.account || 'Account'))}?secret=${secretKey.replace(/\s+/g, '')}`,
+    /^otpauth:\/\//i.test(secretKeyRaw)
+      ? secretKeyRaw
+      : `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${secretKeyRaw.replace(/\s+/g, '')}`,
   );
-  if (!parsed) {
-    if (!BASE32_RE.test(secretKey.replace(/\s+/g, ''))) {
-      return {
-        kind: 'totp',
-        secretKey,
-        issuer: String(t.issuer || t.name || 'Import'),
-        accountName: String(t.accountName || t.username || t.account || 'Account'),
-        algorithm: String(t.algorithm || 'SHA1'),
-        digits: Number(t.digits || 6),
-        period: Number(t.period || 30),
-        sourceId,
-        _status: 'invalid',
-        _skipReason: "Can't import — invalid smart code secret",
-        _sourceHint: source,
-      };
-    }
+
+  if (parsed) {
     return {
       kind: 'totp',
-      secretKey: secretKey.replace(/\s+/g, '').toUpperCase(),
-      issuer: String(t.issuer || t.name || 'Import'),
-      accountName: String(t.accountName || t.username || t.account || 'Account'),
+      secretKey: parsed.secretKey,
+      issuer: parsed.issuer && parsed.issuer !== 'Unknown' ? parsed.issuer : issuer,
+      accountName:
+        parsed.accountName && parsed.accountName !== 'Unknown' ? parsed.accountName : accountName,
+      algorithm: parsed.algorithm,
+      digits: parsed.digits,
+      period: parsed.period,
+      sourceId,
+      _status: 'new',
+      _sourceHint: source,
+    };
+  }
+
+  const normalized = normalizeTotpSecret(secretKeyRaw);
+  if (isPlausibleTotpSecret(normalized) || BASE32_RE.test(secretKeyRaw.replace(/\s+/g, ''))) {
+    return {
+      kind: 'totp',
+      secretKey: normalized || secretKeyRaw.replace(/\s+/g, '').toUpperCase(),
+      issuer,
+      accountName,
       algorithm: String(t.algorithm || 'SHA1'),
       digits: Number(t.digits || 6),
       period: Number(t.period || 30),
@@ -438,16 +447,18 @@ function asTotp(t: Record<string, unknown>, source: string): PorterTotpDraft | n
       _sourceHint: source,
     };
   }
+
   return {
     kind: 'totp',
-    secretKey: parsed.secretKey,
-    issuer: parsed.issuer || String(t.issuer || 'Import'),
-    accountName: parsed.accountName || String(t.accountName || 'Account'),
-    algorithm: parsed.algorithm,
-    digits: parsed.digits,
-    period: parsed.period,
+    secretKey: secretKeyRaw,
+    issuer,
+    accountName,
+    algorithm: String(t.algorithm || 'SHA1'),
+    digits: Number(t.digits || 6),
+    period: Number(t.period || 30),
     sourceId,
-    _status: 'new',
+    _status: 'invalid',
+    _skipReason: "Can't import — invalid smart code secret",
     _sourceHint: source,
   };
 }

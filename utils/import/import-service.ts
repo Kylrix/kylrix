@@ -459,6 +459,9 @@ export class ImportService {
             userId,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            ...((totp as any)._mergeTargetId
+              ? { _mergeTargetId: String((totp as any)._mergeTargetId) }
+              : {}),
           };
 
           await VaultService.stageTotpImport(cleanTotp as any, { batchId });
@@ -649,7 +652,15 @@ export class ImportService {
           totpSecret.folderId = null;
         }
 
-        await VaultService.stageTotpImport(totpSecret as any, { batchId });
+        await VaultService.stageTotpImport(
+          {
+            ...(totpSecret as any),
+            ...((totpSecret as any)._mergeTargetId
+              ? { _mergeTargetId: String((totpSecret as any)._mergeTargetId) }
+              : {}),
+          } as any,
+          { batchId },
+        );
         created++;
         if (userId && created % 8 === 0) kickImportSync(userId);
 
@@ -726,6 +737,7 @@ export class ImportService {
     if (cred.cardPIN) clean.cardPIN = cred.cardPIN;
     if (cred.cardType) clean.cardType = cred.cardType;
     if (cred.faviconUrl) clean.faviconUrl = cred.faviconUrl;
+    if (cred._mergeTargetId) clean._mergeTargetId = String(cred._mergeTargetId);
 
     return clean;
   }

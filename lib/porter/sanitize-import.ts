@@ -1,11 +1,21 @@
 /**
- * Aggressive import sanitize + dedupe for Porter / ImportService.
- * Drops unreadable rows; fingerprints against live vault so re-imports of the
- * same export create zero duplicates by default.
+ * Aggressive import sanitize + critical-value dedupe for Porter / ImportService.
+ *
+ * Duplicates are decided by critical values only (password / TOTP secret) — never
+ * name or row id alone. Related items use subset / superset / mutex merge rules.
  */
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import type { PorterCredentialDraft, PorterDiscernResult, PorterTotpDraft } from './types';
+import {
+  coalesceByCriticalKey,
+  criticalCredentialKey,
+  criticalTotpKey,
+  decideAgainstVault,
+  isPlausibleTotpSecret,
+  isSealedVaultText,
+  normalizeTotpSecret,
+} from './critical-merge';
 
 const UNIMPORTABLE_MARKERS = [
   '[DECRYPTION_DEK_UNAVAILABLE]',
@@ -22,24 +32,21 @@ export function isUnimportableText(value: unknown): boolean {
   return UNIMPORTABLE_MARKERS.some((m) => upper.includes(m.toUpperCase()));
 }
 
-/** Ciphertext / sealed blobs must not participate in content fingerprints. */
+/** @deprecated Use isSealedVaultText — kept for callers expecting this name. */
 export function looksLikeCiphertext(value: unknown): boolean {
-  if (typeof value !== 'string') return false;
-  const s = value.trim();
-  if (!s || isUnimportableText(s)) return false;
-  return s.length > 40 && /^[A-Za-z0-9+/=]+$/.test(s.replace(/\s/g, ''));
+  return isSealedVaultText(value);
 }
 
 /** Row cannot be safely written (broken export / sealed without key). */
 export function isUnimportableCredential(c: Record<string, unknown>): boolean {
   const fields = [c.name, c.username, c.password, c.url, c.notes, c.secretKey];
   if (fields.some(isUnimportableText)) return true;
-  // Need at least a usable title or login material
   const name = String(c.name || '').trim();
   const user = String(c.username || '').trim();
   const pass = String(c.password || '').trim();
   const url = String(c.url || '').trim();
   if (isUnimportableText(name) || isUnimportableText(user) || isUnimportableText(pass)) return true;
+  if (isSealedVaultText(pass) && isSealedVaultText(user) && isSealedVaultText(name)) return true;
   if (!name && !user && !pass && !url && !c.isEnv) return true;
   if (c.isEnv) {
     const raw = c.customFields;
@@ -51,113 +58,51 @@ export function isUnimportableCredential(c: Record<string, unknown>): boolean {
 export function isUnimportableTotp(t: Record<string, unknown>): boolean {
   const fields = [t.secretKey, t.issuer, t.accountName];
   if (fields.some(isUnimportableText)) return true;
-  const secret = String(t.secretKey || '')
-    .replace(/\s+/g, '')
-    .toUpperCase();
-  if (!secret || secret.length < 8) return true;
-  // Reject obvious ciphertext mistaken for secrets
-  if (secret.includes('[') || secret.includes('DECRYPT')) return true;
-  if (looksLikeCiphertext(t.secretKey)) return true;
+  const secret = normalizeTotpSecret(t.secretKey ?? t.secret ?? t.token);
+  if (!secret) return true;
+  if (isSealedVaultText(t.secretKey)) return true;
+  // Only reject when the secret is not a plausible authenticator seed
+  if (!isPlausibleTotpSecret(secret)) return true;
   return false;
 }
 
-function norm(s: unknown): string {
-  return String(s ?? '')
-    .trim()
-    .toLowerCase();
-}
-
-function normSecret(s: unknown): string {
-  return String(s ?? '')
-    .replace(/\s+/g, '')
-    .toUpperCase();
-}
-
-function normDomain(url?: string | null): string {
-  if (!url) return '';
-  try {
-    let host = url.trim().toLowerCase();
-    if (!host.startsWith('http://') && !host.startsWith('https://')) host = 'https://' + host;
-    const hostname = new URL(host).hostname.replace(/^www\./, '');
-    const parts = hostname.split('.');
-    if (parts.length > 2) {
-      const p1 = parts[parts.length - 1];
-      const p2 = parts[parts.length - 2];
-      if ((p2.length <= 3 && p1.length <= 2) || (p2.length <= 2 && p1.length <= 3)) {
-        return parts.slice(-3).join('.');
-      }
-      return parts.slice(-2).join('.');
-    }
-    return hostname;
-  } catch {
-    return url
-      .toLowerCase()
-      .replace(/^(https?:\/\/)?(www\.)?/, '')
-      .split('/')[0];
-  }
-}
-
-/** Multiple fingerprints so same secret with/without url or id still matches. */
+/** Critical-value fingerprints only (password / secret). No name- or id-only keys. */
 export function credentialFingerprints(c: Record<string, unknown>): string[] {
-  const id = String(c.$id || c.id || c.sourceId || '').trim();
-  const name = norm(c.name);
-  const user = norm(c.username);
-  const passRaw = String(c.password ?? '').trim();
-  const passUsable = passRaw && !looksLikeCiphertext(passRaw) && !isUnimportableText(passRaw);
-  const pass = passUsable ? passRaw : '';
-  const domain = normDomain(c.url as string);
-  const keys = new Set<string>();
-  if (id) keys.add(`id:${id}`);
-  if (user && pass) keys.add(`up:${user}|${pass}`);
-  if (domain && user && pass) keys.add(`dup:${domain}|${user}|${pass}`);
-  if (name && user && pass) keys.add(`nup:${name}|${user}|${pass}`);
-  if (name && pass) keys.add(`np:${name}|${pass}`);
-  if (c.isEnv && name) keys.add(`env:${name}`);
-  return Array.from(keys);
+  const key = criticalCredentialKey(c);
+  return key ? [key] : [];
 }
 
 export function totpFingerprints(t: Record<string, unknown>): string[] {
-  const id = String(t.$id || t.id || t.sourceId || '').trim();
-  const secretRaw = String(t.secretKey ?? '').trim();
-  const secret =
-    secretRaw && !looksLikeCiphertext(secretRaw) && !isUnimportableText(secretRaw)
-      ? normSecret(secretRaw)
-      : '';
-  const issuer = norm(t.issuer);
-  const account = norm(t.accountName);
-  const keys = new Set<string>();
-  if (id) keys.add(`id:${id}`);
-  if (secret) keys.add(`sk:${secret}`);
-  if (secret && issuer) keys.add(`isk:${issuer}|${secret}`);
-  if (secret && account) keys.add(`ask:${account}|${secret}`);
-  if (issuer && account && secret) keys.add(`ias:${issuer}|${account}|${secret}`);
-  return Array.from(keys);
+  const key = criticalTotpKey(t);
+  return key ? [key] : [];
 }
 
-function indexFingerprints(rows: Record<string, unknown>[], kind: 'cred' | 'totp'): Set<string> {
-  const set = new Set<string>();
+function indexByCritical(
+  rows: Record<string, unknown>[],
+  kind: 'cred' | 'totp',
+): Map<string, Record<string, unknown>[]> {
+  const map = new Map<string, Record<string, unknown>[]>();
   for (const row of rows) {
-    const fps = kind === 'cred' ? credentialFingerprints(row) : totpFingerprints(row);
-    fps.forEach((fp) => set.add(fp));
+    const key = kind === 'cred' ? criticalCredentialKey(row) : criticalTotpKey(row);
+    if (!key) continue;
+    const list = map.get(key) || [];
+    list.push(row);
+    map.set(key, list);
   }
-  return set;
-}
-
-function matchesIndex(fps: string[], index: Set<string>): boolean {
-  return fps.some((fp) => index.has(fp));
+  return map;
 }
 
 function preferPlaintextRow(a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> {
   const aEnc =
-    looksLikeCiphertext(a.password) ||
-    looksLikeCiphertext(a.secretKey) ||
-    looksLikeCiphertext(a.username) ||
-    looksLikeCiphertext(a.name);
+    isSealedVaultText(a.password) ||
+    isSealedVaultText(a.secretKey) ||
+    isSealedVaultText(a.username) ||
+    isSealedVaultText(a.name);
   const bEnc =
-    looksLikeCiphertext(b.password) ||
-    looksLikeCiphertext(b.secretKey) ||
-    looksLikeCiphertext(b.username) ||
-    looksLikeCiphertext(b.name);
+    isSealedVaultText(b.password) ||
+    isSealedVaultText(b.secretKey) ||
+    isSealedVaultText(b.username) ||
+    isSealedVaultText(b.name);
   if (aEnc && !bEnc) return b;
   if (bEnc && !aEnc) return a;
   return b;
@@ -195,7 +140,7 @@ export type SanitizeImportResult = {
 
 /**
  * Normalize kylrix export shapes (`data.vault` or top-level), drop invalid rows,
- * dedupe within the batch, then against existing vault rows.
+ * coalesce related rows in-batch, then against existing vault by critical value.
  */
 export function sanitizeImportBundle(
   raw: {
@@ -251,57 +196,59 @@ export function sanitizeImportBundle(
       skippedInvalid++;
       continue;
     }
-    if (isUnimportableTotp(t)) {
+    // Normalize secret before validity check
+    const sk = normalizeTotpSecret(t.secretKey ?? t.secret ?? t.token);
+    const normalized = { ...t, secretKey: sk || t.secretKey };
+    if (isUnimportableTotp(normalized)) {
       skippedInvalid++;
       continue;
     }
-    validTotps.push(t);
+    validTotps.push(normalized);
   }
 
-  // Intra-batch dedupe
-  const seenCred = new Set<string>();
-  const uniqueCreds: Record<string, unknown>[] = [];
-  for (const c of validCreds) {
-    const fps = credentialFingerprints(c);
-    if (fps.some((fp) => seenCred.has(fp))) {
-      skippedDuplicateIncoming++;
-      continue;
-    }
-    fps.forEach((fp) => seenCred.add(fp));
-    uniqueCreds.push(c);
-  }
+  const credCoalesced = coalesceByCriticalKey(validCreds, 'cred');
+  const totpCoalesced = coalesceByCriticalKey(validTotps, 'totp');
+  skippedDuplicateIncoming += credCoalesced.dropped + totpCoalesced.dropped;
 
-  const seenTotp = new Set<string>();
-  const uniqueTotps: Record<string, unknown>[] = [];
-  for (const t of validTotps) {
-    const fps = totpFingerprints(t);
-    if (fps.some((fp) => seenTotp.has(fp))) {
-      skippedDuplicateIncoming++;
-      continue;
-    }
-    fps.forEach((fp) => seenTotp.add(fp));
-    uniqueTotps.push(t);
-  }
-
-  const existingCredIndex = indexFingerprints(existing.credentials || [], 'cred');
-  const existingTotpIndex = indexFingerprints(existing.totpSecrets || [], 'totp');
+  const vaultCreds = indexByCritical(existing.credentials || [], 'cred');
+  const vaultTotps = indexByCritical(existing.totpSecrets || [], 'totp');
 
   credentials = [];
-  for (const c of uniqueCreds) {
-    if (matchesIndex(credentialFingerprints(c), existingCredIndex)) {
+  for (const c of credCoalesced.kept) {
+    const key = criticalCredentialKey(c);
+    if (!key) {
+      credentials.push(c);
+      continue;
+    }
+    const decision = decideAgainstVault(c, vaultCreds.get(key) || [], 'cred');
+    if (decision.action === 'skip') {
       skippedDuplicate++;
       continue;
     }
-    credentials.push(c);
+    if (decision.mergeTargetId) {
+      credentials.push({ ...c, _mergeTargetId: decision.mergeTargetId });
+    } else {
+      credentials.push(c);
+    }
   }
 
   totpSecrets = [];
-  for (const t of uniqueTotps) {
-    if (matchesIndex(totpFingerprints(t), existingTotpIndex)) {
+  for (const t of totpCoalesced.kept) {
+    const key = criticalTotpKey(t);
+    if (!key) {
+      totpSecrets.push(t);
+      continue;
+    }
+    const decision = decideAgainstVault(t, vaultTotps.get(key) || [], 'totp');
+    if (decision.action === 'skip') {
       skippedDuplicate++;
       continue;
     }
-    totpSecrets.push(t);
+    if (decision.mergeTargetId) {
+      totpSecrets.push({ ...t, _mergeTargetId: decision.mergeTargetId });
+    } else {
+      totpSecrets.push(t);
+    }
   }
 
   workspaces = (workspaces || []).filter((f) => f && !isUnimportableText(f.name));
@@ -318,21 +265,32 @@ export function sanitizeImportBundle(
 }
 
 /**
- * Mark Porter preview rows as new / duplicate / invalid against live vault.
- * Invalid and duplicate stay visible but must not be imported.
+ * Mark Porter preview rows as new / duplicate / merged / invalid against live vault.
+ * Uses critical values (password / smart-code secret) only — never name or id alone.
  */
 export function annotatePorterDiscernResult(
   result: PorterDiscernResult,
   existing: { credentials: Record<string, unknown>[]; totpSecrets: Record<string, unknown>[] },
 ): PorterDiscernResult {
-  const credIndex = indexFingerprints(existing.credentials || [], 'cred');
-  const totpIndex = indexFingerprints(existing.totpSecrets || [], 'totp');
   const safeCreds = Array.isArray(result.credentials) ? result.credentials : [];
   const safeTotps = Array.isArray(result.totpSecrets) ? result.totpSecrets : [];
   const safeWorkspaces = Array.isArray(result.workspaces) ? result.workspaces : [];
 
-  const credentials: PorterCredentialDraft[] = safeCreds.map((c) => {
-    const row = { ...c, $id: c.sourceId, id: c.sourceId } as Record<string, unknown>;
+  // Intra-file coalesce first (subset discarded, mutex merged)
+  const credRows = safeCreds.map((c) => ({ ...c })) as Record<string, unknown>[];
+  const totpRows = safeTotps.map((t) => {
+    const sk = normalizeTotpSecret(t.secretKey);
+    return { ...t, secretKey: sk || t.secretKey };
+  }) as Record<string, unknown>[];
+
+  const credCoalesced = coalesceByCriticalKey(credRows, 'cred');
+  const totpCoalesced = coalesceByCriticalKey(totpRows, 'totp');
+
+  const vaultCreds = indexByCritical(existing.credentials || [], 'cred');
+  const vaultTotps = indexByCritical(existing.totpSecrets || [], 'totp');
+
+  const credentials: PorterCredentialDraft[] = credCoalesced.kept.map((row) => {
+    const c = row as unknown as PorterCredentialDraft;
     const force = Boolean(c._forceImport);
     if (c._status === 'invalid' || isUnimportableCredential(row)) {
       return {
@@ -342,37 +300,86 @@ export function annotatePorterDiscernResult(
         _forceImport: force || undefined,
       };
     }
-    if (matchesIndex(credentialFingerprints(row), credIndex)) {
+    const key = criticalCredentialKey(row);
+    if (!key) {
+      // No password to compare — still importable if it has other material
+      return { ...c, _status: 'new' as const, _skipReason: undefined, _forceImport: force || undefined };
+    }
+    const decision = decideAgainstVault(row, vaultCreds.get(key) || [], 'cred');
+    if (decision.action === 'skip' && !force) {
       return {
         ...c,
         _status: 'duplicate' as const,
-        _skipReason: 'Already in your vault',
+        _skipReason: decision.reason,
         _forceImport: force || undefined,
       };
     }
-    return { ...c, _status: 'new' as const, _skipReason: undefined, _forceImport: undefined };
+    if (decision.relation === 'superset' || decision.relation === 'mutex') {
+      return {
+        ...c,
+        _status: 'merged' as const,
+        _skipReason: decision.reason,
+        _mergeTargetId: decision.mergeTargetId,
+        _forceImport: force || undefined,
+      };
+    }
+    return {
+      ...c,
+      _status: 'new' as const,
+      _skipReason: undefined,
+      _forceImport: force || undefined,
+      _mergeTargetId: decision.mergeTargetId,
+    };
   });
 
-  const totpSecrets: PorterTotpDraft[] = safeTotps.map((t) => {
-    const row = { ...t, $id: t.sourceId, id: t.sourceId } as Record<string, unknown>;
+  const totpSecrets: PorterTotpDraft[] = totpCoalesced.kept.map((row) => {
+    const t = row as unknown as PorterTotpDraft;
     const force = Boolean(t._forceImport);
+    const sk = normalizeTotpSecret(t.secretKey);
+    const normalized = { ...t, secretKey: sk || t.secretKey };
+
     if (t._status === 'invalid' || isUnimportableTotp(row)) {
       return {
-        ...t,
+        ...normalized,
         _status: 'invalid' as const,
         _skipReason: t._skipReason || "Can't import — this code is unreadable",
         _forceImport: force || undefined,
       };
     }
-    if (matchesIndex(totpFingerprints(row), totpIndex)) {
+    const key = criticalTotpKey(row);
+    if (!key) {
       return {
-        ...t,
-        _status: 'duplicate' as const,
-        _skipReason: 'Already in your vault',
+        ...normalized,
+        _status: 'invalid' as const,
+        _skipReason: "Can't import — missing or unreadable smart code secret",
         _forceImport: force || undefined,
       };
     }
-    return { ...t, _status: 'new' as const, _skipReason: undefined, _forceImport: undefined };
+    const decision = decideAgainstVault(row, vaultTotps.get(key) || [], 'totp');
+    if (decision.action === 'skip' && !force) {
+      return {
+        ...normalized,
+        _status: 'duplicate' as const,
+        _skipReason: decision.reason,
+        _forceImport: force || undefined,
+      };
+    }
+    if (decision.relation === 'superset' || decision.relation === 'mutex') {
+      return {
+        ...normalized,
+        _status: 'merged' as const,
+        _skipReason: decision.reason,
+        _mergeTargetId: decision.mergeTargetId,
+        _forceImport: force || undefined,
+      };
+    }
+    return {
+      ...normalized,
+      _status: 'new' as const,
+      _skipReason: undefined,
+      _forceImport: force || undefined,
+      _mergeTargetId: decision.mergeTargetId,
+    };
   });
 
   const importableCreds = credentials.filter((c) => isPorterRowImportable(c)).length;
@@ -383,14 +390,29 @@ export function annotatePorterDiscernResult(
   const skippedInvalid =
     credentials.filter((c) => c._status === 'invalid' && !c._forceImport).length +
     totpSecrets.filter((t) => t._status === 'invalid' && !t._forceImport).length;
+  const mergedCount =
+    credentials.filter((c) => c._status === 'merged').length +
+    totpSecrets.filter((t) => t._status === 'merged').length;
 
   const warnings = [...(result.warnings || [])];
+  if (credCoalesced.dropped + totpCoalesced.dropped > 0) {
+    warnings.push(
+      `Combined ${credCoalesced.dropped + totpCoalesced.dropped} related item${credCoalesced.dropped + totpCoalesced.dropped === 1 ? '' : 's'} in the file (same password or smart code secret).`,
+    );
+  }
   if (skippedDup > 0) {
-    warnings.push(`${skippedDup} item${skippedDup === 1 ? '' : 's'} already in your vault — skipped.`);
+    warnings.push(
+      `${skippedDup} item${skippedDup === 1 ? '' : 's'} already match a password or smart code secret in your vault — skipped.`,
+    );
   }
   if (skippedInvalid > 0) {
     warnings.push(
       `${skippedInvalid} item${skippedInvalid === 1 ? '' : 's'} can't be imported (unreadable) — disabled.`,
+    );
+  }
+  if (mergedCount > 0) {
+    warnings.push(
+      `${mergedCount} item${mergedCount === 1 ? '' : 's'} share a password or secret with your vault but carry extra details — kept for merge.`,
     );
   }
 
@@ -400,13 +422,14 @@ export function annotatePorterDiscernResult(
     totpSecrets,
     workspaces: safeWorkspaces,
     summary: [
-      importableCreds ? `${importableCreds} new secret${importableCreds === 1 ? '' : 's'}` : null,
-      importableTotp ? `${importableTotp} new smart code${importableTotp === 1 ? '' : 's'}` : null,
+      importableCreds ? `${importableCreds} secret${importableCreds === 1 ? '' : 's'}` : null,
+      importableTotp ? `${importableTotp} smart code${importableTotp === 1 ? '' : 's'}` : null,
       safeWorkspaces.length
         ? `${safeWorkspaces.length} workspace${safeWorkspaces.length === 1 ? '' : 's'}`
         : null,
       skippedDup ? `${skippedDup} already present` : null,
       skippedInvalid ? `${skippedInvalid} disabled` : null,
+      mergedCount ? `${mergedCount} to merge` : null,
     ]
       .filter(Boolean)
       .join(' · ') || result.summary,
@@ -442,7 +465,7 @@ export function filterImportableDiscern(result: PorterDiscernResult): PorterDisc
   };
 }
 
-/** Load existing vault rows for dedupe (decrypted when possible). */
+/** Load existing vault rows for dedupe — always prefer decrypted remote rows. */
 export async function loadExistingVaultForDedupe(userId: string): Promise<{
   credentials: Record<string, unknown>[];
   totpSecrets: Record<string, unknown>[];
@@ -459,18 +482,27 @@ export async function loadExistingVaultForDedupe(userId: string): Promise<{
       VaultService.listAllCredentials(userId).catch(() => [] as any[]),
       VaultService.listTOTPSecrets(userId).catch(() => [] as any[]),
     ]);
-    credentials = mergeById(credentials, Array.isArray(remoteCreds) ? remoteCreds : []);
-    totpSecrets = mergeById(totpSecrets, Array.isArray(remoteTotps) ? remoteTotps : []);
-
-    // Decrypt any remaining ciphertext mirrors so content fingerprints work
-    const needsCredDecrypt = credentials.some(
-      (c) => looksLikeCiphertext(c?.password) || looksLikeCiphertext(c?.username) || looksLikeCiphertext(c?.name),
+    // Prefer remote (already decrypted when vault unlocked) over LocalEngine ciphertext
+    credentials = mergeById(
+      Array.isArray(remoteCreds) ? remoteCreds : [],
+      credentials,
     );
-    if (needsCredDecrypt) {
+    totpSecrets = mergeById(
+      Array.isArray(remoteTotps) ? remoteTotps : [],
+      totpSecrets,
+    );
+
+    // Force per-row decrypt whenever critical fields still look sealed
+    const sealedCred = (c: Record<string, unknown>) =>
+      isSealedVaultText(c?.password) || isSealedVaultText(c?.username) || isSealedVaultText(c?.name);
+    const sealedTotp = (t: Record<string, unknown>) =>
+      isSealedVaultText(t?.secretKey) || !criticalTotpKey(t);
+
+    if (credentials.some(sealedCred)) {
       const decrypted: Record<string, unknown>[] = [];
       for (const row of credentials) {
         const id = String(row?.$id || row?.id || '').trim();
-        if (!id) {
+        if (!id || !sealedCred(row)) {
           decrypted.push(row);
           continue;
         }
@@ -483,14 +515,11 @@ export async function loadExistingVaultForDedupe(userId: string): Promise<{
       credentials = decrypted;
     }
 
-    const needsTotpDecrypt = totpSecrets.some(
-      (t) => looksLikeCiphertext(t?.secretKey) || looksLikeCiphertext(t?.issuer),
-    );
-    if (needsTotpDecrypt) {
+    if (totpSecrets.some(sealedTotp)) {
       const decrypted: Record<string, unknown>[] = [];
       for (const row of totpSecrets) {
         const id = String(row?.$id || row?.id || '').trim();
-        if (!id) {
+        if (!id || !sealedTotp(row)) {
           decrypted.push(row);
           continue;
         }
@@ -506,8 +535,13 @@ export async function loadExistingVaultForDedupe(userId: string): Promise<{
     /* offline — LocalEngine only */
   }
 
+  // Drop rows we still cannot fingerprint (still sealed) — comparing sealed blobs is guessing
   return {
-    credentials: (credentials || []).filter((c) => c && !isUnimportableText(c.$id)),
-    totpSecrets: (totpSecrets || []).filter((t) => t && !isUnimportableText(t.$id)),
+    credentials: (credentials || []).filter(
+      (c) => c && !isUnimportableText(c.$id) && Boolean(criticalCredentialKey(c) || c.isEnv),
+    ),
+    totpSecrets: (totpSecrets || []).filter(
+      (t) => t && !isUnimportableText(t.$id) && Boolean(criticalTotpKey(t)),
+    ),
   };
 }

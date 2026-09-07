@@ -15,8 +15,8 @@ function parseTotpUri(totpUri: string): TotpParseResult | null {
       return parseOtpauthUri(trimmed);
     }
 
-    // If it's just a base32 secret, use defaults
-    if (isBase32Secret(trimmed)) {
+    // If it's just a base32 (or hex) secret, use defaults
+    if (isBase32Secret(trimmed) || isHexSecret(trimmed)) {
       return {
         secretKey: trimmed.replace(/\s+/g, '').toUpperCase(),
         issuer: "Unknown",
@@ -87,9 +87,15 @@ function parseOtpauthUri(uri: string): TotpParseResult | null {
 }
 
 function isBase32Secret(input: string): boolean {
-  // Base32 alphabet: A-Z, 2-7
+  // Base32 alphabet: A-Z, 2-7 — allow short seeds (≥ 8) used by some authenticators
+  const cleaned = input.replace(/\s+/g, '').toUpperCase();
   const base32Regex = /^[A-Z2-7]+=*$/;
-  return base32Regex.test(input.toUpperCase()) && input.length >= 16;
+  return base32Regex.test(cleaned) && cleaned.length >= 8;
+}
+
+function isHexSecret(input: string): boolean {
+  const cleaned = input.replace(/\s+/g, '').toUpperCase();
+  return /^[0-9A-F]+$/.test(cleaned) && cleaned.length >= 16 && cleaned.length % 2 === 0;
 }
 
 export function extractTotpFromBitwardenLogin(
