@@ -11,7 +11,7 @@ export type PorterFormat =
   | 'env-bundle'
   | 'unknown';
 
-export type PorterKind = 'credential' | 'totp' | 'folder' | 'env';
+export type PorterKind = 'credential' | 'totp' | 'workspace' | 'env';
 
 export interface PorterCredentialDraft {
   kind: 'credential';
@@ -47,11 +47,16 @@ export interface PorterTotpDraft {
   _sourceHint?: string;
 }
 
-export interface PorterFolderDraft {
-  kind: 'folder';
+/** Named workspace grouping in Transfer payloads (replaces legacy “folder”). */
+export interface PorterWorkspaceDraft {
+  kind: 'workspace';
   name: string;
+  sourceId?: string;
   _sourceHint?: string;
 }
+
+/** @deprecated Prefer PorterWorkspaceDraft */
+export type PorterFolderDraft = PorterWorkspaceDraft;
 
 export interface PorterDiscernResult {
   format: PorterFormat;
@@ -60,7 +65,7 @@ export interface PorterDiscernResult {
   summary: string;
   credentials: PorterCredentialDraft[];
   totpSecrets: PorterTotpDraft[];
-  folders: PorterFolderDraft[];
+  workspaces: PorterWorkspaceDraft[];
   warnings: string[];
   rawMeta?: Record<string, unknown>;
 }
@@ -70,7 +75,7 @@ export interface PorterImportBundle {
   format: 'kylrix-vault';
   credentials: PorterCredentialDraft[];
   totpSecrets: PorterTotpDraft[];
-  folders: PorterFolderDraft[];
+  workspaces: PorterWorkspaceDraft[];
   discernedFrom: PorterFormat;
   discernedAt: string;
 }

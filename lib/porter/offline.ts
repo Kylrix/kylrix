@@ -53,16 +53,32 @@ export async function loadPorterDraft(userId: string): Promise<PorterSessionDraf
       return {
         direction: 'import',
         dataKind: 'mixed',
-        result: raw.result,
+        result: normalizeDiscernWorkspaces(raw.result),
         fileName: null,
         savedAt: raw.savedAt || new Date().toISOString(),
       };
     }
     if (!raw.direction) return null;
-    return raw as PorterSessionDraft;
+    return {
+      ...(raw as PorterSessionDraft),
+      result: raw.result ? normalizeDiscernWorkspaces(raw.result) : raw.result,
+    };
   } catch {
     return null;
   }
+}
+
+function normalizeDiscernWorkspaces(result: PorterDiscernResult): PorterDiscernResult {
+  const anyResult = result as any;
+  const workspaces =
+    anyResult.workspaces ||
+    (Array.isArray(anyResult.folders)
+      ? anyResult.folders.map((f: any) => ({
+          ...f,
+          kind: 'workspace' as const,
+        }))
+      : []);
+  return { ...result, workspaces };
 }
 
 export async function clearPorterDraft(userId: string): Promise<void> {
@@ -118,12 +134,20 @@ export function bundleToKylrixVaultJson(bundle: PorterImportBundle, userId: stri
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })),
-    folders: bundle.folders.map((f) => ({
+    folders: bundle.workspaces.map((f) => ({
+      ...(f.sourceId ? { $id: f.sourceId, id: f.sourceId } : {}),
       userId,
       name: f.name,
       parentFolderId: null,
       sortOrder: 0,
       isDeleted: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })),
+    workspaces: bundle.workspaces.map((f) => ({
+      ...(f.sourceId ? { $id: f.sourceId, id: f.sourceId } : {}),
+      userId,
+      name: f.name,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })),
@@ -254,7 +278,7 @@ export async function exportVaultPlaintext(userId: string): Promise<{
   exportedAt: string;
   userId: string;
   plaintext: true;
-  data: { vault: { folders: unknown[]; credentials: unknown[]; totpSecrets: unknown[] } };
+  data: { vault: { workspaces: unknown[]; credentials: unknown[]; totpSecrets: unknown[] } };
 }> {
   const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
   if (!masterPassCrypto.isVaultUnlocked()) {
@@ -316,10 +340,9 @@ export async function exportVaultPlaintext(userId: string): Promise<{
     plaintext: true,
     data: {
       vault: {
-        folders: (remoteFolders || []).map((f: any) => ({
+        workspaces: (remoteFolders || []).map((f: any) => ({
           $id: f.$id,
           name: f.name,
-          parentFolderId: f.parentFolderId ?? null,
         })),
         credentials: creds.map((c) => shapePlainCredential(c as any)),
         totpSecrets: totps.map((t) => shapePlainTotp(t as any)),
@@ -334,7 +357,7 @@ export async function exportVaultOffline(userId: string): Promise<{
   format: string;
   exportedAt: string;
   userId: string;
-  data: { vault: { folders: unknown[]; credentials: unknown[]; totpSecrets: unknown[] } };
+  data: { vault: { workspaces: unknown[]; credentials: unknown[]; totpSecrets: unknown[] } };
 }> {
   const plain = await exportVaultPlaintext(userId);
   return {

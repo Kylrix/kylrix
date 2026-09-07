@@ -9,7 +9,7 @@ import { parseTotpData } from '@/utils/import/totp-parser';
 import type {
   PorterCredentialDraft,
   PorterDiscernResult,
-  PorterFolderDraft,
+  PorterWorkspaceDraft,
   PorterFormat,
   PorterImportBundle,
   PorterTotpDraft,
@@ -43,7 +43,7 @@ function looksLikeCsv(text: string): boolean {
 
 function scoreResult(partial: Omit<PorterDiscernResult, 'confidence'> & { confidence?: number }): PorterDiscernResult {
   const total =
-    partial.credentials.length + partial.totpSecrets.length + partial.folders.length;
+    partial.credentials.length + partial.totpSecrets.length + partial.workspaces.length;
   const base = partial.confidence ?? (total > 0 ? 0.75 : 0.1);
   return {
     ...partial,
@@ -212,7 +212,7 @@ function discernOtpauthBlob(text: string): PorterDiscernResult | null {
     summary: `Found ${totpSecrets.length} one-time code secret${totpSecrets.length === 1 ? '' : 's'}.`,
     credentials: [],
     totpSecrets,
-    folders: [],
+    workspaces: [],
     warnings: [],
   });
 }
@@ -263,7 +263,7 @@ function discernEnvBundle(text: string): PorterDiscernResult | null {
       },
     ],
     totpSecrets: [],
-    folders: [],
+    workspaces: [],
     warnings: [],
   });
 }
@@ -362,7 +362,7 @@ function discernCsv(text: string): PorterDiscernResult | null {
       .join(' · '),
     credentials,
     totpSecrets,
-    folders: [],
+    workspaces: [],
     warnings: [],
   });
 }
@@ -371,7 +371,7 @@ function discernBitwarden(data: any, userId: string): PorterDiscernResult | null
   if (!data || typeof data !== 'object') return null;
   const normalized = {
     ...data,
-    folders: Array.isArray(data.folders) ? data.folders : [],
+    workspaces: Array.isArray(data.folders) ? data.folders : [],
     items: Array.isArray(data.items) ? data.items : [],
   };
   if (!validateBitwardenExport(normalized)) return null;
@@ -383,7 +383,7 @@ function discernBitwarden(data: any, userId: string): PorterDiscernResult | null
     summary: [
       mapped.credentials.length ? `${mapped.credentials.length} secrets` : null,
       mapped.totpSecrets.length ? `${mapped.totpSecrets.length} smart codes` : null,
-      mapped.folders.length ? `${mapped.folders.length} folders` : null,
+      mapped.folders.length ? `${mapped.folders.length} workspace${mapped.folders.length === 1 ? '' : 's'}` : null,
     ]
       .filter(Boolean)
       .join(' · ') || 'Empty Bitwarden export',
@@ -393,9 +393,9 @@ function discernBitwarden(data: any, userId: string): PorterDiscernResult | null
     totpSecrets: mapped.totpSecrets
       .map((t) => asTotp(t as any, 'bitwarden'))
       .filter(Boolean) as PorterTotpDraft[],
-    folders: mapped.folders.map((f) => ({
-      kind: 'folder' as const,
-      name: String((f as any).name || 'Folder'),
+    workspaces: mapped.folders.map((f) => ({
+      kind: 'workspace' as const,
+      name: String((f as any).name || 'Workspace'),
       _sourceHint: 'bitwarden',
     })),
     warnings: mapped.mapping.statistics.skippedItems
@@ -441,7 +441,7 @@ function discernAegis(data: any): PorterDiscernResult | null {
     summary: `Found ${totpSecrets.length} smart code${totpSecrets.length === 1 ? '' : 's'}.`,
     credentials: [],
     totpSecrets,
-    folders: [],
+    workspaces: [],
     warnings: [],
   });
 }
@@ -450,7 +450,7 @@ function discernKylrix(data: any): PorterDiscernResult | null {
   const vault =
     data?.data?.vault ||
     data?.vault ||
-    (data?.credentials || data?.totpSecrets || data?.folders ? data : null);
+    (data?.credentials || data?.totpSecrets || data?.workspaces || data?.folders ? data : null);
   if (!vault) return null;
 
   const isWorkspace = Boolean(data?.data?.notes || data?.data?.flow || data?.format === 'kylrix-workspace');
@@ -464,7 +464,12 @@ function discernKylrix(data: any): PorterDiscernResult | null {
 
   const credSrc = vault.credentials || data.credentials || [];
   const totpSrc = vault.totpSecrets || data.totpSecrets || [];
-  const folderSrc = vault.folders || data.folders || [];
+  const workspaceSrc =
+    vault.workspaces ||
+    data.workspaces ||
+    vault.folders ||
+    data.folders ||
+    [];
 
   const credentials = (Array.isArray(credSrc) ? credSrc : [])
     .map((c: any) => asCredential(c, 'kylrix'))
@@ -472,13 +477,14 @@ function discernKylrix(data: any): PorterDiscernResult | null {
   const totpSecrets = (Array.isArray(totpSrc) ? totpSrc : [])
     .map((t: any) => asTotp(t, 'kylrix'))
     .filter(Boolean) as PorterTotpDraft[];
-  const folders: PorterFolderDraft[] = (Array.isArray(folderSrc) ? folderSrc : []).map((f: any) => ({
-    kind: 'folder',
-    name: String(f.name || 'Folder'),
+  const workspaces: PorterWorkspaceDraft[] = (Array.isArray(workspaceSrc) ? workspaceSrc : []).map((f: any) => ({
+    kind: 'workspace',
+    name: String(f.name || 'Workspace'),
+    sourceId: String(f.$id || f.id || '').trim() || undefined,
     _sourceHint: 'kylrix',
   }));
 
-  if (!credentials.length && !totpSecrets.length && !folders.length) return null;
+  if (!credentials.length && !totpSecrets.length && !workspaces.length) return null;
 
   return scoreResult({
     format: isWorkspace ? 'kylrix-workspace' : 'kylrix-vault',
@@ -487,13 +493,13 @@ function discernKylrix(data: any): PorterDiscernResult | null {
     summary: [
       credentials.length ? `${credentials.length} secrets` : null,
       totpSecrets.length ? `${totpSecrets.length} smart codes` : null,
-      folders.length ? `${folders.length} folders` : null,
+      workspaces.length ? `${workspaces.length} workspace${workspaces.length === 1 ? '' : 's'}` : null,
     ]
       .filter(Boolean)
       .join(' · '),
     credentials,
     totpSecrets,
-    folders,
+    workspaces,
     warnings: [],
   });
 }
@@ -535,7 +541,7 @@ function discernGenericJsonArray(data: any): PorterDiscernResult | null {
       .join(' · '),
     credentials,
     totpSecrets,
-    folders: [],
+    workspaces: [],
     warnings: ['Format guessed from list shape — review before importing.'],
   });
 }
@@ -543,7 +549,7 @@ function discernGenericJsonArray(data: any): PorterDiscernResult | null {
 function mergeResults(parts: PorterDiscernResult[]): PorterDiscernResult {
   const credentials: PorterCredentialDraft[] = [];
   const totpSecrets: PorterTotpDraft[] = [];
-  const folders: PorterFolderDraft[] = [];
+  const workspaces: PorterWorkspaceDraft[] = [];
   const warnings: string[] = [];
   let best = parts[0];
 
@@ -551,7 +557,7 @@ function mergeResults(parts: PorterDiscernResult[]): PorterDiscernResult {
     if (p.confidence > best.confidence) best = p;
     credentials.push(...p.credentials);
     totpSecrets.push(...p.totpSecrets);
-    folders.push(...p.folders);
+    workspaces.push(...p.workspaces);
     warnings.push(...p.warnings);
   }
 
@@ -579,13 +585,13 @@ function mergeResults(parts: PorterDiscernResult[]): PorterDiscernResult {
     summary: [
       uniqueCred.length ? `${uniqueCred.length} secrets` : null,
       uniqueTotp.length ? `${uniqueTotp.length} smart codes` : null,
-      folders.length ? `${folders.length} folders` : null,
+      workspaces.length ? `${workspaces.length} workspace${workspaces.length === 1 ? '' : 's'}` : null,
     ]
       .filter(Boolean)
       .join(' · ') || 'Nothing recognized',
     credentials: uniqueCred,
     totpSecrets: uniqueTotp,
-    folders,
+    workspaces,
     warnings: Array.from(new Set(warnings)),
   });
 }
@@ -603,7 +609,7 @@ export function discernImportPayload(raw: string, userId = ''): PorterDiscernRes
       summary: 'Nothing to import.',
       credentials: [],
       totpSecrets: [],
-      folders: [],
+      workspaces: [],
       warnings: ['Paste or drop a file to continue.'],
     };
   }
@@ -637,7 +643,7 @@ export function discernImportPayload(raw: string, userId = ''): PorterDiscernRes
       summary: 'Could not detect secrets or smart codes in this data.',
       credentials: [],
       totpSecrets: [],
-      folders: [],
+      workspaces: [],
       warnings: [
         'Try a Bitwarden JSON export, Kylrix backup, authenticator backup, CSV, .env file, or otpauth links.',
       ],
@@ -663,12 +669,12 @@ export function toImportBundle(result: PorterDiscernResult): PorterImportBundle 
     format: 'kylrix-vault',
     credentials: result.credentials,
     totpSecrets: result.totpSecrets,
-    folders: result.folders,
+    workspaces: result.workspaces,
     discernedFrom: result.format,
     discernedAt: new Date().toISOString(),
   };
 }
 
 export function bundleItemCount(bundle: PorterImportBundle): number {
-  return bundle.credentials.length + bundle.totpSecrets.length + bundle.folders.length;
+  return bundle.credentials.length + bundle.totpSecrets.length + bundle.workspaces.length;
 }

@@ -185,6 +185,8 @@ function mergeById(
 export type SanitizeImportResult = {
   credentials: Record<string, unknown>[];
   totpSecrets: Record<string, unknown>[];
+  workspaces: Record<string, unknown>[];
+  /** @deprecated alias of workspaces for ImportService */
   folders: Record<string, unknown>[];
   skippedInvalid: number;
   skippedDuplicate: number;
@@ -199,8 +201,16 @@ export function sanitizeImportBundle(
   raw: {
     credentials?: unknown[];
     totpSecrets?: unknown[];
+    workspaces?: unknown[];
     folders?: unknown[];
-    data?: { vault?: { credentials?: unknown[]; totpSecrets?: unknown[]; folders?: unknown[] } };
+    data?: {
+      vault?: {
+        credentials?: unknown[];
+        totpSecrets?: unknown[];
+        workspaces?: unknown[];
+        folders?: unknown[];
+      };
+    };
   },
   existing: { credentials: Record<string, unknown>[]; totpSecrets: Record<string, unknown>[] },
 ): SanitizeImportResult {
@@ -212,10 +222,11 @@ export function sanitizeImportBundle(
   let totpSecrets = (Array.isArray(raw?.totpSecrets)
     ? raw.totpSecrets
     : vault?.totpSecrets || []) as Record<string, unknown>[];
-  let folders = (Array.isArray(raw?.folders) ? raw.folders : vault?.folders || []) as Record<
-    string,
-    unknown
-  >[];
+  let workspaces = (Array.isArray(raw?.workspaces)
+    ? raw.workspaces
+    : Array.isArray(raw?.folders)
+      ? raw.folders
+      : vault?.workspaces || vault?.folders || []) as Record<string, unknown>[];
 
   let skippedInvalid = 0;
   let skippedDuplicate = 0;
@@ -293,12 +304,13 @@ export function sanitizeImportBundle(
     totpSecrets.push(t);
   }
 
-  folders = (folders || []).filter((f) => f && !isUnimportableText(f.name));
+  workspaces = (workspaces || []).filter((f) => f && !isUnimportableText(f.name));
 
   return {
     credentials,
     totpSecrets,
-    folders,
+    workspaces,
+    folders: workspaces,
     skippedInvalid,
     skippedDuplicate,
     skippedDuplicateIncoming,
@@ -380,7 +392,9 @@ export function annotatePorterDiscernResult(
     summary: [
       importableCreds ? `${importableCreds} new secret${importableCreds === 1 ? '' : 's'}` : null,
       importableTotp ? `${importableTotp} new smart code${importableTotp === 1 ? '' : 's'}` : null,
-      result.folders.length ? `${result.folders.length} folder${result.folders.length === 1 ? '' : 's'}` : null,
+      result.workspaces.length
+        ? `${result.workspaces.length} workspace${result.workspaces.length === 1 ? '' : 's'}`
+        : null,
       skippedDup ? `${skippedDup} already present` : null,
       skippedInvalid ? `${skippedInvalid} disabled` : null,
     ]

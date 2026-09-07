@@ -2,6 +2,7 @@ export type {
   PorterCredentialDraft,
   PorterDiscernResult,
   PorterFolderDraft,
+  PorterWorkspaceDraft,
   PorterFormat,
   PorterImportBundle,
   PorterKind,

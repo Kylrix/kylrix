@@ -125,7 +125,7 @@ function filterDiscerned(
   return {
     ...result,
     credentials: [],
-    folders: [],
+    workspaces: [],
     summary: result.totpSecrets.length
       ? `${result.totpSecrets.length} smart code${result.totpSecrets.length === 1 ? '' : 's'}`
       : 'No smart codes in this file for the Codes filter',
@@ -235,7 +235,7 @@ export default function EcosystemPorter({
       }
     }
     setDiscerned(result);
-    if (result && result.credentials.length + result.totpSecrets.length + result.folders.length > 0) {
+    if (result && result.credentials.length + result.totpSecrets.length + result.workspaces.length > 0) {
       setView('preview');
     } else {
       setView('import');
@@ -332,7 +332,7 @@ export default function EcosystemPorter({
             fileName: name || null,
           });
         }
-        if (result.credentials.length + result.totpSecrets.length + result.folders.length === 0) {
+        if (result.credentials.length + result.totpSecrets.length + result.workspaces.length === 0) {
           setError(result.warnings[0] || 'Nothing matched the selected type.');
           setView('import');
         } else {
@@ -429,7 +429,7 @@ export default function EcosystemPorter({
             const localEmpty = !(
               localVault.credentials?.length ||
               localVault.totpSecrets?.length ||
-              localVault.folders?.length
+              localVault.workspaces?.length || (localVault as any).folders?.length
             );
 
             if (localEmpty) {
@@ -438,7 +438,7 @@ export default function EcosystemPorter({
                 const vault =
                   result.data.data?.vault ||
                   (result.data as any).vault || {
-                    folders: result.data.folders || [],
+                    workspaces: (result.data as any).workspaces || result.data.folders || [],
                     credentials: result.data.credentials || [],
                     totpSecrets: result.data.totpSecrets || [],
                   };
@@ -452,7 +452,7 @@ export default function EcosystemPorter({
             }
 
             const vault = {
-              folders: [...(finalData?.data?.vault?.folders || [])],
+              workspaces: [...((finalData?.data?.vault as any)?.workspaces || (finalData?.data?.vault as any)?.folders || [])],
               credentials: [...(finalData?.data?.vault?.credentials || [])],
               totpSecrets: [...(finalData?.data?.vault?.totpSecrets || [])],
             };
@@ -460,7 +460,7 @@ export default function EcosystemPorter({
               vault.totpSecrets = [];
             } else if (dataKind === 'totp') {
               vault.credentials = [];
-              vault.folders = [];
+              vault.workspaces = [];
             }
 
             if (dataKind === 'totp' && vault.totpSecrets.length === 0) {
@@ -528,7 +528,7 @@ export default function EcosystemPorter({
   };
 
   const counts = useMemo(() => {
-    if (!discerned) return { secrets: 0, totp: 0, folders: 0, importable: 0, skipped: 0 };
+    if (!discerned) return { secrets: 0, totp: 0, workspaces: 0, importable: 0, skipped: 0 };
     const secretsNew = discerned.credentials.filter(
       (c) => !c._status || c._status === 'new' || c._status === 'merged',
     ).length;
@@ -542,8 +542,8 @@ export default function EcosystemPorter({
     return {
       secrets: discerned.credentials.length,
       totp: discerned.totpSecrets.length,
-      folders: discerned.folders.length,
-      importable: secretsNew + totpNew + discerned.folders.length,
+      workspaces: discerned.workspaces.length,
+      importable: secretsNew + totpNew + discerned.workspaces.length,
       skipped,
     };
   }, [discerned]);
@@ -600,7 +600,7 @@ export default function EcosystemPorter({
                 <div className="rounded-2xl border border-white/20 bg-black px-4 py-3 space-y-1">
                   <p className="text-sm font-bold text-white">{counts.secrets} secrets in file</p>
                   <p className="text-sm font-bold text-white">{counts.totp} smart codes in file</p>
-                  <p className="text-sm font-bold text-white">{counts.folders} folders in file</p>
+                  <p className="text-sm font-bold text-white">{counts.workspaces} workspaces in file</p>
                 </div>
               </>
             ) : (
@@ -860,7 +860,7 @@ export default function EcosystemPorter({
             <div className="grid grid-cols-3 gap-3">
               <StatTile icon={<Lock className="w-4 h-4" />} label="Secrets" value={counts.secrets} />
               <StatTile icon={<KeyRound className="w-4 h-4" />} label="Codes" value={counts.totp} />
-              <StatTile icon={<FileCode2 className="w-4 h-4" />} label="Folders" value={counts.folders} />
+              <StatTile icon={<FileCode2 className="w-4 h-4" />} label="Workspaces" value={counts.workspaces} />
             </div>
 
             {counts.skipped > 0 && (

@@ -115,13 +115,14 @@ export class ImportService {
           {
             credentials: mappedData.credentials as any[],
             totpSecrets: mappedData.totpSecrets as any[],
+            workspaces: mappedData.folders as any[],
             folders: mappedData.folders as any[],
           },
           existing,
         );
         mappedData.credentials = sanitized.credentials as any;
         mappedData.totpSecrets = sanitized.totpSecrets as any;
-        mappedData.folders = sanitized.folders as any;
+        mappedData.folders = sanitized.workspaces as any;
         result.summary.skipped = sanitized.skippedInvalid;
         result.summary.skippedExisting =
           sanitized.skippedDuplicate + sanitized.skippedDuplicateIncoming;
@@ -144,7 +145,7 @@ export class ImportService {
         stage: "folders",
         currentStep: 2,
         totalSteps: 4,
-        message: "Creating folders...",
+        message: "Creating workspaces...",
         itemsProcessed: 0,
         itemsTotal: totalItems,
         errors: [],
@@ -270,8 +271,9 @@ export class ImportService {
       if (
         !parsedData.version &&
         !parsedData.credentials &&
-        !parsedData.folders &&
         !parsedData.totpSecrets &&
+        !parsedData.folders &&
+        !parsedData.workspaces &&
         !vaultBlock
       ) {
         throw new Error("Invalid Kylrix Vault export format");
@@ -283,7 +285,7 @@ export class ImportService {
       const existing = await loadExistingVaultForDedupe(userId);
       const sanitized = sanitizeImportBundle(parsedData, existing);
 
-      let folders = sanitized.folders;
+      let folders = sanitized.workspaces;
       let credentials = sanitized.credentials;
       let totpSecrets = sanitized.totpSecrets;
 
@@ -324,12 +326,12 @@ export class ImportService {
 
       const totalItems = folders.length + credentials.length + totpSecrets.length;
 
-      // Stage 2: Import folders
+      // Stage 2: Import workspaces (legacy vault folders table)
       this.updateProgress({
         stage: "folders",
         currentStep: 2,
         totalSteps: 4,
-        message: "Restoring folders...",
+        message: "Restoring workspaces...",
         itemsProcessed: 0,
         itemsTotal: totalItems,
         errors: [],
