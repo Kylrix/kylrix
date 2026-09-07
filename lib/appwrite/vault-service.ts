@@ -344,6 +344,7 @@ export const COLLECTION_SCHEMAS = {
         "passwordChangedAt",
         "createdAt",
         "updatedAt",
+        "isEnv",
         "$id",
         "$createdAt",
         "$updatedAt"],
@@ -530,8 +531,9 @@ export class VaultService {
       encryptedData.itemType = "login";
     }
 
-    // Validate password presence for login items
-    if (encryptedData.itemType === "login" && !encryptedData.password) {
+    // Env bundles store keys in customFields — password optional.
+    const isEnvBundle = Boolean((sanitizedData as any).isEnv || (data as any).isEnv);
+    if (encryptedData.itemType === "login" && !encryptedData.password && !isEnvBundle) {
       console.error("[AppwriteService] Password missing for credential:", data.name);
       throw new Error("Password is required for login credentials. It may be empty or encryption failed.");
     }

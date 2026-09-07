@@ -2261,6 +2261,7 @@ export const ApiResources = {
         isFavorite: body.isFavorite === true,
         isPinned: body.isPinned === true,
         isDeleted: false,
+        isEnv: body.isEnv === true,
         tags,
         createdAt: now,
         updatedAt: now,
@@ -2334,6 +2335,7 @@ export const ApiResources = {
     if (body.folderId !== undefined) patch.folderId = body.folderId == null ? null : String(body.folderId);
     if (body.isFavorite !== undefined) patch.isFavorite = !!body.isFavorite;
     if (body.isPinned !== undefined) patch.isPinned = !!body.isPinned;
+    if (body.isEnv !== undefined) patch.isEnv = !!body.isEnv;
     if (body.tags !== undefined && Array.isArray(body.tags)) patch.tags = body.tags.map(String);
 
     const hasEncryptedField =

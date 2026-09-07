@@ -59,6 +59,8 @@ export type CredentialsCreate = {
   dek?: string | null;
   keepPermission?: boolean | null;
   source?: string | null;
+  /** One secret row = whole env bundle (keys live in customFields). */
+  isEnv?: boolean | null;
 };
 
 export type FoldersCreate = {

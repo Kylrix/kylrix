@@ -352,6 +352,7 @@ export type CredentialsCreate = {
     "isTrash"?: boolean;
     "isWorkspace"?: boolean;
     "isAgentic"?: boolean;
+    "isEnv"?: boolean;
 }
 
 export type Credentials = Models.Row & {
@@ -392,6 +393,7 @@ export type Credentials = Models.Row & {
     "isTrash"?: boolean;
     "isWorkspace"?: boolean;
     "isAgentic"?: boolean;
+    "isEnv"?: boolean;
 }
 
 export type IdentitiesCreate = {
@@ -2994,6 +2996,7 @@ export type DatabaseTableMap = {
         "isTrash"?: boolean;
         "isWorkspace"?: boolean;
         "isAgentic"?: boolean;
+        "isEnv"?: boolean;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Credentials>;
       get: (id: string) => Promise<Credentials>;
       update: (id: string, data: Partial<{
@@ -3034,6 +3037,7 @@ export type DatabaseTableMap = {
         "isTrash"?: boolean;
         "isWorkspace"?: boolean;
         "isAgentic"?: boolean;
+        "isEnv"?: boolean;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Credentials>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Credentials>>(field: K, value: QueryableFieldValue<Credentials, K>) => string; notEqual: <K extends QueryableKeys<Credentials>>(field: K, value: QueryableFieldValue<Credentials, K>) => string; lessThan: <K extends QueryableKeys<Credentials>>(field: K, value: QueryableFieldValue<Credentials, K>) => string; lessThanEqual: <K extends QueryableKeys<Credentials>>(field: K, value: QueryableFieldValue<Credentials, K>) => string; greaterThan: <K extends QueryableKeys<Credentials>>(field: K, value: QueryableFieldValue<Credentials, K>) => string; greaterThanEqual: <K extends QueryableKeys<Credentials>>(field: K, value: QueryableFieldValue<Credentials, K>) => string; contains: <K extends QueryableKeys<Credentials>>(field: K, value: QueryableFieldValue<Credentials, K>) => string; search: <K extends QueryableKeys<Credentials>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Credentials>>(field: K) => string; isNotNull: <K extends QueryableKeys<Credentials>>(field: K) => string; startsWith: <K extends QueryableKeys<Credentials>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Credentials>>(field: K, value: string) => string; between: <K extends QueryableKeys<Credentials>>(field: K, start: QueryableFieldValue<Credentials, K>, end: QueryableFieldValue<Credentials, K>) => string; select: <K extends keyof Credentials>(fields: K[]) => string; orderAsc: <K extends keyof Credentials>(field: K) => string; orderDesc: <K extends keyof Credentials>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Credentials[] }>;
