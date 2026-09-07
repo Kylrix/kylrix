@@ -214,13 +214,37 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
     useEffect(() => {
         if (!user?.$id) return;
 
-        // 1. Subscribe to NEW messages across all conversations
-        const chatChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.DATABASES.CHAT}.messages.documents`;
-        
-        const unsubChat = realtime.subscribe([chatChannel], (response) => {
-            if (response.events.some(e => e.includes('.create'))) {
-                const payload = response.payload;
-                
+        const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+        const msgsTable = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
+        const activityTable = APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY;
+
+        const chatChannels = [
+            `databases.${dbId}.tables.${msgsTable}.rows`,
+            `databases.${dbId}.collections.${msgsTable}.documents`,
+        ];
+        const activityChannels = [
+            `databases.${dbId}.tables.${activityTable}.rows`,
+            `databases.${dbId}.collections.${activityTable}.documents`,
+        ];
+
+        let closed = false;
+        let unsubChat: any = null;
+        let unsubActivity: any = null;
+
+        const closeSub = async (sub: any) => {
+            try {
+                if (!sub) return;
+                if (typeof sub === 'function') sub();
+                else if (sub.close) await sub.close();
+                else if (sub.unsubscribe) sub.unsubscribe();
+            } catch { /* ignore */ }
+        };
+
+        void realtime.subscribe(chatChannels, (response) => {
+            if (response.events.some((e: string) => e.includes('.create'))) {
+                const payload = response.payload as any;
+                if (!payload?.conversationId) return;
+
                 if (payload.senderId === user.$id) {
                     replyHistoryCache.current.set(payload.conversationId, true);
                     return;
@@ -228,23 +252,22 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
 
                 if (payload.senderId !== user.$id) {
                     setLastMessage(payload);
-                    setUnreadConversations(prev => new Set(prev).add(payload.conversationId));
+                    setUnreadConversations((prev) => new Set(prev).add(payload.conversationId));
                     showDynamicIsland(payload);
                 }
             }
+        }).then((s) => {
+            if (closed) void closeSub(s);
+            else unsubChat = s;
         });
 
-        // 2. Subscribe to Call Signals via Activity Table
-        const activityChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.DATABASES.CHAT}.app_activity.documents`;
-
-        const unsubActivity = realtime.subscribe([activityChannel], (response) => {
-            if (response.events.some(e => e.includes('.update') || e.includes('.create'))) {
-                const activity = response.payload;
-                if (!activity.customStatus) return;
+        void realtime.subscribe(activityChannels, (response) => {
+            if (response.events.some((e: string) => e.includes('.update') || e.includes('.create'))) {
+                const activity = response.payload as any;
+                if (!activity?.customStatus) return;
 
                 try {
                     const signal = JSON.parse(activity.customStatus);
-                    // Only notify for join_request signals targeting us
                     if (signal.target === user.$id && signal.type === 'join_request') {
                         if (Date.now() - signal.ts < 10000) {
                             showCallNotification(signal, activity.userId);
@@ -252,14 +275,15 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                     }
                 } catch (_e) {}
             }
+        }).then((s) => {
+            if (closed) void closeSub(s);
+            else unsubActivity = s;
         });
 
         return () => {
-            if (typeof unsubChat === 'function') (unsubChat as any)();
-            else (unsubChat as any)?.unsubscribe?.();
-
-            if (typeof unsubActivity === 'function') (unsubActivity as any)();
-            else (unsubActivity as any)?.unsubscribe?.();
+            closed = true;
+            void closeSub(unsubChat);
+            void closeSub(unsubActivity);
         };
     }, [user?.$id, showDynamicIsland, showCallNotification]);
 

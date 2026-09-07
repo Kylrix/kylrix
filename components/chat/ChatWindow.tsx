@@ -975,9 +975,10 @@ export const ChatWindow = ({
             void loadMessages();
             void loadConversation();
         }
-        let unsub: any;
+        let unsub: { close?: () => Promise<void>; unsubscribe?: () => void } | (() => void) | null = null;
+        let closed = false;
         const initRealtime = async () => {
-            unsub = await realtime.subscribe(
+            const sub = await realtime.subscribe(
                 [
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`,
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.rows`,
@@ -988,11 +989,14 @@ export const ChatWindow = ({
                 ],
                 async (response) => {
                     const payload = response.payload as any;
+                    if (!payload) return;
+                    const events: string[] = response.events || [];
                     const convTable = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
+                    const activeId = String(conversationId);
+
                     if (
-                        payload &&
-                        (payload.$id === conversationId || payload.id === conversationId) &&
-                        response.events.some(
+                        (String(payload.$id || '') === activeId || String(payload.id || '') === activeId) &&
+                        events.some(
                             (event) =>
                                 event.includes(convTable) ||
                                 event.includes('conversations'),
@@ -1005,14 +1009,18 @@ export const ChatWindow = ({
                         });
                         return;
                     }
-                    // Handle Message Reactions realtime updates
-                    if (payload?.conversationId === conversationId && (response.events.some(e => e.includes('message_reactions')) || payload.emoji)) {
+
+                    if (
+                        String(payload.conversationId || '') === activeId &&
+                        (events.some((e) => e.includes('message_reactions')) || payload.emoji)
+                    ) {
                         void loadReactions();
                         return;
                     }
-                    if (payload?.conversationId === conversationId) {
-                        if (response.events.some(e => e.includes('.create')) || response.events.some(e => e.includes('.update'))) {
-                            if (user && payload.senderId === user.$id && response.events.some(e => e.includes('.create'))) return;
+
+                    if (String(payload.conversationId || '') === activeId) {
+                        if (events.some((e) => e.includes('.create')) || events.some((e) => e.includes('.update'))) {
+                            if (user && payload.senderId === user.$id && events.some((e) => e.includes('.create'))) return;
 
                             const isEncrypted = ecosystemSecurity.status.isUnlocked && (
                                 (payload.type === MessagesType.TEXT && payload.content && payload.content.length > 40)
@@ -1030,41 +1038,56 @@ export const ChatWindow = ({
                                 } catch (_e: unknown) { }
                             }
 
-                            if (response.events.some(e => e.includes('.create'))) {
+                            if (events.some((e) => e.includes('.create'))) {
                                 startTransition(() => {
-                                    setMessages(prev => {
-                                        const withoutOptimistic = prev.filter(m => {
+                                    setMessages((prev) => {
+                                        const withoutOptimistic = prev.filter((m) => {
                                             const isOptimistic = m.$id && String(m.$id).startsWith('optimistic-');
                                             if (isOptimistic) return m.content !== payload.content;
                                             return true;
                                         });
-                                        if (withoutOptimistic.some(m => m.$id === payload.$id)) return withoutOptimistic;
+                                        if (withoutOptimistic.some((m) => m.$id === payload.$id)) return withoutOptimistic;
                                         return [...withoutOptimistic, payload];
                                     });
                                 });
                                 setTimeout(() => scrollToBottom(), 100);
                             } else {
                                 startTransition(() => {
-                                    setMessages(prev => prev.map(m => m.$id === payload.$id ? payload : m));
+                                    setMessages((prev) => prev.map((m) => (m.$id === payload.$id ? payload : m)));
                                 });
                             }
-                        } else if (response.events.some(e => e.includes('.delete'))) {
+                        } else if (events.some((e) => e.includes('.delete'))) {
                             startTransition(() => {
-                                setMessages(prev => prev.filter(m => m.$id === payload.$id));
+                                setMessages((prev) => prev.filter((m) => m.$id !== payload.$id));
                             });
                         }
                     }
                 }
             );
+            if (closed) {
+                try {
+                    if (typeof sub === 'function') (sub as any)();
+                    else if ((sub as any)?.close) await (sub as any).close();
+                    else if ((sub as any)?.unsubscribe) (sub as any).unsubscribe();
+                } catch { /* ignore */ }
+                return;
+            }
+            unsub = sub as any;
         };
 
-        initRealtime();
+        void initRealtime();
 
         return () => {
-            if (typeof unsub === 'function') unsub();
-            else if (unsub?.unsubscribe) unsub.unsubscribe();
+            closed = true;
+            void (async () => {
+                try {
+                    if (typeof unsub === 'function') unsub();
+                    else if (unsub?.close) await unsub.close();
+                    else if (unsub?.unsubscribe) unsub.unsubscribe();
+                } catch { /* ignore */ }
+            })();
         };
-    }, [conversationId, user, user?.$id, loadConversation, loadMessages, startTransition, seedTitle, applyDisplayName]);
+    }, [conversationId, user?.$id, startTransition, applyDisplayName, loadReactions]);
 
     useEffect(() => {
         return () => {
@@ -1088,16 +1111,19 @@ export const ChatWindow = ({
     useEffect(() => {
         if (!conversationId || !user?.$id) return;
 
-        let unsub: any;
+        let unsub: { close?: () => Promise<void>; unsubscribe?: () => void } | (() => void) | null = null;
+        let closed = false;
         const initRealtime = async () => {
-            unsub = await realtime.subscribe(
+            const sub = await realtime.subscribe(
                 [
+                    `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.rows`,
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`,
-                    `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`
+                    `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.documents`,
+                    `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`,
                 ],
                 async (response) => {
                     const payload = response.payload as Partial<ChatReaction>;
-                    if (payload?.conversationId !== conversationId) return;
+                    if (String(payload?.conversationId || '') !== String(conversationId)) return;
 
                     if (response.events.some((event) => event.includes('.delete'))) {
                         if (!payload.messageId) return;
@@ -1126,13 +1152,28 @@ export const ChatWindow = ({
                     });
                 }
             );
+            if (closed) {
+                try {
+                    if (typeof sub === 'function') (sub as any)();
+                    else if ((sub as any)?.close) await (sub as any).close();
+                    else if ((sub as any)?.unsubscribe) (sub as any).unsubscribe();
+                } catch { /* ignore */ }
+                return;
+            }
+            unsub = sub as any;
         };
 
         void initRealtime();
 
         return () => {
-            if (typeof unsub === 'function') unsub();
-            else if (unsub?.unsubscribe) unsub.unsubscribe();
+            closed = true;
+            void (async () => {
+                try {
+                    if (typeof unsub === 'function') unsub();
+                    else if (unsub?.close) await unsub.close();
+                    else if (unsub?.unsubscribe) unsub.unsubscribe();
+                } catch { /* ignore */ }
+            })();
         };
     }, [conversationId, user?.$id, startTransition]);
 

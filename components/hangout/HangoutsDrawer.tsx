@@ -236,7 +236,7 @@ export function HangoutsDrawer({
     };
   }, [isVaultUnlocked, hydrateDecryptedSecureChats]);
 
-  // Realtime subscription for instant updates
+  // Realtime subscription for instant updates (TablesDB + legacy collection channels)
   useEffect(() => {
     if (!user?.$id) return;
     const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -244,18 +244,32 @@ export function HangoutsDrawer({
     const msgsTable = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
     const threadsTable = APPWRITE_CONFIG.TABLES.NOTE.THREADS;
 
-    const channel1 = `databases.${dbId}.collections.${convsTable}.documents`;
-    const channel2 = `databases.${dbId}.collections.${msgsTable}.documents`;
-    const channel3 = `databases.${dbId}.collections.${threadsTable}.documents`;
+    const channels = [
+      `databases.${dbId}.tables.${convsTable}.rows`,
+      `databases.${dbId}.tables.${msgsTable}.rows`,
+      `databases.${dbId}.tables.${threadsTable}.rows`,
+      `databases.${dbId}.collections.${convsTable}.documents`,
+      `databases.${dbId}.collections.${msgsTable}.documents`,
+      `databases.${dbId}.collections.${threadsTable}.documents`,
+    ];
 
-    let unsubPromise: Promise<unknown> | undefined;
-    unsubPromise = realtime.subscribe([channel1, channel2, channel3], (event: any) => {
+    let closed = false;
+    let sub: { close?: () => Promise<void>; unsubscribe?: () => void } | (() => void) | null = null;
+
+    void realtime.subscribe(channels, (event: any) => {
       const payload = event.payload;
       if (!payload) return;
+      const events: string[] = event.events || [];
 
-      // Check if event is a conversation update/create/delete
-      if (event.events?.some((e: string) => e.includes(`collections.${convsTable}.documents`))) {
-        if (event.events.some((e: string) => e.endsWith('.delete'))) {
+      const touchesConversations = events.some(
+        (e: string) => e.includes(`tables.${convsTable}.`) || e.includes(`collections.${convsTable}.`),
+      );
+      const touchesMessages = events.some(
+        (e: string) => e.includes(`tables.${msgsTable}.`) || e.includes(`collections.${msgsTable}.`),
+      );
+
+      if (touchesConversations) {
+        if (events.some((e: string) => e.includes('.delete'))) {
           const deletedId = payload.$id || payload.id;
           startTransition(() => {
             setSecureChats((prev) => {
@@ -276,7 +290,11 @@ export function HangoutsDrawer({
               } else {
                 next = [payload, ...prev];
               }
-              next.sort((a, b) => new Date(b.lastMessageAt || b.updatedAt || b.createdAt || 0).getTime() - new Date(a.lastMessageAt || a.updatedAt || a.createdAt || 0).getTime());
+              next.sort(
+                (a, b) =>
+                  new Date(b.lastMessageAt || b.updatedAt || b.createdAt || 0).getTime() -
+                  new Date(a.lastMessageAt || a.updatedAt || a.createdAt || 0).getTime(),
+              );
               void writeChatsListLocal(next);
               return next;
             });
@@ -284,44 +302,62 @@ export function HangoutsDrawer({
         }
       }
 
-      // Check if event is a new message (update lastMessage preview)
-      if (event.events?.some((e: string) => e.includes(`collections.${msgsTable}.documents`))) {
+      if (touchesMessages) {
         const convId = payload.conversationId;
         if (convId) {
           startTransition(() => {
             setSecureChats((prev) => {
               const idx = prev.findIndex((c: any) => (c.$id || c.id) === convId);
-              if (idx >= 0) {
-                const updated = {
-                  ...prev[idx],
-                  lastMessageText: payload.content || prev[idx].lastMessageText,
-                  lastMessageAt: payload.$createdAt || payload.createdAt || new Date().toISOString(),
-                };
-                const next = [...prev];
-                next[idx] = updated;
-                next.sort((a, b) => new Date(b.lastMessageAt || b.updatedAt || b.createdAt || 0).getTime() - new Date(a.lastMessageAt || a.updatedAt || a.createdAt || 0).getTime());
-                void writeChatsListLocal(next);
-                return next;
+              if (idx < 0) {
+                void refreshChats();
+                return prev;
               }
-              return prev;
+              const updated = {
+                ...prev[idx],
+                lastMessageText: payload.content || prev[idx].lastMessageText,
+                lastMessageAt:
+                  payload.$createdAt || payload.createdAt || new Date().toISOString(),
+              };
+              const next = [...prev];
+              next[idx] = updated;
+              next.sort(
+                (a, b) =>
+                  new Date(b.lastMessageAt || b.updatedAt || b.createdAt || 0).getTime() -
+                  new Date(a.lastMessageAt || a.updatedAt || a.createdAt || 0).getTime(),
+              );
+              void writeChatsListLocal(next);
+              return next;
             });
           });
         }
       }
+    }).then((s) => {
+      if (closed) {
+        void (async () => {
+          try {
+            if (typeof s === 'function') s();
+            else if (s?.close) await s.close();
+            else if (s?.unsubscribe) s.unsubscribe();
+          } catch { /* ignore */ }
+        })();
+        return;
+      }
+      sub = s as any;
     });
 
     return () => {
+      closed = true;
       void (async () => {
         try {
-          const unsub = (await unsubPromise) as { unsubscribe?: () => void } | (() => void);
-          if (typeof unsub === 'function') unsub();
-          else if (unsub?.unsubscribe) unsub.unsubscribe();
+          if (typeof sub === 'function') sub();
+          else if (sub?.close) await sub.close();
+          else if (sub?.unsubscribe) sub.unsubscribe();
         } catch (e) {
           console.warn('[HangoutsDrawer] Realtime unsubscribe error:', e);
         }
       })();
     };
-  }, [user?.$id]);
+  }, [user?.$id, refreshChats]);
 
   // Deep-link: open fullscreen chat and close the hangouts list drawer
   useEffect(() => {
