@@ -1,4 +1,5 @@
-import { createCredential, createFolder, createTotpSecret, AppwriteService } from "@/lib/appwrite";
+import { createFolder, AppwriteService } from "@/lib/appwrite";
+import { VaultService } from "@/lib/appwrite/vault-service";
 import type { Credentials, TotpSecrets, Folders } from "@/lib/appwrite/types";
 import type { BitwardenExport } from "./bitwarden-types";
 import {
@@ -7,6 +8,10 @@ import {
   type MappedImportData,
 } from "./bitwarden-mapper";
 import { DeduplicationEngine } from "@/lib/import/deduplication";
+import {
+  kickImportSync,
+  startImportBatch,
+} from "@/lib/vault/import-local-batch";
 
 export interface ImportProgress {
   stage: "parsing" | "folders" | "credentials" | "totp" | "completed" | "error";
@@ -164,7 +169,7 @@ export class ImportService {
         stage: "credentials",
         currentStep: 3,
         totalSteps: 4,
-        message: "Importing credentials...",
+        message: "Saving secrets privately…",
         itemsProcessed: result.summary.foldersCreated,
         itemsTotal: totalItems,
         errors: result.errors,
@@ -183,7 +188,7 @@ export class ImportService {
         stage: "totp",
         currentStep: 4,
         totalSteps: 4,
-        message: "Importing TOTP secrets...",
+        message: "Saving smart codes privately…",
         itemsProcessed:
           result.summary.foldersCreated + result.summary.credentialsCreated,
         itemsTotal: totalItems,
@@ -209,7 +214,7 @@ export class ImportService {
         stage: "completed",
         currentStep: 4,
         totalSteps: 4,
-        message: `Import completed: ${result.summary.credentialsCreated} credentials, ${result.summary.totpSecretsCreated} TOTP secrets`,
+        message: `Saved locally — syncing in the background (${result.summary.credentialsCreated} secrets, ${result.summary.totpSecretsCreated} codes)`,
         itemsProcessed: totalItems,
         itemsTotal: totalItems,
         errors: result.errors,
@@ -372,43 +377,37 @@ export class ImportService {
       }
       result.folderMapping = folderIdMapping;
 
-      // Stage 3: Import credentials
+      // Stage 3: Import credentials (LocalEngine-first ciphertext + high-priority sync)
       this.updateProgress({
         stage: "credentials",
         currentStep: 3,
         totalSteps: 4,
-        message: "Restoring credentials...",
+        message: "Saving secrets privately…",
         itemsProcessed: result.summary.foldersCreated,
         itemsTotal: totalItems,
         errors: result.errors,
       });
 
-      for (const cred of credentials) {
-        await this.throttle();
-        try {
-          console.log("[ImportService] Processing credential:", cred.name);
+      const batchId = await startImportBatch(userId);
 
+      for (let i = 0; i < credentials.length; i++) {
+        const cred = credentials[i];
+        if (i > 0 && i % 12 === 0) await this.yieldUi();
+        try {
           if (!cred.name || !String(cred.name).trim()) {
             throw new Error("Credential name is missing");
           }
 
           const cleanCred = this.cleanCredentialForCreate(cred, folderIdMapping, userId);
-
-          console.log("[ImportService] cleanCred prepared:", {
-            name: cleanCred.name,
-            username: cleanCred.username,
-            hasPassword: !!cleanCred.password,
-            userId: cleanCred.userId
-          });
-
-          await createCredential(cleanCred as any);
+          await VaultService.stageCredentialImport(cleanCred as any, { batchId });
           result.summary.credentialsCreated++;
+          if (result.summary.credentialsCreated % 24 === 0) kickImportSync(userId);
 
           this.updateProgress({
             stage: "credentials",
             currentStep: 3,
             totalSteps: 4,
-            message: `Restoring credentials... (${result.summary.credentialsCreated}/${credentials.length})`,
+            message: `Saving secrets privately… (${result.summary.credentialsCreated}/${credentials.length})`,
             itemsProcessed: result.summary.foldersCreated + result.summary.credentialsCreated,
             itemsTotal: totalItems,
             errors: result.errors,
@@ -422,21 +421,21 @@ export class ImportService {
         }
       }
 
-      // Stage 4: TOTP Secrets
+      // Stage 4: TOTP Secrets — same local-first path
       this.updateProgress({
         stage: "totp",
         currentStep: 4,
         totalSteps: 4,
-        message: "Restoring TOTP secrets...",
+        message: "Saving smart codes privately…",
         itemsProcessed: result.summary.foldersCreated + result.summary.credentialsCreated,
         itemsTotal: totalItems,
         errors: result.errors,
       });
 
-      for (const totp of totpSecrets) {
-        await this.throttle();
+      for (let i = 0; i < totpSecrets.length; i++) {
+        const totp = totpSecrets[i];
+        if (i > 0 && i % 12 === 0) await this.yieldUi();
         try {
-          // Map folder ID
           let folderId = totp.folderId;
           if (folderId && folderIdMapping.has(folderId)) {
             folderId = folderIdMapping.get(folderId);
@@ -461,13 +460,29 @@ export class ImportService {
             updatedAt: new Date().toISOString(),
           };
 
-          await createTotpSecret(cleanTotp as any);
+          await VaultService.stageTotpImport(cleanTotp as any, { batchId });
           result.summary.totpSecretsCreated++;
+          if (result.summary.totpSecretsCreated % 24 === 0) kickImportSync(userId);
+
+          this.updateProgress({
+            stage: "totp",
+            currentStep: 4,
+            totalSteps: 4,
+            message: `Saving smart codes privately… (${result.summary.totpSecretsCreated}/${totpSecrets.length})`,
+            itemsProcessed:
+              result.summary.foldersCreated +
+              result.summary.credentialsCreated +
+              result.summary.totpSecretsCreated,
+            itemsTotal: totalItems,
+            errors: result.errors,
+          });
         } catch (_e: unknown) {
           result.summary.errors++;
           result.errors.push(`Failed to restore TOTP ${totp.issuer}`);
         }
       }
+
+      kickImportSync(userId);
 
       result.success = true;
 
@@ -475,7 +490,7 @@ export class ImportService {
         stage: "completed",
         currentStep: 4,
         totalSteps: 4,
-        message: "Import completed successfully",
+        message: "Saved locally — syncing in the background",
         itemsProcessed: totalItems,
         itemsTotal: totalItems,
         errors: result.errors,
@@ -515,10 +530,13 @@ export class ImportService {
     }
   }
 
+  private async yieldUi() {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
   private async throttle() {
-    // Basic throttling: 500ms delay between operations
-    // This prevents flooding Appwrite with requests in a tight loop
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Kept for folder creates (few). Item imports use LocalEngine-first + yieldUi.
+    await new Promise(resolve => setTimeout(resolve, 120));
   }
 
   private async importFolders(
@@ -575,22 +593,24 @@ export class ImportService {
     let created = 0;
     let errors = 0;
     const errorMessages: string[] = [];
+    const userId = String((credentials[0] as any)?.userId || "");
+    const batchId = await startImportBatch(userId || "import");
 
     for (let i = 0; i < credentials.length; i++) {
-      await this.throttle(); // Throttle
+      if (i > 0 && i % 12 === 0) await this.yieldUi();
       try {
         const credential = credentials[i];
         const cleanCred = this.cleanCredentialForCreate(credential, folderIdMapping, credential.userId);
 
-        await createCredential(cleanCred as any);
+        await VaultService.stageCredentialImport(cleanCred as any, { batchId });
         created++;
+        if (userId && created % 24 === 0) kickImportSync(userId);
 
-        // Update progress for each credential
         this.updateProgress({
           stage: "credentials",
           currentStep: 3,
           totalSteps: 4,
-          message: `Importing credentials... (${created}/${credentials.length})`,
+          message: `Saving secrets privately… (${created}/${credentials.length})`,
           itemsProcessed: folderIdMapping.size + created,
           itemsTotal: folderIdMapping.size + credentials.length,
           errors: errorMessages,
@@ -603,6 +623,7 @@ export class ImportService {
       }
     }
 
+    if (userId) kickImportSync(userId);
     return { created, errors, errorMessages };
   }
 
@@ -613,28 +634,29 @@ export class ImportService {
     let created = 0;
     let errors = 0;
     const errorMessages: string[] = [];
+    const userId = String((totpSecrets[0] as any)?.userId || "");
+    const batchId = await startImportBatch(userId || "import");
 
     for (let i = 0; i < totpSecrets.length; i++) {
-      await this.throttle(); // Throttle
+      if (i > 0 && i % 12 === 0) await this.yieldUi();
       try {
         const totpSecret = { ...totpSecrets[i] };
 
-        // Map folder ID if present
         if (totpSecret.folderId && folderIdMapping.has(totpSecret.folderId)) {
           totpSecret.folderId = folderIdMapping.get(totpSecret.folderId)!;
         } else {
           totpSecret.folderId = null;
         }
 
-        await createTotpSecret(totpSecret);
+        await VaultService.stageTotpImport(totpSecret as any, { batchId });
         created++;
+        if (userId && created % 24 === 0) kickImportSync(userId);
 
-        // Update progress for each TOTP secret
         this.updateProgress({
           stage: "totp",
           currentStep: 4,
           totalSteps: 4,
-          message: `Importing TOTP secrets... (${created}/${totpSecrets.length})`,
+          message: `Saving smart codes privately… (${created}/${totpSecrets.length})`,
           itemsProcessed: folderIdMapping.size + created,
           itemsTotal: folderIdMapping.size + totpSecrets.length,
           errors: errorMessages,
@@ -647,6 +669,7 @@ export class ImportService {
       }
     }
 
+    if (userId) kickImportSync(userId);
     return { created, errors, errorMessages };
   }
 

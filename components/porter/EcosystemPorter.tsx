@@ -474,8 +474,8 @@ export default function EcosystemPorter({
               const skipped = result.summary.skippedExisting + result.summary.skipped;
               toast.success(
                 skipped > 0
-                  ? `Imported ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes · skipped ${skipped}`
-                  : `Imported ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes`,
+                  ? `Saved locally — syncing ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes · skipped ${skipped}`
+                  : `Saved locally — syncing ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes`,
               );
             } else {
               toast.error(result.errors[0] || 'Import finished with errors');

@@ -610,6 +610,139 @@ export class VaultService {
     }
   }
 
+  /**
+   * Import path: encrypt → LocalEngine (ciphertext) → return immediately.
+   * Remote create is high-priority outbox only (local batch earmarks never hit DB).
+   */
+  static async stageCredentialImport(
+    data: CredentialsCreate,
+    opts: { batchId: string },
+  ): Promise<Credentials> {
+    const sanitizedData = this.sanitizeCredentialData(data);
+    const encryptedData = await this.encryptRowFields(sanitizedData, "credentials");
+    if (!encryptedData.itemType) encryptedData.itemType = "login";
+
+    const rowId = ID.unique();
+    const now = new Date().toISOString();
+    if (!encryptedData.createdAt) encryptedData.createdAt = now;
+    encryptedData.updatedAt = now;
+
+    const predictiveRow = {
+      ...encryptedData,
+      $id: rowId,
+      $createdAt: now,
+      $updatedAt: now,
+    } as Record<string, unknown> & { $id: string };
+
+    await this.mirrorRawCredential(String(data.userId), predictiveRow);
+
+    const {
+      enqueueImportOutbox,
+      IMPORT_SYNC_PRIORITY,
+    } = await import('@/lib/vault/import-local-batch');
+    await enqueueImportOutbox({
+      rowId,
+      kind: 'credential',
+      batchId: opts.batchId,
+      userId: String(data.userId),
+      priority: IMPORT_SYNC_PRIORITY,
+      enqueuedAt: now,
+    });
+    this.clearCredentialCache(String(data.userId));
+    return predictiveRow as unknown as Credentials;
+  }
+
+  static async stageTotpImport(
+    data: TotpSecretsCreate,
+    opts: { batchId: string },
+  ): Promise<TotpSecrets> {
+    const sanitizedData = this.sanitizeTotpData(data);
+    const encryptedData = await this.encryptRowFields(sanitizedData, "totpSecrets");
+    const rowId = ID.unique();
+    const now = new Date().toISOString();
+    if (!encryptedData.createdAt) encryptedData.createdAt = now;
+    encryptedData.updatedAt = now;
+
+    const predictiveRow = {
+      ...encryptedData,
+      $id: rowId,
+      $createdAt: now,
+      $updatedAt: now,
+    } as Record<string, unknown> & { $id: string };
+
+    await this.mirrorRawTotp(String(data.userId), predictiveRow);
+
+    const {
+      enqueueImportOutbox,
+      IMPORT_SYNC_PRIORITY,
+    } = await import('@/lib/vault/import-local-batch');
+    await enqueueImportOutbox({
+      rowId,
+      kind: 'totp',
+      batchId: opts.batchId,
+      userId: String(data.userId),
+      priority: IMPORT_SYNC_PRIORITY,
+      enqueuedAt: now,
+    });
+    this.clearVaultCaches();
+    return predictiveRow as unknown as TotpSecrets;
+  }
+
+  /** Push one staged LocalEngine ciphertext row to Appwrite (write-only). */
+  static async pushStagedImportRow(item: {
+    rowId: string;
+    kind: 'credential' | 'totp';
+    userId: string;
+  }): Promise<void> {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const cacheKey =
+      item.kind === 'credential'
+        ? `vault_credential_${item.rowId}`
+        : `vault_totp_row_${item.rowId}`;
+    const row = (await LocalEngine.cacheGet<Record<string, unknown>>(cacheKey)) as any;
+    if (!row || !row.$id) {
+      throw new Error('Staged row missing from local store');
+    }
+
+    const {
+      $id,
+      $createdAt,
+      $updatedAt,
+      $permissions,
+      $databaseId,
+      $tableId,
+      $sequence,
+      ...payload
+    } = row;
+
+    const collectionId =
+      item.kind === 'credential'
+        ? APPWRITE_COLLECTION_CREDENTIALS_ID
+        : APPWRITE_COLLECTION_TOTPSECRETS_ID;
+
+    try {
+      const doc = await appwriteDatabases.createRow(
+        APPWRITE_DATABASE_ID,
+        collectionId,
+        String($id),
+        payload,
+        [Permission.read(Role.user(item.userId))],
+      );
+      if (item.kind === 'credential') {
+        await this.mirrorRawCredential(item.userId, doc as any);
+      } else {
+        await this.mirrorRawTotp(item.userId, doc as any);
+      }
+    } catch (e: any) {
+      // Already exists from a prior partial flush — treat as synced
+      const msg = String(e?.message || e || '');
+      if (/already exists|document_already_exists|409/i.test(msg)) {
+        return;
+      }
+      throw e;
+    }
+  }
+
   static async createTOTPSecret(
     data: TotpSecretsCreate,
     options?: { linkedNoteIds?: string[] }): Promise<TotpSecrets> {
