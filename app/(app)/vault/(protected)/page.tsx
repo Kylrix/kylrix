@@ -44,6 +44,18 @@ function useIsDesktop() {
   return isDesktop;
 }
 
+/** Collapse twin list entries (stale LocalEngine cache / optimistic+realtime races). */
+function dedupeCredentialsById(rows: Credentials[]): Credentials[] {
+  const byId = new Map<string, Credentials>();
+  for (const row of rows) {
+    if (!row) continue;
+    const id = row.$id || (row as any).id;
+    if (!id) continue;
+    byId.set(id, { ...row, $id: id });
+  }
+  return Array.from(byId.values());
+}
+
 function DashboardPageContent() {
   const { user, isVaultUnlocked, isVaultBlurEnabled, setVaultBlurEnabled } = useAppwriteVault();
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
@@ -168,7 +180,7 @@ function DashboardPageContent() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const loadAllCredentials = useCallback(async (background = false, cursorToUse: string | null = null) => {
+  const loadAllCredentials = useCallback(async (background = false, cursorToUse: string | null = null, force = false) => {
     const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
     if (!activeUserId) { setLoading(false); return; }
     if (!background && !cursorToUse) setLoading(true);
@@ -176,13 +188,17 @@ function DashboardPageContent() {
 
     const cacheKey = `vault_credentials_${activeUserId}`;
 
-    // Instant local copy read on mount
-    if (!cursorToUse) {
+    // Instant local copy read on mount (dedupe — stale cache may contain twin rows)
+    if (!cursorToUse && !force) {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const cachedRows = await LocalEngine.cacheGet<any[]>(cacheKey);
         if (cachedRows && Array.isArray(cachedRows) && cachedRows.length > 0) {
-          setAllCredentials(cachedRows);
+          const unique = dedupeCredentialsById(cachedRows as Credentials[]);
+          setAllCredentials(unique);
+          if (unique.length !== cachedRows.length) {
+            void LocalEngine.cacheSet(cacheKey, unique);
+          }
           setLoading(false);
         }
       } catch {}
@@ -210,17 +226,22 @@ function DashboardPageContent() {
                 Query.orderDesc('$updatedAt')
               ]
             );
-            return (Array.isArray(res?.rows) ? res.rows : []) as unknown as Credentials[];
+            return dedupeCredentialsById((Array.isArray(res?.rows) ? res.rows : []) as unknown as Credentials[]);
           },
           {
             ttl: 1000 * 60 * 5,
-            realtimeChannel: `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.collections.${APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS}.documents`
+            force,
+            realtimeChannel: `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.tables.${APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS}.rows`
           }
         );
 
-        setAllCredentials(rows);
-        setHasMore(rows.length === 50);
-        setNextCursor(rows.length === 50 && rows.length ? (rows[rows.length - 1] as any).$id : null);
+        const unique = dedupeCredentialsById(Array.isArray(rows) ? rows : []);
+        if (unique.length !== (Array.isArray(rows) ? rows.length : 0)) {
+          void LocalEngine.cacheSet(cacheKey, unique);
+        }
+        setAllCredentials(unique);
+        setHasMore(unique.length === 50);
+        setNextCursor(unique.length === 50 && unique.length ? (unique[unique.length - 1] as any).$id : null);
       } else {
         const { TablesDB, Client, Query } = await import('appwrite');
         const client = new Client()
@@ -244,9 +265,10 @@ function DashboardPageContent() {
         setNextCursor(newCursor);
 
         setAllCredentials((prev) => {
-          const existingIds = new Set(prev.map((c) => c.$id));
-          const freshUnique = (rows as unknown as Credentials[]).filter((r: any) => !existingIds.has(r.$id));
-          const updated = [...prev, ...freshUnique] as Credentials[];
+          const updated = dedupeCredentialsById([
+            ...prev,
+            ...(rows as unknown as Credentials[]),
+          ]);
           void LocalEngine.cacheSet(cacheKey, updated);
           return updated;
         });
@@ -307,9 +329,9 @@ function DashboardPageContent() {
             if (idx >= 0) {
               const updated = [...prev];
               updated[idx] = { ...updated[idx], ...payload };
-              return updated;
+              return dedupeCredentialsById(updated);
             }
-            return [payload, ...prev];
+            return dedupeCredentialsById([payload, ...prev]);
           });
         });
         if (cancelled) cleanup();
@@ -398,7 +420,7 @@ function DashboardPageContent() {
               const id = c.$id || c.id;
               if (id) byId.set(id, { ...byId.get(id), ...c, $id: id, projectId: wsId, isWorkspace: true });
             });
-            return Array.from(byId.values());
+            return dedupeCredentialsById(Array.from(byId.values()));
           });
         }
       } catch {}
@@ -410,7 +432,7 @@ function DashboardPageContent() {
   }, [activeWorkspace?.id]);
 
   const sortedCredentials = useMemo(() => {
-    return [...allCredentials].sort((a, b) => {
+    return [...dedupeCredentialsById(allCredentials)].sort((a, b) => {
       const aPinned = isResourcePinned('credential', a.$id, a.userId, a.isPinned);
       const bPinned = isResourcePinned('credential', b.$id, b.userId, b.isPinned);
       if (aPinned && !bPinned) return -1;
@@ -426,9 +448,9 @@ function DashboardPageContent() {
   const vaultGridClass =
     'grid gap-4 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]';
 
-  const refreshCredentials = () => {
+  const refreshCredentials = (force = true) => {
     if (!user?.$id) return;
-    void loadAllCredentials();
+    void loadAllCredentials(true, null, force);
   };
 
   const handleCopy = (value: string) => {
@@ -587,7 +609,7 @@ function DashboardPageContent() {
                                   await db.cache.findOne(`vault_credentials_${user.$id}`).remove().catch(() => {});
                                 }
                               } catch {}
-                              void loadAllCredentials();
+                              void loadAllCredentials(true, null, true);
                             }}
                             className="inline-flex items-center gap-2 px-4 h-12 bg-[#000000] hover:bg-[#1C1A18] text-white/80 hover:text-white border-2 border-white/20 hover:border-white/40 font-bold rounded-2xl text-xs transition-colors"
                           >
@@ -662,15 +684,15 @@ function DashboardPageContent() {
           defaultType={dialogType}
           onSaved={async (saved: any) => {
             // saved is RAW ciphertext (LocalEngine already mirrored in VaultService).
-            // RAM list paint only — never decrypt-then-cacheSet.
+            // RAM list paint only — never decrypt-then-cacheSet. Dedupe before force refresh.
             if (saved && (saved as any).$id) {
               setAllCredentials((prev) => {
-                const exists = prev.find((c) => c.$id === (saved as any).$id);
-                if (exists) return prev.map((c) => (c.$id === (saved as any).$id ? (saved as any) : c));
-                return [saved as any, ...prev];
+                const id = (saved as any).$id;
+                const without = prev.filter((c) => c.$id !== id);
+                return dedupeCredentialsById([saved as any, ...without]);
               });
             }
-            await refreshCredentials();
+            refreshCredentials(true);
           }}
         />
       )}

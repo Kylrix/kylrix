@@ -503,6 +503,7 @@ export default function CredentialDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
 
     if (!masterPassCrypto.isVaultUnlocked()) {
@@ -549,7 +550,7 @@ export default function CredentialDialog({
   };
 
   const handleMorphToDetail = async () => {
-    if (!resolveSecretName()) return;
+    if (!resolveSecretName() || loading) return;
     if (!masterPassCrypto.isVaultUnlocked()) {
       requestSudo({ onSuccess: () => void handleMorphToDetail() });
       return;

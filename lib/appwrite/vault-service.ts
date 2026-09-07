@@ -519,6 +519,17 @@ export class VaultService {
    * LocalEngine is a 1:1 ciphertext mirror of Appwrite — never write decrypted vault rows.
    * Predictive create: seal → mirror locally → sync remote with the same id/payload.
    */
+  private static dedupeRowsById<T extends { $id?: string; id?: string }>(rows: T[]): T[] {
+    const byId = new Map<string, T>();
+    for (const row of rows) {
+      if (!row) continue;
+      const id = row.$id || row.id;
+      if (!id) continue;
+      byId.set(id, row);
+    }
+    return Array.from(byId.values());
+  }
+
   private static async mirrorRawCredential(userId: string, row: Record<string, unknown> & { $id: string }) {
     try {
       const { LocalEngine } = await import("@/lib/services/LocalEngine");
@@ -526,7 +537,8 @@ export class VaultService {
       const listKey = `vault_credentials_${userId}`;
       const prev = (await LocalEngine.cacheGet<any[]>(listKey)) || [];
       const arr = Array.isArray(prev) ? prev : [];
-      await LocalEngine.cacheSet(listKey, [row, ...arr.filter((r) => r && r.$id !== row.$id)]);
+      const next = this.dedupeRowsById([row, ...arr.filter((r) => r && (r.$id || r.id) !== row.$id)]);
+      await LocalEngine.cacheSet(listKey, next);
     } catch {
       /* offline / first run */
     }
@@ -539,7 +551,8 @@ export class VaultService {
       const listKey = `vault_totp_${userId}`;
       const prev = (await LocalEngine.cacheGet<any[]>(listKey)) || [];
       const arr = Array.isArray(prev) ? prev : [];
-      await LocalEngine.cacheSet(listKey, [row, ...arr.filter((r) => r && r.$id !== row.$id)]);
+      const next = this.dedupeRowsById([row, ...arr.filter((r) => r && (r.$id || r.id) !== row.$id)]);
+      await LocalEngine.cacheSet(listKey, next);
     } catch {
       /* offline / first run */
     }
