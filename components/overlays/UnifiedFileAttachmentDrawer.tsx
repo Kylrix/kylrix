@@ -58,6 +58,9 @@ import { tasks, events } from '@/lib/kylrixflow';
 import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
+import { handleSelectObject as handleSelectObject_ext } from './UnifiedFileAttachmentDrawerSections/handleSelectObject';
+import { handleFileUpload as handleFileUpload_ext } from './UnifiedFileAttachmentDrawerSections/handleFileUpload';
+
 
 const BUCKETS = [
   'general_storage',
@@ -387,101 +390,10 @@ export function UnifiedFileAttachmentDrawer() {
 
   if (!isOpen || !options) return null;
 
-  const handleSelectObject = async (item: any) => {
-    if (
-      (activeSubTab === 'totps' || activeSubTab === 'vault') &&
-      !isUnlocked
-    ) {
-      const ok = await promptSudo('unlock');
-      if (!ok) return;
-    }
-
-    const isEncrypted = item.isEncrypted || item.encrypted || item.locked;
-    const itemTitle = isEncrypted
-      ? 'Encrypted Item'
-      : item.title || item.name || item.label || 'Attached Item';
-
-    const childId = item.$id || item.id || 'obj';
-    let childKind: any = 'note';
-    if (activeSubTab === 'ideas') childKind = 'note';
-    else if (activeSubTab === 'goals') childKind = 'task';
-    else if (activeSubTab === 'projects') childKind = 'note';
-    else if (activeSubTab === 'threads') childKind = 'note';
-    else if (activeSubTab === 'totps') childKind = 'vault';
-    else if (activeSubTab === 'vault') childKind = 'vault';
-    else if (activeSubTab === 'forms') childKind = 'form';
-    else if (activeSubTab === 'sessions') {
-      const ok = window.confirm(
-        'Attaching a Kylie session makes the entire conversation visible to anyone who can see this note. Continue?');
-      if (!ok) return;
-      childKind = 'session';
-    }
-
-    const objectBlock = serializeObjectBlock({
-      childId,
-      childKind,
-      bucketId: activeSubTab,
-      label: itemTitle,
-      appTheme: 'idea',
-      metadata: { title: itemTitle, subTab: activeSubTab }});
-
-    options.onSelectFile({
-      $id: childId,
-      name: itemTitle,
-      bucketId: activeSubTab,
-      sizeOriginal: 0,
-      mimeType: 'application/x-kylrix-object',
-      fileUrl: objectBlock});
-    closeFileDrawer();
-  };
+  const handleSelectObject = (..._args: any[]) => handleSelectObject_ext({ CurrentSubTabIcon, activeSubTab, activeTab, filteredMedia, filteredObjects, getSubTabIcon, handleAttachBatchMedia, handleFileUpload, handleSelectObject, isFullscreen, isPro, loadLocalObjects, loadSyncedMedia, loading, mediaFiles, objectItems, previewFile, renderFileIcon, s, searchQuery, selectedFile, selectedMediaIds, setActiveSubTab, setActiveTab, setIsFullscreen, setLoading, setMediaFiles, setObjectItems, setPreviewFile, setSearchQuery, setSelectedFile, setSelectedMediaIds, setUploading, setZoomScale, toggleMediaSelection, uploading, userId, zoomScale });
 
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!isPro) {
-      e.target.value = '';
-      openProUpgrade('File upload');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const bucket = 'notes_attachments';
-      const uploaded = await StorageService.uploadFile(file, bucket);
-      const childKind = file.type.startsWith('image/') ? 'image' : 'file';
-      const fileUrl = StorageService.getFileView(uploaded.$id, bucket);
-
-      const objectBlock = serializeObjectBlock({
-        childId: uploaded.$id,
-        childKind,
-        bucketId: bucket,
-        label: uploaded.name,
-        appTheme: 'idea',
-        metadata: { mimeType: uploaded.mimeType || file.type, fileName: uploaded.name, fileUrl }});
-
-      const newMedia: SyncedMediaFile = {
-        $id: uploaded.$id,
-        name: uploaded.name,
-        bucketId: bucket,
-        sizeOriginal: uploaded.sizeOriginal || file.size,
-        mimeType: uploaded.mimeType || file.type,
-        createdAt: new Date().toISOString(),
-        fileUrl: objectBlock};
-
-      const updated = [newMedia, ...mediaFiles];
-      setMediaFiles(updated);
-      await LocalEngine.cacheSet(`f_user_media_${userId}`, updated);
-
-      options.onSelectFile(newMedia);
-      closeFileDrawer();
-    } catch (err) {
-      console.error('Failed to upload file:', err);
-    } finally {
-      setUploading(false);
-    }
-  };
+  const handleFileUpload = (..._args: any[]) => handleFileUpload_ext({ CurrentSubTabIcon, activeSubTab, activeTab, filteredMedia, filteredObjects, getSubTabIcon, handleAttachBatchMedia, handleFileUpload, handleSelectObject, isFullscreen, isPro, loadLocalObjects, loadSyncedMedia, loading, mediaFiles, objectItems, previewFile, renderFileIcon, s, searchQuery, selectedFile, selectedMediaIds, setActiveSubTab, setActiveTab, setIsFullscreen, setLoading, setMediaFiles, setObjectItems, setPreviewFile, setSearchQuery, setSelectedFile, setSelectedMediaIds, setUploading, setZoomScale, toggleMediaSelection, uploading, userId, zoomScale });
 
   const filteredMedia = mediaFiles.filter((f) =>
     f.name.toLowerCase().includes(searchQuery.toLowerCase())

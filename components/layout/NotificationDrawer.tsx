@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -42,9 +41,17 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { openMomentObjectDetail } from '@/components/objects/MomentObjectDetail';
 import { parseMomentRouteId } from '@/lib/connect/moment-engagement';
+import { handleNostrEvent as handleNostrEvent_ext } from './NotificationDrawerSections/handleNostrEvent';
+import { handleToggleFollow as handleToggleFollow_ext } from './NotificationDrawerSections/handleToggleFollow';
+import { handleNotificationClick as handleNotificationClick_ext } from './NotificationDrawerSections/handleNotificationClick';
+import { onLocal as onLocal_ext } from './NotificationDrawerSections/onLocal';
+import { renderCategoryIcon as renderCategoryIcon_ext } from './NotificationDrawerSections/renderCategoryIcon';
+import { harvestLiveActivity as harvestLiveActivity_ext } from './NotificationDrawerSections/harvestLiveActivity';
+import { openMomentFromNotification as openMomentFromNotification_ext } from './NotificationDrawerSections/openMomentFromNotification';
+import { isFollowingActor as isFollowingActor_ext } from './NotificationDrawerSections/isFollowingActor';
+import { unreadCounts as unreadCounts_ext } from './NotificationDrawerSections/unreadCounts';
 
 export type NotificationCategory = 'all' | 'replies' | 'likes' | 'zaps' | 'follows' | 'system';
-
 export interface KylrixNotification {
   id: string;
   category: 'replies' | 'likes' | 'zaps' | 'follows' | 'system';
@@ -67,7 +74,6 @@ export interface KylrixNotification {
   };
   source?: 'nostr' | 'kylrix' | 'system';
 }
-
 interface NotificationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -75,7 +81,6 @@ interface NotificationDrawerProps {
   isDesktop: boolean;
   nativeSidebar?: boolean;
 }
-
 const DEFAULT_NOTIFICATION_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -83,14 +88,12 @@ const DEFAULT_NOTIFICATION_RELAYS = [
   'wss://relay.nostr.band',
   'wss://purplepag.es',
 ];
-
 function formatTimeAgo(ts: number): string {
   const diffMin = Math.max(1, Math.round((Date.now() - ts) / 60000));
   if (diffMin < 60) return `${diffMin}m ago`;
   if (diffMin < 1440) return `${Math.floor(diffMin / 60)}h ago`;
   return `${Math.floor(diffMin / 1440)}d ago`;
 }
-
 export function NotificationDrawer({
   isOpen,
   onClose,
@@ -110,14 +113,10 @@ export function NotificationDrawer({
   const notificationsRef = useRef<KylrixNotification[]>([]);
   const lastHarvestAtRef = useRef<number>(0);
   const isHarvestingRef = useRef<boolean>(false);
-
   const [followingKeys, setFollowingKeys] = useState<Set<string>>(new Set());
-
   useEffect(() => {
     notificationsRef.current = notifications;
   }, [notifications]);
-
-  // 1. Extract user pubkey (Hex and Npub)
   const userPubkeyHex = useMemo(() => {
     if (!identity?.npub) return null;
     try {
@@ -127,45 +126,31 @@ export function NotificationDrawer({
       return null;
     }
   }, [identity?.npub]);
-
   const userId = user?.$id || 'guest';
   const notifPartitionKey = `${userId}_${userPubkeyHex ? userPubkeyHex.slice(0, 16) : 'default'}`;
   const cacheKey = `kylrix_activity_notifications_${notifPartitionKey}`;
   const readStorageKey = `kylrix_notif_read_${notifPartitionKey}`;
   const dismissedStorageKey = `kylrix_notif_dismissed_${notifPartitionKey}`;
-
-  // 2. Load persisted read/dismissed state for this specific account/identity
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       const savedRead = window.localStorage.getItem(readStorageKey);
       setReadIds(savedRead ? new Set(JSON.parse(savedRead)) : new Set());
-
       const savedDismissed = window.localStorage.getItem(dismissedStorageKey);
       setDismissedIds(savedDismissed ? new Set(JSON.parse(savedDismissed)) : new Set());
     } catch {}
   }, [readStorageKey, dismissedStorageKey]);
-
-  // 3. 0ms Initial Cache Hydration from LocalEngine for this partition & Follows
   useEffect(() => {
     if (typeof window === 'undefined') return;
     let cancelled = false;
-
     void (async () => {
-      // Check primary partition cache first
       let cached = await LocalEngine.cacheGet<KylrixNotification[]>(cacheKey).catch(() => null);
-      
-      // Fallback 1: Generic user notification cache
       if (!Array.isArray(cached) || cached.length === 0) {
         cached = await LocalEngine.cacheGet<KylrixNotification[]>(`kylrix_activity_notifications_${userId}`).catch(() => null);
       }
-
-      // Fallback 2: General notification cache
       if (!Array.isArray(cached) || cached.length === 0) {
         cached = await LocalEngine.cacheGet<KylrixNotification[]>('kylrix_activity_notifications_global').catch(() => null);
       }
-
-      // Fallback 3: Convert raw activity logs from LocalEngine if available
       if (!Array.isArray(cached) || cached.length === 0) {
         const rawLogs = await LocalEngine.cacheGet<any[]>(`f_notifications_${userId}`).catch(() => null);
         if (Array.isArray(rawLogs) && rawLogs.length > 0) {
@@ -182,12 +167,9 @@ export function NotificationDrawer({
           }));
         }
       }
-
       if (Array.isArray(cached) && cached.length > 0 && !cancelled) {
         setNotifications(cached);
       }
-
-      // Merge LocalEngine workspace-intel tips (0 DB)
       try {
         const { listWorkspaceIntelNotifications } = await import('@/lib/agentic/local-notifications');
         const intel = await listWorkspaceIntelNotifications(userId);
@@ -201,7 +183,6 @@ export function NotificationDrawer({
           });
         }
       } catch {}
-
       const localGlobalFollows = (await LocalEngine.cacheGet<string[]>('kylrix:follows')) || [];
       const localUserFollows = userId && userId !== 'guest' ? ((await LocalEngine.cacheGet<string[]>(`kylrix:follows_${userId}`)) || []) : [];
       const merged = new Set<string>([...localGlobalFollows, ...localUserFollows].map((k) => k.toLowerCase()));
@@ -209,26 +190,21 @@ export function NotificationDrawer({
         setFollowingKeys(merged);
       }
     })();
-
     const handleFollowsUpdated = (e: Event) => {
       const customEvent = e as CustomEvent<string[]>;
       if (Array.isArray(customEvent.detail)) {
         setFollowingKeys(new Set(customEvent.detail.map((k) => String(k).toLowerCase())));
       }
     };
-
     window.addEventListener('kylrix:follows-updated', handleFollowsUpdated);
     return () => {
       cancelled = true;
       window.removeEventListener('kylrix:follows-updated', handleFollowsUpdated);
     };
   }, [cacheKey, userId]);
-
-  // 3b. Realtime background sync of active user follows on drawer open
   useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return;
     let cancelled = false;
-
     void (async () => {
       try {
         const discovered = new Set<string>();
@@ -259,331 +235,17 @@ export function NotificationDrawer({
     })();
     return () => { cancelled = true; };
   }, [isOpen, userPubkeyHex, userId]);
-
-  // 4. Stable Activity Harvesting from LocalEngine & Nostr (Throttled, 0 loop)
-  const harvestLiveActivity = useCallback(async (force: boolean = false) => {
-    if (typeof window === 'undefined') return;
-    const now = Date.now();
-    if (!force && now - lastHarvestAtRef.current < 60_000) {
-      return;
-    }
-    if (isHarvestingRef.current) return;
-    isHarvestingRef.current = true;
-    lastHarvestAtRef.current = now;
-    setSyncing(true);
-
-    try {
-      const itemsMap = new Map<string, KylrixNotification>();
-
-      // Preserve existing valid cached items first
-      for (const n of notificationsRef.current) {
-        itemsMap.set(n.id, n);
-      }
-
-      // A0. Workspace ambient tips from LocalEngine (never remote)
-      try {
-        const { listWorkspaceIntelNotifications } = await import('@/lib/agentic/local-notifications');
-        const intel = await listWorkspaceIntelNotifications(userId);
-        for (const n of intel) {
-          itemsMap.set(n.id, { ...n, time: formatTimeAgo(n.timestamp || Date.now()) });
-        }
-      } catch {}
-
-      // A. Real Appwrite Security & Session Logs (Cached with 30-min TTL in LocalEngine)
-      if (user?.$id) {
-        try {
-          const cachedLogs = await LocalEngine.cacheGet<{ logs: any[]; at: number }>('kylrix_session_logs_cache', 30 * 60 * 1000).catch(() => null);
-          let logs: any[] = cachedLogs?.logs || [];
-          if (!logs.length && navigator.onLine) {
-            const logsRes = await account.listLogs().catch(() => ({ logs: [] }));
-            logs = logsRes.logs || [];
-            if (logs.length) {
-              void LocalEngine.cacheSet('kylrix_session_logs_cache', { logs, at: now }).catch(() => {});
-            }
-          }
-          for (const log of logs) {
-            const ts = new Date(log.time).getTime();
-            const timeStr = formatTimeAgo(ts);
-
-            let title = 'Account Session Active';
-            let message = `Signed in from ${log.countryName || 'Local Session'} via ${log.clientName || 'Web Browser'}.`;
-            let accent = '#10B981';
-
-            if (log.event?.includes('password') || log.event?.includes('mfa')) {
-              title = 'Security Updated';
-              message = `Security credentials modified for user from IP ${log.ip}.`;
-              accent = '#F59E0B';
-            }
-
-            const id = `sys_log_${log.$id || ts}_${log.event}`;
-            itemsMap.set(id, {
-              id,
-              category: 'system',
-              title,
-              message,
-              time: timeStr,
-              timestamp: ts,
-              read: false,
-              accent,
-              actionHref: '/settings',
-              source: 'system',
-            });
-          }
-        } catch {}
-      }
-
-      // B. Real Moments Discussions & Reactions from Local Engine (0 network round-trips)
-      try {
-        const moments =
-          (await LocalEngine.cacheGet<any[]>('f_unified_moments_feed')) ||
-          (await LocalEngine.cacheGet<any[]>('f_moments_list')) ||
-          [];
-
-        for (const m of moments.slice(0, 30)) {
-          const ts = new Date(m.$createdAt || m.createdAt || Date.now()).getTime();
-          const timeStr = formatTimeAgo(ts);
-
-          if (m.commentsCount && m.commentsCount > 0) {
-            const id = `rep_moment_${m.$id || m.id}`;
-            itemsMap.set(id, {
-              id,
-              category: 'replies',
-              title: `Discussion on "${(m.caption || m.content || 'Moment').slice(0, 45)}"`,
-              message: `${m.commentsCount} active replies and comments on your moment.`,
-              time: timeStr,
-              timestamp: ts + 1000,
-              read: false,
-              accent: '#6366F1',
-              actionHref: `/moment/${m.$id || m.id}`,
-              actor: {
-                name: m.userName || m.username || 'Community Member',
-                username: m.username,
-                isNostr: !!m.isNostr,
-              },
-              source: m.isNostr ? 'nostr' : 'kylrix',
-            });
-          }
-
-          if (m.likesCount && m.likesCount > 0) {
-            const id = `like_moment_${m.$id || m.id}`;
-            itemsMap.set(id, {
-              id,
-              category: 'likes',
-              title: 'Reactions on your post',
-              message: `${m.likesCount} people liked your moment "${(m.caption || m.content || '').slice(0, 45)}"`,
-              time: timeStr,
-              timestamp: ts + 500,
-              read: false,
-              accent: '#EC4899',
-              actionHref: `/moment/${m.$id || m.id}`,
-              source: m.isNostr ? 'nostr' : 'kylrix',
-            });
-          }
-        }
-      } catch {}
-
-      // C. Live Nostr Relays Notification Harvesting (`#p` targeted query)
-      if (userPubkeyHex) {
-        try {
-          const configuredRelays = await getNostrReadRelays().catch(() => DEFAULT_NOTIFICATION_RELAYS);
-          const relayUrls = Array.from(new Set([...DEFAULT_NOTIFICATION_RELAYS, ...configuredRelays]));
-
-          if (!poolRef.current) {
-            poolRef.current = new NostrRelayPool(relayUrls);
-            poolRef.current.connect();
-          }
-
-          const subId = `kylrix_notif_sub_${Date.now()}`;
-          const authorsToFetch: string[] = [];
-
-          // Query Nostr relays for events tagging the user's pubkey
-          poolRef.current.subscribe(subId, [
-            {
-              '#p': [userPubkeyHex],
-              kinds: [1, 3, 6, 7, 9735],
-              limit: 50,
-            },
-          ]);
-
-          const handleNostrEvent = (event: NostrEvent) => {
-            if (!event || !event.id) return;
-            const ts = (event.created_at || Date.now() / 1000) * 1000;
-            const timeStr = formatTimeAgo(ts);
-            const cachedAuthor = getCachedNostrProfile(event.pubkey);
-            const authorDisplayName = cachedAuthor?.name || cachedAuthor?.displayName || `npub…${event.pubkey.slice(-6)}`;
-            let npubStr: string | undefined;
-            try {
-              npubStr = bytesToNpub(hexToBytes(event.pubkey));
-            } catch {}
-
-            const actorMetadata = {
-              name: authorDisplayName,
-              username: cachedAuthor?.nip05 || (cachedAuthor?.name ? `@${cachedAuthor.name}` : undefined),
-              avatar: cachedAuthor?.picture,
-              isNostr: true,
-              npub: npubStr,
-              pubkey: event.pubkey,
-            };
-
-            authorsToFetch.push(event.pubkey);
-
-            if (event.kind === 1) {
-              const notifId = `nostr_reply_${event.id}`;
-              const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
-              const targetId = targetNoteTag ? targetNoteTag[1] : event.id;
-
-              itemsMap.set(notifId, {
-                id: notifId,
-                category: 'replies',
-                title: `${authorDisplayName} replied to your post`,
-                message: (event.content || '').slice(0, 140),
-                time: timeStr,
-                timestamp: ts,
-                read: false,
-                accent: '#8B5CF6',
-                actionHref: `/moment/nostr_${targetId}`,
-                actor: actorMetadata,
-                source: 'nostr',
-              });
-            } else if (event.kind === 3) {
-              const notifId = `nostr_follow_${event.pubkey}`;
-              itemsMap.set(notifId, {
-                id: notifId,
-                category: 'follows',
-                title: `${authorDisplayName} followed you`,
-                message: `Started following your Nostr profile.`,
-                time: timeStr,
-                timestamp: ts,
-                read: false,
-                accent: '#3B82F6',
-                actionHref: `/connect`,
-                actor: actorMetadata,
-                source: 'nostr',
-              });
-            } else if (event.kind === 7) {
-              const notifId = `nostr_like_${event.id}`;
-              const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
-              const targetId = targetNoteTag ? targetNoteTag[1] : event.id;
-              const emoji = event.content && event.content !== '+' ? event.content : '❤️';
-
-              itemsMap.set(notifId, {
-                id: notifId,
-                category: 'likes',
-                title: `${authorDisplayName} reacted ${emoji}`,
-                message: `Liked your Nostr note.`,
-                time: timeStr,
-                timestamp: ts,
-                read: false,
-                accent: '#EC4899',
-                actionHref: `/moment/nostr_${targetId}`,
-                actor: actorMetadata,
-                source: 'nostr',
-              });
-            } else if (event.kind === 6) {
-              const notifId = `nostr_repost_${event.id}`;
-              const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
-              const targetId = targetNoteTag ? targetNoteTag[1] : event.id;
-
-              itemsMap.set(notifId, {
-                id: notifId,
-                category: 'replies',
-                title: `${authorDisplayName} boosted your post`,
-                message: `Shared your Nostr note with their followers.`,
-                time: timeStr,
-                timestamp: ts,
-                read: false,
-                accent: '#10B981',
-                actionHref: `/moment/nostr_${targetId}`,
-                actor: actorMetadata,
-                source: 'nostr',
-              });
-            } else if (event.kind === 9735) {
-              const notifId = `nostr_zap_${event.id}`;
-              const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
-              const targetId = targetNoteTag ? targetNoteTag[1] : undefined;
-
-              itemsMap.set(notifId, {
-                id: notifId,
-                category: 'zaps',
-                title: `⚡ Lightning Zap received!`,
-                message: `${authorDisplayName} sent you a Lightning Zap on Nostr.`,
-                time: timeStr,
-                timestamp: ts,
-                read: false,
-                accent: '#F59E0B',
-                actionHref: targetId ? `/moment/nostr_${targetId}` : `/connect`,
-                actor: actorMetadata,
-                source: 'nostr',
-              });
-            }
-          };
-
-          (poolRef.current as any).listeners.add(handleNostrEvent);
-
-          setTimeout(() => {
-            if (poolRef.current) {
-              (poolRef.current as any).listeners.delete(handleNostrEvent);
-              poolRef.current.unsubscribe(subId);
-            }
-            if (authorsToFetch.length) {
-              void queueNostrProfileFetch(Array.from(new Set(authorsToFetch)));
-            }
-            const finalSorted = Array.from(itemsMap.values())
-              .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-              .slice(0, 100);
-            setNotifications(finalSorted);
-            void LocalEngine.cacheSet(cacheKey, finalSorted);
-            void LocalEngine.cacheSet(`kylrix_activity_notifications_${userId}`, finalSorted);
-            setSyncing(false);
-            isHarvestingRef.current = false;
-          }, 1500);
-        } catch (err) {
-          console.warn('[NotificationDrawer] Nostr harvest warning:', err);
-        }
-      }
-
-      const sorted = Array.from(itemsMap.values())
-        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-        .slice(0, 100);
-      setNotifications(sorted);
-      await LocalEngine.cacheSet(cacheKey, sorted).catch(() => {});
-      await LocalEngine.cacheSet(`kylrix_activity_notifications_${userId}`, sorted).catch(() => {});
-    } finally {
-      if (!userPubkeyHex) {
-        setSyncing(false);
-        isHarvestingRef.current = false;
-      }
-    }
-  }, [user?.$id, userPubkeyHex, cacheKey, userId]);
-
+  const harvestLiveActivity = useCallback((..._args: any[]) => harvestLiveActivity_ext({ activeTab, cacheKey, clearAllNotifications, diffMin, dismissNotification, dismissedIds, dismissedStorageKey, filteredNotifications, followingKeys, handleNotificationClick, handleToggleFollow, harvestLiveActivity, isFollowingActor, isHarvestingRef, lastHarvestAtRef, markAllRead, markNotificationRead, notifPartitionKey, notificationBody, notifications, notificationsRef, openMomentFromNotification, poolRef, readIds, readStorageKey, renderCategoryIcon, router, setActiveTab, setDismissedIds, setFollowingKeys, setNotifications, setReadIds, setSyncing, syncing, unreadCounts, userId, userPubkeyHex, visibleNotifications }, ..._args), [user?.$id, userPubkeyHex, cacheKey, userId]);
   useEffect(() => {
     if (isOpen) {
       void harvestLiveActivity(false);
     }
   }, [isOpen, harvestLiveActivity]);
-
-  // Live merge when ambient workspace tip lands in LocalEngine
   useEffect(() => {
-    const onLocal = (e: Event) => {
-      const detail = (e as CustomEvent).detail as
-        | { userId?: string; notification?: KylrixNotification }
-        | undefined;
-      if (detail?.userId && detail.userId !== userId) return;
-      const row = detail?.notification;
-      if (!row) return;
-      setNotifications((prev) => {
-        const map = new Map<string, KylrixNotification>();
-        map.set(row.id, { ...row, time: formatTimeAgo(row.timestamp || Date.now()) });
-        for (const n of prev) map.set(n.id, n);
-        return Array.from(map.values())
-          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-          .slice(0, 100);
-      });
-    };
+    const onLocal = (..._args: any[]) => onLocal_ext({ activeTab, cacheKey, clearAllNotifications, diffMin, dismissNotification, dismissedIds, dismissedStorageKey, filteredNotifications, followingKeys, handleNotificationClick, handleToggleFollow, harvestLiveActivity, isFollowingActor, isHarvestingRef, lastHarvestAtRef, markAllRead, markNotificationRead, notifPartitionKey, notificationBody, notifications, notificationsRef, onLocal, openMomentFromNotification, poolRef, readIds, readStorageKey, renderCategoryIcon, router, setActiveTab, setDismissedIds, setFollowingKeys, setNotifications, setReadIds, setSyncing, syncing, unreadCounts, userId, userPubkeyHex, visibleNotifications });
     window.addEventListener('kylrix:local-notifications', onLocal as EventListener);
     return () => window.removeEventListener('kylrix:local-notifications', onLocal as EventListener);
   }, [userId]);
-
   const markNotificationRead = (id: string) => {
     setReadIds((prev) => {
       const next = new Set(prev).add(id);
@@ -593,7 +255,6 @@ export function NotificationDrawer({
       return next;
     });
   };
-
   const markAllRead = () => {
     const allIds = notifications.map((n) => n.id);
     const next = new Set([...Array.from(readIds), ...allIds]);
@@ -602,7 +263,6 @@ export function NotificationDrawer({
       window.localStorage.setItem(readStorageKey, JSON.stringify(Array.from(next)));
     }
   };
-
   const dismissNotification = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setDismissedIds((prev) => {
@@ -613,7 +273,6 @@ export function NotificationDrawer({
       return next;
     });
   };
-
   const clearAllNotifications = () => {
     const allIds = notifications.map((n) => n.id);
     const next = new Set([...Array.from(dismissedIds), ...allIds]);
@@ -622,177 +281,13 @@ export function NotificationDrawer({
       window.localStorage.setItem(`kylrix_notif_dismissed_${userId}`, JSON.stringify(Array.from(next)));
     }
   };
-
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
-
-  const openMomentFromNotification = useCallback(
-    (rawId: string, actor?: KylrixNotification['actor']) => {
-      const cleaned = String(rawId || '')
-        .replace(/^\/moment\//, '')
-        .split(/[?#]/)[0]
-        .trim();
-      if (!cleaned) return false;
-      const { source, id } = parseMomentRouteId(cleaned);
-      if (!id) return false;
-      openMomentObjectDetail({
-        momentId: id,
-        source,
-        preview: actor
-          ? {
-              authorName: actor.name,
-              authorAvatar: actor.avatar,
-            }
-          : undefined,
-        openSidebar,
-        openOverlay,
-        closeSidebar,
-        closeOverlay,
-      });
-      return true;
-    },
-    [openSidebar, openOverlay, closeSidebar, closeOverlay],
-  );
-
-  const isFollowingActor = useCallback(
-    (actor?: KylrixNotification['actor']) => {
-      if (!actor) return false;
-      const keys = [
-        actor.pubkey?.toLowerCase(),
-        actor.npub?.toLowerCase(),
-        actor.userId?.toLowerCase(),
-        actor.username?.toLowerCase()?.replace(/^@/, ''),
-      ].filter(Boolean) as string[];
-
-      return keys.some((k) => followingKeys.has(k));
-    },
-    [followingKeys]
-  );
-
-  const handleToggleFollow = async (
-    actor: NonNullable<KylrixNotification['actor']>,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation();
-    const primaryKey = actor.pubkey || actor.npub || actor.userId || actor.username;
-    if (!primaryKey) return;
-
-    const currentlyFollowing = isFollowingActor(actor);
-    const allKeysToToggle = [
-      actor.pubkey?.toLowerCase(),
-      actor.npub?.toLowerCase(),
-      actor.userId?.toLowerCase(),
-      actor.username?.toLowerCase()?.replace(/^@/, ''),
-    ].filter(Boolean) as string[];
-
-    setFollowingKeys((prev) => {
-      const nextSet = new Set(prev);
-      if (currentlyFollowing) {
-        allKeysToToggle.forEach((k) => nextSet.delete(k));
-      } else {
-        allKeysToToggle.forEach((k) => nextSet.add(k));
-      }
-      const nextArr = Array.from(nextSet);
-
-      // 1. LocalEngine 0ms persistence
-      void LocalEngine.cacheSet('kylrix:follows', nextArr).catch(() => {});
-      if (userId && userId !== 'guest') {
-        void LocalEngine.cacheSet(`kylrix:follows_${userId}`, nextArr).catch(() => {});
-      }
-
-      // 2. Realtime local broadcast
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('kylrix:follows-updated', { detail: nextArr }));
-      }
-      return nextSet;
-    });
-
-    toast.success(currentlyFollowing ? `Unfollowed ${actor.name || 'user'}` : `Following ${actor.name || 'user'}`);
-
-    // 3. Background remote dispatch (optimistic)
-    if (actor.userId && userId && userId !== 'guest') {
-      void (async () => {
-        try {
-          const { SocialService } = await import('@/lib/services/social');
-          if (currentlyFollowing) {
-            await SocialService.unfollowUser(userId, actor.userId!);
-          } else {
-            await SocialService.followUser(userId, actor.userId!);
-          }
-        } catch {}
-      })();
-    }
-
-    if (actor.pubkey && userPubkeyHex && identity) {
-      void (async () => {
-        try {
-          const { getNostrReadRelays } = await import('@/lib/connect/feed-settings');
-          const relays = await getNostrReadRelays().catch(() => DEFAULT_NOTIFICATION_RELAYS);
-          const activePool = poolRef.current || new NostrRelayPool(relays);
-          if (!poolRef.current) {
-            poolRef.current = activePool;
-            activePool.connect();
-          }
-          const storedFollows = (await LocalEngine.cacheGet<string[]>('kylrix:follows')) || [];
-          const followedPubkeys = storedFollows.filter((k) => /^[0-9a-f]{64}$/i.test(k));
-          const tags = followedPubkeys.map((pk) => ['p', pk]);
-          const { signEvent } = await import('@/lib/nostr/nostr');
-          if (identity.privateKeyBytes) {
-            const ev = signEvent(
-              {
-                kind: 3,
-                pubkey: userPubkeyHex,
-                created_at: Math.floor(Date.now() / 1000),
-                tags,
-                content: '',
-              },
-              identity.privateKeyBytes
-            );
-            await activePool.publish(ev);
-          }
-        } catch {}
-      })();
-    }
-  };
-
-  const handleNotificationClick = (notif: KylrixNotification) => {
-    markNotificationRead(notif.id);
-    onClose();
-
-    if (notif.category === 'follows' && notif.actor) {
-      openUnifiedDrawer('profile-preview', {
-        userId: notif.actor.userId,
-        username: notif.actor.username || notif.actor.name,
-        name: notif.actor.name,
-        avatar: notif.actor.avatar,
-        npub: notif.actor.npub,
-        pubkey: notif.actor.pubkey,
-        source: notif.actor.isNostr ? 'nostr' : 'ecosystem',
-      });
-      return;
-    }
-
-    const href = notif.actionHref ? sanitizeInAppHref(notif.actionHref) : '';
-    if (href.startsWith('/moment/')) {
-      openMomentFromNotification(href, notif.actor);
-      return;
-    }
-
-    if (notif.id.includes('moment')) {
-      const parts = notif.id.split('_');
-      const momentId = parts[parts.length - 1];
-      if (momentId && openMomentFromNotification(momentId, notif.actor)) {
-        return;
-      }
-    }
-
-    if (href) {
-      router.push(href);
-    }
-  };
-
-  // Filter visible items
+  const openMomentFromNotification = useCallback((..._args: any[]) => openMomentFromNotification_ext({ activeTab, cacheKey, clearAllNotifications, diffMin, dismissNotification, dismissedIds, dismissedStorageKey, filteredNotifications, followingKeys, handleNotificationClick, handleToggleFollow, harvestLiveActivity, isFollowingActor, isHarvestingRef, lastHarvestAtRef, markAllRead, markNotificationRead, notifPartitionKey, notificationBody, notifications, notificationsRef, openMomentFromNotification, poolRef, readIds, readStorageKey, renderCategoryIcon, router, setActiveTab, setDismissedIds, setFollowingKeys, setNotifications, setReadIds, setSyncing, syncing, unreadCounts, userId, userPubkeyHex, visibleNotifications }, ..._args), [openSidebar, openOverlay, closeSidebar, closeOverlay]);
+  const isFollowingActor = useCallback((..._args: any[]) => isFollowingActor_ext({ activeTab, cacheKey, clearAllNotifications, diffMin, dismissNotification, dismissedIds, dismissedStorageKey, filteredNotifications, followingKeys, handleNotificationClick, handleToggleFollow, harvestLiveActivity, isFollowingActor, isHarvestingRef, lastHarvestAtRef, markAllRead, markNotificationRead, notifPartitionKey, notificationBody, notifications, notificationsRef, openMomentFromNotification, poolRef, readIds, readStorageKey, renderCategoryIcon, router, setActiveTab, setDismissedIds, setFollowingKeys, setNotifications, setReadIds, setSyncing, syncing, unreadCounts, userId, userPubkeyHex, visibleNotifications }, ..._args), [followingKeys]);
+  const handleToggleFollow = (..._args: any[]) => handleToggleFollow_ext({ activeTab, cacheKey, clearAllNotifications, diffMin, dismissNotification, dismissedIds, dismissedStorageKey, filteredNotifications, followingKeys, handleNostrEvent, handleNotificationClick, handleToggleFollow, harvestLiveActivity, isFollowingActor, isHarvestingRef, lastHarvestAtRef, markAllRead, markNotificationRead, notifPartitionKey, notificationBody, notifications, notificationsRef, openMomentFromNotification, poolRef, readIds, readStorageKey, renderCategoryIcon, router, setActiveTab, setDismissedIds, setFollowingKeys, setNotifications, setReadIds, setSyncing, syncing, unreadCounts, userId, userPubkeyHex, visibleNotifications });
+  const handleNotificationClick = (..._args: any[]) => handleNotificationClick_ext({ activeTab, cacheKey, clearAllNotifications, diffMin, dismissNotification, dismissedIds, dismissedStorageKey, filteredNotifications, followingKeys, handleNostrEvent, handleNotificationClick, handleToggleFollow, harvestLiveActivity, isFollowingActor, isHarvestingRef, lastHarvestAtRef, markAllRead, markNotificationRead, notifPartitionKey, notificationBody, notifications, notificationsRef, openMomentFromNotification, poolRef, readIds, readStorageKey, renderCategoryIcon, router, setActiveTab, setDismissedIds, setFollowingKeys, setNotifications, setReadIds, setSyncing, syncing, unreadCounts, userId, userPubkeyHex, visibleNotifications });
   const visibleNotifications = useMemo(() => {
     return notifications
       .filter((n) => !dismissedIds.has(n.id))
@@ -803,22 +298,7 @@ export function NotificationDrawer({
       }))
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   }, [notifications, dismissedIds, readIds]);
-
-  // Category unread counters
-  const unreadCounts = useMemo(() => {
-    const counts = { all: 0, replies: 0, likes: 0, zaps: 0, follows: 0, system: 0 };
-    for (const n of visibleNotifications) {
-      if (!n.read) {
-        counts.all++;
-        if (counts[n.category] !== undefined) {
-          counts[n.category]++;
-        }
-      }
-    }
-    return counts;
-  }, [visibleNotifications]);
-
-  // Active tab items
+  const unreadCounts = useMemo(() => unreadCounts_ext({ activeTab, cacheKey, clearAllNotifications, diffMin, dismissNotification, dismissedIds, dismissedStorageKey, filteredNotifications, followingKeys, handleNotificationClick, handleToggleFollow, harvestLiveActivity, isFollowingActor, isHarvestingRef, lastHarvestAtRef, markAllRead, markNotificationRead, notifPartitionKey, notificationBody, notifications, notificationsRef, openMomentFromNotification, poolRef, readIds, readStorageKey, renderCategoryIcon, router, setActiveTab, setDismissedIds, setFollowingKeys, setNotifications, setReadIds, setSyncing, syncing, unreadCounts, userId, userPubkeyHex, visibleNotifications }), [visibleNotifications]);
   const filteredNotifications = useMemo(() => {
     let list = visibleNotifications;
     if (activeTab !== 'all') {
@@ -826,9 +306,7 @@ export function NotificationDrawer({
     }
     return list.slice(0, 100);
   }, [visibleNotifications, activeTab]);
-
   if (!isOpen) return null;
-
   const tabs: Array<{ id: NotificationCategory; label: string; icon: React.ReactNode }> = [
     { id: 'all', label: 'All', icon: <Bell size={13} /> },
     { id: 'replies', label: 'Replies', icon: <MessageSquare size={13} /> },
@@ -837,24 +315,7 @@ export function NotificationDrawer({
     { id: 'follows', label: 'Follows', icon: <UserPlus size={13} /> },
     { id: 'system', label: 'System', icon: <ShieldCheck size={13} /> },
   ];
-
-  const renderCategoryIcon = (category: KylrixNotification['category']) => {
-    switch (category) {
-      case 'replies':
-        return <MessageSquare size={17} strokeWidth={2.4} />;
-      case 'likes':
-        return <Heart size={17} strokeWidth={2.4} />;
-      case 'zaps':
-        return <Zap size={17} strokeWidth={2.4} />;
-      case 'follows':
-        return <UserPlus size={17} strokeWidth={2.4} />;
-      case 'system':
-      default:
-        return <ShieldCheck size={17} strokeWidth={2.4} />;
-    }
-  };
-
-  // OpenBricks 4.0 Tactile Content Architecture (1:1 with renderProfilePanel)
+  const renderCategoryIcon = (..._args: any[]) => renderCategoryIcon_ext({ activeTab, cacheKey, clearAllNotifications, diffMin, dismissNotification, dismissedIds, dismissedStorageKey, filteredNotifications, followingKeys, handleNotificationClick, handleToggleFollow, harvestLiveActivity, isFollowingActor, isHarvestingRef, lastHarvestAtRef, markAllRead, markNotificationRead, notifPartitionKey, notificationBody, notifications, notificationsRef, onLocal, openMomentFromNotification, poolRef, readIds, readStorageKey, renderCategoryIcon, router, setActiveTab, setDismissedIds, setFollowingKeys, setNotifications, setReadIds, setSyncing, syncing, unreadCounts, userId, userPubkeyHex, visibleNotifications });
   const notificationBody = (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, width: '100%', maxWidth: '100%', height: '100%', flex: 1, boxSizing: 'border-box', px: 0.5 }}>
       {/* 1. Header Identity Tile (Generous padding, avatar/icon slot, title, and close button) */}
@@ -891,7 +352,6 @@ export function NotificationDrawer({
         >
           <Bell size={20} strokeWidth={2.5} />
         </Box>
-
         {/* Stacked Copy Column */}
         <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.4, pr: 0.5 }}>
           <Typography
@@ -909,7 +369,6 @@ export function NotificationDrawer({
           >
             Activity & Notifications
           </Typography>
-
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, overflow: 'hidden' }}>
             <Box
               component="span"
@@ -930,7 +389,6 @@ export function NotificationDrawer({
             >
               {unreadCounts.all > 0 ? `${unreadCounts.all} UNREAD` : 'CAUGHT UP'}
             </Box>
-
             {identity?.npub ? (
               <Typography
                 component="span"
@@ -951,7 +409,6 @@ export function NotificationDrawer({
             ) : null}
           </Box>
         </Box>
-
         {/* Action Controls & Close */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
           <IconButton
@@ -971,7 +428,6 @@ export function NotificationDrawer({
           >
             <RotateCw size={14} className={syncing ? 'animate-spin text-[#F59E0B]' : ''} />
           </IconButton>
-
           <IconButton
             onClick={onClose}
             size="small"
@@ -988,7 +444,6 @@ export function NotificationDrawer({
           </IconButton>
         </Box>
       </Box>
-
       {/* 2. Horizontal Filter Pill Tabs */}
       <Box
         sx={{
@@ -1006,7 +461,6 @@ export function NotificationDrawer({
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const count = unreadCounts[tab.id];
-
           return (
             <button
               key={tab.id}
@@ -1056,7 +510,6 @@ export function NotificationDrawer({
           );
         })}
       </Box>
-
       {/* 3. Notifications List Column (Freely scrollable row stream) */}
       <Box
         sx={{
@@ -1120,7 +573,6 @@ export function NotificationDrawer({
               >
                 {renderCategoryIcon(notif.category)}
               </Box>
-
               {notif.source === 'nostr' && (
                 <Box
                   title="Nostr event"
@@ -1144,7 +596,6 @@ export function NotificationDrawer({
                 </Box>
               )}
             </Box>
-
             {/* 2. Structured Stacked Copy Column */}
             <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.4, pr: 0.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
@@ -1174,7 +625,6 @@ export function NotificationDrawer({
                   {notif.time}
                 </Typography>
               </Box>
-
               <Typography
                 component="span"
                 sx={{
@@ -1191,7 +641,6 @@ export function NotificationDrawer({
               >
                 {notif.message}
               </Typography>
-
               {/* Follow / Mutual Sub-Card */}
               {notif.category === 'follows' && notif.actor && (
                 <Box
@@ -1275,7 +724,6 @@ export function NotificationDrawer({
                       </Typography>
                     </Box>
                   </Box>
-
                   <Box
                     sx={{
                       px: 1.25,
@@ -1309,7 +757,6 @@ export function NotificationDrawer({
                 </Box>
               )}
             </Box>
-
             {/* 3. Dismiss & Right Action */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mt: 0.4 }}>
               <IconButton
@@ -1330,7 +777,6 @@ export function NotificationDrawer({
             </Box>
           </Box>
         ))}
-
         {/* Clean Empty State */}
         {filteredNotifications.length === 0 && (
           <Box
@@ -1385,7 +831,6 @@ export function NotificationDrawer({
           </Box>
         )}
       </Box>
-
       {/* 4. Action Buttons (Mark All Read & Clear Side-by-Side matching Profile Panel) */}
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25, minWidth: 0, width: '100%', pt: 0.5 }}>
         <Button
@@ -1413,7 +858,6 @@ export function NotificationDrawer({
             Mark all read
           </span>
         </Button>
-
         <Button
           onClick={clearAllNotifications}
           disabled={visibleNotifications.length === 0}
@@ -1442,8 +886,6 @@ export function NotificationDrawer({
       </Box>
     </Box>
   );
-
-  // Desktop View (Matching Native Sidebar & Right Drawer)
   if (isDesktop) {
     if (nativeSidebar) {
       return (
@@ -1492,13 +934,10 @@ export function NotificationDrawer({
             <CloseIcon size={16} />
           </IconButton>
         </Box>
-
         {notificationBody}
       </Drawer>
     );
   }
-
-  // Mobile Topbar Dropdown Panel (Exact 1:1 match with renderProfilePanel)
   return (
     <Box
       data-kylrix-topbar-panel

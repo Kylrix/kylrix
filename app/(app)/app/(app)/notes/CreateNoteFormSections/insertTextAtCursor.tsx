@@ -1,0 +1,131 @@
+"use client";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ID } from 'appwrite';
+import { 
+
+export function insertTextAtCursor(bag: any) {
+  const {
+  _attachUrl,
+  _filteredExistingTags,
+  _handlePaste,
+  _handleTagKeyDown,
+  _isAttachingFile,
+  _isCheckingUrl,
+  _isSaving,
+  _isTagDropdownOpen,
+  _isUploadingVoice,
+  _persist,
+  _setIsTagDropdownOpen,
+  _wrapSelection,
+  acceptGhost,
+  allNotesRef,
+  appendTag,
+  applyContentDraft,
+  applyPersistSnapshot,
+  audioChunksRef,
+  autoTitleTimerRef,
+  candidateNote,
+  candidateNoteRef,
+  composeCloseHandledRef,
+  composeHasContentRef,
+  composerKind,
+  content,
+  contentRef,
+  createdToastShown,
+  currentTag,
+  durationIntervalRef,
+  editorStateRef,
+  ensureLiveDraftId,
+  existingTags,
+  fileUploadRef,
+  flushLiveNote,
+  flushLiveNoteDraft,
+  flushLiveNoteDraftRef,
+  ghostSuggestion,
+  handleClose,
+  handleContentChange,
+  handleMorphToDetail,
+  hasAnnouncedCreateRef,
+  hasAnnouncedDraftRef,
+  hasBootstrappedDraftRef,
+  insertObjectBlock,
+  insertTextAtCursor,
+  isArticle,
+  isAttachDrawerOpen,
+  isContextDrawerOpen,
+  isDirty,
+  isExpanded,
+  isGuest,
+  isHydrated,
+  isMobile,
+  isPastedRef,
+  isPro,
+  isPublic,
+  isRecording,
+  isTitleManuallyEdited,
+  lastSavedSnapshot,
+  liveDraftIdRef,
+  localIsExpanded,
+  mediaRecorderRef,
+  migrateDraftId,
+  onPickFile,
+  openPro,
+  pasteTimerRef,
+  pendingBlockDelete,
+  persistedIsGuest,
+  persistedIsPublic,
+  recordingDuration,
+  recordingTimerRef,
+  removeTag,
+  resolvedNoteId,
+  saveComposerNote,
+  scheduleLiveNoteSync,
+  setComposerKind,
+  setContent,
+  setCurrentTag,
+  setIsArticle,
+  setIsAttachDrawerOpen,
+  setIsAttachingFile,
+  setIsCheckingUrl,
+  setIsContextDrawerOpen,
+  setIsGuest,
+  setIsHydrated,
+  setIsMobile,
+  setIsPublic,
+  setIsRecording,
+  setIsSaving,
+  setIsTitleManuallyEdited,
+  setIsUploadingVoice,
+  setLastSavedSnapshot,
+  setLocalIsExpanded,
+  setPendingBlockDelete,
+  setPersistedIsGuest,
+  setPersistedIsPublic,
+  setRecordingDuration,
+  setResolvedNoteId,
+  setTags,
+  setTitle,
+  snapshot,
+  suggestions,
+  syncTimerRef,
+  tags,
+  title,
+  toggleExpand,
+  toggleRecording
+  } = bag as any;
+
+    const textarea = contentRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart || 0;
+      const end = textarea.selectionEnd || 0;
+      const nextContent = content.substring(0, start) + text + content.substring(end);
+      handleContentChange(nextContent);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + text.length, start + text.length);
+      }, 50);
+    } else {
+      handleContentChange(content + text);
+    }
+}

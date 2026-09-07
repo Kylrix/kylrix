@@ -35,6 +35,11 @@ import {
   tryCreatePasskeyWrapKey,
 } from '@/utils/import/encrypted-html-exporter';
 import { porterExport } from '@/lib/data-porter';
+import { executeExport as executeExport_ext } from './EcosystemPorterSections/executeExport';
+import { filterDiscerned as filterDiscerned_ext } from './EcosystemPorterSections/filterDiscerned';
+import { startDirection as startDirection_ext } from './EcosystemPorterSections/startDirection';
+import { executeImport as executeImport_ext } from './EcosystemPorterSections/executeImport';
+
 
 type PorterDirection = 'import' | 'export';
 type PorterDataKind = 'secrets' | 'totp' | 'mixed' | 'auto';
@@ -103,48 +108,7 @@ function kindLabel(kind: PorterDataKind): string {
   return 'Secrets + codes';
 }
 
-function filterDiscerned(
-  result: PorterDiscernResult,
-  kind: PorterDataKind,
-): PorterDiscernResult {
-  const base: PorterDiscernResult = {
-    ...result,
-    credentials: Array.isArray(result.credentials) ? result.credentials : [],
-    totpSecrets: Array.isArray(result.totpSecrets) ? result.totpSecrets : [],
-    workspaces: Array.isArray(result.workspaces) ? result.workspaces : [],
-    warnings: Array.isArray(result.warnings) ? result.warnings : [],
-  };
-  if (kind === 'auto' || kind === 'mixed') return base;
-  if (kind === 'secrets') {
-    return {
-      ...base,
-      totpSecrets: [],
-      summary: base.credentials.length
-        ? `${base.credentials.length} secret${base.credentials.length === 1 ? '' : 's'}`
-        : 'No secrets in this file for the Secrets filter',
-      warnings: [
-        ...base.warnings,
-        ...(result.totpSecrets?.length
-          ? [`Hid ${result.totpSecrets.length} smart code(s) — Secrets selected.`]
-          : []),
-      ],
-    };
-  }
-  return {
-    ...base,
-    credentials: [],
-    workspaces: [],
-    summary: base.totpSecrets.length
-      ? `${base.totpSecrets.length} smart code${base.totpSecrets.length === 1 ? '' : 's'}`
-      : 'No smart codes in this file for the Codes filter',
-    warnings: [
-      ...base.warnings,
-      ...(result.credentials?.length
-        ? [`Hid ${result.credentials.length} secret(s) — Smart codes selected.`]
-        : []),
-    ],
-  };
-}
+const filterDiscerned = (..._args: any[]) => filterDiscerned_ext({ a, blob, busy, cachedSession, confirmDrawer, confirmKind, confirmKindPick, confirmLeaveFlow, counts, dataKind, direction, discerned, endFlowAndClose, error, executeExport, executeImport, exportFormat, exportPassword, fileName, fileRef, filterDiscerned, goBack, handleClose, lockWithPasskey, onFile, pasteTimer, persistSession, portalReady, progressMsg, rawText, requestLeaveFlow, resumeCachedSession, runDiscern, scheduleDiscernFromPaste, setBusy, setCachedSession, setConfirmKind, setDataKind, setDirection, setDiscerned, setError, setExportFormat, setExportPassword, setFileName, setLockWithPasskey, setPortalReady, setProgressMsg, setRawText, setView, shellClass, startDirection, url, userId, view, visibleKinds });
 
 export default function EcosystemPorter({
   onClose,
@@ -322,48 +286,7 @@ export default function EcosystemPorter({
     void endFlowAndClose();
   };
 
-  const startDirection = (dir: PorterDirection) => {
-    // Already have work in the other direction — ask to cancel first
-    if (cachedSession && cachedSession.direction !== dir) {
-      setError(
-        `You have an in-progress ${cachedSession.direction}. Open it, or cancel it first.`,
-      );
-      return;
-    }
-
-    // Same direction with saved work → resume details
-    if (
-      cachedSession?.direction === dir &&
-      (dir === 'export' || draftHasImportPreview(cachedSession) || cachedSession.view)
-    ) {
-      void resumeCachedSession();
-      return;
-    }
-
-    setDirection(dir);
-    setError(null);
-    setDiscerned(null);
-    setRawText('');
-    setFileName(null);
-    setConfirmKind(null);
-    const nextKind =
-      dir === 'export' && dataKind === 'auto'
-        ? surface === 'vault-totp'
-          ? 'totp'
-          : surface === 'vault-secrets'
-            ? 'secrets'
-            : 'mixed'
-        : dataKind;
-    if (nextKind !== dataKind) setDataKind(nextKind);
-    void persistSession({
-      direction: dir,
-      dataKind: nextKind,
-      result: null,
-      fileName: null,
-      view: 'pick-kind',
-    });
-    setView('pick-kind');
-  };
+  const startDirection = (..._args: any[]) => startDirection_ext({ a, blob, busy, cachedSession, confirmDrawer, confirmKind, confirmKindPick, confirmLeaveFlow, counts, dataKind, direction, discerned, endFlowAndClose, error, executeExport, executeImport, exportFormat, exportPassword, fileName, fileRef, filterDiscerned, goBack, handleClose, lockWithPasskey, onFile, pasteTimer, persistSession, portalReady, progressMsg, rawText, requestLeaveFlow, resumeCachedSession, runDiscern, scheduleDiscernFromPaste, setBusy, setCachedSession, setConfirmKind, setDataKind, setDirection, setDiscerned, setError, setExportFormat, setExportPassword, setFileName, setLockWithPasskey, setPortalReady, setProgressMsg, setRawText, setView, shellClass, startDirection, url, userId, view, visibleKinds });
 
   const confirmKindPick = (kind: PorterDataKind) => {
     setDataKind(kind);
@@ -458,154 +381,9 @@ export default function EcosystemPorter({
     }
   };
 
-  const executeImport = () => {
-    if (!discerned || !userId) return;
-    setConfirmKind(null);
-    requestSudo({
-      onSuccess: () => {
-        void (async () => {
-          setBusy(true);
-          setProgressMsg('Importing…');
-          try {
-            const result = await runOfflinePorterImport(discerned, userId, (msg, processed, total) =>
-              setProgressMsg(total ? `${msg} (${processed}/${total})` : msg),
-            );
-            if (result.success) {
-              const skipped = result.summary.skippedExisting + result.summary.skipped;
-              toast.success(
-                skipped > 0
-                  ? `Saved locally — syncing ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes · skipped ${skipped}`
-                  : `Saved locally — syncing ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes`,
-              );
-            } else {
-              toast.error(result.errors[0] || 'Import finished with errors');
-            }
-            await clearPorterDraft(userId);
-            setCachedSession(null);
-            onImported?.();
-            handleClose();
-          } catch (e: any) {
-            setError(e?.message || 'Import failed');
-          } finally {
-            setBusy(false);
-            setProgressMsg(null);
-          }
-        })();
-      },
-    });
-  };
+  const executeImport = (..._args: any[]) => executeImport_ext({ a, blob, busy, cachedSession, confirmDrawer, confirmKind, confirmKindPick, confirmLeaveFlow, counts, dataKind, direction, discerned, endFlowAndClose, error, executeExport, executeImport, exportFormat, exportPassword, fileName, fileRef, filterDiscerned, goBack, handleClose, lockWithPasskey, onFile, pasteTimer, persistSession, portalReady, progressMsg, rawText, requestLeaveFlow, resumeCachedSession, runDiscern, scheduleDiscernFromPaste, setBusy, setCachedSession, setConfirmKind, setDataKind, setDirection, setDiscerned, setError, setExportFormat, setExportPassword, setFileName, setLockWithPasskey, setPortalReady, setProgressMsg, setRawText, setView, shellClass, startDirection, url, userId, view, visibleKinds });
 
-  const executeExport = () => {
-    if (!userId) return;
-    setConfirmKind(null);
-    requestSudo({
-      onSuccess: () => {
-        void (async () => {
-          setBusy(true);
-          setError(null);
-          try {
-            let finalData = await exportVaultPlaintext(userId);
-            const localVault = finalData.data.vault;
-            const localEmpty = !(
-              localVault.credentials?.length ||
-              localVault.totpSecrets?.length ||
-              localVault.workspaces?.length || (localVault as any).folders?.length
-            );
-
-            if (localEmpty) {
-              try {
-                const result = await porterExport(userId);
-                const vault =
-                  result.data.data?.vault ||
-                  (result.data as any).vault || {
-                    workspaces: (result.data as any).workspaces || result.data.folders || [],
-                    credentials: result.data.credentials || [],
-                    totpSecrets: result.data.totpSecrets || [],
-                  };
-                finalData = {
-                  ...finalData,
-                  data: { vault },
-                } as any;
-              } catch {
-                /* keep empty */
-              }
-            }
-
-            const vault = {
-              workspaces: [...((finalData?.data?.vault as any)?.workspaces || (finalData?.data?.vault as any)?.folders || [])],
-              credentials: [...(finalData?.data?.vault?.credentials || [])],
-              totpSecrets: [...(finalData?.data?.vault?.totpSecrets || [])],
-            };
-            if (dataKind === 'secrets') {
-              vault.totpSecrets = [];
-            } else if (dataKind === 'totp') {
-              vault.credentials = [];
-              vault.workspaces = [];
-            }
-
-            if (dataKind === 'totp' && vault.totpSecrets.length === 0) {
-              setError('No smart codes found to export. Open the Codes tab once, then try again.');
-              setBusy(false);
-              return;
-            }
-            if (dataKind === 'secrets' && vault.credentials.length === 0) {
-              setError('No secrets found to export.');
-              setBusy(false);
-              return;
-            }
-
-            const payload = {
-              version: 2,
-              format: 'kylrix-vault',
-              plaintext: true,
-              exportedAt: new Date().toISOString(),
-              userId,
-              exportKind: dataKind,
-              data: { vault },
-            };
-
-            const jsonString = JSON.stringify(payload, null, 2);
-            const suffix =
-              dataKind === 'secrets' ? 'secrets' : dataKind === 'totp' ? 'codes' : 'vault';
-
-            if (exportFormat === 'encrypted-html') {
-              if (!exportPassword.trim()) {
-                setError('Choose a password to lock this HTML file (passkey unlock is optional).');
-                setBusy(false);
-                return;
-              }
-              const passkeyWrap = lockWithPasskey
-                ? await tryCreatePasskeyWrapKey().catch(() => null)
-                : null;
-              const sealed = await sealPlaintextExport(
-                jsonString,
-                exportPassword.trim(),
-                passkeyWrap,
-              );
-              const htmlPage = generateEncryptedHtmlPage(sealed, user?.email || 'Kylrix User');
-              downloadBlob(htmlPage, `kylrix-${suffix}-backup-locked.html`, 'text/html');
-            } else {
-              downloadBlob(jsonString, `kylrix-${suffix}-backup.json`, 'application/json');
-            }
-            toast.success(
-              dataKind === 'totp'
-                ? `Exported ${vault.totpSecrets.length} smart codes`
-                : dataKind === 'secrets'
-                  ? `Exported ${vault.credentials.length} secrets`
-                  : 'Export ready',
-            );
-            if (userId) await clearPorterDraft(userId);
-            setCachedSession(null);
-            handleClose();
-          } catch (e: any) {
-            setError(e?.message || 'Export failed');
-          } finally {
-            setBusy(false);
-          }
-        })();
-      },
-    });
-  };
+  const executeExport = (..._args: any[]) => executeExport_ext({ a, blob, busy, cachedSession, confirmDrawer, confirmKind, confirmKindPick, confirmLeaveFlow, counts, dataKind, direction, discerned, endFlowAndClose, error, executeExport, executeImport, exportFormat, exportPassword, fileName, fileRef, filterDiscerned, goBack, handleClose, lockWithPasskey, onFile, pasteTimer, persistSession, portalReady, progressMsg, rawText, requestLeaveFlow, resumeCachedSession, runDiscern, scheduleDiscernFromPaste, setBusy, setCachedSession, setConfirmKind, setDataKind, setDirection, setDiscerned, setError, setExportFormat, setExportPassword, setFileName, setLockWithPasskey, setPortalReady, setProgressMsg, setRawText, setView, shellClass, startDirection, url, userId, view, visibleKinds });
 
   const counts = useMemo(() => {
     if (!discerned) return { secrets: 0, totp: 0, workspaces: 0, importable: 0, skipped: 0 };

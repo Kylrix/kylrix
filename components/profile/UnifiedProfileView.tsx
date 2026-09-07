@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
@@ -41,10 +40,13 @@ import { BadgeChip } from '@/components/sponsor/SponsorBadges';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityById } from '@/lib/identity-cache';
 import toast from 'react-hot-toast';
-
+import { unpackNostrEvent as unpackNostrEvent_ext } from './UnifiedProfileViewSections/unpackNostrEvent';
+import { loadNostrActivity as loadNostrActivity_ext } from './UnifiedProfileViewSections/loadNostrActivity';
+import { lookup as lookup_ext } from './UnifiedProfileViewSections/lookup';
+import { resolveAvatar as resolveAvatar_ext } from './UnifiedProfileViewSections/resolveAvatar';
+import { loadStats as loadStats_ext } from './UnifiedProfileViewSections/loadStats';
 export type ProfileTab = 'posts' | 'replies' | 'likes' | 'zaps';
 export type ProfileViewMode = 'ecosystem' | 'nostr';
-
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -52,7 +54,6 @@ const DEFAULT_RELAYS = [
   'wss://relay.nostr.band',
   'wss://purplepag.es',
 ];
-
 function formatRelative(ts: number | string) {
   const timeMs = typeof ts === 'string' ? new Date(ts).getTime() : ts * 1000;
   if (!timeMs) return '';
@@ -67,7 +68,6 @@ function formatRelative(ts: number | string) {
   if (day < 7) return `${day}d`;
   return new Date(timeMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
-
 interface UnpackedPost {
   id: string;
   targetId: string;
@@ -81,84 +81,7 @@ interface UnpackedPost {
   reactionEmoji?: string;
   zapAmount?: string;
 }
-
-function unpackNostrEvent(item: NostrEvent, reposterName?: string): UnpackedPost {
-  const isRepost = item.kind === 6;
-  let targetId = item.id;
-  let rawContent = item.content || '';
-  let authorPubkey = item.pubkey;
-  let createdAt = item.created_at;
-  let reactionEmoji: string | undefined;
-  let zapAmount: string | undefined;
-
-  // Handle Reposts (NIP-18 kind 6)
-  if (isRepost) {
-    const trimmed = rawContent.trim();
-    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        if (parsed && typeof parsed === 'object') {
-          targetId = parsed.id || item.tags?.find(t => t[0] === 'e')?.[1] || item.id;
-          rawContent = parsed.content || '';
-          authorPubkey = parsed.pubkey || item.pubkey;
-          if (parsed.created_at) createdAt = parsed.created_at;
-        }
-      } catch {}
-    } else {
-      const eTag = item.tags?.find(t => t[0] === 'e');
-      if (eTag) targetId = eTag[1];
-      const pTag = item.tags?.find(t => t[0] === 'p');
-      if (pTag) authorPubkey = pTag[1];
-    }
-  }
-
-  // Handle Reactions (kind 7)
-  if (item.kind === 7) {
-    reactionEmoji = rawContent && rawContent !== '+' ? rawContent : '❤️';
-    const eTag = item.tags?.find(t => t[0] === 'e');
-    if (eTag) targetId = eTag[1];
-    rawContent = '';
-  }
-
-  // Handle Zaps (kind 9735)
-  if (item.kind === 9735) {
-    const eTag = item.tags?.find(t => t[0] === 'e');
-    if (eTag) targetId = eTag[1];
-    const descTag = item.tags?.find(t => t[0] === 'description');
-    if (descTag?.[1]) {
-      try {
-        const descObj = JSON.parse(descTag[1]);
-        if (descObj.content) rawContent = descObj.content;
-      } catch {}
-    }
-  }
-
-  // Fallback: If content is stringified JSON, unpack the text
-  const trimmedFinal = rawContent.trim();
-  if (trimmedFinal.startsWith('{') && trimmedFinal.endsWith('}')) {
-    try {
-      const parsed = JSON.parse(trimmedFinal);
-      if (parsed.content) rawContent = parsed.content;
-    } catch {}
-  }
-
-  const { text: cleanText, images } = extractPostImages(rawContent, item.tags);
-
-  return {
-    id: item.id,
-    targetId: targetId || item.id,
-    isRepost,
-    repostAuthor: isRepost ? reposterName : undefined,
-    authorPubkey,
-    content: cleanText,
-    createdAt,
-    images,
-    kind: item.kind,
-    reactionEmoji,
-    zapAmount,
-  };
-}
-
+const unpackNostrEvent = (..._args: any[]) => unpackNostrEvent_ext({ activeBio, activeDisplayName, activeHandle, activeTab, badges, copiedKey, copyToClipboard, currentUserId, day, diff, engagement, handleToggleFollow, hr, isEditModalOpen, isFollowing, isNostrMode, isOwnCheck, isOwnProfile, isRepost, kylrixFollowersCount, kylrixFollowingCount, loadNostrActivity, loadStats, loadingPosts, lookup, min, nostrFollowersCount, nostrFollowingCount, nostrMeta, nostrPosts, parentEvents, rawUsername, resolveAvatar, resolvedAvatarUrl, resolvedNpub, resolvedProfile, resolvedPubkey, router, sec, setActiveTab, setBadges, setCopiedKey, setEngagement, setIsEditModalOpen, setIsFollowing, setKylrixFollowersCount, setKylrixFollowingCount, setLoadingPosts, setNostrFollowersCount, setNostrFollowingCount, setNostrMeta, setNostrPosts, setParentEvents, setResolvedAvatarUrl, setResolvedNpub, setResolvedProfile, setResolvedPubkey, setViewMode, targetUid, timeMs, totalFollowers, totalFollowing, trimmedFinal, unpackNostrEvent, unpackedLikes, unpackedPosts, unpackedReplies, unpackedZaps, viewMode });
 export interface UnifiedProfileViewProps {
   userId?: string;
   username?: string;
@@ -171,7 +94,6 @@ export interface UnifiedProfileViewProps {
   initialProfile?: any;
   onClose?: () => void;
 }
-
 export function UnifiedProfileView({
   userId,
   username,
@@ -191,10 +113,8 @@ export function UnifiedProfileView({
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const router = useRouter();
-
   const currentUserId = user?.$id;
   const targetUid = userId || initialProfile?.userId || initialProfile?.$id || (isOwnCheck() ? currentUserId : undefined);
-
   function isOwnCheck() {
     return Boolean(
       (currentUserId && userId && currentUserId === userId) ||
@@ -202,13 +122,10 @@ export function UnifiedProfileView({
       (user?.prefs?.username && username && user.prefs.username.toLowerCase() === username.toLowerCase())
     );
   }
-
   const isOwnProfile = isOwnCheck();
-
   // Resolved public keys (hex and npub)
   const [resolvedNpub, setResolvedNpub] = useState<string | null>(initialNpub || null);
   const [resolvedPubkey, setResolvedPubkey] = useState<string | null>(initialPubkey || null);
-
   // Resolved profile details
   const [resolvedProfile, setResolvedProfile] = useState<{ 
     name?: string; 
@@ -227,10 +144,8 @@ export function UnifiedProfileView({
     socials: initialProfile?.socials || {},
     createdAt: initialProfile?.$createdAt || initialProfile?.createdAt,
   });
-
   // Avatar URL resolved from Appwrite storage / local previews / remote
   const [resolvedAvatarUrl, setResolvedAvatarUrl] = useState<string | null>(null);
-
   // Nostr-native metadata
   const [nostrMeta, setNostrMeta] = useState<{
     name?: string;
@@ -242,16 +157,13 @@ export function UnifiedProfileView({
     banner?: string;
     relaysCount?: number;
   }>({});
-
   // Follower & Following metrics
   const [kylrixFollowersCount, setKylrixFollowersCount] = useState<number>(0);
   const [kylrixFollowingCount, setKylrixFollowingCount] = useState<number>(0);
   const [nostrFollowersCount, setNostrFollowersCount] = useState<number>(0);
   const [nostrFollowingCount, setNostrFollowingCount] = useState<number>(0);
-
   // Badges
   const [badges, setBadges] = useState<any[]>([]);
-
   // Activity Stream State
   const [nostrPosts, setNostrPosts] = useState<NostrEvent[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
@@ -269,7 +181,6 @@ export function UnifiedProfileView({
     repostCount: {},
   });
   const [parentEvents, setParentEvents] = useState<Record<string, NostrEvent>>({});
-
   // 1. Derive Keys from Identity or User Prefs
   useEffect(() => {
     if (isOwnProfile) {
@@ -289,7 +200,6 @@ export function UnifiedProfileView({
       }
     }
   }, [isOwnProfile, identity, user]);
-
   useEffect(() => {
     if (initialPubkey && !resolvedNpub) {
       try {
@@ -297,7 +207,6 @@ export function UnifiedProfileView({
       } catch {}
     }
   }, [initialPubkey, resolvedNpub]);
-
   useEffect(() => {
     if (initialNpub && !resolvedPubkey) {
       try {
@@ -305,130 +214,20 @@ export function UnifiedProfileView({
       } catch {}
     }
   }, [initialNpub, resolvedPubkey]);
-
   // 2. Resolve Profile & Identity from LocalEngine / DB
   useEffect(() => {
     let cancelled = false;
-    const lookup = async () => {
-      try {
-        const uid = targetUid;
-        if (uid) {
-          // Instant Identity cache hit
-          const cachedIdentity = getCachedIdentityById(uid);
-          if (cachedIdentity && !cancelled) {
-            const storedNpub = (cachedIdentity as any).nostrNpub || (cachedIdentity as any).npub || (cachedIdentity.publicKey?.startsWith('npub') ? cachedIdentity.publicKey : undefined);
-            const storedPubkey = (cachedIdentity as any).nostrPubkey || (cachedIdentity as any).pubkey || (cachedIdentity.publicKey && !cachedIdentity.publicKey.startsWith('npub') ? cachedIdentity.publicKey : undefined);
-            if (storedNpub && !resolvedNpub) setResolvedNpub(storedNpub);
-            if (storedPubkey && !resolvedPubkey) setResolvedPubkey(storedPubkey);
-            setResolvedProfile(prev => ({
-              ...prev,
-              name: (prev.name || cachedIdentity.displayName || (cachedIdentity as any).name) || undefined,
-              username: (prev.username || cachedIdentity.username) || undefined,
-              avatar: (prev.avatar || cachedIdentity.avatar || (cachedIdentity as any).avatarUrl) || undefined,
-              bio: (prev.bio || cachedIdentity.bio) || undefined,
-              links: prev.links?.length ? prev.links : (cachedIdentity as any).links || [],
-              createdAt: (prev.createdAt || (cachedIdentity as any).createdAt) || undefined,
-            }));
-          }
-
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const localIdentity = await LocalEngine.cacheGet<any>(`identity:${uid}`).catch(() => null);
-          if (localIdentity && !cancelled) {
-            const storedNpub = localIdentity.nostrNpub || localIdentity.npub || (localIdentity.publicKey?.startsWith('npub') ? localIdentity.publicKey : undefined);
-            const storedPubkey = localIdentity.nostrPubkey || localIdentity.pubkey || (localIdentity.publicKey && !localIdentity.publicKey.startsWith('npub') ? localIdentity.publicKey : undefined);
-            if (storedNpub && !resolvedNpub) setResolvedNpub(storedNpub);
-            if (storedPubkey && !resolvedPubkey) setResolvedPubkey(storedPubkey);
-            setResolvedProfile(prev => ({
-              name: prev.name || localIdentity.displayName || localIdentity.name,
-              username: prev.username || localIdentity.username,
-              avatar: prev.avatar || localIdentity.avatar || localIdentity.avatarUrl,
-              bio: prev.bio || localIdentity.bio,
-              links: prev.links?.length ? prev.links : localIdentity.links || [],
-              createdAt: prev.createdAt || localIdentity.createdAt,
-            }));
-          }
-
-          const { UsersService } = await import('@/lib/services/users');
-          const prof = await UsersService.getProfileById(uid).catch(() => null);
-          if (cancelled || !prof) return;
-          const storedNpub = (prof as any).nostrNpub || (prof as any).npub;
-          const storedPubkey = (prof as any).nostrPubkey || (prof as any).pubkey;
-          if (storedNpub && !resolvedNpub) setResolvedNpub(storedNpub);
-          if (storedPubkey && !resolvedPubkey) setResolvedPubkey(storedPubkey);
-          setResolvedProfile(prev => ({
-            name: prev.name || prof.displayName || prof.name,
-            username: prev.username || prof.username,
-            avatar: prev.avatar || prof.avatar || prof.avatarUrl,
-            bio: prev.bio || prof.bio,
-            links: prev.links?.length ? prev.links : (prof as any).preferences?.links || (prof as any).links || [],
-            createdAt: prev.createdAt || (prof as any).$createdAt,
-          }));
-        } else if (username && !resolvedPubkey && !resolvedNpub) {
-          const { UsersService } = await import('@/lib/services/users');
-          const prof = await UsersService.getProfile(username).catch(() => null);
-          if (cancelled || !prof) return;
-          const storedNpub = (prof as any).nostrNpub || (prof as any).npub;
-          const storedPubkey = (prof as any).nostrPubkey || (prof as any).pubkey;
-          if (storedNpub) setResolvedNpub(storedNpub);
-          if (storedPubkey) setResolvedPubkey(storedPubkey);
-          setResolvedProfile(prev => ({
-            name: prev.name || prof.displayName || prof.name,
-            username: prev.username || prof.username,
-            avatar: prev.avatar || prof.avatar || prof.avatarUrl,
-            bio: prev.bio || prof.bio,
-            links: prev.links?.length ? prev.links : (prof as any).preferences?.links || (prof as any).links || [],
-            createdAt: prev.createdAt || (prof as any).$createdAt,
-          }));
-        }
-      } catch {}
-    };
+    const lookup = (..._args: any[]) => lookup_ext({ activeBio, activeDisplayName, activeHandle, activeTab, badges, copiedKey, copyToClipboard, currentUserId, day, diff, engagement, handleToggleFollow, hr, isEditModalOpen, isFollowing, isNostrMode, isOwnCheck, isOwnProfile, isRepost, kylrixFollowersCount, kylrixFollowingCount, loadNostrActivity, loadStats, loadingPosts, lookup, min, nostrFollowersCount, nostrFollowingCount, nostrMeta, nostrPosts, parentEvents, rawUsername, resolveAvatar, resolvedAvatarUrl, resolvedNpub, resolvedProfile, resolvedPubkey, router, sec, setActiveTab, setBadges, setCopiedKey, setEngagement, setIsEditModalOpen, setIsFollowing, setKylrixFollowersCount, setKylrixFollowingCount, setLoadingPosts, setNostrFollowersCount, setNostrFollowingCount, setNostrMeta, setNostrPosts, setParentEvents, setResolvedAvatarUrl, setResolvedNpub, setResolvedProfile, setResolvedPubkey, setViewMode, targetUid, timeMs, totalFollowers, totalFollowing, trimmedFinal, unpackNostrEvent, unpackedLikes, unpackedPosts, unpackedReplies, unpackedZaps, viewMode });
     void lookup();
     return () => { cancelled = true; };
   }, [targetUid, username, resolvedNpub, resolvedPubkey]);
-
   // 3. Resolve Avatar Preview from Storage / Cache / Remote
   useEffect(() => {
     let cancelled = false;
-    const resolveAvatar = async () => {
-      const raw = resolvedProfile.avatar || (isOwnProfile ? (user?.prefs?.avatar || user?.prefs?.profilePicId) : null);
-      if (!raw) {
-        if (targetUid) {
-          const cachedPreview = getCachedProfilePreview(targetUid);
-          if (cachedPreview && !cancelled) {
-            setResolvedAvatarUrl(cachedPreview);
-            return;
-          }
-        }
-        if (nostrMeta.picture && !cancelled) {
-          setResolvedAvatarUrl(nostrMeta.picture);
-        }
-        return;
-      }
-
-      if (raw.startsWith('http')) {
-        if (!cancelled) setResolvedAvatarUrl(raw);
-        return;
-      }
-
-      // It's a file ID — load from cache or fetch preview
-      const cached = getCachedProfilePreview(raw);
-      if (cached && !cancelled) {
-        setResolvedAvatarUrl(cached);
-        return;
-      }
-
-      try {
-        const url = await fetchProfilePreview(raw, 160, 160);
-        if (!cancelled && typeof url === 'string') {
-          setResolvedAvatarUrl(url);
-        }
-      } catch {}
-    };
-
+    const resolveAvatar = (..._args: any[]) => resolveAvatar_ext({ activeBio, activeDisplayName, activeHandle, activeTab, badges, copiedKey, copyToClipboard, currentUserId, day, diff, engagement, handleToggleFollow, hr, isEditModalOpen, isFollowing, isNostrMode, isOwnCheck, isOwnProfile, isRepost, kylrixFollowersCount, kylrixFollowingCount, loadNostrActivity, loadStats, loadingPosts, lookup, min, nostrFollowersCount, nostrFollowingCount, nostrMeta, nostrPosts, parentEvents, rawUsername, resolveAvatar, resolvedAvatarUrl, resolvedNpub, resolvedProfile, resolvedPubkey, router, sec, setActiveTab, setBadges, setCopiedKey, setEngagement, setIsEditModalOpen, setIsFollowing, setKylrixFollowersCount, setKylrixFollowingCount, setLoadingPosts, setNostrFollowersCount, setNostrFollowingCount, setNostrMeta, setNostrPosts, setParentEvents, setResolvedAvatarUrl, setResolvedNpub, setResolvedProfile, setResolvedPubkey, setViewMode, targetUid, timeMs, totalFollowers, totalFollowing, trimmedFinal, unpackNostrEvent, unpackedLikes, unpackedPosts, unpackedReplies, unpackedZaps, viewMode });
     void resolveAvatar();
     return () => { cancelled = true; };
   }, [resolvedProfile.avatar, isOwnProfile, user, targetUid, nostrMeta.picture]);
-
   // 4. Fetch Badges
   useEffect(() => {
     if (!targetUid) return;
@@ -438,46 +237,13 @@ export function UnifiedProfileView({
       })
       .catch(() => {});
   }, [targetUid]);
-
   // 5. Fetch Follower / Following metrics for Kylrix and Nostr
   useEffect(() => {
     let cancelled = false;
-    const loadStats = async () => {
-      // Kylrix stats
-      if (targetUid) {
-        try {
-          const { SocialService } = await import('@/lib/services/social');
-          const [followers, following] = await Promise.all([
-            SocialService.getFollowers(targetUid).catch(() => []),
-            SocialService.getFollowing(targetUid).catch(() => []),
-          ]);
-          if (!cancelled) {
-            setKylrixFollowersCount(Array.isArray(followers) ? followers.length : 0);
-            setKylrixFollowingCount(Array.isArray(following) ? following.length : 0);
-          }
-        } catch {}
-      }
-
-      // Nostr stats
-      const hex = resolvedPubkey;
-      if (hex) {
-        try {
-          const [nFollowers, nFollowing] = await Promise.all([
-            fetchNostrFollowers(hex, 3500).catch(() => []),
-            fetchNostrFollowing(hex, 3500).catch(() => []),
-          ]);
-          if (!cancelled) {
-            setNostrFollowersCount(nFollowers.length);
-            setNostrFollowingCount(nFollowing.length);
-          }
-        } catch {}
-      }
-    };
-
+    const loadStats = (..._args: any[]) => loadStats_ext({ activeBio, activeDisplayName, activeHandle, activeTab, badges, copiedKey, copyToClipboard, currentUserId, day, diff, engagement, handleToggleFollow, hr, isEditModalOpen, isFollowing, isNostrMode, isOwnCheck, isOwnProfile, isRepost, kylrixFollowersCount, kylrixFollowingCount, loadNostrActivity, loadStats, loadingPosts, lookup, min, nostrFollowersCount, nostrFollowingCount, nostrMeta, nostrPosts, parentEvents, rawUsername, resolveAvatar, resolvedAvatarUrl, resolvedNpub, resolvedProfile, resolvedPubkey, router, sec, setActiveTab, setBadges, setCopiedKey, setEngagement, setIsEditModalOpen, setIsFollowing, setKylrixFollowersCount, setKylrixFollowingCount, setLoadingPosts, setNostrFollowersCount, setNostrFollowingCount, setNostrMeta, setNostrPosts, setParentEvents, setResolvedAvatarUrl, setResolvedNpub, setResolvedProfile, setResolvedPubkey, setViewMode, targetUid, timeMs, totalFollowers, totalFollowing, trimmedFinal, unpackNostrEvent, unpackedLikes, unpackedPosts, unpackedReplies, unpackedZaps, viewMode });
     void loadStats();
     return () => { cancelled = true; };
   }, [targetUid, resolvedPubkey]);
-
   // 6. Check Local Follow Status
   useEffect(() => {
     const targetKey = resolvedNpub || resolvedPubkey || targetUid;
@@ -490,107 +256,27 @@ export function UnifiedProfileView({
       }).catch(() => {});
     });
   }, [targetUid, resolvedNpub, resolvedPubkey]);
-
   // 7. Fetch Nostr Activity & Profile Metadata
   useEffect(() => {
     if (!resolvedPubkey && !resolvedNpub) return;
     let cancelled = false;
     let pool: NostrRelayPool | null = null;
-
-    const loadNostrActivity = async () => {
-      setLoadingPosts(true);
-      try {
-        let hex = resolvedPubkey;
-        if (!hex && resolvedNpub) {
-          try {
-            hex = bytesToHex(npubToBytes(resolvedNpub));
-          } catch {
-            hex = null;
-          }
-        }
-
-        if (!hex) {
-          setLoadingPosts(false);
-          return;
-        }
-
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const cachedFeed = await LocalEngine.cacheGet<NostrEvent[]>(`nostr_profile_feed_${hex}`).catch(() => null);
-        if (Array.isArray(cachedFeed) && cachedFeed.length > 0 && !cancelled) {
-          setNostrPosts(cachedFeed);
-          setLoadingPosts(false);
-        }
-
-        const readRelays = await getNostrReadRelays().catch(() => DEFAULT_RELAYS);
-        const targets = readRelays.length ? readRelays : DEFAULT_RELAYS;
-        pool = new NostrRelayPool(targets);
-        await pool.connect();
-
-        const fetchedEvents: NostrEvent[] = cachedFeed ? [...cachedFeed] : [];
-        const authorsToFetch: string[] = [];
-
-        pool.addListener((ev) => {
-          if (cancelled) return;
-          if (ev.kind === 0) {
-            try {
-              const meta = JSON.parse(ev.content);
-              setNostrMeta({
-                name: meta.name,
-                displayName: meta.display_name || meta.name,
-                about: meta.about,
-                picture: meta.picture,
-                nip05: meta.nip05,
-                lud16: meta.lud16 || meta.lud06,
-                banner: meta.banner,
-                relaysCount: targets.length,
-              });
-              if (meta.picture && !resolvedAvatarUrl) {
-                setResolvedAvatarUrl(meta.picture);
-              }
-            } catch {}
-          } else if ([1, 6, 7, 9735].includes(ev.kind)) {
-            if (!fetchedEvents.some(e => e.id === ev.id)) {
-              fetchedEvents.push(ev);
-              fetchedEvents.sort((a, b) => b.created_at - a.created_at);
-              setNostrPosts([...fetchedEvents]);
-              void LocalEngine.cacheSet(`nostr_profile_feed_${hex}`, fetchedEvents).catch(() => {});
-              if (ev.pubkey) authorsToFetch.push(ev.pubkey);
-            }
-          }
-        });
-
-        pool.subscribe('profile-feed', [{ kinds: [1, 6, 7, 9735], authors: [hex], limit: 60 }]);
-        pool.subscribe('profile-meta', [{ kinds: [0], authors: [hex], limit: 1 }]);
-
-        if (authorsToFetch.length > 0) {
-          void queueNostrProfileFetch(Array.from(new Set(authorsToFetch)));
-        }
-      } catch (err) {
-        console.warn('[UnifiedProfile] Failed to fetch Nostr activity:', err);
-      } finally {
-        setTimeout(() => { if (!cancelled) setLoadingPosts(false); }, 1500);
-      }
-    };
-
+    const loadNostrActivity = (..._args: any[]) => loadNostrActivity_ext({ activeBio, activeDisplayName, activeHandle, activeTab, badges, copiedKey, copyToClipboard, currentUserId, day, diff, engagement, handleToggleFollow, hr, isEditModalOpen, isFollowing, isNostrMode, isOwnCheck, isOwnProfile, isRepost, kylrixFollowersCount, kylrixFollowingCount, loadNostrActivity, loadStats, loadingPosts, lookup, min, nostrFollowersCount, nostrFollowingCount, nostrMeta, nostrPosts, parentEvents, rawUsername, resolveAvatar, resolvedAvatarUrl, resolvedNpub, resolvedProfile, resolvedPubkey, router, sec, setActiveTab, setBadges, setCopiedKey, setEngagement, setIsEditModalOpen, setIsFollowing, setKylrixFollowersCount, setKylrixFollowingCount, setLoadingPosts, setNostrFollowersCount, setNostrFollowingCount, setNostrMeta, setNostrPosts, setParentEvents, setResolvedAvatarUrl, setResolvedNpub, setResolvedProfile, setResolvedPubkey, setViewMode, targetUid, timeMs, totalFollowers, totalFollowing, trimmedFinal, unpackNostrEvent, unpackedLikes, unpackedPosts, unpackedReplies, unpackedZaps, viewMode });
     void loadNostrActivity();
     return () => {
       cancelled = true;
       if (pool) pool.close();
     };
   }, [resolvedPubkey, resolvedNpub, resolvedAvatarUrl]);
-
   // 8. Fetch live engagement counts
   useEffect(() => {
     if (!nostrPosts.length) return;
     let cancelled = false;
-
     const ids = Array.from(new Set(nostrPosts.flatMap(p => {
       const eTag = p.tags?.find(t => t[0] === 'e')?.[1];
       return [p.id, eTag].filter(Boolean) as string[];
     })));
-
     if (!ids.length) return;
-
     void (async () => {
       try {
         const engData = await fetchNostrEngagement(ids, 3500);
@@ -604,31 +290,24 @@ export function UnifiedProfileView({
         }
       } catch {}
     })();
-
     return () => {
       cancelled = true;
     };
   }, [nostrPosts]);
-
   // Derive Display Info based on View Mode
   const isNostrMode = viewMode === 'nostr';
-
   const activeDisplayName = isNostrMode
     ? (nostrMeta.displayName || nostrMeta.name || resolvedProfile.name || name || 'Nostr User')
     : (resolvedProfile.name || name || username || (resolvedNpub ? `Nostr ${resolvedNpub.slice(0, 10)}…` : 'Kylrix User'));
-
   const rawUsername = resolvedProfile.username || username;
   const activeHandle = isNostrMode
     ? (nostrMeta.nip05 || (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''))
     : (rawUsername ? `@${rawUsername.replace(/^@/, '')}` : (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''));
-
   const activeBio = isNostrMode
     ? (nostrMeta.about || resolvedProfile.bio || bio || '')
     : (resolvedProfile.bio || bio || nostrMeta.about || '');
-
   const totalFollowers = isNostrMode ? nostrFollowersCount : (kylrixFollowersCount + nostrFollowersCount);
   const totalFollowing = isNostrMode ? nostrFollowingCount : (kylrixFollowingCount + nostrFollowingCount);
-
   // Tab Filtering and Unpacking
   const unpackedPosts = useMemo(() => {
     return nostrPosts
@@ -642,7 +321,6 @@ export function UnifiedProfileView({
       })
       .map((ev) => unpackNostrEvent(ev, activeDisplayName));
   }, [nostrPosts, activeDisplayName]);
-
   const unpackedReplies = useMemo(() => {
     return nostrPosts
       .filter((ev) => {
@@ -654,20 +332,16 @@ export function UnifiedProfileView({
       })
       .map((ev) => unpackNostrEvent(ev, activeDisplayName));
   }, [nostrPosts, activeDisplayName]);
-
   // Fetch Parent Events for threaded replies view
   useEffect(() => {
     if (!unpackedReplies.length) return;
     let cancelled = false;
-
     const parentIdsToFetch = Array.from(new Set(
       unpackedReplies
         .map(r => r.targetId)
         .filter((id): id is string => Boolean(id) && !parentEvents[id as string])
     ));
-
     if (!parentIdsToFetch.length) return;
-
     void (async () => {
       try {
         const fetchedMap = await fetchNostrEventsByIds(parentIdsToFetch, 3500);
@@ -685,31 +359,26 @@ export function UnifiedProfileView({
         }
       } catch {}
     })();
-
     return () => {
       cancelled = true;
     };
   }, [unpackedReplies, parentEvents]);
-
   const unpackedLikes = useMemo(() => {
     return nostrPosts
       .filter((ev) => ev.kind === 7)
       .map((ev) => unpackNostrEvent(ev, activeDisplayName));
   }, [nostrPosts, activeDisplayName]);
-
   const unpackedZaps = useMemo(() => {
     return nostrPosts
       .filter((ev) => ev.kind === 9735)
       .map((ev) => unpackNostrEvent(ev, activeDisplayName));
   }, [nostrPosts, activeDisplayName]);
-
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(label);
     toast.success(`Copied ${label}`);
     setTimeout(() => setCopiedKey(null), 1500);
   };
-
   const handleToggleFollow = async () => {
     const targetKey = resolvedNpub || resolvedPubkey || targetUid;
     if (!targetKey) return;
@@ -725,12 +394,10 @@ export function UnifiedProfileView({
       toast.error('Could not update follow');
     }
   };
-
   const currentTabItems: UnpackedPost[] =
     activeTab === 'posts' ? unpackedPosts :
     activeTab === 'replies' ? unpackedReplies :
     activeTab === 'likes' ? unpackedLikes : unpackedZaps;
-
   return (
     <div className={`${onClose ? 'h-full flex flex-col' : 'fixed inset-0 z-50 flex flex-col'} w-full max-h-[100dvh] bg-[#161412] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi`}>
       {/* Top Header Bar */}
@@ -741,7 +408,6 @@ export function UnifiedProfileView({
             {activeHandle || activeDisplayName}
           </span>
         </div>
-
         <div className="flex items-center gap-2 shrink-0">
           {/* Own Profile Actions */}
           {isOwnProfile ? (
@@ -756,7 +422,6 @@ export function UnifiedProfileView({
                 <Edit3 size={14} />
                 <span className="hidden sm:inline">Edit</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => {
@@ -787,7 +452,6 @@ export function UnifiedProfileView({
                 {isFollowing ? <UserCheck size={14} /> : <UserPlus size={14} />}
                 <span className="hidden sm:inline">{isFollowing ? 'Following' : 'Follow'}</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => {
@@ -799,7 +463,6 @@ export function UnifiedProfileView({
               >
                 <MessageSquare size={15} />
               </button>
-
               <button
                 type="button"
                 onClick={() => {
@@ -817,7 +480,6 @@ export function UnifiedProfileView({
               </button>
             </>
           )}
-
           <button
             type="button"
             onClick={() => {
@@ -831,7 +493,6 @@ export function UnifiedProfileView({
           >
             <Share2 size={15} />
           </button>
-
           {onClose && (
             <button
               type="button"
@@ -845,11 +506,9 @@ export function UnifiedProfileView({
           )}
         </div>
       </header>
-
       {/* Main Content Body (Canonical Deep Ash Canvas) */}
       <main className="flex-1 overflow-y-auto min-h-0 select-text bg-[#161412]">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-5">
-          
           {/* View Mode Switcher: Ecosystem (Kylrix) ⟷ Nostr Native */}
           <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-[#000000] border-2 border-white/20 shadow-sm">
             <button
@@ -864,7 +523,6 @@ export function UnifiedProfileView({
               <Sparkles size={14} className={!isNostrMode ? 'text-[#F59E0B]' : 'text-white/40'} />
               <span>Ecosystem Profile</span>
             </button>
-
             <button
               type="button"
               onClick={() => setViewMode('nostr')}
@@ -878,7 +536,6 @@ export function UnifiedProfileView({
               <span>Nostr Mode</span>
             </button>
           </div>
-
           {/* Identity Card (Primary Pitch Black Outlined Panel) */}
           <div className="rounded-3xl bg-[#000000] border border-white/20 p-5 sm:p-6 space-y-4 shadow-sm">
             <div className="flex items-center gap-4 min-w-0">
@@ -900,7 +557,6 @@ export function UnifiedProfileView({
                 )}
                 <span className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-[#161412] ${isNostrMode ? 'bg-[#A855F7]' : 'bg-emerald-400'}`} />
               </div>
-
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2 min-w-0">
                   <h1 className="text-xl sm:text-2xl font-black font-clash text-white tracking-tight truncate">
@@ -917,7 +573,6 @@ export function UnifiedProfileView({
                 </p>
               </div>
             </div>
-
             {/* Follower & Following Metrics Strip (Inset Wells) */}
             <div className="grid grid-cols-2 gap-2 pt-2">
               <div className="rounded-2xl bg-[#161412] border border-white/20 px-4 py-2.5 flex items-center justify-between">
@@ -937,7 +592,6 @@ export function UnifiedProfileView({
                 </span>
               </div>
             </div>
-
             {/* Bio */}
             {activeBio ? (
               <p className="text-sm text-white/85 leading-relaxed font-satoshi whitespace-pre-wrap break-words">
@@ -948,7 +602,6 @@ export function UnifiedProfileView({
                 {isNostrMode ? 'No Nostr about description set.' : 'No bio yet.'}
               </p>
             )}
-
             {/* Badges (Ecosystem Mode) */}
             {!isNostrMode && badges.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
@@ -957,7 +610,6 @@ export function UnifiedProfileView({
                 ))}
               </div>
             )}
-
             {/* Socials & Custom Links */}
             {!isNostrMode && resolvedProfile.links && resolvedProfile.links.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
@@ -976,7 +628,6 @@ export function UnifiedProfileView({
                 ))}
               </div>
             )}
-
             {/* Nostr-Specific Details (Lightning Address, Nip05) */}
             {isNostrMode && (
               <div className="space-y-2 pt-1">
@@ -995,7 +646,6 @@ export function UnifiedProfileView({
                 )}
               </div>
             )}
-
             {/* Keys & Protocol Pills */}
             <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/20">
               {resolvedNpub && (
@@ -1010,7 +660,6 @@ export function UnifiedProfileView({
                   {copiedKey === 'npub' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} className="text-white/40" />}
                 </button>
               )}
-
               {targetUid && !isNostrMode && (
                 <button
                   type="button"
@@ -1023,7 +672,6 @@ export function UnifiedProfileView({
                   {copiedKey === 'Ecosystem ID' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} className="text-white/40" />}
                 </button>
               )}
-
               {resolvedPubkey && isNostrMode && (
                 <button
                   type="button"
@@ -1038,7 +686,6 @@ export function UnifiedProfileView({
               )}
             </div>
           </div>
-
           {/* Activity Section */}
           <div className="space-y-4">
             {/* Stream Tabs */}
@@ -1071,7 +718,6 @@ export function UnifiedProfileView({
                 );
               })}
             </nav>
-
             {/* Stream Cards */}
             <div className="space-y-3">
               {loadingPosts && nostrPosts.length === 0 ? (
@@ -1090,7 +736,6 @@ export function UnifiedProfileView({
                   const zapCount = engagement.zapCount[targetId] || 0;
                   const repostCount = engagement.repostCount[targetId] || 0;
                   const parentNote = activeTab === 'replies' && parentEvents[targetId];
-
                   return (
                     <div
                       key={post.id}
@@ -1115,7 +760,6 @@ export function UnifiedProfileView({
                           <span>{activeDisplayName} zapped</span>
                         </div>
                       )}
-
                       {/* Threaded Parent Note */}
                       {activeTab === 'replies' && parentNote && (
                         <div className="flex gap-3 relative pb-2">
@@ -1135,7 +779,6 @@ export function UnifiedProfileView({
                           </div>
                         </div>
                       )}
-
                       {/* Header */}
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -1161,14 +804,12 @@ export function UnifiedProfileView({
                           </div>
                         </div>
                       </div>
-
                       {/* Content */}
                       {post.content && (
                         <p className="text-sm text-white/90 leading-relaxed break-words whitespace-pre-wrap font-satoshi">
                           {post.content}
                         </p>
                       )}
-
                       {/* Media Attachments */}
                       {post.images.length > 0 && (
                         <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden border border-white/[0.06]">
@@ -1183,7 +824,6 @@ export function UnifiedProfileView({
                           ))}
                         </div>
                       )}
-
                       {/* Interactive Action Strip */}
                       <div className="flex items-center justify-between pt-2 border-t border-white/[0.06] text-white/40 text-xs">
                         <button
@@ -1199,7 +839,6 @@ export function UnifiedProfileView({
                           <MessageCircle size={15} />
                           <span>{replyCount || ''}</span>
                         </button>
-
                         <button
                           type="button"
                           onClick={async () => {
@@ -1218,7 +857,6 @@ export function UnifiedProfileView({
                           <Repeat2 size={15} />
                           <span>{repostCount || ''}</span>
                         </button>
-
                         <button
                           type="button"
                           onClick={async () => {
@@ -1237,7 +875,6 @@ export function UnifiedProfileView({
                           <Heart size={15} />
                           <span>{likeCount || ''}</span>
                         </button>
-
                         <button
                           type="button"
                           onClick={() => {
@@ -1261,7 +898,6 @@ export function UnifiedProfileView({
           </div>
         </div>
       </main>
-
       {/* Edit Profile Modal */}
       {isEditModalOpen && (
         <EditProfileModal
@@ -1275,4 +911,3 @@ export function UnifiedProfileView({
     </div>
   );
 }
-

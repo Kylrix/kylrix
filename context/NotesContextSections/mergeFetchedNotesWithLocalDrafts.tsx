@@ -1,0 +1,87 @@
+"use client";
+
+
+import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode, useMemo } from 'react';
+import { 
+
+export function mergeFetchedNotesWithLocalDrafts(bag: any) {
+  const {
+  INITIAL_NOTES_CACHE_KEY,
+  PAGE_SIZE,
+  PINNED_CACHE_KEY,
+  _pinnedIds,
+  activeComposeNoteIdsRef,
+  activeUserId,
+  applyNotePin,
+  clearLiveNoteGuard,
+  composeSyncEpoch,
+  context,
+  contextValue,
+  cursor,
+  cursorRef,
+  displayTitle,
+  effectivePinnedIds,
+  error,
+  fetchBatch,
+  hasInitiallyFetchedForUserRef,
+  hasMore,
+  hydratedUserIdRef,
+  isCacheLoaded,
+  isFetchingRef,
+  isLoading,
+  isPinned,
+  isUnpersistedComposeDraftLocal,
+  isWorkspace,
+  lastPullAtRef,
+  liveEditGuardsRef,
+  loadMore,
+  mergeFetchedNotesWithLocalDrafts,
+  meta,
+  migrateDraftNoteId,
+  normalizeVisibility,
+  noteOwnerId,
+  notes,
+  notesRef,
+  opportunisticallyDecryptNote,
+  pinNote,
+  projectId,
+  pushLiveNote,
+  refetchNotes,
+  registerComposeSession,
+  removeNote,
+  scheduleInvalidateInitialNotesPage,
+  seen,
+  setComposeSyncEpoch,
+  setCursor,
+  setError,
+  setHasMore,
+  setIsCacheLoaded,
+  setIsLoading,
+  setNotes,
+  setPinnedIds,
+  setTotalNotes,
+  setUnpersistedComposeDraftIds,
+  sortedNotes,
+  sweepEncryptedNotes,
+  totalNotes,
+  transferComposeSession,
+  unpersistedComposeDraftIds,
+  unpinNote,
+  unregisterComposeSession,
+  upsertNote
+  } = bag as any;
+
+  return mergeServerPageWithLocalCopy<Notes>({
+    serverBatch,
+    localNotes,
+    guards,
+    deletedIds,
+    normalize: normalizeVisibility,
+    applyGuard: (serverNote, guard) =>
+      mergeServerWithLiveGuard(serverNote, {
+        title: guard.title || '',
+        content: guard.content || '',
+        tags: Array.isArray(guard.tags) ? guard.tags : [],
+        at: guard.at || Date.now()}),
+  });
+}

@@ -34,6 +34,12 @@ import { loadNotesFromLocalCopy, warmNotesLocalCopy } from '@/lib/notes/load-loc
 import { subscribeLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
+import { getthreadNotes as getthreadNotes_ext } from './NotesContextSections/getthreadNotes';
+import { hydrateFromCache as hydrateFromCache_ext } from './NotesContextSections/hydrateFromCache';
+import { mergeFetchedNotesWithLocalDrafts as mergeFetchedNotesWithLocalDrafts_ext } from './NotesContextSections/mergeFetchedNotesWithLocalDrafts';
+import { normalizeVisibility as normalizeVisibility_ext } from './NotesContextSections/normalizeVisibility';
+
+
 
 type LiveEditGuard = {
   title: string;
@@ -45,26 +51,7 @@ type LiveEditGuard = {
 
 ;
 
-function mergeFetchedNotesWithLocalDrafts(
-  serverBatch: Notes[],
-  localNotes: Notes[],
-  guards: Map<string, LiveEditGuard>,
-  deletedIds?: Set<string>,
-): Notes[] {
-  return mergeServerPageWithLocalCopy<Notes>({
-    serverBatch,
-    localNotes,
-    guards,
-    deletedIds,
-    normalize: normalizeVisibility,
-    applyGuard: (serverNote, guard) =>
-      mergeServerWithLiveGuard(serverNote, {
-        title: guard.title || '',
-        content: guard.content || '',
-        tags: Array.isArray(guard.tags) ? guard.tags : [],
-        at: guard.at || Date.now()}),
-  });
-}
+const mergeFetchedNotesWithLocalDrafts = (..._args: any[]) => mergeFetchedNotesWithLocalDrafts_ext({ INITIAL_NOTES_CACHE_KEY, PAGE_SIZE, PINNED_CACHE_KEY, _pinnedIds, activeComposeNoteIdsRef, activeUserId, applyNotePin, clearLiveNoteGuard, composeSyncEpoch, context, contextValue, cursor, cursorRef, displayTitle, effectivePinnedIds, error, fetchBatch, hasInitiallyFetchedForUserRef, hasMore, hydratedUserIdRef, isCacheLoaded, isFetchingRef, isLoading, isPinned, isUnpersistedComposeDraftLocal, isWorkspace, lastPullAtRef, liveEditGuardsRef, loadMore, mergeFetchedNotesWithLocalDrafts, meta, migrateDraftNoteId, normalizeVisibility, noteOwnerId, notes, notesRef, opportunisticallyDecryptNote, pinNote, projectId, pushLiveNote, refetchNotes, registerComposeSession, removeNote, scheduleInvalidateInitialNotesPage, seen, setComposeSyncEpoch, setCursor, setError, setHasMore, setIsCacheLoaded, setIsLoading, setNotes, setPinnedIds, setTotalNotes, setUnpersistedComposeDraftIds, sortedNotes, sweepEncryptedNotes, totalNotes, transferComposeSession, unpersistedComposeDraftIds, unpinNote, unregisterComposeSession, upsertNote });
 
 function dedupeNotesById(rows: Notes[]): Notes[] {
   const seen = new Set<string>();
@@ -132,72 +119,10 @@ const NotesContext = createContext<NotesContextType>({
   isUnpersistedComposeDraft: () => false,
 });
 
-function normalizeVisibility(note: Notes): Notes {
-  const meta = (() => {
-    try {
-      return typeof note.metadata === 'string' ? JSON.parse(note.metadata) : (note.metadata || {});
-    } catch {
-      return {};
-    }
-  })();
-  // Prefer real DB projectId; fall back to metadata for local drafts
-  const projectId = (note as any).projectId || meta.projectId || undefined;
-  // Respect DB/metadata isWorkspace flag or fallback to presence of projectId
-  const isWorkspace = note.isWorkspace === true || meta.isWorkspace === true || Boolean(projectId);
-  return {
-    ...note,
-    isPublic: getNotePublicState(note),
-    projectId,
-    isWorkspace,
-  } as Notes;
-}
+const normalizeVisibility = (..._args: any[]) => normalizeVisibility_ext({ INITIAL_NOTES_CACHE_KEY, PAGE_SIZE, PINNED_CACHE_KEY, _pinnedIds, activeComposeNoteIdsRef, activeUserId, applyNotePin, clearLiveNoteGuard, composeSyncEpoch, context, contextValue, cursor, cursorRef, displayTitle, effectivePinnedIds, error, fetchBatch, hasInitiallyFetchedForUserRef, hasMore, hydratedUserIdRef, isCacheLoaded, isFetchingRef, isLoading, isPinned, isUnpersistedComposeDraftLocal, isWorkspace, lastPullAtRef, liveEditGuardsRef, loadMore, mergeFetchedNotesWithLocalDrafts, meta, migrateDraftNoteId, normalizeVisibility, noteOwnerId, notes, notesRef, opportunisticallyDecryptNote, pinNote, projectId, pushLiveNote, refetchNotes, registerComposeSession, removeNote, scheduleInvalidateInitialNotesPage, seen, setComposeSyncEpoch, setCursor, setError, setHasMore, setIsCacheLoaded, setIsLoading, setNotes, setPinnedIds, setTotalNotes, setUnpersistedComposeDraftIds, sortedNotes, sweepEncryptedNotes, totalNotes, transferComposeSession, unpersistedComposeDraftIds, unpinNote, unregisterComposeSession, upsertNote });
 
 
-async function getthreadNotes(): Promise<Notes[]> {
-  if (typeof window === 'undefined') return [];
-  const historyRaw = localStorage.getItem('kylrix_thread_notes_v2');
-  if (!historyRaw) return [];
-  try {
-    const history = JSON.parse(historyRaw);
-    if (!Array.isArray(history)) return [];
-    const { decryptThreadData } = await import('@/lib/encryption/thread-crypto');
-    const mapped = await Promise.all(history.map(async (item: any) => {
-      const meta = (() => {
-        try { return JSON.parse(item.metadata || '{}'); } catch { return {}; }
-      })();
-      const kind = meta?.send_object?.kind || 'note';
-      if (kind !== 'note' || meta?._deleted === true) return null;
-
-      let decryptedTitle = item.title;
-      let decryptedContent = item.content || '';
-      if (item.decryptionKey) {
-        try {
-          decryptedTitle = await decryptThreadData(item.title, item.decryptionKey);
-          decryptedContent = await decryptThreadData(item.content || '', item.decryptionKey);
-        } catch (e) {
-          console.error('Failed to decrypt thread note in getthreadNotes:', e);
-        }
-      }
-      return {
-        $id: item.id,
-        $createdAt: item.createdAt,
-        $updatedAt: item.createdAt,
-        title: decryptedTitle,
-        content: decryptedContent,
-        format: 'text',
-        tags: [],
-        userId: 'thread',
-        isPublic: false,
-        isGuest: false,
-        metadata: item.metadata || '{}',
-      };
-    }));
-    return mapped.filter(Boolean) as any as Notes[];
-  } catch (e) {
-    console.error('Failed to parse thread history in getthreadNotes', e);
-    return [];
-  }
-}
+const getthreadNotes = (..._args: any[]) => getthreadNotes_ext({ INITIAL_NOTES_CACHE_KEY, PAGE_SIZE, PINNED_CACHE_KEY, _pinnedIds, activeComposeNoteIdsRef, activeUserId, applyNotePin, clearLiveNoteGuard, composeSyncEpoch, context, contextValue, cursor, cursorRef, displayTitle, effectivePinnedIds, error, fetchBatch, getthreadNotes, hasInitiallyFetchedForUserRef, hasMore, historyRaw, hydrateFromCache, hydratedUserIdRef, isCacheLoaded, isFetchingRef, isLoading, isPinned, isUnpersistedComposeDraftLocal, isWorkspace, lastPullAtRef, liveEditGuardsRef, loadMore, meta, migrateDraftNoteId, noteOwnerId, notes, notesRef, opportunisticallyDecryptNote, pinNote, projectId, pushLiveNote, refetchNotes, registerComposeSession, removeNote, scheduleInvalidateInitialNotesPage, seen, setComposeSyncEpoch, setCursor, setError, setHasMore, setIsCacheLoaded, setIsLoading, setNotes, setPinnedIds, setTotalNotes, setUnpersistedComposeDraftIds, sortedNotes, sweepEncryptedNotes, totalNotes, transferComposeSession, unpersistedComposeDraftIds, unpinNote, unregisterComposeSession, upsertNote });
 
 // Outside component scope
 const sweepInFlightRef = { current: false };
@@ -269,40 +194,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     if (typeof window === 'undefined') return;
     let cancelled = false;
 
-    const hydrateFromCache = async () => {
-      const userId = activeUserId;
-      if (hydratedUserIdRef.current !== userId) {
-        setNotes([]);
-        notesRef.current = [];
-        setTotalNotes(0);
-        setCursor(null);
-        setHasMore(true);
-        setIsCacheLoaded(false);
-        hydratedUserIdRef.current = userId;
-      } else if (isCacheLoaded) {
-        return;
-      }
-
-      const local = await loadNotesFromLocalCopy({
-        userId,
-        existingNotes: notesRef.current,
-        getCachedDataSync: (key) => getCachedData(key),
-        getCachedDataAsync: (key) => getCachedDataAsync(key)});
-
-      if (cancelled) return;
-
-      if (local?.notes?.length) {
-        setNotes((prev) => (prev.length ? prev : local.notes));
-        setTotalNotes(local.totalNotes || local.notes.length);
-        setCursor(local.cursor ?? null);
-        setHasMore(local.hasMore ?? true);
-        void warmNotesLocalCopy(userId, local.notes);
-        console.log('[NotesContext] Instant cold start via local copy cascade.');
-      }
-      hydratedUserIdRef.current = userId;
-      setIsLoading(false);
-      setIsCacheLoaded(true);
-    };
+    const hydrateFromCache = (..._args: any[]) => hydrateFromCache_ext({ INITIAL_NOTES_CACHE_KEY, PAGE_SIZE, PINNED_CACHE_KEY, _pinnedIds, activeComposeNoteIdsRef, activeUserId, applyNotePin, clearLiveNoteGuard, composeSyncEpoch, context, contextValue, cursor, cursorRef, displayTitle, effectivePinnedIds, error, fetchBatch, getthreadNotes, hasInitiallyFetchedForUserRef, hasMore, historyRaw, hydrateFromCache, hydratedUserIdRef, isCacheLoaded, isFetchingRef, isLoading, isPinned, isUnpersistedComposeDraftLocal, isWorkspace, lastPullAtRef, liveEditGuardsRef, loadMore, meta, migrateDraftNoteId, noteOwnerId, notes, notesRef, opportunisticallyDecryptNote, pinNote, projectId, pushLiveNote, refetchNotes, registerComposeSession, removeNote, scheduleInvalidateInitialNotesPage, seen, setComposeSyncEpoch, setCursor, setError, setHasMore, setIsCacheLoaded, setIsLoading, setNotes, setPinnedIds, setTotalNotes, setUnpersistedComposeDraftIds, sortedNotes, sweepEncryptedNotes, totalNotes, transferComposeSession, unpersistedComposeDraftIds, unpinNote, unregisterComposeSession, upsertNote });
 
     void hydrateFromCache();
 

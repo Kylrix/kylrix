@@ -22,6 +22,9 @@ import { masterPassCrypto } from "@/lib/masterpass-crypto";
 import { initializeMasterPassVault } from "@/lib/vault/initialize-masterpass";
 import { useDrawerState } from "@/components/ui/DrawerStateContext";
 import { useAppwriteVault } from "@/context/appwrite-context";
+import { detect as detect_ext } from './SudoModalSections/detect';
+import { handlePasswordVerify as handlePasswordVerify_ext } from './SudoModalSections/handlePasswordVerify';
+
 
 interface SudoModalProps {
     isOpen?: boolean;
@@ -255,128 +258,7 @@ export default function SudoModal({
 
         let active = true;
         
-        async function detect() {
-            try {
-                setIsDetecting(true);
-                const userId = user?.$id || '';
-                const cached = SUDO_DETECT_CACHE.get(userId);
-                const now = Date.now();
-
-                let hasPass: boolean;
-                let pending: boolean;
-                let passkeyPresent = false;
-
-                if (cached && (now - cached.timestamp < CACHE_TTL_MS)) {
-                    hasPass = cached.hasPass;
-                    pending = cached.pending;
-                    passkeyPresent = cached.passkeyPresent;
-                } else {
-                    // Instant local probe — never hang unlock UI on a dead socket
-                    const { SecurityEnclave } = await import('@/lib/security/enclave');
-                    const probe = await SecurityEnclave.probeCapabilities(userId);
-                    let entriesRes = probe.keychain;
-                    // If local probe returned empty but device is online, attempt AppwriteService fetch as secondary verification
-                    if (entriesRes.length === 0 && typeof navigator !== 'undefined' && navigator.onLine !== false) {
-                        try {
-                            const remoteEntries = await Promise.race([
-                                AppwriteService.listKeychainEntries(userId),
-                                new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 3500)),
-                            ]);
-                            if (remoteEntries.length > 0) {
-                                entriesRes = remoteEntries;
-                                await SecurityEnclave.setKeychain(userId, remoteEntries);
-                            }
-                        } catch (_err) {}
-                    }
-
-                    hasPass =
-                        probe.hasMasterpass ||
-                        entriesRes.some((e: any) => e.type === 'password' || e.type === 'passkey');
-                    pending = entriesRes.some((e: any) => e.type === 'password' && e.isPending);
-
-                    const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
-                    const isLocalHost = currentHost === 'localhost' || currentHost === '127.0.0.1';
-                    passkeyPresent = entriesRes.some((e: any) => {
-                        if (e.type !== "passkey") return false;
-                        let rpId = '';
-                        try {
-                            const parsed = typeof e.params === 'string' ? JSON.parse(e.params) : e.params;
-                            rpId = parsed?.rpId || '';
-                        } catch (_err) {}
-                        if (isLocalHost) {
-                            return rpId === 'localhost' || rpId === '127.0.0.1';
-                        } else {
-                            return rpId !== 'localhost' && rpId !== '127.0.0.1';
-                        }
-                    }) || probe.hasPasskey;
-
-                    SUDO_DETECT_CACHE.set(userId, {
-                        hasPass,
-                        pending,
-                        passkeyPresent,
-                        timestamp: now
-                    });
-
-                    // Background soft refresh when online (does not block detect)
-                    if (typeof navigator !== 'undefined' && navigator.onLine !== false) {
-                        void SecurityEnclave.hydrateFromRemote(userId).catch(() => {});
-                    }
-                }
-
-                if (!active) return;
-                setHasMasterpass(hasPass);
-
-                // Hoop: hasPass/hasMasterpass false from stale enclave pocket — trigger background sync of dedicated pocket sec_enclave_keychain_{userId} via RxDB/LocalEngine only (rxdb-local-storage-only).
-                if (hasPass === false) {
-                    void import('@/lib/security/enclave').then(({ SecurityEnclave: _SecurityEnclave }) => _SecurityEnclave.hydrateFromRemote(userId, { force: true }).catch(() => {}));
-                }
-
-                // Fail-safe: NEVER default to initialize mode unless explicitly requested by caller (intent === 'initialize')
-                // Default to 'password' mode if capability probe is empty due to transient network lag
-                if (hasPass === false && intent !== 'initialize') {
-                    setMode("password");
-                    setIsDetecting(false);
-                    return;
-                }
-
-                setIsPendingVault(pending);
-
-                const passkeyAllowed = passkeyPresent && isKylrixDomain;
-                setHasPasskey(passkeyAllowed);
-
-                // Determine default mode
-                if (intent === "initialize") {
-                    setMode("initialize");
-                } else if (intent === "change-masterpass") {
-                    setMode("change-masterpass");
-                } else if (intent === "reset") {
-                    setMode("reset-confirm");
-                    setResetStep(1);
-                } else if (intent === "upgrade") {
-                    setMode("password");
-                } else if (pending) {
-                    setMode("password");
-                } else if (passkeyAllowed && usePasskeysByDefault) {
-                    setMode("passkey");
-                } else {
-                    setMode("password");
-                }
-
-                // Trigger passkey verification immediately if it's default
-                if (passkeyAllowed && usePasskeysByDefault && !passkeyTriggeredRef.current) {
-                    passkeyTriggeredRef.current = true;
-                    // Run async to avoid blocking
-                    setTimeout(() => {
-                        if (active) handlePasskeyVerify();
-                    }, 100);
-                }
-            } catch (err) {
-                console.error("SudoModal detection error:", err);
-                if (active) setMode("password");
-            } finally {
-                if (active) setIsDetecting(false);
-            }
-        }
+const detect = (..._args: any[]) => detect_ext({ detect, handlePasswordVerify });
 
         detect();
 
@@ -404,66 +286,7 @@ export default function SudoModal({
         }
     }, [isOpen]);
 
-    const handlePasswordVerify = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (!user?.$id) return;
-
-        if (hasMasterpass === false) {
-            // Hoop: hasMasterpass false from enclave probe — sync dedicated pocket (sec_enclave_keychain_{userId}) via LocalEngine/RxDB only, no UI fetch. Don't block unlock.
-            void import('@/lib/security/enclave').then(({ SecurityEnclave }) => SecurityEnclave.hydrateFromRemote(user.$id, { force: true }).catch(() => {}));
-            // Still attempt unlock if password provided — decouple from stale probe (masterpass-crypto SoT). Only redirect to setup if unlock+verified zero rows.
-            if (!password) {
-                handleRedirectToVaultSetup();
-                return;
-            }
-            // fall through to unlock attempt below
-        }
-
-        if (!password) return;
-
-        setLoading(true);
-        try {
-            const success = await masterPassCrypto.unlock(
-              password,
-              user.$id,
-              false
-            );
-
-            if (success) {
-                setHasMasterpass(true);
-                SUDO_DETECT_CACHE.set(user.$id, {
-                    hasPass: true,
-                    pending: false,
-                    passkeyPresent: hasPasskey || false,
-                    timestamp: Date.now()
-                });
-                // IF MIGRATING: Don't call handleSuccessWithSync yet.
-                if (isMigratingRef.current) {
-                    return;
-                }
-                if (intent === "upgrade") {
-                    setMode("change-masterpass");
-                    setPassword("");
-                    setConfirmPassword("");
-                } else {
-                    toast.success("Verified");
-                    handleSuccessWithSync();
-                }
-            } else {
-                toast.error("Incorrect master password");
-            }
-        } catch (error: any) {
-            console.error(error);
-            if (error.message === 'VAULT_ALREADY_EXISTS') {
-                toast.error("Vault already initialized.");
-                handleSuccessWithSync();
-            } else {
-                toast.error("Verification failed");
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
+    const handlePasswordVerify = (..._args: any[]) => handlePasswordVerify_ext({ detect, handlePasswordVerify });
 
     const validateMasterPassword = (pwd: string, usernameOrEmail?: string | null): string | null => {
         if (!pwd || pwd.length < 8) {
