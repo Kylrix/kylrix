@@ -56,14 +56,20 @@ export const FormattedText: React.FC<FormattedTextProps> = ({
         if (hostname.startsWith('connect.') || pathname.startsWith('/connect') || pathname.startsWith('/chats') || pathname.startsWith('/hangouts')) {
             return { label: 'CONNECT', color: '#F59E0B', icon: <MessageSquare size={12} />, href: fullUrl };
         }
-        if (hostname.startsWith('flow.') || pathname.startsWith('/flow') || pathname.startsWith('/workflows')) {
+        if (pathname.startsWith('/moment')) {
+            return { label: 'MOMENT', color: '#F59E0B', icon: <MessageSquare size={12} />, href: fullUrl };
+        }
+        if (hostname.startsWith('flow.') || pathname.startsWith('/flow') || pathname.startsWith('/workflows') || pathname.startsWith('/goal') || pathname.startsWith('/form') || pathname.startsWith('/events')) {
             return { label: 'FLOW', color: '#A855F7', icon: <Zap size={12} />, href: fullUrl };
         }
         if (hostname.startsWith('vault.') || pathname.startsWith('/vault')) {
             return { label: 'VAULT', color: '#10B981', icon: <Lock size={12} />, href: fullUrl };
         }
-        if (hostname.startsWith('note.') || pathname.startsWith('/note') || pathname.startsWith('/notes') || pathname.startsWith('/app')) {
-            return { label: 'KYLRIX NOTE', color: '#EC4899', icon: <FileText size={12} />, href: fullUrl };
+        if (pathname.startsWith('/workspace') || pathname.startsWith('/workspaces')) {
+            return { label: 'WORKSPACE', color: '#6366F1', icon: <FileText size={12} />, href: fullUrl };
+        }
+        if (hostname.startsWith('note.') || pathname.startsWith('/note') || pathname.startsWith('/notes') || pathname.startsWith('/idea') || pathname.startsWith('/app')) {
+            return { label: 'IDEA', color: '#EC4899', icon: <FileText size={12} />, href: fullUrl };
         }
 
         return { label: 'KYLRIX', color: '#6366F1', icon: <FileText size={12} />, href: fullUrl };

@@ -7,7 +7,7 @@ import {
   renderMarkdownHtml,
 } from '@/lib/markdown';
 import { parseObjectBlocks, type SecondaryObjectPayload } from '@/lib/note-object-secondary';
-import { FormattedText } from '@/components/common/FormattedText';
+import { EcosystemRichText } from '@/components/common/EcosystemLinkCard';
 import { ChatObjectPreview } from '@/components/chat/ChatObjectPreview';
 
 type ContentNode =
@@ -61,11 +61,7 @@ export function ChatMarkdownContent({
 
         if (!looksLikeMarkdown(trimmed)) {
           return (
-            <FormattedText
-              key={`txt-${index}`}
-              text={trimmed}
-              linkPreviewsEnabled={linkPreviewsEnabled}
-            />
+            <EcosystemRichText key={`txt-${index}`} text={trimmed} />
           );
         }
 

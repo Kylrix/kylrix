@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import toast from 'react-hot-toast';
+import { EcosystemRichText } from '@/components/common/EcosystemLinkCard';
 
 type PreviewSeed = {
   authorName?: string;
@@ -219,9 +220,7 @@ function CommentMomentRow({
               {formatTs(comment.createdAt)}
             </span>
           </div>
-          <p className="text-[14px] text-white whitespace-pre-wrap break-words [overflow-wrap:anywhere] m-0 font-satoshi max-w-full">
-            {comment.content}
-          </p>
+          <EcosystemRichText text={comment.content} proseClassName="text-[14px] text-white" />
           <div className="flex items-center gap-4 pt-2 border-t border-white/15 min-w-0 flex-wrap">
             <button
               type="button"
@@ -814,9 +813,7 @@ export function PostViewClient({
             </div>
 
             {body ? (
-              <p className="text-[16px] leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-satoshi text-white m-0 max-w-full">
-                {body}
-              </p>
+              <EcosystemRichText text={body} proseClassName="text-[16px] leading-relaxed text-white" />
             ) : null}
 
             {images.length > 0 ? (

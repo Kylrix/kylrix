@@ -11,6 +11,7 @@ import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
+import { EcosystemRichText } from '@/components/common/EcosystemLinkCard';
 import toast from 'react-hot-toast';
 
 function formatRelative(ts: number) {
@@ -544,9 +545,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
 
       {/* Content */}
       {preview ? (
-        <p className="text-xs sm:text-sm text-white/90 leading-relaxed break-words whitespace-pre-wrap font-satoshi m-0">
-          {preview}
-        </p>
+        <EcosystemRichText text={preview} proseClassName="text-xs sm:text-sm" />
       ) : null}
 
       {/* Media Attachments */}
