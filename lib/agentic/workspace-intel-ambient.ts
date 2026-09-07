@@ -5,6 +5,7 @@
 
 import { pushLocalSystemNotification } from '@/lib/agentic/local-notifications';
 import { redactForTypeIntel } from '@/lib/agentic/type-intel-local';
+import { sanitizeInAppHref } from '@/lib/routing/app-paths';
 
 const LAST_NUDGE_KEY = (uid: string) => `f_workspace_intel_last_nudge_${uid}`;
 const AI_CACHE_KEY = (uid: string) => `f_workspace_intel_ai_nudge_${uid}`;
@@ -108,8 +109,8 @@ function hrefFor(sample: SampledObject): string {
   if (sample.kind === 'idea' && sample.id) return `/idea/${sample.id}`;
   if (sample.kind === 'goal' && sample.id) return `/goal/${sample.id}`;
   if (sample.kind === 'event' && sample.id) return `/events/${sample.id}`;
-  if (sample.kind === 'form' && sample.id) return `/forms/${sample.id}`;
-  return '/workspaces';
+  if (sample.kind === 'form' && sample.id) return `/form/${sample.id}`;
+  return '/app';
 }
 
 /** Zero-AI tip from sampled local objects. */
@@ -203,7 +204,7 @@ export async function maybeEmitWorkspaceIntelNudge(opts: {
     nudge = {
       title: aiCache.title,
       message: aiCache.message,
-      actionHref: aiCache.actionHref || nudge?.actionHref || '/workspaces',
+      actionHref: sanitizeInAppHref(aiCache.actionHref || nudge?.actionHref || '/app'),
     };
   } else if (isPro && navigator.onLine) {
     try {
@@ -229,7 +230,7 @@ export async function maybeEmitWorkspaceIntelNudge(opts: {
             nudge = {
               title: res.title,
               message: res.message,
-              actionHref: res.actionHref || nudge?.actionHref || '/workspaces',
+              actionHref: sanitizeInAppHref(res.actionHref || nudge?.actionHref || '/app'),
             };
             await LocalEngine.cacheSet(AI_CACHE_KEY(userId), {
               ...nudge,

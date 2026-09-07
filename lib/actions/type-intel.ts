@@ -303,8 +303,10 @@ export async function generateWorkspaceIntelNudgeAction(params: {
 
     const title = String(parsed?.title || 'Workspace tip').trim().slice(0, 40);
     const message = String(parsed?.message || cleaned).trim().slice(0, 160);
-    let actionHref = String(parsed?.actionHref || '/workspaces').trim();
-    if (!actionHref.startsWith('/')) actionHref = '/workspaces';
+    const { sanitizeInAppHref } = await import('@/lib/routing/app-paths');
+    let actionHref = String(parsed?.actionHref || '/app').trim();
+    if (!actionHref.startsWith('/')) actionHref = '/app';
+    actionHref = sanitizeInAppHref(actionHref);
     if (!message) return { success: false, error: 'Empty tip' };
     return { success: true, title, message, actionHref };
   } catch (err: any) {

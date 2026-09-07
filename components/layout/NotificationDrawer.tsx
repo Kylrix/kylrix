@@ -28,6 +28,7 @@ import {
 import toast from 'react-hot-toast';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
+import { sanitizeInAppHref } from '@/lib/routing/app-paths';
 import { account } from '@/lib/appwrite/client';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -739,7 +740,7 @@ export function NotificationDrawer({
     }
 
     if (notif.actionHref) {
-      router.push(notif.actionHref);
+      router.push(sanitizeInAppHref(notif.actionHref));
       return;
     }
 
@@ -759,6 +760,7 @@ export function NotificationDrawer({
       .map((n) => ({
         ...n,
         read: readIds.has(n.id),
+        actionHref: n.actionHref ? sanitizeInAppHref(n.actionHref) : n.actionHref,
       }))
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   }, [notifications, dismissedIds, readIds]);

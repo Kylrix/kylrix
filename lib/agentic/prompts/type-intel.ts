@@ -100,8 +100,8 @@ export function buildWorkspaceIntelNudgePrompt(params: {
       `You write short, friendly workspace tips for ${name} inside Kylrix.`,
       'No chatbot tone. No jargon. One practical suggestion only.',
       'Never invent private facts. Samples are already redacted.',
-      'OUTPUT — JSON only: {"title":"...","message":"...","actionHref":"/workspaces"}',
-      'title ≤ 28 chars. message ≤ 120 chars. actionHref must be a simple in-app path.',
+      'OUTPUT — JSON only: {"title":"...","message":"...","actionHref":"/app"}',
+      'title ≤ 28 chars. message ≤ 120 chars. actionHref must be a live in-app path (/app, /idea/…, /goal/…, /flow/…, /workspace/… for share). Never /workspaces or /workflows.',
     ].join('\n'),
     prompt: [
       'Write one occasional tip from these local objects:',

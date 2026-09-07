@@ -1144,7 +1144,6 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
           enum: [
             '/app',
             '/goals',
-            '/workspaces',
             '/flows',
             '/events',
             '/forms',

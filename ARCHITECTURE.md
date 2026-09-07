@@ -133,7 +133,7 @@ Paint local first; live copy = content SoT; pending = separate; auth late-bindin
 | `/vault` `/vault/totp` | Secrets/TOTP | `lib/appwrite/vault.ts`, `masterpass-crypto.ts` |
 | `/connect` | Moments & Feed | `ConnectMomentsPanel`, `presence.ts` |
 | `/agents` | Kylie | `lib/agentic/`, `lib/actions/agentic.ts` |
-| `/workspaces` `/workspaces/[projectId]` | Workspaces (=projects) | `lib/appwrite/projects.ts`, `useProjectObjects`, `useWorkspaceFilteredItems` |
+| `/app` + `/workspace/[id]` | Workspaces (=projects) | Active workspace filters `/app`. Share `/workspace/[id]`. Dead `/workspaces` redirects to `/app`. |
 | `/settings` | Profile/MFA/Sessions/Developers/Privacy | `ProfileManager`, `WorkspaceTab→CreatePatDrawer`, `PrivacyTab` |
 | `/oauth/consent` | OAuth consent | `oauth2.getGrant/approve/reject` |
 | `/docs` `/docs/api` | Docs | `api/SKILL.md` mirror |
@@ -224,7 +224,7 @@ Authorization server = Appwrite project. Clients via Console **Apps** or Client 
 
 ## 15. Workspaces (= Projects Table)
 
-UI **Workspaces** (`/workspaces`, `/workspaces/[projectId]`) over `projects` table (`ProjectsService`). Legacy `/projects` redirects. Synergy hub linking ideas/goals/forms/events/hangouts/discussions via `project_objects` join (`useProjectObjects` → `useWorkspaceFilteredItems` filters by `project_objects.entityId` or default-workspace fallback). Caps: 8 collaborators free.
+UI **Workspaces** live in chrome (active filter on `/app`) with share links at `/workspace/[id]` over the `projects` table (`ProjectsService`). Dead `/workspaces` and `/projects` redirect. Synergy hub linking ideas/goals/forms/events/hangouts/discussions via `project_objects` join (`useProjectObjects` → `useWorkspaceFilteredItems` filters by `project_objects.entityId` or default-workspace fallback). Caps: 8 collaborators free.
 
 ---
 

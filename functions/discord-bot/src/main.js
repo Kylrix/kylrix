@@ -193,7 +193,7 @@ export default async ({ req, res, log, error }) => {
             embeds: [
               {
                 title: '📂 Kylrix Workspaces',
-                description: 'Manage and switch workspaces at [www.kylrix.space/workspaces](https://www.kylrix.space/workspaces).',
+                description: 'Manage and switch workspaces at [www.kylrix.space/app](https://www.kylrix.space/app).',
                 color: 0x6366f1,
               },
             ],

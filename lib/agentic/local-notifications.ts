@@ -4,6 +4,7 @@
  */
 
 import type { KylrixNotification } from '@/components/layout/NotificationDrawer';
+import { sanitizeInAppHref } from '@/lib/routing/app-paths';
 
 export function workspaceIntelNotifsKey(userId: string): string {
   return `kylrix_workspace_intel_notifs_${userId}`;
@@ -51,7 +52,7 @@ export async function pushLocalSystemNotification(
     timestamp: ts,
     read: false,
     accent: input.accent || '#6366F1',
-    actionHref: input.actionHref || '/workspaces',
+    actionHref: sanitizeInAppHref(input.actionHref || '/app'),
     source: 'system',
   };
 

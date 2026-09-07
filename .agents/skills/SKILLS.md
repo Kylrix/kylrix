@@ -2,7 +2,7 @@
 
 **Read this file first.** Then open only the one skill that matches your task. Do not browse the directory skill-by-skill.
 
-Hard policy also lives in repo-root `AGENTS.md` (Table/Row terms, single DB `passwordManagerDb`, no new in-app `app/api` routes, pnpm only, `/flows` + `/workspaces` routing).
+Hard policy also lives in repo-root `AGENTS.md` (Table/Row terms, single DB `passwordManagerDb`, no new in-app `app/api` routes, pnpm only, `/flows` + `/workspace/[id]` share routing — never `/workspaces`).
 
 _Catalog covers 88 skills._
 

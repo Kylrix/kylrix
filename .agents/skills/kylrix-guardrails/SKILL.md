@@ -15,7 +15,7 @@ disable-model-invocation: true
 4. Never edit `generated/` or hand-edit generated Appwrite types. Schema changes only when the user explicitly requests them — follow **`system.appwrite-cli-ops`** (durable CLI SoT; survives official `appwrite-cli` reinstall). Never hand-edit `appwrite.config.json`; never `push tables`.
 5. Single database: `passwordManagerDb`. Never introduce other DB IDs.
 6. Terminology: **Table** / **Row** only (never Collection/Document) in code, logs, and UI.
-7. Routing: Flow = `/flows` (workflows only). Workspaces = `/workspaces`. Goals/forms/events are separate. See `system.routing-canonical`.
+7. Routing: Flow = `/flows` (workflows only). Workspaces use `/app` + share `/workspace/[id]` — never `/workspaces`. Goals/forms/events are separate. See `system.routing-canonical`.
 8. Keep token ledger + BlockBee billing modules — not optional “Web3 cut” targets.
 9. Privileged ops: server-side `ADMINS` allowlist; do not trust client role labels.
 10. Overlay UX: conditional mount (`{isOpen && <Drawer />}`); OpenBricks drawers use `keepMounted: false`, `disablePortal: true`.

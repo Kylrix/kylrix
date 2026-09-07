@@ -220,7 +220,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
           { label: 'Connect Hub', icon: <MessageSquare size={16} />, onClick: () => router.push('/connect') },
           { label: 'Goals & Tasks', icon: <CheckCircle2 size={16} />, onClick: () => router.push('/goals') },
           { label: 'Security Vault', icon: <Lock size={16} />, onClick: () => router.push('/vault') },
-          { label: 'Workspaces', icon: <Layers size={16} />, onClick: () => router.push('/workspaces') },
+          { label: 'Workspaces', icon: <Layers size={16} />, onClick: () => router.push('/app') },
           { label: 'Settings', icon: <Settings size={16} />, onClick: () => router.push('/settings') }
         );
       } else if (isTopbar) {
@@ -228,7 +228,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
         items.push(
           { label: 'Universal Search', icon: <Search size={16} />, onClick: () => focusGlobalSearch() },
           { label: 'Quick Capture Note', icon: <Plus size={16} />, onClick: () => openUnifiedDrawer('note') },
-          { label: 'Explore Workspaces', icon: <Layers size={16} />, onClick: () => router.push('/workspaces') }
+          { label: 'Home', icon: <Layers size={16} />, onClick: () => router.push('/app') }
         );
       } else {
         // Highly contextual per-route actions
@@ -278,7 +278,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
           items.push(
             { label: 'New Scratch Note', icon: <Plus size={16} className="text-amber-400" />, onClick: () => openUnifiedDrawer('note') },
             { label: 'Search Notes Directory', icon: <Search size={16} />, onClick: () => focusGlobalSearch('Search notes, tags, and ideas...') },
-            { label: 'Workspaces Hub', icon: <Layers size={16} />, onClick: () => router.push('/workspaces') },
+            { label: 'Home', icon: <Layers size={16} />, onClick: () => router.push('/app') },
             { label: 'Settings', icon: <Settings size={16} />, onClick: () => router.push('/settings') }
           );
         } else if (appType === 'vault') {
