@@ -208,6 +208,21 @@ export function ShareContextDrawer() {
         (resourceId ? buildInstantShareUrl(resourceType, resourceId, { projectId }) : '');
       if (active && quick) setResolvedUrl(quick);
 
+      // If URL is bare but we have a DEK (encrypted vault), append key fragment before copy/share.
+      if (dek && resourceId && active) {
+        try {
+          const { buildInstantShareUrlWithDek } = await import('@/lib/share/instant-share');
+          const withDek = await buildInstantShareUrlWithDek(resourceType, resourceId, {
+            projectId,
+            dek,
+            openMasterpassPrompt: () => open('masterpass'),
+          });
+          if (!withDek.requiresMasterpass && withDek.keyFragment && active) {
+            setResolvedUrl(withDek.url);
+          }
+        } catch {}
+      }
+
       try {
         const methods = await getFrequentShareMethods(user?.$id);
         if (active) setMethodOrder(methods);

@@ -39,7 +39,7 @@ export function ShareLockButton({
   onPublished,
   canPublish = true,
   blockReason,
-  getCustomShareUrl: _getCustomShareUrl
+  getCustomShareUrl,
 }: ShareLockButtonProps) {
   const { showError } = useToast();
   const { open } = useUnifiedDrawer();
@@ -66,7 +66,25 @@ export function ShareLockButton({
       return;
     }
 
-    const instantUrl = buildInstantShareUrl(resourceType, resourceId, { projectId });
+    // Encrypted vault items need DEK in the URI (/vault/[id]/[dek]) — never ship bare public id.
+    let instantUrl = buildInstantShareUrl(resourceType, resourceId, { projectId });
+    try {
+      if (getCustomShareUrl) {
+        instantUrl = await getCustomShareUrl();
+      } else if (dek) {
+        const { buildInstantShareUrlWithDek } = await import('@/lib/share/instant-share');
+        const withDek = await buildInstantShareUrlWithDek(resourceType, resourceId, {
+          projectId,
+          dek,
+          openMasterpassPrompt: () => open('masterpass'),
+        });
+        if (withDek.requiresMasterpass) return;
+        instantUrl = withDek.url;
+      }
+    } catch (err: any) {
+      showError(err?.message || 'Could not build share link');
+      return;
+    }
     const alreadyLive = isPublic && isGuest;
 
     // Happy-go-lucky: drawer + URL first

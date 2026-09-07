@@ -77,6 +77,26 @@ async function resolveDekFragment(
   return { keyFragment: '', requiresMasterpass: false };
 }
 
+/** Public URL with DEK path segment for encrypted vault/locked shares. */
+export async function buildInstantShareUrlWithDek(
+  resourceType: PublicResourceType,
+  resourceId: string,
+  options: Pick<InstantShareOptions, 'projectId' | 'dek' | 'openMasterpassPrompt'> = {},
+): Promise<{ url: string; requiresMasterpass: boolean; keyFragment: string }> {
+  const { keyFragment, requiresMasterpass } = await resolveDekFragment(
+    options.dek,
+    options.openMasterpassPrompt,
+  );
+  return {
+    url: buildInstantShareUrl(resourceType, resourceId, {
+      projectId: options.projectId,
+      keyFragment,
+    }),
+    requiresMasterpass,
+    keyFragment,
+  };
+}
+
 async function enqueueShareFlush(
   resourceType: PublicResourceType,
   resourceId: string,
