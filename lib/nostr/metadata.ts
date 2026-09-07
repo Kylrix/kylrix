@@ -22,6 +22,8 @@ export interface NostrProfileMetadata {
   picture?: string;
   about?: string;
   banner?: string;
+  lud16?: string;
+  lud06?: string;
   updatedAt: number;
 }
 
@@ -149,6 +151,8 @@ async function flushPendingMetadata(): Promise<void> {
           picture: data.picture || data.image || data.avatar,
           about: data.about,
           banner: data.banner,
+          lud16: data.lud16 || undefined,
+          lud06: data.lud06 || undefined,
           updatedAt: (event.created_at || 0) * 1000,
         };
 

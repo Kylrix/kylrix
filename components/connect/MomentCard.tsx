@@ -229,9 +229,19 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   const onZap = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!momentId) return;
+    const dualNostrId =
+      item.source === 'ecosystem'
+        ? String(item.rawEvent?.nostrId || '').trim() || undefined
+        : undefined;
+    const availableSources: Array<'ecosystem' | 'nostr'> = [];
+    if (item.source === 'ecosystem') availableSources.push('ecosystem');
+    if (item.source === 'nostr' || dualNostrId) availableSources.push('nostr');
     openUnifiedDrawer('zap', {
       targetId: momentId,
       source: item.source,
+      availableSources,
+      ecosystemTargetId: item.source === 'ecosystem' ? momentId : undefined,
+      nostrTargetId: item.source === 'nostr' ? momentId : dualNostrId,
       targetKind: 'moment',
       targetOwnerId: item.rawEvent?.userId || item.rawEvent?.creatorId,
       targetPubkey: item.rawEvent?.pubkey,

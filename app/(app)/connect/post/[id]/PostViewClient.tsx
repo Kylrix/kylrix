@@ -144,9 +144,19 @@ function CommentMomentRow({
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
   const [liked, setLiked] = useState(Boolean(comment.isLiked));
   const [likes, setLikes] = useState(Number(comment.likesCount || 0));
+  const [reposts, setReposts] = useState(
+    Number((comment.raw as any)?.stats?.pulses || (comment.raw as any)?.repostCount || 0),
+  );
+  const [zaps, setZaps] = useState(
+    Number((comment.raw as any)?.stats?.zaps || (comment.raw as any)?.zapCount || 0),
+  );
+  const [reposted, setReposted] = useState(false);
   const [busy, setBusy] = useState(false);
   const isNostr = comment.source === 'nostr';
   const avatarUrl = comment.authorAvatar;
+  const dualNostrId = !isNostr
+    ? String((comment.raw as any)?.nostrId || '').trim() || undefined
+    : undefined;
 
   const toggleLike = async () => {
     if (busy) return;
@@ -175,6 +185,7 @@ function CommentMomentRow({
         privateKeyBytes: identity?.privateKeyBytes,
         nsec: identity?.nsec,
         rootPubkey: comment.authorPubkey,
+        nostrId: dualNostrId,
       });
     } catch (err) {
       setLiked(prevLiked);
@@ -184,6 +195,61 @@ function CommentMomentRow({
     } finally {
       setBusy(false);
     }
+  };
+
+  const onRepost = async () => {
+    if (busy || reposted) return;
+    if (isNostr) {
+      if (isVaultLocked || !identity) {
+        toast.error('Unlock vault to pulse on Nostr');
+        void unlockAndLoad();
+        return;
+      }
+    } else if (!userId) {
+      toast.error('Sign in to pulse');
+      return;
+    }
+    setBusy(true);
+    setReposted(true);
+    setReposts((n) => n + 1);
+    try {
+      const { repostMoment } = await import('@/lib/connect/moment-engagement');
+      await repostMoment({
+        source: comment.source,
+        id: comment.id,
+        userId,
+        creatorId: comment.authorUserId,
+        privateKeyBytes: identity?.privateKeyBytes,
+        nsec: identity?.nsec,
+        rootPubkey: comment.authorPubkey,
+        nostrId: dualNostrId || (isNostr ? comment.id : undefined),
+      });
+      toast.success('Pulsed to feed');
+    } catch (err: any) {
+      setReposted(false);
+      setReposts((n) => Math.max(0, n - 1));
+      toast.error(err?.message || 'Could not pulse');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onZap = () => {
+    const availableSources: Array<'ecosystem' | 'nostr'> = [];
+    if (!isNostr) availableSources.push('ecosystem');
+    if (isNostr || dualNostrId) availableSources.push('nostr');
+    openUnifiedDrawer('zap', {
+      targetId: comment.id,
+      source: isNostr ? 'nostr' : 'ecosystem',
+      availableSources,
+      ecosystemTargetId: isNostr ? undefined : comment.id,
+      nostrTargetId: isNostr ? comment.id : dualNostrId,
+      targetKind: 'moment',
+      targetOwnerId: comment.authorUserId,
+      targetPubkey: comment.authorPubkey,
+      authorName: comment.authorName,
+      onZapSuccess: (amount: number) => setZaps((n) => n + amount),
+    });
   };
 
   return (
@@ -238,6 +304,23 @@ function CommentMomentRow({
             >
               <MessageCircle size={14} />
               <span className="font-mono">{comment.repliesCount || 0}</span>
+            </button>
+            <button
+              type="button"
+              disabled={busy || reposted}
+              onClick={() => void onRepost()}
+              className={`inline-flex items-center gap-1.5 text-xs font-bold disabled:opacity-40 shrink-0 ${reposted ? 'text-[#00BA7C]' : 'text-white hover:text-[#00BA7C]'}`}
+            >
+              <Repeat2 size={14} />
+              <span className="font-mono">{reposts}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onZap}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white hover:text-[#F59E0B] shrink-0"
+            >
+              <Zap size={14} className={zaps > 0 ? 'text-[#F59E0B] fill-[#F59E0B]' : ''} />
+              <span className="font-mono">{zaps}</span>
             </button>
             <button
               type="button"
@@ -373,6 +456,7 @@ export function PostViewClient({
   const [liked, setLiked] = useState(false);
   const [loading, setLoading] = useState(!preview?.content);
   const [busy, setBusy] = useState(false);
+  const [reposted, setReposted] = useState(false);
 
   // For Nostr event kind detection
   const [nostrEvent, setNostrEvent] = useState<NostrEvent | null>(null);
@@ -503,10 +587,67 @@ export function PostViewClient({
         privateKeyBytes: identity?.privateKeyBytes,
         nsec: identity?.nsec,
         rootPubkey: moment?.pubkey || nostrEvent?.pubkey,
+        nostrId: (moment as any)?.nostrId || (source === 'nostr' ? momentId : undefined),
       });
     } catch (e) {
       setLiked(prevLiked); setLikes(prevLikes); console.error(e);
     } finally { setBusy(false); }
+  };
+
+  const onRepost = async () => {
+    if (!momentId || busy || reposted) return;
+    if (source === 'nostr' && (isVaultLocked || !identity)) {
+      toast.error('Unlock vault to pulse on Nostr');
+      void unlockAndLoad();
+      return;
+    }
+    if (source === 'ecosystem' && !user?.$id) {
+      toast.error('Sign in to pulse');
+      return;
+    }
+    setBusy(true);
+    setReposted(true);
+    setReposts((n) => n + 1);
+    try {
+      const { repostMoment } = await import('@/lib/connect/moment-engagement');
+      await repostMoment({
+        source,
+        id: momentId,
+        userId: user?.$id,
+        creatorId: moment?.userId || moment?.creatorId,
+        privateKeyBytes: identity?.privateKeyBytes,
+        nsec: identity?.nsec,
+        rootPubkey: moment?.pubkey || nostrEvent?.pubkey,
+        nostrId: (moment as any)?.nostrId || (source === 'nostr' ? momentId : undefined),
+      });
+      toast.success('Pulsed to feed');
+    } catch (err: any) {
+      setReposted(false);
+      setReposts((n) => Math.max(0, n - 1));
+      toast.error(err?.message || 'Could not pulse');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onZap = () => {
+    if (!momentId) return;
+    const dualNostrId = String((moment as any)?.nostrId || '').trim() || undefined;
+    const availableSources: Array<'ecosystem' | 'nostr'> = [];
+    if (source === 'ecosystem') availableSources.push('ecosystem');
+    if (source === 'nostr' || dualNostrId) availableSources.push('nostr');
+    openUnifiedDrawer('zap', {
+      targetId: momentId,
+      source,
+      availableSources,
+      ecosystemTargetId: source === 'ecosystem' ? momentId : undefined,
+      nostrTargetId: source === 'nostr' ? momentId : dualNostrId,
+      targetKind: 'moment',
+      targetOwnerId: moment?.userId || moment?.creatorId,
+      targetPubkey: moment?.pubkey || nostrEvent?.pubkey,
+      authorName: creator?.displayName || creator?.username || preview?.authorName || 'Creator',
+      onZapSuccess: (amount: number) => setZaps((n) => n + amount),
+    });
   };
 
   const openReplyComposer = (parent?: MomentComment) => {
@@ -872,13 +1013,18 @@ export function PostViewClient({
                 <MessageCircle size={16} />
                 <span className="font-mono">{replies.length}</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white shrink-0">
-                <Repeat2 size={16} />
-                <span className="font-mono">{reposts}</span>
-              </span>
               <button
                 type="button"
-                onClick={() => setEngagementDrawer({ open: true, kind: 'zap' })}
+                disabled={busy || reposted}
+                onClick={() => void onRepost()}
+                className={`inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold disabled:opacity-40 shrink-0 ${reposted ? 'text-[#00BA7C]' : 'text-white hover:text-[#00BA7C]'}`}
+              >
+                <Repeat2 size={16} />
+                <span className="font-mono">{reposts}</span>
+              </button>
+              <button
+                type="button"
+                onClick={onZap}
                 className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white hover:text-[#F59E0B] shrink-0"
               >
                 <Zap size={16} className={zaps > 0 ? 'text-[#F59E0B] fill-[#F59E0B]' : ''} />

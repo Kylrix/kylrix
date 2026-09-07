@@ -484,6 +484,9 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           onClose={onClose}
           targetId={drawerData?.targetId || drawerData?.noteId || ''}
           source={drawerData?.source || 'ecosystem'}
+          availableSources={drawerData?.availableSources}
+          ecosystemTargetId={drawerData?.ecosystemTargetId}
+          nostrTargetId={drawerData?.nostrTargetId}
           targetKind={drawerData?.targetKind || 'moment'}
           targetOwnerId={drawerData?.targetOwnerId}
           targetPubkey={drawerData?.targetPubkey || drawerData?.recipientPubkey}

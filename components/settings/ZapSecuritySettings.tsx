@@ -45,7 +45,7 @@ export function ZapSecuritySettings() {
             </h3>
           </div>
           <p className="text-[10px] text-white/35 font-bold mt-1 font-satoshi">
-            Prompt drawer confirmation before dispatching ecosystem token micro-zaps
+            Ask for vault confirmation before every zap. When off, confirm only if the vault is actually locked.
           </p>
         </div>
         <button
@@ -64,11 +64,11 @@ export function ZapSecuritySettings() {
           <Zap className="w-4 h-4 fill-current" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-white truncate">Global Ecosystem Zap Safeguard</p>
+          <p className="text-sm font-bold text-white truncate">Zap vault safeguard</p>
           <p className="mt-1 text-[11px] text-white/40 font-satoshi">
             {enabled
-              ? 'Active — prompts amount confirmation before rix transfer'
-              : 'Direct mode — 1-click instant zaps without confirmation'}
+              ? 'Active — vault confirm before Kylrix rix or Nostr Lightning zaps'
+              : 'Direct mode — vault confirm only when locked'}
           </p>
         </div>
       </div>
