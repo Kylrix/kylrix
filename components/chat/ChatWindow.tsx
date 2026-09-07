@@ -71,7 +71,6 @@ import { PresenceService } from '@/lib/services/presence';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import {
     chatConversationCacheKey,
-    chatMessagesCacheKey,
     peekChatsListMemory,
     peekMessagesMemory,
     patchConversationListPreview,
