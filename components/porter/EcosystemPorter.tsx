@@ -19,12 +19,16 @@ import {
   cachePorterDraft,
   clearPorterDraft,
   discernImportPayload,
-  exportVaultOffline,
+  exportVaultPlaintext,
   loadPorterDraft,
   type PorterDiscernResult,
 } from '@/lib/porter';
 import { runOfflinePorterImport } from '@/lib/porter/offline';
-import { encryptExportData, generateEncryptedHtmlPage } from '@/utils/import/encrypted-html-exporter';
+import {
+  generateEncryptedHtmlPage,
+  sealPlaintextExport,
+  tryCreatePasskeyWrapKey,
+} from '@/utils/import/encrypted-html-exporter';
 import { porterExport } from '@/lib/data-porter';
 
 type PorterDirection = 'import' | 'export';
@@ -145,6 +149,7 @@ export default function EcosystemPorter({
   const [error, setError] = useState<string | null>(null);
   const [exportFormat, setExportFormat] = useState<'json' | 'encrypted-html'>('json');
   const [exportPassword, setExportPassword] = useState('');
+  const [lockWithPasskey, setLockWithPasskey] = useState(true);
   const [progressMsg, setProgressMsg] = useState<string | null>(null);
 
   const userId = user?.$id || '';
@@ -297,8 +302,8 @@ export default function EcosystemPorter({
           setBusy(true);
           setError(null);
           try {
-            // Local-first: UI list mirrors are SoT. Server porter often returns empty vault.
-            let finalData = await exportVaultOffline(userId);
+            // Always decrypt to plaintext before any download.
+            let finalData = await exportVaultPlaintext(userId);
             const localVault = finalData.data.vault;
             const localEmpty =
               !(localVault.credentials?.length || localVault.totpSecrets?.length || localVault.folders?.length);
@@ -306,23 +311,20 @@ export default function EcosystemPorter({
             if (localEmpty) {
               try {
                 const result = await porterExport(userId);
+                // Server payload may still be ciphertext — only use as last resort ids, then decrypt via plaintext path already failed empty
+                const vault =
+                  result.data.data?.vault ||
+                  (result.data as any).vault || {
+                    folders: result.data.folders || [],
+                    credentials: result.data.credentials || [],
+                    totpSecrets: result.data.totpSecrets || [],
+                  };
                 finalData = {
-                  version: 2,
-                  format: 'kylrix-vault',
-                  exportedAt: new Date().toISOString(),
-                  userId,
-                  data: {
-                    vault:
-                      result.data.data?.vault ||
-                      (result.data as any).vault || {
-                        folders: result.data.folders || [],
-                        credentials: result.data.credentials || [],
-                        totpSecrets: result.data.totpSecrets || [],
-                      },
-                  },
+                  ...finalData,
+                  data: { vault },
                 } as any;
               } catch {
-                /* keep local empty snapshot */
+                /* keep empty */
               }
             }
 
@@ -350,8 +352,11 @@ export default function EcosystemPorter({
             }
 
             const payload = {
-              ...finalData,
+              version: 2,
               format: 'kylrix-vault',
+              plaintext: true,
+              exportedAt: new Date().toISOString(),
+              userId,
               exportKind: dataKind,
               data: { vault },
             };
@@ -362,18 +367,21 @@ export default function EcosystemPorter({
 
             if (exportFormat === 'encrypted-html') {
               if (!exportPassword.trim()) {
-                setError('Enter a password to lock the export file.');
+                setError('Choose a password to lock this HTML file (passkey unlock is optional).');
                 setBusy(false);
                 return;
               }
-              const encrypted = await encryptExportData(jsonString, exportPassword);
-              const htmlPage = generateEncryptedHtmlPage(
-                encrypted.ciphertext,
-                encrypted.salt,
-                encrypted.iv,
-                user?.email || 'Kylrix User',
+              // Optional passkey wrap (PRF) — password always works.
+              const passkeyWrap = lockWithPasskey
+                ? await tryCreatePasskeyWrapKey().catch(() => null)
+                : null;
+              const sealed = await sealPlaintextExport(
+                jsonString,
+                exportPassword.trim(),
+                passkeyWrap,
               );
-              downloadBlob(htmlPage, `kylrix-${suffix}-backup-encrypted.html`, 'text/html');
+              const htmlPage = generateEncryptedHtmlPage(sealed, user?.email || 'Kylrix User');
+              downloadBlob(htmlPage, `kylrix-${suffix}-backup-locked.html`, 'text/html');
             } else {
               downloadBlob(jsonString, `kylrix-${suffix}-backup.json`, 'application/json');
             }
@@ -679,17 +687,31 @@ export default function EcosystemPorter({
             </div>
 
             {exportFormat === 'encrypted-html' && (
-              <input
-                type="password"
-                value={exportPassword}
-                onChange={(e) => setExportPassword(e.target.value)}
-                placeholder="Export password"
-                className="w-full rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white outline-none"
-              />
+              <>
+                <input
+                  type="password"
+                  value={exportPassword}
+                  onChange={(e) => setExportPassword(e.target.value)}
+                  placeholder="File unlock password"
+                  className="w-full rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white outline-none"
+                />
+                <label className="flex items-center gap-3 rounded-xl border border-white/20 bg-black px-4 py-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={lockWithPasskey}
+                    onChange={(e) => setLockWithPasskey(e.target.checked)}
+                    className="accent-[#10B981]"
+                  />
+                  <span className="text-sm font-medium text-white">
+                    Also allow passkey unlock in the HTML file
+                  </span>
+                </label>
+              </>
             )}
 
             <p className="text-sm font-medium text-white">
-              Works offline from your local vault copy when the network is unavailable.
+              JSON downloads readable plaintext. Locked HTML opens with a confirm-access screen
+              (password and optional passkey).
             </p>
 
             <button

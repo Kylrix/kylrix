@@ -19,6 +19,7 @@ export {
   cachePorterDraft,
   clearPorterDraft,
   exportVaultOffline,
+  exportVaultPlaintext,
   loadPorterDraft,
   runOfflinePorterImport,
 } from './offline';

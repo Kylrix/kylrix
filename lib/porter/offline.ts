@@ -118,23 +118,85 @@ export async function runOfflinePorterImport(
   return service.importKylrixVaultData(json, userId);
 }
 
-/** Local-first vault export — LocalEngine mirror first, then VaultService lists. */
-export async function exportVaultOffline(userId: string): Promise<{
+/** Strip ciphertext / server chrome — export-safe plaintext row. */
+function shapePlainCredential(row: Record<string, unknown>) {
+  return {
+    $id: row.$id || row.id || undefined,
+    itemType: row.itemType || 'login',
+    name: row.name ?? null,
+    username: row.username ?? null,
+    password: row.password ?? null,
+    url: row.url ?? null,
+    notes: row.notes ?? null,
+    totpId: row.totpId ?? null,
+    isEnv: Boolean(row.isEnv),
+    customFields: (() => {
+      const raw = row.customFields;
+      if (!raw) return null;
+      if (typeof raw === 'string') {
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return raw;
+        }
+      }
+      return raw;
+    })(),
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    cardNumber: row.cardNumber ?? null,
+    cardholderName: row.cardholderName ?? null,
+    cardExpiry: row.cardExpiry ?? null,
+    cardCVV: row.cardCVV ?? null,
+    cardPIN: row.cardPIN ?? null,
+    cardType: row.cardType ?? null,
+    folderId: row.folderId ?? null,
+    createdAt: row.createdAt || row.$createdAt || null,
+    updatedAt: row.updatedAt || row.$updatedAt || null,
+  };
+}
+
+function shapePlainTotp(row: Record<string, unknown>) {
+  return {
+    $id: row.$id || row.id || undefined,
+    issuer: row.issuer ?? null,
+    accountName: row.accountName ?? null,
+    secretKey: row.secretKey ?? null,
+    algorithm: row.algorithm || 'SHA1',
+    digits: row.digits ?? 6,
+    period: row.period ?? 30,
+    url: row.url ?? null,
+    createdAt: row.createdAt || row.$createdAt || null,
+    updatedAt: row.updatedAt || row.$updatedAt || null,
+  };
+}
+
+function looksEncrypted(val: unknown): boolean {
+  if (typeof val !== 'string' || !val.trim()) return false;
+  // Vault ciphertext is base64-ish and longer than typical plaintext labels
+  return val.length > 40 && /^[A-Za-z0-9+/=]+$/.test(val.replace(/\s/g, ''));
+}
+
+/** Plaintext vault export — decrypts before write. Requires unlocked vault. */
+export async function exportVaultPlaintext(userId: string): Promise<{
   version: number;
   format: string;
   exportedAt: string;
   userId: string;
+  plaintext: true;
   data: { vault: { folders: unknown[]; credentials: unknown[]; totpSecrets: unknown[] } };
 }> {
+  const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+  if (!masterPassCrypto.isVaultUnlocked()) {
+    throw new Error('Unlock your vault before exporting.');
+  }
+
   const { VaultService } = await import('@/lib/appwrite/vault-service');
 
-  // Prefer the same LocalEngine list keys the vault UI paints from.
   let creds =
     ((await LocalEngine.cacheGet<any[]>(`vault_credentials_${userId}`).catch(() => null)) as any[]) ||
     [];
   let totps =
     ((await LocalEngine.cacheGet<any[]>(`vault_totp_${userId}`).catch(() => null)) as any[]) || [];
-  let folders: any[] = [];
 
   const [remoteCreds, remoteTotps, remoteFolders] = await Promise.all([
     VaultService.listAllCredentials(userId).catch(() => [] as any[]),
@@ -142,26 +204,37 @@ export async function exportVaultOffline(userId: string): Promise<{
     VaultService.listFolders(userId).catch(() => [] as any[]),
   ]);
 
-  if (!creds.length && Array.isArray(remoteCreds) && remoteCreds.length) creds = remoteCreds;
-  if (!totps.length && Array.isArray(remoteTotps) && remoteTotps.length) totps = remoteTotps;
-  folders = Array.isArray(remoteFolders) ? remoteFolders : [];
+  // Prefer decrypted remote lists when populated
+  if (Array.isArray(remoteCreds) && remoteCreds.length) creds = remoteCreds;
+  if (Array.isArray(remoteTotps) && remoteTotps.length) totps = remoteTotps;
 
-  // Merge remote into local by $id when both exist (remote may be fresher for a subset).
-  if (Array.isArray(remoteCreds) && remoteCreds.length && creds.length) {
-    const byId = new Map<string, any>();
-    for (const row of [...creds, ...remoteCreds]) {
+  // Local mirror may still be ciphertext — decrypt via get* when needed
+  if (creds.some((c) => looksEncrypted(c?.password) || looksEncrypted(c?.name) || looksEncrypted(c?.secretKey))) {
+    const decrypted: any[] = [];
+    for (const row of creds) {
       const id = row?.$id || row?.id;
-      if (id) byId.set(id, row);
+      if (!id) continue;
+      try {
+        decrypted.push(await VaultService.getCredential(String(id)));
+      } catch {
+        decrypted.push(row);
+      }
     }
-    creds = Array.from(byId.values());
+    creds = decrypted;
   }
-  if (Array.isArray(remoteTotps) && remoteTotps.length && totps.length) {
-    const byId = new Map<string, any>();
-    for (const row of [...totps, ...remoteTotps]) {
+
+  if (totps.some((t) => looksEncrypted(t?.secretKey) || looksEncrypted(t?.issuer))) {
+    const decrypted: any[] = [];
+    for (const row of totps) {
       const id = row?.$id || row?.id;
-      if (id) byId.set(id, row);
+      if (!id) continue;
+      try {
+        decrypted.push(await VaultService.getTOTPSecret(String(id)));
+      } catch {
+        decrypted.push(row);
+      }
     }
-    totps = Array.from(byId.values());
+    totps = decrypted;
   }
 
   return {
@@ -169,12 +242,35 @@ export async function exportVaultOffline(userId: string): Promise<{
     format: 'kylrix-vault',
     exportedAt: new Date().toISOString(),
     userId,
+    plaintext: true,
     data: {
       vault: {
-        folders,
-        credentials: creds,
-        totpSecrets: totps,
+        folders: (remoteFolders || []).map((f: any) => ({
+          $id: f.$id,
+          name: f.name,
+          parentFolderId: f.parentFolderId ?? null,
+        })),
+        credentials: creds.map((c) => shapePlainCredential(c as any)),
+        totpSecrets: totps.map((t) => shapePlainTotp(t as any)),
       },
     },
+  };
+}
+
+/** @deprecated Prefer exportVaultPlaintext for user-facing downloads. */
+export async function exportVaultOffline(userId: string): Promise<{
+  version: number;
+  format: string;
+  exportedAt: string;
+  userId: string;
+  data: { vault: { folders: unknown[]; credentials: unknown[]; totpSecrets: unknown[] } };
+}> {
+  const plain = await exportVaultPlaintext(userId);
+  return {
+    version: plain.version,
+    format: plain.format,
+    exportedAt: plain.exportedAt,
+    userId: plain.userId,
+    data: plain.data,
   };
 }
