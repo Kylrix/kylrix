@@ -135,19 +135,21 @@ async function hydrateCommentAvatars(comments: MomentComment[]): Promise<MomentC
 
   try {
     const { getCachedNostrProfile, queueNostrProfileFetch } = await import('@/lib/nostr/metadata');
+    const missing: string[] = [];
     next = next.map((c) => {
       if (c.source !== 'nostr' || !c.authorPubkey || c.authorAvatar) return c;
       const cached = getCachedNostrProfile(c.authorPubkey);
       if (!cached) {
-        void queueNostrProfileFetch(c.authorPubkey);
+        missing.push(c.authorPubkey);
         return c;
       }
       return {
         ...c,
         authorAvatar: cached.picture || undefined,
-        authorName: cached.display_name || cached.name || c.authorName,
+        authorName: cached.displayName || cached.name || c.authorName,
       };
     });
+    if (missing.length) void queueNostrProfileFetch(missing);
   } catch {}
 
   return next;
