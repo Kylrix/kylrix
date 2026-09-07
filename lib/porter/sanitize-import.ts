@@ -225,7 +225,7 @@ export function sanitizeImportBundle(
       skippedDuplicate++;
       continue;
     }
-    if (decision.mergeTargetId) {
+    if (decision.action === 'import' && decision.mergeTargetId) {
       credentials.push({ ...c, _mergeTargetId: decision.mergeTargetId });
     } else {
       credentials.push(c);
@@ -244,7 +244,7 @@ export function sanitizeImportBundle(
       skippedDuplicate++;
       continue;
     }
-    if (decision.mergeTargetId) {
+    if (decision.action === 'import' && decision.mergeTargetId) {
       totpSecrets.push({ ...t, _mergeTargetId: decision.mergeTargetId });
     } else {
       totpSecrets.push(t);
@@ -306,6 +306,7 @@ export function annotatePorterDiscernResult(
       return { ...c, _status: 'new' as const, _skipReason: undefined, _forceImport: force || undefined };
     }
     const decision = decideAgainstVault(row, vaultCreds.get(key) || [], 'cred');
+    const mergeTargetId = decision.action === 'import' ? decision.mergeTargetId : undefined;
     if (decision.action === 'skip' && !force) {
       return {
         ...c,
@@ -319,7 +320,7 @@ export function annotatePorterDiscernResult(
         ...c,
         _status: 'merged' as const,
         _skipReason: decision.reason,
-        _mergeTargetId: decision.mergeTargetId,
+        _mergeTargetId: mergeTargetId,
         _forceImport: force || undefined,
       };
     }
@@ -328,7 +329,7 @@ export function annotatePorterDiscernResult(
       _status: 'new' as const,
       _skipReason: undefined,
       _forceImport: force || undefined,
-      _mergeTargetId: decision.mergeTargetId,
+      _mergeTargetId: mergeTargetId,
     };
   });
 
@@ -356,6 +357,7 @@ export function annotatePorterDiscernResult(
       };
     }
     const decision = decideAgainstVault(row, vaultTotps.get(key) || [], 'totp');
+    const mergeTargetId = decision.action === 'import' ? decision.mergeTargetId : undefined;
     if (decision.action === 'skip' && !force) {
       return {
         ...normalized,
@@ -369,7 +371,7 @@ export function annotatePorterDiscernResult(
         ...normalized,
         _status: 'merged' as const,
         _skipReason: decision.reason,
-        _mergeTargetId: decision.mergeTargetId,
+        _mergeTargetId: mergeTargetId,
         _forceImport: force || undefined,
       };
     }
@@ -378,7 +380,7 @@ export function annotatePorterDiscernResult(
       _status: 'new' as const,
       _skipReason: undefined,
       _forceImport: force || undefined,
-      _mergeTargetId: decision.mergeTargetId,
+      _mergeTargetId: mergeTargetId,
     };
   });
 
