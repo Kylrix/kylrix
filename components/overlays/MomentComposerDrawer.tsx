@@ -86,7 +86,6 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     learningStatus,
     suggestion,
     busy: agentBusy,
-    showWand,
     acceptSuggestion,
     runTakeover,
     flushReinforce,

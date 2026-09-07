@@ -227,7 +227,6 @@ export function CreateEventComposer({
     learningLabel,
     suggestion: agentSuggestion,
     busy: agentBusy,
-    showWand,
     acceptSuggestion: acceptAgentSuggestion,
     runTakeover,
     handleKeyDown: handleAgentKeyDown,

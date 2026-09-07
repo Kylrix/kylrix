@@ -349,7 +349,6 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
     learningLabel,
     suggestion: agentSuggestion,
     busy: agentBusy,
-    showWand,
     acceptSuggestion: acceptAgentSuggestion,
     runTakeover,
     handleKeyDown: handleAgentKeyDown,

@@ -339,7 +339,6 @@ export function CreateGoalComposer({
     learningLabel,
     suggestion: agentSuggestion,
     busy: agentBusy,
-    showWand,
     acceptSuggestion: acceptAgentSuggestion,
     runTakeover,
     handleKeyDown: handleAgentKeyDown,

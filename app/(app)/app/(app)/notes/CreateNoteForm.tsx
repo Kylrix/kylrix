@@ -446,7 +446,6 @@ export default function CreateNoteForm({
     learningLabel,
     suggestion: agentSuggestion,
     busy: agentBusy,
-    showWand,
     acceptSuggestion,
     runTakeover,
     handleKeyDown: handleAgentKeyDown,
