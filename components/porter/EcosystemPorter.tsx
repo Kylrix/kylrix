@@ -16,10 +16,12 @@ import toast from 'react-hot-toast';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { useSudo } from '@/context/SudoContext';
 import {
+  annotatePorterDiscernResult,
   cachePorterDraft,
   clearPorterDraft,
   discernImportPayload,
   exportVaultPlaintext,
+  loadExistingVaultForDedupe,
   loadPorterDraft,
   type PorterDiscernResult,
 } from '@/lib/porter';
@@ -169,7 +171,14 @@ export default function EcosystemPorter({
     void (async () => {
       const draft = await loadPorterDraft(userId);
       if (draft?.result && (draft.result.credentials.length || draft.result.totpSecrets.length)) {
-        setDiscerned(filterDiscerned(draft.result, dataKind));
+        let result = filterDiscerned(draft.result, dataKind);
+        try {
+          const existing = await loadExistingVaultForDedupe(userId);
+          result = annotatePorterDiscernResult(result, existing);
+        } catch {
+          /* preview without live dedupe */
+        }
+        setDiscerned(result);
         setDirection('import');
         setView('preview');
       }
@@ -228,10 +237,14 @@ export default function EcosystemPorter({
       setBusy(true);
       try {
         const raw = discernImportPayload(text, userId);
-        const result = filterDiscerned(raw, dataKind);
+        let result = filterDiscerned(raw, dataKind);
+        if (userId) {
+          const existing = await loadExistingVaultForDedupe(userId);
+          result = annotatePorterDiscernResult(result, existing);
+        }
         setDiscerned(result);
         setFileName(name || null);
-        if (userId) await cachePorterDraft(userId, raw);
+        if (userId) await cachePorterDraft(userId, result);
         if (result.credentials.length + result.totpSecrets.length + result.folders.length === 0) {
           setError(result.warnings[0] || 'Nothing matched the selected type.');
           setView('import');
@@ -274,8 +287,11 @@ export default function EcosystemPorter({
               setProgressMsg(total ? `${msg} (${processed}/${total})` : msg),
             );
             if (result.success) {
+              const skipped = result.summary.skippedExisting + result.summary.skipped;
               toast.success(
-                `Imported ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes`,
+                skipped > 0
+                  ? `Imported ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes · skipped ${skipped}`
+                  : `Imported ${result.summary.credentialsCreated} secrets · ${result.summary.totpSecretsCreated} codes`,
               );
             } else {
               toast.error(result.errors[0] || 'Import finished with errors');
@@ -404,11 +420,18 @@ export default function EcosystemPorter({
   };
 
   const counts = useMemo(() => {
-    if (!discerned) return { secrets: 0, totp: 0, folders: 0 };
+    if (!discerned) return { secrets: 0, totp: 0, folders: 0, importable: 0, skipped: 0 };
+    const secretsNew = discerned.credentials.filter((c) => !c._status || c._status === 'new' || c._status === 'merged').length;
+    const totpNew = discerned.totpSecrets.filter((t) => !t._status || t._status === 'new' || t._status === 'merged').length;
+    const skipped =
+      discerned.credentials.filter((c) => c._status === 'duplicate' || c._status === 'invalid').length +
+      discerned.totpSecrets.filter((t) => t._status === 'duplicate' || t._status === 'invalid').length;
     return {
       secrets: discerned.credentials.length,
       totp: discerned.totpSecrets.length,
       folders: discerned.folders.length,
+      importable: secretsNew + totpNew + discerned.folders.length,
+      skipped,
     };
   }, [discerned]);
 
@@ -590,6 +613,12 @@ export default function EcosystemPorter({
               <StatTile icon={<FileCode2 className="w-4 h-4" />} label="Folders" value={counts.folders} />
             </div>
 
+            {counts.skipped > 0 && (
+              <p className="text-sm font-medium text-white">
+                {counts.skipped} item{counts.skipped === 1 ? '' : 's'} will be skipped (already present or unreadable).
+              </p>
+            )}
+
             {discerned.warnings.length > 0 && (
               <ul className="rounded-2xl border border-white/20 bg-black px-4 py-3 space-y-1">
                 {discerned.warnings.map((w) => (
@@ -601,30 +630,48 @@ export default function EcosystemPorter({
             )}
 
             <div className="rounded-2xl border border-white/20 bg-black max-h-[240px] overflow-y-auto divide-y divide-white/10">
-              {discerned.credentials.slice(0, 40).map((c, i) => (
-                <div key={`c-${i}`} className="px-4 py-3 flex items-center gap-3">
-                  <Lock className="w-3.5 h-3.5 text-white shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{c.name}</p>
-                    <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white truncate">
-                      {c.isEnv ? 'Env bundle' : c.username || c.url || 'Secret'}
-                    </p>
+              {discerned.credentials.slice(0, 40).map((c, i) => {
+                const disabled = c._status === 'duplicate' || c._status === 'invalid';
+                return (
+                  <div
+                    key={`c-${i}`}
+                    className={`px-4 py-3 flex items-center gap-3 ${disabled ? 'opacity-40' : ''}`}
+                  >
+                    <Lock className="w-3.5 h-3.5 text-white shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-white truncate">{c.name}</p>
+                      <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white truncate">
+                        {disabled
+                          ? c._skipReason || (c._status === 'duplicate' ? 'Already in vault' : "Can't import")
+                          : c.isEnv
+                            ? 'Env bundle'
+                            : c.username || c.url || 'Secret'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-              {discerned.totpSecrets.slice(0, 40).map((t, i) => (
-                <div key={`t-${i}`} className="px-4 py-3 flex items-center gap-3">
-                  <KeyRound className="w-3.5 h-3.5 text-white shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-white truncate">
-                      {t.issuer} · {t.accountName}
-                    </p>
-                    <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white truncate">
-                      Smart code
-                    </p>
+                );
+              })}
+              {discerned.totpSecrets.slice(0, 40).map((t, i) => {
+                const disabled = t._status === 'duplicate' || t._status === 'invalid';
+                return (
+                  <div
+                    key={`t-${i}`}
+                    className={`px-4 py-3 flex items-center gap-3 ${disabled ? 'opacity-40' : ''}`}
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-white shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-white truncate">
+                        {t.issuer} · {t.accountName}
+                      </p>
+                      <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white truncate">
+                        {disabled
+                          ? t._skipReason || (t._status === 'duplicate' ? 'Already in vault' : "Can't import")
+                          : 'Smart code'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {counts.secrets + counts.totp > 80 && (
                 <p className="px-4 py-3 text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white">
                   +{counts.secrets + counts.totp - 80} more in batch
@@ -638,13 +685,15 @@ export default function EcosystemPorter({
 
             <button
               type="button"
-              disabled={busy || counts.secrets + counts.totp + counts.folders === 0}
+              disabled={busy || counts.importable === 0}
               onClick={handleConfirmImport}
               className="w-full py-3 rounded-xl font-bold bg-[#10B981] text-black disabled:opacity-50 font-clash"
             >
               {busy
                 ? 'Importing…'
-                : `Import ${counts.secrets + counts.totp + counts.folders} items`}
+                : counts.importable === 0
+                  ? 'Nothing new to import'
+                  : `Import ${counts.importable} new item${counts.importable === 1 ? '' : 's'}`}
             </button>
           </>
         )}

@@ -1,3 +1,5 @@
+import { credentialFingerprints } from '@/lib/porter/sanitize-import';
+
 export interface ImportItem {
   name?: string | null;
   url?: string | null;
@@ -179,24 +181,23 @@ export class DeduplicationEngine {
    * Helper to check if an incoming item matches an existing item in the database.
    */
   static isDuplicateOfExisting(incoming: ImportItem, existingItems: any[]): boolean {
-    const incDomain = this.normalizeDomain(incoming.url);
-    const incUser = (incoming.username || "").trim().toLowerCase();
-    const incPass = (incoming.password || "").trim();
-
-    return existingItems.some(ext => {
-      const extDomain = this.normalizeDomain(ext.url);
-      const extUser = (ext.username || "").trim().toLowerCase();
-      const extPass = (ext.password || "").trim();
-
-      // Check same domain
-      if (incDomain !== extDomain && incDomain && extDomain) return false;
-
-      // Check username match or high similarity
-      const usernameMatch = incUser === extUser || this.areUsernamesSimilar(incUser, extUser);
-      if (!usernameMatch) return false;
-
-      // If passwords are exact, or incoming has no password (existing has it), it is duplicate
-      return incPass === extPass || !incPass;
-    });
+    const incomingFps = new Set(credentialFingerprints(incoming as Record<string, unknown>));
+    if (!incomingFps.size) {
+      const incDomain = this.normalizeDomain(incoming.url);
+      const incUser = (incoming.username || '').trim().toLowerCase();
+      const incPass = (incoming.password || '').trim();
+      return existingItems.some((ext) => {
+        const extDomain = this.normalizeDomain(ext.url);
+        const extUser = (ext.username || '').trim().toLowerCase();
+        const extPass = (ext.password || '').trim();
+        if (incDomain !== extDomain && incDomain && extDomain) return false;
+        const usernameMatch = incUser === extUser || this.areUsernamesSimilar(incUser, extUser);
+        if (!usernameMatch) return false;
+        return incPass === extPass || !incPass;
+      });
+    }
+    return existingItems.some((ext) =>
+      credentialFingerprints(ext as Record<string, unknown>).some((fp) => incomingFps.has(fp)),
+    );
   }
 }

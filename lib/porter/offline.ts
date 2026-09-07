@@ -42,12 +42,19 @@ export async function clearPorterDraft(userId: string): Promise<void> {
 
 /** Build payload ImportService / background task understands. */
 export function bundleToKylrixVaultJson(bundle: PorterImportBundle, userId: string): string {
+  const creds = bundle.credentials.filter(
+    (c) => !c._status || c._status === 'new' || c._status === 'merged',
+  );
+  const totps = bundle.totpSecrets.filter(
+    (t) => !t._status || t._status === 'new' || t._status === 'merged',
+  );
   return JSON.stringify({
     version: 2,
     format: 'kylrix-vault',
     exportedAt: new Date().toISOString(),
     userId,
-    credentials: bundle.credentials.map((c) => ({
+    credentials: creds.map((c) => ({
+      ...(c.sourceId ? { $id: c.sourceId, id: c.sourceId } : {}),
       userId,
       name: c.name,
       username: c.username ?? null,
@@ -63,7 +70,8 @@ export function bundleToKylrixVaultJson(bundle: PorterImportBundle, userId: stri
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })),
-    totpSecrets: bundle.totpSecrets.map((t) => ({
+    totpSecrets: totps.map((t) => ({
+      ...(t.sourceId ? { $id: t.sourceId, id: t.sourceId } : {}),
       userId,
       secretKey: t.secretKey,
       issuer: t.issuer,
@@ -104,9 +112,38 @@ export async function runOfflinePorterImport(
   };
   errors: string[];
 }> {
-  const bundle = toImportBundle(result);
+  const {
+    annotatePorterDiscernResult,
+    filterImportableDiscern,
+    loadExistingVaultForDedupe,
+  } = await import('./sanitize-import');
+  const existing = await loadExistingVaultForDedupe(userId);
+  const annotated = annotatePorterDiscernResult(result, existing);
+  const importable = filterImportableDiscern(annotated);
+  const bundle = toImportBundle(importable);
   const total = bundleItemCount(bundle);
   onProgress?.('Preparing import…', 0, total);
+
+  if (total === 0) {
+    const skippedInvalid =
+      annotated.credentials.filter((c) => c._status === 'invalid').length +
+      annotated.totpSecrets.filter((t) => t._status === 'invalid').length;
+    const skippedExisting =
+      annotated.credentials.filter((c) => c._status === 'duplicate').length +
+      annotated.totpSecrets.filter((t) => t._status === 'duplicate').length;
+    return {
+      success: true,
+      summary: {
+        foldersCreated: 0,
+        credentialsCreated: 0,
+        totpSecretsCreated: 0,
+        errors: 0,
+        skipped: skippedInvalid,
+        skippedExisting,
+      },
+      errors: [],
+    };
+  }
 
   const { ImportService } = await import('@/utils/import/import-service');
   const service = new ImportService((p) => {

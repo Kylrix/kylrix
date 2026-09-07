@@ -14,6 +14,7 @@ import type {
   PorterImportBundle,
   PorterTotpDraft,
 } from './types';
+import { isUnimportableText } from './sanitize-import';
 
 const OTP_URI_RE = /otpauth:\/\/totp\/[^\s"'<>]+/gi;
 const BASE32_RE = /^[A-Z2-7=]{16,}$/i;
@@ -56,10 +57,17 @@ function asCredential(c: Record<string, unknown>, source: string): PorterCredent
   const password = (c.password ?? c.pass ?? c.secret ?? null) as string | null;
   const url = (c.url ?? c.uri ?? c.website ?? null) as string | null;
   const notes = (c.notes ?? c.note ?? c.comment ?? null) as string | null;
-  if (!name && !username && !password && !url) return null;
+  if (!name && !username && !password && !url && !c.isEnv) return null;
+  const sourceId = String(c.$id || c.id || '').trim() || undefined;
+  const unreadable =
+    isUnimportableText(name) ||
+    isUnimportableText(username) ||
+    isUnimportableText(password) ||
+    isUnimportableText(url) ||
+    isUnimportableText(notes);
   return {
     kind: 'credential',
-    name: name || username || url || 'Untitled secret',
+    name: name || (username ? String(username) : '') || (url ? String(url) : '') || 'Untitled secret',
     username: username ? String(username) : null,
     password: password ? String(password) : null,
     url: url ? String(url) : null,
@@ -80,7 +88,9 @@ function asCredential(c: Record<string, unknown>, source: string): PorterCredent
             }
           })()
         : undefined,
-    _status: 'new',
+    sourceId,
+    _status: unreadable ? 'invalid' : 'new',
+    _skipReason: unreadable ? "Can't import — this item is unreadable" : undefined,
     _sourceHint: source,
   };
 }
@@ -88,13 +98,43 @@ function asCredential(c: Record<string, unknown>, source: string): PorterCredent
 function asTotp(t: Record<string, unknown>, source: string): PorterTotpDraft | null {
   const secretKey = String(t.secretKey || t.secret || t.token || '').trim();
   if (!secretKey) return null;
+  const sourceId = String(t.$id || t.id || '').trim() || undefined;
+  if (isUnimportableText(secretKey) || isUnimportableText(t.issuer) || isUnimportableText(t.accountName)) {
+    return {
+      kind: 'totp',
+      secretKey,
+      issuer: String(t.issuer || t.name || 'Import'),
+      accountName: String(t.accountName || t.username || t.account || 'Account'),
+      algorithm: String(t.algorithm || 'SHA1'),
+      digits: Number(t.digits || 6),
+      period: Number(t.period || 30),
+      sourceId,
+      _status: 'invalid',
+      _skipReason: "Can't import — this code is unreadable",
+      _sourceHint: source,
+    };
+  }
   const parsed = parseTotpData(
     secretKey.startsWith('otpauth://')
       ? secretKey
       : `otpauth://totp/${encodeURIComponent(String(t.issuer || t.name || 'Import'))}:${encodeURIComponent(String(t.accountName || t.username || t.account || 'Account'))}?secret=${secretKey.replace(/\s+/g, '')}`,
   );
   if (!parsed) {
-    if (!BASE32_RE.test(secretKey.replace(/\s+/g, ''))) return null;
+    if (!BASE32_RE.test(secretKey.replace(/\s+/g, ''))) {
+      return {
+        kind: 'totp',
+        secretKey,
+        issuer: String(t.issuer || t.name || 'Import'),
+        accountName: String(t.accountName || t.username || t.account || 'Account'),
+        algorithm: String(t.algorithm || 'SHA1'),
+        digits: Number(t.digits || 6),
+        period: Number(t.period || 30),
+        sourceId,
+        _status: 'invalid',
+        _skipReason: "Can't import — invalid smart code secret",
+        _sourceHint: source,
+      };
+    }
     return {
       kind: 'totp',
       secretKey: secretKey.replace(/\s+/g, '').toUpperCase(),
@@ -103,6 +143,7 @@ function asTotp(t: Record<string, unknown>, source: string): PorterTotpDraft | n
       algorithm: String(t.algorithm || 'SHA1'),
       digits: Number(t.digits || 6),
       period: Number(t.period || 30),
+      sourceId,
       _status: 'new',
       _sourceHint: source,
     };
@@ -115,6 +156,7 @@ function asTotp(t: Record<string, unknown>, source: string): PorterTotpDraft | n
     algorithm: parsed.algorithm,
     digits: parsed.digits,
     period: parsed.period,
+    sourceId,
     _status: 'new',
     _sourceHint: source,
   };

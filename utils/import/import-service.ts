@@ -105,69 +105,36 @@ export class ImportService {
       });
 
       const existingFoldersMap = new Map<string, string>(); // Name -> ID
-      const existingTotpMap = new Set<string>(); // SecretKey
 
       try {
-        const [existingCreds, existingFolders, existingTotps] = await Promise.all([
-            AppwriteService.listAllCredentials(userId),
-            AppwriteService.listFolders(userId),
-            AppwriteService.listTOTPSecrets(userId)
-        ]);
+        const { sanitizeImportBundle, loadExistingVaultForDedupe } = await import(
+          '@/lib/porter/sanitize-import'
+        );
+        const existing = await loadExistingVaultForDedupe(userId);
+        const sanitized = sanitizeImportBundle(
+          {
+            credentials: mappedData.credentials as any[],
+            totpSecrets: mappedData.totpSecrets as any[],
+            folders: mappedData.folders as any[],
+          },
+          existing,
+        );
+        mappedData.credentials = sanitized.credentials as any;
+        mappedData.totpSecrets = sanitized.totpSecrets as any;
+        mappedData.folders = sanitized.folders as any;
+        result.summary.skipped = sanitized.skippedInvalid;
+        result.summary.skippedExisting =
+          sanitized.skippedDuplicate + sanitized.skippedDuplicateIncoming;
+        if (sanitized.skippedInvalid > 0) {
+          result.errors.push(
+            `Dropped ${sanitized.skippedInvalid} unreadable item(s).`,
+          );
+        }
 
-        // Index existing folders
+        const existingFolders = await AppwriteService.listFolders(userId);
         existingFolders.forEach((f: any) => {
-            if (f.name) existingFoldersMap.set(f.name.trim(), f.$id);
+          if (f.name) existingFoldersMap.set(f.name.trim(), f.$id);
         });
-
-        // Index existing TOTP secrets
-        existingTotps.forEach((t: any) => {
-            if (t.secretKey) existingTotpMap.add(t.secretKey.trim());
-        });
-
-        // Index existing Credentials for O(1) lookup
-        const existingCredsSet = new Set<string>();
-        for (const existing of existingCreds) {
-            const existUrl = this.normalizeUrl(existing.url);
-            const existUser = existing.username ? existing.username.trim() : "";
-            const existPass = existing.password ? existing.password.trim() : "";
-            existingCredsSet.add(`${existUrl}|${existUser}|${existPass}`);
-        }
-
-        // Run smart merge on incoming credentials first
-        const mergedIncoming = DeduplicationEngine.processSmartMerge(mappedData.credentials.map(c => ({
-          ...c,
-          _status: 'new'
-        })));
-
-        // Deduplicate against existing database items
-        const uniqueCredentials = [];
-        let skippedExisting = 0;
-
-        for (const cred of mergedIncoming) {
-          if (DeduplicationEngine.isDuplicateOfExisting(cred, existingCreds)) {
-            skippedExisting++;
-          } else {
-            uniqueCredentials.push(cred);
-          }
-        }
-        
-        mappedData.credentials = uniqueCredentials as any;
-        result.summary.skippedExisting = skippedExisting;
-        
-        // Deduplicate TOTP Secrets
-        const uniqueTotps = [];
-        for (const totp of mappedData.totpSecrets) {
-            if (totp.secretKey && existingTotpMap.has(totp.secretKey.trim())) {
-                result.summary.skippedExisting++;
-            } else {
-                uniqueTotps.push(totp);
-            }
-        }
-        mappedData.totpSecrets = uniqueTotps;
-
-        if (skippedExisting > 0) {
-             console.log(`[ImportService] Skipped/merged ${skippedExisting} existing/duplicate credentials.`);
-        }
       } catch (e: unknown) {
         console.warn("[ImportService] Failed to check existing data, proceeding with import.", e);
       }
@@ -298,100 +265,60 @@ export class ImportService {
 
       const parsedData = JSON.parse(jsonData);
 
-      // Basic validation
-      if (!parsedData.version && (!parsedData.credentials && !parsedData.folders && !parsedData.totpSecrets)) {
+      // Basic validation — support top-level or data.vault exports
+      const vaultBlock = parsedData?.data?.vault;
+      if (
+        !parsedData.version &&
+        !parsedData.credentials &&
+        !parsedData.folders &&
+        !parsedData.totpSecrets &&
+        !vaultBlock
+      ) {
         throw new Error("Invalid Kylrix Vault export format");
       }
 
-      const folders = parsedData.folders || [];
-      let credentials = parsedData.credentials || [];
-      let totpSecrets = parsedData.totpSecrets || [];
+      const { sanitizeImportBundle, loadExistingVaultForDedupe } = await import(
+        '@/lib/porter/sanitize-import'
+      );
+      const existing = await loadExistingVaultForDedupe(userId);
+      const sanitized = sanitizeImportBundle(parsedData, existing);
 
-      // Check against existing data
-      this.updateProgress({
-        stage: "parsing",
-        currentStep: 1,
-        totalSteps: 4,
-        message: "Checking for existing data...",
-        itemsProcessed: 0,
-        itemsTotal: 0,
-        errors: [],
-      });
+      let folders = sanitized.folders;
+      let credentials = sanitized.credentials;
+      let totpSecrets = sanitized.totpSecrets;
 
-      const existingFoldersMap = new Map<string, string>(); // Name -> ID
-      const existingTotpMap = new Set<string>(); // SecretKey
-      // credentials and totpSecrets are already declared above
+      result.summary.skipped = sanitized.skippedInvalid;
+      result.summary.skippedExisting =
+        sanitized.skippedDuplicate + sanitized.skippedDuplicateIncoming;
 
-      try {
-        const [existingCreds, existingFolders, existingTotps] = await Promise.all([
-            AppwriteService.listAllCredentials(userId),
-            AppwriteService.listFolders(userId),
-            AppwriteService.listTOTPSecrets(userId)
-        ]);
-
-        // Index existing folders
-        existingFolders.forEach((f: any) => {
-            if (f.name) existingFoldersMap.set(f.name.trim(), f.$id);
-        });
-
-        // Index existing TOTP secrets
-        existingTotps.forEach((t: any) => {
-            if (t.secretKey) existingTotpMap.add(t.secretKey.trim());
-        });
-
-        // Index existing Credentials for O(1) lookup
-        const existingCredsSet = new Set<string>();
-        for (const existing of existingCreds) {
-            const existUrl = this.normalizeUrl(existing.url);
-            const existUser = existing.username ? existing.username.trim() : "";
-            const existPass = existing.password ? existing.password.trim() : "";
-            existingCredsSet.add(`${existUrl}|${existUser}|${existPass}`);
-        }
-
-        // Run smart merge on incoming credentials first
-        const mergedIncoming = DeduplicationEngine.processSmartMerge(credentials.map((c: any) => ({
-          ...c,
-          _status: 'new'
-        })));
-
-        // Deduplicate Credentials against existing items
-        const uniqueCredentials = [];
-        let skippedExisting = 0;
-
-        for (const cred of mergedIncoming) {
-          if (DeduplicationEngine.isDuplicateOfExisting(cred, existingCreds)) {
-            skippedExisting++;
-          } else {
-            uniqueCredentials.push(cred);
-          }
-        }
-        
-        credentials = uniqueCredentials;
-        result.summary.skippedExisting = skippedExisting;
-        
-        // Deduplicate TOTP Secrets
-        const uniqueTotps = [];
-        for (const totp of totpSecrets) {
-            if (totp.secretKey && existingTotpMap.has(totp.secretKey.trim())) {
-                result.summary.skippedExisting++;
-            } else {
-                uniqueTotps.push(totp);
-            }
-        }
-        totpSecrets = uniqueTotps;
-
-        if (skippedExisting > 0) {
-             console.log(`[ImportService] Skipped/merged ${skippedExisting} existing/duplicate credentials.`);
-        }
-      } catch (e: unknown) {
-        console.warn("[ImportService] Failed to check existing data, proceeding with import.", e);
+      if (sanitized.skippedInvalid > 0) {
+        result.errors.push(
+          `Dropped ${sanitized.skippedInvalid} unreadable item(s) (e.g. decryption placeholders).`,
+        );
       }
 
+      const existingFoldersMap = new Map<string, string>(); // Name -> ID
+      try {
+        const existingFolders = await AppwriteService.listFolders(userId);
+        existingFolders.forEach((f: any) => {
+          if (f.name) existingFoldersMap.set(f.name.trim(), f.$id);
+        });
+      } catch {}
+
+      // Legacy smart-merge still helps noisy batches after sanitize
+      try {
+        const mergedIncoming = DeduplicationEngine.processSmartMerge(
+          credentials.map((c: any) => ({ ...c, _status: 'new' })),
+        );
+        credentials = mergedIncoming as any;
+      } catch {}
 
       console.log("[ImportService] Parsed Kylrix Vault data:", {
         foldersCount: folders.length,
         credentialsCount: credentials.length,
         totpSecretsCount: totpSecrets.length,
+        skippedInvalid: sanitized.skippedInvalid,
+        skippedExisting: result.summary.skippedExisting,
         firstCredential: credentials[0] ? JSON.stringify(credentials[0]).substring(0, 200) : "NONE"
       });
 
@@ -459,19 +386,11 @@ export class ImportService {
         try {
           console.log("[ImportService] Processing credential:", cred.name);
 
-          // STRICT VALIDATION: Ensure required fields are present
-          if (!cred.name) {
+          if (!cred.name || !String(cred.name).trim()) {
             throw new Error("Credential name is missing");
-          }
-          if (!cred.username) {
-            throw new Error("Credential username is missing");
           }
 
           const cleanCred = this.cleanCredentialForCreate(cred, folderIdMapping, userId);
-
-          if (!cleanCred.password) {
-            throw new Error("Password is empty");
-          }
 
           console.log("[ImportService] cleanCred prepared:", {
             name: cleanCred.name,
@@ -736,12 +655,14 @@ export class ImportService {
   }
 
   private cleanCredentialForCreate(cred: any, folderIdMapping: Map<string, string>, userId: string) {
+    const usernameRaw = cred.username != null ? String(cred.username).trim() : '';
+    const passwordRaw = cred.password != null ? String(cred.password).trim() : '';
     const clean: any = {
       userId: userId,
       itemType: cred.itemType || "login",
       name: String(cred.name || "").substring(0, 255),
-      username: String(cred.username || "").substring(0, 255),
-      password: String(cred.password || "").trim().substring(0, 1000),
+      username: usernameRaw ? usernameRaw.substring(0, 255) : null,
+      password: passwordRaw ? passwordRaw.substring(0, 1000) : null,
       isFavorite: cred.isFavorite || false,
       isDeleted: cred.isDeleted || false,
       createdAt: new Date().toISOString(),

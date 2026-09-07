@@ -25,7 +25,10 @@ export interface PorterCredentialDraft {
   isEnv?: boolean;
   itemType?: string;
   tags?: string[];
-  _status?: 'new' | 'duplicate' | 'merged';
+  /** Original vault row id — kept for re-import dedupe */
+  sourceId?: string;
+  _status?: 'new' | 'duplicate' | 'merged' | 'invalid';
+  _skipReason?: string;
   _sourceHint?: string;
 }
 
@@ -37,7 +40,10 @@ export interface PorterTotpDraft {
   algorithm?: string;
   digits?: number;
   period?: number;
-  _status?: 'new' | 'duplicate' | 'merged';
+  /** Original vault row id — kept for re-import dedupe */
+  sourceId?: string;
+  _status?: 'new' | 'duplicate' | 'merged' | 'invalid';
+  _skipReason?: string;
   _sourceHint?: string;
 }
 

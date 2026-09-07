@@ -23,3 +23,13 @@ export {
   loadPorterDraft,
   runOfflinePorterImport,
 } from './offline';
+
+export {
+  annotatePorterDiscernResult,
+  filterImportableDiscern,
+  isUnimportableCredential,
+  isUnimportableText,
+  isUnimportableTotp,
+  loadExistingVaultForDedupe,
+  sanitizeImportBundle,
+} from './sanitize-import';
