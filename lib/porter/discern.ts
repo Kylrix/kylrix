@@ -16,7 +16,8 @@ import type {
 } from './types';
 import { isUnimportableText } from './sanitize-import';
 
-const OTP_URI_RE = /otpauth:\/\/totp\/[^\s"'<>]+/gi;
+const OTP_URI_RE = /otpauth:\/\/(?:totp|hotp)\/[^\s"'<>]+/gi;
+const OTP_MIGRATION_RE = /otpauth-migration:\/\/[^\s"'<>]+/gi;
 const BASE32_RE = /^[A-Z2-7=]{16,}$/i;
 const ENV_LINE_RE = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/;
 
@@ -42,13 +43,302 @@ function looksLikeCsv(text: string): boolean {
 }
 
 function scoreResult(partial: Omit<PorterDiscernResult, 'confidence'> & { confidence?: number }): PorterDiscernResult {
-  const total =
-    partial.credentials.length + partial.totpSecrets.length + partial.workspaces.length;
+  const credentials = Array.isArray(partial.credentials) ? partial.credentials : [];
+  const totpSecrets = Array.isArray(partial.totpSecrets) ? partial.totpSecrets : [];
+  const workspaces = Array.isArray(partial.workspaces) ? partial.workspaces : [];
+  const warnings = Array.isArray(partial.warnings) ? partial.warnings : [];
+  const total = credentials.length + totpSecrets.length + workspaces.length;
   const base = partial.confidence ?? (total > 0 ? 0.75 : 0.1);
   return {
     ...partial,
+    credentials,
+    totpSecrets,
+    workspaces,
+    warnings,
     confidence: Math.min(0.99, base),
   };
+}
+
+/** Prefer otpauth:// and repeating-record heuristics for auto type guessing. */
+function unwrapRecordArrays(data: unknown, depth = 0): Record<string, unknown>[] {
+  if (depth > 4 || data == null) return [];
+  if (Array.isArray(data)) {
+    return data.filter((r) => r && typeof r === 'object' && !Array.isArray(r)) as Record<string, unknown>[];
+  }
+  if (typeof data !== 'object') return [];
+  const obj = data as Record<string, unknown>;
+  const preferredKeys = [
+    'entries',
+    'accounts',
+    'items',
+    'tokens',
+    'authenticators',
+    'otp',
+    'services',
+    'secrets',
+    'credentials',
+    'totpSecrets',
+    'db',
+  ];
+  for (const key of preferredKeys) {
+    if (!(key in obj)) continue;
+    const nested = unwrapRecordArrays(obj[key], depth + 1);
+    if (nested.length >= 1) return nested;
+  }
+  // Any array-valued property with many similar objects
+  let best: Record<string, unknown>[] = [];
+  for (const value of Object.values(obj)) {
+    const nested = unwrapRecordArrays(value, depth + 1);
+    if (nested.length > best.length) best = nested;
+  }
+  return best;
+}
+
+function keySignature(row: Record<string, unknown>): string {
+  return Object.keys(row)
+    .map((k) => k.toLowerCase())
+    .sort()
+    .join('|');
+}
+
+function scoreTotpKeys(keys: Set<string>): number {
+  let score = 0;
+  if (keys.has('secret') || keys.has('secretkey') || keys.has('token')) score += 3;
+  if (keys.has('issuer')) score += 2;
+  if (keys.has('otpauth') || keys.has('totp') || keys.has('uri')) score += 3;
+  if (keys.has('account') || keys.has('accountname') || keys.has('label') || keys.has('name')) score += 1;
+  if (keys.has('digits') || keys.has('period') || keys.has('algorithm') || keys.has('algo')) score += 1;
+  return score;
+}
+
+function scoreSecretKeys(keys: Set<string>): number {
+  let score = 0;
+  if (keys.has('password') || keys.has('pass') || keys.has('login')) score += 3;
+  if (keys.has('username') || keys.has('user') || keys.has('email')) score += 2;
+  if (keys.has('url') || keys.has('uri') || keys.has('website')) score += 2;
+  if (keys.has('notes') || keys.has('note')) score += 1;
+  return score;
+}
+
+/**
+ * Detect repeating object shapes (variable data in a constant frame) and
+ * classify the batch as smart codes vs secrets.
+ */
+function discernRepeatingStructure(data: unknown): PorterDiscernResult | null {
+  const rows = unwrapRecordArrays(data);
+  if (rows.length < 2) return null;
+
+  // Find the dominant constant structure (most common key signature)
+  const sigCounts = new Map<string, number>();
+  for (const row of rows) {
+    const sig = keySignature(row);
+    if (!sig) continue;
+    sigCounts.set(sig, (sigCounts.get(sig) || 0) + 1);
+  }
+  let dominantSig = '';
+  let dominantCount = 0;
+  for (const [sig, count] of sigCounts) {
+    if (count > dominantCount) {
+      dominantSig = sig;
+      dominantCount = count;
+    }
+  }
+  if (dominantCount < 2) return null;
+
+  const dominantRows = rows.filter((r) => keySignature(r) === dominantSig);
+  const keys = new Set(dominantSig.split('|').filter(Boolean));
+  const totpScore = scoreTotpKeys(keys);
+  const secretScore = scoreSecretKeys(keys);
+
+  // Constant frame vs variable fields: values that change across rows are data holders
+  const sampleKeys = Array.from(keys);
+  const variableKeys = new Set<string>();
+  for (const key of sampleKeys) {
+    const seen = new Set<string>();
+    for (const row of dominantRows.slice(0, 40)) {
+      const raw = row[key] ?? row[Object.keys(row).find((k) => k.toLowerCase() === key) || ''];
+      if (raw === null || raw === undefined) continue;
+      seen.add(typeof raw === 'object' ? JSON.stringify(raw) : String(raw));
+      if (seen.size > 3) {
+        variableKeys.add(key);
+        break;
+      }
+    }
+  }
+
+  const credentials: PorterCredentialDraft[] = [];
+  const totpSecrets: PorterTotpDraft[] = [];
+
+  const preferTotp = totpScore >= secretScore && totpScore >= 3;
+  for (const row of dominantRows) {
+    // Nested otpauth string anywhere in variable fields
+    for (const key of variableKeys.size ? variableKeys : keys) {
+      const realKey = Object.keys(row).find((k) => k.toLowerCase() === key) || key;
+      const val = row[realKey];
+      if (typeof val === 'string' && /otpauth:\/\//i.test(val)) {
+        const t = asTotp({ secretKey: val, issuer: row.issuer || row.name, accountName: row.account || row.username }, 'pattern-otpauth');
+        if (t && t._status !== 'invalid') totpSecrets.push(t);
+      }
+    }
+
+    if (preferTotp) {
+      const t = asTotp(row, 'pattern-totp');
+      if (t) totpSecrets.push(t);
+    } else if (secretScore >= 2) {
+      const c = asCredential(row, 'pattern-secret');
+      if (c) credentials.push(c);
+      if (row.totp || row.otpauth || row.secretKey) {
+        const t = asTotp(row, 'pattern-embedded-totp');
+        if (t) totpSecrets.push(t);
+      }
+    } else if (totpScore >= 2) {
+      const t = asTotp(row, 'pattern-totp-weak');
+      if (t) totpSecrets.push(t);
+    }
+  }
+
+  // Dedupe totp by secret
+  const seen = new Set<string>();
+  const uniqueTotp = totpSecrets.filter((t) => {
+    const k = (t.secretKey || '').toUpperCase();
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  if (!credentials.length && !uniqueTotp.length) return null;
+
+  const format: PorterFormat =
+    credentials.length && uniqueTotp.length
+      ? 'csv-mixed'
+      : uniqueTotp.length && !credentials.length
+        ? 'otpauth-list'
+        : 'csv-credentials';
+
+  return scoreResult({
+    format,
+    confidence: Math.min(0.94, 0.7 + Math.min(dominantCount, 40) / 100),
+    label: preferTotp ? 'Smart codes (pattern)' : 'Secrets (pattern)',
+    summary: [
+      credentials.length ? `${credentials.length} secrets` : null,
+      uniqueTotp.length ? `${uniqueTotp.length} smart codes` : null,
+      `repeating shape × ${dominantCount}`,
+    ]
+      .filter(Boolean)
+      .join(' · '),
+    credentials,
+    totpSecrets: uniqueTotp,
+    workspaces: [],
+    warnings: [
+      `Detected a repeating structure (${dominantCount} similar rows). Variable fields treated as item data.`,
+    ],
+  });
+}
+
+function discernOtpauthBlob(text: string): PorterDiscernResult | null {
+  const uris = text.match(OTP_URI_RE) || [];
+  const totpSecrets: PorterTotpDraft[] = [];
+  for (const uri of uris) {
+    const parsed = parseTotpData(uri);
+    if (!parsed) continue;
+    totpSecrets.push({
+      kind: 'totp',
+      secretKey: parsed.secretKey,
+      issuer: parsed.issuer,
+      accountName: parsed.accountName,
+      algorithm: parsed.algorithm,
+      digits: parsed.digits,
+      period: parsed.period,
+      _status: 'new',
+      _sourceHint: 'otpauth-uri',
+    });
+  }
+
+  // Lone base32 lines (Google Authenticator plain dumps / Authenticator apps)
+  if (totpSecrets.length === 0) {
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    // If most lines look like base32 secrets, treat as smart-code dump
+    const base32Lines = lines.filter((line) => {
+      if (line.includes('=') && !BASE32_RE.test(line.replace(/\s+/g, ''))) {
+        // allow trailing padding only
+        const cleaned = line.replace(/\s+/g, '');
+        return BASE32_RE.test(cleaned);
+      }
+      const cleaned = line.replace(/\s+/g, '');
+      return BASE32_RE.test(cleaned) && cleaned.length >= 16;
+    });
+    const ratio = base32Lines.length / Math.max(lines.length, 1);
+    if (base32Lines.length >= 2 && ratio >= 0.5) {
+      for (const line of base32Lines) {
+        const cleaned = line.replace(/\s+/g, '');
+        const parsed = parseTotpData(cleaned);
+        if (!parsed) continue;
+        totpSecrets.push({
+          kind: 'totp',
+          secretKey: parsed.secretKey,
+          issuer: parsed.issuer,
+          accountName: parsed.accountName,
+          algorithm: parsed.algorithm,
+          digits: parsed.digits,
+          period: parsed.period,
+          _status: 'new',
+          _sourceHint: 'base32-line',
+        });
+      }
+    } else {
+      for (const line of lines) {
+        const cleaned = line.replace(/\s+/g, '');
+        if (!BASE32_RE.test(cleaned)) continue;
+        const parsed = parseTotpData(cleaned);
+        if (!parsed) continue;
+        totpSecrets.push({
+          kind: 'totp',
+          secretKey: parsed.secretKey,
+          issuer: parsed.issuer,
+          accountName: parsed.accountName,
+          algorithm: parsed.algorithm,
+          digits: parsed.digits,
+          period: parsed.period,
+          _status: 'new',
+          _sourceHint: 'base32-line',
+        });
+      }
+    }
+  }
+
+  const migrationHits = text.match(OTP_MIGRATION_RE) || [];
+  const warnings: string[] = [];
+  if (migrationHits.length && !totpSecrets.length) {
+    warnings.push(
+      'Found Google Authenticator migration links. Export as otpauth URIs or a JSON backup, then try again.',
+    );
+  }
+
+  if (!totpSecrets.length) {
+    if (warnings.length) {
+      return scoreResult({
+        format: 'unknown',
+        confidence: 0.4,
+        label: 'Migration export',
+        summary: 'Recognized authenticator migration data, but needs a different export format.',
+        credentials: [],
+        totpSecrets: [],
+        workspaces: [],
+        warnings,
+      });
+    }
+    return null;
+  }
+  return scoreResult({
+    format: 'otpauth-list',
+    confidence: uris.length ? 0.96 : 0.78,
+    label: 'Smart codes',
+    summary: `Found ${totpSecrets.length} one-time code secret${totpSecrets.length === 1 ? '' : 's'}.`,
+    credentials: [],
+    totpSecrets,
+    workspaces: [],
+    warnings,
+  });
 }
 
 function asCredential(c: Record<string, unknown>, source: string): PorterCredentialDraft | null {
@@ -115,7 +405,7 @@ function asTotp(t: Record<string, unknown>, source: string): PorterTotpDraft | n
     };
   }
   const parsed = parseTotpData(
-    secretKey.startsWith('otpauth://')
+    /^otpauth:\/\//i.test(secretKey)
       ? secretKey
       : `otpauth://totp/${encodeURIComponent(String(t.issuer || t.name || 'Import'))}:${encodeURIComponent(String(t.accountName || t.username || t.account || 'Account'))}?secret=${secretKey.replace(/\s+/g, '')}`,
   );
@@ -160,61 +450,6 @@ function asTotp(t: Record<string, unknown>, source: string): PorterTotpDraft | n
     _status: 'new',
     _sourceHint: source,
   };
-}
-
-function discernOtpauthBlob(text: string): PorterDiscernResult | null {
-  const uris = text.match(OTP_URI_RE) || [];
-  const totpSecrets: PorterTotpDraft[] = [];
-  for (const uri of uris) {
-    const parsed = parseTotpData(uri);
-    if (!parsed) continue;
-    totpSecrets.push({
-      kind: 'totp',
-      secretKey: parsed.secretKey,
-      issuer: parsed.issuer,
-      accountName: parsed.accountName,
-      algorithm: parsed.algorithm,
-      digits: parsed.digits,
-      period: parsed.period,
-      _status: 'new',
-      _sourceHint: 'otpauth-uri',
-    });
-  }
-
-  // Lone base32 lines (Google Authenticator plain dumps / Authenticator apps)
-  if (totpSecrets.length === 0) {
-    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    for (const line of lines) {
-      if (line.includes('=') && !BASE32_RE.test(line)) continue;
-      const cleaned = line.replace(/\s+/g, '');
-      if (!BASE32_RE.test(cleaned)) continue;
-      const parsed = parseTotpData(cleaned);
-      if (!parsed) continue;
-      totpSecrets.push({
-        kind: 'totp',
-        secretKey: parsed.secretKey,
-        issuer: parsed.issuer,
-        accountName: parsed.accountName,
-        algorithm: parsed.algorithm,
-        digits: parsed.digits,
-        period: parsed.period,
-        _status: 'new',
-        _sourceHint: 'base32-line',
-      });
-    }
-  }
-
-  if (!totpSecrets.length) return null;
-  return scoreResult({
-    format: 'otpauth-list',
-    confidence: uris.length ? 0.95 : 0.7,
-    label: 'Smart codes',
-    summary: `Found ${totpSecrets.length} one-time code secret${totpSecrets.length === 1 ? '' : 's'}.`,
-    credentials: [],
-    totpSecrets,
-    workspaces: [],
-    warnings: [],
-  });
 }
 
 function discernEnvBundle(text: string): PorterDiscernResult | null {
@@ -555,10 +790,10 @@ function mergeResults(parts: PorterDiscernResult[]): PorterDiscernResult {
 
   for (const p of parts) {
     if (p.confidence > best.confidence) best = p;
-    credentials.push(...p.credentials);
-    totpSecrets.push(...p.totpSecrets);
-    workspaces.push(...p.workspaces);
-    warnings.push(...p.warnings);
+    credentials.push(...(p.credentials || []));
+    totpSecrets.push(...(p.totpSecrets || []));
+    workspaces.push(...(p.workspaces || []));
+    warnings.push(...(p.warnings || []));
   }
 
   // Dedupe totp by secretKey, credentials by name|user|pass fingerprint
@@ -624,16 +859,20 @@ export function discernImportPayload(raw: string, userId = ''): PorterDiscernRes
     if (bitwarden) candidates.push(bitwarden);
     const aegis = discernAegis(json);
     if (aegis) candidates.push(aegis);
+    const pattern = discernRepeatingStructure(json);
+    if (pattern) candidates.push(pattern);
     const arr = discernGenericJsonArray(json);
     if (arr) candidates.push(arr);
   }
+
+  // Even when JSON parse fails, otpauth URIs embedded in the blob still count
+  const otp = discernOtpauthBlob(text);
+  if (otp) candidates.push(otp);
 
   const csv = discernCsv(text);
   if (csv) candidates.push(csv);
   const env = discernEnvBundle(text);
   if (env) candidates.push(env);
-  const otp = discernOtpauthBlob(text);
-  if (otp) candidates.push(otp);
 
   if (!candidates.length) {
     return {
@@ -652,29 +891,40 @@ export function discernImportPayload(raw: string, userId = ''): PorterDiscernRes
 
   // Prefer highest confidence; if several strong hits, merge complementary kinds
   candidates.sort((a, b) => b.confidence - a.confidence);
-  const top = candidates[0];
-  const strong = candidates.filter((c) => c.confidence >= 0.7);
+  const top = scoreResult(candidates[0]);
+  const strong = candidates.filter((c) => c.confidence >= 0.7).map(scoreResult);
   if (strong.length > 1) {
-    // Merge only when they contribute different kinds (e.g. CSV secrets + otpauth lines)
-    const hasCred = strong.some((c) => c.credentials.length);
-    const hasTotp = strong.some((c) => c.totpSecrets.length);
+    const hasCred = strong.some((c) => (c.credentials || []).length);
+    const hasTotp = strong.some((c) => (c.totpSecrets || []).length);
     if (hasCred && hasTotp) return mergeResults(strong);
+  }
+  // Prefer otpauth / pattern totp when auto-detecting a smart-code-heavy file
+  const totpHeavy = strong.find(
+    (c) => (c.totpSecrets || []).length >= 5 && (c.credentials || []).length === 0,
+  );
+  if (totpHeavy && (totpHeavy.totpSecrets || []).length >= (top.totpSecrets || []).length) {
+    return totpHeavy;
   }
   return top;
 }
 
 export function toImportBundle(result: PorterDiscernResult): PorterImportBundle {
+  const safe = scoreResult(result);
   return {
     version: 2,
     format: 'kylrix-vault',
-    credentials: result.credentials,
-    totpSecrets: result.totpSecrets,
-    workspaces: result.workspaces,
-    discernedFrom: result.format,
+    credentials: safe.credentials,
+    totpSecrets: safe.totpSecrets,
+    workspaces: safe.workspaces,
+    discernedFrom: safe.format,
     discernedAt: new Date().toISOString(),
   };
 }
 
 export function bundleItemCount(bundle: PorterImportBundle): number {
-  return bundle.credentials.length + bundle.totpSecrets.length + bundle.workspaces.length;
+  return (
+    (bundle.credentials || []).length +
+    (bundle.totpSecrets || []).length +
+    (bundle.workspaces || []).length
+  );
 }

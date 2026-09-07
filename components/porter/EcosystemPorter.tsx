@@ -38,7 +38,7 @@ import { porterExport } from '@/lib/data-porter';
 type PorterDirection = 'import' | 'export';
 type PorterDataKind = 'secrets' | 'totp' | 'mixed' | 'auto';
 type PorterView = 'home' | 'pick-kind' | 'import' | 'preview' | 'export-format';
-type ConfirmKind = 'import' | 'export' | null;
+type ConfirmKind = 'import' | 'export' | 'leave' | null;
 
 export type EcosystemPorterProps = {
   onClose?: () => void;
@@ -106,32 +106,39 @@ function filterDiscerned(
   result: PorterDiscernResult,
   kind: PorterDataKind,
 ): PorterDiscernResult {
-  if (kind === 'auto' || kind === 'mixed') return result;
+  const base: PorterDiscernResult = {
+    ...result,
+    credentials: Array.isArray(result.credentials) ? result.credentials : [],
+    totpSecrets: Array.isArray(result.totpSecrets) ? result.totpSecrets : [],
+    workspaces: Array.isArray(result.workspaces) ? result.workspaces : [],
+    warnings: Array.isArray(result.warnings) ? result.warnings : [],
+  };
+  if (kind === 'auto' || kind === 'mixed') return base;
   if (kind === 'secrets') {
     return {
-      ...result,
+      ...base,
       totpSecrets: [],
-      summary: result.credentials.length
-        ? `${result.credentials.length} secret${result.credentials.length === 1 ? '' : 's'}`
+      summary: base.credentials.length
+        ? `${base.credentials.length} secret${base.credentials.length === 1 ? '' : 's'}`
         : 'No secrets in this file for the Secrets filter',
       warnings: [
-        ...result.warnings,
-        ...(result.totpSecrets.length
+        ...base.warnings,
+        ...(result.totpSecrets?.length
           ? [`Hid ${result.totpSecrets.length} smart code(s) — Secrets selected.`]
           : []),
       ],
     };
   }
   return {
-    ...result,
+    ...base,
     credentials: [],
     workspaces: [],
-    summary: result.totpSecrets.length
-      ? `${result.totpSecrets.length} smart code${result.totpSecrets.length === 1 ? '' : 's'}`
+    summary: base.totpSecrets.length
+      ? `${base.totpSecrets.length} smart code${base.totpSecrets.length === 1 ? '' : 's'}`
       : 'No smart codes in this file for the Codes filter',
     warnings: [
-      ...result.warnings,
-      ...(result.credentials.length
+      ...base.warnings,
+      ...(result.credentials?.length
         ? [`Hid ${result.credentials.length} secret(s) — Smart codes selected.`]
         : []),
     ],
@@ -235,7 +242,13 @@ export default function EcosystemPorter({
       }
     }
     setDiscerned(result);
-    if (result && result.credentials.length + result.totpSecrets.length + result.workspaces.length > 0) {
+    if (
+      result &&
+      (result.credentials?.length || 0) +
+        (result.totpSecrets?.length || 0) +
+        (result.workspaces?.length || 0) >
+        0
+    ) {
       setView('preview');
     } else {
       setView('import');
@@ -279,6 +292,12 @@ export default function EcosystemPorter({
       return;
     }
     setView('home');
+  };
+
+  const requestLeaveFlow = () => setConfirmKind('leave');
+
+  const confirmLeaveFlow = () => {
+    void endFlowAndClose();
   };
 
   const startDirection = (dir: PorterDirection) => {
@@ -332,8 +351,13 @@ export default function EcosystemPorter({
             fileName: name || null,
           });
         }
-        if (result.credentials.length + result.totpSecrets.length + result.workspaces.length === 0) {
-          setError(result.warnings[0] || 'Nothing matched the selected type.');
+        if (
+          (result.credentials?.length || 0) +
+            (result.totpSecrets?.length || 0) +
+            (result.workspaces?.length || 0) ===
+          0
+        ) {
+          setError(result.warnings?.[0] || 'Nothing matched the selected type.');
           setView('import');
         } else {
           setView('preview');
@@ -529,21 +553,23 @@ export default function EcosystemPorter({
 
   const counts = useMemo(() => {
     if (!discerned) return { secrets: 0, totp: 0, workspaces: 0, importable: 0, skipped: 0 };
-    const secretsNew = discerned.credentials.filter(
+    const creds = Array.isArray(discerned.credentials) ? discerned.credentials : [];
+    const totps = Array.isArray(discerned.totpSecrets) ? discerned.totpSecrets : [];
+    const spaces = Array.isArray(discerned.workspaces) ? discerned.workspaces : [];
+    const secretsNew = creds.filter(
       (c) => !c._status || c._status === 'new' || c._status === 'merged',
     ).length;
-    const totpNew = discerned.totpSecrets.filter(
+    const totpNew = totps.filter(
       (t) => !t._status || t._status === 'new' || t._status === 'merged',
     ).length;
     const skipped =
-      discerned.credentials.filter((c) => c._status === 'duplicate' || c._status === 'invalid')
-        .length +
-      discerned.totpSecrets.filter((t) => t._status === 'duplicate' || t._status === 'invalid').length;
+      creds.filter((c) => c._status === 'duplicate' || c._status === 'invalid').length +
+      totps.filter((t) => t._status === 'duplicate' || t._status === 'invalid').length;
     return {
-      secrets: discerned.credentials.length,
-      totp: discerned.totpSecrets.length,
-      workspaces: discerned.workspaces.length,
-      importable: secretsNew + totpNew + discerned.workspaces.length,
+      secrets: creds.length,
+      totp: totps.length,
+      workspaces: spaces.length,
+      importable: secretsNew + totpNew + spaces.length,
       skipped,
     };
   }, [discerned]);
@@ -574,7 +600,11 @@ export default function EcosystemPorter({
                 Confirm
               </p>
               <p className="text-base font-black text-white font-clash truncate">
-                {confirmKind === 'import' ? 'Import into vault' : 'Download backup'}
+                {confirmKind === 'import'
+                  ? 'Import into vault'
+                  : confirmKind === 'export'
+                    ? 'Download backup'
+                    : 'Cancel transfer'}
               </p>
             </div>
             <button
@@ -603,7 +633,7 @@ export default function EcosystemPorter({
                   <p className="text-sm font-bold text-white">{counts.workspaces} workspaces in file</p>
                 </div>
               </>
-            ) : (
+            ) : confirmKind === 'export' ? (
               <>
                 <p className="text-sm font-medium text-white">
                   Download{' '}
@@ -620,23 +650,35 @@ export default function EcosystemPorter({
                   </p>
                 )}
               </>
+            ) : (
+              <p className="text-sm font-medium text-white">
+                Stop this transfer and clear the saved draft? You can start again anytime.
+              </p>
             )}
           </div>
           <div className="shrink-0 px-5 py-4 border-t border-white/20 flex flex-col gap-2">
             <button
               type="button"
               disabled={busy || (confirmKind === 'import' && counts.importable === 0)}
-              onClick={() => (confirmKind === 'import' ? executeImport() : executeExport())}
+              onClick={() => {
+                if (confirmKind === 'import') executeImport();
+                else if (confirmKind === 'export') executeExport();
+                else confirmLeaveFlow();
+              }}
               className="w-full py-3 rounded-xl font-bold bg-[#10B981] text-black disabled:opacity-50 font-clash"
             >
-              {confirmKind === 'import' ? 'Yes, import' : 'Yes, download'}
+              {confirmKind === 'import'
+                ? 'Yes, import'
+                : confirmKind === 'export'
+                  ? 'Yes, download'
+                  : 'Yes, cancel transfer'}
             </button>
             <button
               type="button"
               onClick={() => setConfirmKind(null)}
               className="w-full py-3 rounded-xl font-bold bg-black border border-white/20 text-white font-clash"
             >
-              Cancel
+              Keep going
             </button>
           </div>
         </div>
@@ -669,7 +711,17 @@ export default function EcosystemPorter({
                     : 'Import · Export'}
           </p>
         </div>
-        <ArrowUpDown className="w-5 h-5 text-white shrink-0" />
+        {view !== 'home' ? (
+          <button
+            type="button"
+            onClick={requestLeaveFlow}
+            className="px-3 py-2 rounded-xl bg-black border border-white/20 text-white text-xs font-bold font-clash hover:border-white/40"
+          >
+            Cancel
+          </button>
+        ) : (
+          <ArrowUpDown className="w-5 h-5 text-white shrink-0" />
+        )}
       </header>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 flex flex-col gap-4 font-satoshi">
@@ -710,7 +762,7 @@ export default function EcosystemPorter({
                   </button>
                   <button
                     type="button"
-                    onClick={() => void cancelCachedSession()}
+                    onClick={requestLeaveFlow}
                     className="flex-1 py-2.5 rounded-xl font-bold bg-black border border-white/20 text-white font-clash"
                   >
                     Cancel

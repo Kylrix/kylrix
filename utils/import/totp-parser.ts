@@ -9,15 +9,16 @@ export interface TotpParseResult {
 
 function parseTotpUri(totpUri: string): TotpParseResult | null {
   try {
-    // Handle different TOTP URI formats
-    if (totpUri.startsWith("otpauth://totp/")) {
-      return parseOtpauthUri(totpUri);
+    const trimmed = String(totpUri || '').trim();
+    // otpauth://totp/... and otpauth://hotp/... (import hotp as timed code seed)
+    if (/^otpauth:\/\//i.test(trimmed)) {
+      return parseOtpauthUri(trimmed);
     }
 
     // If it's just a base32 secret, use defaults
-    if (isBase32Secret(totpUri)) {
+    if (isBase32Secret(trimmed)) {
       return {
-        secretKey: totpUri.toUpperCase(),
+        secretKey: trimmed.replace(/\s+/g, '').toUpperCase(),
         issuer: "Unknown",
         accountName: "Unknown",
         algorithm: "SHA1",
@@ -37,7 +38,11 @@ function parseOtpauthUri(uri: string): TotpParseResult | null {
   try {
     const url = new URL(uri);
 
-    if (url.protocol !== "otpauth:" || url.hostname !== "totp") {
+    if (url.protocol !== "otpauth:") {
+      return null;
+    }
+    const kind = (url.hostname || '').toLowerCase();
+    if (kind !== "totp" && kind !== "hotp") {
       return null;
     }
 
@@ -68,7 +73,7 @@ function parseOtpauthUri(uri: string): TotpParseResult | null {
     const period = parseInt(url.searchParams.get("period") || "30", 10);
 
     return {
-      secretKey: secret.toUpperCase(),
+      secretKey: secret.replace(/\s+/g, '').toUpperCase(),
       issuer,
       accountName,
       algorithm,

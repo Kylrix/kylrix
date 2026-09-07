@@ -327,8 +327,11 @@ export function annotatePorterDiscernResult(
 ): PorterDiscernResult {
   const credIndex = indexFingerprints(existing.credentials || [], 'cred');
   const totpIndex = indexFingerprints(existing.totpSecrets || [], 'totp');
+  const safeCreds = Array.isArray(result.credentials) ? result.credentials : [];
+  const safeTotps = Array.isArray(result.totpSecrets) ? result.totpSecrets : [];
+  const safeWorkspaces = Array.isArray(result.workspaces) ? result.workspaces : [];
 
-  const credentials: PorterCredentialDraft[] = result.credentials.map((c) => {
+  const credentials: PorterCredentialDraft[] = safeCreds.map((c) => {
     const row = { ...c, $id: c.sourceId, id: c.sourceId } as Record<string, unknown>;
     if (c._status === 'invalid' || isUnimportableCredential(row)) {
       return {
@@ -347,7 +350,7 @@ export function annotatePorterDiscernResult(
     return { ...c, _status: 'new' as const, _skipReason: undefined };
   });
 
-  const totpSecrets: PorterTotpDraft[] = result.totpSecrets.map((t) => {
+  const totpSecrets: PorterTotpDraft[] = safeTotps.map((t) => {
     const row = { ...t, $id: t.sourceId, id: t.sourceId } as Record<string, unknown>;
     if (t._status === 'invalid' || isUnimportableTotp(row)) {
       return {
@@ -389,11 +392,12 @@ export function annotatePorterDiscernResult(
     ...result,
     credentials,
     totpSecrets,
+    workspaces: safeWorkspaces,
     summary: [
       importableCreds ? `${importableCreds} new secret${importableCreds === 1 ? '' : 's'}` : null,
       importableTotp ? `${importableTotp} new smart code${importableTotp === 1 ? '' : 's'}` : null,
-      result.workspaces.length
-        ? `${result.workspaces.length} workspace${result.workspaces.length === 1 ? '' : 's'}`
+      safeWorkspaces.length
+        ? `${safeWorkspaces.length} workspace${safeWorkspaces.length === 1 ? '' : 's'}`
         : null,
       skippedDup ? `${skippedDup} already present` : null,
       skippedInvalid ? `${skippedInvalid} disabled` : null,
@@ -406,10 +410,14 @@ export function annotatePorterDiscernResult(
 
 /** Only rows that should be written. */
 export function filterImportableDiscern(result: PorterDiscernResult): PorterDiscernResult {
+  const credentials = Array.isArray(result.credentials) ? result.credentials : [];
+  const totpSecrets = Array.isArray(result.totpSecrets) ? result.totpSecrets : [];
+  const workspaces = Array.isArray(result.workspaces) ? result.workspaces : [];
   return {
     ...result,
-    credentials: result.credentials.filter((c) => !c._status || c._status === 'new' || c._status === 'merged'),
-    totpSecrets: result.totpSecrets.filter((t) => !t._status || t._status === 'new' || t._status === 'merged'),
+    credentials: credentials.filter((c) => !c._status || c._status === 'new' || c._status === 'merged'),
+    totpSecrets: totpSecrets.filter((t) => !t._status || t._status === 'new' || t._status === 'merged'),
+    workspaces,
   };
 }
 
