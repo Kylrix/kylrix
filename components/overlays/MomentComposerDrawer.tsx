@@ -28,8 +28,10 @@ import {
   saveMomentAgentPref,
   useMomentIntelligence,
 } from '@/hooks/useMomentIntelligence';
+import { useMomentDraftMemory } from '@/hooks/useSurfaceDraft';
 import { TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { writeSurfaceActive } from '@/lib/ui/surface-memory';
 import toast from 'react-hot-toast';
 
 interface MomentComposerDrawerProps {
@@ -66,7 +68,18 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   const { openProUpgrade } = useProUpgrade();
   const isPro = hasPaidKylrixPlan(user);
 
-  const [content, setContent] = useState('');
+  const {
+    text: content,
+    setText: setContent,
+    hydrated: draftHydrated,
+    clear: clearDraft,
+  } = useMomentDraftMemory({
+    userId: user?.$id,
+    mode,
+    parentMomentId: mode === 'reply' ? parentMomentId : null,
+    enabled: Boolean(user?.$id),
+  });
+
   const [publishing, setPublishing] = useState(false);
   const [syncToNostr, setSyncToNostr] = useState(false);
   const [createWithAgent, setCreateWithAgent] = useState(true);
@@ -93,7 +106,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     userId: user?.$id,
     displayName: user?.name || user?.email || undefined,
     draft: content,
-    enabled: createWithAgent,
+    enabled: createWithAgent && draftHydrated,
     isPro,
     onOpenPro: openPro,
     setDraft: setContent,
@@ -105,15 +118,24 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   useEffect(() => {
     setMounted(true);
     document.body.style.overflow = 'hidden';
+    if (user?.$id) {
+      void writeSurfaceActive(user.$id, 'moment-composer', {
+        id: mode === 'reply' ? parentMomentId : 'create',
+        meta: { mode },
+      });
+    }
     return () => {
       document.body.style.overflow = '';
       flushReinforce();
+      if (user?.$id) {
+        void writeSurfaceActive(user.$id, 'moment-composer', { open: false });
+      }
       if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
     };
-  }, [flushReinforce]);
+  }, [flushReinforce, user?.$id, mode, parentMomentId]);
 
   useEffect(() => {
     void LocalEngine.cacheGet<boolean>('f_sync_to_nostr_pref').then((pref) => {
@@ -334,6 +356,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
 
       const text = finalBody;
       setContent('');
+      void clearDraft();
       setAttachments([]);
       setPublishing(false);
       onClose();
@@ -430,6 +453,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
 
     toast.success('Publishing moment in background...');
     setContent('');
+    void clearDraft();
     setAttachments([]);
     setPublishing(false);
     onClose();

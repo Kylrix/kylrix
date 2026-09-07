@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, startTransition } from 'react';
 import { account } from '@/lib/appwrite/client';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import {
@@ -67,7 +67,9 @@ export function useMomentIntelligence(opts: {
 
   const applySuggestion = useCallback((raw: string, forDraft: string) => {
     const cleaned = asSuggestionSuffix(forDraft, raw);
-    setSuggestion(cleaned);
+    startTransition(() => {
+      setSuggestion(cleaned);
+    });
     lastShownSuggestionRef.current = cleaned;
     return cleaned;
   }, []);
@@ -82,6 +84,9 @@ export function useMomentIntelligence(opts: {
   const sourceRef = useRef<SuggestionSource>('offline');
   const voiceReadyRef = useRef(false);
   const lastShownSuggestionRef = useRef('');
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const lastKeystrokeAtRef = useRef(Date.now());
   const pendingAcceptRef = useRef<{
     draftBefore: string;
     suggestion: string;
@@ -130,9 +135,13 @@ export function useMomentIntelligence(opts: {
       return;
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    const now = Date.now();
+    const typingGap = now - lastKeystrokeAtRef.current;
+    lastKeystrokeAtRef.current = now;
 
-    const phase = isReply ? replyKickoffPhase(draft) : null;
-    const trimmed = draft.trimEnd();
+    const liveDraft = () => draftRef.current;
+    const phase = isReply ? replyKickoffPhase(liveDraft()) : null;
+    const trimmed = liveDraft().trimEnd();
 
     // Create mode: wait until a few characters exist
     if (!isReply) {
@@ -151,19 +160,28 @@ export function useMomentIntelligence(opts: {
       }
     }
 
+    // Adaptive debounce — typing bursts must never queue AI/JWT work
+    const bursty = typingGap < 140;
     const delayMs = !isReply
-      ? 380
+      ? bursty
+        ? 900
+        : 520
       : phase === 'empty'
-        ? 220
+        ? 600
         : phase === 'warming'
-          ? 900
-          : 420;
+          ? 1100
+          : bursty
+            ? 950
+            : 650;
 
     debounceRef.current = setTimeout(() => {
       void (async () => {
-        // Re-check warming after wait — only fire once kickoff is ready or still empty
+        // Still typing? bail — next keystroke reschedules
+        if (Date.now() - lastKeystrokeAtRef.current < 220) return;
+
+        const draftNow = liveDraft();
         if (isReply) {
-          const after = replyKickoffPhase(draft);
+          const after = replyKickoffPhase(draftNow);
           if (after === 'warming') return;
         }
 
@@ -171,7 +189,9 @@ export function useMomentIntelligence(opts: {
         const scope = isReply
           ? `moment_reply_${parentMomentId || 'x'}`
           : 'moment_doppelganger';
-        const cacheDraft = isReply && !trimmed ? `__empty__:${(parentSnippet || '').slice(0, 80)}` : draft;
+        const trimmedNow = draftNow.trimEnd();
+        const cacheDraft =
+          isReply && !trimmedNow ? `__empty__:${(parentSnippet || '').slice(0, 80)}` : draftNow;
 
         const { lookupCachedSuggestion, rememberSuggestion } = await loadSuggestCache();
         const cached = await lookupCachedSuggestion({
@@ -182,29 +202,35 @@ export function useMomentIntelligence(opts: {
         if (myReq !== reqIdRef.current) return;
         if (cached) {
           sourceRef.current = 'offline';
-          applySuggestion(cached, draft);
+          applySuggestion(cached, draftNow);
           setBusy(false);
           return;
         }
 
         const offline = isReply
-          ? suggestOfflineReply(draft, parentSnippet, samplesRef.current)
-          : completeOfflineSuffix(draft, samplesRef.current, {
+          ? suggestOfflineReply(draftNow, parentSnippet, samplesRef.current)
+          : completeOfflineSuffix(draftNow, samplesRef.current, {
               niche: 'connect',
               minConfidence: 0.5,
             });
 
-        const afterPhase = isReply ? replyKickoffPhase(draft) : 'ready';
-        // Empty reply + parent + Pro: prefer parent-aware AI; offline is fallback only
+        const afterPhase = isReply ? replyKickoffPhase(draftNow) : 'ready';
+        // Empty reply + parent + Pro: prefer parent-aware AI only after idle
+        const idleMs = Date.now() - lastKeystrokeAtRef.current;
         const preferReplyAi =
-          isReply && afterPhase === 'empty' && isPro && parentSnippet.trim().length >= 8;
+          isReply &&
+          afterPhase === 'empty' &&
+          isPro &&
+          parentSnippet.trim().length >= 8 &&
+          idleMs >= 900;
 
         const source = preferReplyAi
           ? 'ai'
           : await pickCompletionSource({
               scope,
               offlineSuffix: offline,
-              allowAi: isPro,
+              // Never pick AI mid-burst — keeps the input thread free
+              allowAi: isPro && idleMs >= 900,
             });
 
         if (myReq !== reqIdRef.current) return;
@@ -212,7 +238,7 @@ export function useMomentIntelligence(opts: {
         if (source === 'offline') {
           sourceRef.current = 'offline';
           const text = offline.trim();
-          applySuggestion(text, draft);
+          applySuggestion(text, draftNow);
           setBusy(false);
           if (text) void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: text });
           return;
@@ -220,7 +246,7 @@ export function useMomentIntelligence(opts: {
 
         if (source !== 'ai' || !isPro) {
           sourceRef.current = 'offline';
-          applySuggestion(offline, draft);
+          applySuggestion(offline, draftNow);
           setBusy(false);
           if (offline.trim()) {
             void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: offline.trim() });
@@ -232,9 +258,16 @@ export function useMomentIntelligence(opts: {
         try {
           await recordAiInference(scope);
           const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+          if (myReq !== reqIdRef.current) return;
+          // Abort AI if user typed again while minting JWT
+          if (Date.now() - lastKeystrokeAtRef.current < 400) {
+            sourceRef.current = 'offline';
+            applySuggestion(offline, liveDraft());
+            return;
+          }
           const { completeMomentDraftAction } = await import('@/lib/actions/moment-doppelganger');
           const res = await completeMomentDraftAction({
-            draft,
+            draft: draftNow,
             voiceSamples: samplesRef.current,
             coldStartHints: hintsRef.current,
             displayName,
@@ -249,7 +282,7 @@ export function useMomentIntelligence(opts: {
           if (!res.success) {
             if (String(res.error || '').toLowerCase().includes('pro')) onOpenPro();
             sourceRef.current = 'offline';
-            applySuggestion(offline, draft);
+            applySuggestion(offline, liveDraft());
             if (offline.trim()) {
               void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: offline.trim() });
             }
@@ -258,11 +291,11 @@ export function useMomentIntelligence(opts: {
           const aiText = String(res.completion || '').trim();
           if (aiText) {
             sourceRef.current = 'ai';
-            applySuggestion(aiText, draft);
+            applySuggestion(aiText, liveDraft());
             void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: aiText });
           } else {
             sourceRef.current = 'offline';
-            applySuggestion(offline, draft);
+            applySuggestion(offline, liveDraft());
             if (offline.trim()) {
               void rememberSuggestion({ scope, userId, draft: cacheDraft, suggestion: offline.trim() });
             }
@@ -270,7 +303,7 @@ export function useMomentIntelligence(opts: {
         } catch {
           if (myReq === reqIdRef.current) {
             sourceRef.current = 'offline';
-            applySuggestion(offline, draft);
+            applySuggestion(offline, liveDraft());
           }
         } finally {
           if (myReq === reqIdRef.current) setBusy(false);
@@ -292,6 +325,7 @@ export function useMomentIntelligence(opts: {
     parentSnippet,
     parentMomentId,
     learningStatus,
+    applySuggestion,
   ]);
 
   // Reinforce: after accept, watch subsequent edits; also catch ignored hints

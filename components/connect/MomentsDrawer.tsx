@@ -10,6 +10,9 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 
 import { MomentObjectDetail } from '@/components/objects/MomentObjectDetail';
 import type { MomentSource } from '@/lib/connect/moment-engagement';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useSurfaceScroll } from '@/hooks/useSurfaceScroll';
+import { scrollScope, writeSurfaceActive } from '@/lib/ui/surface-memory';
 
 export interface MomentsDrawerProps {
   onClose?: () => void;
@@ -20,11 +23,26 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
   const { open: openUnified } = useUnifiedDrawer();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
+  const { user } = useAuth();
   const [selectedMoment, setSelectedMoment] = React.useState<{
     momentId: string;
     source: MomentSource;
     preview?: any;
   } | null>(null);
+
+  const feedScrollRef = useSurfaceScroll({
+    userId: user?.$id,
+    scope: user?.$id ? scrollScope('moments-drawer', 'feed') : null,
+    enabled: !selectedMoment,
+  });
+
+  useEffect(() => {
+    if (!user?.$id) return;
+    void writeSurfaceActive(user.$id, 'moments-drawer', {
+      id: selectedMoment?.momentId || 'feed',
+      meta: selectedMoment ? { source: selectedMoment.source } : { view: 'feed' },
+    });
+  }, [user?.$id, selectedMoment?.momentId, selectedMoment?.source]);
 
   const handleOpenComposer = useCallback(() => {
     openUnified('moment-composer');
@@ -129,7 +147,11 @@ export function MomentsDrawer({ onClose }: MomentsDrawerProps) {
       </header>
 
       {/* Main Stream Body */}
-      <main className="flex-1 overflow-y-auto px-3 sm:px-6 py-6 min-h-0 select-text">
+      <main
+        ref={feedScrollRef as any}
+        data-scroll-remember="moments-drawer-feed"
+        className="flex-1 overflow-y-auto px-3 sm:px-6 py-6 min-h-0 select-text"
+      >
         <ConnectMomentsPanel onCreateMoment={handleOpenComposer} />
       </main>
 
