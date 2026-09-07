@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   createCredential,
   updateCredential,
@@ -85,6 +86,7 @@ export default function CredentialDialog({
     onClose();
     setIsExpanded(false);
     setIsHydrated(false);
+    setIsNameManuallyEdited(false);
   };
 
   useEffect(() => {
@@ -94,6 +96,7 @@ export default function CredentialDialog({
 
   const [showPassword, setShowPassword] = useState(false);
   const [isEnvMode, setIsEnvMode] = useState(false);
+  const [isNameManuallyEdited, setIsNameManuallyEdited] = useState(false);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [form, setForm] = useState({
     name: '',
@@ -128,6 +131,9 @@ export default function CredentialDialog({
         if (draft.form) setForm(draft.form);
         if (draft.customFields) setCustomFields(draft.customFields);
         if (typeof draft.isEnvMode === 'boolean') setIsEnvMode(draft.isEnvMode);
+        if (typeof draft.isNameManuallyEdited === 'boolean') {
+          setIsNameManuallyEdited(draft.isNameManuallyEdited);
+        }
       } catch (e) {
         console.error('Failed to parse secret draft', e);
       }
@@ -137,7 +143,7 @@ export default function CredentialDialog({
 
   useEffect(() => {
     if (!open || typeof window === 'undefined' || !isHydrated || initial) return;
-    const draft = { form, customFields, isEnvMode };
+    const draft = { form, customFields, isEnvMode, isNameManuallyEdited };
     if (
       form.name.trim() ||
       form.username.trim() ||
@@ -149,7 +155,7 @@ export default function CredentialDialog({
     } else {
       localStorage.removeItem('kylrix:draft:secret');
     }
-  }, [open, isHydrated, form, customFields, isEnvMode, initial]);
+  }, [open, isHydrated, form, customFields, isEnvMode, isNameManuallyEdited, initial]);
 
   useEffect(() => {
     if (initial) {
@@ -169,6 +175,7 @@ export default function CredentialDialog({
       });
       setCustomFields(normalizeCustomFields(initial.customFields));
       setIsEnvMode(Boolean(initial.isEnv));
+      setIsNameManuallyEdited(true);
       setAttachments(initial.attachments ? JSON.parse(initial.attachments) : []);
     } else {
       setForm({
@@ -187,6 +194,7 @@ export default function CredentialDialog({
       });
       setCustomFields([]);
       setIsEnvMode(false);
+      setIsNameManuallyEdited(Boolean(prefill?.name));
       setAttachments([]);
     }
     setEnvHint(null);
@@ -207,7 +215,11 @@ export default function CredentialDialog({
     setIsEnvMode(true);
     setEnvHint(`${parsed.length} variable${parsed.length === 1 ? '' : 's'} ready`);
     setError(null);
-  }, []);
+    setForm((f) => {
+      if (isNameManuallyEdited && f.name.trim()) return f;
+      return { ...f, name: parsed[0]?.label || 'Env' };
+    });
+  }, [isNameManuallyEdited]);
 
   const handlePasteEnv = useCallback(async () => {
     try {
@@ -226,16 +238,36 @@ export default function CredentialDialog({
       try {
         const text = await file.text();
         applyEnvText(text);
-        if (!form.name.trim()) {
+        if (!isNameManuallyEdited) {
           const base = file.name.replace(/\.(env|txt|dotenv)$/i, '').trim();
-          if (base) setForm((f) => ({ ...f, name: base }));
+          if (base) {
+            setForm((f) => ({ ...f, name: base }));
+          }
         }
       } catch {
         setError('Could not read that file.');
       }
     },
-    [applyEnvText, form.name],
+    [applyEnvText, isNameManuallyEdited],
   );
+
+  const syncNameFromUsername = useCallback(
+    (username: string) => {
+      if (isNameManuallyEdited) return;
+      setForm((f) => ({ ...f, username, name: username.trim() }));
+    },
+    [isNameManuallyEdited],
+  );
+
+  const resolveSecretName = useCallback((): string => {
+    const explicit = form.name.trim();
+    if (explicit) return explicit;
+    if (isEnvMode) {
+      const first = customFields.find((f) => f.label.trim())?.label.trim();
+      return first || 'Env';
+    }
+    return form.username.trim() || form.cardholderName.trim() || 'Untitled Secret';
+  }, [form.name, form.username, form.cardholderName, isEnvMode, customFields]);
 
   const handleGeneratePassword = () => {
     setForm({ ...form, password: generateRandomPassword(16) });
@@ -290,7 +322,7 @@ export default function CredentialDialog({
     const credentialData: CredentialsCreate = {
       userId: user.$id,
       itemType: type,
-      name: form.name.trim(),
+      name: resolveSecretName(),
       url: null,
       username: null,
       notes: null,
@@ -443,7 +475,7 @@ export default function CredentialDialog({
   };
 
   const handleMorphToDetail = async () => {
-    if (!form.name.trim()) return;
+    if (!resolveSecretName()) return;
     if (!masterPassCrypto.isVaultUnlocked()) {
       requestSudo({ onSuccess: () => void handleMorphToDetail() });
       return;
@@ -488,7 +520,7 @@ export default function CredentialDialog({
           </span>
         </div>
         <div className="flex items-center gap-0.5">
-          {form.name.trim().length > 0 && (
+          {resolveSecretName().length > 0 && (
             <button
               type="button"
               onClick={handleMorphToDetail}
@@ -503,6 +535,7 @@ export default function CredentialDialog({
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
               className="p-1.5 rounded-lg text-white hover:bg-black transition-colors"
+              aria-label={isExpanded ? 'Collapse' : 'Expand fullscreen'}
             >
               {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
             </button>
@@ -510,34 +543,23 @@ export default function CredentialDialog({
           <button
             type="button"
             onClick={handleClose}
-            className="p-1.5 rounded-lg text-white hover:bg-black transition-colors"
+            className="p-1.5 rounded-full bg-black border border-white/20 text-white hover:border-white/40 transition-colors"
+            aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       <div className="px-5 pb-5 flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 font-satoshi">
-        <div className="flex flex-col gap-2 w-full">
-          <label className={labelClass}>
-            Name <span className="text-[#ef4444]">*</span>
-          </label>
-          <input
-            type="text"
-            placeholder={isEnvMode ? 'e.g. Production API' : 'e.g. GitHub, Gmail'}
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-            className={inputClass}
-          />
-        </div>
-
         {currentType === 'login' && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-white/20 bg-black px-4 py-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <FileCode2 className="w-4 h-4 text-white shrink-0" />
               <div className="min-w-0">
-                <p className="text-sm font-bold text-white truncate">Environment file</p>
+                <p className="text-sm font-bold text-white truncate">
+                  {isMobile ? 'Env variables' : 'Environment variables'}
+                </p>
                 <p className="text-[0.72rem] font-medium text-white tracking-wide uppercase">
                   One secret · many keys
                 </p>
@@ -657,7 +679,7 @@ export default function CredentialDialog({
                   type="text"
                   placeholder="you@example.com"
                   value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  onChange={(e) => syncNameFromUsername(e.target.value)}
                   required
                   className={`${inputClass} pl-11`}
                 />
@@ -740,7 +762,14 @@ export default function CredentialDialog({
                 type="text"
                 placeholder="JOHN DOE"
                 value={form.cardholderName}
-                onChange={(e) => setForm({ ...form, cardholderName: e.target.value })}
+                onChange={(e) => {
+                  const cardholderName = e.target.value;
+                  setForm((f) => ({
+                    ...f,
+                    cardholderName,
+                    name: isNameManuallyEdited ? f.name : cardholderName.trim(),
+                  }));
+                }}
                 required
                 className={inputClass}
               />
@@ -912,7 +941,7 @@ export default function CredentialDialog({
         )}
       </div>
 
-      <div className="px-5 py-4 flex flex-col gap-2 shrink-0 border-t border-white/10 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="px-5 py-4 shrink-0 border-t border-white/10 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <button
           type="submit"
           disabled={loading}
@@ -922,13 +951,6 @@ export default function CredentialDialog({
           <span>
             {loading ? 'Saving…' : initial ? 'Update' : isEnvMode ? 'Save Env' : 'Save Secret'}
           </span>
-        </button>
-        <button
-          type="button"
-          onClick={handleClose}
-          className="w-full py-2.5 rounded-xl font-bold text-white hover:bg-black transition-colors text-sm"
-        >
-          Cancel
         </button>
       </div>
     </form>
@@ -949,21 +971,23 @@ export default function CredentialDialog({
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-[1400] flex justify-end items-end overflow-hidden">
-      <div className="absolute inset-0 bg-black/80 animate-in fade-in z-0" onClick={handleClose} />
+  // Portal + high z-index so fullscreen sits above topbar/bottom chrome (matches ObjectCreateDrawer).
+  return createPortal(
+    <div className="fixed inset-0 z-[14000] flex pointer-events-auto overflow-hidden">
       <div
-        className={`relative z-[1401] bg-[#161412] border-t border-white/20 flex flex-col w-full max-w-[720px] mx-auto left-0 right-0 overflow-hidden ${
+        className="absolute inset-0 bg-black/80 transition-opacity duration-200"
+        onClick={handleClose}
+      />
+      <div
+        className={
           isExpanded
-            ? 'h-[100dvh] max-h-[100dvh] rounded-none'
-            : 'h-[60dvh] max-h-[60dvh] rounded-t-[24px]'
-        } animate-in slide-in-from-bottom duration-300`}
+            ? 'fixed inset-0 h-[100dvh] max-h-[100dvh] w-full bg-[#161412] border-0 rounded-none z-[14001] flex flex-col overflow-hidden'
+            : 'fixed bottom-0 left-1/2 -translate-x-1/2 h-[60dvh] max-h-[60dvh] w-full max-w-[720px] bg-[#161412] border border-white/20 border-b-0 rounded-t-[24px] z-[14001] flex flex-col overflow-hidden'
+        }
       >
-        <div className="flex justify-center py-2.5 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-[#3D3A36]" />
-        </div>
         {credentialForm}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
