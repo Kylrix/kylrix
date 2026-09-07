@@ -661,15 +661,14 @@ function DashboardPageContent() {
           prefill={dialogPrefill}
           defaultType={dialogType}
           onSaved={async (saved: any) => {
-            // Optimistic live-engine first — instant paint like notes/goals
+            // RAM-only optimistic paint. Do NOT LocalEngine.cacheSet decrypted rows —
+            // disk must stay ciphertext; refresh reloads raw Appwrite rows.
             if (saved && (saved as any).$id) {
-              setAllCredentials(prev => {
-                const exists = prev.find(c => c.$id === (saved as any).$id);
-                if (exists) return prev.map(c => c.$id === (saved as any).$id ? saved as any : c);
+              setAllCredentials((prev) => {
+                const exists = prev.find((c) => c.$id === (saved as any).$id);
+                if (exists) return prev.map((c) => (c.$id === (saved as any).$id ? (saved as any) : c));
                 return [saved as any, ...prev];
               });
-              // also warm LocalEngine cache via unified path
-              try { const { LocalEngine } = await import('@/lib/services/LocalEngine'); await LocalEngine.cacheSet(`vault_credentials_${user?.$id}`, [saved as any, ...allCredentials] as any); } catch {}
             }
             await refreshCredentials();
           }}

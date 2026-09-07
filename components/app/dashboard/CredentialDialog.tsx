@@ -119,43 +119,23 @@ export default function CredentialDialog({
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [envHint, setEnvHint] = useState<string | null>(null);
 
+  // Vault secrets: NEVER persist drafts to localStorage / disk (plain text leak).
+  // Wipe any legacy draft key left from older builds.
   useEffect(() => {
-    if (!open || typeof window === 'undefined' || initial) {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem('kylrix:draft:secret');
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
       setIsHydrated(false);
       return;
     }
-    const raw = localStorage.getItem('kylrix:draft:secret');
-    if (raw) {
-      try {
-        const draft = JSON.parse(raw);
-        if (draft.form) setForm(draft.form);
-        if (draft.customFields) setCustomFields(draft.customFields);
-        if (typeof draft.isEnvMode === 'boolean') setIsEnvMode(draft.isEnvMode);
-        if (typeof draft.isNameManuallyEdited === 'boolean') {
-          setIsNameManuallyEdited(draft.isNameManuallyEdited);
-        }
-      } catch (e) {
-        console.error('Failed to parse secret draft', e);
-      }
-    }
-    setIsHydrated(true);
+    // Create flow: start clean in RAM only (no disk hydrate of secrets).
+    if (!initial) setIsHydrated(true);
   }, [open, initial]);
-
-  useEffect(() => {
-    if (!open || typeof window === 'undefined' || !isHydrated || initial) return;
-    const draft = { form, customFields, isEnvMode, isNameManuallyEdited };
-    if (
-      form.name.trim() ||
-      form.username.trim() ||
-      form.password.trim() ||
-      form.cardNumber.trim() ||
-      customFields.length > 0
-    ) {
-      localStorage.setItem('kylrix:draft:secret', JSON.stringify(draft));
-    } else {
-      localStorage.removeItem('kylrix:draft:secret');
-    }
-  }, [open, isHydrated, form, customFields, isEnvMode, isNameManuallyEdited, initial]);
 
   useEffect(() => {
     if (initial) {
@@ -409,61 +389,20 @@ export default function CredentialDialog({
         (credentialData as any).isWorkspace = true;
       }
 
-      const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      const { ID } = await import('appwrite');
+      // RAM-only optimistic UX. Never write plaintext secrets to LocalEngine / RxDB /
+      // localStorage — disk cache must stay ciphertext (raw Appwrite rows only).
       if (initial && initial.$id) {
-        const localUpdated = {
-          ...initial,
-          ...credentialData,
-          $id: initial.$id,
-          $updatedAt: new Date().toISOString(),
-        } as any;
-        await LocalEngine.cacheSet(`vault_credential_${initial.$id}`, localUpdated).catch(() => {});
-        void updateCredential(initial.$id, credentialData).catch(() => {});
-        onSaved(localUpdated as any);
+        const saved = await updateCredential(initial.$id, credentialData);
+        onSaved((saved || { ...initial, ...credentialData, $id: initial.$id }) as any);
       } else {
-        const tempId = ID.unique();
-        const localCreated = {
-          ...credentialData,
-          $id: tempId,
-          $createdAt: new Date().toISOString(),
-          $updatedAt: new Date().toISOString(),
-        } as any;
-        await LocalEngine.cacheSet(`vault_credential_${tempId}`, localCreated).catch(() => {});
-        try {
-          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-          const db = await getRxDB().catch(() => null);
-          if (db) {
-            const cacheKey = `vault_credentials_${user?.$id}`;
-            const existing = await db.cache.findOne(cacheKey).exec().catch(() => null);
-            const prev = (existing?.data as any) || [];
-            await db.cache
-              .upsert({
-                id: cacheKey,
-                data: [localCreated, ...(Array.isArray(prev) ? prev : [])],
-                timestamp: Date.now(),
-              })
-              .catch(() => {});
-          }
-        } catch {}
-        void createCredential(credentialData)
-          .then(async (created: any) => {
-            if (isCustomWorkspace && (created?.$id || (created as any)?.id)) {
-              void attachEntityToActiveWorkspace(
-                'credential',
-                created.$id || (created as any).id,
-              );
-            }
-            try {
-              await LocalEngine.cacheDelete(`vault_credential_${tempId}`).catch(() => {});
-              await LocalEngine.cacheSet(`vault_credential_${created.$id}`, created).catch(
-                () => {},
-              );
-            } catch {}
-          })
-          .catch(() => {});
-        onSaved(localCreated as any);
-        if (typeof window !== 'undefined') localStorage.removeItem('kylrix:draft:secret');
+        const created = await createCredential(credentialData);
+        if (isCustomWorkspace && (created?.$id || (created as any)?.id)) {
+          void attachEntityToActiveWorkspace(
+            'credential',
+            created.$id || (created as any).id,
+          );
+        }
+        onSaved(created as any);
       }
       handleClose();
       setLoading(false);
@@ -490,8 +429,8 @@ export default function CredentialDialog({
       } else {
         saved = await createCredential(credentialData);
       }
-      if (!initial && typeof window !== 'undefined') {
-        localStorage.removeItem('kylrix:draft:secret');
+      if (!initial) {
+        // no draft to clear — secrets never hit localStorage
       }
       onSaved();
       if (saved && (saved.$id || saved.id)) {
