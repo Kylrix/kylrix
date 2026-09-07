@@ -8,24 +8,58 @@ import { bundleItemCount, toImportBundle } from './discern';
 
 const DRAFT_KEY = (userId: string) => `porter_draft_${userId}`;
 
-export async function cachePorterDraft(userId: string, result: PorterDiscernResult): Promise<void> {
+export type PorterDraftDirection = 'import' | 'export';
+export type PorterDraftDataKind = 'secrets' | 'totp' | 'mixed' | 'auto';
+
+export type PorterSessionDraft = {
+  direction: PorterDraftDirection;
+  dataKind: PorterDraftDataKind;
+  /** Optional file name for import sessions */
+  fileName?: string | null;
+  result?: PorterDiscernResult | null;
+  exportFormat?: 'json' | 'encrypted-html';
+  savedAt: string;
+};
+
+export async function cachePorterDraft(
+  userId: string,
+  draft: Omit<PorterSessionDraft, 'savedAt'> | PorterDiscernResult,
+): Promise<void> {
   if (!userId) return;
   try {
-    await LocalEngine.cacheSet(DRAFT_KEY(userId), {
-      result,
-      savedAt: new Date().toISOString(),
-    });
+    // Back-compat: older callers passed only a discern result (import preview)
+    const normalized: PorterSessionDraft =
+      draft && typeof draft === 'object' && 'direction' in draft
+        ? { ...(draft as Omit<PorterSessionDraft, 'savedAt'>), savedAt: new Date().toISOString() }
+        : {
+            direction: 'import',
+            dataKind: 'mixed',
+            result: draft as PorterDiscernResult,
+            savedAt: new Date().toISOString(),
+          };
+    await LocalEngine.cacheSet(DRAFT_KEY(userId), normalized);
   } catch {
     /* offline ok */
   }
 }
 
-export async function loadPorterDraft(
-  userId: string,
-): Promise<{ result: PorterDiscernResult; savedAt: string } | null> {
+export async function loadPorterDraft(userId: string): Promise<PorterSessionDraft | null> {
   if (!userId) return null;
   try {
-    return (await LocalEngine.cacheGet(DRAFT_KEY(userId))) as any;
+    const raw = (await LocalEngine.cacheGet(DRAFT_KEY(userId))) as any;
+    if (!raw) return null;
+    // Legacy shape: { result, savedAt }
+    if (raw.result && !raw.direction) {
+      return {
+        direction: 'import',
+        dataKind: 'mixed',
+        result: raw.result,
+        fileName: null,
+        savedAt: raw.savedAt || new Date().toISOString(),
+      };
+    }
+    if (!raw.direction) return null;
+    return raw as PorterSessionDraft;
   } catch {
     return null;
   }

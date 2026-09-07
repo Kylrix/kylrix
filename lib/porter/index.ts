@@ -22,6 +22,9 @@ export {
   exportVaultPlaintext,
   loadPorterDraft,
   runOfflinePorterImport,
+  type PorterDraftDataKind,
+  type PorterDraftDirection,
+  type PorterSessionDraft,
 } from './offline';
 
 export {

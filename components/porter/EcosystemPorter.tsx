@@ -23,7 +23,9 @@ import {
   discernImportPayload,
   exportVaultPlaintext,
   loadExistingVaultForDedupe,
+  loadPorterDraft,
   type PorterDiscernResult,
+  type PorterSessionDraft,
 } from '@/lib/porter';
 import { runOfflinePorterImport } from '@/lib/porter/offline';
 import {
@@ -93,6 +95,13 @@ function kindIcon(kind: (typeof KIND_OPTIONS)[number]['icon']) {
   return <FileCode2 className="w-5 h-5 text-[#10B981]" />;
 }
 
+function kindLabel(kind: PorterDataKind): string {
+  if (kind === 'secrets') return 'Secrets';
+  if (kind === 'totp') return 'Smart codes';
+  if (kind === 'auto') return 'Auto-detect';
+  return 'Secrets + codes';
+}
+
 function filterDiscerned(
   result: PorterDiscernResult,
   kind: PorterDataKind,
@@ -157,6 +166,7 @@ export default function EcosystemPorter({
   const [progressMsg, setProgressMsg] = useState<string | null>(null);
   const [confirmKind, setConfirmKind] = useState<ConfirmKind>(null);
   const [portalReady, setPortalReady] = useState(false);
+  const [cachedSession, setCachedSession] = useState<PorterSessionDraft | null>(null);
 
   const userId = user?.$id || '';
 
@@ -164,16 +174,90 @@ export default function EcosystemPorter({
     setPortalReady(true);
   }, []);
 
+  useEffect(() => {
+    if (!userId) return;
+    void (async () => {
+      const draft = await loadPorterDraft(userId);
+      setCachedSession(draft);
+    })();
+  }, [userId]);
+
+  const handleClose = useCallback(() => {
+    onClose?.();
+  }, [onClose]);
+
+  const persistSession = useCallback(
+    async (partial: Partial<PorterSessionDraft> & { direction: PorterDirection; dataKind: PorterDataKind }) => {
+      if (!userId) return;
+      const next: Omit<PorterSessionDraft, 'savedAt'> = {
+        direction: partial.direction,
+        dataKind: partial.dataKind,
+        fileName: partial.fileName ?? fileName,
+        result: partial.result !== undefined ? partial.result : discerned,
+        exportFormat: partial.exportFormat ?? exportFormat,
+      };
+      await cachePorterDraft(userId, next);
+      setCachedSession({ ...next, savedAt: new Date().toISOString() });
+    },
+    [userId, fileName, discerned, exportFormat],
+  );
+
+  const cancelCachedSession = useCallback(async () => {
+    if (userId) await clearPorterDraft(userId);
+    setCachedSession(null);
+    setDiscerned(null);
+    setRawText('');
+    setFileName(null);
+    setError(null);
+    setConfirmKind(null);
+    setView('home');
+  }, [userId]);
+
+  const resumeCachedSession = useCallback(async () => {
+    if (!cachedSession) return;
+    setDirection(cachedSession.direction);
+    setDataKind(cachedSession.dataKind);
+    setFileName(cachedSession.fileName || null);
+    if (cachedSession.exportFormat) setExportFormat(cachedSession.exportFormat);
+
+    if (cachedSession.direction === 'export') {
+      setView('export-format');
+      return;
+    }
+
+    let result = cachedSession.result || null;
+    if (result && userId) {
+      try {
+        const existing = await loadExistingVaultForDedupe(userId);
+        result = annotatePorterDiscernResult(filterDiscerned(result, cachedSession.dataKind), existing);
+      } catch {
+        result = filterDiscerned(result, cachedSession.dataKind);
+      }
+    }
+    setDiscerned(result);
+    if (result && result.credentials.length + result.totpSecrets.length + result.folders.length > 0) {
+      setView('preview');
+    } else {
+      setView('import');
+    }
+  }, [cachedSession, userId]);
+
+  const endFlowAndClose = useCallback(async () => {
+    if (userId) await clearPorterDraft(userId);
+    setCachedSession(null);
+    setDiscerned(null);
+    setRawText('');
+    setFileName(null);
+    setConfirmKind(null);
+    handleClose();
+  }, [userId, handleClose]);
+
   const visibleKinds = useMemo(() => {
     return KIND_OPTIONS.filter((opt) => {
       if (opt.importOnly && direction === 'export') return false;
       return true;
     });
   }, [direction]);
-
-  const handleClose = useCallback(() => {
-    onClose?.();
-  }, [onClose]);
 
   const goBack = () => {
     setError(null);
@@ -204,15 +288,23 @@ export default function EcosystemPorter({
     setRawText('');
     setFileName(null);
     setConfirmKind(null);
-    if (dir === 'export' && dataKind === 'auto') {
-      setDataKind(surface === 'vault-totp' ? 'totp' : surface === 'vault-secrets' ? 'secrets' : 'mixed');
-    }
+    const nextKind =
+      dir === 'export' && dataKind === 'auto'
+        ? surface === 'vault-totp'
+          ? 'totp'
+          : surface === 'vault-secrets'
+            ? 'secrets'
+            : 'mixed'
+        : dataKind;
+    if (nextKind !== dataKind) setDataKind(nextKind);
+    void persistSession({ direction: dir, dataKind: nextKind, result: null, fileName: null });
     setView('pick-kind');
   };
 
   const confirmKindPick = (kind: PorterDataKind) => {
     setDataKind(kind);
     setError(null);
+    void persistSession({ direction, dataKind: kind, result: discerned });
     if (direction === 'import') setView('import');
     else setView('export-format');
   };
@@ -232,7 +324,14 @@ export default function EcosystemPorter({
         }
         setDiscerned(result);
         setFileName(name || null);
-        if (userId) await cachePorterDraft(userId, result);
+        if (userId) {
+          await persistSession({
+            direction: 'import',
+            dataKind,
+            result,
+            fileName: name || null,
+          });
+        }
         if (result.credentials.length + result.totpSecrets.length + result.folders.length === 0) {
           setError(result.warnings[0] || 'Nothing matched the selected type.');
           setView('import');
@@ -246,7 +345,7 @@ export default function EcosystemPorter({
         setBusy(false);
       }
     },
-    [userId, dataKind],
+    [userId, dataKind, persistSession],
   );
 
   const scheduleDiscernFromPaste = useCallback(
@@ -302,6 +401,7 @@ export default function EcosystemPorter({
               toast.error(result.errors[0] || 'Import finished with errors');
             }
             await clearPorterDraft(userId);
+            setCachedSession(null);
             onImported?.();
             handleClose();
           } catch (e: any) {
@@ -579,6 +679,44 @@ export default function EcosystemPorter({
 
         {view === 'home' && (
           <>
+            {cachedSession && (
+              <div className="rounded-2xl border border-[#10B981]/40 bg-black px-5 py-4 space-y-3">
+                <div>
+                  <p className="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-white">
+                    In progress
+                  </p>
+                  <p className="text-base font-black text-white font-clash mt-1">
+                    {cachedSession.direction === 'import' ? 'Import' : 'Export'} ·{' '}
+                    {kindLabel(cachedSession.dataKind)}
+                  </p>
+                  <p className="text-sm font-medium text-white mt-1">
+                    {cachedSession.direction === 'import'
+                      ? cachedSession.result
+                        ? `${(cachedSession.result.credentials?.length || 0) + (cachedSession.result.totpSecrets?.length || 0)} item(s) ready to review`
+                        : 'Started — pick up where you left off'
+                      : `Backup as ${cachedSession.exportFormat === 'encrypted-html' ? 'locked HTML' : 'JSON'}`}
+                    {cachedSession.fileName ? ` · ${cachedSession.fileName}` : ''}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void resumeCachedSession()}
+                    className="flex-1 py-2.5 rounded-xl font-bold bg-[#10B981] text-black font-clash"
+                  >
+                    Open details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void cancelCachedSession()}
+                    className="flex-1 py-2.5 rounded-xl font-bold bg-black border border-white/20 text-white font-clash"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => startDirection('import')}
@@ -796,8 +934,14 @@ export default function EcosystemPorter({
 
             <button
               type="button"
-              disabled={busy || counts.importable === 0}
-              onClick={() => setConfirmKind('import')}
+              disabled={busy}
+              onClick={() => {
+                if (counts.importable === 0) {
+                  void endFlowAndClose();
+                  return;
+                }
+                setConfirmKind('import');
+              }}
               className="w-full py-3 rounded-xl font-bold bg-[#10B981] text-black disabled:opacity-50 font-clash"
             >
               {counts.importable === 0
@@ -826,7 +970,10 @@ export default function EcosystemPorter({
             <div className="rounded-2xl border border-white/20 bg-black p-1 flex gap-1">
               <button
                 type="button"
-                onClick={() => setExportFormat('json')}
+                onClick={() => {
+                  setExportFormat('json');
+                  void persistSession({ direction: 'export', dataKind, exportFormat: 'json' });
+                }}
                 className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-colors ${
                   exportFormat === 'json' ? 'bg-[#10B981] text-black' : 'text-white'
                 }`}
@@ -835,7 +982,14 @@ export default function EcosystemPorter({
               </button>
               <button
                 type="button"
-                onClick={() => setExportFormat('encrypted-html')}
+                onClick={() => {
+                  setExportFormat('encrypted-html');
+                  void persistSession({
+                    direction: 'export',
+                    dataKind,
+                    exportFormat: 'encrypted-html',
+                  });
+                }}
                 className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-colors ${
                   exportFormat === 'encrypted-html' ? 'bg-[#10B981] text-black' : 'text-white'
                 }`}
