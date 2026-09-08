@@ -727,6 +727,8 @@ export async function getCurrentUser(force = false): Promise<any | null> {
             const salvaged = await salvageUserFromLocalSubstrate();
             if (salvaged) return salvaged;
         }
+    }
+
     if (isDogfoodSafetyActive()) {
         const snap = readCurrentUserSnapshot(true);
         if (snap?.user) return snap.user;

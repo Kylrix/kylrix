@@ -331,7 +331,7 @@ export async function clearConversationFootprintInternal(payload: {
   jwt?: string;
   actorId?: string;
 }) {
-  let verifiedActorId = payload.actorId;
+  let verifiedActorId: string = payload.actorId || '';
   if (!verifiedActorId) {
     const { account } = await createServerClient(payload.jwt);
     const user = await account.get().catch(() => null);
@@ -391,7 +391,7 @@ export async function deleteConversationFullyInternal(payload: {
   jwt?: string;
   actorId?: string;
 }) {
-  let verifiedActorId = payload.actorId;
+  let verifiedActorId: string = payload.actorId || '';
   if (!verifiedActorId) {
     const { account } = await createServerClient(payload.jwt);
     const user = await account.get().catch(() => null);
@@ -496,7 +496,7 @@ export async function nuclearWipeConversationInternal(payload: {
   jwt?: string;
   actorId?: string;
 }) {
-  let verifiedActorId = payload.actorId;
+  let verifiedActorId: string = payload.actorId || '';
   if (!verifiedActorId) {
     const { account } = await createServerClient(payload.jwt);
     const user = await account.get().catch(() => null);
@@ -606,7 +606,7 @@ export async function toggleReactionInternal(payload: {
   jwt?: string;
   actorId?: string;
 }) {
-  let verifiedActorId = payload.actorId;
+  let verifiedActorId: string = payload.actorId || '';
   if (!verifiedActorId) {
     const { account } = await createServerClient(payload.jwt);
     const user = await account.get().catch(() => null);
@@ -676,7 +676,7 @@ export async function repairConversationInternal(payload: {
   actorId?: string;
   actorLabels?: string[];
 }) {
-  let verifiedActorId = payload.actorId;
+  let verifiedActorId: string = payload.actorId || '';
   let verifiedLabels = payload.actorLabels || [];
 
   if (!verifiedActorId) {
@@ -687,7 +687,7 @@ export async function repairConversationInternal(payload: {
     verifiedLabels = user.labels || [];
   }
 
-  const targetUserId = payload.userId || verifiedActorId;
+  const targetUserId: string = payload.userId || verifiedActorId;
   const isAdmin = Array.isArray(verifiedLabels) && verifiedLabels.includes('admin');
 
   if (verifiedActorId !== targetUserId && !isAdmin) {
@@ -995,7 +995,7 @@ export async function clearChatForMeInternal(payload: {
   jwt?: string;
   actorId?: string;
 }) {
-  let verifiedActorId = payload.actorId;
+  let verifiedActorId: string = payload.actorId || '';
   if (!verifiedActorId) {
     const { account } = await createServerClient(payload.jwt);
     const user = await account.get().catch(() => null);
@@ -1029,7 +1029,7 @@ export async function updateConversationInternal(payload: {
   jwt?: string;
   actorId?: string;
 }) {
-  let verifiedActorId = payload.actorId;
+  let verifiedActorId: string = payload.actorId || '';
   if (!verifiedActorId) {
     const { account } = await createServerClient(payload.jwt);
     const user = await account.get().catch(() => null);

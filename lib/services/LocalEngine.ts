@@ -8,6 +8,7 @@ import type { Models } from 'appwrite';
 
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
 import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
+import { client } from '@/lib/appwrite/client';
 
 /** Realtime subscription registry — one per channel, survives HMR */
 const realtimeSubs = new Map<string, { unsubscribe: () => void; refCount: number }>();
@@ -197,7 +198,6 @@ export const LocalEngine = {
       return () => { existing.refCount--; if (existing.refCount <= 0) { existing.unsubscribe(); realtimeSubs.delete(channel); } };
     }
     try {
-      const { client } = await import('@/lib/appwrite/client');
       const unsubscribe = client.subscribe(channel, async (event: any) => {
         try {
           if (event?.payload && event?.events?.[0]) {

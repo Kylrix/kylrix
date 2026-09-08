@@ -169,7 +169,7 @@ export async function permissionsInternal(
   payload: Record<string, unknown>,
   actorId?: string
 ) {
-  let effectiveActorId = actorId;
+  let effectiveActorId: string = actorId || '';
 
   if (!effectiveActorId) {
     const jwt = payload.jwt as string | undefined;
