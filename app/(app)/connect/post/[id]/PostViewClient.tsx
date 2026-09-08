@@ -123,6 +123,68 @@ function ParentPostStub({
   );
 }
 
+/** Ecosystem parent post stub — shown above a Kylrix reply moment. */
+function EcosystemParentStub({
+  moment,
+  creator,
+  loading,
+}: {
+  moment: any | null;
+  creator: any | null;
+  loading: boolean;
+}) {
+  const content = moment?.caption || moment?.content || '';
+  const { text, images } = extractPostImages(content, moment?.tags);
+  const preview = text.slice(0, 180) + (text.length > 180 ? '…' : '');
+  const who = creator?.displayName || creator?.username || moment?.userName || 'Someone';
+  const avatarUrl = creator?.avatarUrl || creator?.prefs?.avatarUrl || moment?.avatarUrl;
+  const ts = moment?.$createdAt || moment?.createdAt;
+  const tsMs = ts ? new Date(ts).getTime() : 0;
+
+  return (
+    <div className="relative pl-4">
+      {/* Vertical thread line */}
+      <div className="absolute left-[18px] top-0 bottom-0 w-[2px] bg-white/[0.10] rounded-full" />
+      <div className="ml-6 rounded-[18px] border-2 border-white/15 bg-[#0F0D0C] p-3.5 space-y-2 opacity-80">
+        {loading && !moment ? (
+          <p className="text-xs text-white/35 font-mono">Loading original post…</p>
+        ) : !moment ? (
+          <p className="text-xs text-white/30 font-mono italic">Original post not available.</p>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover border border-white/20 shrink-0" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-[#1C1A18] border border-white/[0.08] text-[10px] font-black text-emerald-400 flex items-center justify-center shrink-0">
+                  {initials(who)}
+                </div>
+              )}
+              <span className="text-[11px] font-bold text-white/70 truncate">{who}</span>
+              <Shield size={10} className="text-emerald-400 shrink-0" />
+              {tsMs > 0 && (
+                <span className="ml-auto text-[10px] text-white/30 font-mono shrink-0">
+                  {formatTs(tsMs)}
+                </span>
+              )}
+            </div>
+            {preview && (
+              <p className="text-[13px] leading-relaxed text-white/70 font-satoshi whitespace-pre-wrap break-words m-0">
+                {preview}
+              </p>
+            )}
+            {images[0] && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={images[0]} alt="" className="w-full h-24 object-cover rounded-lg border border-white/[0.06]" loading="lazy" />
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Comment = full moment object — same engagement surface as the parent post. */
 function CommentMomentRow({
   comment,
@@ -462,6 +524,10 @@ export function PostViewClient({
   const [nostrEvent, setNostrEvent] = useState<NostrEvent | null>(null);
   const [parentEvent, setParentEvent] = useState<NostrEvent | null>(null);
   const [parentLoading, setParentLoading] = useState(false);
+  // For Ecosystem reply thread detection
+  const [ecoParentMoment, setEcoParentMoment] = useState<any | null>(null);
+  const [ecoParentCreator, setEcoParentCreator] = useState<any | null>(null);
+  const [ecoParentLoading, setEcoParentLoading] = useState(false);
   const [engagementDrawer, setEngagementDrawer] = useState<{ open: boolean; kind: 'reaction' | 'zap' | 'repost'; content?: string; zapAmount?: number }>({ open: false, kind: 'reaction' });
 
   useEffect(() => {
@@ -487,6 +553,39 @@ export function PostViewClient({
               const profile = await UsersService.getProfileById(creatorId);
               if (!cancelled) setCreator(profile);
             } catch { /* keep preview */ }
+          }
+
+          // If this is an ecosystem reply — fetch the parent moment for the thread stub
+          const ecoSourceId = String(data?.sourceId || '').trim() ||
+            (() => {
+              try {
+                const meta = data?.fileId && String(data.fileId).startsWith('{') ? JSON.parse(data.fileId) : null;
+                return String(meta?.sourceId || '').trim();
+              } catch { return ''; }
+            })();
+          const ecoKind = String(data?.momentKind || '').trim().toLowerCase();
+
+          if ((ecoKind === 'reply' || ecoSourceId) && ecoSourceId && !cancelled) {
+            setEcoParentLoading(true);
+            void (async () => {
+              try {
+                const parentData = await SocialService.getMomentById(ecoSourceId);
+                if (!cancelled) {
+                  setEcoParentMoment(parentData);
+                  const parentCreatorId = parentData?.userId || parentData?.creatorId;
+                  if (parentCreatorId) {
+                    try {
+                      const parentProfile = await UsersService.getProfileById(parentCreatorId);
+                      if (!cancelled) setEcoParentCreator(parentProfile);
+                    } catch { /* use whatever is in parentData */ }
+                  }
+                }
+              } catch {
+                if (!cancelled) setEcoParentMoment(null);
+              } finally {
+                if (!cancelled) setEcoParentLoading(false);
+              }
+            })();
           }
         } else {
           // Try local feed cache first
@@ -732,6 +831,11 @@ export function PostViewClient({
   const isReaction = eventType === 'reaction';
   const isRepost = eventType === 'repost';
   const showParent = (isReply || isReaction || isRepost) && (parentLoading || parentEvent);
+  // Ecosystem reply detection
+  const isEcoReply = source === 'ecosystem' && (
+    String(moment?.momentKind || '').toLowerCase() === 'reply' || Boolean(ecoParentMoment) || ecoParentLoading
+  );
+  const showEcoParent = isEcoReply && (ecoParentLoading || ecoParentMoment);
 
   const reactionContent = isReaction ? (moment?.content || '+') : undefined;
 
@@ -836,7 +940,7 @@ export function PostViewClient({
           <ArrowLeft size={18} />
         </button>
         <span className="text-sm font-extrabold font-clash truncate">
-          {isReaction ? 'Reaction' : isRepost ? 'Repost' : isReply ? 'Reply' : 'Moment'}
+          {isReaction ? 'Reaction' : isRepost ? 'Repost' : (isReply || isEcoReply) ? 'Reply' : 'Moment'}
         </span>
         {isReaction && (
           <span className="ml-auto text-2xl leading-none">{reactionEmoji(reactionContent || '+')}</span>
@@ -844,7 +948,7 @@ export function PostViewClient({
         {isRepost && (
           <Repeat2 size={16} className="ml-auto text-[#00BA7C]" />
         )}
-        {isReply && (
+        {(isReply || isEcoReply) && (
           <div className="ml-auto flex items-center gap-1 text-[11px] text-white/60 font-mono">
             <MessageCircle size={12} /> Reply thread
           </div>
@@ -853,7 +957,20 @@ export function PostViewClient({
 
       <div className="px-3 sm:px-4 py-4 space-y-3 min-w-0 max-w-full">
 
-        {/* Parent post stub — shown above for replies/reactions/reposts */}
+        {/* Ecosystem parent post stub — shown above ecosystem replies */}
+        {showEcoParent && (
+          <EcosystemParentStub moment={ecoParentMoment} creator={ecoParentCreator} loading={ecoParentLoading} />
+        )}
+
+        {/* Thread connector pip for ecosystem replies */}
+        {showEcoParent && (
+          <div className="flex items-center gap-2 pl-5 py-1">
+            <div className="h-4 w-[2px] bg-white/20 rounded-full ml-[14px]" />
+            <span className="text-[10px] text-white/50 font-mono">replied to</span>
+          </div>
+        )}
+
+        {/* Parent post stub — shown above for Nostr replies/reactions/reposts */}
         {showParent && (
           <ParentPostStub event={parentEvent} loading={parentLoading} />
         )}
