@@ -7,6 +7,7 @@
 import type { Models } from 'appwrite';
 
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
+import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
 
 /** Realtime subscription registry — one per channel, survives HMR */
 const realtimeSubs = new Map<string, { unsubscribe: () => void; refCount: number }>();
@@ -148,14 +149,16 @@ export const LocalEngine = {
   async instantWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
     await this.cacheSet(cacheKey, data);
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data } }));
-    void (async () => {
-      try {
-        const jwt = await getFreshJWT();
-        await mutator(jwt);
-      } catch (e: any) {
-        console.warn('[LocalEngine instantWrite] sync failed, revert may be needed', e);
-      }
-    })();
+    if (!isDogfoodSafetyActive()) {
+      void (async () => {
+        try {
+          const jwt = await getFreshJWT();
+          await mutator(jwt);
+        } catch (e: any) {
+          console.warn('[LocalEngine instantWrite] sync failed, revert may be needed', e);
+        }
+      })();
+    }
     return data;
   },
 
@@ -163,9 +166,11 @@ export const LocalEngine = {
   async lazyWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
     await this.cacheSet(cacheKey, data);
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data } }));
-    setTimeout(async () => {
-      try { const jwt = await getFreshJWT(); await mutator(jwt); } catch (e) { console.warn('[LocalEngine lazyWrite] failed', e); }
-    }, 800);
+    if (!isDogfoodSafetyActive()) {
+      setTimeout(async () => {
+        try { const jwt = await getFreshJWT(); await mutator(jwt); } catch (e) { console.warn('[LocalEngine lazyWrite] failed', e); }
+      }, 800);
+    }
     return data;
   },
 
@@ -182,11 +187,15 @@ export const LocalEngine = {
     return data;
   },
 
-  /** Realtime: subscribe to Appwrite channel, write directly to RxDB cache on event — prevents pull-before-push double read */
-  async subscribeRealtime(channel: string, handler?: (payload: any) => void): Promise<() => void> {
+  /** Subscribe to Realtime events for a channel and pipe to local cache */
+  subscribeRealtime(channel: string, handler?: (event: any) => void): () => void {
     if (typeof window === 'undefined') return () => {};
-    const existing = realtimeSubs.get(channel);
-    if (existing) { existing.refCount++; return () => { existing.refCount--; if (existing.refCount <= 0) { existing.unsubscribe(); realtimeSubs.delete(channel); } }; }
+    if (isDogfoodSafetyActive()) return () => {};
+    if (realtimeSubs.has(channel)) {
+      const existing = realtimeSubs.get(channel)!;
+      existing.refCount++;
+      return () => { existing.refCount--; if (existing.refCount <= 0) { existing.unsubscribe(); realtimeSubs.delete(channel); } };
+    }
     try {
       const { client } = await import('@/lib/appwrite/client');
       const unsubscribe = client.subscribe(channel, async (event: any) => {
@@ -228,9 +237,13 @@ export const LocalEngine = {
     const cached = opts?.force ? null : await this.cacheGet<T>(cacheKey, ttl);
 
     if (cached) {
-      if (opts?.realtimeChannel) void this.subscribeRealtime(opts.realtimeChannel);
+      if (opts?.realtimeChannel && !isDogfoodSafetyActive()) void this.subscribeRealtime(opts.realtimeChannel);
 
-      // Throttled background revalidation: at most once every 3 minutes per cacheKey
+      // Throttled background revalidation: at most once every 3 minutes per cacheKey (disabled in Dogfood Safety)
+      if (isDogfoodSafetyActive()) {
+        return cached;
+      }
+
       const lastReval = backgroundRevalidationCooldowns.get(cacheKey) || 0;
       const now = Date.now();
       if (now - lastReval > 1000 * 60 * 3 && !inflightQueries.has(cacheKey)) {
@@ -251,6 +264,10 @@ export const LocalEngine = {
         inflightQueries.set(cacheKey, revalPromise);
       }
       return cached;
+    }
+
+    if (isDogfoodSafetyActive()) {
+      return (Array.isArray(cached) ? [] : { total: 0, rows: [] }) as unknown as T;
     }
 
     // Cache miss: coalesce concurrent inflight queries

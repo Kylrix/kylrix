@@ -11,7 +11,18 @@ import { cache } from 'react';
  * - Supports exhaustive cookie discovery.
  * - Prioritizes explicit JWT for cross-environment reliability.
  */
+import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
+
 export const createServerClient = cache(async (jwt?: string) => {
+  if (isDogfoodSafetyActive()) {
+    const stubClient = new Client() as any;
+    const stubAccount = {
+      get: async () => { throw new Error('DOGFOOD_SAFETY: Remote backend access is disabled'); },
+      createJWT: async () => ({ jwt: '' }),
+    } as any;
+    return { client: stubClient, account: stubAccount };
+  }
+
   const client = configureInternalAppwriteClient(new Client());
   
   // Use the primary ecosystem endpoint for session/JWT validation.

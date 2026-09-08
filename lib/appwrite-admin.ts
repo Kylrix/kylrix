@@ -104,6 +104,8 @@ export function createSystemClient() {
   return cachedSystemClient;
 }
 
+import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
+
 function createProxiedDatabases(client: Client) {
   const original = new Databases(client);
   const tablesDB = new TablesDB(client);
@@ -112,11 +114,17 @@ function createProxiedDatabases(client: Client) {
     get(target, prop, receiver) {
       if (prop === 'listRows') {
         return async (databaseId: string, tableId: string, queries?: any[]) => {
+          if (isDogfoodSafetyActive()) {
+            return { total: 0, rows: [] };
+          }
           return tablesDB.listRows({ databaseId, tableId, queries });
         };
       }
       if (prop === 'getRow') {
         return async (databaseId: string, tableId: string, rowId: string, queries?: any[]) => {
+          if (isDogfoodSafetyActive()) {
+            return null;
+          }
           return tablesDB.getRow({ databaseId, tableId, rowId, queries });
         };
       }
@@ -127,6 +135,9 @@ function createProxiedDatabases(client: Client) {
           rowId: string,
           data: any,
           permissions?: string[]) => {
+          if (isDogfoodSafetyActive()) {
+            return { $id: rowId, ...data };
+          }
           return tablesDB.createRow({ databaseId, tableId, rowId, data, permissions });
         };
       }
@@ -137,11 +148,17 @@ function createProxiedDatabases(client: Client) {
           rowId: string,
           data: any,
           permissions?: string[]) => {
+          if (isDogfoodSafetyActive()) {
+            return { $id: rowId, ...data };
+          }
           return tablesDB.updateRow({ databaseId, tableId, rowId, data, permissions });
         };
       }
       if (prop === 'deleteRow') {
         return async (databaseId: string, tableId: string, rowId: string) => {
+          if (isDogfoodSafetyActive()) {
+            return { success: true };
+          }
           return tablesDB.deleteRow({ databaseId, tableId, rowId });
         };
       }
@@ -186,8 +203,22 @@ export function createSystemTablesDB(): TablesDB {
 
   const proxied = new Proxy(rawTablesDB, {
     get(target, prop, receiver) {
+      if (prop === 'createRow') {
+        return async (...args: any[]) => {
+          if (isDogfoodSafetyActive()) {
+            const data = args[0]?.data || args[3] || {};
+            const rowId = args[0]?.rowId || args[2] || `local_${Date.now()}`;
+            return { $id: rowId, ...data };
+          }
+          return (target as any).createRow(...args);
+        };
+      }
+
       if (prop === 'getRow') {
         return async (...args: any[]) => {
+          if (isDogfoodSafetyActive()) {
+            return null;
+          }
           let databaseId = '';
           let tableId = '';
           let rowId = '';
@@ -236,6 +267,9 @@ export function createSystemTablesDB(): TablesDB {
 
       if (prop === 'listRows') {
         return async (...args: any[]) => {
+          if (isDogfoodSafetyActive()) {
+            return { total: 0, rows: [] };
+          }
           let databaseId = '';
           let tableId = '';
           let queries: any[] | undefined;
@@ -286,12 +320,17 @@ export function createSystemTablesDB(): TablesDB {
           let databaseId = '';
           let tableId = '';
           let rowId = '';
+          let data: any = {};
           if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
             databaseId = args[0].databaseId;
             tableId = args[0].tableId;
             rowId = args[0].rowId;
+            data = args[0].data || {};
           } else {
-            [databaseId, tableId, rowId] = args;
+            [databaseId, tableId, rowId, data] = args;
+          }
+          if (isDogfoodSafetyActive()) {
+            return { $id: rowId, ...data };
           }
           const res = await (target as any).updateRow(...args);
           if (databaseId && tableId) {
@@ -312,6 +351,9 @@ export function createSystemTablesDB(): TablesDB {
             rowId = args[0].rowId;
           } else {
             [databaseId, tableId, rowId] = args;
+          }
+          if (isDogfoodSafetyActive()) {
+            return { success: true };
           }
           const res = await (target as any).deleteRow(...args);
           if (databaseId && tableId) {

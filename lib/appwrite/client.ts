@@ -15,6 +15,8 @@ const initAppwrite = () => {
     }
 };
 
+import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
+
 initAppwrite();
 export const account = new Account(client);
 const originalDatabases = new Databases(client);
@@ -27,6 +29,9 @@ export function getSessionTablesDB(): TablesDB {
 
 // Helper to fetch JWT securely from client-side SDK
 async function getJwt(): Promise<string | undefined> {
+  if (isDogfoodSafetyActive()) {
+    return undefined;
+  }
   if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && !navigator.onLine) {
     return undefined;
   }
@@ -102,6 +107,9 @@ const databasesProxy = new Proxy(originalDatabases, {
                 const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
                 const payload = data ? { ...data } : {};
                 if (rowId) payload.$id = rowId;
+                if (isDogfoodSafetyActive()) {
+                    return payload;
+                }
                 const jwt = await getJwt();
                 const { createRowSecure } = await import('@/lib/actions/secure-ops');
                 return await createRowSecure(databaseId, tableId, payload, permissions, jwt);
@@ -110,6 +118,9 @@ const databasesProxy = new Proxy(originalDatabases, {
         if (prop === 'updateRow' || prop === 'updateRow') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
+                if (isDogfoodSafetyActive()) {
+                    return { $id: rowId, ...data };
+                }
                 const jwt = await getJwt();
                 const { updateRowSecure } = await import('@/lib/actions/secure-ops');
                 const res = await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
@@ -120,6 +131,9 @@ const databasesProxy = new Proxy(originalDatabases, {
         }
         if (prop === 'listRows' || prop === 'listRows' || prop === 'listDocuments' || prop === 'listDocuments') {
             return async (...args: any[]) => {
+                if (isDogfoodSafetyActive()) {
+                    return { total: 0, rows: [] };
+                }
                 let dbId: string = '';
                 let tblId: string = '';
                 let q: any[] | undefined;
@@ -145,6 +159,9 @@ const databasesProxy = new Proxy(originalDatabases, {
         }
         if (prop === 'getRow' || prop === 'getRow' || prop === 'getDocument' || prop === 'getDocument') {
             return async (...args: any[]) => {
+                if (isDogfoodSafetyActive()) {
+                    return null;
+                }
                 let dbId: string = '';
                 let tblId: string = '';
                 let rId: string = '';
@@ -171,6 +188,9 @@ const databasesProxy = new Proxy(originalDatabases, {
         if (prop === 'deleteRow' || prop === 'deleteRow') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId } = parseDatabasesDeleteArgs(args);
+                if (isDogfoodSafetyActive()) {
+                    return { success: true };
+                }
                 const jwt = await getJwt();
                 const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
                 const res = await deleteRowSecure(databaseId, tableId, rowId, jwt);
@@ -193,6 +213,9 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
                 const { databaseId, tableId, rowId, data, permissions } = parseTablesDBArgs(args);
                 const payload = data ? { ...data } : {};
                 if (rowId) payload.$id = rowId;
+                if (isDogfoodSafetyActive()) {
+                    return payload;
+                }
                 const jwt = await getJwt();
                 const { createRowSecure } = await import('@/lib/actions/secure-ops');
                 return await createRowSecure(databaseId, tableId, payload, permissions, jwt);
@@ -201,6 +224,9 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
         if (prop === 'updateRow') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId, data, permissions } = parseTablesDBArgs(args);
+                if (isDogfoodSafetyActive()) {
+                    return { $id: rowId, ...data };
+                }
                 const jwt = await getJwt();
                 const { updateRowSecure } = await import('@/lib/actions/secure-ops');
                 const res = await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
@@ -211,6 +237,9 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
         }
         if (prop === 'listRows' || prop === 'listDocuments') {
             return async (...args: any[]) => {
+                if (isDogfoodSafetyActive()) {
+                    return { total: 0, rows: [] };
+                }
                 let dbId: string = '';
                 let tblId: string = '';
                 let q: any[] | undefined;
@@ -236,6 +265,9 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
         }
         if (prop === 'getRow' || prop === 'getDocument') {
             return async (...args: any[]) => {
+                if (isDogfoodSafetyActive()) {
+                    return null;
+                }
                 let dbId: string = '';
                 let tblId: string = '';
                 let rId: string = '';
@@ -262,6 +294,9 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
         if (prop === 'deleteRow') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId } = parseTablesDBDeleteArgs(args);
+                if (isDogfoodSafetyActive()) {
+                    return { success: true };
+                }
                 const jwt = await getJwt();
                 const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
                 const res = await deleteRowSecure(databaseId, tableId, rowId, jwt);
@@ -282,7 +317,21 @@ export const avatars = new Avatars(client);
 export const teams = new Teams(client);
 export const functions = new Functions(client);
 export const locale = new Locale(client);
-export const realtime = new Realtime(client);
+const originalRealtime = new Realtime(client);
+export const realtime = new Proxy(originalRealtime, {
+    get(target, prop, receiver) {
+        if (prop === 'subscribe') {
+            return (...args: any[]) => {
+                if (isDogfoodSafetyActive()) {
+                    return () => {};
+                }
+                return (target as any).subscribe(...args);
+            };
+        }
+        const val = Reflect.get(target, prop, receiver);
+        return typeof val === 'function' ? val.bind(target) : val;
+    }
+}) as unknown as Realtime;
 
 // Aliases for compatibility
 export const appwriteAccount = account;
@@ -678,6 +727,12 @@ export async function getCurrentUser(force = false): Promise<any | null> {
             const salvaged = await salvageUserFromLocalSubstrate();
             if (salvaged) return salvaged;
         }
+    if (isDogfoodSafetyActive()) {
+        const snap = readCurrentUserSnapshot(true);
+        if (snap?.user) return snap.user;
+        const salvaged = await salvageUserFromLocalSubstrate();
+        if (salvaged) return salvaged;
+        return null;
     }
 
     if (currentUserInFlight) {
@@ -768,6 +823,7 @@ export async function resolveCurrentUser(req?: { headers: { get(k: string): stri
 // Per-request user fetch using incoming Cookie header
 export async function getCurrentUserFromRequest(req: { headers: { get(k: string): string | null } } | null | undefined): Promise<any | null> {
     try {
+        if (isDogfoodSafetyActive()) return null;
         if (!req) return null;
         const cookieHeader = req.headers.get('cookie') || req.headers.get('Cookie');
         if (!cookieHeader) return null;

@@ -33,6 +33,18 @@ export function isIntegratedBackend(): boolean {
   return parseEnvFlag(flag);
 }
 
+/**
+ * Dogfood Safety mode: total airgap against remote backend to prevent burning database read/write limits.
+ * Cuts off all remote backend operations; application relies strictly on LocalEngine / RxDB substrate.
+ */
+export function isDogfoodSafetyActive(): boolean {
+  const flag =
+    typeof window === 'undefined'
+      ? process.env.DOGFOOD_SAFETY || process.env.NEXT_PUBLIC_DOGFOOD_SAFETY
+      : process.env.NEXT_PUBLIC_DOGFOOD_SAFETY || (window as any)?.__KYLRIX_DOGFOOD_SAFETY__;
+  return parseEnvFlag(flag);
+}
+
 /** Commerce/checkout + tier paywalls — enabled for cloud deployments with pricing tiers on. */
 export function isBillingCommerceEnabled(): boolean {
   if (typeof window === 'undefined') {

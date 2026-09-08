@@ -17,6 +17,7 @@ import { getNotePublicState } from '@/lib/appwrite';
 import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
 import { getLiveNoteForSync, getLiveGoalForSync, getLiveEventForSync } from '@/lib/sync/pending-sync-bridge';
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
 import type { Event } from '@/types';
 
 function safeIsoString(val: any): string {
@@ -828,6 +829,7 @@ export const autonomicSyncEngine = {
    * Background engine fetch — zero UI overhead. Replaces local copy only if un-pending and remote differs.
    */
   requestObjectFreshness(kind: 'note' | 'goal' | 'workspace' | 'flows', id?: string, onRefreshed?: (item: any) => void) {
+    if (isDogfoodSafetyActive()) return;
     if (kind === 'flows') {
       void (async () => {
         try {
@@ -1048,6 +1050,7 @@ export const autonomicSyncEngine = {
    */
   async runCycle() {
     if (isSyncing) return;
+    if (isDogfoodSafetyActive()) return;
     if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && !navigator.onLine) {
       return;
     }
