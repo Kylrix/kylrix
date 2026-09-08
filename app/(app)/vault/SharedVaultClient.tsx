@@ -68,7 +68,7 @@ async function decryptWithDek(ciphertext: string, dek: CryptoKey): Promise<strin
 }
 
 import { looksEncrypted } from '@/lib/masterpass-crypto';
-import { normalizeCustomFields } from '@/lib/vault/parse-env';
+import { normalizeCustomFields, formatEnvText } from '@/lib/vault/parse-env';
 
 export default function SharedVaultClient({ credentialId, dekFragment, rawCredential }: SharedVaultClientProps & { rawCredential: any }) {
   const [credential, setCredential] = useState<DecryptedCredential | null>(null);
@@ -283,7 +283,42 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
 
           {credential.customFields?.length > 0 && (
             <div className="svc-field">
-              <label>{credential.isEnv || (!credential.password && !credential.username) ? 'Variables' : 'Custom Fields'}</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <label style={{ margin: 0 }}>
+                  {credential.isEnv || (!credential.password && !credential.username) ? 'Variables' : 'Custom Fields'}
+                </label>
+                {(credential.isEnv || (!credential.password && !credential.username)) && (
+                  <button
+                    className="svc-btn"
+                    onClick={() => copyToClipboard(formatEnvText(credential.customFields), 'all-envs')}
+                    title="Copy all variables as .env"
+                    style={{
+                      fontSize: '11px',
+                      padding: '4px 8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.06)',
+                      color: copied === 'all-envs' ? '#10B981' : '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {copied === 'all-envs' ? (
+                      <>
+                        <CheckCircle2 size={12} className="copied" />
+                        <span>Copied .env</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={12} />
+                        <span>Copy .env</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
               <div className="svc-custom-fields">
                 {credential.customFields.map((field, index) => (
                   <div key={field.id || index} className="svc-custom-row">

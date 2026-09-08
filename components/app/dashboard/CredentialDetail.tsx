@@ -28,7 +28,7 @@ import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { looksEncrypted } from '@/lib/masterpass-crypto';
-import { normalizeCustomFields } from '@/lib/vault/parse-env';
+import { normalizeCustomFields, formatEnvText } from '@/lib/vault/parse-env';
 import toast from 'react-hot-toast';
 
 const labelClass =
@@ -255,7 +255,11 @@ export default function CredentialDetail({
     }
   }, [credential, isPublic, liveCredential]);
 
-  const handleCopy = async (textToCopy: string | null | undefined, field: string) => {
+  const handleCopy = async (
+    textToCopy: string | null | undefined,
+    field: string,
+    successMessage = 'Copied',
+  ) => {
     if (!textToCopy) return;
     try {
       if (navigator.clipboard?.writeText) {
@@ -272,7 +276,7 @@ export default function CredentialDetail({
         document.body.removeChild(textArea);
       }
       setCopied(field);
-      toast.success('Copied');
+      toast.success(successMessage);
       setTimeout(() => setCopied(null), 1500);
     } catch {
       toast.error('Failed to copy');
@@ -284,6 +288,15 @@ export default function CredentialDetail({
     () => normalizeCustomFields(liveCredential.customFields),
     [liveCredential.customFields],
   );
+
+  const handleCopyAllEnvs = () => {
+    if (!customFields.length) {
+      toast.error('No variables to copy');
+      return;
+    }
+    const envText = formatEnvText(customFields);
+    handleCopy(envText, 'all-envs', 'Copied .env');
+  };
 
   if (!credential) return null;
 
@@ -414,6 +427,24 @@ export default function CredentialDetail({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            {isEnv && customFields.length > 0 && (
+              <button
+                type="button"
+                onClick={handleCopyAllEnvs}
+                className={`p-2 rounded-xl border transition-colors ${
+                  copied === 'all-envs'
+                    ? 'text-[#10B981] bg-black border-[#10B981]'
+                    : 'text-white bg-black border-white/20 hover:border-white/40'
+                }`}
+                title={copied === 'all-envs' ? 'Copied .env' : 'Copy .env'}
+              >
+                {copied === 'all-envs' ? (
+                  <Check className="w-4 h-4 text-[#10B981]" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={handleShareLink}
@@ -589,7 +620,28 @@ export default function CredentialDetail({
 
           {customFields.length > 0 && (
             <div className="flex flex-col gap-3">
-              <span className={labelClass}>{isEnv ? 'Variables' : 'Custom Fields'}</span>
+              <div className="flex items-center justify-between">
+                <span className={labelClass}>{isEnv ? 'Variables' : 'Custom Fields'}</span>
+                {isEnv && (
+                  <button
+                    type="button"
+                    onClick={handleCopyAllEnvs}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold font-satoshi border transition-colors ${
+                      copied === 'all-envs'
+                        ? 'bg-black border-[#10B981] text-[#10B981]'
+                        : 'bg-black border-white/20 text-white hover:border-white/40'
+                    }`}
+                    title="Copy all variables as .env"
+                  >
+                    {copied === 'all-envs' ? (
+                      <Check className="w-3.5 h-3.5 text-[#10B981]" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copied === 'all-envs' ? 'Copied .env' : 'Copy .env'}</span>
+                  </button>
+                )}
+              </div>
               <div className="flex flex-col gap-2.5">
                 {customFields.map((field, index) => (
                   <div key={field.id || index} className="flex flex-col gap-1">

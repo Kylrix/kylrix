@@ -78,3 +78,26 @@ export function normalizeCustomFields(raw: unknown): EnvField[] {
   }
   return [];
 }
+
+/** Format custom-field env rows back into KEY=VALUE lines for .env pasting. */
+export function formatEnvText(
+  fields: Array<{ label?: string; key?: string; value?: string }>,
+): string {
+  if (!fields || !Array.isArray(fields)) return '';
+  return fields
+    .map((f) => {
+      const key = (f.label ?? (f as any).key ?? '').trim();
+      const rawVal = f.value ?? '';
+      if (!key) return rawVal;
+      let val = rawVal;
+      if (
+        (val.includes(' ') || val.includes('\n') || val.includes('#')) &&
+        !((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'")))
+      ) {
+        val = `"${val.replace(/"/g, '\\"')}"`;
+      }
+      return `${key}=${val}`;
+    })
+    .filter((line) => line.length > 0)
+    .join('\n');
+}
