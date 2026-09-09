@@ -11,6 +11,8 @@ import { useAuth } from '@/lib/auth';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getUserBadgesAction } from '@/lib/actions/sponsor-actions';
 import { BadgeChip } from '@/components/sponsor/SponsorBadges';
+import { fetchNostrFollowers, fetchNostrFollowing } from '@/lib/nostr/user-activity';
+import { bytesToHex, npubToBytes } from '@/lib/nostr/crypto';
 import toast from 'react-hot-toast';
 
 /**
@@ -50,6 +52,9 @@ export function ProfileSidebar({
   const uid = profile?.userId || profile?.$id || userId;
   const [badges, setBadges] = useState<any[]>([]);
 
+  const [nostrFollowersCount, setNostrFollowersCount] = useState<number | null>(null);
+  const [nostrFollowingCount, setNostrFollowingCount] = useState<number | null>(null);
+
   useEffect(() => {
     if (!uid || isGroup) return;
     getUserBadgesAction(uid)
@@ -58,6 +63,38 @@ export function ProfileSidebar({
       })
       .catch(() => {});
   }, [uid, isGroup]);
+
+  // Fetch real Nostr followers/following counts
+  useEffect(() => {
+    if (isGroup) return;
+    let cancelled = false;
+
+    let hex = profile?.nostrPubkey || profile?.pubkey;
+    if (!hex && profile?.nostrNpub) {
+      try {
+        hex = bytesToHex(npubToBytes(profile.nostrNpub));
+      } catch {}
+    }
+
+    if (!hex) return;
+
+    void (async () => {
+      try {
+        const [followers, following] = await Promise.all([
+          fetchNostrFollowers(hex, 3500).catch(() => []),
+          fetchNostrFollowing(hex, 3500).catch(() => []),
+        ]);
+        if (!cancelled) {
+          setNostrFollowersCount(followers.length);
+          setNostrFollowingCount(following.length);
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile, isGroup]);
 
   useEffect(() => {
     if (isGroup) return;
@@ -274,18 +311,48 @@ export function ProfileSidebar({
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-[#161412] border border-white/20 px-3 py-2">
+              <button
+                type="button"
+                onClick={() => {
+                  let hex = profile?.nostrPubkey || profile?.pubkey;
+                  if (!hex && profile?.nostrNpub) {
+                    try { hex = bytesToHex(npubToBytes(profile.nostrNpub)); } catch {}
+                  }
+                  openUnified('follow-list', {
+                    pubkey: hex || undefined,
+                    npub: profile?.nostrNpub || undefined,
+                    type: 'following',
+                    targetName: displayName,
+                  });
+                }}
+                className="rounded-xl bg-[#161412] border border-white/20 px-3 py-2 hover:border-white/40 transition-all cursor-pointer text-left"
+              >
                 <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 m-0">Following</p>
                 <p className="text-xs font-extrabold text-white m-0 mt-0.5 tabular-nums">
-                  {profile?.followingCount ?? profile?.stats?.following ?? '—'}
+                  {nostrFollowingCount ?? profile?.followingCount ?? profile?.stats?.following ?? '—'}
                 </p>
-              </div>
-              <div className="rounded-xl bg-[#161412] border border-white/20 px-3 py-2">
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  let hex = profile?.nostrPubkey || profile?.pubkey;
+                  if (!hex && profile?.nostrNpub) {
+                    try { hex = bytesToHex(npubToBytes(profile.nostrNpub)); } catch {}
+                  }
+                  openUnified('follow-list', {
+                    pubkey: hex || undefined,
+                    npub: profile?.nostrNpub || undefined,
+                    type: 'followers',
+                    targetName: displayName,
+                  });
+                }}
+                className="rounded-xl bg-[#161412] border border-white/20 px-3 py-2 hover:border-white/40 transition-all cursor-pointer text-left"
+              >
                 <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 m-0">Followers</p>
                 <p className="text-xs font-extrabold text-white m-0 mt-0.5 tabular-nums">
-                  {profile?.followerCount ?? profile?.stats?.followers ?? '—'}
+                  {nostrFollowersCount ?? profile?.followerCount ?? profile?.stats?.followers ?? '—'}
                 </p>
-              </div>
+              </button>
             </div>
           )}
 
