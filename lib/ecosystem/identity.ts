@@ -1,5 +1,5 @@
 import { databases, CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, Query } from '../appwrite';
-
+import { bytesToHex, hexToBytes, bytesToNpub, npubToBytes } from '@/lib/nostr/crypto';
 
 /**
  * Ensures the user has a record in the global Kylrix Connect Directory.
@@ -8,11 +8,85 @@ import { databases, CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, Query } from '.
 
 /**
  * Searches for users across the entire ecosystem via the global directory.
- * Supports email, username, and display name.
+ * Supports email, username, display name, and Nostr npub / public key.
  */
 export async function searchGlobalUsers(query: string, limit = 10) {
     const cleaned = query.trim().replace(/^@/, '');
     if (!query || cleaned.length < 1) return [];
+
+    // Check if query is a Nostr public key or npub
+    const isNpub = cleaned.startsWith('npub1') && cleaned.length >= 50;
+    const isHexNostr = /^[0-9a-fA-F]{64}$/.test(cleaned);
+
+    if (isNpub || isHexNostr) {
+        try {
+            let npub = cleaned;
+            let pubkeyHex = cleaned;
+
+            if (isNpub) {
+                try {
+                    pubkeyHex = bytesToHex(npubToBytes(cleaned));
+                } catch {
+                    pubkeyHex = cleaned;
+                }
+            } else if (isHexNostr) {
+                try {
+                    npub = bytesToNpub(hexToBytes(cleaned.toLowerCase()));
+                    pubkeyHex = cleaned.toLowerCase();
+                } catch {
+                    npub = cleaned;
+                }
+            }
+
+            const { resolveNostrPubkeysAction } = await import('@/lib/actions/secure-ops/nostr');
+            const resolvedMap: Record<string, any> = await resolveNostrPubkeysAction([npub]).catch(() => ({}));
+
+            const ecosystemProfile = resolvedMap[npub];
+
+            if (ecosystemProfile?.userId) {
+                const { searchGlobalUsersSecure } = await import('@/lib/actions/secure-ops');
+                const userDocs = await searchGlobalUsersSecure(ecosystemProfile.userId, 1).catch(() => []);
+                const userDoc = Array.isArray(userDocs) && userDocs.length > 0 ? userDocs[0] : null;
+
+                return [{
+                    id: ecosystemProfile.userId,
+                    userId: ecosystemProfile.userId,
+                    type: 'user' as const,
+                    displayName: userDoc?.displayName || ecosystemProfile.username || 'Kylrix User',
+                    username: userDoc?.username || ecosystemProfile.username || null,
+                    title: userDoc?.displayName || (userDoc?.username ? `@${userDoc.username}` : ecosystemProfile.username || 'Kylrix User'),
+                    subtitle: `Nostr npub: ${npub.slice(0, 12)}…`,
+                    avatar: userDoc?.avatar || ecosystemProfile.avatarUrl || null,
+                    viaNpub: true,
+                    isEcosystemUser: true,
+                    isNostrOnly: false,
+                    nostrNpub: npub,
+                    nostrPubkeyHex: pubkeyHex,
+                    publicKey: userDoc?.publicKey || null,
+                    apps: userDoc?.appsActive || []
+                }];
+            }
+
+            return [{
+                id: npub,
+                userId: npub,
+                type: 'user' as const,
+                displayName: `npub…${npub.slice(-8)}`,
+                username: `npub…${npub.slice(-8)}`,
+                title: `npub…${npub.slice(-8)}`,
+                subtitle: 'Nostr Public Key (External)',
+                avatar: null,
+                viaNpub: true,
+                isNostrOnly: true,
+                isEcosystemUser: false,
+                nostrNpub: npub,
+                nostrPubkeyHex: pubkeyHex,
+                apps: []
+            }];
+        } catch (e: any) {
+            console.warn('[Identity] Nostr npub search failed:', e?.message);
+        }
+    }
 
     const isEmailQuery = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned);
     if (isEmailQuery) {

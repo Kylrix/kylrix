@@ -13,6 +13,7 @@ import {
   Sparkles,
   Maximize2,
   Minimize2,
+  Radio,
 } from 'lucide-react';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -93,6 +94,7 @@ export function HangoutsDrawer({
   const openedInitialRef = useRef(false);
 
   const [secureChats, setSecureChats] = useState<any[]>(() => peekChatsListMemory());
+  const [nostrChats, setNostrChats] = useState<any[]>([]);
   const [threads, setThreads] = useState<any[]>(() => peekThreadsListMemory());
   const [initialLoading, setInitialLoading] = useState<boolean>(() => !peekChatsListMemory().length && !peekThreadsListMemory().length);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -175,16 +177,14 @@ export function HangoutsDrawer({
   const currentWorkspaceId = propWorkspaceId || (!activeWorkspace?.isPersonal ? activeWorkspace?.id : undefined);
   const currentWorkspaceTitle = propWorkspaceTitle || (!activeWorkspace?.isPersonal ? (activeWorkspace?.title || (activeWorkspace as any)?.name) : undefined);
 
-  // Eagerly hydrate chats and threads from local copy + rate-limited remote escape hatch
+  // Eagerly hydrate chats, Nostr DMs, and threads
   const refreshChats = useCallback(async () => {
     try {
-      // 1. Eagerly read local copy from IndexedDB / RxDB
       const [cachedChats, cachedThreads] = await Promise.all([
         readChatsListLocal(),
         readThreadsListLocal(),
       ]);
 
-      // Enrich list previews from per-conversation message LocalEngine cache (ciphertext-safe)
       const enrichFromMessageCache = async (rows: any[]) => {
         const next = [...rows];
         await Promise.all(
@@ -228,7 +228,43 @@ export function HangoutsDrawer({
         hasAnyLocal = true;
       }
 
-      // 2. If local copy is empty or escape hatch allows, trigger remote fetch to replenish local copy
+      // Fetch Nostr DMs for current user
+      try {
+        const { getActiveNostrKeyPair, fetchNostrDirectMessages } = await import('@/lib/nostr/dm');
+        const activeNostr = await getActiveNostrKeyPair();
+        if (activeNostr?.pubkeyHex) {
+          const nostrDms = await fetchNostrDirectMessages({
+            myPubkeyHex: activeNostr.pubkeyHex,
+            myPrivateKey: activeNostr.privateKeyBytes,
+          });
+          const { resolveNostrPubkeysAction } = await import('@/lib/actions/secure-ops/nostr');
+          const npubs = nostrDms.map((d) => d.peerNpub).filter(Boolean);
+          const resolvedProfiles: Record<string, any> = await resolveNostrPubkeysAction(npubs).catch(() => ({}));
+
+          const mappedNostr = nostrDms.map((d) => {
+            const profile = resolvedProfiles[d.peerNpub];
+            return {
+              id: d.id,
+              label: profile?.username ? `@${profile.username}` : `npub…${d.peerNpub.slice(-8)}`,
+              otherUserId: profile?.userId || undefined,
+              isSelf: false,
+              kind: 'secure' as const,
+              type: 'direct',
+              raw: d,
+              isEncrypted: true,
+              isNostrDm: true,
+              participants: [activeNostr.pubkeyHex, d.peerPubkey],
+              lastMessageText: d.lastMessageText,
+              lastMessageAt: d.lastMessageAt,
+              isWorkspace: false,
+            };
+          });
+          startTransition(() => setNostrChats(mappedNostr));
+        }
+      } catch (nostrErr) {
+        console.warn('[HangoutsDrawer] Nostr DMs fetch warning:', nostrErr);
+      }
+
       const shouldEscape = shouldRunEmptyEscapeHatch('chats', user?.$id);
 
       if (user?.$id && (!hasAnyLocal || shouldEscape)) {
@@ -273,7 +309,7 @@ export function HangoutsDrawer({
     };
   }, [isVaultUnlocked, hydrateDecryptedSecureChats]);
 
-  // Realtime subscription for instant updates (TablesDB + legacy collection channels)
+  // Realtime subscription
   useEffect(() => {
     if (!user?.$id) return;
     const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -371,7 +407,6 @@ export function HangoutsDrawer({
               const rawText = String(payload.content || '');
               const updated = {
                 ...prev[idx],
-                // Display: encrypted chats keep prior decrypted preview until hydrate; list cache uses ciphertext via patch
                 lastMessageText:
                   encrypted && rawText && !(rawText.length > 40 && !rawText.includes(' '))
                     ? prev[idx].lastMessageText
@@ -412,7 +447,7 @@ export function HangoutsDrawer({
     openConversation(initialConversationId, 'chat');
   }, [mode, initialConversationId, openConversation]);
 
-  // Ensure workspace discussion exists in the list without auto-opening it
+  // Ensure workspace discussion exists in the list
   useEffect(() => {
     if (mode !== 'browse' || !currentWorkspaceId || initialConversationId || !user?.$id) return;
     let cancelled = false;
@@ -435,7 +470,7 @@ export function HangoutsDrawer({
     };
   }, [mode, currentWorkspaceId, currentWorkspaceTitle, initialConversationId, user?.$id, refreshChats]);
 
-  // Resolve peer display names when stored title is the generic "Direct Chat" placeholder
+  // Resolve peer display names
   useEffect(() => {
     if (!user?.$id || !secureChats.length) return;
     const peerIds = new Set<string>();
@@ -477,6 +512,7 @@ export function HangoutsDrawer({
         type: c.type || 'direct',
         raw: c,
         isEncrypted: !!c.isEncrypted,
+        isNostrDm: false,
         participants: c.participants || [],
         lastMessageText: c.lastMessageText || '',
         lastMessageAt: c.lastMessageAt || c.updatedAt || c.createdAt,
@@ -496,16 +532,17 @@ export function HangoutsDrawer({
       type: 'thread',
       raw: t,
       isEncrypted: false,
+      isNostrDm: false,
       participants: t.participants || [],
       lastMessageText: t.lastMessageText || '',
       lastMessageAt: t.lastMessageAt || t.updatedAt || t.createdAt,
       isWorkspace: false,
     }));
-    return [...secure, ...discuss].sort(
+    return [...secure, ...nostrChats, ...discuss].sort(
       (a, b) =>
         new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime(),
     );
-  }, [secureChats, threads, user?.$id, currentWorkspaceTitle, identityHydrationTick]);
+  }, [secureChats, nostrChats, threads, user?.$id, currentWorkspaceTitle, identityHydrationTick]);
 
   const filteredTargets = useMemo(() => {
     return allTargets.filter((t) => {
@@ -632,7 +669,7 @@ export function HangoutsDrawer({
               ? 'Pick hangouts to send this to'
               : currentWorkspaceTitle
                 ? `${currentWorkspaceTitle} · Connect`
-                : 'Discussions and private chats'}
+                : 'Discussions, Nostr DMs, and private chats'}
           </p>
         </div>
 
@@ -676,7 +713,7 @@ export function HangoutsDrawer({
         </div>
       )}
 
-      {/* Conversation list — messenger rows (not catalog action tiles) */}
+      {/* Conversation list */}
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {initialLoading && filteredTargets.length === 0 ? (
           <div className="space-y-0 py-1">
@@ -713,7 +750,7 @@ export function HangoutsDrawer({
           <div className="space-y-2 px-4 py-2">
             {filteredTargets.map((target) => {
               const isSelected = selected.has(target.id);
-              const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !isVaultUnlocked;
+              const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !target.isNostrDm && !isVaultUnlocked;
               const previewFallback =
                 target.kind === 'secure'
                   ? target.type === 'group'
@@ -721,7 +758,7 @@ export function HangoutsDrawer({
                     : 'No messages yet'
                   : 'Resource discussion';
               const displayPreview = resolveConversationPreviewText(target.lastMessageText, {
-                isEncrypted: target.isEncrypted,
+                isEncrypted: target.isEncrypted && !target.isNostrDm,
                 isVaultUnlocked,
                 fallback: previewFallback,
               });
@@ -760,18 +797,22 @@ export function HangoutsDrawer({
                       <IdentityAvatar
                         userId={avatarUserId}
                         size={48}
-                        fallback={(target.label || '?').charAt(0).toUpperCase()}
+                        fallback={(target.label || '?').replace(/^@/, '').charAt(0).toUpperCase()}
                       />
                     ) : (
                       <div className="grid h-12 w-12 place-items-center rounded-full bg-[#161412] border border-white/20 text-[#A855F7]">
                         <MessageCircleMore size={20} />
                       </div>
                     )}
-                    {target.isWorkspace && (
+                    {target.isNostrDm ? (
+                      <div className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-[#000000] bg-purple-600">
+                        <Radio size={8} className="text-white" />
+                      </div>
+                    ) : target.isWorkspace ? (
                       <div className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-[#000000] bg-[#A855F7]">
                         <Sparkles size={8} className="text-white" />
                       </div>
-                    )}
+                    ) : null}
                   </div>
 
                   <div className="min-w-0 flex-1">
@@ -780,9 +821,11 @@ export function HangoutsDrawer({
                         <span className="truncate text-[15px] font-bold leading-tight text-white">
                           {target.label}
                         </span>
-                        {target.isEncrypted && (
+                        {target.isNostrDm ? (
+                          <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">Nostr DM</span>
+                        ) : target.isEncrypted ? (
                           <Lock size={12} className="shrink-0 text-[#F59E0B]" aria-hidden />
-                        )}
+                        ) : null}
                       </div>
                       {timeLabel ? (
                         <span className="shrink-0 text-[11px] font-semibold text-white/50">{timeLabel}</span>
