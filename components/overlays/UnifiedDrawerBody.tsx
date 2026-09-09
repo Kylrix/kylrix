@@ -117,6 +117,7 @@ const AgenticPanelContent = dynamic(
   { ssr: false },
 );
 
+const FollowListDrawer = dynamic(() => import('./FollowListDrawer').then((m) => m.FollowListDrawer), { ssr: false });
 const ZapDrawer = dynamic(() => import('./ZapDrawer').then((m) => m.ZapDrawer), { ssr: false });
 const SanitizeDrawer = dynamic(() => import('./SanitizeDrawer').then((m) => m.SanitizeDrawer), { ssr: false });
 const PricingDrawer = dynamic(() => import('../objects/PricingDrawer').then((m) => m.PricingDrawer), { ssr: false });
@@ -145,6 +146,8 @@ export function unifiedDrawerWidth(content: DrawerContent): number {
       return 560;
     case 'moments':
       return 480;
+    case 'follow-list':
+      return 460;
     case 'zap':
       return 420;
     default:
@@ -449,6 +452,16 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           pubkey={drawerData?.pubkey}
           bio={drawerData?.bio}
           source={drawerData?.source}
+        />
+      );
+    case 'follow-list':
+      return (
+        <FollowListDrawer
+          pubkey={drawerData?.pubkey}
+          npub={drawerData?.npub}
+          type={drawerData?.type}
+          targetName={drawerData?.targetName}
+          onClose={onClose}
         />
       );
     case 'pricing':

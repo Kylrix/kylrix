@@ -936,22 +936,50 @@ export function UnifiedProfileView({
 
             {/* Follower & Following Metrics Strip (Inset Wells) */}
             <div className="grid grid-cols-2 gap-2 pt-2">
-              <div className="rounded-2xl bg-[#161412] border border-white/20 px-4 py-2.5 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  const pk = resolvedPubkey || resolvedNpub || targetUid;
+                  if (pk) {
+                    openUnifiedDrawer('follow-list', {
+                      pubkey: resolvedPubkey || undefined,
+                      npub: resolvedNpub || undefined,
+                      type: 'following',
+                      targetName: activeDisplayName,
+                    });
+                  }
+                }}
+                className="rounded-2xl bg-[#161412] border border-white/20 px-4 py-2.5 flex items-center justify-between hover:border-white/40 active:scale-[0.98] transition-all cursor-pointer text-left"
+              >
                 <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
                   {isNostrMode ? 'Nostr Following' : 'Following'}
                 </span>
                 <span className="text-sm font-black font-mono text-white tabular-nums">
                   {totalFollowing}
                 </span>
-              </div>
-              <div className="rounded-2xl bg-[#161412] border border-white/20 px-4 py-2.5 flex items-center justify-between">
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const pk = resolvedPubkey || resolvedNpub || targetUid;
+                  if (pk) {
+                    openUnifiedDrawer('follow-list', {
+                      pubkey: resolvedPubkey || undefined,
+                      npub: resolvedNpub || undefined,
+                      type: 'followers',
+                      targetName: activeDisplayName,
+                    });
+                  }
+                }}
+                className="rounded-2xl bg-[#161412] border border-white/20 px-4 py-2.5 flex items-center justify-between hover:border-white/40 active:scale-[0.98] transition-all cursor-pointer text-left"
+              >
                 <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
                   {isNostrMode ? 'Nostr Followers' : 'Followers'}
                 </span>
                 <span className="text-sm font-black font-mono text-white tabular-nums">
                   {totalFollowers}
                 </span>
-              </div>
+              </button>
             </div>
 
             {/* Bio */}
