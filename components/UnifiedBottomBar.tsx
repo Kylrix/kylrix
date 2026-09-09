@@ -106,28 +106,19 @@ export function UnifiedBottomBar() {
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >
-                <div
-                  className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all ${
-                    isSelected
-                      ? 'bg-[#161412] border-2 shadow-[0_0_12px_rgba(0,0,0,0.4)]'
-                      : 'bg-[#161412] border border-[#FFFFFF]/40 hover:border-[#FFFFFF] hover:bg-[#201D1A]'
-                  }`}
-                  style={{
-                    borderColor: isSelected ? itemColor : undefined,
-                    boxShadow: isSelected ? `0 0 12px ${itemColor}40` : undefined,
-                  }}
-                >
+                <div className="relative flex items-center justify-center transition-all">
                   <Icon
-                    size={20}
-                    strokeWidth={isSelected ? 2.2 : 1.8}
-                    className="transition-colors duration-200"
+                    size={22}
+                    strokeWidth={isSelected ? 2.3 : 1.8}
+                    className="transition-all duration-200"
                     style={{
                       color: isSelected ? itemColor : '#FFFFFF',
+                      filter: isSelected ? `drop-shadow(0 0 6px ${itemColor}80)` : undefined,
                     }}
                   />
                   {isSelected && (
                     <div
-                      className="absolute -bottom-1 w-1.5 h-1.5 rounded-full animate-fadeIn"
+                      className="absolute -bottom-1.5 w-1.5 h-1.5 rounded-full animate-fadeIn"
                       style={{ backgroundColor: itemColor }}
                     />
                   )}
