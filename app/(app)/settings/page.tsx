@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
 import { AgentsSettingsTab } from '@/components/settings/AgentsSettingsTab';
+import { TeamsTab } from '@/components/settings/TeamsTab';
 import { SecurityTab } from '@/components/settings/SecurityTab';
 import { PrivacyTab } from '@/components/settings/PrivacyTab';
 import { DevelopersTab } from '@/components/settings/DevelopersTab';
@@ -114,7 +115,7 @@ function SettingsPageInner() {
     const _nativeSidebar = useNativeSidebarOptional();
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'general' | 'billing' | 'agents' | 'workspace' | 'security' | 'privacy' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'billing' | 'teams' | 'agents' | 'workspace' | 'security' | 'privacy' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
     const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
     const [mfaFactors, setMfaFactors] = useState<any>(null);
     const [accountMfaEnabled, setAccountMfaEnabled] = useState(false);
@@ -124,7 +125,7 @@ function SettingsPageInner() {
     useEffect(() => {
         const section = (searchParams.get('section') || '').toLowerCase();
         const tab = (searchParams.get('tab') || '').toLowerCase();
-        const allowed = new Set(['general', 'billing', 'agents', 'workspace', 'security', 'privacy', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
+        const allowed = new Set(['general', 'billing', 'teams', 'agents', 'workspace', 'security', 'privacy', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
         if (section.startsWith('admin') || tab === 'admin') {
             setActiveTab('admin');
             if (section.includes('user')) setAdminSubTab('users');
@@ -533,6 +534,7 @@ function SettingsPageInner() {
     const tabsList = [
         { id: 'general', label: 'General', icon: RootAccountIcon },
         { id: 'billing', label: 'Billing', icon: BillingIcon },
+        { id: 'teams', label: 'Teams', icon: Users },
         { id: 'agents', label: 'Smart Agents', icon: Bot },
         { id: 'workspace', label: 'Workspace', icon: WorkspaceIcon },
         { id: 'security', label: 'Security & 2FA', icon: SecurityIcon },
@@ -737,6 +739,10 @@ function SettingsPageInner() {
 
                 {/* Content — fluid, right-rail aware */}
                 <div className="w-full relative min-h-[400px] min-w-0 overflow-x-hidden col-span-1 lg:col-span-1">
+                {activeTab === 'teams' && (
+                    <TeamsTab />
+                )}
+
                 {activeTab === 'agents' && (
                     <AgentsSettingsTab />
                 )}

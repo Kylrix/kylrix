@@ -131,7 +131,7 @@ export function ContextMenuPanel({ onCloseAction, items, title }: { onCloseActio
   );
 }
 
-export function ContextMenu({ x, y, onCloseAction, items, appType, title }: ContextMenuProps) {
+export function ContextMenu({ x: _x, y: _y, onCloseAction, items, appType, title }: ContextMenuProps) {
   if (typeof window === 'undefined') return null;
 
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
