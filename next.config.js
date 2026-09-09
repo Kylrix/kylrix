@@ -28,6 +28,10 @@ const nextConfig = {
       (process.env.PRICING_TIERS_ENABLED ?? process.env.ENABLE_PRICING_TIERS) === 'true'
         ? 'true'
         : 'false',
+    NEXT_PUBLIC_KYLRIX_CLOUD:
+      (process.env.KYLRIX_CLOUD ?? process.env.NEXT_PUBLIC_KYLRIX_CLOUD) === 'true'
+        ? 'true'
+        : 'false',
     NEXT_PUBLIC_PRICING_PLANS_JSON: buildPublicPricingPlansJson(),
   },
   // Standalone output produces a self-contained server in .next/standalone

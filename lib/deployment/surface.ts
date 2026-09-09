@@ -52,3 +52,16 @@ export function isBillingCommerceEnabled(): boolean {
   }
   return readPricingTiersClientEnv() && !readSelfHostedClientEnv();
 }
+
+/**
+ * KYLRIX_CLOUD mode: indicates official Kylrix Cloud ecosystem runtime.
+ * Allows applying custom hand-wired shortcuts and logic for Kylrix main cloud
+ * directly in code while bypassing pricing tier envs.
+ */
+export function isKylrixCloud(): boolean {
+  const flag =
+    typeof window === 'undefined'
+      ? process.env.KYLRIX_CLOUD || process.env.NEXT_PUBLIC_KYLRIX_CLOUD
+      : process.env.NEXT_PUBLIC_KYLRIX_CLOUD || (window as any)?.__KYLRIX_CLOUD__;
+  return parseEnvFlag(flag);
+}

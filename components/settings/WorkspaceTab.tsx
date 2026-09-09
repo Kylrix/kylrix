@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FolderKanban, 
-  Users, 
   UserPlus, 
   UserMinus, 
   Globe, 
@@ -433,14 +432,26 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
 
       {/* Members & Collaborators */}
       <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border-2 border-white/20 shadow-xl space-y-5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-base md:text-lg font-black text-white font-clash m-0">Members & Collaborators</h2>
-            <p className="text-xs text-white/40 mt-0.5 m-0">Manage people with access to this workspace</p>
+            <p className="text-xs text-white/40 mt-0.5 m-0">View, invite, and manage collaborators with access to this workspace</p>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-[#0A0908] border-2 border-white/15 grid place-items-center text-[#818CF8]">
-            <Users size={15} />
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              openDrawer('share-note', {
+                resourceType: 'project',
+                resourceId: activeWorkspace.id,
+                resourceTitle: activeWorkspace.title,
+                onShared: () => { void loadWorkspaceDetails(); },
+              });
+            }}
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer border-2 border-[#6366F1] shadow-md"
+          >
+            <UserPlus size={13} />
+            <span>Manage & Invite</span>
+          </button>
         </div>
 
         <form onSubmit={handleAddMember} className="flex gap-2.5">
@@ -478,18 +489,42 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-white font-mono truncate">{c.userId || c.entityId}</div>
-                    <div className="text-[10px] text-white/40 uppercase font-mono font-bold">{c.role || 'Member'}</div>
+                    <div className="text-[10px] text-white/40 uppercase font-mono font-bold">{c.role || c.permission || 'Member'}</div>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleRemoveMember(c.userId || c.entityId)}
-                  className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
-                  title="Remove Member"
-                >
-                  <UserMinus size={14} />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      openDrawer('share-note', {
+                        resourceType: 'project',
+                        resourceId: activeWorkspace.id,
+                        resourceTitle: activeWorkspace.title,
+                        initialCollaborator: {
+                          userId: c.userId || c.entityId,
+                          username: c.username || c.userId || c.entityId,
+                          displayName: c.displayName || c.userId || c.entityId,
+                          avatar: c.avatar || null,
+                          permissionLevel: c.permission === 'admin' ? 'admin' : (c.permission === 'write' ? 'editor' : 'viewer'),
+                        },
+                        onShared: () => { void loadWorkspaceDetails(); },
+                      });
+                    }}
+                    className="p-1.5 text-xs text-[#818CF8] hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer font-medium"
+                    title="Edit Access Level"
+                  >
+                    Edit Access
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveMember(c.userId || c.entityId)}
+                    className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                    title="Remove Member"
+                  >
+                    <UserMinus size={14} />
+                  </button>
+                </div>
               </div>
             ))
           )}
