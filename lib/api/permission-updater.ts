@@ -1,7 +1,6 @@
 import { Databases, ID, Permission, Query, Role, Storage } from 'node-appwrite';
 import { createHash } from 'node:crypto';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { hasPaidKylrixPlanServer } from '@/lib/services/internal/subscription-entitlement';
 import { createSystemClient } from '@/lib/appwrite-admin';
 
 function getResourceTypeFromTableId(tableId: string): string | null {
@@ -44,17 +43,7 @@ export async function provisionHybridTeamExpansionSecure(
       uniqueCollabIds.push(targetUserId);
   }
 
-  // If under limit, no team needed
-  if (uniqueCollabIds.length <= 3) {
-      return { isTeamExpanded: false, newAcl: null };
-  }
-
-  // 2. Enforce Pro limits
-  const isPro = await hasPaidKylrixPlanServer(ownerId);
-
-  if (!isPro) {
-      throw new Error('Limit reached: Free plan is limited to 3 collaborators. Upgrade to PRO for more team members.');
-  }
+  // Note: Collaborators are free and limitless on all plans
 
   const teamId = `rt_${resourceId.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 30)}`;
 

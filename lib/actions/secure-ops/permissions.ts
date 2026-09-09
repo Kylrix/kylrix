@@ -5,11 +5,6 @@ import {
   ID, Query
 } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { getUserSubscriptionTierServer } from '@/lib/services/internal/subscription-entitlement';
-import {
-  allowsCollaboratorSharing,
-  getCollaboratorCap
-} from '@/lib/entitlements';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { permissionsInternal } from '@/lib/services/internal/permissions';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
@@ -31,23 +26,6 @@ const {
   verifyProjectPermission,
   verifyFormPermission} = shared;
 
-async function resolveCollaboratorBillingUserId(
-  resourceType: string,
-  resourceId: string,
-  requesterId: string,
-): Promise<string> {
-  if (resourceType !== 'project') return requesterId;
-  try {
-    const tables = createSystemTablesDB();
-    const project = await tables.getRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: 'projects',
-      rowId: resourceId}) as { ownerId?: string | null; userId?: string | null };
-    return String(project.ownerId || project.userId || requesterId).trim() || requesterId;
-  } catch {
-    return requesterId;
-  }
-}
 
 function membershipIsAccepted(membership: { confirm?: boolean; joined?: string | boolean }): boolean {
   if (membership.confirm === true) return true;
@@ -214,31 +192,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
         ])
       : Query.equal('resourceType', resourceType);
 
-    // Enforce 3-collaborator limit for FREE tier
-    const existingCollabsRes = await tables.listRows({
-      databaseId: FLOW_DATABASE_ID,
-      tableId: COLLABORATORS_TABLE,
-      queries: [
-        Query.equal('resourceId', input.resourceId),
-        collabTypeFilter,
-      ] as any
-    });
-
-    const billingUserId = await resolveCollaboratorBillingUserId(resourceType, input.resourceId, requester.$id);
-    const userTier = await getUserSubscriptionTierServer(billingUserId);
-    if (!allowsCollaboratorSharing(userTier, resourceType)) {
-      if (resourceType === 'project') {
-        throw new Error('Project collaboration is a TEAMS feature. Upgrade the project owner to TEAMS to collaborate on projects.');
-      }
-      throw new Error(`Adding collaborators is a premium feature. Upgrade to PRO or TEAMS to collaborate on your ${resourceType}.`);
-    }
-    const maxCollabs = getCollaboratorCap(userTier, resourceType);
-    if (existingCollabsRes.rows.length >= maxCollabs) {
-      if (resourceType === 'project') {
-        throw new Error('Project collaboration is limited to TEAMS plan. Upgrade to TEAMS for unlimited team members.');
-      }
-      throw new Error(`Limit reached. Upgrade to PRO or TEAMS for unlimited collaborators on your ${resourceType}.`);
-    }
+    // Note: Collaborators are free and limitless on all plans
 
     const existingCollab = await tables.listRows({
       databaseId: FLOW_DATABASE_ID,
@@ -643,30 +597,7 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
       tableId: 'projects',
       rowId: projectId});
 
-  // Enforce 3-collaborator limit for FREE tier
-  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-
-  const existingCollabsRes = await tables.listRows({
-    databaseId: FLOW_DATABASE_ID,
-    tableId: COLLABORATORS_TABLE,
-    queries: [
-      Query.equal('resourceId', projectId),
-      Query.equal('resourceType', 'project')
-    ] as any
-  });
-
-  const ownerTier = await getUserSubscriptionTierServer(project.ownerId);
-
-  if (!allowsCollaboratorSharing(ownerTier, 'project')) {
-    throw new Error('Project collaboration is a TEAMS feature. Upgrade the project owner to TEAMS to collaborate on projects.');
-  }
-
-  const maxCollabs = getCollaboratorCap(ownerTier, 'project');
-  if (existingCollabsRes.rows.length >= maxCollabs) {
-    throw new Error('Project collaboration is limited to TEAMS plan. Upgrade the project owner to TEAMS for unlimited team members.');
-  }
-
+  // Note: Collaborators are free and limitless on all plans
   const { teams } = createSystemClient();
   const teamRole = permissionLevel === 'admin'
     ? 'admin'
