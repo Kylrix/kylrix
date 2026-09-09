@@ -9,8 +9,6 @@ import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { permissionsInternal } from '@/lib/services/internal/permissions';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import { dispatchSecureNotification } from '@/lib/services/internal/notification-dispatcher';
-import { buildPublicResourceUrl } from '@/lib/share/public-url';
-
 
 import {
   isValidAppwriteRowId,
@@ -25,29 +23,6 @@ const {
   getActor,
   verifyProjectPermission,
   verifyFormPermission} = shared;
-
-
-function membershipIsAccepted(membership: { confirm?: boolean; joined?: string | boolean }): boolean {
-  if (membership.confirm === true) return true;
-  if (typeof membership.joined === 'string' && membership.joined.trim()) return true;
-  return membership.joined === true;
-}
-
-function mapTeamMembership(membership: {
-  userId?: string;
-  roles?: string[];
-  confirm?: boolean;
-  joined?: string | boolean;
-}) {
-  const accepted = membershipIsAccepted(membership);
-  return {
-    userId: String(membership.userId || ''),
-    level: membership.roles?.includes('admin')
-      ? 'admin'
-      : (membership.roles?.includes('editor') || membership.roles?.includes('write') ? 'editor' : 'viewer'),
-    status: accepted ? 'accepted' : 'pending',
-    accepted};
-}
 
 async function upsertProjectCollaboratorRow(
   tables: ReturnType<typeof createSystemTablesDB>,
@@ -120,7 +95,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
   }
   const resourceType = normalizedResourceType;
 
-  const { users, teams } = createSystemClient();
+  const { users } = createSystemClient();
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   let targetUserIdToUse = input.targetUserId;
@@ -136,22 +111,6 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       }
     } catch (e) {
       console.warn('[grantPermissionSecure] Failed to check user by email:', e);
-    }
-  }
-
-  // Handle Project Team synchronization
-  if (resourceType === 'project') {
-    const inviteUrl = buildPublicResourceUrl('project', input.resourceId);
-    try {
-        await teams.createMembership(
-            input.resourceId, 
-            [input.permission], 
-            inviteUrl, 
-            !isEcosystemUser ? input.targetUserId : undefined, 
-            isEcosystemUser ? targetUserIdToUse : undefined
-        );
-    } catch (teamErr: any) {
-        console.warn('[grantPermissionSecure] Team membership sync skipped or failed:', teamErr?.message);
     }
   }
 
@@ -286,22 +245,6 @@ export async function revokePermissionSecure(input: {
 }) {
     const requester = await getActor(input.jwt);
     if (!requester) throw new Error('Unauthorized');
-
-    const { teams } = createSystemClient();
-
-    // Handle Project Team synchronization
-    if (input.resourceType === 'project') {
-      try {
-          // List memberships to find the one to delete
-          const memberships = await teams.listMemberships(input.resourceId);
-          const membership = memberships.memberships.find(m => m.userId === input.targetUserId);
-          if (membership) {
-              await teams.deleteMembership(input.resourceId, membership.$id);
-          }
-      } catch (teamErr: any) {
-          console.warn('[revokePermissionSecure] Team membership removal skipped or failed:', teamErr?.message);
-      }
-    }
 
     const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
                  input.resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
@@ -471,32 +414,6 @@ export async function getResourceCollaboratorsSecure(input: {
             console.warn('[getResourceCollaboratorsSecure] Failed to query polymorphic project collaborators:', polyErr?.message);
         }
 
-        try {
-            const { teams } = createSystemClient();
-            const memberships = await teams.listMemberships(input.resourceId);
-            for (const membership of memberships.memberships) {
-                const userId = String(membership.userId || '').trim();
-                if (!userId) continue;
-                const teamCollab = mapTeamMembership(membership);
-                const existing = merged.get(userId);
-                if (existing) {
-                    // Do not override an inbound 'requested' status with a pending team invitation
-                    const resolvedStatus = teamCollab.accepted
-                      ? 'accepted'
-                      : (existing.status === 'requested' ? 'requested' : existing.status || 'pending');
-                    merged.set(userId, {
-                        ...existing,
-                        level: teamCollab.level || existing.level,
-                        status: resolvedStatus,
-                        accepted: teamCollab.accepted || existing.accepted});
-                } else {
-                    merged.set(userId, teamCollab);
-                }
-            }
-        } catch (teamErr: any) {
-            console.warn('[getResourceCollaboratorsSecure] Failed to query native team:', teamErr?.message);
-        }
-
         filteredCollabs = [...merged.values()];
     } else if (resourceType === 'note' || resourceType === 'event' || resourceType === 'form' || resourceType === 'huddle' || resourceType === 'call' || resourceType === 'secret' || resourceType === 'totp') {
         // Query polymorphic collaborators table as the single source of truth
@@ -598,50 +515,7 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
       rowId: projectId});
 
   // Note: Collaborators are free and limitless on all plans
-  const { teams } = createSystemClient();
-  const teamRole = permissionLevel === 'admin'
-    ? 'admin'
-    : (permissionLevel === 'editor' || permissionLevel === 'write' ? 'editor' : 'viewer');
-
-  const inviteUrl = buildPublicResourceUrl('project', projectId);
-
-  // Create native Appwrite Team membership and mirror status into Collaborators table.
-  try {
-    try {
-      await teams.get(projectId);
-    } catch {
-      await teams.create(projectId, project.title || 'Project Team');
-    }
-    try {
-      await teams.createMembership(
-        projectId,
-        [teamRole],
-        inviteUrl,
-        undefined,
-        targetUserId
-      );
-    } catch (membershipErr: any) {
-      const message = String(membershipErr?.message || '').toLowerCase();
-      const alreadyMember = message.includes('already') || message.includes('duplicate') || message.includes('member');
-      if (!alreadyMember) {
-        throw membershipErr;
-      }
-    }
-  } catch (err: any) {
-    console.error('[addProjectCollaboratorSecure] Appwrite Team membership creation failed:', err?.message);
-    throw err;
-  }
-
-  let inviteStatus: 'pending' | 'accepted' = 'pending';
-  try {
-    const memberships = await teams.listMemberships(projectId);
-    const membership = memberships.memberships.find((m) => m.userId === targetUserId);
-    if (membership && membershipIsAccepted(membership)) {
-      inviteStatus = 'accepted';
-    }
-  } catch {
-    // keep pending
-  }
+  const inviteStatus: 'pending' | 'accepted' = 'accepted';
 
   try {
     await upsertProjectCollaboratorRow(tables, projectId, targetUserId, permissionLevel, inviteStatus, actor.$id);
@@ -681,21 +555,8 @@ export async function removeProjectCollaboratorSecure(projectId: string, targetU
   }
 
   const tables = createSystemTablesDB();
-  const { teams } = createSystemClient();
 
-  // 1. Sync to native Appwrite Team for optimized read-access
-  try {
-      const teamId = projectId;
-      const memberships = await teams.listMemberships(teamId);
-      const membership = memberships.memberships.find(m => m.userId === targetUserId);
-      if (membership) {
-          await teams.deleteMembership(teamId, membership.$id);
-      }
-  } catch (teamErr: any) {
-      console.warn('[removeProjectCollaboratorSecure] Team membership removal skipped or failed:', teamErr?.message);
-  }
-
-  // 2. Fetch current project to update permissions
+  // 1. Fetch current project to update permissions
   const project = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'projects',

@@ -1,7 +1,6 @@
 import { Databases, ID, Permission, Query, Role, Storage } from 'node-appwrite';
 import { createHash } from 'node:crypto';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createSystemClient } from '@/lib/appwrite-admin';
 
 function getResourceTypeFromTableId(tableId: string): string | null {
   if (tableId === APPWRITE_CONFIG.TABLES.NOTE.NOTES) return 'note';
@@ -18,100 +17,14 @@ function getResourceTypeFromTableId(tableId: string): string | null {
  * Dynamically spins up an Appwrite Team when a resource exceeds 3 collaborators.
  */
 export async function provisionHybridTeamExpansionSecure(
-  databases: Databases,
-  resourceId: string, 
-  resourceType: string, 
-  ownerId: string,
-  targetUserId: string,
-  targetRole: string
+  _databases: Databases,
+  _resourceId: string,
+  _resourceType: string,
+  _ownerId: string,
+  _targetUserId: string,
+  _targetRole: string
 ): Promise<{ isTeamExpanded: boolean, newAcl: string | null }> {
-  const { teams } = createSystemClient();
-  
-  // 1. Check current collaborator count
-  const existingCollabsRes = await databases.listRows(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
-    [
-      Query.equal('resourceId', resourceId),
-      Query.equal('resourceType', resourceType),
-      Query.limit(100)
-    ]
-  ).catch(() => ({ rows: [] }));
-
-  const uniqueCollabIds = Array.from(new Set(existingCollabsRes.rows.map((r: any) => r.userId)));
-  if (!uniqueCollabIds.includes(targetUserId)) {
-      uniqueCollabIds.push(targetUserId);
-  }
-
-  // Note: Collaborators are free and limitless on all plans
-
-  const teamId = `rt_${resourceId.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 30)}`;
-
-  // 3. Provision Team if missing
-  try {
-      await teams.get(teamId);
-  } catch (err: any) {
-      if (err.code === 404) {
-          try {
-              await teams.create(teamId, `${resourceType.toUpperCase()} Expansion: ${resourceId}`);
-              
-              // Seed the team with the owner and existing collaborators
-              await teams.createMembership(teamId, ['owner'], undefined, ownerId).catch(() => null);
-
-              for (const row of existingCollabsRes.rows) {
-                  if (row.userId !== ownerId) {
-                      const role = row.permission === 'admin' ? 'admin' : (row.permission === 'write' ? 'editor' : 'viewer');
-                      await teams.createMembership(teamId, [role], undefined, row.userId).catch(() => null);
-                  }
-                  
-                  // Mirror to collaborators table under team scope
-                  await databases.createRow(
-                      APPWRITE_CONFIG.DATABASES.FLOW,
-                      APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
-                      ID.unique(),
-                      {
-                          resourceId: teamId,
-                          resourceType: 'team',
-                          userId: row.userId,
-                          permission: row.permission,
-                          role: row.role || 'collaborator',
-                          status: row.status || 'accepted',
-                          accepted: row.accepted ?? true,
-                          invitedAt: new Date().toISOString()
-                      }
-                  ).catch(() => null);
-              }
-          } catch (createErr: any) {
-              console.warn('[provisionHybridTeamExpansionSecure] Team creation failed:', createErr?.message);
-          }
-      }
-  }
-
-  // 4. Add the 9th+ user
-  try {
-      await teams.createMembership(teamId, [targetRole], undefined, targetUserId).catch(() => null);
-      
-      // Mirror 9th+ user to team collaborators
-      await databases.createRow(
-          APPWRITE_CONFIG.DATABASES.FLOW,
-          APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
-          ID.unique(),
-          {
-              resourceId: teamId,
-              resourceType: 'team',
-              userId: targetUserId,
-              permission: targetRole === 'admin' ? 'admin' : (targetRole === 'editor' ? 'write' : 'read'),
-              role: 'collaborator',
-              status: 'accepted',
-              accepted: true,
-              invitedAt: new Date().toISOString()
-          }
-      ).catch(() => null);
-  } catch (addErr: any) {
-      console.warn('[provisionHybridTeamExpansionSecure] Failed to add member to expansion team:', addErr?.message);
-  }
-
-  return { isTeamExpanded: true, newAcl: `read("team:${teamId}")` };
+  return { isTeamExpanded: false, newAcl: null };
 }
 
 export type PermissionLevel = 'read' | 'write' | 'admin';
