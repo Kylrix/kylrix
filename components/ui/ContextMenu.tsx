@@ -136,10 +136,6 @@ export function ContextMenu({ x, y, onCloseAction, items, appType, title }: Cont
 
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
 
-  // Clamp x and y coordinates to viewport bounds on desktop
-  const posX = isDesktop ? Math.min(Math.max(16, (x || window.innerWidth / 2) - 20), window.innerWidth - 300) : 0;
-  const posY = isDesktop ? Math.min(Math.max(16, (y || window.innerHeight / 2) - 20), window.innerHeight - 380) : 0;
-
   return createPortal(
     <>
       <div
@@ -153,8 +149,7 @@ export function ContextMenu({ x, y, onCloseAction, items, appType, title }: Cont
       {isDesktop ? (
         <div
           data-kylrix-context-menu="true"
-          style={{ top: `${posY}px`, left: `${posX}px` }}
-          className="fixed z-[10100] w-[280px] max-h-[85vh] bg-[#161412] border border-white/[0.12] rounded-2xl text-white p-2.5 flex flex-col gap-2 overflow-y-auto font-satoshi shadow-[0_24px_50px_rgba(0,0,0,0.85)] animate-in fade-in zoom-in-95 duration-150"
+          className="fixed top-0 right-0 bottom-0 h-full w-[360px] sm:w-[380px] bg-[#161412] border-l border-white/10 z-[10100] text-white p-4 flex flex-col gap-2 overflow-y-auto font-satoshi shadow-[-24px_0_48px_rgba(0,0,0,0.8)] animate-in slide-in-from-right duration-200"
           onClick={(e) => e.stopPropagation()}
           onContextMenu={(e) => e.preventDefault()}
         >

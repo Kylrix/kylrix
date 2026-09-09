@@ -24,6 +24,7 @@ import { ZapSecuritySettings } from '@/components/settings/ZapSecuritySettings';
 import { formatDateWithFallback } from '@/lib/date-utils';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { useAuth } from '@/lib/auth';
+import { useDevMode } from '@/lib/dev-mode';
 import { toast } from 'react-hot-toast';
 
 function BareBonesMasterpassUnlock() {
@@ -501,6 +502,8 @@ export function SecurityTab({
   mfaFactors,
   onManageMfa,
 }: Props) {
+  const { devMode } = useDevMode();
+
   // hasMasterpass === null means still loading / offline — don't show setup button in that state
   const vaultSetup = hasMasterpass === true;
   const vaultLoading = hasMasterpass === null;
@@ -635,7 +638,7 @@ export function SecurityTab({
       </Section>
 
       {/* First-principles direct unlock diagnostic */}
-      <BareBonesMasterpassUnlock />
+      {devMode && <BareBonesMasterpassUnlock />}
 
       <Section
         title="Passkeys"
