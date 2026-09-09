@@ -145,6 +145,7 @@ _Catalog covers 88 skills._
 | Skill | Helps with |
 |-------|------------|
 | `agentic.runtime` | In-app agent runtime (settings agents, chat/session routes, tool registry, client executor). Use when editing agent drawers, tools, or session UX. |
+| `getzup` | Architecture, cryptography, OAuth2 ('Sign in with Kylrix'), and local-first sync guidance for Zup standalone Nostr client. |
 
 ## Why (product rationale)
 
