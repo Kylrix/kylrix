@@ -58,9 +58,3 @@ export function buildSidekickUserPrompt(target: SidekickTarget): string {
 export function buildSidekickContextBlock(target: SidekickTarget): string {
   return `[SIDEKICK TARGET] type=${target.type} id=${target.id}\n${JSON.stringify({ title: target.title, content: (target.content || '').slice(0, 9000), tags: target.tags, metadata: target.metadata, attachments: target.attachments }, null, 2)}`;
 }
-
-// Back-compat aliases for summarize -> sidekick migration
-export type SummarizeTarget = SidekickTarget;
-export const buildSummarizeSystemInstruction = buildSidekickSystemInstruction;
-export const buildSummarizeUserPrompt = buildSidekickUserPrompt;
-export const buildSummarizeContextBlock = buildSidekickContextBlock;

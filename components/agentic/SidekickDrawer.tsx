@@ -406,6 +406,3 @@ export function SidekickDrawer({
     </Drawer>
   );
 }
-
-// Back-compat: keep SummarizeDrawer as alias to SidekickDrawer to avoid codebase confusion during migration
-export const SummarizeDrawer = SidekickDrawer;

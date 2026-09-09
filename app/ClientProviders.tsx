@@ -16,7 +16,7 @@ import { TaskProvider } from '@/context/TaskContext';
 import { OverlayProvider } from '@/components/ui/OverlayContext';
 import { DynamicSidebarProvider } from '@/components/ui/DynamicSidebar';
 import { SidebarProvider } from '@/components/ui/SidebarContext';
-import { RightRailProvider } from '@/context/RightRailContext';
+import { NativeSidebarProvider } from '@/context/RightRailContext';
 import { SectionProvider } from '@/context/SectionContext';
 import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
 import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
@@ -100,7 +100,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   OverlayProvider,
   DynamicSidebarProvider,
   SidebarProvider,
-  RightRailProvider,
+  NativeSidebarProvider,
   SudoProvider,
   SectionProvider,
   WalletOverlayProvider,

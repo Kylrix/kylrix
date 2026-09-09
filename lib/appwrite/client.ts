@@ -333,14 +333,6 @@ export const realtime = new Proxy(originalRealtime, {
     }
 }) as unknown as Realtime;
 
-// Aliases for compatibility
-export const appwriteAccount = account;
-export const appwriteDatabases = databases; // Standard Databases API
-
-export const appwriteStorage = storage;
-export const appwriteAvatars = avatars;
-export const appwriteClient = client;
-export const appwriteRealtime = realtime;
 export { client };
 
 export const APPWRITE_BUCKET_BACKUPS_ID = APPWRITE_CONFIG.BUCKETS.BACKUPS;

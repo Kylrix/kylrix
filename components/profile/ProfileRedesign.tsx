@@ -8,7 +8,7 @@ export interface ProfileProps extends UnifiedProfileViewProps {
   initialProfile?: any;
 }
 
-export function ProfileRedesign({ username, initialProfile, ...rest }: ProfileProps) {
+export function Profile({ username, initialProfile, ...rest }: ProfileProps) {
   return (
     <UnifiedProfileView
       username={username}
@@ -17,6 +17,3 @@ export function ProfileRedesign({ username, initialProfile, ...rest }: ProfilePr
     />
   );
 }
-
-export const Profile = ProfileRedesign;
-export default ProfileRedesign;

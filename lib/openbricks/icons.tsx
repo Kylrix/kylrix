@@ -82,7 +82,6 @@ export const Visibility = EyeIcon;
 export const VisibilityOff = EyeOffIcon;
 export const Warning = AlertTriangle;
 export const Home = HomeIcon;
-export const Lock = LockIcon;
 export const Chat = MessageSquare;
 export const Send = SendIcon;
 export const CloudUpload = UploadIcon;

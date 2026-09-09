@@ -6,10 +6,10 @@
  */
 
 import { Functions, ExecutionMethod } from 'appwrite';
-import { appwriteClient } from '@/lib/appwrite';
+import { client } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
-const functions = new Functions(appwriteClient);
+const functions = new Functions(client);
 
 // Function ID — must be set after deploying the function
 const DATA_PORTER_FUNCTION_ID = APPWRITE_CONFIG.FUNCTIONS.DATA_PORTER || 'data-porter';
