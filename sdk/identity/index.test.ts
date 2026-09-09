@@ -4,14 +4,26 @@ import { computeIdentityFlags, getUserProfilePicId, normalizeUsername, shortenUs
 describe('identity helpers', () => {
   it('normalizes usernames', () => {
     expect(normalizeUsername('@Kylrix')).toBe('kylrix');
+    expect(normalizeUsername('@@User')).toBe('user');
+    expect(normalizeUsername(null)).toBeNull();
+    expect(normalizeUsername('')).toBeNull();
   });
 
   it('resolves the best avatar source', () => {
-    expect(getUserProfilePicId({ prefs: { profilePicId: 'prefs-id' } })).toBe('prefs-id');
+    expect(getUserProfilePicId(null)).toBeNull();
+    expect(getUserProfilePicId({})).toBeNull();
+    expect(getUserProfilePicId({ avatarFileId: 'file-id' })).toBe('file-id');
     expect(getUserProfilePicId({ avatarUrl: 'avatar-url' })).toBe('avatar-url');
+    expect(getUserProfilePicId({ profilePicId: 'pic-id' })).toBe('pic-id');
+    expect(getUserProfilePicId({ avatar: 'avatar-id' })).toBe('avatar-id');
+    expect(getUserProfilePicId({ prefs: { profilePicId: 'prefs-id' } })).toBe('prefs-id');
+    expect(getUserProfilePicId({ preferences: { profilePicId: 'preferences-id' } })).toBe('preferences-id');
   });
 
   it('shortens ids consistently', () => {
+    expect(shortenUserId(null)).toBe('local');
+    expect(shortenUserId('')).toBe('local');
+    expect(shortenUserId('shortid')).toBe('shortid');
     expect(shortenUserId('1234567890abcdef')).toBe('123456…cdef');
   });
 
@@ -23,9 +35,17 @@ describe('identity helpers', () => {
       profilePicId: 'file-1',
       username: 'kylrix',
       bio: 'builds things',
-      tier: 'pro'});
+      tier: 'pro',
+    });
 
     expect(flags.verified).toBe(true);
     expect(flags.pro).toBe(true);
+
+    const unverified = computeIdentityFlags({
+      createdAt: null,
+      tier: 'free',
+    });
+    expect(unverified.verified).toBe(false);
+    expect(unverified.pro).toBe(false);
   });
 });

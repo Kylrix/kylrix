@@ -16,7 +16,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['sdk/**', 'utils/**'],
-      exclude: ['**/*.d.ts', '**/*.config.*', '__tests__/**'],
+      exclude: ['**/*.d.ts', '**/*.config.*', '__tests__/**', '**/*.md'],
       thresholds: {
         statements: 85,
         branches: 80,
