@@ -33,6 +33,13 @@ function buildCollaboratorSearchLabels(user: Record<string, any>, searchQuery: s
     return { primary: query, secondary: 'Invite via Email' };
   }
 
+  if (user.viaNpub || user.isNostrOnly) {
+    return {
+      primary: user.title || user.displayName || user.username || 'Nostr User',
+      secondary: user.subtitle || 'Nostr Public Key',
+    };
+  }
+
   const handle = normalizeHandle(user.username);
   const accountName = resolveAccountName(user);
   const primary = handle || accountName || 'Kylrix User';
@@ -56,6 +63,11 @@ interface User {
   displayName?: string;
   username?: string;
   publicKey?: string | null;
+  viaNpub?: boolean;
+  isNostrOnly?: boolean;
+  isEcosystemUser?: boolean;
+  nostrNpub?: string | null;
+  nostrPubkeyHex?: string | null;
 }
 
 interface UserSearchProps {
@@ -71,7 +83,7 @@ interface UserSearchProps {
 
 export default function UserSearch({
   label = 'ASSIGN TO',
-  placeholder = 'Search by name or @username',
+  placeholder = 'Search by name, @username, or npub...',
   selectedUsers,
   onSelect,
   onRemove,
@@ -125,11 +137,17 @@ export default function UserSearch({
           id: u.id || u.userId || u.$id,
           title: labels.primary,
           subtitle: labels.secondary,
-          displayName: resolveAccountName(u) || undefined,
+          displayName: u.displayName || resolveAccountName(u) || undefined,
           username: normalizeHandle(u.username) || undefined,
           avatar: u.avatar || null,
           profilePicId: u.avatar || null,
-          email: isEmailLike(searchQuery) ? (u.email || undefined) : undefined};
+          viaNpub: Boolean(u.viaNpub),
+          isNostrOnly: Boolean(u.isNostrOnly),
+          isEcosystemUser: u.isEcosystemUser !== undefined ? u.isEcosystemUser : true,
+          nostrNpub: u.nostrNpub || null,
+          nostrPubkeyHex: u.nostrPubkeyHex || null,
+          email: isEmailLike(searchQuery) ? (u.email || undefined) : undefined,
+        };
       });
       setRawResults(normalized as User[]);
     } catch (err) {

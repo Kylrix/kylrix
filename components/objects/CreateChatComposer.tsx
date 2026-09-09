@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, Lock, MessageSquare, Shield, Users, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Lock, MessageSquare, Radio, Shield, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
 import { useAuth } from '@/lib/auth';
@@ -45,10 +45,11 @@ export function CreateChatComposer({
   // E2E toggle — ON by default if vault unlocked, transient (not persisted)
   const [userToggledOff, setUserToggledOff] = useState(false);
   const [missingKeyIds, setMissingKeyIds] = useState<Set<string>>(new Set());
+  // Extra Nostr DM protocol toggle — enabled by default if search input was a Nostr public key (npub)
+  const [sendViaNostr, setSendViaNostr] = useState(false);
 
   const isUnlocked = ecosystemSecurity.status.isUnlocked;
   // Unencrypted hangouts reuse same conversations/messages tables with isEncrypted=false (no key_mapping/epochs).
-  // Toggle ON by default (transient); auto-off if user toggled off OR participant lacks X25519 key. For unencrypted, no vault/keys needed.
   const hasMissingKeys = missingKeyIds.size > 0;
   const [existingDirectInfo, setExistingDirectInfo] = useState<{ hasEncrypted: boolean; hasUnencrypted: boolean; checked: boolean }>({ hasEncrypted: false, hasUnencrypted: false, checked: false });
   const baseEncryptedEnabled = !userToggledOff && !hasMissingKeys;
@@ -57,19 +58,31 @@ export function CreateChatComposer({
   const hasBothDirects = isDirectForDup && existingDirectInfo.checked && existingDirectInfo.hasEncrypted && existingDirectInfo.hasUnencrypted;
   const hasOneDirect = isDirectForDup && existingDirectInfo.checked && (existingDirectInfo.hasEncrypted !== existingDirectInfo.hasUnencrypted);
   
-  // Bug fix: If an unencrypted chat already exists (x = unencrypted), we want to create encrypted (1-x).
-  // But if a participant has not setup encryption (hasMissingKeys), encrypted cannot be created either.
-  // In that scenario, neither (x) nor (1-x) can be created, so isImpossibleDirect is true!
   const isImpossibleDirect = isDirectForDup && existingDirectInfo.checked && existingDirectInfo.hasUnencrypted && hasMissingKeys;
 
-  // If one direct exists, target is the opposite (!hasEncrypted). But if missing keys forces encryption off, target becomes unencrypted (which already exists!).
   const targetEncrypted = hasOneDirect ? !existingDirectInfo.hasEncrypted : baseEncryptedEnabled;
   const encryptedEnabled = hasBothDirects || isImpossibleDirect ? false : (hasOneDirect ? targetEncrypted && !hasMissingKeys : baseEncryptedEnabled);
   const isToggleGreyed = hasBothDirects || hasOneDirect || hasMissingKeys || isImpossibleDirect;
 
+  const isNostrOnlyUser = selectedUsers.length === 1 && Boolean(selectedUsers[0]?.isNostrOnly);
+  const isViaNpubSearch = selectedUsers.length > 0 && selectedUsers.some((u) => u.viaNpub || u.isNostrOnly);
+
   useEffect(() => {
     onRegisterClose?.(() => onClose());
   }, [onClose, onRegisterClose]);
+
+  // Auto-opt to send via Nostr if search method was a Nostr public key (npub) or recipient is external Nostr-only
+  useEffect(() => {
+    if (selectedUsers.length === 0) {
+      setSendViaNostr(false);
+      return;
+    }
+    if (isViaNpubSearch || isNostrOnlyUser) {
+      setSendViaNostr(true);
+    } else {
+      setSendViaNostr(false);
+    }
+  }, [selectedUsers, isViaNpubSearch, isNostrOnlyUser]);
 
   // Re-evaluate readiness whenever selection changes — auto-off encryption if needed
   useEffect(() => {
@@ -104,7 +117,7 @@ export function CreateChatComposer({
     return () => { cancelled = true; };
   }, [selectedUsers, user?.$id, isUnlocked, userToggledOff]);
 
-  // Existing direct duplicate check — defaults to opposite, greys out if both exist
+  // Existing direct duplicate check
   useEffect(() => {
     if (selectedUsers.length !== 1 || !user?.$id) {
       setExistingDirectInfo({ hasEncrypted: false, hasUnencrypted: false, checked: false });
@@ -127,11 +140,12 @@ export function CreateChatComposer({
   }, [selectedUsers, user?.$id]);
 
   const openConversation = useCallback(
-    (id: string, kind: 'chat' | 'thread' = 'chat') => {
+    (id: string, kind: 'chat' | 'thread' = 'chat', title?: string) => {
       onClose();
       openCommObjectDetail({
         conversationId: id,
         kind,
+        title,
         openSidebar,
         openOverlay,
         closeSidebar,
@@ -151,13 +165,39 @@ export function CreateChatComposer({
       toast.error(`Hangouts cap at ${HANGOUT_MAX + 1} people including you`);
       return;
     }
+
+    // Nostr DM Routing
+    if (sendViaNostr || isNostrOnlyUser) {
+      setBusy(true);
+      try {
+        const target = selectedUsers[0];
+        let pubkeyHex = target?.nostrPubkeyHex || target?.id || target?.$id;
+        if (target?.nostrNpub || (typeof pubkeyHex === 'string' && pubkeyHex.startsWith('npub1'))) {
+          const { npubToBytes, bytesToHex } = await import('@/lib/nostr/crypto');
+          try {
+            pubkeyHex = bytesToHex(npubToBytes(target.nostrNpub || pubkeyHex));
+          } catch {}
+        }
+        const conversationId = `nostr_dm_${pubkeyHex}`;
+        const recipientTitle = target.title || target.displayName || target.username || 'Nostr DM';
+
+        toast.success('Nostr DM hangout ready');
+        openConversation(conversationId, 'chat', recipientTitle);
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to start Nostr DM');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     const isGroup = selectedUsers.length > 1;
     if (isGroup && !hangoutName.trim() && encryptedEnabled) {
       toast.error('Name your hangout');
       return;
     }
 
-    // Duplicate prevention: direct can have at most encrypted+unencrypted. If both exist, show chooser.
+    // Duplicate prevention for Kylrix direct chats
     if (selectedUsers.length === 1 && existingDirectInfo.checked && (hasBothDirects || isImpossibleDirect)) {
       try {
         const otherId = (selectedUsers[0] as any).id || (selectedUsers[0] as any).$id;
@@ -170,7 +210,6 @@ export function CreateChatComposer({
           return;
         }
         toast('Both conversations already exist — choose one', { id: 'dup-both' });
-        // Open the one matching current toggle, or first encrypted
         const preferred = directs.find((c: any) => !!c.isEncrypted === encryptedEnabled) || directs[0];
         if (preferred) openConversation(preferred.$id, 'chat');
       } catch {}
@@ -181,7 +220,7 @@ export function CreateChatComposer({
     const resolveUserId = (u: any) => u?.contactUserId || u?.userId || u?.targetUserId || u?.id || u?.$id;
     const participantIds = [user.$id, ...selectedUsers.map((u) => resolveUserId(u)).filter(Boolean)];
 
-    // Unencrypted hangout — same conversations/messages tables, isEncrypted=false, no key_mapping/epochs, no vault needed
+    // Unencrypted hangout — Kylrix traditional system
     if (!encryptedEnabled) {
       try {
         const newConv = await ChatService.createConversation(participantIds, isGroup ? 'group' : 'direct', isGroup ? hangoutName.trim() : undefined, { encrypted: false } as any);
@@ -195,7 +234,7 @@ export function CreateChatComposer({
       return;
     }
 
-    // Encrypted — requires vault unlock + valid public keys (transient toggle, no key_mapping for unencrypted)
+    // Encrypted — Kylrix traditional system
     const doCreate = async (forceEncrypted: boolean) => {
       try {
         if (forceEncrypted) await ecosystemSecurity.ensureE2EIdentity(user.$id);
@@ -230,10 +269,10 @@ export function CreateChatComposer({
       return;
     }
     await doCreate(encryptedEnabled);
-  }, [user, selectedUsers, hangoutName, encryptedEnabled, existingDirectInfo, hasBothDirects, isImpossibleDirect, openConversation, requestSudo]);
+  }, [user, selectedUsers, sendViaNostr, isNostrOnlyUser, hangoutName, encryptedEnabled, existingDirectInfo, hasBothDirects, isImpossibleDirect, openConversation, requestSudo]);
 
   const isGroup = selectedUsers.length > 1;
-  const canCreate = selectedUsers.length > 0 && !busy && !hasBothDirects && !isImpossibleDirect && (!isGroup || hangoutName.trim().length > 0 || !encryptedEnabled);
+  const canCreate = selectedUsers.length > 0 && !busy && (sendViaNostr || isNostrOnlyUser || (!hasBothDirects && !isImpossibleDirect && (!isGroup || hangoutName.trim().length > 0 || !encryptedEnabled)));
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#161412] text-white font-satoshi">
@@ -272,63 +311,87 @@ export function CreateChatComposer({
         </div>
       </div>
 
-      {/* E2E Toggle — single control merges chat/hangout tabs */}
-      <div className="px-5 pt-4 shrink-0">
-        <div className="flex items-center justify-between gap-3 rounded-xl bg-[#0A0908] border border-white/[0.06] px-4 py-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={`p-2 rounded-lg border shrink-0 ${encryptedEnabled ? 'bg-[#F59E0B]/10 border-[#F59E0B]/20 text-[#F59E0B]' : 'bg-white/5 border-white/10 text-white/40'}`}>
-              {encryptedEnabled ? <Lock size={16} /> : <Shield size={16} />}
+      {/* Nostr Protocol Toggle Row — appears when recipient is selected */}
+      {selectedUsers.length > 0 ? (
+        <div className="px-5 pt-4 shrink-0 space-y-2.5">
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-[#0A0908] border border-purple-500/20 px-4 py-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`p-2 rounded-lg border shrink-0 ${sendViaNostr ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                <Radio size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold text-white m-0 flex items-center gap-1.5">
+                  <span>Send via Nostr Protocol</span>
+                  {isViaNpubSearch ? (
+                    <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">Default (npub input)</span>
+                  ) : null}
+                </p>
+                <p className="text-[10px] font-semibold text-white/40 m-0 leading-tight">
+                  {isNostrOnlyUser
+                    ? 'External Nostr user — will send directly via Nostr DM protocol'
+                    : sendViaNostr
+                    ? 'Send via Nostr DM protocol'
+                    : 'Disabled — will use Kylrix traditional hangouts system'}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-extrabold text-white m-0">End-to-end encrypted</p>
-              <p className="text-[10px] font-semibold text-white/35 m-0 leading-tight">
-                {checkingKeys ? 'Checking keys…' : isImpossibleDirect ? 'Cannot create — standard chat exists and participant lacks encryption' : hasMissingKeys ? 'Off — someone lacks secure setup' : encryptedEnabled ? 'Messages stay private to participants' : 'Off — will create standard hangout'}
-              </p>
-            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={sendViaNostr}
+              disabled={isNostrOnlyUser}
+              onClick={() => setSendViaNostr((v) => !v)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${sendViaNostr ? 'bg-purple-600 border-purple-500' : 'bg-white/10 border-white/10'} ${isNostrOnlyUser ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${sendViaNostr ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={encryptedEnabled}
-            disabled={isToggleGreyed}
-            onClick={() => {
-              if (isImpossibleDirect) {
-                toast('Standard chat already exists, and this participant has not set up secure chat yet.', { id: 'e2e-impossible-reason' });
-                return;
-              }
-              if (hasMissingKeys) {
-                toast('Turn off encryption is automatic — a participant lacks secure setup', { id: 'e2e-disabled-reason' });
-                return;
-              }
-              if (hasBothDirects || hasOneDirect) {
-                toast(hasBothDirects ? 'Both encrypted and standard chats already exist — choose one' : `Only ${existingDirectInfo.hasEncrypted ? 'standard' : 'encrypted'} chat can be created — opposite of existing`, { id: 'dup-both-toggle' });
-                return;
-              }
-              setUserToggledOff((v) => !v);
-            }}
-            title={isImpossibleDirect ? 'Cannot create — standard chat already exists and participant has not set up encryption' : hasMissingKeys ? 'Disabled — participant without public key' : hasBothDirects ? 'Greyed — both chat types already exist' : hasOneDirect ? `Greyed — opposite of existing (${existingDirectInfo.hasEncrypted ? 'standard' : 'encrypted'})` : encryptedEnabled ? 'Tap to turn off — will create unencrypted discussion' : 'Tap to turn on'}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${encryptedEnabled ? 'bg-[#F59E0B] border-[#F59E0B]' : 'bg-white/10 border-white/10'} ${isToggleGreyed ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${encryptedEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
+
+          {!sendViaNostr ? (
+            /* E2E Toggle for Kylrix Traditional Hangouts */
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-[#0A0908] border border-white/[0.06] px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`p-2 rounded-lg border shrink-0 ${encryptedEnabled ? 'bg-[#F59E0B]/10 border-[#F59E0B]/20 text-[#F59E0B]' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                  {encryptedEnabled ? <Lock size={16} /> : <Shield size={16} />}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-extrabold text-white m-0">End-to-end encrypted</p>
+                  <p className="text-[10px] font-semibold text-white/35 m-0 leading-tight">
+                    {checkingKeys ? 'Checking keys…' : isImpossibleDirect ? 'Cannot create — standard chat exists and participant lacks encryption' : hasMissingKeys ? 'Off — someone lacks secure setup' : encryptedEnabled ? 'Messages stay private to participants' : 'Off — will create standard hangout'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={encryptedEnabled}
+                disabled={isToggleGreyed}
+                onClick={() => {
+                  if (isImpossibleDirect) {
+                    toast('Standard chat already exists, and this participant has not set up secure chat yet.', { id: 'e2e-impossible-reason' });
+                    return;
+                  }
+                  if (hasMissingKeys) {
+                    toast('Turn off encryption is automatic — a participant lacks secure setup', { id: 'e2e-disabled-reason' });
+                    return;
+                  }
+                  if (hasBothDirects || hasOneDirect) {
+                    toast(hasBothDirects ? 'Both encrypted and standard chats already exist — choose one' : `Only ${existingDirectInfo.hasEncrypted ? 'standard' : 'encrypted'} chat can be created — opposite of existing`, { id: 'dup-both-toggle' });
+                    return;
+                  }
+                  setUserToggledOff((v) => !v);
+                }}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${encryptedEnabled ? 'bg-[#F59E0B] border-[#F59E0B]' : 'bg-white/10 border-white/10'} ${isToggleGreyed ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${encryptedEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          ) : null}
         </div>
-        {encryptedEnabled && !isUnlocked ? (
-          <p className="text-[10px] font-semibold text-amber-400/80 mt-2 px-1">Vault locked — creating encrypted hangout will prompt unlock.</p>
-        ) : null}
-        {isImpossibleDirect ? (
-          <p className="text-[10px] font-semibold text-amber-400/90 mt-2 px-1">A standard chat already exists with this person, but they haven&apos;t set up encrypted chat yet. No new chat can be created.</p>
-        ) : !encryptedEnabled && hasMissingKeys ? (
-          <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">No conversation keys — standard chat uses same table with encryption off.</p>
-        ) : null}
-        {hasBothDirects ? (
-          <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">Both encrypted and standard chats already exist — choose one from your conversations.</p>
-        ) : hasOneDirect && !isImpossibleDirect ? (
-          <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">Defaults to {existingDirectInfo.hasEncrypted ? 'standard (unencrypted)' : 'encrypted'} — opposite of existing chat. Toggle greyed to prevent duplicate.</p>
-        ) : null}
-      </div>
+      ) : null}
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
-        {isGroup ? (
+        {isGroup && !sendViaNostr ? (
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-wider text-white/45 font-mono block">
               Hangout name {encryptedEnabled ? '' : '(unencrypted)'}
@@ -344,7 +407,7 @@ export function CreateChatComposer({
 
         <UserSearch
           label="ADD PEOPLE"
-          placeholder="Search by name or @username"
+          placeholder="Search by name, @username, or npub..."
           selectedUsers={selectedUsers}
           onSelect={(u) => {
             const id = u.id || (u as any).$id;
@@ -353,7 +416,6 @@ export function CreateChatComposer({
               toast.error(`Up to ${HANGOUT_MAX} people besides you`);
               return;
             }
-            // Optimistically add; key check effect will auto-disable encryption if needed
             setSelectedUsers((prev) => [...prev, u]);
           }}
           onRemove={(id) => setSelectedUsers((prev) => prev.filter((u) => (u.id || (u as any).$id) !== id))}
@@ -364,23 +426,8 @@ export function CreateChatComposer({
 
         {selectedUsers.length === 0 ? (
           <p className="text-center text-xs text-white/35 py-6 font-semibold">
-            Add one person for a direct chat, or multiple for a hangout. {!encryptedEnabled ? 'Will create a standard hangout.' : 'Encrypted when possible.'}
+            Add a person by username or Nostr npub to start a hangout.
           </p>
-        ) : null}
-        {isImpossibleDirect ? (
-          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2.5 flex gap-2.5">
-            <Shield size={14} className="text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-[11px] font-semibold text-amber-200/90 leading-relaxed m-0">
-              You already have a standard chat with this person. An encrypted chat cannot be created until they set up secure chat in Settings.
-            </p>
-          </div>
-        ) : hasMissingKeys ? (
-          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2.5 flex gap-2.5">
-            <Shield size={14} className="text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-[11px] font-semibold text-amber-200/90 leading-relaxed m-0">
-              One or more people haven&apos;t set up secure chat. Encryption is off — we&apos;ll create a standard hangout instead. Remove them or have them unlock vault in Settings to use encrypted hangouts.
-            </p>
-          </div>
         ) : null}
       </div>
 
@@ -399,7 +446,7 @@ export function CreateChatComposer({
           onClick={() => void handleCreate()}
           className="flex-1 h-12 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm disabled:opacity-40 hover:bg-amber-500 transition-colors"
         >
-          {busy ? 'Creating…' : isImpossibleDirect ? 'Chat exists' : hasBothDirects ? 'Both exist' : isGroup ? 'Create hangout' : 'Start hangout'}
+          {busy ? 'Creating…' : sendViaNostr ? 'Start Nostr DM' : isImpossibleDirect ? 'Chat exists' : hasBothDirects ? 'Both exist' : isGroup ? 'Create hangout' : 'Start hangout'}
         </button>
       </div>
     </div>
