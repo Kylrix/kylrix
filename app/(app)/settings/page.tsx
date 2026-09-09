@@ -1258,11 +1258,51 @@ function SettingsPageInner() {
                 {activeTab === 'admin' && isAdmin && (
                     <div className="flex flex-col lg:flex-row gap-6 pb-24 w-full">
                         {/* Admin sub-menu */}
-                        <div className="flex flex-col gap-2 w-full lg:w-[200px] flex-shrink-0">
-                            <button type="button" onClick={() => setAdminSubTab('dashboard')} className={`p-3.5 rounded-xl text-xs font-bold text-left cursor-pointer transition-colors ${adminSubTab === 'dashboard' ? 'bg-[#6366F1]/10 text-[#6366F1] border border-[#6366F1]/20' : 'text-white/40 hover:bg-white/5'}`}>System Dashboard</button>
-                            <button type="button" onClick={() => setAdminSubTab('users')} className={`p-3.5 rounded-xl text-xs font-bold text-left cursor-pointer transition-colors ${adminSubTab === 'users' ? 'bg-[#6366F1]/10 text-[#6366F1] border border-[#6366F1]/20' : 'text-white/40 hover:bg-white/5'}`}>User Directory</button>
-                            <button type="button" onClick={() => setAdminSubTab('email')} className={`p-3.5 rounded-xl text-xs font-bold text-left cursor-pointer transition-colors ${adminSubTab === 'email' ? 'bg-[#6366F1]/10 text-[#6366F1] border border-[#6366F1]/20' : 'text-white/40 hover:bg-white/5'}`}>Email Orchestrator</button>
-                            <button type="button" onClick={() => setAdminSubTab('coupons')} className={`p-3.5 rounded-xl text-xs font-bold text-left cursor-pointer transition-colors ${adminSubTab === 'coupons' ? 'bg-[#6366F1]/10 text-[#6366F1] border border-[#6366F1]/20' : 'text-white/40 hover:bg-white/5'}`}>Coupons Registry</button>
+                        <div className="p-2 bg-[#000000] border-2 border-white/20 rounded-2xl shadow-xl flex flex-col gap-1.5 w-full lg:w-[220px] flex-shrink-0 self-start">
+                            <button
+                                type="button"
+                                onClick={() => setAdminSubTab('dashboard')}
+                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-left w-full cursor-pointer ${
+                                    adminSubTab === 'dashboard'
+                                        ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]'
+                                        : 'text-white/70 hover:text-white hover:bg-white/[0.06] border-2 border-transparent hover:border-white/20'
+                                }`}
+                            >
+                                System Dashboard
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setAdminSubTab('users')}
+                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-left w-full cursor-pointer ${
+                                    adminSubTab === 'users'
+                                        ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]'
+                                        : 'text-white/70 hover:text-white hover:bg-white/[0.06] border-2 border-transparent hover:border-white/20'
+                                }`}
+                            >
+                                User Directory
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setAdminSubTab('email')}
+                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-left w-full cursor-pointer ${
+                                    adminSubTab === 'email'
+                                        ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]'
+                                        : 'text-white/70 hover:text-white hover:bg-white/[0.06] border-2 border-transparent hover:border-white/20'
+                                }`}
+                            >
+                                Email Orchestrator
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setAdminSubTab('coupons')}
+                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-left w-full cursor-pointer ${
+                                    adminSubTab === 'coupons'
+                                        ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]'
+                                        : 'text-white/70 hover:text-white hover:bg-white/[0.06] border-2 border-transparent hover:border-white/20'
+                                }`}
+                            >
+                                Coupons Registry
+                            </button>
                         </div>
                         {/* Render the selected admin subpage */}
                         <div className="flex-grow min-w-0">

@@ -23,7 +23,7 @@ const menuItems = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={
-      <div className="flex justify-center items-center min-h-screen bg-[#0A0908]">
+      <div className="flex justify-center items-center min-h-screen bg-[#000000]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1]" />
       </div>
     }>
@@ -48,9 +48,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <AdminGuard>
-      <div className="flex min-h-screen bg-[#0A0908] text-white font-satoshi">
+      <div className="flex min-h-screen bg-[#000000] text-white font-satoshi">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex flex-col w-[280px] bg-[#161412] border-r border-white/5 p-6 flex-shrink-0">
+        <aside className="hidden md:flex flex-col w-[280px] bg-[#000000] border-r-2 border-white/20 p-6 flex-shrink-0">
           <div className="flex items-center gap-3 mb-8">
             <Logo app="accounts" variant="icon" size={32} />
             <div>
@@ -63,7 +63,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <nav className="flex-1 space-y-1">
+          <nav className="flex-1 space-y-1.5">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
@@ -72,32 +72,32 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                   key={item.label}
                   type="button"
                   onClick={() => router.push(item.href)}
-                  className={`flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${
+                  className={`flex items-center justify-between w-full px-4 py-3 rounded-xl text-xs font-extrabold transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? 'bg-[#6366F1]/10 text-white border border-[#6366F1]/20'
-                      : 'text-white/50 hover:bg-white/[0.02] hover:text-white border border-transparent'
+                      ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]'
+                      : 'text-white/70 hover:bg-white/[0.06] hover:text-white border-2 border-transparent hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-[#6366F1]' : 'text-white/40'}`} strokeWidth={isActive ? 2.5 : 2} />
+                    <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white/50'}`} strokeWidth={2.5} />
                     <span>{item.label}</span>
                   </div>
-                  {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/60" />}
+                  {isActive && <ChevronRight className="w-4 h-4 text-white" />}
                 </button>
               );
             })}
           </nav>
 
-          <div className="mt-auto pt-6 border-t border-white/5">
-            <div className="flex items-center gap-3 p-4 rounded-2xl bg-[#6366F1]/[0.03] border border-white/[0.03]">
-              <div className="p-2 rounded-xl bg-[#6366F1]/10 text-[#6366F1]">
+          <div className="mt-auto pt-6 border-t-2 border-white/10">
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-[#000000] border-2 border-white/20 shadow-lg">
+              <div className="p-2 rounded-xl bg-[#6366F1]/20 border-2 border-[#6366F1]/40 text-[#6366F1]">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-xs text-white">
+                <h4 className="font-black text-xs text-white">
                   Secure Access
                 </h4>
-                <p className="text-[10px] text-white/40">
+                <p className="text-[10px] font-bold text-white/50">
                   Admin Privileges Active
                 </p>
               </div>
@@ -112,7 +112,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-[72px] bg-[#161412] border-t border-white/5 flex items-center justify-around px-4 shadow-[0_-12px_36px_rgba(0,0,0,0.34)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-[72px] bg-[#000000] border-t-2 border-white/20 flex items-center justify-around px-4 shadow-2xl">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
