@@ -21,8 +21,10 @@ import {
   Sparkles,
   Link as LinkIcon,
   Flame,
-  KeyRound
+  KeyRound,
+  Wallet
 } from 'lucide-react';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useRouter } from 'next/navigation';
 import { NostrRelayPool, type NostrEvent } from '@/lib/nostr/nostr';
 import { getNostrReadRelays } from '@/lib/connect/feed-settings';
@@ -187,6 +189,7 @@ export function UnifiedProfileView({
   const { user } = useAuth();
   const { identity } = useNostrIdentity();
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
+  const { openWallet } = useWalletOverlay();
   const [viewMode, setViewMode] = useState<ProfileViewMode>(source === 'nostr' ? 'nostr' : 'ecosystem');
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -817,6 +820,19 @@ export function UnifiedProfileView({
               </button>
             </>
           )}
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onClose) onClose();
+              openWallet();
+            }}
+            className="p-2 rounded-xl bg-[#000000] border border-white/20 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            title="Wallet"
+            aria-label="Wallet"
+          >
+            <Wallet size={15} />
+          </button>
 
           <button
             type="button"
