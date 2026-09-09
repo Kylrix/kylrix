@@ -376,6 +376,3 @@ export function useRightRail() {
 export function useRightRailOptional() {
   return useNativeSidebarOptional();
 }
-
-/** Alias provider name for ClientProviders migration */
-export const RightRailProvider = NativeSidebarProvider;

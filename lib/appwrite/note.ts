@@ -198,10 +198,6 @@ export function isExcludedNote(note: any): boolean {
   return !note.userId;
 }
 
-/** Alias — use at every Ideas / note discovery surface. */
-export const isIdeaListExcludedNote = isExcludedNote;
-// Back-compat alias for callers still importing isThreadNote
-export const isThreadNote = isExcludedNote;
 
 /**
  * Appwrite query fragments that shrink discussion shells before client filter.

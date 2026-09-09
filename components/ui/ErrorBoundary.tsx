@@ -43,8 +43,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-export default ErrorBoundary;
-
 export class NotesErrorBoundary extends Component<{ children: ReactNode }> {
   render() {
     return this.props.children;

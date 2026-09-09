@@ -481,5 +481,3 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
   if (typeof document === 'undefined') return null;
   return createPortal(dialog, document.body);
 };
-
-export default EventDialog;

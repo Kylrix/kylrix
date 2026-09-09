@@ -8,8 +8,7 @@ import {
   databases, 
   client, 
   getCurrentUser,
-  appwriteDatabases as originalAppwriteDatabases,
-  appwriteStorage,
+  storage,
   APPWRITE_DATABASE_ID,
   APPWRITE_BUCKET_BACKUPS_ID,
   APPWRITE_COLLECTION_KEYCHAIN_ID
@@ -70,9 +69,9 @@ const secureDatabases = {
     createRow: secureCreateRow,
     updateRow: secureUpdateRow,
     deleteRow: secureDeleteRow,
-    getRow: (dbId: string, collId: string, docId: string) => originalAppwriteDatabases.getRow(dbId, collId, docId),
+    getRow: (dbId: string, collId: string, docId: string) => databases.getRow(dbId, collId, docId),
     listRows: (dbId: string, collId: string, queries?: string[]) => {
-        return originalAppwriteDatabases.listRows(dbId, collId, queries);
+        return databases.listRows(dbId, collId, queries);
     }};
 
 export const vaultDatabases = secureDatabases;
@@ -826,7 +825,7 @@ export class VaultService {
     userId: string,
     resourceType: 'secret' | 'totp'): Promise<string[]> {
     try {
-      const response = await originalAppwriteDatabases.listRows(
+      const response = await databases.listRows(
         APPWRITE_DATABASE_ID,
         APPWRITE_COLLECTION_KEY_MAPPING_ID,
         [
@@ -2228,7 +2227,7 @@ export class VaultService {
     const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
     const file = new File([blob], `${APPWRITE_CONFIG.SYSTEM.RP_NAME}-backup-${new Date().getTime()}.json`, { type: "application/json" });
 
-    return await appwriteStorage.createFile(
+    return await storage.createFile(
       APPWRITE_BUCKET_BACKUPS_ID,
       ID.unique(),
       file,
@@ -2238,7 +2237,7 @@ export class VaultService {
   }
 
   static async listCloudBackups(_userId: string): Promise<Models.FileList> {
-    return await appwriteStorage.listFiles(
+    return await storage.listFiles(
       APPWRITE_BUCKET_BACKUPS_ID,
       [Query.orderDesc("$createdAt")]
     );

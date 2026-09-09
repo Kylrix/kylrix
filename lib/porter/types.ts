@@ -13,6 +13,9 @@ export type PorterFormat =
 
 export type PorterKind = 'credential' | 'totp' | 'workspace' | 'env';
 
+export type PorterDraftDirection = 'import' | 'export';
+export type PorterDraftDataKind = 'secrets' | 'totp' | 'mixed' | 'auto';
+
 export interface PorterCredentialDraft {
   kind: 'credential';
   name: string;

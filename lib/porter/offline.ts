@@ -4,13 +4,12 @@
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { looksEncrypted as masterLooksEncrypted } from '@/lib/masterpass-crypto';
-import type { PorterDiscernResult, PorterImportBundle } from './types';
+import type { PorterDiscernResult, PorterImportBundle, PorterDraftDirection, PorterDraftDataKind } from './types';
 import { bundleItemCount, toImportBundle } from './discern';
 
 const DRAFT_KEY = (userId: string) => `porter_draft_${userId}`;
 
-export type PorterDraftDirection = 'import' | 'export';
-export type PorterDraftDataKind = 'secrets' | 'totp' | 'mixed' | 'auto';
+export type { PorterDraftDirection, PorterDraftDataKind };
 
 export type PorterSessionDraft = {
   direction: PorterDraftDirection;

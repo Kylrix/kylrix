@@ -173,5 +173,3 @@ export function BareMetalInput({
 }
 
 export const BareMetalTextarea = (props: Omit<BaseProps, 'as'> & { forwardedRef?: React.Ref<any> }) => <BareMetalInput {...props} as="textarea" forwardedRef={props.forwardedRef} />;
-
-export const BareMetalField = BareMetalInput;

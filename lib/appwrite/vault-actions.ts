@@ -17,7 +17,7 @@ import {
 import {
   APPWRITE_DATABASE_ID,
   APPWRITE_COLLECTION_KEYCHAIN_ID,
-  appwriteAccount,
+  account,
 } from "./client";
 import type {
   Credentials,
@@ -237,14 +237,7 @@ export async function deleteCredential(id: string) {
   return await VaultService.deleteCredential(id);
 }
 
-/**
- * Delete a TOTP secret by row ID.
- */
-export async function deleteTOTPSecret(id: string) {
-  return await VaultService.deleteTOTPSecret(id);
-}
-
-export const deleteTotp = deleteTOTPSecret;
+export const deleteTotp = deleteTotpSecret;
 
 /**
  * Logs out the current user from Appwrite and clears session/local storage.
@@ -252,7 +245,7 @@ export const deleteTotp = deleteTOTPSecret;
  */
 export async function logoutAppwrite() {
   try {
-    await appwriteAccount.deleteSession("current");
+    await account.deleteSession("current");
   } catch { }
   if (typeof window !== "undefined") {
     const { purgeAllClientStorageOnLogout } = await import('@/lib/services/wipe-client-storage');
@@ -344,8 +337,8 @@ export async function deleteCredentialAttachment(credentialId: string, fileId: s
 
   // Delete from Appwrite Storage
   try {
-    const { appwriteStorage } = await import('./client');
-    await appwriteStorage.deleteFile('vault_attachments', fileId);
+    const { storage } = await import('./client');
+    await storage.deleteFile('vault_attachments', fileId);
   } catch (err) {
     console.warn('[vault-attachments] Failed to delete file from storage (might already be deleted):', err);
   }
