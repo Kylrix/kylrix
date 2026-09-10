@@ -69,3 +69,6 @@ functions/**/.env.*
 .repo/
 
 .env*
+
+# standalone nostr client clone
+zup/
