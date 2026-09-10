@@ -158,7 +158,7 @@ function BareBonesMasterpassUnlock() {
         addLog(`Remote listKeychainEntries error: ${err?.message || err}`);
         return [];
       });
-      addLog(`Remote Appwrite Database (${APPWRITE_CONFIG.DATABASES.VAULT}.${APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN}) Rows: ${remoteEntries.length}`);
+      addLog(`Remote Database (${APPWRITE_CONFIG.DATABASES.VAULT}.${APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN}) Rows: ${remoteEntries.length}`);
 
       const allEntries = remoteEntries.length > 0 ? remoteEntries : localKeychain;
       if (allEntries.length === 0) {

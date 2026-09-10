@@ -17,7 +17,7 @@ export async function listMyTeamsSecure(jwt?: string) {
   }
 
   if (!isTeamsTierAllowed(actor.prefs)) {
-    throw new Error('Forbidden: Native Teams is exclusively available on the Teams plan.');
+    throw new Error('Forbidden: Teams feature is exclusively available on the Teams plan.');
   }
 
   const { teams } = createSystemClient();
@@ -37,7 +37,7 @@ export async function createNativeTeamSecure(name: string, roles?: string[], jwt
   }
 
   if (!isTeamsTierAllowed(actor.prefs)) {
-    throw new Error('Forbidden: Native Teams is exclusively available on the Teams plan.');
+    throw new Error('Forbidden: Teams feature is exclusively available on the Teams plan.');
   }
 
   if (!name || !name.trim()) {
@@ -63,7 +63,7 @@ export async function deleteNativeTeamSecure(teamId: string, jwt?: string) {
   }
 
   if (!isTeamsTierAllowed(actor.prefs)) {
-    throw new Error('Forbidden: Native Teams is exclusively available on the Teams plan.');
+    throw new Error('Forbidden: Teams feature is exclusively available on the Teams plan.');
   }
 
   const { teams } = createSystemClient();
@@ -83,7 +83,7 @@ export async function getTeamMembershipsSecure(teamId: string, jwt?: string) {
   }
 
   if (!isTeamsTierAllowed(actor.prefs)) {
-    throw new Error('Forbidden: Native Teams is exclusively available on the Teams plan.');
+    throw new Error('Forbidden: Teams feature is exclusively available on the Teams plan.');
   }
 
   const { teams } = createSystemClient();
@@ -110,7 +110,7 @@ export async function addTeamMemberSecure(input: {
   }
 
   if (!isTeamsTierAllowed(actor.prefs)) {
-    throw new Error('Forbidden: Native Teams is exclusively available on the Teams plan.');
+    throw new Error('Forbidden: Teams feature is exclusively available on the Teams plan.');
   }
 
   const { teams } = createSystemClient();
@@ -137,7 +137,7 @@ export async function removeTeamMemberSecure(teamId: string, membershipId: strin
   }
 
   if (!isTeamsTierAllowed(actor.prefs)) {
-    throw new Error('Forbidden: Native Teams is exclusively available on the Teams plan.');
+    throw new Error('Forbidden: Teams feature is exclusively available on the Teams plan.');
   }
 
   const { teams } = createSystemClient();

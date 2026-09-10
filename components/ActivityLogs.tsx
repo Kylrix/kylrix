@@ -2,7 +2,8 @@
 import { useColors } from '@/lib/theme-context';
 
 import { useState, useEffect, useCallback } from 'react';
-import { account } from '@/lib/appwrite/client';
+import { useAuth } from '@/lib/auth';
+import { listAccountLogsSecure } from '@/lib/actions/auth-actions';
 import {
   Box,
   Typography,
@@ -60,6 +61,7 @@ const EVENT_COLORS: Record<string, string> = {
 
 export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
   const dynamicColors = useColors();
+  const { getJWT } = useAuth();
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<Log[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -71,10 +73,17 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
     try {
       setLoading(true);
       setError(null);
-      const logList = await account.listLogs();
-      const formattedLogs = (logList.logs || []).map((log) => ({
+      const jwt = await getJWT();
+      const res = await listAccountLogsSecure(jwt || undefined);
+      if (!res.success && res.error) {
+        setError(res.error);
+        setLogs([]);
+        return;
+      }
+      const rawLogs = res.logs || [];
+      const formattedLogs = rawLogs.map((log: any) => ({
         ...log,
-        eventType: log.event}));
+        eventType: log.event || log.eventType}));
       setLogs(formattedLogs);
       onLogsLoaded?.(formattedLogs.length);
     } catch (err: unknown) {
@@ -83,7 +92,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
     } finally {
       setLoading(false);
     }
-  }, [onLogsLoaded]);
+  }, [onLogsLoaded, getJWT]);
 
   useEffect(() => {
     loadLogs();
@@ -98,8 +107,13 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
     setPage(0);
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString();
+  const formatDate = (timeValue: any) => {
+    if (!timeValue) return '—';
+    if (typeof timeValue === 'number') {
+      return new Date(timeValue * (timeValue < 10000000000 ? 1000 : 1)).toLocaleString();
+    }
+    const d = new Date(timeValue);
+    return isNaN(d.getTime()) ? String(timeValue) : d.toLocaleString();
   };
 
   const getEventLabel = (event: string): string => {
@@ -251,7 +265,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
                       {log.countryCode || '—'}
                     </TableCell>
                     <TableCell sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
-                      {formatDate(new Date(log.time).getTime() / 1000)}
+                      {formatDate(log.time)}
                     </TableCell>
                   </TableRow>
                 ))}

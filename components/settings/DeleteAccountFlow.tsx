@@ -187,7 +187,7 @@ export function DeleteAccountFlow({ onClose }: { onClose?: () => void }) {
               <button type="button" onClick={() => setStep(4)} className="flex-1 h-10 rounded-xl border border-white/10 text-white text-xs font-bold">Back</button>
               <button type="button" onClick={onClose} className="flex-1 h-10 rounded-xl bg-white/5 text-white/60 text-xs font-bold">Cancel</button>
             </div>
-            <p className="text-[10px] text-white/30 font-mono text-center">Next.js server purges all rows + storage first; Appwrite function `account-cleanup` sweeps leftovers on `users.*.delete`. Instant.</p>
+            <p className="text-[10px] text-white/30 font-mono text-center">Next.js server purges all rows + storage first; background system function sweeps leftovers instantly.</p>
           </div>
         )}
       </div>
