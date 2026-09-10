@@ -197,7 +197,7 @@ export function TeamsTab() {
             <span>Teams</span>
           </h2>
           <p className="text-xs text-white/40 font-semibold mt-1">
-            Govern organization-level collaboration, workspaces, and system permissions across your company using Appwrite native teams.
+            Govern organization-level collaboration, workspaces, and system permissions across your company using organization teams.
           </p>
         </div>
 
@@ -217,13 +217,13 @@ export function TeamsTab() {
               </h3>
 
               <p className="text-xs text-white/60 leading-relaxed font-medium">
-                Teams exist to govern collaboration across workspaces and organizational domains. Native Appwrite Teams functionality is strictly reserved for the <span className="text-white font-bold">Teams Plan</span>. Note that object-level collaborator sharing remains completely free and available across all plans!
+                Teams exist to govern collaboration across workspaces and organizational domains. Organization Teams functionality is strictly reserved for the <span className="text-white font-bold">Teams Plan</span>. Note that object-level collaborator sharing remains completely free and available across all plans!
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <div className="flex items-start gap-2 text-xs text-white/70">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-1.5 shrink-0" />
-                  <span>Create and manage native Appwrite Teams</span>
+                  <span>Create and manage organization teams</span>
                 </div>
                 <div className="flex items-start gap-2 text-xs text-white/70">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#6366F1] mt-1.5 shrink-0" />
@@ -270,7 +270,7 @@ export function TeamsTab() {
             <span>Teams</span>
           </h2>
           <p className="text-xs text-white/40 font-semibold mt-1">
-            Manage your Appwrite native teams, govern organizational access, and invite team members.
+            Manage your organization teams, govern organizational access, and invite team members.
           </p>
         </div>
 
@@ -287,7 +287,7 @@ export function TeamsTab() {
       {/* Create Team Modal / Inline Card */}
       {showCreateModal && (
         <form onSubmit={handleCreateTeam} className="p-5 bg-[#000000] border-2 border-[#6366F1]/50 rounded-2xl shadow-xl space-y-4">
-          <h3 className="text-sm font-black text-white font-clash">Create New Native Team</h3>
+          <h3 className="text-sm font-black text-white font-clash">Create New Team</h3>
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <input
               type="text"
@@ -329,9 +329,9 @@ export function TeamsTab() {
           <div className="w-12 h-12 rounded-2xl bg-[#6366F1]/10 border-2 border-[#6366F1]/30 text-[#6366F1] flex items-center justify-center mx-auto">
             <Users size={24} />
           </div>
-          <h3 className="text-white font-extrabold text-sm font-clash">No native teams yet</h3>
+          <h3 className="text-white font-extrabold text-sm font-clash">No teams yet</h3>
           <p className="text-xs text-white/40 max-w-sm mx-auto leading-relaxed">
-            Create your first Appwrite native team to organize members and manage team-based workspace permissions.
+            Create your first team to organize members and manage team-based workspace permissions.
           </p>
           <button
             type="button"

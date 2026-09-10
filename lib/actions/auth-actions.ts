@@ -143,6 +143,35 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname?: st
 }
 
 /**
+ * Fetches activity logs for the authenticated user securely via server actions.
+ * Leverages system client with actor verification and server account fallback.
+ */
+export async function listAccountLogsSecure(jwt?: string) {
+  try {
+    const { getActor } = await import('./secure-ops/shared');
+    const actor = await getActor(jwt);
+
+    if (actor && actor.$id) {
+      try {
+        const systemClient = createSystemClient();
+        const logsRes = await systemClient.users.listLogs(actor.$id);
+        return { success: true, logs: logsRes.logs || [] };
+      } catch (systemErr) {
+        console.warn('[listAccountLogsSecure] System client fetch failed, trying server client:', systemErr);
+      }
+    }
+
+    const { createServerClient } = await import('@/lib/appwrite/server');
+    const { account } = await createServerClient(jwt);
+    const logList = await account.listLogs();
+    return { success: true, logs: logList.logs || [] };
+  } catch (error: any) {
+    console.error('Error fetching account activity logs:', error);
+    return { success: false, error: error.message || 'Failed to fetch activity logs', logs: [] };
+  }
+}
+
+/**
  * Verifies WebAuthn assertion response and returns an Appwrite custom token.
  */
 export async function verifyPasskeyLoginAction(

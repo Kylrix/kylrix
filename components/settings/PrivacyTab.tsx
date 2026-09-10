@@ -116,7 +116,7 @@ export function PrivacyTab() {
               <div className="w-8 h-8 rounded-xl bg-[#161412] border-2 border-white/20 flex items-center justify-center text-white/70"><Circle size={16} /></div>
               <div className="min-w-0">
                 <div className="text-white font-bold text-sm">Online presence</div>
-                <div className="text-white/40 text-xs leading-relaxed">Show when you are online and see partner online (Appwrite presence)</div>
+                <div className="text-white/40 text-xs leading-relaxed">Show when you are online and see partner online (Ecosystem presence)</div>
               </div>
             </div>
             <button
