@@ -15,7 +15,9 @@ import {
   AlertTriangle,
   KeyRound,
   Plus,
-  Code2
+  Code2,
+  Clock,
+  UserCheck
 } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -151,11 +153,11 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
     setAddingMember(true);
     try {
       await ProjectsService.addCollaborator(activeWorkspace.id, newMemberEmail.trim(), 'member');
-      toast.success('Member added / invited to workspace');
+      toast.success('Invitation sent');
       setNewMemberEmail('');
       void loadWorkspaceDetails();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to add member');
+      toast.error(err.message || 'Failed to send invite');
     } finally {
       setAddingMember(false);
     }
@@ -475,60 +477,181 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
           </button>
         </form>
 
-        <div className="space-y-2">
-          {collaborators.length === 0 ? (
-            <div className="p-4 text-center text-xs text-white/40 rounded-xl bg-[#0A0908] border-2 border-white/15">
-              No additional collaborators registered. You are the sole workspace owner.
-            </div>
-          ) : (
-            collaborators.map((c) => (
-              <div key={c.$id || c.entityId || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center text-xs font-mono font-bold shrink-0">
-                    {(c.userId || c.entityId || '?').charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-white font-mono truncate">{c.userId || c.entityId}</div>
-                    <div className="text-[10px] text-white/40 uppercase font-mono font-bold">{c.role || c.permission || 'Member'}</div>
-                  </div>
-                </div>
+        {/* Collaborators Subsections: Join Requests, Pending Invites, Active Members */}
+        {(() => {
+          const joinRequests = collaborators.filter((c) => c.status === 'requested');
+          const pendingInvites = collaborators.filter((c) => c.status === 'pending');
+          const activeMembers = collaborators.filter((c) => c.status === 'accepted' || (!c.status && c.accepted !== false));
 
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      openDrawer('share-note', {
-                        resourceType: 'project',
-                        resourceId: activeWorkspace.id,
-                        resourceTitle: activeWorkspace.title,
-                        initialCollaborator: {
-                          userId: c.userId || c.entityId,
-                          username: c.username || c.userId || c.entityId,
-                          displayName: c.displayName || c.userId || c.entityId,
-                          avatar: c.avatar || null,
-                          permissionLevel: c.permission === 'admin' ? 'admin' : (c.permission === 'write' ? 'editor' : 'viewer'),
-                        },
-                        onShared: () => { void loadWorkspaceDetails(); },
-                      });
-                    }}
-                    className="p-1.5 text-xs text-[#818CF8] hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer font-medium"
-                    title="Edit Access Level"
-                  >
-                    Edit Access
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveMember(c.userId || c.entityId)}
-                    className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
-                    title="Remove Member"
-                  >
-                    <UserMinus size={14} />
-                  </button>
+          return (
+            <div className="space-y-4">
+              {/* 1. Inbound Join Requests */}
+              {joinRequests.length > 0 && (
+                <div className="space-y-2 p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 font-clash flex items-center gap-1.5">
+                      <Clock size={12} />
+                      Pending Join Requests ({joinRequests.length})
+                    </span>
+                    <span className="text-[10px] text-amber-400/60 font-mono">Requires Admin Approval</span>
+                  </div>
+                  <div className="space-y-2">
+                    {joinRequests.map((c) => (
+                      <div key={c.$id || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border border-amber-500/20 hover:border-amber-500/40 transition-colors gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center text-xs font-mono font-bold shrink-0">
+                            {(c.displayName || c.username || c.userId || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || c.username || c.userId}</div>
+                            <div className="text-[10px] text-amber-400/70 font-mono">Requested via link</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openDrawer('join-request-confirm', {
+                                action: 'grant',
+                                requesterName: c.displayName || c.username || c.userId,
+                                projectName: activeWorkspace.title,
+                                onConfirm: async (role) => {
+                                  await ProjectsService.approveJoinRequest(activeWorkspace.id, c.userId, role || 'viewer');
+                                  toast.success(`Access granted to ${c.displayName || c.username || c.userId}`);
+                                  void loadWorkspaceDetails();
+                                },
+                              });
+                            }}
+                            className="px-2.5 py-1 text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <UserCheck size={12} />
+                            <span>Approve</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openDrawer('join-request-confirm', {
+                                action: 'deny',
+                                requesterName: c.displayName || c.username || c.userId,
+                                projectName: activeWorkspace.title,
+                                onConfirm: async () => {
+                                  await ProjectsService.removeCollaborator(activeWorkspace.id, c.userId);
+                                  toast.success(`Request denied`);
+                                  void loadWorkspaceDetails();
+                                },
+                              });
+                            }}
+                            className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                            title="Deny Request"
+                          >
+                            <UserMinus size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              )}
+
+              {/* 2. Outbound Pending Invites */}
+              {pendingInvites.length > 0 && (
+                <div className="space-y-2 p-3.5 rounded-2xl bg-[#6366F1]/5 border border-[#6366F1]/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#818CF8] font-clash flex items-center gap-1.5">
+                      <Clock size={12} />
+                      Pending Outbound Invites ({pendingInvites.length})
+                    </span>
+                    <span className="text-[10px] text-white/40 font-mono">Awaiting User Acceptance</span>
+                  </div>
+                  <div className="space-y-2">
+                    {pendingInvites.map((c) => (
+                      <div key={c.$id || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border border-white/15 hover:border-white/30 transition-colors gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center text-xs font-mono font-bold shrink-0">
+                            {(c.displayName || c.username || c.userId || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || c.username || c.userId}</div>
+                            <div className="text-[10px] text-white/40 uppercase font-mono font-bold">{c.permissionLevel || c.permission || 'Invited'}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMember(c.userId)}
+                            className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer text-xs font-medium"
+                            title="Cancel Invite"
+                          >
+                            Cancel Invite
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Active Workspace Members */}
+              <div className="space-y-2">
+                {activeMembers.length === 0 && joinRequests.length === 0 && pendingInvites.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-white/40 rounded-xl bg-[#0A0908] border-2 border-white/15">
+                    No additional collaborators registered. You are the sole workspace owner.
+                  </div>
+                ) : (
+                  activeMembers.map((c) => (
+                    <div key={c.$id || c.entityId || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center text-xs font-mono font-bold shrink-0">
+                          {(c.displayName || c.username || c.userId || c.entityId || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || c.username || c.userId || c.entityId}</div>
+                          <div className="text-[10px] text-white/40 uppercase font-mono font-bold">{c.permissionLevel || c.role || c.permission || 'Member'}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            openDrawer('share-note', {
+                              resourceType: 'project',
+                              resourceId: activeWorkspace.id,
+                              resourceTitle: activeWorkspace.title,
+                              initialCollaborator: {
+                                userId: c.userId || c.entityId,
+                                username: c.username || c.userId || c.entityId,
+                                displayName: c.displayName || c.userId || c.entityId,
+                                avatar: c.avatar || null,
+                                permissionLevel: c.permissionLevel || (c.permission === 'admin' ? 'admin' : (c.permission === 'write' ? 'editor' : 'viewer')),
+                              },
+                              onShared: () => { void loadWorkspaceDetails(); },
+                            });
+                          }}
+                          className="p-1.5 text-xs text-[#818CF8] hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer font-medium"
+                          title="Edit Access Level"
+                        >
+                          Edit Access
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(c.userId || c.entityId)}
+                          className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                          title="Remove Member"
+                        >
+                          <UserMinus size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            ))
-          )}
-        </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Workspace Keys */}

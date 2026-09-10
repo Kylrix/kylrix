@@ -164,7 +164,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     });
 
     const permission = input.permission === 'admin' ? 'admin' : (input.permission === 'editor' ? 'write' : 'read');
-    const inviteStatus = resourceType === 'project' && isEcosystemUser ? 'pending' : (isEcosystemUser ? 'accepted' : 'pending');
+    const inviteStatus = resourceType === 'project' ? 'pending' : (isEcosystemUser ? 'accepted' : 'pending');
     const inviteAccepted = inviteStatus === 'accepted';
 
     if (existingCollab.rows.length > 0) {
@@ -175,7 +175,8 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
         data: {
           permission,
           status: inviteStatus,
-          accepted: inviteAccepted}
+          accepted: inviteAccepted,
+          inviterId: requester.$id}
       });
     } else {
       await tables.createRow({
@@ -190,7 +191,8 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
           invitedAt: new Date().toISOString(),
           accepted: inviteAccepted,
           status: inviteStatus,
-          role: 'collaborator'
+          role: 'collaborator',
+          inviterId: requester.$id
         }
       });
     }
@@ -514,8 +516,8 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
       tableId: 'projects',
       rowId: projectId});
 
-  // Note: Collaborators are free and limitless on all plans
-  const inviteStatus: 'pending' | 'accepted' = 'accepted';
+  // On workspaces, adding a collaborator creates a pending outbound invite that requires user acceptance
+  const inviteStatus: 'pending' | 'accepted' = 'pending';
 
   try {
     await upsertProjectCollaboratorRow(tables, projectId, targetUserId, permissionLevel, inviteStatus, actor.$id);

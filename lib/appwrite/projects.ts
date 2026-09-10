@@ -102,6 +102,32 @@ export const ProjectsService = {
   },
 
   async listProjectCollaborators(projectId: string) {
+    if (typeof window !== 'undefined') {
+      try {
+        const { account } = await import('./client');
+        const res = await account.createJWT().catch(() => null);
+        const { getResourceCollaboratorsSecure } = await import('@/lib/actions/secure-ops');
+        const { collaborators } = await getResourceCollaboratorsSecure({
+          resourceId: projectId,
+          resourceType: 'project',
+          jwt: res?.jwt,
+        });
+        return { rows: collaborators };
+      } catch (e) {
+        console.warn('[ProjectsService] listProjectCollaborators failed via secure action, falling back:', e);
+      }
+    } else {
+      try {
+        const { getResourceCollaboratorsSecure } = await import('@/lib/actions/secure-ops');
+        const { collaborators } = await getResourceCollaboratorsSecure({
+          resourceId: projectId,
+          resourceType: 'project',
+        });
+        return { rows: collaborators };
+      } catch (e) {
+        console.warn('[ProjectsService] listProjectCollaborators server action failed:', e);
+      }
+    }
     return (databases as any).listRows(
       DATABASE_ID,
       PROJECT_OBJECTS_COLLECTION_ID,
