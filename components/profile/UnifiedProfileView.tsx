@@ -22,7 +22,8 @@ import {
   Link as LinkIcon,
   Flame,
   KeyRound,
-  Wallet
+  Wallet,
+  Coins
 } from 'lucide-react';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useRouter } from 'next/navigation';
@@ -189,8 +190,9 @@ export function UnifiedProfileView({
   const { user } = useAuth();
   const { identity } = useNostrIdentity();
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
-  const { openWallet } = useWalletOverlay();
+  const { openWallet, openWalletWithIntent } = useWalletOverlay();
   const [viewMode, setViewMode] = useState<ProfileViewMode>(source === 'nostr' ? 'nostr' : 'ecosystem');
+  const [tipEnabled, setTipEnabled] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const router = useRouter();
@@ -358,6 +360,16 @@ export function UnifiedProfileView({
           const storedPubkey = (prof as any).nostrPubkey || (prof as any).pubkey;
           if (storedNpub && !resolvedNpub) setResolvedNpub(storedNpub);
           if (storedPubkey && !resolvedPubkey) setResolvedPubkey(storedPubkey);
+
+          try {
+            const prefs = typeof (prof as any).preferences === 'string'
+              ? JSON.parse((prof as any).preferences)
+              : (prof as any).preferences;
+            if (prefs && typeof prefs.tipEnabled === 'boolean') {
+              setTipEnabled(prefs.tipEnabled);
+            }
+          } catch {}
+
           setResolvedProfile(prev => ({
             name: prev.name || prof.displayName || prof.name,
             username: prev.username || prof.username,
@@ -374,6 +386,16 @@ export function UnifiedProfileView({
           const storedPubkey = (prof as any).nostrPubkey || (prof as any).pubkey;
           if (storedNpub) setResolvedNpub(storedNpub);
           if (storedPubkey) setResolvedPubkey(storedPubkey);
+
+          try {
+            const prefs = typeof (prof as any).preferences === 'string'
+              ? JSON.parse((prof as any).preferences)
+              : (prof as any).preferences;
+            if (prefs && typeof prefs.tipEnabled === 'boolean') {
+              setTipEnabled(prefs.tipEnabled);
+            }
+          } catch {}
+
           setResolvedProfile(prev => ({
             name: prev.name || prof.displayName || prof.name,
             username: prev.username || prof.username,
@@ -776,6 +798,28 @@ export function UnifiedProfileView({
           ) : (
             <>
               {/* Other User Actions */}
+              {tipEnabled !== false && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    openWalletWithIntent({
+                      mode: 'send',
+                      toUser: {
+                        id: targetUid || '',
+                        username: rawUsername || '',
+                        displayName: activeDisplayName,
+                      },
+                    });
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-500 text-black hover:bg-emerald-400 active:scale-95 transition-all shadow-[0_4px_12px_rgba(16,185,129,0.25)] cursor-pointer"
+                  title={`Tip ${activeDisplayName}`}
+                  aria-label={`Tip ${activeDisplayName}`}
+                >
+                  <Coins size={14} />
+                  <span className="hidden sm:inline">Tip</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={handleToggleFollow}

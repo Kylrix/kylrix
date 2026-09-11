@@ -56,7 +56,12 @@ export function FollowListDrawer({
   }
 
   // Resolve own hex pubkey
-  const myHex = identity?.pubkeyHex || (user?.prefs?.nostrPubkey ? String(user.prefs.nostrPubkey) : null);
+  let myHex: string | null = user?.prefs?.nostrPubkey ? String(user.prefs.nostrPubkey) : null;
+  if (!myHex && identity?.npub) {
+    try {
+      myHex = bytesToHex(npubToBytes(identity.npub));
+    } catch {}
+  }
 
   // Load list of followers or following
   const loadList = useCallback(async () => {
