@@ -72,6 +72,8 @@ export function middleware(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 30, // 30 days
       path: '/',
       sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
     });
     return response;
   };
@@ -295,6 +297,7 @@ export function middleware(request: NextRequest) {
     maxAge: Math.ceil(RELOAD_WINDOW_MS / 1000),
     httpOnly: true,
     sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
   });
 
   return response;

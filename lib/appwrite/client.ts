@@ -627,7 +627,8 @@ export function setKylrixPulse(user: any, avatarBase64?: string | null) {
         };
         
         const domainStr = getCookieDomain();
-        document.cookie = `${PULSE_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(pulse))}; path=/; ${domainStr}max-age=31536000; SameSite=Lax`;
+        const secureStr = window.location.protocol === 'https:' ? 'Secure; ' : '';
+        document.cookie = `${PULSE_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(pulse))}; path=/; ${domainStr}${secureStr}max-age=31536000; SameSite=Lax`;
         if (avatarBase64) localStorage.setItem(AVATAR_CACHE_PREFIX + user.$id, avatarBase64);
         (window as any).__KYLRIX_PULSE__ = { ...pulse, avatarBase64: avatarBase64 || localStorage.getItem(AVATAR_CACHE_PREFIX + user.$id) };
     } catch (_e) {}
@@ -636,10 +637,11 @@ export function setKylrixPulse(user: any, avatarBase64?: string | null) {
 export function clearKylrixPulse() {
     if (typeof window === 'undefined') return;
     const domainStr = getCookieDomain();
+    const secureStr = window.location.protocol === 'https:' ? 'Secure; ' : '';
     if (domainStr) {
-        document.cookie = `${PULSE_COOKIE_NAME}=; path=/; ${domainStr}expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        document.cookie = `${PULSE_COOKIE_NAME}=; path=/; ${domainStr}${secureStr}expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
     }
-    document.cookie = `${PULSE_COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    document.cookie = `${PULSE_COOKIE_NAME}=; path=/; ${secureStr}expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
     delete (window as any).__KYLRIX_PULSE__;
     document.documentElement.removeAttribute('data-kylrix-pulse');
 }

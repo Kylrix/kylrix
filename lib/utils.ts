@@ -150,14 +150,15 @@ export function getEffectiveUsername(user: any): string | null {
 // Clear stale session cookies to prevent overlapping session identity bugs
 export function clearStatelessSessions() {
   try {
-    document.cookie = "kylrix_pulse_v2=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+    const secureStr = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'Secure; ' : '';
+    document.cookie = `kylrix_pulse_v2=; path=/; ${secureStr}expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
     document.cookie.split(";").forEach((cookie) => {
       const eqPos = cookie.indexOf("=");
       const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
       if (name.startsWith("a_session_")) {
-        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+        document.cookie = `${name}=; path=/; ${secureStr}expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
         const domain = window.location.hostname;
-        document.cookie = `${name}=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+        document.cookie = `${name}=; path=/; domain=${domain}; ${secureStr}expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
       }
     });
     // Keep sessionStorage partition pointers intact
