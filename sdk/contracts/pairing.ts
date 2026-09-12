@@ -20,7 +20,23 @@ export type PairingStatus = (typeof PAIRING_STATUSES)[number];
 export const pairingRequestInputZod = z.object({
   clientName: z.string().min(1).max(128).default('Kylrix Client'),
   clientType: z.enum(['cli', 'self_hosted_sync', 'mobile', 'daemon']).default('cli'),
-  requestedScopes: z.array(z.string()).default(['notes:read', 'notes:write', 'goals:read', 'goals:write']),
+  requestedScopes: z.array(z.string()).default([
+    'profile:read',
+    'notes:read',
+    'notes:write',
+    'goals:read',
+    'goals:write',
+    'tags:read',
+    'tags:write',
+    'forms:read',
+    'forms:write',
+    'events:read',
+    'events:write',
+    'workspaces:read',
+    'workspaces:write',
+    'objects:read',
+    'objects:write',
+  ]),
   pairingMetadata: z.record(z.unknown()).optional(),
 });
 

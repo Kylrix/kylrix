@@ -62,7 +62,23 @@ export function CloudSyncSection() {
       const session = await client.requestPairing({
         clientName: `Self-Hosted Node (${typeof window !== 'undefined' ? window.location.hostname : 'Node'})`,
         clientType: 'self_hosted_sync',
-        requestedScopes: ['notes:read', 'notes:write', 'goals:read', 'goals:write', 'profile:read'],
+        requestedScopes: [
+          'profile:read',
+          'notes:read',
+          'notes:write',
+          'goals:read',
+          'goals:write',
+          'tags:read',
+          'tags:write',
+          'forms:read',
+          'forms:write',
+          'events:read',
+          'events:write',
+          'workspaces:read',
+          'workspaces:write',
+          'objects:read',
+          'objects:write',
+        ],
       });
 
       setPairingSession({

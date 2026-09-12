@@ -38,6 +38,7 @@ const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr:
 
 import { WebMcpProvider } from '@/context/WebMcpContext';
 import { WebMcpInspectorDrawer } from '@/components/webmcp/WebMcpInspectorDrawer';
+import { CloudSyncProvider } from '@/components/providers/CloudSyncProvider';
 
 interface ComposeProvidersProps {
   providers: Array<React.ComponentType<{ children: ReactNode }>>;
@@ -112,6 +113,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   TrashPurgeProvider,
   PaymentReminderProvider,
   WebMcpProvider,
+  CloudSyncProvider,
 ];
 
 export function ClientProviders({ children }: { children: ReactNode }) {
