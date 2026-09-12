@@ -133,7 +133,7 @@ export function EditProfileModal({
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [tipEnabled, setTipEnabled] = useState(false);
-  const [hasWallet, setHasWallet] = useState(false);
+  const [_hasWallet, setHasWallet] = useState(false);
   const [hideSensitiveInfo, setHideSensitiveInfo] = useState(false);
 
   const { openProUpgrade } = useProUpgrade();
@@ -395,7 +395,7 @@ export function EditProfileModal({
         ...currentPrefsObj,
         links: links.filter(l => l.url.trim() !== ''),
         tags,
-        tipEnabled: tipEnabled && hasWallet,
+        tipEnabled: tipEnabled,
         hideSensitiveInfo: hideSensitiveInfo && isPro
       });
 
@@ -827,6 +827,20 @@ export function EditProfileModal({
                         setIsGuest(e.target.checked);
                         if (e.target.checked) setIsPublic(true);
                       }}
+                      className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#6366F1] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform"
+                    />
+                  </div>
+
+                  {/* Allow Tipping */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-white m-0">Allow Tipping</p>
+                      <p className="text-[11px] text-white/40 m-0">Allow members to tip tokens directly to your profile</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={tipEnabled}
+                      onChange={(e) => setTipEnabled(e.target.checked)}
                       className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#6366F1] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform"
                     />
                   </div>

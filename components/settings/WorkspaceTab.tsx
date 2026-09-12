@@ -512,12 +512,13 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                           <button
                             type="button"
                             onClick={() => {
-                              openDrawer('join-request-confirm', {
+                              openDrawer('project-join-request-confirm', {
                                 action: 'grant',
                                 requesterName: c.displayName || c.username || c.userId,
                                 projectName: activeWorkspace.title,
-                                onConfirm: async (role) => {
-                                  await ProjectsService.approveJoinRequest(activeWorkspace.id, c.userId, role || 'viewer');
+                                onConfirm: async (role?: string) => {
+                                  const validRole = (role === 'admin' || role === 'editor' || role === 'viewer') ? role : 'viewer';
+                                  await ProjectsService.approveJoinRequest(activeWorkspace.id, c.userId, validRole);
                                   toast.success(`Access granted to ${c.displayName || c.username || c.userId}`);
                                   void loadWorkspaceDetails();
                                 },
@@ -532,7 +533,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                           <button
                             type="button"
                             onClick={() => {
-                              openDrawer('join-request-confirm', {
+                              openDrawer('project-join-request-confirm', {
                                 action: 'deny',
                                 requesterName: c.displayName || c.username || c.userId,
                                 projectName: activeWorkspace.title,
