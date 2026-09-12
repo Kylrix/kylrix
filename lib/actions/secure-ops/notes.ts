@@ -52,7 +52,9 @@ async function hydrateSharedNoteRow(noteId: string) {
     doc.attachments = [];
   }
 
-  return doc;
+  // Sanitize internal permissions and Appwrite system fields to prevent wire leakage
+  const { $permissions, $databaseId, $collectionId, ...cleanDoc } = doc;
+  return cleanDoc;
 }
 
 async function canReadSharedNoteSecure(noteId: string, actorId?: string | null) {
@@ -246,7 +248,16 @@ export async function getPublicNoteCommentsSecure(noteId: string) {
       Query.limit(200)
     ]
   );
-  return { rows: res.rows };
+  const cleanRows = (res.rows || []).map((c: any) => ({
+    $id: c.$id,
+    id: c.$id,
+    noteId: c.noteId,
+    userId: c.userId,
+    content: c.content,
+    createdAt: c.createdAt || c.$createdAt,
+    updatedAt: c.updatedAt || c.$updatedAt,
+  }));
+  return { rows: cleanRows };
 }
 
 export async function getPublicNoteReactionsSecure(noteId: string, targetId?: string, targetType?: string) {
@@ -264,7 +275,17 @@ export async function getPublicNoteReactionsSecure(noteId: string, targetId?: st
       Query.limit(500)
     ]
   );
-  return { rows: res.rows };
+  const cleanRows = (res.rows || []).map((r: any) => ({
+    $id: r.$id,
+    id: r.$id,
+    targetId: r.targetId,
+    targetType: r.targetType,
+    reactionType: r.reactionType,
+    userId: r.userId,
+    createdAt: r.createdAt || r.$createdAt,
+    updatedAt: r.updatedAt || r.$updatedAt,
+  }));
+  return { rows: cleanRows };
 }
 
 export async function getCrossSuggestionsSecure(params: any, jwt?: string) {
@@ -1211,7 +1232,21 @@ export async function createthreadNoteChatSecure(data: {
     }
   }
 
-  return JSON.parse(JSON.stringify(result));
+  return {
+    $id: result.$id,
+    id: result.$id,
+    title: result.title,
+    content: result.content,
+    format: result.format,
+    isPublic: Boolean(result.isPublic),
+    userId: result.userId,
+    creatorId: result.creatorId,
+    createdAt: result.createdAt,
+    updatedAt: result.updatedAt,
+    isThread: true,
+    isChat: true,
+    collaborators: data.participants,
+  };
 }
 
 export async function listthreadNoteChatsSecure(jwt?: string) {
@@ -1242,8 +1277,6 @@ export async function listthreadNoteChatsSecure(jwt?: string) {
   ];
 
   if (collabResourceIds.length > 0) {
-      // Chunk into groups of 100 to respect Appwrite Query.equal array limits if needed
-      // but for simplicity here we assume < 100 for now.
       authOrFilters.push(Query.equal('$id', collabResourceIds.slice(0, 100)));
   }
 
@@ -1258,13 +1291,24 @@ export async function listthreadNoteChatsSecure(jwt?: string) {
     ] as any
   }).catch(() => ({ rows: [] }));
 
-  // Sort by updatedAt descending
   const rows = [...(res.rows || [])];
-
-
   rows.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
 
-  return JSON.parse(JSON.stringify(rows));
+  // Return clean, shaped DTOs without leaking internal table/database permissions or raw metadata
+  return rows.map((r: any) => ({
+    $id: r.$id,
+    id: r.$id,
+    title: r.title,
+    content: r.content,
+    format: r.format,
+    isPublic: Boolean(r.isPublic),
+    userId: r.userId,
+    creatorId: r.creatorId,
+    createdAt: r.createdAt || r.$createdAt,
+    updatedAt: r.updatedAt || r.$updatedAt,
+    isThread: true,
+    isChat: Boolean(r.isChat),
+  }));
 }
 
 export async function listTagsSecure(userId?: string, jwt?: string) {
@@ -1283,5 +1327,17 @@ export async function listTagsSecure(userId?: string, jwt?: string) {
       ? [Query.equal('userId', targetUserId), Query.orderDesc('$createdAt'), Query.limit(100)]
       : [Query.orderDesc('$createdAt'), Query.limit(100)]});
 
-  return JSON.parse(JSON.stringify(result));
+  // Map to clean tag records
+  const cleanRows = (result.rows || []).map((r: any) => ({
+    $id: r.$id,
+    id: r.$id,
+    name: r.name,
+    userId: r.userId,
+    usageCount: r.usageCount || 0,
+    isPublic: Boolean(r.isPublic),
+    createdAt: r.createdAt || r.$createdAt,
+    updatedAt: r.updatedAt || r.$updatedAt,
+  }));
+
+  return { rows: cleanRows, total: result.total };
 }
