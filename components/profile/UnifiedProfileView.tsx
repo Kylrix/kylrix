@@ -36,6 +36,8 @@ import { fetchNostrEventsByIds, fetchNostrFollowers, fetchNostrFollowing } from 
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { toggleMomentLike, repostMoment } from '@/lib/connect/moment-engagement';
 import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { getUserBadgesAction } from '@/lib/actions/sponsor-actions';
@@ -190,6 +192,8 @@ export function UnifiedProfileView({
   const { identity } = useNostrIdentity();
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
   const { openWallet } = useWalletOverlay();
+  const { currentTier } = useSubscription();
+  const { openProUpgrade } = useProUpgrade();
   const [viewMode, setViewMode] = useState<ProfileViewMode>(source === 'nostr' ? 'nostr' : 'ecosystem');
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -926,6 +930,24 @@ export function UnifiedProfileView({
                     <span className="px-2 py-0.5 rounded-md bg-[#6366F1]/20 text-[#818CF8] text-[10px] font-bold shrink-0 font-mono">
                       YOU
                     </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full bg-[#EC4899]/15 text-[#EC4899] text-[10px] font-black font-mono uppercase tracking-wider border border-[#EC4899]/20 shrink-0">
+                    {currentTier} PLAN
+                  </span>
+                  {currentTier === 'FREE' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onClose) onClose();
+                        openProUpgrade();
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EC4899] text-white text-[10px] font-extrabold hover:bg-[#db2777] active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
+                    >
+                      <Sparkles size={11} />
+                      <span>Upgrade</span>
+                    </button>
                   )}
                 </div>
                 <p className="text-xs sm:text-sm font-mono text-white/50 truncate">
