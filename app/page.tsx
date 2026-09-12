@@ -11,17 +11,12 @@ import {
   Bot,
   Zap,
   Radio,
-  Share2,
   Terminal,
   ShieldCheck,
   ChevronRight,
   ArrowUpRight,
-  Database,
-  Key,
   Globe,
   CheckCircle2,
-  Cpu,
-  Layers,
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -31,7 +26,7 @@ import { ThreadNoteClaimer } from '@/components/landing/ThreadNoteClaimer';
 
 export default function LandingPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
   const { openAgenticDrawer } = useAgenticDrawer();
   const [activeTab, setActiveTab] = useState<'notes' | 'goals' | 'vault' | 'agents'>('notes');
