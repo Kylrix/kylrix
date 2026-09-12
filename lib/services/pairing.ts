@@ -10,7 +10,7 @@
  * and issues user-scoped punch tokens via `PatService` (`kyl_punch_...`).
  */
 
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes } from 'crypto';
 import { ID, Query } from 'node-appwrite';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -218,10 +218,9 @@ export const PairingService = {
       : normalizeScopes(row.requestedScopes);
 
     const clientName = meta.clientName || 'Paired Client';
-    const clientType = meta.clientType || 'cli';
 
     // Create a punch token using PatService
-    const { token, pat } = await PatService.createPat({
+    const { token, pat } = await PatService.create({
       userId: params.userId,
       name: `${clientName} (Punch Grant)`,
       scopes: scopes as PatScope[],

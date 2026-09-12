@@ -3,20 +3,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Cloud, 
-  CloudRain, 
   RefreshCw, 
-  CheckCircle2, 
-  AlertCircle, 
   ShieldAlert, 
   ArrowLeftRight, 
   ArrowUpRight, 
   ArrowDownLeft, 
   Key, 
   Globe, 
-  Settings2,
-  Check,
-  Zap,
-  Info
+  Zap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { 

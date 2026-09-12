@@ -216,7 +216,6 @@ export async function executeCloudSync(
     await saveCloudSyncConfig({ cloudAccount });
 
     const lastSyncTime = config.lastSyncAt ? new Date(config.lastSyncAt).getTime() : 0;
-    const isPro = cloudAccount.quotas.isPro;
 
     // 2. Synchronize Notes
     if (config.syncNotes) {
@@ -378,7 +377,7 @@ export async function executeCloudSync(
 
       // Delta goals push/pull via REST
       if (config.syncDirection === 'bidirectional' || config.syncDirection === 'pull_only') {
-        for (const cg of cloudGoals) {
+        for (let i = 0; i < cloudGoals.length; i++) {
           stats.goalsPulled++;
         }
       }

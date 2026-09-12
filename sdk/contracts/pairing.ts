@@ -37,7 +37,7 @@ export const pairingRequestInputZod = z.object({
     'objects:read',
     'objects:write',
   ]),
-  pairingMetadata: z.record(z.unknown()).optional(),
+  pairingMetadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type PairingRequestInput = z.infer<typeof pairingRequestInputZod>;

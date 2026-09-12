@@ -198,6 +198,7 @@ export function UnifiedProfileView({
   const { user } = useAuth();
   const { identity } = useNostrIdentity();
   const { openWallet, openWalletWithIntent } = useWalletOverlay();
+  const { open: openUnifiedDrawer } = useUnifiedDrawer();
   const { currentTier } = useSubscription();
   const { openProUpgrade } = useProUpgrade();
   const [viewMode, setViewMode] = useState<ProfileViewMode>(source === 'nostr' ? 'nostr' : 'ecosystem');
@@ -341,7 +342,7 @@ export function UnifiedProfileView({
             setResolvedProfile(prev => ({
               ...prev,
               name: (prev.name || cachedIdentity.displayName || (cachedIdentity as any).name) || undefined,
-              username: isCleanUsername(cachedIdentity.username) ? cachedIdentity.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
+              username: isCleanUsername(cachedIdentity.username) ? cachedIdentity.username!.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
               avatar: (prev.avatar || cachedIdentity.avatar || (cachedIdentity as any).avatarUrl) || undefined,
               bio: (prev.bio || cachedIdentity.bio) || undefined,
               links: prev.links?.length ? prev.links : (cachedIdentity as any).links || [],
