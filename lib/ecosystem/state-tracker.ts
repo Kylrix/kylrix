@@ -20,7 +20,8 @@ function mirrorLastRouteCookie(path: string) {
         ? ''
         : `.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
     const domainStr = domain ? `domain=${domain}; ` : '';
-    document.cookie = `${LAST_ROUTE_COOKIE}=${encodeURIComponent(path)}; path=/; ${domainStr}max-age=2592000; SameSite=Lax`;
+    const secureStr = window.location.protocol === 'https:' ? 'Secure; ' : '';
+    document.cookie = `${LAST_ROUTE_COOKIE}=${encodeURIComponent(path)}; path=/; ${domainStr}${secureStr}max-age=2592000; SameSite=Lax`;
   } catch {
     // Best effort only.
   }

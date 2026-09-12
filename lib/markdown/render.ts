@@ -2,6 +2,7 @@ import { isFlowInstalled } from '@/lib/flows/installed';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import type { Config as DomPurifyConfig } from 'dompurify';
+import { Window } from 'happy-dom';
 import { preProcessMarkdown } from '@/lib/markdown/preprocess';
 import {
   defaultMathModeContext,
@@ -11,6 +12,18 @@ import {
 import { registerMathTransforms } from '@/lib/markdown/math';
 
 let layersReady = false;
+let serverPurify: typeof DOMPurify | null = null;
+
+function sanitizeHtml(html: string): string {
+  if (typeof window !== 'undefined') {
+    return String(DOMPurify.sanitize(html, MATH_PURIFY));
+  }
+  if (!serverPurify) {
+    const win = new Window();
+    serverPurify = DOMPurify(win as unknown as Window & typeof globalThis);
+  }
+  return String(serverPurify.sanitize(html, MATH_PURIFY));
+}
 
 export function ensureMarkdownLayers() {
   if (layersReady) return;
@@ -103,8 +116,7 @@ export function renderMarkdownHtml(
   const pre = runMarkdownPipeline(prepped, 'pre', context);
   const raw = marked.parse(pre) as string;
   const post = runMarkdownPipeline(raw, 'post', context);
-  if (typeof window === 'undefined') return post;
-  return String(DOMPurify.sanitize(post, MATH_PURIFY));
+  return sanitizeHtml(post);
 }
 
 export function isMathModeFlowInstalled(): boolean {

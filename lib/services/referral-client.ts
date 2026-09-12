@@ -7,7 +7,8 @@ const COOKIE_NAME = 'attribution_payload';
 
 function clearAttributionCookie() {
   if (typeof document === 'undefined') return;
-  document.cookie = `${COOKIE_NAME}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  const secureStr = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'Secure; ' : '';
+  document.cookie = `${COOKIE_NAME}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; ${secureStr}SameSite=Lax`;
 }
 
 function readAttributionPayload(): { ref: string; src?: string; origin?: string; timestamp?: number } | null {

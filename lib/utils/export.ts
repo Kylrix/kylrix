@@ -1,4 +1,4 @@
-import { marked } from 'marked';
+import { renderMarkdownHtml } from '@/lib/markdown/render';
 
 /**
  * Downloads a text file dynamically on the client.
@@ -41,7 +41,7 @@ export function exportToPDF(title: string, markdownContent: string) {
 
   let parsedHtml = '';
   try {
-    parsedHtml = String(marked.parse(markdownContent));
+    parsedHtml = renderMarkdownHtml(markdownContent);
   } catch (_err) {
     parsedHtml = markdownContent.replace(/\n/g, '<br/>');
   }
@@ -95,7 +95,7 @@ export function exportToPDF(title: string, markdownContent: string) {
 export function exportToDOCX(title: string, markdownContent: string) {
   let parsedHtml = '';
   try {
-    parsedHtml = String(marked.parse(markdownContent));
+    parsedHtml = renderMarkdownHtml(markdownContent);
   } catch {
     parsedHtml = markdownContent.replace(/\n/g, '<br/>');
   }
