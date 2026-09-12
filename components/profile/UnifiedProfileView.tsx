@@ -50,6 +50,12 @@ import toast from 'react-hot-toast';
 export type ProfileTab = 'posts' | 'replies' | 'likes' | 'zaps';
 export type ProfileViewMode = 'ecosystem' | 'nostr';
 
+function isCleanUsername(val?: string | null): boolean {
+  if (!val || typeof val !== 'string') return false;
+  const trimmed = val.trim();
+  return trimmed.length > 0 && !/\s/.test(trimmed);
+}
+
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
   'wss://nos.lol',
@@ -217,6 +223,10 @@ export function UnifiedProfileView({
   const [resolvedNpub, setResolvedNpub] = useState<string | null>(initialNpub || null);
   const [resolvedPubkey, setResolvedPubkey] = useState<string | null>(initialPubkey || null);
 
+  const initialCleanUsername = isCleanUsername(username)
+    ? username!.trim().replace(/^@/, '')
+    : (isCleanUsername(initialProfile?.username) ? initialProfile.username.trim().replace(/^@/, '') : undefined);
+
   // Resolved profile details
   const [resolvedProfile, setResolvedProfile] = useState<{ 
     name?: string; 
@@ -228,7 +238,7 @@ export function UnifiedProfileView({
     createdAt?: string;
   }>({
     name: name || initialProfile?.displayName || initialProfile?.name,
-    username: username || initialProfile?.username,
+    username: initialCleanUsername,
     avatar: avatar || initialProfile?.avatar || initialProfile?.avatarUrl,
     bio: bio || initialProfile?.bio,
     links: initialProfile?.preferences?.links || initialProfile?.links || [],
@@ -331,7 +341,7 @@ export function UnifiedProfileView({
             setResolvedProfile(prev => ({
               ...prev,
               name: (prev.name || cachedIdentity.displayName || (cachedIdentity as any).name) || undefined,
-              username: (prev.username || cachedIdentity.username) || undefined,
+              username: isCleanUsername(cachedIdentity.username) ? cachedIdentity.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
               avatar: (prev.avatar || cachedIdentity.avatar || (cachedIdentity as any).avatarUrl) || undefined,
               bio: (prev.bio || cachedIdentity.bio) || undefined,
               links: prev.links?.length ? prev.links : (cachedIdentity as any).links || [],
@@ -348,7 +358,7 @@ export function UnifiedProfileView({
             if (storedPubkey && !resolvedPubkey) setResolvedPubkey(storedPubkey);
             setResolvedProfile(prev => ({
               name: prev.name || localIdentity.displayName || localIdentity.name,
-              username: prev.username || localIdentity.username,
+              username: isCleanUsername(localIdentity.username) ? localIdentity.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
               avatar: prev.avatar || localIdentity.avatar || localIdentity.avatarUrl,
               bio: prev.bio || localIdentity.bio,
               links: prev.links?.length ? prev.links : localIdentity.links || [],
@@ -375,7 +385,7 @@ export function UnifiedProfileView({
 
           setResolvedProfile(prev => ({
             name: prev.name || prof.displayName || prof.name,
-            username: prev.username || prof.username,
+            username: isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
             avatar: prev.avatar || prof.avatar || prof.avatarUrl,
             bio: prev.bio || prof.bio,
             links: prev.links?.length ? prev.links : (prof as any).preferences?.links || (prof as any).links || [],
@@ -401,7 +411,7 @@ export function UnifiedProfileView({
 
           setResolvedProfile(prev => ({
             name: prev.name || prof.displayName || prof.name,
-            username: prev.username || prof.username,
+            username: isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
             avatar: prev.avatar || prof.avatar || prof.avatarUrl,
             bio: prev.bio || prof.bio,
             links: prev.links?.length ? prev.links : (prof as any).preferences?.links || (prof as any).links || [],
@@ -645,10 +655,19 @@ export function UnifiedProfileView({
     ? (nostrMeta.displayName || nostrMeta.name || resolvedProfile.name || name || 'Nostr User')
     : (resolvedProfile.name || name || username || (resolvedNpub ? `Nostr ${resolvedNpub.slice(0, 10)}…` : 'Kylrix User'));
 
-  const rawUsername = resolvedProfile.username || username;
+  const rawUsername = isCleanUsername(resolvedProfile.username)
+    ? resolvedProfile.username
+    : (isCleanUsername(username)
+        ? username
+        : (isOwnProfile
+            ? (isCleanUsername(user?.prefs?.username) ? user?.prefs?.username : (isCleanUsername(user?.username) ? user?.username : null))
+            : null));
+
+  const cleanUsername = rawUsername ? rawUsername.trim().replace(/^@/, '') : null;
+
   const activeHandle = isNostrMode
-    ? (nostrMeta.nip05 || (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''))
-    : (rawUsername ? `@${rawUsername.replace(/^@/, '')}` : (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''));
+    ? (nostrMeta.nip05 ? `@${nostrMeta.nip05.replace(/^@/, '')}` : (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''))
+    : (cleanUsername ? `@${cleanUsername}` : (resolvedNpub ? `@${resolvedNpub.slice(0, 12)}…` : ''));
 
   const activeBio = isNostrMode
     ? (nostrMeta.about || resolvedProfile.bio || bio || '')
@@ -993,9 +1012,21 @@ export function UnifiedProfileView({
                     </button>
                   )}
                 </div>
-                <p className="text-xs sm:text-sm font-mono text-white/50 truncate">
-                  {activeHandle}
-                </p>
+                {activeHandle ? (
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(activeHandle, 'username')}
+                    className="group flex items-center gap-1.5 text-xs sm:text-sm font-mono text-[#6366F1] hover:text-[#818CF8] transition-colors cursor-pointer text-left truncate max-w-full"
+                    title="Click to copy handle"
+                  >
+                    <span className="truncate">{activeHandle}</span>
+                    {copiedKey === 'username' ? (
+                      <Check size={13} className="text-emerald-400 shrink-0" />
+                    ) : (
+                      <Copy size={13} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    )}
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -1384,4 +1415,3 @@ export function UnifiedProfileView({
     </div>
   );
 }
-
