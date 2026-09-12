@@ -37,10 +37,25 @@ export async function generateMetadata(props: {
       ? `${trimMax(captionRaw, 72)} — ${who.displayName}`
       : `${who.displayName} · Moment`;
 
+    const previewImage = `/moment/${cleanId}/opengraph-image`;
+
     return {
       title,
       description,
       alternates: { canonical: `/moment/${cleanId}` },
+      openGraph: {
+        title,
+        description,
+        type: 'article',
+        siteName: 'Kylrix',
+        images: [{ url: previewImage, width: 1200, height: 630, alt: title }],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [previewImage],
+      },
     };
   } catch {
     return { title: 'Moment — Kylrix' };

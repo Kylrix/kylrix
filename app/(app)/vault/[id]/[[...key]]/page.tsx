@@ -12,13 +12,14 @@ export async function generateMetadata({
   try {
     const { id } = await params;
     const credential = await validatePublicVaultAccess(id);
-    const previewImage = `https://www.kylrix.space/vault/${id}/opengraph-image`;
+    const previewImage = `/vault/${id}/opengraph-image`;
 
     if (!credential) {
       return buildOgMetadata({
         title: 'Shared Secret · Kylrix',
         description: 'View this shared credential securely.',
-        imageUrl: previewImage});
+        imageUrl: previewImage,
+      });
     }
 
     // name is encrypted, so we show a generic preview (safe: no secret data in OG)
@@ -31,7 +32,8 @@ export async function generateMetadata({
     return buildOgMetadata({
       title: 'Shared Secret · Kylrix',
       description: 'View shared credentials securely.',
-      imageUrl: 'https://www.kylrix.space/opengraph-image'});
+      imageUrl: '/opengraph-image',
+    });
   }
 }
 

@@ -20,7 +20,7 @@ export async function generateMetadata({
   try {
     const { id, key } = await params;
     const isTemp = key?.[0] === 'temp';
-    const previewImage = `https://www.kylrix.space/vault/totp/${id}/opengraph-image${isTemp ? '?temp=1' : ''}`;
+    const previewImage = `/vault/totp/${id}/opengraph-image${isTemp ? '?temp=1' : ''}`;
 
     const displayTitle = isTemp
       ? 'Temporary TOTP Code · Kylrix'
@@ -34,7 +34,8 @@ export async function generateMetadata({
     return buildOgMetadata({
       title: 'Shared TOTP · Kylrix',
       description: 'View a shared TOTP authenticator code securely.',
-      imageUrl: 'https://www.kylrix.space/opengraph-image'});
+      imageUrl: '/opengraph-image',
+    });
   }
 }
 
