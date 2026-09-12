@@ -5,6 +5,13 @@ export interface ProfileRecord {
   auth: string;
   scopes: string[];
   patId: string | null;
+  tier?: string;
+  quotas?: {
+    isPro: boolean;
+    maxCollaboratorsPerResource?: number;
+    exportAllowed?: boolean;
+    aiRateLimitMultiplier?: number;
+  };
 }
 
 export function shapeProfile(actor: {
@@ -12,12 +19,16 @@ export function shapeProfile(actor: {
   kind: string;
   scopes: string[];
   patId?: string | null;
+  tier?: string;
+  quotas?: ProfileRecord['quotas'];
 }): ProfileRecord {
   return {
     id: actor.userId,
     auth: actor.kind,
     scopes: actor.scopes,
     patId: actor.patId || null,
+    ...(actor.tier ? { tier: actor.tier } : {}),
+    ...(actor.quotas ? { quotas: actor.quotas } : {}),
   };
 }
 

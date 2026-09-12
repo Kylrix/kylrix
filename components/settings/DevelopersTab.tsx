@@ -20,6 +20,7 @@ import { ManageOAuthAppDrawer } from '@/components/settings/ManageOAuthAppDrawer
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { CloudSyncSection } from '@/components/settings/CloudSyncSection';
 
 type PatItem = {
   id: string;
@@ -522,6 +523,9 @@ export function DevelopersTab() {
           onChanged={() => void refreshApps()}
         />
       )}
+      {/* Cloud Replication & Sync for Self-Hosted Nodes */}
+      <CloudSyncSection />
     </div>
   );
 }
+

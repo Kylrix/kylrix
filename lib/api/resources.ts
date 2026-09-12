@@ -403,7 +403,28 @@ export async function resolveWorkspaceMekBytes(
 export const ApiResources = {
   async me(actor: ApiActor) {
     requireScope(actor, 'profile:read');
-    return shapeProfile(actor);
+    let tier = 'FREE';
+    let isPro = false;
+    try {
+      const { getVerifiedProEntitlementForUser } = await import('@/lib/services/internal/subscription-entitlement');
+      const ent = await getVerifiedProEntitlementForUser(actor.userId).catch(() => null);
+      if (ent) {
+        tier = ent.uiTier;
+        isPro = Boolean(ent.active);
+      }
+    } catch {
+      // Non-fatal
+    }
+    return shapeProfile({
+      ...actor,
+      tier,
+      quotas: {
+        isPro,
+        maxCollaboratorsPerResource: isPro ? 100 : 8,
+        exportAllowed: true,
+        aiRateLimitMultiplier: isPro ? 5 : 1,
+      },
+    });
   },
 
   async listNotes(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {

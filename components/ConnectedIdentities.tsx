@@ -6,6 +6,7 @@ import { AppWindow } from 'lucide-react';
 import { account } from '@/lib/appwrite/client';
 import { getApp, type OauthApp } from '@/lib/oauth2/apps';
 import { clearStatelessSessions } from '@/lib/utils';
+import { CloudSyncSection } from '@/components/settings/CloudSyncSection';
 
 /** Project-level Auth OAuth providers enabled for Kylrix sign-in (not Sign in with Kylrix). */
 export const PROJECT_SIGN_IN_PROVIDERS: {
@@ -261,6 +262,10 @@ export default function ConnectedIdentities() {
           </div>
         )}
       </section>
+
+      {/* Cloud Replication & Sync for Self-Hosted Nodes */}
+      <CloudSyncSection />
     </div>
   );
 }
+
