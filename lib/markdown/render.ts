@@ -2,7 +2,6 @@ import { isFlowInstalled } from '@/lib/flows/installed';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import type { Config as DomPurifyConfig } from 'dompurify';
-import { Window } from 'happy-dom';
 import { preProcessMarkdown } from '@/lib/markdown/preprocess';
 import {
   defaultMathModeContext,
@@ -19,6 +18,9 @@ function sanitizeHtml(html: string): string {
     return String(DOMPurify.sanitize(html, MATH_PURIFY));
   }
   if (!serverPurify) {
+    // Dynamic require happy-dom on Node server-side only so it won't be bundled into client browser bundles
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Window } = require('happy-dom');
     const win = new Window();
     serverPurify = DOMPurify(win as unknown as Window & typeof globalThis);
   }

@@ -4,7 +4,7 @@
  * the RFC 8628-inspired pairing authorization flow.
  */
 
-import type { PairingSessionRecord, PairingExchangeResult, PairingRequestInput } from '@/sdk/contracts/pairing';
+import type { PairingSessionRecord, PairingRequestInput } from '@/sdk/contracts/pairing';
 
 export class PairingClient {
   private endpoint: string;

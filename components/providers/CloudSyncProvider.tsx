@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef } from 'react';
 import { executeCloudSync, getCloudSyncConfig, type CloudSyncConfig } from '@/lib/sync/cloud-sync-client';
-import { LocalEngine } from '@/lib/services/LocalEngine';
 
 /**
  * CloudSyncProvider — Background replication driver for local-first client resolution.
@@ -22,8 +21,6 @@ export function CloudSyncProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    let active = true;
 
     const checkAndTriggerSync = async (reason = 'timer') => {
       if (isSyncingRef.current) return;
@@ -69,7 +66,6 @@ export function CloudSyncProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('kylrix:cloud-sync-config-changed', handleConfigChange);
 
     return () => {
-      active = false;
       if (syncTimerRef.current) {
         clearInterval(syncTimerRef.current);
       }

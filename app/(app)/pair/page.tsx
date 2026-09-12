@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ShieldCheck, ShieldAlert, CheckCircle2, Loader2, ArrowRight, Laptop, Key, RefreshCw } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, CheckCircle2, Loader2, ArrowRight, Laptop, Key } from 'lucide-react';
 import { account } from '@/lib/appwrite/client';
 import toast from 'react-hot-toast';
 
@@ -91,7 +91,7 @@ function PairContent() {
 
       const json = await res.json();
       if (json.ok && json.data?.ok) {
-        setDecisionDone(action);
+        setDecisionDone(action === 'approve' ? 'approved' : 'denied');
         if (action === 'approve') {
           toast.success('Client authorized successfully! You can return to your terminal or app.');
         } else {
