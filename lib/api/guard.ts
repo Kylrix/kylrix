@@ -63,6 +63,7 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
 
   if (
     bearer.startsWith('kyl_pat_') ||
+    bearer.startsWith('kyl_punch_') ||
     bearer.startsWith('kyl_apat_') ||
     bearer.startsWith('kyl_apk_') ||
     bearer.startsWith('kyl_wpat_') ||

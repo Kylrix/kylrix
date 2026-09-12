@@ -28,6 +28,7 @@ import {
   type CloudSyncStats,
   type SyncDirection 
 } from '@/lib/sync/cloud-sync-client';
+import { PairingClient } from '@/sdk/pairing-client';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
 
 export function CloudSyncSection() {
@@ -44,7 +45,70 @@ export function CloudSyncSection() {
   const [currentStep, setCurrentStep] = useState<string | null>(null);
   const [lastStats, setLastStats] = useState<CloudSyncStats | null>(null);
 
+  // 1-Click Punch & Pair State
+  const [pairingSession, setPairingSession] = useState<{
+    userCode: string;
+    verificationUriComplete: string;
+    deviceCode: string;
+  } | null>(null);
+  const [pairingWaiting, setPairingWaiting] = useState(false);
+
   const isSelfHosted = isSelfHostedDeployment();
+
+  const handleInitiatePairing = async () => {
+    setPairingWaiting(true);
+    try {
+      const client = new PairingClient(endpointInput || undefined);
+      const session = await client.requestPairing({
+        clientName: `Self-Hosted Node (${typeof window !== 'undefined' ? window.location.hostname : 'Node'})`,
+        clientType: 'self_hosted_sync',
+        requestedScopes: ['notes:read', 'notes:write', 'goals:read', 'goals:write', 'profile:read'],
+      });
+
+      setPairingSession({
+        userCode: session.userCode,
+        verificationUriComplete: session.verificationUriComplete,
+        deviceCode: session.deviceCode,
+      });
+
+      toast.success(`Pairing code generated: ${session.userCode}`);
+
+      // Open authorization screen in new tab/window for 1-click approval
+      if (typeof window !== 'undefined') {
+        window.open(session.verificationUriComplete, '_blank', 'noopener,noreferrer');
+      }
+
+      // Background poll exchange
+      const exchanged = await client.pollExchange(session.deviceCode, {
+        intervalSeconds: session.interval,
+        timeoutSeconds: session.expiresIn,
+      });
+
+      // Verification succeeded! Save punch token and verify connection
+      setTokenInput(exchanged.token);
+      const res = await verifyCloudConnection(endpointInput, exchanged.token);
+      if (res.ok && res.account) {
+        await saveCloudSyncConfig({
+          enabled: true,
+          cloudEndpoint: endpointInput.trim(),
+          token: exchanged.token,
+          syncDirection: direction,
+          syncNotes,
+          syncGoals,
+          autoSync,
+          cloudAccount: res.account,
+          lastError: null,
+        });
+        toast.success(`Successfully paired with Cloud account: ${res.account.userId}`);
+        setPairingSession(null);
+        await loadConfig();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Pairing failed.');
+    } finally {
+      setPairingWaiting(false);
+    }
+  };
 
   const loadConfig = useCallback(async () => {
     const cfg = await getCloudSyncConfig();
@@ -308,9 +372,58 @@ export function CloudSyncSection() {
             </p>
           </div>
 
+          {/* 1-Click Punch & Pair Box */}
+          <div className="rounded-2xl bg-[#161412] border-2 border-white/15 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h5 className="text-xs font-black font-mono text-white flex items-center gap-1.5">
+                  <Zap size={15} className="text-[#6366F1]" />
+                  <span>Instant Punch Pairing (Recommended)</span>
+                </h5>
+                <p className="text-[11px] text-white/50 mt-0.5">
+                  Authorize this node with a single click — no manual token copy-pasting.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleInitiatePairing}
+                disabled={pairingWaiting}
+                className="px-4 py-2 rounded-xl text-xs font-black bg-[#6366F1] hover:bg-[#5254E8] text-white cursor-pointer disabled:opacity-40 border-2 border-[#6366F1] transition-all flex items-center gap-1.5 shadow-md shrink-0"
+              >
+                {pairingWaiting ? <RefreshCw size={13} className="animate-spin" /> : <Zap size={13} />}
+                <span>{pairingWaiting ? 'Waiting for Approval...' : 'Punch & Pair Now'}</span>
+              </button>
+            </div>
+
+            {pairingSession && (
+              <div className="p-3 bg-black/60 rounded-xl border border-[#6366F1]/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-white/50 uppercase font-mono">PAIRING CODE:</span>
+                  <span className="font-mono font-black text-base text-emerald-400 tracking-wider">
+                    {pairingSession.userCode}
+                  </span>
+                </div>
+                <a
+                  href={pairingSession.verificationUriComplete}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-[#818CF8] hover:text-white underline font-mono"
+                >
+                  Open Approval Link →
+                </a>
+              </div>
+            )}
+          </div>
+
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-white/10" />
+            <span className="flex-shrink mx-3 text-[10px] font-mono text-white/40 uppercase">Or Manual Token</span>
+            <div className="flex-grow border-t border-white/10" />
+          </div>
+
           <div>
             <label className="text-[11px] font-bold text-white/70 block mb-1.5 font-mono flex items-center justify-between">
-              <span>Personal Access Token (PAT)</span>
+              <span>Personal Access Token (PAT) / Punch Token</span>
               {isConnected && (
                 <span className="text-[10px] text-emerald-400 font-normal">● Token active</span>
               )}
@@ -319,11 +432,11 @@ export function CloudSyncSection() {
               type="password"
               value={tokenInput}
               onChange={(e) => setTokenInput(e.target.value)}
-              placeholder="kyl_pat_..."
+              placeholder="kyl_punch_... or kyl_pat_..."
               className="w-full bg-[#161412] border-2 border-white/20 focus:border-[#6366F1] rounded-xl px-3.5 py-2.5 text-xs text-white font-mono outline-none transition-colors"
             />
             <p className="text-[10px] text-white/40 mt-1">
-              Generate this in your Cloud account under Settings → Developers → Personal Access Tokens with <code>notes:*</code> and <code>goals:*</code> scopes.
+              Either punch-paired automatically or generated manually under Settings → Developers.
             </p>
           </div>
 
@@ -332,10 +445,10 @@ export function CloudSyncSection() {
               type="button"
               onClick={handleTestAndSaveConnection}
               disabled={testing}
-              className="px-5 py-2.5 rounded-xl text-xs font-black bg-[#6366F1] hover:bg-[#5254E8] text-white cursor-pointer disabled:opacity-40 border-2 border-[#6366F1] transition-all flex items-center gap-2 shadow-md"
+              className="px-5 py-2.5 rounded-xl text-xs font-black bg-[#161412] hover:bg-white/10 text-white cursor-pointer disabled:opacity-40 border-2 border-white/20 transition-all flex items-center gap-2"
             >
               <Key size={14} className={testing ? 'animate-spin' : ''} />
-              <span>{testing ? 'Testing connection...' : isConnected ? 'Update Connection' : 'Connect to Cloud'}</span>
+              <span>{testing ? 'Testing connection...' : isConnected ? 'Update Token' : 'Save Manual Token'}</span>
             </button>
           </div>
         </div>

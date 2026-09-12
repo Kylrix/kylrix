@@ -37,6 +37,34 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     return jsonOk(await ApiResources.revokePat(actor, b));
   }
 
+  // Pairing (Authenticated verification and approval)
+  if (a === S.pairing) {
+    const { PairingService } = await import('@/lib/services/pairing');
+    // GET /api/v1/pairing/verify?code=KYL-XXXX
+    if (b === SUB.verify && method === 'GET') {
+      const code = params.get('code') || '';
+      const session = await PairingService.lookupByUserCode(code);
+      if (!session) {
+        return jsonOk({ found: false });
+      }
+      return jsonOk({ found: true, session });
+    }
+    // POST /api/v1/pairing/approve
+    if (b === SUB.approve && method === 'POST') {
+      const body = await readBody();
+      const code = String(body.code || body.userCode || '').trim();
+      const action = body.action === 'deny' ? 'deny' : 'approve';
+      const grantedScopes = Array.isArray(body.grantedScopes) ? body.grantedScopes as string[] : undefined;
+      const res = await PairingService.decidePairing({
+        userCode: code,
+        userId: actor.userId,
+        action,
+        grantedScopes,
+      });
+      return jsonOk(res);
+    }
+  }
+
   // Notes
   if (a === S.notes && !b) {
     if (method === 'GET') {

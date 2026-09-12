@@ -7,7 +7,7 @@ import { normalizeScopes, type PatScope } from '@/lib/api/scopes';
 const DB = APPWRITE_CONFIG.DATABASES.FLOW;
 const TABLE = 'pats';
 
-export type PatCategory = 'user_pat' | 'agent_provisioning_key' | 'agentic_pat' | 'workspace_pat';
+export type PatCategory = 'user_pat' | 'agent_provisioning_key' | 'agentic_pat' | 'workspace_pat' | 'punch_token';
 
 export type PatRow = {
   $id: string;
@@ -63,6 +63,9 @@ export function formatPatToken(
   if (category === 'workspace_pat') {
     return `kyl_wpat_${prefix}_${secret}`;
   }
+  if (category === 'punch_token') {
+    return `kyl_punch_${prefix}_${secret}`;
+  }
   return `kyl_pat_${prefix}_${secret}`;
 }
 
@@ -80,6 +83,9 @@ export function parsePatToken(raw: string): { prefix: string; token: string; cat
   } else if (token.startsWith('kyl_wpat_')) {
     category = 'workspace_pat';
     rest = token.slice('kyl_wpat_'.length);
+  } else if (token.startsWith('kyl_punch_')) {
+    category = 'punch_token';
+    rest = token.slice('kyl_punch_'.length);
   } else if (token.startsWith('kyl_pat_')) {
     category = 'user_pat';
     rest = token.slice('kyl_pat_'.length);
@@ -106,6 +112,9 @@ function inferCategory(row: PatRow): { category: PatCategory; agentId: string | 
   
   if (name.includes('(Agentic PAT)') || name.toLowerCase().startsWith('agent:') || name.toLowerCase().includes('agentic')) {
     return { category: 'agentic_pat', agentId: row.workspaceId || null };
+  }
+  if (name.toLowerCase().includes('punch') || name.toLowerCase().includes('pairing') || name.toLowerCase().includes('device code')) {
+    return { category: 'punch_token', agentId: null };
   }
   if (scopes.length === 1 && scopes.includes('agents:provision')) {
     return { category: 'agent_provisioning_key', agentId: null };

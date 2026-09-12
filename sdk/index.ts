@@ -6,5 +6,7 @@ export * from './appwrite';
 export * from './topbar';
 export * from './ecosystem';
 export * from './token';
+export * from './pairing-client';
 export { buildNoteAttachmentMetadata, buildSourceNoteTags, buildVaultNoteTags, parseSourceNoteIdsFromTags, NOTE_SOURCE_TAG_PREFIX } from './crosslinks';
 export { createNoteCreationService } from './notes';
+

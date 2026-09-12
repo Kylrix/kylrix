@@ -15,3 +15,5 @@ export * from './threads';
 export * from './agents';
 export * from './trash';
 export * from './vault';
+export * from './pairing';
+

@@ -20,6 +20,7 @@ export const API_V1_SEGMENTS = {
   moments: 'moments',
   objects: 'objects',
   feeds: 'feeds',
+  pairing: 'pairing',
 } as const;
 
 /** Nested path segments reused across REST handlers. */
@@ -44,6 +45,10 @@ export const API_V1_SUBSEGMENTS = {
   identity: 'identity',
   mirror: 'mirror',
   installations: 'installations',
+  request: 'request',
+  exchange: 'exchange',
+  verify: 'verify',
+  approve: 'approve',
 } as const;
 
 export function isWorkspaceSegment(segment?: string) {
