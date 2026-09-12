@@ -102,20 +102,7 @@ export function middleware(request: NextRequest) {
       return attachAttribution(NextResponse.redirect(landingWithAuth));
     }
 
-    if (searchParams.has('stay')) {
-      // Guest/user traffic stays on the landing page if ?stay or ?stay=true is present
-    } else {
-      if (hasAuthSessionHint(request)) {
-        const lastRoute = readResumePathFromCookie(request);
-        const target = (lastRoute && lastRoute.startsWith('/') && lastRoute !== '/')
-          ? lastRoute
-          : DEFAULT_AUTHENTICATED_ROUTE;
-        return NextResponse.redirect(new URL(target, request.url));
-      } else {
-        // Guests redirect to /app instantly
-        return NextResponse.redirect(new URL('/app', request.url));
-      }
-    }
+    // Natural landing behavior: anyone who visits / stays on / without requiring ?stay
   }
 
   // Handle deep link ?ref= query parameter stripping (URL hygiene)

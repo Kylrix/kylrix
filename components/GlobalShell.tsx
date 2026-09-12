@@ -230,7 +230,7 @@ const isSpecificPostPage = useMemo(
     <Box 
         sx={{ 
             minHeight: '100vh', 
-            bgcolor: '#161412', 
+            bgcolor: isLandingPage ? '#000000' : '#161412', 
             color: '#fff',
             position: 'relative',
             overflowX: 'hidden'
@@ -262,11 +262,13 @@ const isSpecificPostPage = useMemo(
             position: 'relative',
             zIndex: 1,
             pb: isSpecificPostPage ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
-            px: isProjectDetailPage
-              ? { xs: 1, sm: 1, md: 2 }
-              : isNoteFullPageDetail
-                ? { xs: 0, sm: 0, md: 0 }
-                : { xs: 1.5, sm: 2, md: 2.5 },
+            px: isLandingPage
+              ? 0
+              : isProjectDetailPage
+                ? { xs: 1, sm: 1, md: 2 }
+                : isNoteFullPageDetail
+                  ? { xs: 0, sm: 0, md: 0 }
+                  : { xs: 1.5, sm: 2, md: 2.5 },
             pointerEvents: 'auto',
             overflowX: 'hidden',
             transition: 'margin 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1)'}}
@@ -319,7 +321,7 @@ const isSpecificPostPage = useMemo(
         <UnifiedBottomBar />
       )}
       
-      {!isSharedPage && <UniversalFAB />}
+      {!isSharedPage && !isLandingPage && <UniversalFAB />}
 
       </FABProvider>
 
