@@ -410,7 +410,7 @@ export default function ConnectTopbar({
 
   const openProfileMenu = useCallback((_event?: MouseEvent<HTMLElement>) => {
     handleCloseAll();
-    const effectiveUsername = user?.prefs?.username || user?.name || 'user';
+    const effectiveUsername = user?.prefs?.username || user?.username || undefined;
     openUnified('profile-preview', {
       userId: user?.$id,
       username: effectiveUsername,
