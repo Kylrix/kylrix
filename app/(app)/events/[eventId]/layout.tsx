@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { events as eventApi } from '@/lib/kylrixflow';
+import { buildOgMetadata } from '@/lib/og/share-card';
 
 export async function generateMetadata({
   params}: {
@@ -10,9 +11,11 @@ export async function generateMetadata({
     const event = await eventApi.get(eventId);
 
     if (!event) {
-      return {
+      return buildOgMetadata({
         title: 'Event Not Found | Kylrix Flow',
-        description: 'This event is private or does not exist.'};
+        description: 'This event is private or does not exist.',
+        imageUrl: `/events/${eventId}/opengraph-image`,
+      });
     }
 
     const eventTitle = event.title?.trim() || 'Scheduled Event';
@@ -32,34 +35,17 @@ export async function generateMetadata({
       event.$updatedAt || eventId
     )}`;
 
-    return {
+    return buildOgMetadata({
       title,
       description,
-      openGraph: {
-        title,
-        description,
-        type: 'website',
-        images: [
-          {
-            url: previewImage,
-            width: 1200,
-            height: 630,
-            alt: title,
-          },
-        ],
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title,
-        description,
-        images: [previewImage],
-      },
-    };
+      imageUrl: previewImage,
+    });
   } catch (_e) {
-    return {
+    return buildOgMetadata({
       title: 'Scheduled Event | Kylrix',
       description: 'Coordinate scheduled events, RSVPs, and live moments on Kylrix.',
-    };
+      imageUrl: '/opengraph-image',
+    });
   }
 }
 

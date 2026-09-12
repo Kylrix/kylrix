@@ -28,34 +28,45 @@ const ACCENTS: Record<OgAccent, { solid: string; soft: string; border: string; g
 export function buildOgMetadata({
   title,
   description,
-  imageUrl}: {
+  imageUrl,
+  type = 'website',
+  siteName = 'Kylrix',
+  robots = {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+}: {
   title: string;
   description: string;
   imageUrl: string;
+  type?: 'website' | 'article' | 'profile';
+  siteName?: string;
+  robots?: Metadata['robots'];
 }): Metadata {
   return {
     title,
     description,
-    robots: {
-      index: false,
-      follow: false,
-      nocache: true,
-      googleBot: {
-        index: false,
-        follow: false,
-        noimageindex: true,
-      },
-    },
+    robots,
     openGraph: {
       title,
       description,
-      type: 'website',
-      images: [{ url: imageUrl, width: 1200, height: 630, alt: title }]},
+      type,
+      siteName,
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: title }],
+    },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [imageUrl]}};
+      images: [imageUrl],
+    },
+  };
 }
 
 function KylrixLogo({ size = 220 }: { size?: number }) {
