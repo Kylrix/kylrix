@@ -9,11 +9,7 @@ import {
   Settings,
   Trash2,
   Sparkles,
-  Check,
   ChevronDown,
-  Globe,
-  Lock,
-  AlertTriangle,
   ArrowUp,
   ArrowDown,
   Type,
@@ -24,7 +20,6 @@ import {
   CheckCircle2,
   List,
   UploadCloud,
-  Wand2,
 } from 'lucide-react';
 import { Drawer } from '@/lib/openbricks/primitives';
 import { FormsService } from '@/lib/services/forms';
@@ -403,10 +398,8 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         setFields(initialDraft.fields || []);
         setIsRestored(true);
         setHasUnsavedChanges(true);
-      } else {
-        const formId = form?.$id || 'new';
-        const savedDraft = await DraftsService.getDraft(formId);
-
+      } else if (form) {
+        const savedDraft = await DraftsService.getDraft(form.$id);
         if (savedDraft) {
           setTitle(savedDraft.title || '');
           setDescription(savedDraft.description || '');
@@ -414,7 +407,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
           setFields(savedDraft.fields || []);
           setIsRestored(true);
           setHasUnsavedChanges(true);
-        } else if (form) {
+        } else {
           setTitle(form.title);
           setDescription(form.description || '');
           setStatus(form.status as any);
@@ -425,14 +418,16 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
           }
           setIsRestored(false);
           setHasUnsavedChanges(false);
-        } else {
-          setTitle('');
-          setDescription('');
-          setStatus('draft');
-          setFields([{ id: 'field_1', label: 'Full Name', type: 'text', required: true }]);
-          setIsRestored(false);
-          setHasUnsavedChanges(false);
         }
+      } else {
+        // Brand new form creation: clear any stale 'new' draft and start fresh
+        void DraftsService.clearDraft('new');
+        setTitle('');
+        setDescription('');
+        setStatus('draft');
+        setFields([{ id: 'field_1', label: 'Full Name', type: 'text', required: true }]);
+        setIsRestored(false);
+        setHasUnsavedChanges(false);
       }
 
       setTimeout(() => {
@@ -543,6 +538,8 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         settings: form?.settings || '{}',
       };
 
+      const formId = form?.$id || (initialDraft ? initialDraft.id : 'new');
+
       if (form) {
         await FormsService.updateForm(form.$id, formDataPayload);
         autonomicSyncEngine.ack(form.$id);
@@ -560,6 +557,14 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         autonomicSyncEngine.ack(newForm.$id);
         if (user) invalidate(`f_user_forms_${user.$id}`);
       }
+
+      // Clear local drafts after successful creation / update
+      await DraftsService.clearDraft(formId);
+      if (initialDraft?.id) {
+        await DraftsService.clearDraft(initialDraft.id);
+      }
+      await DraftsService.clearDraft('new');
+
       setHasUnsavedChanges(false);
 
       onSaved();
