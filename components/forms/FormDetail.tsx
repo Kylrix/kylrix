@@ -17,6 +17,8 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import FormSettingsDialog from './FormSettingsDialog';
+import SubmissionViewer from './SubmissionViewer';
+import { ShareLockButton } from '@/components/share/ShareLockButton';
 
 interface FormDetailProps {
   formId: string;
@@ -42,7 +44,7 @@ export function FormDetail({
   const [form, setForm] = useState<Forms | null>(initialForm || null);
   const [loading, setLoading] = useState(!initialForm);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'schema' | 'preview'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'responses' | 'schema' | 'preview'>('responses');
   const [copied, setCopied] = useState(false);
 
   const loadForm = useCallback(async () => {
@@ -149,6 +151,16 @@ export function FormDetail({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          <ShareLockButton
+            resourceType="form"
+            resourceId={form.$id}
+            isPublic={!!form.isPublic}
+            isGuest={!!form.isGuest}
+            resourceTitle={form.title}
+            accentColor="#6366F1"
+            onPublished={() => void loadForm()}
+          />
+
           {onEdit && (
             <button
               type="button"
@@ -197,6 +209,7 @@ export function FormDetail({
       {/* Tabs */}
       <div className="px-6 border-b border-white/[0.08] flex items-center gap-6 bg-[#161412] shrink-0">
         {[
+          { id: 'responses', label: 'Responses' },
           { id: 'overview', label: 'Overview' },
           { id: 'schema', label: `Fields (${fields.length})` },
           { id: 'preview', label: 'Live Preview' },
@@ -218,6 +231,12 @@ export function FormDetail({
 
       {/* Body Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {activeTab === 'responses' && (
+          <div className="space-y-4">
+            <SubmissionViewer formId={form.$id} formSchema={form.schema} />
+          </div>
+        )}
+
         {activeTab === 'overview' && (
           <div className="space-y-5">
             {/* Description Tile */}

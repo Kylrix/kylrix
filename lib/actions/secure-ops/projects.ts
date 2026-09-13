@@ -1024,6 +1024,10 @@ export async function createFormSecure(data: any, jwt?: string) {
     Permission.read(Role.any()), // Allow public discovery via listRows filter
     ];
 
+  const status = data.status || 'draft';
+  const isPublic = data.isPublic !== undefined ? data.isPublic : status === 'published';
+  const isGuest = data.isGuest !== undefined ? data.isGuest : status === 'published';
+
   const form = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
@@ -1031,9 +1035,9 @@ export async function createFormSecure(data: any, jwt?: string) {
       data: {
       ...data,
       userId: actor.$id,
-      status: data.status || 'published',
-      isPublic: data.isPublic !== undefined ? data.isPublic : true,
-      isGuest: data.isGuest !== undefined ? data.isGuest : true},
+      status,
+      isPublic,
+      isGuest},
       permissions: permissions});
 
   return JSON.parse(JSON.stringify(form));
@@ -1096,13 +1100,21 @@ export async function updateFormSecure(formId: string, data: any, jwt?: string) 
     settings = JSON.parse(form.settings || '{}');
   } catch {}
 
+  if (data.status === 'published') {
+    if (data.isPublic === undefined) data.isPublic = true;
+    if (data.isGuest === undefined) data.isGuest = true;
+  } else if (data.status === 'draft' || data.status === 'archived') {
+    if (data.isPublic === undefined && !data.isPinned) data.isPublic = false;
+    if (data.isGuest === undefined && !data.isPinned) data.isGuest = false;
+  }
+
   const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
   const extraReadUserIds =
     settings.collaborators && typeof settings.collaborators === 'object'
       ? Object.keys(settings.collaborators)
       : [];
   const permissions = ownerRowPermissions(ownerId || actor.$id, {
-    isPublic: currentStatus === 'published',
+    isPublic: data.isPublic !== undefined ? data.isPublic : currentStatus === 'published',
     extraReadUserIds,
   });
 
