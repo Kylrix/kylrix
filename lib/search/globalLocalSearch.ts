@@ -381,7 +381,39 @@ export function searchLocalEngine(qRaw: string, ctx: GlobalSearchCtx): GlobalRes
     }
   }
 
-  // Cap per kind to keep UI fast, sort by title relevance (startsWith first)
+  const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Compute relevance score for fine-grained ranking
+  const computeScore = (r: GlobalResult): number => {
+    let score = 0;
+    const titleLower = r.title.toLowerCase();
+    const subLower = r.subtitle.toLowerCase();
+
+    if (titleLower === q) {
+      score += 100;
+    } else if (titleLower.startsWith(q)) {
+      score += 50;
+    } else if (escapedQ && new RegExp(`\\b${escapedQ}`).test(titleLower)) {
+      score += 35;
+    } else if (titleLower.includes(q)) {
+      score += 25;
+    }
+
+    if (subLower.includes(q)) {
+      score += 10;
+    }
+
+    if (r.raw) {
+      if (r.raw.isPinned) score += 20;
+      const ts = new Date(r.raw.$updatedAt || r.raw.updatedAt || r.raw.createdAt || 0).getTime();
+      if (!isNaN(ts) && ts > 0) {
+        // Small recency bonus (0..5 points)
+        const ageInDays = (Date.now() - ts) / (1000 * 60 * 60 * 24);
+        score += Math.max(0, 5 - ageInDays * 0.1);
+      }
+    }
+    return score;
+  };
+
   const byKind: Record<string, GlobalResult[]> = {};
   for (const r of out) {
     byKind[r.kind] = byKind[r.kind] || [];
@@ -392,18 +424,7 @@ export function searchLocalEngine(qRaw: string, ctx: GlobalSearchCtx): GlobalRes
   for (const k of orderedKinds) {
     const arr = byKind[k];
     if (!arr) continue;
-    arr.sort((a,b) => {
-      // LocalEngine SoT: pinned first then $updatedAt desc (sync skill) before relevance
-      const aPinned = a.raw?.isPinned ? 0 : 1;
-      const bPinned = b.raw?.isPinned ? 0 : 1;
-      if (aPinned !== bPinned) return aPinned - bPinned;
-      const aT = new Date(a.raw?.$updatedAt || a.raw?.updatedAt || a.raw?.createdAt || 0).getTime();
-      const bT = new Date(b.raw?.$updatedAt || b.raw?.updatedAt || b.raw?.createdAt || 0).getTime();
-      if (aT !== bT) return bT - aT;
-      const aStarts = a.title.toLowerCase().startsWith(q) ? 0 : 1;
-      const bStarts = b.title.toLowerCase().startsWith(q) ? 0 : 1;
-      return aStarts - bStarts;
-    });
+    arr.sort((a, b) => computeScore(b) - computeScore(a));
     capped.push(...arr.slice(0, 6));
   }
   return capped;
