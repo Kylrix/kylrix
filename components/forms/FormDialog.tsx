@@ -31,8 +31,8 @@ import {
   CloudUpload as SyncIcon,
   Warning as WarningIcon,
   Settings as SettingsIcon,
-  UploadFile as FileUploadIcon,
-  ChevronDownIcon} from '@/lib/openbricks/icons';
+  UploadFile as FileUploadIcon
+} from '@/lib/openbricks/icons';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
 import { Forms, FormsStatus } from '@/generated/appwrite/types';
@@ -94,7 +94,9 @@ function SortableField({
   updateOption, 
   removeOption,
   isChoiceType,
-  openSelectorDrawer,
+  user,
+  openProUpgrade,
+  _openSelectorDrawer,
   openSettingsDrawer
 }: any) {
   const {
@@ -900,7 +902,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                       isChoiceType={isChoiceType}
                       user={user}
                       openProUpgrade={openProUpgrade}
-                      openSelectorDrawer={openSelectorDrawer}
+                      _openSelectorDrawer={openSelectorDrawer}
                       openSettingsDrawer={openSettingsDrawer}
                     />
                   ))}

@@ -21,24 +21,16 @@ import {
   EyeOff,
   Copy,
   Check,
-  Play,
   RotateCw,
   Send,
-  Sparkles,
   Pin,
   Tag,
   Paperclip,
-  Clock,
   UserCheck,
   Monitor,
   Smartphone,
-  X,
   History,
   Download,
-  Plus,
-  Search,
-  MoreHorizontal,
-  Share2,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -67,7 +59,6 @@ export default function LandingPage() {
 
   // Smart Assistant Session Simulation
   const [agentRunning, setAgentRunning] = useState(false);
-  const [agentCompleted, setAgentCompleted] = useState(true);
   const [agentInput, setAgentInput] = useState('');
   const [agentMessages, setAgentMessages] = useState<
     Array<{
@@ -132,26 +123,29 @@ export default function LandingPage() {
     setAgentRunning(true);
     setAgentInput('');
 
-    const userMsg = { id: `u-${Date.now()}`, role: 'user' as const, content: textToSend };
-    setAgentMessages((prev) => [...prev, userMsg]);
+    setAgentMessages((prev) => [
+      ...prev,
+      { id: `u-${prev.length + 1}`, role: 'user' as const, content: textToSend },
+    ]);
 
     setTimeout(() => {
-      const assistantMsg = {
-        id: `a-${Date.now()}`,
-        role: 'assistant' as const,
-        content: `Completed task: "${textToSend}". Scanned active items and applied updates.`,
-        tools: [
-          {
-            toolKey: 'workspace_executor',
-            status: 'success',
-            resultSummary: 'Executed requested action • Updated 3 workspace records',
-          },
-        ],
-        nextSteps: ['Review updated items', 'Export session log'],
-      };
-      setAgentMessages((prev) => [...prev, assistantMsg]);
+      setAgentMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${prev.length + 1}`,
+          role: 'assistant' as const,
+          content: `Completed task: "${textToSend}". Scanned active items and applied updates.`,
+          tools: [
+            {
+              toolKey: 'workspace_executor',
+              status: 'success',
+              resultSummary: 'Executed requested action • Updated 3 workspace records',
+            },
+          ],
+          nextSteps: ['Review updated items', 'Export session log'],
+        },
+      ]);
       setAgentRunning(false);
-      setAgentCompleted(true);
     }, 1200);
   };
 
