@@ -31,6 +31,18 @@ import {
   Smartphone,
   History,
   Download,
+  Cpu,
+  Server,
+  Globe,
+  Settings,
+  Search,
+  Bell,
+  Heart,
+  Calendar,
+  Layers,
+  Share2,
+  MoreVertical,
+  CheckSquare,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -47,7 +59,12 @@ export default function LandingPage() {
   const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop');
   const [activeTab, setActiveTab] = useState<'agents' | 'notes' | 'vault' | 'goals' | 'chat'>('agents');
 
-  // Interactive Live Simulation States
+  // Copy states
+  const [copiedSelfHost, setCopiedSelfHost] = useState(false);
+  const [copiedMcp, setCopiedMcp] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  // Interactive Tasks state in 1:1 demo
   const [tasks, setTasks] = useState([
     { id: '1', title: 'Setup workspace & team permissions', completed: true, category: 'Setup' },
     { id: '2', title: 'Store private vault passwords & security keys', completed: false, category: 'Security' },
@@ -55,7 +72,6 @@ export default function LandingPage() {
     { id: '4', title: 'Run smart assistant daily workspace summary', completed: false, category: 'Assistant' },
   ]);
   const [showVaultSecret, setShowVaultSecret] = useState(false);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   // Smart Assistant Session Simulation
   const [agentRunning, setAgentRunning] = useState(false);
@@ -110,10 +126,18 @@ export default function LandingPage() {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
   };
 
-  const handleCopy = (text: string, index: number) => {
+  const handleCopyText = (text: string, type: 'selfhost' | 'mcp' | number) => {
     navigator.clipboard.writeText(text);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
+    if (type === 'selfhost') {
+      setCopiedSelfHost(true);
+      setTimeout(() => setCopiedSelfHost(false), 2000);
+    } else if (type === 'mcp') {
+      setCopiedMcp(true);
+      setTimeout(() => setCopiedMcp(false), 2000);
+    } else if (typeof type === 'number') {
+      setCopiedIndex(type);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    }
   };
 
   const runSimulatedAgentTask = (promptText?: string) => {
@@ -168,22 +192,22 @@ export default function LandingPage() {
       <ThreadNoteClaimer />
 
       {/* Spatial Soft Ambient Glows */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-50">
-        <div className="absolute -top-40 left-1/2 h-[650px] w-[1000px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#6366F1]/25 via-[#EC4899]/20 to-transparent blur-[140px]" />
-        <div className="absolute top-[800px] -left-40 h-[600px] w-[600px] rounded-full bg-[#10B981]/20 blur-[150px]" />
-        <div className="absolute top-[1500px] -right-40 h-[600px] w-[600px] rounded-full bg-[#A855F7]/20 blur-[150px]" />
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-40">
+        <div className="absolute -top-40 left-1/2 h-[650px] w-[1000px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#6366F1]/20 via-[#EC4899]/15 to-transparent blur-[140px]" />
+        <div className="absolute top-[800px] -left-40 h-[600px] w-[600px] rounded-full bg-[#10B981]/15 blur-[150px]" />
+        <div className="absolute top-[1500px] -right-40 h-[600px] w-[600px] rounded-full bg-[#A855F7]/15 blur-[150px]" />
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          1. HERO SECTION WITH PROMINENT FAINT BACKGROUND SCREENS
+          1. HERO SECTION WITH TRANSPARENT FAINT SLANTED BACKGROUND SCREENS
          ───────────────────────────────────────────────────────────── */}
-      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 sm:pt-14 pb-16 lg:pb-24">
+      <section className="relative z-10 mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-6 sm:pt-12 pb-12 sm:pb-20">
 
-        {/* PROMINENT FAINT SLANTED MOCK SCREENS PROVIDING FORM & DEPTH */}
-        <div className="pointer-events-none absolute inset-x-0 top-2 sm:top-6 bottom-0 z-0 flex justify-center items-start overflow-hidden opacity-60 sm:opacity-75">
-          <div className="relative w-full max-w-6xl h-[520px]">
-            {/* Left Slanted Screen: Kylie Desktop Sidebar Frame */}
-            <div className="absolute top-2 left-0 sm:left-4 w-[85%] sm:w-[560px] rounded-3xl bg-[#161412] border-2 border-white/25 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)] transform -rotate-6 -skew-y-2 backdrop-blur-sm">
+        {/* PROMINENT FAINT SLANTED MOCK SCREENS WITH REDUCED OPACITY & BACKDROP BLUR */}
+        <div className="pointer-events-none absolute inset-x-0 top-1 sm:top-4 bottom-0 z-0 flex justify-center items-start overflow-hidden opacity-30 sm:opacity-40">
+          <div className="relative w-full max-w-6xl h-[500px]">
+            {/* Left Slanted Screen: Kylie Agentic Sidebar Frame */}
+            <div className="absolute top-2 left-0 sm:left-4 w-[85%] sm:w-[540px] rounded-3xl bg-[#161412]/80 border-2 border-white/20 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)] transform -rotate-6 -skew-y-2 backdrop-blur-md">
               <div className="flex items-center justify-between pb-3 border-b border-white/15 mb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-xl bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center font-bold text-xs">
@@ -194,11 +218,11 @@ export default function LandingPage() {
                 <div className="h-2 w-20 rounded-full bg-white/20" />
               </div>
               <div className="space-y-3">
-                <div className="p-3 rounded-2xl bg-[#000000] border border-white/15 text-xs text-white/90">
+                <div className="p-3 rounded-2xl bg-[#000000]/90 border border-white/15 text-xs text-white/90">
                   <div className="text-[10px] text-white/50 font-mono mb-1">User request</div>
                   Scan workspace and create milestone summary
                 </div>
-                <div className="p-3 rounded-2xl bg-[#000000] border border-[#6366F1]/40 text-xs text-white">
+                <div className="p-3 rounded-2xl bg-[#000000]/90 border border-[#6366F1]/40 text-xs text-white">
                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#818CF8] mb-1">
                     <Zap size={10} /> Tool · workspace_summarizer [success]
                   </div>
@@ -208,7 +232,7 @@ export default function LandingPage() {
             </div>
 
             {/* Right Slanted Screen: Workspace App Main View */}
-            <div className="absolute top-8 right-0 sm:right-4 w-[85%] sm:w-[560px] rounded-3xl bg-[#0D0D10] border-2 border-white/25 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)] transform rotate-6 skew-y-2 backdrop-blur-sm">
+            <div className="absolute top-8 right-0 sm:right-4 w-[85%] sm:w-[540px] rounded-3xl bg-[#0D0D10]/80 border-2 border-white/20 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)] transform rotate-6 skew-y-2 backdrop-blur-md">
               <div className="flex items-center justify-between pb-3 border-b border-white/15 mb-3">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
@@ -218,14 +242,14 @@ export default function LandingPage() {
                 <div className="h-2 w-24 rounded-full bg-white/20" />
               </div>
               <div className="grid grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 space-y-1.5">
+                <div className="p-3 rounded-2xl bg-[#141418]/90 border border-white/15 space-y-1.5">
                   <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#EC4899]/20 text-[#EC4899] font-bold">
                     Note
                   </span>
                   <div className="h-3 w-28 rounded bg-white/30" />
                   <div className="h-2 w-20 rounded bg-white/15" />
                 </div>
-                <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 space-y-1.5">
+                <div className="p-3 rounded-2xl bg-[#141418]/90 border border-white/15 space-y-1.5">
                   <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#10B981]/20 text-[#10B981] font-bold">
                     Vault
                   </span>
@@ -237,17 +261,17 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* CONCISE, IMPACTFUL HERO CONTENT */}
+        {/* HERO CONTENT WITH CRISP TYPOGRAPHY & COMPACT MOBILE BUTTONS */}
         <div className="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-5"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-4"
           >
             <span className="flex h-2 w-2 rounded-full bg-[#10B981] animate-pulse" />
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-              All-in-One Workspace
+            <span className="text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider text-white">
+              Agentic Living Workspace
             </span>
           </motion.div>
 
@@ -255,11 +279,11 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.05 }}
-            className="font-clash text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.08]"
+            className="font-clash text-3xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.08] [text-shadow:_0_2px_12px_rgba(0,0,0,0.9)]"
           >
-            Notes, Vault & Assistant <br className="hidden sm:inline" />
+            Build, ship and think in <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-[#818CF8] via-[#EC4899] to-[#10B981] bg-clip-text text-transparent">
-              In One Unified App.
+              one living agentic workspace.
             </span>
           </motion.h1>
 
@@ -267,55 +291,56 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.1 }}
-            className="mt-5 text-base sm:text-lg text-white/80 max-w-xl font-normal leading-relaxed"
+            className="mt-4 sm:mt-5 text-sm sm:text-lg text-white/90 max-w-2xl font-normal leading-relaxed drop-shadow-md"
           >
-            Manage notes, goals, passwords, and team chats with an inbuilt smart assistant that completes work instantly.
+            Notes, goals, encrypted vault, direct messages, and autonomous AI tools sharing the exact same workspace.
           </motion.p>
 
+          {/* COMPACT BUTTONS ON MOBILE */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.15 }}
-            className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto px-4 sm:px-0"
+            className="mt-6 sm:mt-8 flex items-center justify-center gap-2.5 sm:gap-3.5 w-auto"
           >
             <button
               type="button"
               onClick={handlePrimaryAction}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#6366F1] text-white font-bold text-sm sm:text-base border border-[#818CF8]/50 shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:bg-[#5254E8] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-4 py-2.5 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-2xl bg-[#6366F1] text-white font-bold text-xs sm:text-base border border-[#818CF8]/50 shadow-[0_0_25px_rgba(99,102,241,0.4)] hover:bg-[#5254E8] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
-              <span>{isAuthenticated ? 'Open Workspace' : 'Start Free Workspace'}</span>
-              <ChevronRight size={18} strokeWidth={2.5} />
+              <span>{isAuthenticated ? 'Open App' : 'App'}</span>
+              <ChevronRight size={16} strokeWidth={2.5} className="hidden sm:inline" />
             </button>
 
             <button
               type="button"
               onClick={() => openAgenticDrawer({ prompt: 'Show me around the workspace tools' })}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#161412] text-white font-bold text-sm sm:text-base border border-white/20 hover:border-[#EC4899]/60 hover:bg-[#1C1A18] active:scale-[0.98] transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-4 py-2.5 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-2xl bg-[#161412] text-white font-bold text-xs sm:text-base border border-white/20 hover:border-[#EC4899]/60 hover:bg-[#1C1A18] active:scale-[0.98] transition-all cursor-pointer"
             >
-              <Bot size={18} className="text-[#EC4899]" />
-              <span>Ask Smart Assistant</span>
+              <Bot size={15} className="text-[#EC4899] sm:w-[18px] sm:h-[18px]" />
+              <span>Ask Kylie</span>
             </button>
           </motion.div>
         </div>
 
         {/* ─────────────────────────────────────────────────────────────
-            2. 1:1 PIXEL-PERFECT ADAPTIVE DEMO SCREENSHOT MOCKUPS
+            2. 1:1 SCALED REPLICA OF THE ACTUAL APPLICATION
            ───────────────────────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-12 sm:mt-16 relative max-w-6xl mx-auto"
+          className="mt-10 sm:mt-14 relative max-w-6xl mx-auto"
         >
-          {/* Controls Bar: Device Switcher & Feature Tabs */}
+          {/* Controls Bar: Device Mode & Feature Navigation Tabs */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4 px-2">
-            {/* Feature Selectors */}
+            {/* Feature Tabs */}
             <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 scrollbar-none">
               {[
                 { id: 'agents', label: 'Smart Assistant (Kylie)', icon: Bot, color: '#6366F1' },
-                { id: 'notes', label: 'Notes & Ideas', icon: FileText, color: '#EC4899' },
+                { id: 'notes', label: 'Ideas & Notes', icon: FileText, color: '#EC4899' },
                 { id: 'vault', label: 'Encrypted Vault', icon: Lock, color: '#10B981' },
-                { id: 'goals', label: 'Tasks & Goals', icon: Target, color: '#A855F7' },
+                { id: 'goals', label: 'Goals & Tasks', icon: Target, color: '#A855F7' },
                 { id: 'chat', label: 'Direct Messages', icon: MessageSquare, color: '#3B82F6' },
               ].map((tab) => {
                 const Icon = tab.icon;
@@ -325,14 +350,14 @@ export default function LandingPage() {
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                       isActive
                         ? 'bg-[#18181C] text-white border-2'
                         : 'bg-white/5 text-white/70 border border-white/10 hover:border-white/30 hover:text-white'
                     }`}
                     style={{ borderColor: isActive ? tab.color : undefined }}
                   >
-                    <Icon size={15} style={{ color: tab.color }} />
+                    <Icon size={14} style={{ color: tab.color }} />
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -369,137 +394,412 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Device Chassis Frame */}
-          <div className="relative rounded-[24px] sm:rounded-[32px] bg-[#0A0A0C] p-2.5 sm:p-5 border-2 border-white/20 shadow-[0_30px_90px_rgba(0,0,0,0.95)] transition-all">
-            {/* Top Desktop Browser Bar */}
-            {deviceMode === 'desktop' && (
-              <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 rounded-t-[20px] bg-[#141418] border-b border-white/10 mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#EF4444]" />
-                  <span className="w-3 h-3 rounded-full bg-[#F59E0B]" />
-                  <span className="w-3 h-3 rounded-full bg-[#10B981]" />
-                </div>
+          {/* 1:1 SCALED APPLICATION FRAME */}
+          <div className="relative rounded-[24px] sm:rounded-[28px] bg-[#000000] p-1.5 sm:p-3 border-2 border-white/20 shadow-[0_30px_90px_rgba(0,0,0,0.95)] transition-all overflow-hidden">
 
-                <div className="flex items-center gap-2 px-5 py-1 rounded-xl bg-[#000000] border border-white/15 text-xs font-mono text-white/90">
-                  <Lock size={12} className="text-[#10B981]" />
-                  <span className="font-bold text-white">kylrix.space</span>
-                  <span className="text-white/40">/</span>
-                  <span className="text-[#818CF8]">app</span>
+            {/* 1:1 CONNECT TOPBAR REPLICA */}
+            <div className="w-full bg-[#000000] border-b-2 border-white/20 px-3 py-2.5 rounded-t-[20px] flex items-center justify-between gap-2 text-xs font-satoshi">
+              {/* Left: App Logo / Name */}
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[#6366F1] flex items-center justify-center font-clash font-black text-white text-xs">
+                  K
                 </div>
+                <span className="font-clash font-black text-white text-sm">Kylrix</span>
+              </div>
 
-                <div className="flex items-center gap-2 text-xs font-mono text-white/60">
-                  <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-                  <span className="hidden sm:inline">Workspace Active</span>
+              {/* Center: Search Island */}
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#161412] border border-white/15 text-[11px] font-bold text-white/80">
+                <Search size={13} className="text-white/60" />
+                <span className="hidden sm:inline">Search ecosystem...</span>
+                <span className="sm:hidden">Search...</span>
+              </div>
+
+              {/* Right: Actions & User Avatar */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openAgenticDrawer({ prompt: 'Show active workspace session' })}
+                  className="w-7 h-7 rounded-xl bg-[#161412] border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center hover:bg-[#1C1A18] transition-colors"
+                >
+                  <Bot size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="w-7 h-7 rounded-xl bg-[#161412] border border-white/15 text-white/80 flex items-center justify-center"
+                >
+                  <Bell size={14} />
+                </button>
+                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#EC4899] p-0.5 flex items-center justify-center font-bold text-[10px] text-white">
+                  U
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Mobile Notch Bar */}
-            {deviceMode === 'mobile' && (
-              <div className="flex items-center justify-between px-4 py-2 rounded-t-[20px] bg-[#141418] border-b border-white/10 mb-3 text-xs text-white/70 font-mono">
-                <span>9:41</span>
-                <div className="w-16 h-3 rounded-full bg-black border border-white/20" />
-                <span>100%</span>
-              </div>
-            )}
+            {/* MAIN APP SHELL CONTENT LAYOUT (SIDEBAR + MAIN CANVAS + AGENTIC SIDEBAR) */}
+            <div className="relative min-h-[460px] bg-[#000000] flex flex-col md:flex-row overflow-hidden">
 
-            {/* ─────────────────────────────────────────────────────────────
-                1:1 MOCKUP 1: SMART ASSISTANT (KYLIE)
-               ───────────────────────────────────────────────────────────── */}
-            {activeTab === 'agents' && (
-              <div
-                className={`relative bg-[#161412] rounded-2xl overflow-hidden border border-white/15 min-h-[480px] flex ${
-                  deviceMode === 'desktop' ? 'flex-row' : 'flex-col'
-                }`}
-              >
-                {/* Workspace Main Canvas (Left in Desktop, Top in Mobile) */}
-                <div className="flex-1 p-4 sm:p-6 bg-[#000000] flex flex-col justify-between border-r border-white/10">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+              {/* DESKTOP 1:1 UNIFIED LEFT SIDEBAR (Shown when in desktop mode) */}
+              {deviceMode === 'desktop' && (
+                <div className="hidden md:flex w-[200px] bg-[#000000] border-r border-white/15 p-2.5 flex-col justify-between shrink-0 font-satoshi">
+                  <div className="space-y-3">
+                    {/* Workspace Selector */}
+                    <div className="p-2 rounded-xl bg-[#161412] border border-white/15 flex items-center justify-between text-xs font-bold text-white">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-[#EC4899]/20 border border-[#EC4899]/40 flex items-center justify-center text-[#EC4899]">
-                          <FileText size={16} />
+                        <div className="w-5 h-5 rounded-md bg-[#F59E0B]/20 text-[#F59E0B] flex items-center justify-center text-[10px] font-black">
+                          P
+                        </div>
+                        <span className="truncate text-[11px]">Personal Space</span>
+                      </div>
+                      <ChevronRight size={12} className="text-white/40" />
+                    </div>
+
+                    {/* Nav Items */}
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('notes')}
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
+                          activeTab === 'notes'
+                            ? 'bg-[#161412] text-[#EC4899] border border-[#EC4899]/30'
+                            : 'text-white/70 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <FileText size={14} className="text-[#EC4899]" />
+                        <span>Ideas</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('goals')}
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
+                          activeTab === 'goals'
+                            ? 'bg-[#161412] text-[#A855F7] border border-[#A855F7]/30'
+                            : 'text-white/70 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <Target size={14} className="text-[#A855F7]" />
+                        <span>Goals</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('vault')}
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
+                          activeTab === 'vault'
+                            ? 'bg-[#161412] text-[#10B981] border border-[#10B981]/30'
+                            : 'text-white/70 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <Lock size={14} className="text-[#10B981]" />
+                        <span>Vault</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('agents')}
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
+                          activeTab === 'agents'
+                            ? 'bg-[#161412] text-[#6366F1] border border-[#6366F1]/30'
+                            : 'text-white/70 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <Bot size={14} className="text-[#6366F1]" />
+                        <span>Agents</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold text-white/70 hover:text-white hover:bg-white/5 text-left"
+                      >
+                        <Settings size={14} className="text-[#6366F1]" />
+                        <span>Settings</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Sidebar Footer links */}
+                  <div className="space-y-1 pt-2 border-t border-white/10 text-[11px] font-bold">
+                    <a
+                      href="/sponsor"
+                      className="flex items-center gap-2 px-2 py-1 rounded bg-[#EC4899]/10 text-[#EC4899] border border-[#EC4899]/20"
+                    >
+                      <Heart size={12} />
+                      <span>Sponsor</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* MAIN CANVAS CONTENT AREA */}
+              <div className="flex-1 p-3 sm:p-5 bg-[#000000] overflow-y-auto min-h-[400px]">
+                {/* TAB 1: AGENTS ACTIVE VIEW */}
+                {activeTab === 'agents' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-[#6366F1]/20 border border-[#6366F1]/40 flex items-center justify-center text-[#818CF8]">
+                          <Bot size={15} />
                         </div>
                         <div>
-                          <h4 className="font-clash font-bold text-sm text-white">#Q3-Milestones</h4>
-                          <p className="text-[11px] text-white/50">Auto-generated by Kylie Smart Assistant</p>
+                          <h4 className="font-clash font-bold text-xs text-white">Smart Assistant Workspace</h4>
+                          <p className="text-[10px] text-white/50">Active agentic session & live MCP tool executions</p>
                         </div>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full bg-[#10B981]/20 text-[#10B981] text-[10px] font-mono font-bold">
-                        Encrypted & Saved
+                      <span className="px-2 py-0.5 rounded-full bg-[#10B981]/20 text-[#10B981] text-[10px] font-mono font-bold">
+                        Online · Local First
                       </span>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-[#141418] border border-white/15 space-y-3">
-                      <h5 className="font-bold text-xs text-white uppercase tracking-wider text-[#818CF8]">
-                        Workspace Summary
+                    <div className="p-3.5 rounded-2xl bg-[#141418] border border-white/15 space-y-2.5">
+                      <h5 className="font-bold text-[11px] text-[#818CF8] uppercase tracking-wider">
+                        #Q3-Milestones Summary
                       </h5>
-                      <ul className="space-y-2 text-xs text-white/80 leading-relaxed">
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 size={14} className="text-[#10B981] shrink-0 mt-0.5" />
-                          <span>Offline sync engine initialized with 100% document cache.</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 size={14} className="text-[#10B981] shrink-0 mt-0.5" />
-                          <span>Vault credentials backed up locally with AES-256 encryption.</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 size={14} className="text-[#10B981] shrink-0 mt-0.5" />
-                          <span>Team direct message channel configured & ready.</span>
-                        </li>
-                      </ul>
+                      <p className="text-xs text-white/80 leading-relaxed">
+                        Kylie scanned workspace notes, created #Q3-Milestones, and encrypted backup keys inside Vault.
+                      </p>
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-[#10B981]">
+                        <CheckCircle2 size={12} />
+                        <span>Tool execution completed successfully</span>
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-white/50 font-mono">
-                    <span>Status: Autonomic Sync Active</span>
-                    <span className="text-[#818CF8]">1:1 Agentic Session</span>
+                {/* TAB 2: NOTES & IDEAS ACTIVE VIEW */}
+                {activeTab === 'notes' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <span className="text-xs font-bold text-white/80">Ideas & Notes</span>
+                      <button type="button" className="text-xs font-bold text-[#EC4899]">
+                        + New Idea
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 space-y-2 hover:border-[#EC4899]/50 transition-all">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#EC4899]/20 text-[#EC4899] font-bold">
+                            Roadmap
+                          </span>
+                          <Pin size={11} className="text-[#EC4899] fill-[#EC4899]" />
+                        </div>
+                        <h4 className="font-bold text-xs text-white">Q3 Product Architecture</h4>
+                        <p className="text-[11px] text-white/70 leading-relaxed">
+                          Offline sync engine, fast search indexing, and collaborative workspace tagging.
+                        </p>
+                        <div className="text-[10px] text-white/40 pt-1 border-t border-white/10 flex justify-between">
+                          <span>2 attachments</span>
+                          <span>Updated 5m ago</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 space-y-2 hover:border-[#EC4899]/50 transition-all">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#818CF8]/20 text-[#818CF8] font-bold">
+                            Meeting
+                          </span>
+                          <span className="text-[10px] text-white/40">2h ago</span>
+                        </div>
+                        <h4 className="font-bold text-xs text-white">UI Sync & Dark Theme</h4>
+                        <p className="text-[11px] text-white/70 leading-relaxed">
+                          Streamline action buttons, refine dark theme card borders, and standardize UI.
+                        </p>
+                        <div className="text-[10px] text-[#818CF8] pt-1 border-t border-white/10 flex justify-between">
+                          <span>Shared with Team</span>
+                          <ArrowUpRight size={11} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* 1:1 KYLIE SIDEBAR (Desktop) OR FLOATING BOTTOM DRAWER (Mobile) */}
-                <div
-                  className={`${
-                    deviceMode === 'desktop'
-                      ? 'w-[360px] border-l border-white/20'
-                      : 'w-full border-t-2 border-white/20 mt-2'
-                  } bg-[#161412] flex flex-col justify-between`}
-                >
-                  {/* Sticky Kylie Header (Exact match to AgenticPanelContent) */}
-                  <div className="px-4 py-3 border-b border-white/20 bg-[#0E0D0C] flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center font-clash font-black text-sm">
+                {/* TAB 3: ENCRYPTED VAULT ACTIVE VIEW */}
+                {activeTab === 'vault' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <span className="text-xs font-bold text-white/80">Encrypted Credentials</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowVaultSecret(!showVaultSecret)}
+                        className="inline-flex items-center gap-1 text-xs text-[#10B981] font-bold cursor-pointer"
+                      >
+                        {showVaultSecret ? <EyeOff size={13} /> : <Eye size={13} />}
+                        <span>{showVaultSecret ? 'Hide' : 'Reveal'}</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-mono text-[#10B981] font-bold uppercase">Password</span>
+                          <KeyRound size={12} className="text-[#10B981]" />
+                        </div>
+                        <h4 className="font-bold text-xs text-white">Database Key</h4>
+                        <p className="text-[11px] font-mono text-white/80">
+                          {showVaultSecret ? 'postgres://admin:sec3te#9@db' : '••••••••••••••••••••'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText('postgres://admin:sec3te#9@db', 1)}
+                          className="w-full flex items-center justify-between text-[10px] font-mono text-white/70 hover:text-white pt-1.5 border-t border-white/10 cursor-pointer"
+                        >
+                          <span>{copiedIndex === 1 ? 'Copied!' : 'Copy key'}</span>
+                          {copiedIndex === 1 ? <Check size={11} className="text-[#10B981]" /> : <Copy size={11} />}
+                        </button>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-mono text-[#10B981] font-bold uppercase">Authenticator</span>
+                          <ShieldCheck size={12} className="text-[#10B981]" />
+                        </div>
+                        <h4 className="font-bold text-xs text-white">2FA Code</h4>
+                        <p className="text-base font-mono font-bold text-white tracking-wider">
+                          {showVaultSecret ? '849 201' : '••• •••'}
+                        </p>
+                        <div className="text-[10px] font-mono text-white/40 pt-1.5 border-t border-white/10 flex justify-between">
+                          <span>AES-256</span>
+                          <span>18s remaining</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 4: GOALS ACTIVE VIEW */}
+                {activeTab === 'goals' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <span className="text-xs font-bold text-white/80">Goals & Tasks</span>
+                      <span className="text-xs font-bold text-[#A855F7]">
+                        {tasks.filter((t) => t.completed).length} of {tasks.length} Done
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {tasks.map((task) => (
+                        <div
+                          key={task.id}
+                          onClick={() => toggleTask(task.id)}
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                            task.completed
+                              ? 'bg-[#141418]/60 border-white/10 opacity-70'
+                              : 'bg-[#141418] border-white/20 hover:border-[#A855F7]/60'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            {task.completed ? (
+                              <CheckCircle2 size={16} className="text-[#A855F7] shrink-0" />
+                            ) : (
+                              <Circle size={16} className="text-white/40 shrink-0" />
+                            )}
+                            <span
+                              className={`text-xs font-medium ${
+                                task.completed ? 'line-through text-white/50' : 'text-white'
+                              }`}
+                            >
+                              {task.title}
+                            </span>
+                          </div>
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60">
+                            {task.category}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 5: DIRECT MESSAGES ACTIVE VIEW */}
+                {activeTab === 'chat' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <div className="flex items-center gap-1.5">
+                        <UserCheck size={14} className="text-[#3B82F6]" />
+                        <span className="text-xs font-bold text-white">Direct Chat with Alex</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-[#3B82F6]">Encrypted Channel</span>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 flex flex-col justify-between min-h-[260px]">
+                      <div className="space-y-2.5 mb-3 overflow-y-auto max-h-[180px] pr-1">
+                        {chatMessages.map((msg, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex flex-col ${msg.isUser ? 'items-end' : 'items-start'}`}
+                          >
+                            <div
+                              className={`px-3 py-1.5 rounded-2xl text-xs max-w-[85%] ${
+                                msg.isUser
+                                  ? 'bg-[#3B82F6] text-white rounded-br-xs'
+                                  : 'bg-[#222228] text-white/90 rounded-bl-xs border border-white/10'
+                              }`}
+                            >
+                              {msg.text}
+                            </div>
+                            <span className="text-[9px] text-white/40 mt-0.5 px-1">{msg.time}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <form onSubmit={handleSendChatMessage} className="flex items-center gap-2 pt-2 border-t border-white/10">
+                        <input
+                          type="text"
+                          value={newChatText}
+                          onChange={(e) => setNewChatText(e.target.value)}
+                          placeholder="Type a message..."
+                          className="flex-1 px-3 py-1.5 rounded-xl bg-[#000000] border border-white/15 text-xs text-white focus:outline-none focus:border-[#3B82F6]"
+                        />
+                        <button
+                          type="submit"
+                          className="px-3 py-1.5 rounded-xl bg-[#3B82F6] text-white text-xs font-bold hover:bg-[#2563EB] cursor-pointer"
+                        >
+                          <Send size={12} />
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* DESKTOP 1:1 KYLIE AGENTIC SIDEBAR PANEL (Active in Desktop View) */}
+              {deviceMode === 'desktop' && (
+                <div className="w-[320px] bg-[#161412] border-l border-white/20 flex flex-col justify-between font-satoshi shrink-0">
+                  {/* Sticky Header */}
+                  <div className="px-3 py-2.5 border-b border-white/20 bg-[#0E0D0C] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center font-clash font-black text-xs">
                         K
                       </div>
                       <div>
-                        <h4 className="text-white font-extrabold text-sm font-clash leading-tight">Kylie</h4>
-                        <p className="text-[#9B9691] text-[10px] font-semibold">Smart Workspace Assistant</p>
+                        <h4 className="text-white font-extrabold text-xs font-clash leading-tight">Kylie</h4>
+                        <p className="text-[#9B9691] text-[9px] font-semibold">Smart Workspace Assistant</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-white/60">
-                      <button type="button" className="p-1.5 rounded-lg bg-[#161412] border border-white/15">
-                        <History size={14} />
+                    <div className="flex items-center gap-1 text-white/60">
+                      <button type="button" className="p-1 rounded bg-[#161412] border border-white/15">
+                        <History size={12} />
                       </button>
-                      <button type="button" className="p-1.5 rounded-lg bg-[#161412] border border-white/15">
-                        <Download size={14} />
+                      <button type="button" className="p-1 rounded bg-[#161412] border border-white/15">
+                        <Download size={12} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Chat Session Messages */}
-                  <div className="p-4 space-y-3 flex-1 overflow-y-auto max-h-[300px]">
+                  {/* Messages Feed */}
+                  <div className="p-3 space-y-2.5 flex-1 overflow-y-auto max-h-[300px]">
                     {agentMessages.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`flex gap-1.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
                         {msg.role === 'assistant' && (
-                          <div className="w-6 h-6 rounded-lg bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center text-[10px] font-bold shrink-0 mt-1">
+                          <div className="w-5 h-5 rounded bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">
                             K
                           </div>
                         )}
                         <div
-                          className={`max-w-[90%] rounded-2xl p-3 text-xs leading-relaxed ${
+                          className={`max-w-[88%] rounded-2xl p-2.5 text-[11px] leading-relaxed ${
                             msg.role === 'user'
                               ? 'bg-[#1C1A18] border border-white/20 text-white'
                               : 'bg-[#000000] border border-white/20 text-white/95'
@@ -507,20 +807,19 @@ export default function LandingPage() {
                         >
                           <p>{msg.content}</p>
 
-                          {/* 1:1 Tool Execution Box */}
                           {msg.tools && (
-                            <div className="mt-2.5 space-y-1.5">
+                            <div className="mt-2 space-y-1">
                               {msg.tools.map((t, idx) => (
                                 <div
                                   key={idx}
-                                  className="rounded-xl border border-white/20 bg-black/40 p-2 text-[10px]"
+                                  className="rounded-lg border border-white/20 bg-black/40 p-1.5 text-[9px]"
                                 >
                                   <div className="flex items-center gap-1 font-bold uppercase tracking-wider text-[#9B9691]">
-                                    <Zap size={10} className="text-[#818CF8]" />
+                                    <Zap size={9} className="text-[#818CF8]" />
                                     <span>Tool · {t.toolKey}</span>
                                     <span className="text-emerald-400 ml-auto">{t.status}</span>
                                   </div>
-                                  <p className="text-[#9B9691] mt-1 text-[11px] font-semibold">
+                                  <p className="text-[#9B9691] mt-0.5 text-[10px]">
                                     {t.resultSummary}
                                   </p>
                                 </div>
@@ -528,10 +827,9 @@ export default function LandingPage() {
                             </div>
                           )}
 
-                          {/* 1:1 Next Step Action Pills */}
                           {msg.nextSteps && (
-                            <div className="mt-2.5 space-y-1">
-                              <span className="text-[9px] uppercase font-bold text-[#9B9691] tracking-wider">
+                            <div className="mt-2 space-y-1">
+                              <span className="text-[8px] uppercase font-bold text-[#9B9691] tracking-wider">
                                 Next with Kylie
                               </span>
                               <div className="flex flex-wrap gap-1">
@@ -540,7 +838,7 @@ export default function LandingPage() {
                                     key={sIdx}
                                     type="button"
                                     onClick={() => runSimulatedAgentTask(step)}
-                                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/15 text-[10px] font-semibold text-white/90 cursor-pointer transition-all"
+                                    className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/15 text-[9px] font-semibold text-white/90 cursor-pointer transition-all"
                                   >
                                     {step}
                                   </button>
@@ -553,293 +851,94 @@ export default function LandingPage() {
                     ))}
 
                     {agentRunning && (
-                      <div className="flex justify-start gap-2 items-center text-xs text-white/70">
-                        <div className="w-6 h-6 rounded-lg bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center text-[10px] font-bold">
+                      <div className="flex justify-start gap-1.5 items-center text-[11px] text-white/70">
+                        <div className="w-5 h-5 rounded bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center text-[9px] font-bold">
                           K
                         </div>
-                        <div className="p-2.5 rounded-2xl bg-[#000000] border border-white/20 flex items-center gap-2">
-                          <RotateCw size={12} className="animate-spin text-[#818CF8]" />
+                        <div className="p-2 rounded-xl bg-[#000000] border border-white/20 flex items-center gap-1.5">
+                          <RotateCw size={11} className="animate-spin text-[#818CF8]" />
                           <span>Kylie is on it…</span>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* 1:1 OpenBricks 4.0 Pill Input Bar */}
-                  <div className="p-3 border-t border-white/20 bg-[#0E0D0C]">
-                    <div className="flex items-center gap-1 rounded-[22px] bg-[#000000] border-2 border-white/20 px-2 py-1.5">
+                  {/* OpenBricks 4.0 Pill Input Bar */}
+                  <div className="p-2 border-t border-white/20 bg-[#0E0D0C]">
+                    <div className="flex items-center gap-1 rounded-[20px] bg-[#000000] border border-white/20 px-2 py-1">
                       <button
                         type="button"
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10"
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10"
                       >
-                        <Paperclip size={16} />
+                        <Paperclip size={13} />
                       </button>
                       <input
                         type="text"
                         value={agentInput}
                         onChange={(e) => setAgentInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && runSimulatedAgentTask()}
-                        placeholder="Ask Kylie to help you with anything…"
-                        className="flex-1 bg-transparent border-none text-xs text-white placeholder:text-white/40 focus:outline-none px-1"
+                        placeholder="Ask Kylie..."
+                        className="flex-1 bg-transparent border-none text-[11px] text-white placeholder:text-white/40 focus:outline-none px-1"
                       />
                       <button
                         type="button"
                         onClick={() => runSimulatedAgentTask()}
-                        className="w-8 h-8 rounded-full bg-[#6366F1] text-white flex items-center justify-center hover:bg-[#5254E8] cursor-pointer"
+                        className="w-6 h-6 rounded-full bg-[#6366F1] text-white flex items-center justify-center hover:bg-[#5254E8] cursor-pointer"
                       >
-                        <Send size={14} />
+                        <Send size={12} />
                       </button>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* ─────────────────────────────────────────────────────────────
-                1:1 MOCKUP 2: NOTES & DOCUMENTS
-               ───────────────────────────────────────────────────────────── */}
-            {activeTab === 'notes' && (
-              <div className="p-4 sm:p-6 bg-[#000000] rounded-2xl border border-white/15 min-h-[440px] space-y-4">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <span className="text-xs font-bold text-white/70">Workspace Notes & Documents</span>
-                  <button type="button" className="text-xs font-bold text-[#EC4899] cursor-pointer">
-                    + New Note
-                  </button>
-                </div>
+            {/* MOBILE 1:1 UNIFIED BOTTOM BAR (Shown in Mobile Mode) */}
+            {deviceMode === 'mobile' && (
+              <div className="w-full bg-[#000000] border-t-2 border-white/30 rounded-b-[20px] px-2 py-1.5 flex items-center justify-around text-xs font-satoshi">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('notes')}
+                  className={`flex flex-col items-center justify-center flex-1 py-1 ${
+                    activeTab === 'notes' ? 'text-[#EC4899]' : 'text-white/70'
+                  }`}
+                >
+                  <FileText size={18} />
+                  <span className="text-[10px] font-bold mt-0.5">Ideas</span>
+                </button>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Note Card 1 */}
-                  <div className="p-4 rounded-2xl bg-[#141418] border border-white/15 hover:border-[#EC4899]/60 transition-all space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#EC4899]/20 text-[#EC4899] font-bold flex items-center gap-1">
-                        <Tag size={10} />
-                        Project Plan
-                      </span>
-                      <Pin size={12} className="text-[#EC4899] fill-[#EC4899]" />
-                    </div>
-                    <h4 className="font-bold text-sm text-white">Q3 Product Roadmap</h4>
-                    <p className="text-xs text-white/70 leading-relaxed">
-                      Implement offline sync, fast search indexing, and collaborative workspace tagging.
-                    </p>
-                    <div className="flex items-center justify-between text-[11px] text-white/40 pt-2 border-t border-white/10">
-                      <span>2 attachments</span>
-                      <span>Updated 5m ago</span>
-                    </div>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('goals')}
+                  className={`flex flex-col items-center justify-center flex-1 py-1 ${
+                    activeTab === 'goals' ? 'text-[#A855F7]' : 'text-white/70'
+                  }`}
+                >
+                  <Target size={18} />
+                  <span className="text-[10px] font-bold mt-0.5">Goals</span>
+                </button>
 
-                  {/* Note Card 2 */}
-                  <div className="p-4 rounded-2xl bg-[#141418] border border-white/15 hover:border-[#EC4899]/60 transition-all space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#818CF8]/20 text-[#818CF8] font-bold">
-                        Meeting Notes
-                      </span>
-                      <span className="text-[10px] text-white/40">2h ago</span>
-                    </div>
-                    <h4 className="font-bold text-sm text-white">Design Sync & Layout</h4>
-                    <p className="text-xs text-white/70 leading-relaxed">
-                      Streamline action buttons, refine dark theme card borders, and standardize UI.
-                    </p>
-                    <div className="flex items-center justify-between text-[11px] text-[#818CF8] pt-2 border-t border-white/10">
-                      <span>Shared with Team</span>
-                      <ArrowUpRight size={13} />
-                    </div>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('vault')}
+                  className={`flex flex-col items-center justify-center flex-1 py-1 ${
+                    activeTab === 'vault' ? 'text-[#10B981]' : 'text-white/70'
+                  }`}
+                >
+                  <Lock size={18} />
+                  <span className="text-[10px] font-bold mt-0.5">Vault</span>
+                </button>
 
-                  {/* Note Card 3 */}
-                  <div className="p-4 rounded-2xl bg-[#141418] border border-white/15 hover:border-[#EC4899]/60 transition-all space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#10B981]/20 text-[#10B981] font-bold flex items-center gap-1">
-                        <Lock size={10} />
-                        Encrypted
-                      </span>
-                      <span className="text-[10px] text-white/40">Yesterday</span>
-                    </div>
-                    <h4 className="font-bold text-sm text-white">Private Strategy Draft</h4>
-                    <p className="text-xs text-white/70 leading-relaxed">
-                      Encrypted content sealed locally with personal master key.
-                    </p>
-                    <div className="flex items-center justify-between text-[11px] text-[#10B981] pt-2 border-t border-white/10 font-mono">
-                      <span>AES-256</span>
-                      <ShieldCheck size={13} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ─────────────────────────────────────────────────────────────
-                1:1 MOCKUP 3: ENCRYPTED VAULT
-               ───────────────────────────────────────────────────────────── */}
-            {activeTab === 'vault' && (
-              <div className="p-4 sm:p-6 bg-[#000000] rounded-2xl border border-white/15 min-h-[440px] space-y-4">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <span className="text-xs font-bold text-white/70">Encrypted Credentials & Keys</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowVaultSecret(!showVaultSecret)}
-                    className="inline-flex items-center gap-1 text-xs text-[#10B981] font-bold cursor-pointer"
-                  >
-                    {showVaultSecret ? <EyeOff size={14} /> : <Eye size={14} />}
-                    <span>{showVaultSecret ? 'Hide Secrets' : 'Reveal Secrets'}</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Vault Item 1 */}
-                  <div className="p-4 rounded-2xl bg-[#141418] border border-white/15 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-[#10B981] font-bold uppercase">Password</span>
-                      <KeyRound size={14} className="text-[#10B981]" />
-                    </div>
-                    <h4 className="font-bold text-sm text-white">Production Database</h4>
-                    <p className="text-xs font-mono text-white/80">
-                      {showVaultSecret ? 'postgres://admin:sec3te#9@db' : '••••••••••••••••••••'}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy('postgres://admin:sec3te#9@db', 1)}
-                      className="w-full flex items-center justify-between text-xs font-mono text-white/70 hover:text-white pt-2 border-t border-white/10 cursor-pointer"
-                    >
-                      <span>{copiedIndex === 1 ? 'Copied!' : 'Copy connection string'}</span>
-                      {copiedIndex === 1 ? <Check size={13} className="text-[#10B981]" /> : <Copy size={13} />}
-                    </button>
-                  </div>
-
-                  {/* Vault Item 2 */}
-                  <div className="p-4 rounded-2xl bg-[#141418] border border-white/15 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-[#10B981] font-bold uppercase">Authenticator</span>
-                      <ShieldCheck size={14} className="text-[#10B981]" />
-                    </div>
-                    <h4 className="font-bold text-sm text-white">Account 2FA Code</h4>
-                    <p className="text-xl font-mono font-bold text-white tracking-wider">
-                      {showVaultSecret ? '849 201' : '••• •••'}
-                    </p>
-                    <div className="flex items-center justify-between text-[11px] font-mono text-white/40 pt-2 border-t border-white/10">
-                      <span>AES-256</span>
-                      <span>Refreshes in 18s</span>
-                    </div>
-                  </div>
-
-                  {/* Vault Item 3 */}
-                  <div className="p-4 rounded-2xl bg-[#141418] border border-white/15 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-[#10B981] font-bold uppercase">Identity Key</span>
-                      <Lock size={14} className="text-[#10B981]" />
-                    </div>
-                    <h4 className="font-bold text-sm text-white">Security Key</h4>
-                    <p className="text-xs font-mono text-white/80">
-                      {showVaultSecret ? 'nsec1w9k2...88a' : 'nsec1••••••••••••'}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy('nsec1w9k288a', 3)}
-                      className="w-full flex items-center justify-between text-xs font-mono text-white/70 hover:text-white pt-2 border-t border-white/10 cursor-pointer"
-                    >
-                      <span>{copiedIndex === 3 ? 'Copied!' : 'Copy key'}</span>
-                      {copiedIndex === 3 ? <Check size={13} className="text-[#10B981]" /> : <Copy size={13} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ─────────────────────────────────────────────────────────────
-                1:1 MOCKUP 4: TASKS & GOALS
-               ───────────────────────────────────────────────────────────── */}
-            {activeTab === 'goals' && (
-              <div className="p-4 sm:p-6 bg-[#000000] rounded-2xl border border-white/15 min-h-[440px] space-y-4">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <span className="text-xs font-bold text-white/70">Active Tasks & Goals</span>
-                  <span className="text-xs font-bold text-[#A855F7]">
-                    {tasks.filter((t) => t.completed).length} of {tasks.length} Completed
-                  </span>
-                </div>
-
-                <div className="space-y-2.5">
-                  {tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      onClick={() => toggleTask(task.id)}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                        task.completed
-                          ? 'bg-[#141418]/60 border-white/10 opacity-70'
-                          : 'bg-[#141418] border-white/20 hover:border-[#A855F7]/60'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {task.completed ? (
-                          <CheckCircle2 size={18} className="text-[#A855F7] shrink-0" />
-                        ) : (
-                          <Circle size={18} className="text-white/40 shrink-0" />
-                        )}
-                        <span
-                          className={`text-xs sm:text-sm font-medium ${
-                            task.completed ? 'line-through text-white/50' : 'text-white'
-                          }`}
-                        >
-                          {task.title}
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/60">
-                        {task.category}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ─────────────────────────────────────────────────────────────
-                1:1 MOCKUP 5: DIRECT MESSAGES
-               ───────────────────────────────────────────────────────────── */}
-            {activeTab === 'chat' && (
-              <div className="p-4 sm:p-6 bg-[#000000] rounded-2xl border border-white/15 min-h-[440px] space-y-4">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <div className="flex items-center gap-2">
-                    <UserCheck size={16} className="text-[#3B82F6]" />
-                    <span className="text-xs font-bold text-white">Direct Chat with Alex</span>
-                  </div>
-                  <span className="text-[11px] font-mono text-[#3B82F6]">Private Channel</span>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-[#141418] border border-white/15 flex flex-col justify-between min-h-[300px]">
-                  <div className="space-y-3 mb-4 overflow-y-auto max-h-[220px] pr-1">
-                    {chatMessages.map((msg, idx) => (
-                      <div
-                        key={idx}
-                        className={`flex flex-col ${msg.isUser ? 'items-end' : 'items-start'}`}
-                      >
-                        <div
-                          className={`px-3.5 py-2 rounded-2xl text-xs max-w-[80%] ${
-                            msg.isUser
-                              ? 'bg-[#3B82F6] text-white rounded-br-xs'
-                              : 'bg-[#222228] text-white/90 rounded-bl-xs border border-white/10'
-                          }`}
-                        >
-                          {msg.text}
-                        </div>
-                        <span className="text-[10px] text-white/40 mt-1 px-1">{msg.time}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <form onSubmit={handleSendChatMessage} className="flex items-center gap-2 pt-3 border-t border-white/10">
-                    <input
-                      type="text"
-                      value={newChatText}
-                      onChange={(e) => setNewChatText(e.target.value)}
-                      placeholder="Type a message..."
-                      className="flex-1 px-3 py-2 rounded-xl bg-[#000000] border border-white/15 text-xs text-white focus:outline-none focus:border-[#3B82F6]"
-                    />
-                    <button
-                      type="submit"
-                      className="px-3.5 py-2 rounded-xl bg-[#3B82F6] text-white text-xs font-bold hover:bg-[#2563EB] cursor-pointer"
-                    >
-                      <Send size={13} />
-                    </button>
-                  </form>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('chat')}
+                  className={`flex flex-col items-center justify-center flex-1 py-1 ${
+                    activeTab === 'chat' ? 'text-[#3B82F6]' : 'text-white/70'
+                  }`}
+                >
+                  <MessageSquare size={18} />
+                  <span className="text-[10px] font-bold mt-0.5">Connect</span>
+                </button>
               </div>
             )}
           </div>
@@ -847,61 +946,284 @@ export default function LandingPage() {
       </section>
 
       {/* ─────────────────────────────────────────────────────────────
-          3. FEATURE HIGHLIGHTS
+          3. ONE-CLICK SELF-HOST & AGENTIC FLOWS (IMMEDIATELY AFTER HERO)
          ───────────────────────────────────────────────────────────── */}
-      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20 border-t border-white/10">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <h2 className="font-clash text-3xl sm:text-5xl font-black text-white tracking-tight">
-            Designed for real work.
-          </h2>
-          <p className="mt-3 text-base sm:text-lg text-white/80">
-            Clean tools that help you focus and complete tasks faster.
-          </p>
-        </div>
+      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16 border-t border-white/10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-6 rounded-3xl bg-[#141418] border border-white/15 hover:border-white/40 transition-all space-y-3">
-            <div className="w-11 h-11 rounded-2xl bg-[#EC4899]/15 text-[#EC4899] flex items-center justify-center border border-[#EC4899]/30">
-              <Zap size={20} />
+          {/* ONE-CLICK SELF HOST BOX */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-[#141418] border-2 border-white/20 shadow-2xl flex flex-col justify-between space-y-6">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs font-mono font-bold">
+                <Server size={14} />
+                <span>One-Command Self Host</span>
+              </div>
+              <h3 className="font-clash text-2xl sm:text-3xl font-black text-white">
+                Run standard Kylrix locally in 60s.
+              </h3>
+              <p className="text-sm text-white/80 leading-relaxed">
+                Bundled local Appwrite + Kylrix backend. Zero cloud dependencies required.
+              </p>
             </div>
-            <h3 className="font-clash text-xl font-bold text-white">Instant Offline Access</h3>
-            <p className="text-sm text-white/70 leading-relaxed">
-              Create and edit notes offline. Your workspace saves instantly and syncs when online.
-            </p>
+
+            {/* Copyable Terminal Box */}
+            <div className="relative p-4 rounded-2xl bg-[#000000] border border-white/20 font-mono text-xs text-[#10B981] overflow-x-auto">
+              <div className="flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap select-all text-white/90">
+                  curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopyText(
+                      'curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash',
+                      'selfhost'
+                    )
+                  }
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-sans text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                >
+                  {copiedSelfHost ? (
+                    <>
+                      <Check size={13} className="text-[#10B981]" />
+                      <span>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-mono text-white/70">
+              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                <span className="block text-white font-bold">App Server</span>
+                <span className="text-[#818CF8]">http://localhost:5003</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                <span className="block text-white font-bold">Local API</span>
+                <span className="text-[#10B981]">http://localhost:8080/v1</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 col-span-2 sm:col-span-1">
+                <span className="block text-white font-bold">License</span>
+                <span className="text-[#EC4899]">AGPL-3.0 Open Source</span>
+              </div>
+            </div>
           </div>
 
-          <div className="p-6 rounded-3xl bg-[#141418] border border-white/15 hover:border-white/40 transition-all space-y-3">
-            <div className="w-11 h-11 rounded-2xl bg-[#10B981]/15 text-[#10B981] flex items-center justify-center border border-[#10B981]/30">
-              <Lock size={20} />
+          {/* AGENTIC MCP & SKILLS INTEGRATION */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-[#141418] border-2 border-white/20 shadow-2xl flex flex-col justify-between space-y-6">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/30 text-[#818CF8] text-xs font-mono font-bold">
+                <Cpu size={14} />
+                <span>Agent Tools & MCP Integration</span>
+              </div>
+              <h3 className="font-clash text-2xl sm:text-3xl font-black text-white">
+                Wire IDEs, Cursor, & Browser Agents.
+              </h3>
+              <p className="text-sm text-white/80 leading-relaxed">
+                Connect external assistants directly via MCP, WebMCP browser standard, or REST API keys.
+              </p>
             </div>
-            <h3 className="font-clash text-xl font-bold text-white">Private & Encrypted</h3>
-            <p className="text-sm text-white/70 leading-relaxed">
-              Store confidential notes and passwords safely. Your data is protected so only you can unlock it.
-            </p>
-          </div>
 
-          <div className="p-6 rounded-3xl bg-[#141418] border border-white/15 hover:border-white/40 transition-all space-y-3">
-            <div className="w-11 h-11 rounded-2xl bg-[#6366F1]/15 text-[#818CF8] flex items-center justify-center border border-[#6366F1]/30">
-              <Bot size={20} />
+            {/* Install Skills Command Box */}
+            <div className="relative p-4 rounded-2xl bg-[#000000] border border-white/20 font-mono text-xs text-[#818CF8] overflow-x-auto">
+              <div className="flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap select-all text-white/90">
+                  npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopyText(
+                      'npx skills add kylrix/kylrix --skill mcp --skill api --skill agents',
+                      'mcp'
+                    )
+                  }
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-sans text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+                >
+                  {copiedMcp ? (
+                    <>
+                      <Check size={13} className="text-[#10B981]" />
+                      <span>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-            <h3 className="font-clash text-xl font-bold text-white">Smart Assistant</h3>
-            <p className="text-sm text-white/70 leading-relaxed">
-              Use built-in smart tools to summarize notes, organize tasks, and execute workspace actions.
-            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-satoshi">
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                <span className="font-bold text-white block">WebMCP (Browser Native)</span>
+                <p className="text-white/60 text-[11px]">
+                  Zero-config <code className="text-[#818CF8]">navigator.modelContext</code> tool execution inside Chrome.
+                </p>
+              </div>
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                <span className="font-bold text-white block">PAT & Agent Keys</span>
+                <p className="text-white/60 text-[11px]">
+                  Grant agents their own workspace or delegate access on your behalf.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ─────────────────────────────────────────────────────────────
-          4. BOTTOM CALL TO ACTION
+          4. 1:1 REAL WORLD OBJECT CARDS (NOTES, VAULT, GOALS, FORMS, EVENTS)
+         ───────────────────────────────────────────────────────────── */}
+      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-20 border-t border-white/10">
+        <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
+          <h2 className="font-clash text-3xl sm:text-5xl font-black text-white tracking-tight">
+            Real-world object cards.
+          </h2>
+          <p className="mt-3 text-base sm:text-lg text-white/80">
+            See exactly how notes, vault passwords, tasks, forms, and events look inside the workspace.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Real Object Card 1: Note / Idea */}
+          <div className="p-5 rounded-3xl bg-[#141418] border-2 border-white/20 hover:border-[#EC4899]/60 transition-all space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-[#EC4899]/20 text-[#EC4899] font-bold flex items-center gap-1.5">
+                <Tag size={12} />
+                Idea Object
+              </span>
+              <Pin size={14} className="text-[#EC4899] fill-[#EC4899]" />
+            </div>
+            <h3 className="font-clash text-lg font-bold text-white">#Q3-Milestones & Strategic Plan</h3>
+            <p className="text-xs text-white/70 leading-relaxed">
+              Autonomic local-first sync with AES-256 encryption. Seamlessly shareable across workspace team members.
+            </p>
+            <div className="flex items-center justify-between text-xs text-white/50 pt-3 border-t border-white/10 font-mono">
+              <span>Tags: #strategy #q3</span>
+              <span>2 Attachments</span>
+            </div>
+          </div>
+
+          {/* Real Object Card 2: Vault Password */}
+          <div className="p-5 rounded-3xl bg-[#141418] border-2 border-white/20 hover:border-[#10B981]/60 transition-all space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-[#10B981]/20 text-[#10B981] font-bold flex items-center gap-1.5">
+                <Lock size={12} />
+                Vault Credential
+              </span>
+              <ShieldCheck size={16} className="text-[#10B981]" />
+            </div>
+            <h3 className="font-clash text-lg font-bold text-white">Production DB Credentials</h3>
+            <p className="text-xs font-mono text-white/80 bg-black/50 p-2.5 rounded-xl border border-white/10">
+              postgres://admin:••••••••••••@db.prod
+            </p>
+            <div className="flex items-center justify-between text-xs text-[#10B981] pt-3 border-t border-white/10 font-mono">
+              <span>Client AES-256</span>
+              <span>Click to reveal</span>
+            </div>
+          </div>
+
+          {/* Real Object Card 3: Goal & Tasks */}
+          <div className="p-5 rounded-3xl bg-[#141418] border-2 border-white/20 hover:border-[#A855F7]/60 transition-all space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-[#A855F7]/20 text-[#A855F7] font-bold flex items-center gap-1.5">
+                <Target size={12} />
+                Goal Deliverable
+              </span>
+              <CheckSquare size={16} className="text-[#A855F7]" />
+            </div>
+            <h3 className="font-clash text-lg font-bold text-white">Launch Agentic Integration</h3>
+            <div className="space-y-1.5 text-xs text-white/80">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={13} className="text-[#A855F7]" />
+                <span className="line-through text-white/50">Setup workspace permissions</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Circle size={13} className="text-white/40" />
+                <span>Publish WebMCP tools to browser</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-xs text-[#A855F7] pt-3 border-t border-white/10 font-mono">
+              <span>1 of 2 Complete</span>
+              <span>75% Progress</span>
+            </div>
+          </div>
+
+          {/* Real Object Card 4: Form */}
+          <div className="p-5 rounded-3xl bg-[#141418] border-2 border-white/20 hover:border-[#F59E0B]/60 transition-all space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-[#F59E0B]/20 text-[#F59E0B] font-bold flex items-center gap-1.5">
+                <Layers size={12} />
+                Form Object
+              </span>
+              <Share2 size={14} className="text-[#F59E0B]" />
+            </div>
+            <h3 className="font-clash text-lg font-bold text-white">Feedback & Security Inquiry</h3>
+            <p className="text-xs text-white/70 leading-relaxed">
+              Collect response data directly into your workspace. Responses sync in real-time.
+            </p>
+            <div className="flex items-center justify-between text-xs text-[#F59E0B] pt-3 border-t border-white/10 font-mono">
+              <span>18 Submissions</span>
+              <span>Public Link</span>
+            </div>
+          </div>
+
+          {/* Real Object Card 5: Event */}
+          <div className="p-5 rounded-3xl bg-[#141418] border-2 border-white/20 hover:border-[#3B82F6]/60 transition-all space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-[#3B82F6]/20 text-[#3B82F6] font-bold flex items-center gap-1.5">
+                <Calendar size={12} />
+                Calendar Event
+              </span>
+              <Globe size={14} className="text-[#3B82F6]" />
+            </div>
+            <h3 className="font-clash text-lg font-bold text-white">Weekly Team Huddle & Sync</h3>
+            <p className="text-xs text-white/70 leading-relaxed">
+              Recurring workspace meeting with inbuilt call link & shared agenda notes.
+            </p>
+            <div className="flex items-center justify-between text-xs text-[#3B82F6] pt-3 border-t border-white/10 font-mono">
+              <span>Fridays @ 10:00 AM</span>
+              <span>5 Attending</span>
+            </div>
+          </div>
+
+          {/* Real Object Card 6: Workspace Container */}
+          <div className="p-5 rounded-3xl bg-[#141418] border-2 border-white/20 hover:border-[#818CF8]/60 transition-all space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-[#818CF8]/20 text-[#818CF8] font-bold flex items-center gap-1.5">
+                <Bot size={12} />
+                Agent Workspace
+              </span>
+              <MoreVertical size={14} className="text-[#818CF8]" />
+            </div>
+            <h3 className="font-clash text-lg font-bold text-white">Kylie Agentic Container</h3>
+            <p className="text-xs text-white/70 leading-relaxed">
+              Dedicated autonomous agent workspace. Executes background workflows independently.
+            </p>
+            <div className="flex items-center justify-between text-xs text-[#818CF8] pt-3 border-t border-white/10 font-mono">
+              <span>Agent Key Active</span>
+              <span>4 Tools Connected</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          5. BOTTOM CALL TO ACTION
          ───────────────────────────────────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20 text-center">
         <div className="p-8 sm:p-12 rounded-[32px] bg-[#141418] border-2 border-white/20 shadow-2xl relative overflow-hidden">
           <h2 className="font-clash text-3xl sm:text-5xl font-black text-white tracking-tight">
-            Ready to organize your workspace?
+            Ready to build in one living workspace?
           </h2>
           <p className="mt-3 text-base sm:text-lg text-white/80 max-w-lg mx-auto">
-            Get started right now. Free to use anytime.
+            Get started right now on the cloud or run locally in one command.
           </p>
           <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto px-4 sm:px-0">
             <button
@@ -916,7 +1238,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─────────────────────────────────────────────────────────────
-          5. FOOTER
+          6. FOOTER
          ───────────────────────────────────────────────────────────── */}
       <footer className="relative z-10 border-t border-white/10 py-8 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/60">
