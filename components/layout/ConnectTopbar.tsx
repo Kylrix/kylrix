@@ -176,20 +176,28 @@ export default function ConnectTopbar({
   const [notifHint, setNotifHint] = useState<{ id: string; title: string; description: string; accent: string } | null>(null);
   const [dismissedHintId, _setDismissedHintId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
   const [searchingPeople, setSearchingPeople] = useState(false);
   const [searchShortcutsView, setSearchShortcutsView] = useState(false);
   const [onPageResults, setOnPageResults] = useState<PageMatch[]>([]);
 
   useEffect(() => {
-    const query = searchQuery.trim();
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const query = debouncedSearchQuery.trim();
     if (query.length < 2) {
       setOnPageResults([]);
       return;
     }
     const matches = searchOnPage(query);
     setOnPageResults(matches);
-  }, [searchQuery]);
+  }, [debouncedSearchQuery]);
 
   const [localTags, setLocalTags] = useState<any[]>([]);
   const [localTrash, setLocalTrash] = useState<any[]>([]);
@@ -235,7 +243,7 @@ export default function ConnectTopbar({
 
   const { events: localEvents } = useLocalContext();
   const globalResults = useMemo(() => {
-    return searchLocalEngine(searchQuery, {
+    return searchLocalEngine(debouncedSearchQuery, {
       notes,
       tasks,
       workspaces: projects,
@@ -250,7 +258,7 @@ export default function ConnectTopbar({
       tags: localTags,
       trash: localTrash,
     });
-  }, [searchQuery, notes, tasks, projects, localEvents, localForms, localVaultCreds, localVaultTotp, localMoments, localTags, localTrash]);
+  }, [debouncedSearchQuery, notes, tasks, projects, localEvents, localForms, localVaultCreds, localVaultTotp, localMoments, localTags, localTrash]);
   const groupedGlobalResults = useMemo(() => {
     const byKind: Record<string, GlobalResult[]> = {};
     for (const r of globalResults) {
@@ -421,7 +429,7 @@ export default function ConnectTopbar({
 
 
   useEffect(() => {
-    const query = searchQuery.trim();
+    const query = debouncedSearchQuery.trim();
     if (query.length < 2) {
       setPeopleResults([]);
       return;
@@ -440,12 +448,11 @@ export default function ConnectTopbar({
       }
     };
 
-    const timer = setTimeout(searchPeople, 300);
+    searchPeople();
     return () => {
       mounted = false;
-      clearTimeout(timer);
     };
-  }, [searchQuery]);
+  }, [debouncedSearchQuery]);
 
   const searchSurface = useMemo(
     () =>
@@ -834,10 +841,8 @@ export default function ConnectTopbar({
               {searchShortcutsView ? (
             <Box sx={{ display: 'grid', gap: 1.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                  <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.08)', color: '#fff' }}>
-                    <Keyboard size={16} />
-                  </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Keyboard size={18} style={{ color: '#fff', flexShrink: 0 }} />
                   <Box>
                     <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1rem', lineHeight: 1.1 }}>
                       Keyboard shortcuts
@@ -896,9 +901,7 @@ export default function ConnectTopbar({
                       borderColor: 'rgba(255,255,255,0.4)',
                       transform: 'translateX(2px)'}}}
                 >
-                  <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.08)', color: '#fff', flexShrink: 0 }}>
-                    <Keyboard size={15} />
-                  </Box>
+                  <Keyboard size={18} style={{ color: '#fff', flexShrink: 0 }} />
                   <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                     <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }}>
                       View all shortcuts
@@ -954,9 +957,7 @@ export default function ConnectTopbar({
                         }
                       }}
                     >
-                      <Box sx={{ width: 34, height: 34, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${app.color}18`, color: app.color }}>
-                        <AppIcon size={16} strokeWidth={2} />
-                      </Box>
+                      <AppIcon size={20} strokeWidth={2} style={{ color: app.color, flexShrink: 0 }} />
                       <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.82rem' }}>
                         {app.label}
                       </Typography>
@@ -997,9 +998,7 @@ export default function ConnectTopbar({
                         borderColor: 'rgba(168, 85, 247, 0.4)',
                         transform: 'translateX(2px)'}}}
                   >
-                    <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(168, 85, 247, 0.15)', color: '#A855F7', flexShrink: 0 }}>
-                      <GitFork size={15} strokeWidth={2} />
-                    </Box>
+                    <GitFork size={18} strokeWidth={2} style={{ color: '#A855F7', flexShrink: 0 }} />
                     <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                       <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }}>
                         Workflows
@@ -1040,19 +1039,17 @@ export default function ConnectTopbar({
                         }
                       }}
                     >
-                      <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}18`, color: action.accent, flexShrink: 0 }}>
-                        {action.kind === 'note' ? (
-                          <FileText size={15} strokeWidth={2} />
-                        ) : action.kind === 'vault' ? (
-                          <Lock size={15} strokeWidth={2} />
-                        ) : action.kind === 'connect' ? (
-                          <MessageCircle size={15} strokeWidth={2} />
-                        ) : action.kind === 'flow' ? (
-                          <GitFork size={15} strokeWidth={2} />
-                        ) : (
-                          <Sparkles size={15} strokeWidth={2} />
-                        )}
-                      </Box>
+                      {action.kind === 'note' ? (
+                        <FileText size={18} strokeWidth={2} style={{ color: action.accent, flexShrink: 0 }} />
+                      ) : action.kind === 'vault' ? (
+                        <Lock size={18} strokeWidth={2} style={{ color: action.accent, flexShrink: 0 }} />
+                      ) : action.kind === 'connect' ? (
+                        <MessageCircle size={18} strokeWidth={2} style={{ color: action.accent, flexShrink: 0 }} />
+                      ) : action.kind === 'flow' ? (
+                        <GitFork size={18} strokeWidth={2} style={{ color: action.accent, flexShrink: 0 }} />
+                      ) : (
+                        <Sparkles size={18} strokeWidth={2} style={{ color: action.accent, flexShrink: 0 }} />
+                      )}
                       <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                         <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
                           {action.title}
@@ -1259,9 +1256,15 @@ export default function ConnectTopbar({
                               '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' },
                             }}
                           >
-                            <Box sx={{ width: 30, height: 30, borderRadius: '8px', display: 'grid', placeItems: 'center', bgcolor: `${r.accent}22`, color: r.accent, flexShrink: 0, fontSize: '0.72rem', fontWeight: 900 }}>
-                              {r.kind[0].toUpperCase()}
-                            </Box>
+                            {r.kind === 'note' ? <FileText size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'goal' ? <Target size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'secret' || r.kind === 'totp' ? <Lock size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'flow' ? <GitFork size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'event' ? <Sparkles size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'form' ? <FileText size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'tag' ? <TagIcon size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'trash' ? <TrashIcon size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             <MessageCircle size={18} style={{ color: r.accent, flexShrink: 0 }} />}
                             <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.15 }}>
                               <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.84rem', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {r.title}
@@ -1312,9 +1315,7 @@ export default function ConnectTopbar({
                           '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' }
                         }}
                       >
-                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255, 255, 255, 0.08)', color: '#fff', flexShrink: 0 }}>
-                          <Search size={15} />
-                        </Box>
+                        <Search size={18} style={{ color: '#fff', flexShrink: 0 }} />
                         <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                           <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
                             {match.text}
@@ -1420,9 +1421,7 @@ export default function ConnectTopbar({
                         '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' }
                       }}
                     >
-                      <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}18`, color: action.accent, flexShrink: 0 }}>
-                        <Logo app={action.kind as any} size={15} variant="icon" />
-                      </Box>
+                      <Logo app={action.kind as any} size={18} variant="icon" />
                       <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                         <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
                           {action.title}
@@ -1607,13 +1606,14 @@ export default function ConnectTopbar({
         sx={{
           width: '100%',
           maxWidth: '100vw',
+          height: '60dvh',
           maxHeight: '60dvh',
           display: 'flex',
           flexDirection: 'column',
-          borderTop: '1px solid rgba(255,255,255,0.1)',
-          borderBottom: '2px solid rgba(255,255,255,0.25)',
+          borderTop: '1px solid rgba(255,255,255,0.15)',
+          borderBottom: '1px solid rgba(255,255,255,0.2)',
           borderRadius: '0 0 28px 28px',
-          bgcolor: '#000000',
+          bgcolor: '#161412',
           overflow: 'hidden',
           boxShadow: '0 16px 42px rgba(0,0,0,0.6)',
           p: { xs: 2, sm: 2.5 },
@@ -1624,9 +1624,7 @@ export default function ConnectTopbar({
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 1.5, px: { xs: 0.5, sm: 1 }, shrink: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.15)' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-              <Box sx={{ width: 28, height: 28, borderRadius: '8px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
-                <Logo app={activeApp} size={14} variant="icon" />
-              </Box>
+              <Logo app={activeApp} size={18} variant="icon" />
               <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '0.95rem' }}>
                 Search
               </Typography>
