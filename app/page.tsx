@@ -100,27 +100,6 @@ export default function LandingPage() {
         <div className="absolute top-[1500px] -right-40 h-[600px] w-[600px] rounded-full bg-[#A855F7]/15 blur-[150px]" />
       </div>
 
-      {/* Navigation Header */}
-      <header className="relative z-30 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#6366F1] to-[#EC4899] p-0.5 shadow-lg shadow-[#6366F1]/20">
-            <div className="w-full h-full bg-[#000000] rounded-[10px] flex items-center justify-center font-black text-sm text-white font-clash">
-              K
-            </div>
-          </div>
-          <span className="font-clash font-bold text-lg tracking-tight text-white">Kylrix</span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handlePrimaryAction}
-            className="px-4 py-2 rounded-xl bg-white text-black font-bold text-xs sm:text-sm hover:bg-white/90 transition-all cursor-pointer shadow-md"
-          >
-            {isAuthenticated ? 'Open App' : 'Get Started'}
-          </button>
-        </div>
-      </header>
 
       {/* ─────────────────────────────────────────────────────────────
           1. HERO SECTION WITH INTEGRATED FAINT DEVICE BACKDROP
