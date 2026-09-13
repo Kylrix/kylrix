@@ -43,6 +43,11 @@ import {
   Share2,
   MoreVertical,
   CheckSquare,
+  Plus,
+  FileSpreadsheet,
+  GitFork,
+  X,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -55,25 +60,15 @@ export default function LandingPage() {
   const { open: openUnified } = useUnifiedDrawer();
   const { openAgenticDrawer } = useAgenticDrawer();
 
-  // Mode & Tab switches for adaptive device previews
-  const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop');
-  const [activeTab, setActiveTab] = useState<'agents' | 'notes' | 'vault' | 'goals' | 'chat'>('agents');
-
   // Copy states
   const [copiedSelfHost, setCopiedSelfHost] = useState(false);
   const [copiedMcp, setCopiedMcp] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   // Interactive Tasks state in 1:1 demo
-  const [tasks, setTasks] = useState([
-    { id: '1', title: 'Setup workspace & team permissions', completed: true, category: 'Setup' },
-    { id: '2', title: 'Store private vault passwords & security keys', completed: false, category: 'Security' },
-    { id: '3', title: 'Connect identity & direct message channel', completed: true, category: 'Messages' },
-    { id: '4', title: 'Run smart assistant daily workspace summary', completed: false, category: 'Assistant' },
-  ]);
   const [showVaultSecret, setShowVaultSecret] = useState(false);
 
-  // Smart Assistant Session Simulation
+  // Smart Assistant Session Simulation in 1:1 Mockup
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentInput, setAgentInput] = useState('');
   const [agentMessages, setAgentMessages] = useState<
@@ -102,17 +97,9 @@ export default function LandingPage() {
           resultSummary: 'Scanned 14 items • Summary note saved & encrypted',
         },
       ],
-      nextSteps: ['Open #Q3-Milestones note', 'Share summary with team', 'View Vault backup key'],
+      nextSteps: ['Open #Q3-Milestones note', 'Share summary with team'],
     },
   ]);
-
-  // Chat tab state
-  const [chatMessages, setChatMessages] = useState([
-    { sender: 'Alex', text: 'Hey, did you review the project outline for this week?', time: '10:14 AM', isUser: false },
-    { sender: 'You', text: 'Yes! Added notes and pinned key tasks.', time: '10:15 AM', isUser: true },
-    { sender: 'Alex', text: 'Awesome! Everything looks clear.', time: '10:16 AM', isUser: false },
-  ]);
-  const [newChatText, setNewChatText] = useState('');
 
   const handlePrimaryAction = () => {
     if (isAuthenticated) {
@@ -120,10 +107,6 @@ export default function LandingPage() {
     } else {
       openUnified('login');
     }
-  };
-
-  const toggleTask = (id: string) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
   };
 
   const handleCopyText = (text: string, type: 'selfhost' | 'mcp' | number) => {
@@ -173,101 +156,28 @@ export default function LandingPage() {
     }, 1200);
   };
 
-  const handleSendChatMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newChatText.trim()) return;
-    const msg = {
-      sender: 'You',
-      text: newChatText.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isUser: true,
-    };
-    setChatMessages((prev) => [...prev, msg]);
-    setNewChatText('');
-  };
-
   return (
     <div className="min-h-screen bg-[#000000] text-white selection:bg-[#6366F1]/30 selection:text-white font-sans overflow-x-hidden relative">
       {/* Background Claimer */}
       <ThreadNoteClaimer />
 
-      {/* Spatial Soft Ambient Glows */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-40">
+      {/* Spatial Ambient Glows */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-30">
         <div className="absolute -top-40 left-1/2 h-[650px] w-[1000px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#6366F1]/20 via-[#EC4899]/15 to-transparent blur-[140px]" />
         <div className="absolute top-[800px] -left-40 h-[600px] w-[600px] rounded-full bg-[#10B981]/15 blur-[150px]" />
         <div className="absolute top-[1500px] -right-40 h-[600px] w-[600px] rounded-full bg-[#A855F7]/15 blur-[150px]" />
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          1. HERO SECTION WITH TRANSPARENT FAINT SLANTED BACKGROUND SCREENS
+          1. HERO SECTION
          ───────────────────────────────────────────────────────────── */}
-      <section className="relative z-10 mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-6 sm:pt-12 pb-12 sm:pb-20">
-
-        {/* PROMINENT FAINT SLANTED MOCK SCREENS WITH REDUCED OPACITY & BACKDROP BLUR */}
-        <div className="pointer-events-none absolute inset-x-0 top-1 sm:top-4 bottom-0 z-0 flex justify-center items-start overflow-hidden opacity-30 sm:opacity-40">
-          <div className="relative w-full max-w-6xl h-[500px]">
-            {/* Left Slanted Screen: Kylie Agentic Sidebar Frame */}
-            <div className="absolute top-2 left-0 sm:left-4 w-[85%] sm:w-[540px] rounded-3xl bg-[#161412]/80 border-2 border-white/20 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)] transform -rotate-6 -skew-y-2 backdrop-blur-md">
-              <div className="flex items-center justify-between pb-3 border-b border-white/15 mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-xl bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center font-bold text-xs">
-                    K
-                  </div>
-                  <span className="text-xs font-bold text-white">Kylie · Smart Assistant</span>
-                </div>
-                <div className="h-2 w-20 rounded-full bg-white/20" />
-              </div>
-              <div className="space-y-3">
-                <div className="p-3 rounded-2xl bg-[#000000]/90 border border-white/15 text-xs text-white/90">
-                  <div className="text-[10px] text-white/50 font-mono mb-1">User request</div>
-                  Scan workspace and create milestone summary
-                </div>
-                <div className="p-3 rounded-2xl bg-[#000000]/90 border border-[#6366F1]/40 text-xs text-white">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#818CF8] mb-1">
-                    <Zap size={10} /> Tool · workspace_summarizer [success]
-                  </div>
-                  Summary generated & encrypted in Vault
-                </div>
-              </div>
-            </div>
-
-            {/* Right Slanted Screen: Workspace App Main View */}
-            <div className="absolute top-8 right-0 sm:right-4 w-[85%] sm:w-[540px] rounded-3xl bg-[#0D0D10]/80 border-2 border-white/20 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)] transform rotate-6 skew-y-2 backdrop-blur-md">
-              <div className="flex items-center justify-between pb-3 border-b border-white/15 mb-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-                </div>
-                <div className="h-2 w-24 rounded-full bg-white/20" />
-              </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-2xl bg-[#141418]/90 border border-white/15 space-y-1.5">
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#EC4899]/20 text-[#EC4899] font-bold">
-                    Note
-                  </span>
-                  <div className="h-3 w-28 rounded bg-white/30" />
-                  <div className="h-2 w-20 rounded bg-white/15" />
-                </div>
-                <div className="p-3 rounded-2xl bg-[#141418]/90 border border-white/15 space-y-1.5">
-                  <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#10B981]/20 text-[#10B981] font-bold">
-                    Vault
-                  </span>
-                  <div className="h-3 w-24 rounded bg-white/30" />
-                  <div className="h-2 w-16 rounded bg-white/15" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* HERO CONTENT WITH CRISP TYPOGRAPHY & COMPACT MOBILE BUTTONS */}
+      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 sm:pt-16 pb-10 sm:pb-16">
         <div className="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-4"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-5"
           >
             <span className="flex h-2 w-2 rounded-full bg-[#10B981] animate-pulse" />
             <span className="text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider text-white">
@@ -296,657 +206,388 @@ export default function LandingPage() {
             Notes, goals, encrypted vault, direct messages, and autonomous AI tools sharing the exact same workspace.
           </motion.p>
 
-          {/* COMPACT BUTTONS ON MOBILE */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.15 }}
-            className="mt-6 sm:mt-8 flex items-center justify-center gap-2.5 sm:gap-3.5 w-auto"
+            className="mt-6 sm:mt-8 flex items-center justify-center gap-3 w-auto"
           >
             <button
               type="button"
               onClick={handlePrimaryAction}
-              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-4 py-2.5 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-2xl bg-[#6366F1] text-white font-bold text-xs sm:text-base border border-[#818CF8]/50 shadow-[0_0_25px_rgba(99,102,241,0.4)] hover:bg-[#5254E8] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 sm:px-7 sm:py-3.5 rounded-2xl bg-[#6366F1] text-white font-bold text-xs sm:text-base border border-[#818CF8]/50 shadow-[0_0_25px_rgba(99,102,241,0.4)] hover:bg-[#5254E8] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
-              <span>{isAuthenticated ? 'Open App' : 'App'}</span>
-              <ChevronRight size={16} strokeWidth={2.5} className="hidden sm:inline" />
+              <span>{isAuthenticated ? 'Open App' : 'Get Started'}</span>
+              <ChevronRight size={18} strokeWidth={2.5} />
             </button>
 
             <button
               type="button"
               onClick={() => openAgenticDrawer({ prompt: 'Show me around the workspace tools' })}
-              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-4 py-2.5 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-2xl bg-[#161412] text-white font-bold text-xs sm:text-base border border-white/20 hover:border-[#EC4899]/60 hover:bg-[#1C1A18] active:scale-[0.98] transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 sm:px-7 sm:py-3.5 rounded-2xl bg-[#161412] text-white font-bold text-xs sm:text-base border border-white/20 hover:border-[#EC4899]/60 hover:bg-[#1C1A18] active:scale-[0.98] transition-all cursor-pointer"
             >
-              <Bot size={15} className="text-[#EC4899] sm:w-[18px] sm:h-[18px]" />
+              <Bot size={18} className="text-[#EC4899]" />
               <span>Ask Kylie</span>
             </button>
           </motion.div>
         </div>
 
         {/* ─────────────────────────────────────────────────────────────
-            2. 1:1 SCALED REPLICA OF THE ACTUAL APPLICATION
+            2. REAL-TIME 1:1 SCALED MOCKUP MATCHING /app EXACTLY
            ───────────────────────────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: 25 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          transition={{ duration: 0.45, delay: 0.2 }}
           className="mt-10 sm:mt-14 relative max-w-6xl mx-auto"
         >
-          {/* Controls Bar: Device Mode & Feature Navigation Tabs */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4 px-2">
-            {/* Feature Tabs */}
-            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 scrollbar-none">
-              {[
-                { id: 'agents', label: 'Smart Assistant (Kylie)', icon: Bot, color: '#6366F1' },
-                { id: 'notes', label: 'Ideas & Notes', icon: FileText, color: '#EC4899' },
-                { id: 'vault', label: 'Encrypted Vault', icon: Lock, color: '#10B981' },
-                { id: 'goals', label: 'Goals & Tasks', icon: Target, color: '#A855F7' },
-                { id: 'chat', label: 'Direct Messages', icon: MessageSquare, color: '#3B82F6' },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                      isActive
-                        ? 'bg-[#18181C] text-white border-2'
-                        : 'bg-white/5 text-white/70 border border-white/10 hover:border-white/30 hover:text-white'
-                    }`}
-                    style={{ borderColor: isActive ? tab.color : undefined }}
-                  >
-                    <Icon size={14} style={{ color: tab.color }} />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Desktop / Mobile Adaptive Switcher */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-[#141418] border border-white/15 self-center sm:self-auto shrink-0">
-              <button
-                type="button"
-                onClick={() => setDeviceMode('desktop')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  deviceMode === 'desktop'
-                    ? 'bg-[#6366F1] text-white shadow-md'
-                    : 'text-white/60 hover:text-white'
-                }`}
-              >
-                <Monitor size={14} />
-                <span>Desktop View</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setDeviceMode('mobile')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  deviceMode === 'mobile'
-                    ? 'bg-[#6366F1] text-white shadow-md'
-                    : 'text-white/60 hover:text-white'
-                }`}
-              >
-                <Smartphone size={14} />
-                <span>Mobile View</span>
-              </button>
-            </div>
-          </div>
-
           {/* 1:1 SCALED APPLICATION FRAME */}
-          <div className="relative rounded-[24px] sm:rounded-[28px] bg-[#000000] p-1.5 sm:p-3 border-2 border-white/20 shadow-[0_30px_90px_rgba(0,0,0,0.95)] transition-all overflow-hidden">
+          <div className="relative rounded-[24px] sm:rounded-[28px] bg-[#000000] p-1.5 sm:p-2.5 border-2 border-white/20 shadow-[0_30px_90px_rgba(0,0,0,0.95)] overflow-hidden">
 
             {/* 1:1 CONNECT TOPBAR REPLICA */}
-            <div className="w-full bg-[#000000] border-b-2 border-white/20 px-3 py-2.5 rounded-t-[20px] flex items-center justify-between gap-2 text-xs font-satoshi">
+            <div className="w-full bg-[#000000] border-b-2 border-white/20 px-3 py-3 rounded-t-[20px] flex items-center justify-between gap-3 text-xs font-satoshi">
               {/* Left: App Logo / Name */}
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[#6366F1] flex items-center justify-center font-clash font-black text-white text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-[#6366F1] flex items-center justify-center font-clash font-black text-white text-sm shadow-[0_0_12px_rgba(99,102,241,0.5)]">
                   K
                 </div>
-                <span className="font-clash font-black text-white text-sm">Kylrix</span>
+                <span className="font-clash font-black text-white text-base tracking-tight">Kylrix</span>
               </div>
 
               {/* Center: Search Island */}
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#161412] border border-white/15 text-[11px] font-bold text-white/80">
-                <Search size={13} className="text-white/60" />
-                <span className="hidden sm:inline">Search ecosystem...</span>
-                <span className="sm:hidden">Search...</span>
+              <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#161412] border border-white/15 text-xs font-bold text-white/80 shadow-inner max-w-md w-full justify-center sm:justify-start">
+                <Search size={14} className="text-white/60 shrink-0" />
+                <span className="truncate">Search ecosystem...</span>
               </div>
 
               {/* Right: Actions & User Avatar */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => openAgenticDrawer({ prompt: 'Show active workspace session' })}
-                  className="w-7 h-7 rounded-xl bg-[#161412] border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center hover:bg-[#1C1A18] transition-colors"
+                  className="w-8 h-8 rounded-xl bg-[#161412] border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center hover:bg-[#1C1A18] transition-colors cursor-pointer"
+                  title="Kylie Assistant"
                 >
-                  <Bot size={14} />
+                  <Bot size={16} />
                 </button>
                 <button
                   type="button"
-                  className="w-7 h-7 rounded-xl bg-[#161412] border border-white/15 text-white/80 flex items-center justify-center"
+                  className="w-8 h-8 rounded-xl bg-[#161412] border border-white/15 text-white/80 flex items-center justify-center"
+                  title="Notifications"
                 >
-                  <Bell size={14} />
+                  <Bell size={16} />
                 </button>
-                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#EC4899] p-0.5 flex items-center justify-center font-bold text-[10px] text-white">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#EC4899] p-0.5 flex items-center justify-center font-bold text-xs text-white">
                   U
                 </div>
               </div>
             </div>
 
-            {/* MAIN APP SHELL CONTENT LAYOUT (SIDEBAR + MAIN CANVAS + AGENTIC SIDEBAR) */}
-            <div className="relative min-h-[460px] bg-[#000000] flex flex-col md:flex-row overflow-hidden">
+            {/* MAIN APP SHELL CONTENT LAYOUT */}
+            <div className="relative min-h-[500px] bg-[#000000] flex flex-col md:flex-row overflow-hidden">
 
-              {/* DESKTOP 1:1 UNIFIED LEFT SIDEBAR (Shown when in desktop mode) */}
-              {deviceMode === 'desktop' && (
-                <div className="hidden md:flex w-[200px] bg-[#000000] border-r border-white/15 p-2.5 flex-col justify-between shrink-0 font-satoshi">
-                  <div className="space-y-3">
-                    {/* Workspace Selector */}
-                    <div className="p-2 rounded-xl bg-[#161412] border border-white/15 flex items-center justify-between text-xs font-bold text-white">
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-md bg-[#F59E0B]/20 text-[#F59E0B] flex items-center justify-center text-[10px] font-black">
-                          P
-                        </div>
-                        <span className="truncate text-[11px]">Personal Space</span>
+              {/* DESKTOP 1:1 UNIFIED LEFT SIDEBAR */}
+              <div className="hidden md:flex w-[210px] bg-[#000000] border-r border-white/15 p-3 flex-col justify-between shrink-0 font-satoshi">
+                <div className="space-y-3.5">
+                  {/* Workspace Selector */}
+                  <div className="p-2.5 rounded-xl bg-[#161412] border border-white/15 flex items-center justify-between text-xs font-bold text-white shadow-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-5 h-5 rounded-md bg-[#6366F1]/20 text-[#818CF8] flex items-center justify-center text-[10px] font-black shrink-0">
+                        P
                       </div>
-                      <ChevronRight size={12} className="text-white/40" />
+                      <span className="truncate text-xs">Personal Space</span>
                     </div>
-
-                    {/* Nav Items */}
-                    <div className="space-y-1">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('notes')}
-                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
-                          activeTab === 'notes'
-                            ? 'bg-[#161412] text-[#EC4899] border border-[#EC4899]/30'
-                            : 'text-white/70 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <FileText size={14} className="text-[#EC4899]" />
-                        <span>Ideas</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('goals')}
-                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
-                          activeTab === 'goals'
-                            ? 'bg-[#161412] text-[#A855F7] border border-[#A855F7]/30'
-                            : 'text-white/70 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <Target size={14} className="text-[#A855F7]" />
-                        <span>Goals</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('vault')}
-                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
-                          activeTab === 'vault'
-                            ? 'bg-[#161412] text-[#10B981] border border-[#10B981]/30'
-                            : 'text-white/70 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <Lock size={14} className="text-[#10B981]" />
-                        <span>Vault</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('agents')}
-                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all text-left ${
-                          activeTab === 'agents'
-                            ? 'bg-[#161412] text-[#6366F1] border border-[#6366F1]/30'
-                            : 'text-white/70 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <Bot size={14} className="text-[#6366F1]" />
-                        <span>Agents</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold text-white/70 hover:text-white hover:bg-white/5 text-left"
-                      >
-                        <Settings size={14} className="text-[#6366F1]" />
-                        <span>Settings</span>
-                      </button>
-                    </div>
+                    <ChevronRight size={14} className="text-white/40 shrink-0" />
                   </div>
 
-                  {/* Sidebar Footer links */}
-                  <div className="space-y-1 pt-2 border-t border-white/10 text-[11px] font-bold">
-                    <a
-                      href="/sponsor"
-                      className="flex items-center gap-2 px-2 py-1 rounded bg-[#EC4899]/10 text-[#EC4899] border border-[#EC4899]/20"
+                  {/* Nav Items */}
+                  <div className="space-y-1">
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all text-left bg-[#161412] text-[#EC4899] border border-[#EC4899]/40 shadow-[0_2px_10px_rgba(236,72,153,0.15)]"
                     >
-                      <Heart size={12} />
-                      <span>Sponsor</span>
-                    </a>
+                      <FileText size={15} className="text-[#EC4899]" />
+                      <span>Ideas</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-left text-white/70 hover:text-white hover:bg-white/5"
+                    >
+                      <FileSpreadsheet size={15} className="text-[#F59E0B]" />
+                      <span>Forms</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-left text-white/70 hover:text-white hover:bg-white/5"
+                    >
+                      <Target size={15} className="text-[#A855F7]" />
+                      <span>Goals</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-left text-white/70 hover:text-white hover:bg-white/5"
+                    >
+                      <Lock size={15} className="text-[#10B981]" />
+                      <span>Vault</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-left text-white/70 hover:text-white hover:bg-white/5"
+                    >
+                      <MessageSquare size={15} className="text-[#3B82F6]" />
+                      <span>Connect</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-left text-white/70 hover:text-white hover:bg-white/5"
+                    >
+                      <Settings size={15} className="text-white/60" />
+                      <span>Settings</span>
+                    </button>
                   </div>
                 </div>
-              )}
 
-              {/* MAIN CANVAS CONTENT AREA */}
-              <div className="flex-1 p-3 sm:p-5 bg-[#000000] overflow-y-auto min-h-[400px]">
-                {/* TAB 1: AGENTS ACTIVE VIEW */}
-                {activeTab === 'agents' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-[#6366F1]/20 border border-[#6366F1]/40 flex items-center justify-center text-[#818CF8]">
-                          <Bot size={15} />
-                        </div>
-                        <div>
-                          <h4 className="font-clash font-bold text-xs text-white">Smart Assistant Workspace</h4>
-                          <p className="text-[10px] text-white/50">Active agentic session & live MCP tool executions</p>
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-[#10B981]/20 text-[#10B981] text-[10px] font-mono font-bold">
-                        Online · Local First
-                      </span>
-                    </div>
-
-                    <div className="p-3.5 rounded-2xl bg-[#141418] border border-white/15 space-y-2.5">
-                      <h5 className="font-bold text-[11px] text-[#818CF8] uppercase tracking-wider">
-                        #Q3-Milestones Summary
-                      </h5>
-                      <p className="text-xs text-white/80 leading-relaxed">
-                        Kylie scanned workspace notes, created #Q3-Milestones, and encrypted backup keys inside Vault.
-                      </p>
-                      <div className="flex items-center gap-2 text-[10px] font-mono text-[#10B981]">
-                        <CheckCircle2 size={12} />
-                        <span>Tool execution completed successfully</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 2: NOTES & IDEAS ACTIVE VIEW */}
-                {activeTab === 'notes' && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                      <span className="text-xs font-bold text-white/80">Ideas & Notes</span>
-                      <button type="button" className="text-xs font-bold text-[#EC4899]">
-                        + New Idea
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 space-y-2 hover:border-[#EC4899]/50 transition-all">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#EC4899]/20 text-[#EC4899] font-bold">
-                            Roadmap
-                          </span>
-                          <Pin size={11} className="text-[#EC4899] fill-[#EC4899]" />
-                        </div>
-                        <h4 className="font-bold text-xs text-white">Q3 Product Architecture</h4>
-                        <p className="text-[11px] text-white/70 leading-relaxed">
-                          Offline sync engine, fast search indexing, and collaborative workspace tagging.
-                        </p>
-                        <div className="text-[10px] text-white/40 pt-1 border-t border-white/10 flex justify-between">
-                          <span>2 attachments</span>
-                          <span>Updated 5m ago</span>
-                        </div>
-                      </div>
-
-                      <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 space-y-2 hover:border-[#EC4899]/50 transition-all">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#818CF8]/20 text-[#818CF8] font-bold">
-                            Meeting
-                          </span>
-                          <span className="text-[10px] text-white/40">2h ago</span>
-                        </div>
-                        <h4 className="font-bold text-xs text-white">UI Sync & Dark Theme</h4>
-                        <p className="text-[11px] text-white/70 leading-relaxed">
-                          Streamline action buttons, refine dark theme card borders, and standardize UI.
-                        </p>
-                        <div className="text-[10px] text-[#818CF8] pt-1 border-t border-white/10 flex justify-between">
-                          <span>Shared with Team</span>
-                          <ArrowUpRight size={11} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 3: ENCRYPTED VAULT ACTIVE VIEW */}
-                {activeTab === 'vault' && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                      <span className="text-xs font-bold text-white/80">Encrypted Credentials</span>
-                      <button
-                        type="button"
-                        onClick={() => setShowVaultSecret(!showVaultSecret)}
-                        className="inline-flex items-center gap-1 text-xs text-[#10B981] font-bold cursor-pointer"
-                      >
-                        {showVaultSecret ? <EyeOff size={13} /> : <Eye size={13} />}
-                        <span>{showVaultSecret ? 'Hide' : 'Reveal'}</span>
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-mono text-[#10B981] font-bold uppercase">Password</span>
-                          <KeyRound size={12} className="text-[#10B981]" />
-                        </div>
-                        <h4 className="font-bold text-xs text-white">Database Key</h4>
-                        <p className="text-[11px] font-mono text-white/80">
-                          {showVaultSecret ? 'postgres://admin:sec3te#9@db' : '••••••••••••••••••••'}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyText('postgres://admin:sec3te#9@db', 1)}
-                          className="w-full flex items-center justify-between text-[10px] font-mono text-white/70 hover:text-white pt-1.5 border-t border-white/10 cursor-pointer"
-                        >
-                          <span>{copiedIndex === 1 ? 'Copied!' : 'Copy key'}</span>
-                          {copiedIndex === 1 ? <Check size={11} className="text-[#10B981]" /> : <Copy size={11} />}
-                        </button>
-                      </div>
-
-                      <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-mono text-[#10B981] font-bold uppercase">Authenticator</span>
-                          <ShieldCheck size={12} className="text-[#10B981]" />
-                        </div>
-                        <h4 className="font-bold text-xs text-white">2FA Code</h4>
-                        <p className="text-base font-mono font-bold text-white tracking-wider">
-                          {showVaultSecret ? '849 201' : '••• •••'}
-                        </p>
-                        <div className="text-[10px] font-mono text-white/40 pt-1.5 border-t border-white/10 flex justify-between">
-                          <span>AES-256</span>
-                          <span>18s remaining</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 4: GOALS ACTIVE VIEW */}
-                {activeTab === 'goals' && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                      <span className="text-xs font-bold text-white/80">Goals & Tasks</span>
-                      <span className="text-xs font-bold text-[#A855F7]">
-                        {tasks.filter((t) => t.completed).length} of {tasks.length} Done
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {tasks.map((task) => (
-                        <div
-                          key={task.id}
-                          onClick={() => toggleTask(task.id)}
-                          className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                            task.completed
-                              ? 'bg-[#141418]/60 border-white/10 opacity-70'
-                              : 'bg-[#141418] border-white/20 hover:border-[#A855F7]/60'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            {task.completed ? (
-                              <CheckCircle2 size={16} className="text-[#A855F7] shrink-0" />
-                            ) : (
-                              <Circle size={16} className="text-white/40 shrink-0" />
-                            )}
-                            <span
-                              className={`text-xs font-medium ${
-                                task.completed ? 'line-through text-white/50' : 'text-white'
-                              }`}
-                            >
-                              {task.title}
-                            </span>
-                          </div>
-                          <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/60">
-                            {task.category}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 5: DIRECT MESSAGES ACTIVE VIEW */}
-                {activeTab === 'chat' && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                      <div className="flex items-center gap-1.5">
-                        <UserCheck size={14} className="text-[#3B82F6]" />
-                        <span className="text-xs font-bold text-white">Direct Chat with Alex</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-[#3B82F6]">Encrypted Channel</span>
-                    </div>
-
-                    <div className="p-3 rounded-2xl bg-[#141418] border border-white/15 flex flex-col justify-between min-h-[260px]">
-                      <div className="space-y-2.5 mb-3 overflow-y-auto max-h-[180px] pr-1">
-                        {chatMessages.map((msg, idx) => (
-                          <div
-                            key={idx}
-                            className={`flex flex-col ${msg.isUser ? 'items-end' : 'items-start'}`}
-                          >
-                            <div
-                              className={`px-3 py-1.5 rounded-2xl text-xs max-w-[85%] ${
-                                msg.isUser
-                                  ? 'bg-[#3B82F6] text-white rounded-br-xs'
-                                  : 'bg-[#222228] text-white/90 rounded-bl-xs border border-white/10'
-                              }`}
-                            >
-                              {msg.text}
-                            </div>
-                            <span className="text-[9px] text-white/40 mt-0.5 px-1">{msg.time}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <form onSubmit={handleSendChatMessage} className="flex items-center gap-2 pt-2 border-t border-white/10">
-                        <input
-                          type="text"
-                          value={newChatText}
-                          onChange={(e) => setNewChatText(e.target.value)}
-                          placeholder="Type a message..."
-                          className="flex-1 px-3 py-1.5 rounded-xl bg-[#000000] border border-white/15 text-xs text-white focus:outline-none focus:border-[#3B82F6]"
-                        />
-                        <button
-                          type="submit"
-                          className="px-3 py-1.5 rounded-xl bg-[#3B82F6] text-white text-xs font-bold hover:bg-[#2563EB] cursor-pointer"
-                        >
-                          <Send size={12} />
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                )}
+                {/* Sidebar Footer link */}
+                <div className="pt-2 border-t border-white/10 text-xs font-bold">
+                  <a
+                    href="/sponsor"
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#EC4899]/10 text-[#EC4899] border border-[#EC4899]/20"
+                  >
+                    <Heart size={13} />
+                    <span>Sponsor Project</span>
+                  </a>
+                </div>
               </div>
 
-              {/* DESKTOP 1:1 KYLIE AGENTIC SIDEBAR PANEL (Active in Desktop View) */}
-              {deviceMode === 'desktop' && (
-                <div className="w-[320px] bg-[#161412] border-l border-white/20 flex flex-col justify-between font-satoshi shrink-0">
-                  {/* Sticky Header */}
-                  <div className="px-3 py-2.5 border-b border-white/20 bg-[#0E0D0C] flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center font-clash font-black text-xs">
-                        K
-                      </div>
-                      <div>
-                        <h4 className="text-white font-extrabold text-xs font-clash leading-tight">Kylie</h4>
-                        <p className="text-[#9B9691] text-[9px] font-semibold">Smart Workspace Assistant</p>
-                      </div>
+              {/* MAIN CANVAS CONTENT AREA (1:1 IDEAS VIEW FROM /app) */}
+              <div className="flex-1 p-3 sm:p-5 bg-[#000000] overflow-y-auto min-h-[460px] space-y-5">
+                {/* Top Nav Switcher */}
+                <div className="flex items-center justify-between gap-3 w-full">
+                  <div className="flex items-center gap-1.5 p-1.5 bg-[#000000] border-2 border-white/20 rounded-2xl select-none shadow-md overflow-x-auto scrollbar-none">
+                    <span className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#EC4899] text-white border border-[#EC4899] shadow-[0_4px_12px_rgba(236,72,153,0.25)] shrink-0">
+                      <FileText size={15} />
+                      <span>Ideas</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold text-white/80 border border-white/10 hover:bg-white/5 shrink-0">
+                      <FileSpreadsheet size={15} />
+                      <span>Forms</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold text-white/80 border border-white/10 hover:bg-white/5 shrink-0">
+                      <GitFork size={15} />
+                      <span>Workflows</span>
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handlePrimaryAction}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#EC4899] text-white hover:bg-[#db2777] active:scale-95 transition-all shadow-[0_4px_14px_rgba(236,72,153,0.3)] select-none shrink-0 cursor-pointer"
+                  >
+                    <Plus size={16} strokeWidth={2.5} />
+                    <span className="hidden sm:inline">New Idea</span>
+                  </button>
+                </div>
+
+                {/* Tags Filter Row */}
+                <div className="overflow-x-auto scrollbar-none p-2 bg-[#000000] border-2 border-white/20 rounded-[20px] flex items-center gap-2 select-none shadow-md">
+                  <Tag size={14} className="text-[#EC4899] ml-2 shrink-0" />
+                  {[
+                    { name: 'Roadmap', color: '#EC4899', active: true },
+                    { name: 'Architecture', color: '#3B82F6', active: false },
+                    { name: 'Security', color: '#10B981', active: false },
+                    { name: 'Q3-Goals', color: '#A855F7', active: false },
+                  ].map((t, idx) => (
+                    <span
+                      key={idx}
+                      className={`whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold border shrink-0 ${
+                        t.active
+                          ? 'bg-[#EC4899] border-white text-white shadow-sm'
+                          : 'bg-[#161412] border-white/25 text-white/80'
+                      }`}
+                    >
+                      {t.name}
+                    </span>
+                  ))}
+                </div>
+
+                {/* REAL IDEAS OBJECT CARDS GRID (1:1 NoteCard styling) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Card 1 */}
+                  <div className="p-4 rounded-2xl bg-[#141418] border-2 border-white/20 hover:border-[#EC4899]/60 transition-all space-y-3 shadow-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-md bg-[#EC4899]/20 text-[#EC4899] font-bold">
+                        Roadmap
+                      </span>
+                      <Pin size={13} className="text-[#EC4899] fill-[#EC4899]" />
                     </div>
-                    <div className="flex items-center gap-1 text-white/60">
-                      <button type="button" className="p-1 rounded bg-[#161412] border border-white/15">
-                        <History size={12} />
-                      </button>
-                      <button type="button" className="p-1 rounded bg-[#161412] border border-white/15">
-                        <Download size={12} />
-                      </button>
+                    <div>
+                      <h4 className="font-clash font-bold text-sm text-white">#Q3-Milestones & Architecture</h4>
+                      <p className="text-xs text-white/70 leading-relaxed mt-1 line-clamp-2">
+                        Local-first sync engine with client-side AES-256 encryption. Seamless sharing across workspace members.
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-white/40 pt-2 border-t border-white/10 font-mono">
+                      <span>#strategy #q3</span>
+                      <span>Updated 2m ago</span>
                     </div>
                   </div>
 
-                  {/* Messages Feed */}
-                  <div className="p-3 space-y-2.5 flex-1 overflow-y-auto max-h-[300px]">
-                    {agentMessages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex gap-1.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        {msg.role === 'assistant' && (
-                          <div className="w-5 h-5 rounded bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">
-                            K
-                          </div>
-                        )}
-                        <div
-                          className={`max-w-[88%] rounded-2xl p-2.5 text-[11px] leading-relaxed ${
-                            msg.role === 'user'
-                              ? 'bg-[#1C1A18] border border-white/20 text-white'
-                              : 'bg-[#000000] border border-white/20 text-white/95'
-                          }`}
-                        >
-                          <p>{msg.content}</p>
+                  {/* Card 2 */}
+                  <div className="p-4 rounded-2xl bg-[#141418] border-2 border-white/20 hover:border-[#10B981]/60 transition-all space-y-3 shadow-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-md bg-[#10B981]/20 text-[#10B981] font-bold">
+                        Vault
+                      </span>
+                      <ShieldCheck size={14} className="text-[#10B981]" />
+                    </div>
+                    <div>
+                      <h4 className="font-clash font-bold text-sm text-white">Encrypted Credential Backup</h4>
+                      <p className="text-xs font-mono text-white/80 bg-black/60 p-2 rounded-lg border border-white/10 mt-1">
+                        postgres://admin:••••••••••••@db.prod
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-[#10B981] pt-2 border-t border-white/10 font-mono">
+                      <span>AES-256 Protected</span>
+                      <span className="hover:underline cursor-pointer">Reveal Key</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                          {msg.tools && (
-                            <div className="mt-2 space-y-1">
-                              {msg.tools.map((t, idx) => (
-                                <div
-                                  key={idx}
-                                  className="rounded-lg border border-white/20 bg-black/40 p-1.5 text-[9px]"
-                                >
-                                  <div className="flex items-center gap-1 font-bold uppercase tracking-wider text-[#9B9691]">
-                                    <Zap size={9} className="text-[#818CF8]" />
-                                    <span>Tool · {t.toolKey}</span>
-                                    <span className="text-emerald-400 ml-auto">{t.status}</span>
-                                  </div>
-                                  <p className="text-[#9B9691] mt-0.5 text-[10px]">
-                                    {t.resultSummary}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+              {/* DESKTOP 1:1 KYLIE AGENTIC SIDEBAR PANEL */}
+              <div className="hidden lg:flex w-[320px] bg-[#161412] border-l border-white/20 flex-col justify-between font-satoshi shrink-0 max-h-[500px]">
+                {/* Sticky Header */}
+                <div className="px-3.5 py-3 border-b border-white/20 bg-[#0E0D0C] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center font-clash font-black text-xs">
+                      K
+                    </div>
+                    <div>
+                      <h4 className="text-white font-extrabold text-xs font-clash leading-tight">Kylie</h4>
+                      <p className="text-[#9B9691] text-[9px] font-semibold">Smart Workspace Assistant</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-white/60">
+                    <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+                  </div>
+                </div>
 
-                          {msg.nextSteps && (
-                            <div className="mt-2 space-y-1">
-                              <span className="text-[8px] uppercase font-bold text-[#9B9691] tracking-wider">
-                                Next with Kylie
-                              </span>
-                              <div className="flex flex-wrap gap-1">
-                                {msg.nextSteps.map((step, sIdx) => (
-                                  <button
-                                    key={sIdx}
-                                    type="button"
-                                    onClick={() => runSimulatedAgentTask(step)}
-                                    className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/15 text-[9px] font-semibold text-white/90 cursor-pointer transition-all"
-                                  >
-                                    {step}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {agentRunning && (
-                      <div className="flex justify-start gap-1.5 items-center text-[11px] text-white/70">
-                        <div className="w-5 h-5 rounded bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center text-[9px] font-bold">
+                {/* Messages Feed */}
+                <div className="p-3 space-y-2.5 flex-1 overflow-y-auto max-h-[360px]">
+                  {agentMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex gap-1.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {msg.role === 'assistant' && (
+                        <div className="w-5 h-5 rounded bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">
                           K
                         </div>
-                        <div className="p-2 rounded-xl bg-[#000000] border border-white/20 flex items-center gap-1.5">
-                          <RotateCw size={11} className="animate-spin text-[#818CF8]" />
-                          <span>Kylie is on it…</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                      <div
+                        className={`max-w-[88%] rounded-2xl p-2.5 text-[11px] leading-relaxed ${
+                          msg.role === 'user'
+                            ? 'bg-[#1C1A18] border border-white/20 text-white'
+                            : 'bg-[#000000] border border-white/20 text-white/95'
+                        }`}
+                      >
+                        <p>{msg.content}</p>
 
-                  {/* OpenBricks 4.0 Pill Input Bar */}
-                  <div className="p-2 border-t border-white/20 bg-[#0E0D0C]">
-                    <div className="flex items-center gap-1 rounded-[20px] bg-[#000000] border border-white/20 px-2 py-1">
-                      <button
-                        type="button"
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10"
-                      >
-                        <Paperclip size={13} />
-                      </button>
-                      <input
-                        type="text"
-                        value={agentInput}
-                        onChange={(e) => setAgentInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && runSimulatedAgentTask()}
-                        placeholder="Ask Kylie..."
-                        className="flex-1 bg-transparent border-none text-[11px] text-white placeholder:text-white/40 focus:outline-none px-1"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => runSimulatedAgentTask()}
-                        className="w-6 h-6 rounded-full bg-[#6366F1] text-white flex items-center justify-center hover:bg-[#5254E8] cursor-pointer"
-                      >
-                        <Send size={12} />
-                      </button>
+                        {msg.tools && (
+                          <div className="mt-2 space-y-1">
+                            {msg.tools.map((t, idx) => (
+                              <div
+                                key={idx}
+                                className="rounded-lg border border-white/20 bg-black/40 p-1.5 text-[9px]"
+                              >
+                                <div className="flex items-center gap-1 font-bold uppercase tracking-wider text-[#9B9691]">
+                                  <Zap size={9} className="text-[#818CF8]" />
+                                  <span>Tool · {t.toolKey}</span>
+                                  <span className="text-emerald-400 ml-auto">{t.status}</span>
+                                </div>
+                                <p className="text-[#9B9691] mt-0.5 text-[10px]">
+                                  {t.resultSummary}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {msg.nextSteps && (
+                          <div className="mt-2 space-y-1">
+                            <span className="text-[8px] uppercase font-bold text-[#9B9691] tracking-wider">
+                              Next with Kylie
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {msg.nextSteps.map((step, sIdx) => (
+                                <button
+                                  key={sIdx}
+                                  type="button"
+                                  onClick={() => runSimulatedAgentTask(step)}
+                                  className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/15 text-[9px] font-semibold text-white/90 cursor-pointer transition-all"
+                                >
+                                  {step}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  ))}
+
+                  {agentRunning && (
+                    <div className="flex justify-start gap-1.5 items-center text-[11px] text-white/70">
+                      <div className="w-5 h-5 rounded bg-[#6366F1]/20 border border-[#6366F1]/50 text-[#818CF8] flex items-center justify-center text-[9px] font-bold">
+                        K
+                      </div>
+                      <div className="p-2 rounded-xl bg-[#000000] border border-white/20 flex items-center gap-1.5">
+                        <RotateCw size={11} className="animate-spin text-[#818CF8]" />
+                        <span>Kylie is working…</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pill Input Bar */}
+                <div className="p-2.5 border-t border-white/20 bg-[#0E0D0C]">
+                  <div className="flex items-center gap-1 rounded-[20px] bg-[#000000] border border-white/20 px-2 py-1">
+                    <button
+                      type="button"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-white/50 hover:text-white"
+                    >
+                      <Paperclip size={13} />
+                    </button>
+                    <input
+                      type="text"
+                      value={agentInput}
+                      onChange={(e) => setAgentInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && runSimulatedAgentTask()}
+                      placeholder="Ask Kylie..."
+                      className="flex-1 bg-transparent border-none text-[11px] text-white placeholder:text-white/40 focus:outline-none px-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => runSimulatedAgentTask()}
+                      className="w-6 h-6 rounded-full bg-[#6366F1] text-white flex items-center justify-center hover:bg-[#5254E8] cursor-pointer shrink-0"
+                    >
+                      <Send size={12} />
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* MOBILE 1:1 UNIFIED BOTTOM BAR (Shown in Mobile Mode) */}
-            {deviceMode === 'mobile' && (
-              <div className="w-full bg-[#000000] border-t-2 border-white/30 rounded-b-[20px] px-2 py-1.5 flex items-center justify-around text-xs font-satoshi">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('notes')}
-                  className={`flex flex-col items-center justify-center flex-1 py-1 ${
-                    activeTab === 'notes' ? 'text-[#EC4899]' : 'text-white/70'
-                  }`}
-                >
-                  <FileText size={18} />
-                  <span className="text-[10px] font-bold mt-0.5">Ideas</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('goals')}
-                  className={`flex flex-col items-center justify-center flex-1 py-1 ${
-                    activeTab === 'goals' ? 'text-[#A855F7]' : 'text-white/70'
-                  }`}
-                >
-                  <Target size={18} />
-                  <span className="text-[10px] font-bold mt-0.5">Goals</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('vault')}
-                  className={`flex flex-col items-center justify-center flex-1 py-1 ${
-                    activeTab === 'vault' ? 'text-[#10B981]' : 'text-white/70'
-                  }`}
-                >
-                  <Lock size={18} />
-                  <span className="text-[10px] font-bold mt-0.5">Vault</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('chat')}
-                  className={`flex flex-col items-center justify-center flex-1 py-1 ${
-                    activeTab === 'chat' ? 'text-[#3B82F6]' : 'text-white/70'
-                  }`}
-                >
-                  <MessageSquare size={18} />
-                  <span className="text-[10px] font-bold mt-0.5">Connect</span>
-                </button>
               </div>
-            )}
+            </div>
           </div>
         </motion.div>
       </section>
 
       {/* ─────────────────────────────────────────────────────────────
-          3. ONE-CLICK SELF-HOST & AGENTIC FLOWS (IMMEDIATELY AFTER HERO)
+          3. ONE-CLICK SELF-HOST & AGENTIC FLOWS (COMMAND BOXES FIT PERFECTLY)
          ───────────────────────────────────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16 border-t border-white/10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
@@ -966,35 +607,33 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Copyable Terminal Box */}
-            <div className="relative p-4 rounded-2xl bg-[#000000] border border-white/20 font-mono text-xs text-[#10B981] overflow-x-auto">
-              <div className="flex items-center justify-between gap-2">
-                <span className="whitespace-nowrap select-all text-white/90">
-                  curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleCopyText(
-                      'curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash',
-                      'selfhost'
-                    )
-                  }
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-sans text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
-                >
-                  {copiedSelfHost ? (
-                    <>
-                      <Check size={13} className="text-[#10B981]" />
-                      <span>Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={13} />
-                      <span>Copy</span>
-                    </>
-                  )}
-                </button>
-              </div>
+            {/* Terminal Command Box (Fits without scrolling) */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#000000] border border-white/20 font-mono text-xs text-[#10B981] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0">
+              <span className="break-all select-all text-white/90 font-mono text-[11px] sm:text-xs leading-relaxed flex-1 min-w-0">
+                curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  handleCopyText(
+                    'curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash',
+                    'selfhost'
+                  )
+                }
+                className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-sans text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 border border-white/10 self-end sm:self-auto"
+              >
+                {copiedSelfHost ? (
+                  <>
+                    <Check size={13} className="text-[#10B981]" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-mono text-white/70">
@@ -1028,35 +667,33 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Install Skills Command Box */}
-            <div className="relative p-4 rounded-2xl bg-[#000000] border border-white/20 font-mono text-xs text-[#818CF8] overflow-x-auto">
-              <div className="flex items-center justify-between gap-2">
-                <span className="whitespace-nowrap select-all text-white/90">
-                  npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleCopyText(
-                      'npx skills add kylrix/kylrix --skill mcp --skill api --skill agents',
-                      'mcp'
-                    )
-                  }
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-sans text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
-                >
-                  {copiedMcp ? (
-                    <>
-                      <Check size={13} className="text-[#10B981]" />
-                      <span>Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={13} />
-                      <span>Copy</span>
-                    </>
-                  )}
-                </button>
-              </div>
+            {/* Install Skills Command Box (Fits without scrolling) */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#000000] border border-white/20 font-mono text-xs text-[#818CF8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0">
+              <span className="break-all select-all text-white/90 font-mono text-[11px] sm:text-xs leading-relaxed flex-1 min-w-0">
+                npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  handleCopyText(
+                    'npx skills add kylrix/kylrix --skill mcp --skill api --skill agents',
+                    'mcp'
+                  )
+                }
+                className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-sans text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 border border-white/10 self-end sm:self-auto"
+              >
+                {copiedMcp ? (
+                  <>
+                    <Check size={13} className="text-[#10B981]" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-satoshi">
