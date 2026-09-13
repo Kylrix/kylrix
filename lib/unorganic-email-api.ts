@@ -196,6 +196,23 @@ function escapeHtml(value: string) {
     .replace(/'/g, '&#39;');
 }
 
+export function redactSensitiveEnvContent(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    // Redact private keys (-----BEGIN ... PRIVATE KEY-----)
+    .replace(/-----BEGIN[A-Z\s]+PRIVATE KEY-----[\s\S]*?-----END[A-Z\s]+PRIVATE KEY-----/gi, '[REDACTED_PRIVATE_KEY]')
+    // Redact DB connection strings / URIs containing credentials
+    .replace(/\b(?:postgres|postgresql|mongodb|mongodb\+srv|mysql|redis):\/\/[^\s"']+/gi, '[REDACTED_URI]')
+    // Redact JWT tokens (eyJ...)
+    .replace(/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, '[REDACTED_TOKEN]')
+    // Redact API key / Secret patterns (sk-..., sk_..., ghp_..., np_..., xoxb-..., etc.)
+    .replace(/\b(?:sk|ghp|gho|ghu|ghs|ghr|np|xoxb|xoxp|xapp|live|test)[_-][a-zA-Z0-9_]{16,}\b/gi, '[REDACTED_SECRET]')
+    // Redact KEY=VALUE env assignments (including optional export keyword and quotes)
+    .replace(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/gm, (match, key) => {
+      return `${key}=[REDACTED_ENV]`;
+    });
+}
+
 function pickText(...values: Array<string | null | undefined>) {
   for (const value of values) {
     const text = typeof value === 'string' ? value.trim() : '';
@@ -380,13 +397,17 @@ function buildEmailHtml(params: {
   const chatBubblesHtml = params.metadata?.chatMessages && Array.isArray(params.metadata.chatMessages)
     ? `<div style="margin: 20px 0; padding: 16px; background: rgba(0,0,0,0.4); border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);">
         <div style="font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,0.4); margin-bottom: 12px; font-weight: 800;">Recent messages</div>
-        ${params.metadata.chatMessages.map((msg: any) => `
+        ${params.metadata.chatMessages.map((msg: any) => {
+          const rawContent = String(msg.content || '');
+          const redactedContent = redactSensitiveEnvContent(rawContent);
+          return `
           <div style="margin-bottom: 10px; display: flex; flex-direction: column;">
             <div style="align-self: flex-start; max-width: 85%; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.25); color: #fff; padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 14px; line-height: 1.4;">
-              ${escapeHtml(String(msg.content || ''))}
+              ${escapeHtml(redactedContent)}
             </div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
        </div>`
     : '';
 
