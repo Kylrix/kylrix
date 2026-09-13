@@ -195,33 +195,41 @@ function SortableField({
             </Stack>
         </Stack>
 
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ pl: { md: 5 } }}>
-            {/* Bottom Drawer Select Trigger */}
-            <Button
-                variant="text"
-                onClick={() => openSelectorDrawer(fIdx)}
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ pl: { md: 5 }, flexWrap: 'wrap', gap: 1.5 }}>
+            {/* Inline Field Type Dropdown Select */}
+            <Select
+                value={field.type}
+                onChange={(e: any) => {
+                  const val = e.target.value;
+                  if (val === 'file' && !hasPaidKylrixPlan(user)) {
+                    openProUpgrade('Form File Uploads');
+                    return;
+                  }
+                  updateField(fIdx, { type: val });
+                }}
+                disableUnderline
                 sx={{
                     bgcolor: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
                     borderRadius: '12px',
-                    px: 2.5,
-                    py: 1.25,
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    px: 2,
+                    py: 1,
+                    color: 'white',
                     fontSize: '0.8rem',
-                    fontWeight: 700,
-                    textTransform: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
+                    fontWeight: 800,
+                    minWidth: 160,
                     '&:hover': {
                         bgcolor: 'rgba(255, 255, 255, 0.06)',
-                        borderColor: 'rgba(255, 255, 255, 0.1)'
+                        borderColor: 'rgba(255, 255, 255, 0.15)'
                     }
                 }}
             >
-                {FIELD_TYPES.find(t => t.value === field.type)?.icon}
-                <span>{FIELD_TYPES.find(t => t.value === field.type)?.label}</span>
-            </Button>
+                {FIELD_TYPES.map((t) => (
+                    <MenuItem key={t.value} value={t.value} sx={{ fontSize: '0.8rem', fontWeight: 700, gap: 1.5 }}>
+                        {t.label}
+                    </MenuItem>
+                ))}
+            </Select>
             
             <FormControlLabel
                 control={
@@ -824,29 +832,33 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800, letterSpacing: '0.05em', ml: 1 }}>
                   DEPLOYMENT STATUS
                 </Typography>
-                <Button
-                  onClick={() => setStatusDrawerOpen(true)}
-                  sx={{ 
+                <Select
+                  value={status}
+                  onChange={(e: any) => setStatus(e.target.value)}
+                  disableUnderline
+                  sx={{
                     borderRadius: '16px',
                     bgcolor: '#0B0A09',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
                     px: 2.5,
-                    py: 2,
+                    py: 1.5,
                     color: 'white',
-                    justifyContent: 'space-between',
-                    textTransform: 'none',
                     fontWeight: 800,
+                    fontSize: '0.9rem',
                     width: '100%',
                     '&:hover': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
                   }}
                 >
-                  <span>
-                    {status === 'draft' && 'DRAFT (INTERNAL)'}
-                    {status === 'published' && 'PUBLISHED (PUBLIC ACCESS)'}
-                    {status === 'archived' && 'ARCHIVED (READ-ONLY)'}
-                  </span>
-                  <ChevronDownIcon fontSize="small" sx={{ opacity: 0.5 }} />
-                </Button>
+                  <MenuItem value="draft" sx={{ fontWeight: 800, fontSize: '0.85rem' }}>
+                    DRAFT (INTERNAL)
+                  </MenuItem>
+                  <MenuItem value="published" sx={{ fontWeight: 800, fontSize: '0.85rem', color: '#34D399' }}>
+                    PUBLISHED (PUBLIC ACCESS)
+                  </MenuItem>
+                  <MenuItem value="archived" sx={{ fontWeight: 800, fontSize: '0.85rem', color: '#FBBF24' }}>
+                    ARCHIVED (READ-ONLY)
+                  </MenuItem>
+                </Select>
               </Stack>
             </Stack>
           </Box>

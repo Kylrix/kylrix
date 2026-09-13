@@ -35,6 +35,7 @@ import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
+import { ShareLockButton } from '@/components/share/ShareLockButton';
 
 
 
@@ -625,7 +626,16 @@ function FormCard({
                         </h3>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <ShareLockButton
+                            resourceType="form"
+                            resourceId={form.$id}
+                            isPublic={!!form.isPublic}
+                            isGuest={!!form.isGuest}
+                            resourceTitle={form.title}
+                            accentColor="#6366F1"
+                            onPublished={onUpdate}
+                        />
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase font-mono tracking-wider border ${
                             isPublished 
                                 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
