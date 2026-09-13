@@ -290,6 +290,58 @@ Please utilize this contextual memory to optimize your recommendations if releva
   }
 }
 
+export async function generateObjectAssistSchemaAction(params: {
+  kind: string;
+  prompt: string;
+  jwt?: string;
+}) {
+  const { kind, prompt, jwt } = params;
+  if (!prompt || !prompt.trim()) {
+    return { success: false, error: "Prompt is required" };
+  }
+
+  const systemInstruction = `You are Kylrix Assist, an intelligent AI generator for ${kind} creation.
+When requested to generate or update a ${kind}, analyze the user prompt and generate a structured JSON object.
+
+For kind "form":
+Return JSON strictly in the format:
+{
+  "title": "Short Form Title",
+  "description": "Brief description of the form's purpose",
+  "fields": [
+    {
+      "id": "field_1",
+      "label": "Question Label",
+      "type": "text | textarea | email | number | select | radio | checkbox | file",
+      "required": true,
+      "options": ["Option 1", "Option 2"]
+    }
+  ]
+}
+
+DO NOT wrap response in markdown code blocks like \`\`\`json. Return raw JSON string only.`;
+
+  const res = await generateAIContent({
+    mode: "GENERAL_QUERY",
+    prompt: `Generate a structured schema for a ${kind} based on this request: "${prompt}"`,
+    systemInstruction,
+    jwt,
+  });
+
+  if (!res.success || !res.data) {
+    return { success: false, error: res.error || "Failed to generate schema" };
+  }
+
+  try {
+    const jsonText = res.data.replace(/```json/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(jsonText);
+    return { success: true, data: parsed };
+  } catch (err) {
+    console.error("[generateObjectAssistSchemaAction] JSON parse error:", err);
+    return { success: false, error: "Failed to parse generated schema JSON" };
+  }
+}
+
 export async function getComputeBalanceAction(jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor) return null;
