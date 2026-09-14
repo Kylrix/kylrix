@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
+import { getEnabledGhostFields, resolveGhostFields } from '@/lib/forms/ghost-fields';
+import { GhostFieldsNotice } from './GhostFieldsNotice';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { secureUploadFile } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -207,7 +209,14 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
         setError(null);
 
         try {
-            await FormsService.submitForm(formId, JSON.stringify(formData));
+            const enabledGhost = getEnabledGhostFields(form?.settings);
+            let submissionPayload = { ...formData };
+            if (enabledGhost.length > 0) {
+                const ghostData = await resolveGhostFields(enabledGhost, currentUser);
+                submissionPayload._ghost = ghostData;
+            }
+
+            await FormsService.submitForm(formId, JSON.stringify(submissionPayload));
             setSubmitted(true);
             await LocalEngine.cacheDelete(`form_draft_${formId}`);
         } catch (err: any) {
@@ -512,7 +521,7 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                     <div className="flex flex-col gap-4">
                         {/* Scrollable Title & Description block */}
                         {form && (
-                            <div className="flex flex-col gap-1 pb-3 border-b border-white/5">
+                            <div className="flex flex-col gap-2 pb-3 border-b border-white/5">
                                 <h3 className="font-extrabold text-base md:text-lg text-white font-clash leading-snug">
                                     {form.title || 'Form'}
                                 </h3>
@@ -521,6 +530,7 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                                         {form.description}
                                     </p>
                                 )}
+                                <GhostFieldsNotice ghostFields={getEnabledGhostFields(form.settings)} />
                             </div>
                         )}
 

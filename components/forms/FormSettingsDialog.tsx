@@ -3,9 +3,11 @@ import {
   X, 
   Copy, 
   Clock, 
-  Globe 
+  Globe,
+  Ghost
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
+import { GHOST_FIELDS_REGISTRY, getEnabledGhostFields } from '@/lib/forms/ghost-fields';
 import { Forms, FormsStatus } from '@/generated/appwrite/types';
 import { useToast } from '@/components/ui/Toast';
 
@@ -23,6 +25,7 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
   const [allowAnonymousView, setAllowAnonymousView] = useState(false);
   const [allowAnonymousFill, setAllowAnonymousFill] = useState(false);
   const [expiresAt, setExpiresAt] = useState('');
+  const [enabledGhostFields, setEnabledGhostFields] = useState<string[]>([]);
 
   useEffect(() => {
     if (form && open) {
@@ -36,24 +39,40 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
       setAllowAnonymousView(form.isPublic ?? (status === 'published'));
       setAllowAnonymousFill(form.isGuest ?? settings.allowAnonymousFill ?? false);
       setExpiresAt(settings.expiresAt ? settings.expiresAt.slice(0, 16) : '');
+      setEnabledGhostFields(getEnabledGhostFields(settings));
     }
   }, [form, open, status]);
 
   if (!open || !form) return null;
 
+  const toggleGhostField = (key: string) => {
+    setEnabledGhostFields((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
   const handleSave = async () => {
     setLoading(true);
     try {
+      let existingSettings: any = {};
+      try {
+        existingSettings = JSON.parse(form.settings || '{}');
+      } catch (_e) {}
+
       const settings = {
+        ...existingSettings,
         allowAnonymousView,
         allowAnonymousFill,
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null};
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+        ghostFields: enabledGhostFields,
+      };
 
       await FormsService.updateForm(form.$id, {
         status: status as FormsStatus,
         settings: JSON.stringify(settings),
         isPublic: status === 'published',
-        isGuest: allowAnonymousFill} as any);
+        isGuest: allowAnonymousFill,
+      } as any);
       
       onSaved();
       onClose();
@@ -173,6 +192,64 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
                   }`}
                 />
               </button>
+            </div>
+          </div>
+
+          <div className="border-t border-white/5" />
+
+          {/* Modular Ghost Fields Telemetry */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Ghost className="w-4 h-4 text-[#6366F1]" />
+              <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">
+                TELEMETRY & GHOST FIELDS
+              </span>
+            </div>
+            <p className="text-[11px] text-[#9B9691] leading-relaxed">
+              Enable background account telemetry fields. When enabled, submitters are notified transparently via an info icon drawer on the form link.
+            </p>
+
+            <div className="space-y-2 pt-1">
+              {Object.values(GHOST_FIELDS_REGISTRY).map((gf) => {
+                const isChecked = enabledGhostFields.includes(gf.id);
+                return (
+                  <div
+                    key={gf.id}
+                    onClick={() => toggleGhostField(gf.id)}
+                    className={`p-3 rounded-xl border flex items-start justify-between gap-3 cursor-pointer transition-all ${
+                      isChecked
+                        ? 'bg-[#6366F1]/10 border-[#6366F1]/40'
+                        : 'bg-black border-white/5 hover:border-white/10'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-white font-satoshi">
+                          {gf.label}
+                        </span>
+                        <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-white/5 text-white/50 border border-white/10 font-bold">
+                          {gf.category}
+                        </span>
+                      </div>
+                      <span className="block text-[10px] text-[#9B9691] mt-0.5 leading-normal">
+                        {gf.description}
+                      </span>
+                    </div>
+
+                    <div
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none shrink-0 mt-0.5 ${
+                        isChecked ? 'bg-[#6366F1]' : 'bg-white/10'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-black transition-transform ${
+                          isChecked ? 'translate-x-4.5' : 'translate-x-1'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

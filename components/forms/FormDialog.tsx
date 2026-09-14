@@ -20,7 +20,9 @@ import {
   CheckCircle2,
   List,
   UploadCloud,
+  Ghost,
 } from 'lucide-react';
+import { GHOST_FIELDS_REGISTRY, getEnabledGhostFields } from '@/lib/forms/ghost-fields';
 import { Drawer } from '@/lib/openbricks/primitives';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
@@ -244,11 +246,13 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'draft' | 'published' | 'archived'>('draft');
   const [fields, setFields] = useState<any[]>([]);
+  const [enabledGhostFields, setEnabledGhostFields] = useState<string[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isRestored, setIsRestored] = useState(false);
 
   // Drawers state
   const [assistDrawerOpen, setAssistDrawerOpen] = useState(false);
+  const [ghostDrawerOpen, setGhostDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeSettingsFieldIndex, setActiveSettingsFieldIndex] = useState<number | null>(null);
 
@@ -405,6 +409,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
           setDescription(savedDraft.description || '');
           setStatus((savedDraft.status as any) || 'draft');
           setFields(savedDraft.fields || []);
+          setEnabledGhostFields((savedDraft as any).ghostFields || getEnabledGhostFields(form.settings));
           setIsRestored(true);
           setHasUnsavedChanges(true);
         } else {
@@ -416,6 +421,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
           } catch (_e) {
             setFields([]);
           }
+          setEnabledGhostFields(getEnabledGhostFields(form.settings));
           setIsRestored(false);
           setHasUnsavedChanges(false);
         }
@@ -426,6 +432,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         setDescription('');
         setStatus('draft');
         setFields([{ id: 'field_1', label: 'Full Name', type: 'text', required: true }]);
+        setEnabledGhostFields([]);
         setIsRestored(false);
         setHasUnsavedChanges(false);
       }
@@ -460,7 +467,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
     }
 
     if (isDifferent) {
-      void DraftsService.saveDraft(formId, { title, description, status, fields });
+      void DraftsService.saveDraft(formId, { title, description, status, fields, ghostFields: enabledGhostFields } as any);
       setHasUnsavedChanges(true);
     } else {
       void DraftsService.clearDraft(formId);
@@ -530,12 +537,22 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
 
     setLoading(true);
     try {
+      let existingSettings: any = {};
+      try {
+        existingSettings = JSON.parse(form?.settings || '{}');
+      } catch (_e) {}
+
+      const mergedSettings = {
+        ...existingSettings,
+        ghostFields: enabledGhostFields,
+      };
+
       const formDataPayload = {
         title: title || 'Untitled Form',
         description,
         status: status as FormsStatus,
         schema: JSON.stringify(fields),
-        settings: form?.settings || '{}',
+        settings: JSON.stringify(mergedSettings),
       };
 
       const formId = form?.$id || (initialDraft ? initialDraft.id : 'new');
@@ -762,9 +779,26 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                 </select>
               </div>
 
-              <span className="text-xs font-mono text-white/40">
-                {fields.length} {fields.length === 1 ? 'question' : 'questions'}
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setGhostDrawerOpen(true)}
+                  className={`px-3 py-1 rounded-xl border text-xs font-satoshi font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    enabledGhostFields.length > 0
+                      ? 'bg-[#6366F1]/10 border-[#6366F1]/40 text-[#818CF8]'
+                      : 'bg-white/5 border-white/10 text-white/50 hover:text-white'
+                  }`}
+                >
+                  <Ghost size={14} />
+                  <span>
+                    Ghost Fields ({enabledGhostFields.length})
+                  </span>
+                </button>
+
+                <span className="text-xs font-mono text-white/40">
+                  {fields.length} {fields.length === 1 ? 'question' : 'questions'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -855,6 +889,107 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         subtitle="Prompt AI to automatically generate questions, field choices, and logic schema for your form."
         onApply={handleAssistApply}
       />
+
+      {/* Ghost Fields Builder Drawer */}
+      <Drawer
+        anchor="bottom"
+        open={ghostDrawerOpen}
+        onClose={() => setGhostDrawerOpen(false)}
+        ModalProps={{ keepMounted: false, disablePortal: true }}
+        PaperProps={{
+          sx: {
+            width: '100%',
+            maxWidth: 640,
+            mx: 'auto',
+            borderRadius: '28px 28px 0 0',
+            bgcolor: '#161412',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+            backgroundImage: 'none',
+            p: 5,
+            pb: 6,
+            zIndex: 1400,
+            maxHeight: '80vh',
+            overflowY: 'auto',
+          },
+        }}
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-white/5">
+            <div className="flex items-center gap-2">
+              <Ghost size={18} className="text-[#6366F1]" />
+              <h3 className="font-clash font-extrabold text-base text-white">
+                Modular Ghost Fields Telemetry
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setGhostDrawerOpen(false)}
+              className="p-1.5 rounded-xl bg-white/5 text-white/70 hover:text-white"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <p className="text-xs text-white/60 leading-relaxed font-satoshi">
+            Ghost fields automatically capture diagnostic account context (such as subscription tier or 2FA status) when a user submits a bug report or form entry. Submitters will see a clear notification with an info drawer on the form link.
+          </p>
+
+          <div className="space-y-2.5 pt-2">
+            {Object.values(GHOST_FIELDS_REGISTRY).map((gf) => {
+              const isChecked = enabledGhostFields.includes(gf.id);
+              return (
+                <div
+                  key={gf.id}
+                  onClick={() => {
+                    setEnabledGhostFields((prev) =>
+                      prev.includes(gf.id) ? prev.filter((id) => id !== gf.id) : [...prev, gf.id]
+                    );
+                  }}
+                  className={`p-3.5 rounded-2xl border flex items-start justify-between gap-3 cursor-pointer transition-all ${
+                    isChecked
+                      ? 'bg-[#6366F1]/10 border-[#6366F1]/40'
+                      : 'bg-[#000000] border-white/5 hover:border-white/10'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-white font-satoshi">{gf.label}</span>
+                      <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-white/5 text-white/50 border border-white/10 font-bold">
+                        {gf.category}
+                      </span>
+                    </div>
+                    <span className="block text-[11px] text-white/50 mt-1 leading-relaxed">
+                      {gf.description}
+                    </span>
+                  </div>
+
+                  <div
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none shrink-0 mt-0.5 ${
+                      isChecked ? 'bg-[#6366F1]' : 'bg-white/10'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-black transition-transform ${
+                        isChecked ? 'translate-x-4.5' : 'translate-x-1'
+                      }`}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setGhostDrawerOpen(false)}
+            className="w-full py-2.5 mt-2 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-clash font-extrabold text-xs transition-all cursor-pointer"
+          >
+            Apply Ghost Settings
+          </button>
+        </div>
+      </Drawer>
 
       {/* Field Settings & Logic Rules Drawer */}
       <Drawer
