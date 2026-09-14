@@ -650,7 +650,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         // Instantly write to LocalEngine caches and session workspace cache
         try {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const { saveSessionProjectsList } = await import('@/lib/projects/projects-cache');
+          const { setSessionProjectsList } = await import('@/lib/projects/projects-cache');
           const cacheKey = `f_projects_list_${userId}`;
           const currentCached = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
           const updatedProjects = [
@@ -660,7 +660,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           await LocalEngine.cacheSet(cacheKey, updatedProjects);
           await LocalEngine.cacheSet('f_projects_list', updatedProjects);
           await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, created.$id);
-          saveSessionProjectsList(userId, updatedProjects);
+          setSessionProjectsList(updatedProjects, userId);
         } catch {}
 
         void refreshWorkspaces();
