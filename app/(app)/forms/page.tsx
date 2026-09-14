@@ -110,7 +110,12 @@ export default function FormsDashboard() {
                 items = [];
             }
             if (items.length === 0) {
-                items = (await LocalEngine.cacheGet<any[]>('f_forms_list')) || [];
+                const [userScopedList, userScopedForms, legacyList] = await Promise.all([
+                    LocalEngine.cacheGet<any[]>(`f_forms_list_${userId}`).catch(() => null),
+                    LocalEngine.cacheGet<any[]>(`f_forms_${userId}`).catch(() => null),
+                    LocalEngine.cacheGet<any[]>('f_forms_list').catch(() => null),
+                ]);
+                items = userScopedList || userScopedForms || legacyList || [];
             }
 
             if (items.length > 0) {
@@ -135,6 +140,8 @@ export default function FormsDashboard() {
                 const merged = Array.from(byId.values());
 
                 setForms(sortForms(merged as unknown as Forms[]));
+                await LocalEngine.cacheSet(`f_forms_list_${userId}`, merged);
+                await LocalEngine.cacheSet(`f_forms_${userId}`, merged);
                 await LocalEngine.cacheSet('f_forms_list', merged);
             }
         } catch (error) {
