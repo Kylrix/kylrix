@@ -65,15 +65,6 @@ export const ProjectsService = {
     return filterRootWorkspaceProjects(result);
   },
 
-  async listSubProjects(workspaceId: string) {
-    if (typeof window !== 'undefined') {
-      const { listSubProjectsForWorkspace } = await import('@/lib/actions/client-ops');
-      return listSubProjectsForWorkspace(workspaceId);
-    }
-    const { listSubProjectsForWorkspaceSecure } = await import('@/lib/actions/secure-ops');
-    return listSubProjectsForWorkspaceSecure(workspaceId);
-  },
-
   async getProject(projectId: string) {
     return  (databases as any).getRow(
       DATABASE_ID,

@@ -7,7 +7,7 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
-import { useSubProjects } from '@/hooks/useSubProjects';
+import { ProjectsService } from '@/lib/appwrite/projects';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
 import { userCanUseProjects } from '@/lib/projects/feature-gate-client';
 import { getUserSubscriptionTier } from '@/lib/utils';
@@ -37,8 +37,19 @@ export function AddToProjectDrawerHost() {
   const parentWorkspaceId = data.workspaceId || activeWorkspace?.id || null;
   const isPersonal = parentWorkspaceId === user?.$id || activeWorkspace?.isPersonal;
 
-  const { projects, loading } = useSubProjects(isOpen && !isPersonal ? parentWorkspaceId : null);
+  const [projects, setProjects] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
   const [attaching, setAttaching] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen && !isPersonal) {
+      setLoading(true);
+      ProjectsService.listProjects()
+        .then((res) => setProjects(res.rows || []))
+        .catch(() => setProjects([]))
+        .finally(() => setLoading(false));
+    }
+  }, [isOpen, isPersonal]);
 
   const entityKind = data.entityKind || (activeContent === 'task-add-to-project' ? 'goal' : 'note');
   const entityId = data.entityId || data.taskId || data.resourceId || '';
@@ -70,8 +81,6 @@ export function AddToProjectDrawerHost() {
     if (!parentWorkspaceId) return;
     close();
     openDrawer('new-project', {
-      isSubProject: true,
-      parentWorkspaceId,
       pendingAttachment: entityId
         ? { entityKind, entityId }
         : undefined,
