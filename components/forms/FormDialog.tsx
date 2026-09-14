@@ -34,9 +34,6 @@ import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
-import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
-import { TypeIntelToggle, TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
-import { useContextualAutocomplete } from '@/lib/contextual-engine';
 import { ObjectAssistDrawer } from '@/components/agentic/ObjectAssistDrawer';
 
 import {
@@ -236,8 +233,6 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
   const isPro = hasPaidKylrixPlan(user);
-  const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('form');
-  const openPro = useCallback(() => openProUpgrade('Kylie Assist'), [openProUpgrade]);
   const { invalidate } = useDataNexus();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const { setIsDrawerOpen } = useDrawerState();
@@ -263,46 +258,6 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
     setActiveSettingsFieldIndex(fIdx);
     setSettingsOpen(true);
   };
-
-  const {
-    learningStatus,
-    learningLabel,
-    suggestion: agentSuggestion,
-    busy: agentBusy,
-    acceptSuggestion: acceptAgentSuggestion,
-    runTakeover,
-    handleKeyDown: handleAgentKeyDown,
-    accent: agentAccent,
-  } = useTypeIntelligence({
-    kind: 'form',
-    userId: user?.$id,
-    displayName: user?.name || user?.email || undefined,
-    draft: description || title,
-    enabled: createWithAgent && open,
-    isPro,
-    onOpenPro: openPro,
-    setDraft: (next) => {
-      setDescription(next);
-    },
-  });
-
-  const { inlineSuffix, handleKeyDown: handleAutoKeyDown } = useContextualAutocomplete(description || title, {
-    niche: 'productivity',
-    onAccept: (completedText) => setDescription(completedText),
-  });
-
-  const ghostSuggestion = createWithAgent && agentSuggestion ? agentSuggestion : inlineSuffix || '';
-
-  const acceptGhost = useCallback(() => {
-    if (createWithAgent && agentSuggestion) {
-      acceptAgentSuggestion();
-      return;
-    }
-    if (inlineSuffix) {
-      const base = description || title;
-      setDescription(base + inlineSuffix);
-    }
-  }, [createWithAgent, agentSuggestion, acceptAgentSuggestion, inlineSuffix, description, title]);
 
   useEffect(() => {
     setIsDrawerOpen(open);
@@ -716,45 +671,10 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    (e.key === 'ArrowRight' || e.key === 'Tab') &&
-                    ghostSuggestion &&
-                    e.currentTarget.selectionStart === e.currentTarget.value.length
-                  ) {
-                    e.preventDefault();
-                    acceptGhost();
-                    return;
-                  }
-                  handleAgentKeyDown(e);
-                  handleAutoKeyDown(e);
-                }}
                 placeholder="Briefly describe the purpose or instructions for this form..."
                 className="relative w-full bg-transparent border-0 outline-none text-sm text-white/70 placeholder:text-white/30 focus:ring-0 resize-none font-satoshi leading-relaxed"
               />
-              <TypeIntelGhostLayer
-                draft={description}
-                suggestion={ghostSuggestion}
-                enabled={Boolean(ghostSuggestion) || createWithAgent}
-                showWand={createWithAgent}
-                busy={agentBusy}
-                accent={agentAccent}
-                onAccept={acceptGhost}
-                onTakeover={() => void runTakeover()}
-                className="text-sm leading-normal font-satoshi"
-              />
             </div>
-
-            <TypeIntelToggle
-              enabled={createWithAgent}
-              onToggle={persistAgent}
-              locked={!isPro}
-              onLockedAttempt={openPro}
-              accent={agentAccent}
-              learningStatus={learningStatus}
-              learningLabel={learningLabel}
-              busy={agentBusy}
-            />
 
             {/* Deployment Status & Options Row */}
             <div className="pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-3">
@@ -885,6 +805,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         open={assistDrawerOpen}
         onClose={() => setAssistDrawerOpen(false)}
         kind="form"
+        targetId={form?.$id || (initialDraft ? initialDraft.id : 'new_form')}
         title="Kylrix Assist — Form Auto-Creator"
         subtitle="Prompt AI to automatically generate questions, field choices, and logic schema for your form."
         onApply={handleAssistApply}
