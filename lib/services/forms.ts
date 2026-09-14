@@ -33,6 +33,16 @@ export const FormsService = {
      * Get a form by ID (Public Access Support)
      */
     async getForm(formId: string) {
+        if (typeof window !== 'undefined') {
+            const { getPublicFormData } = await import('@/lib/actions/client-ops');
+            const doc = await getPublicFormData(formId).catch(() => null);
+            if (doc) return doc as unknown as Forms;
+        } else {
+            const { getPublicFormDataSecure } = await import('@/lib/actions/secure-ops');
+            const doc = await getPublicFormDataSecure(formId).catch(() => null);
+            if (doc) return doc as unknown as Forms;
+        }
+
         try {
             const res = await (tablesDB as any).listRows({
                 databaseId: DATABASE_ID,

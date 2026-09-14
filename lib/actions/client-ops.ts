@@ -119,6 +119,11 @@ export async function getSharedNoteData(noteId: string) {
   return getSharedNoteDataSecure(noteId, jwt);
 }
 
+export async function getPublicFormData(formId: string) {
+  const { getPublicFormDataSecure } = await import('./secure-ops');
+  return getPublicFormDataSecure(formId);
+}
+
 export async function getNoteSecondaryObjectPreview(input: {
   noteId: string;
   childKind: string;

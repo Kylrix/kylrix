@@ -31,6 +31,49 @@ const {
   sanitizeEventData,
   rowCache} = shared;
 
+export async function getPublicFormDataSecure(formId: string) {
+  const tables = createSystemTablesDB();
+  const row = await tables.getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+    rowId: formId
+  }).catch(() => null);
+
+  if (!row || row.isTrash === true || row.isDeleted === true) return null;
+
+  const status = row.status || 'draft';
+  const isPublic = row.isPublic === true;
+  const isGuest = row.isGuest === true;
+
+  if (status !== 'published' && !isPublic && !isGuest) {
+    return null;
+  }
+
+  let settings: any = {};
+  try {
+    settings = JSON.parse(row.settings || '{}');
+  } catch (_e) {}
+
+  if (settings.expiresAt && new Date(settings.expiresAt) < new Date()) {
+    return null;
+  }
+
+  return JSON.parse(JSON.stringify({
+    $id: row.$id,
+    id: row.$id,
+    userId: row.userId,
+    status: row.status,
+    title: row.title,
+    description: row.description,
+    schema: row.schema,
+    settings: row.settings,
+    isPublic: row.isPublic,
+    isGuest: row.isGuest,
+    $createdAt: row.$createdAt,
+    $updatedAt: row.$updatedAt
+  }));
+}
+
 export async function getPublicGoalDataSecure(goalId: string) {
   const tables = createSystemTablesDB();
   const row = await tables.getRow({

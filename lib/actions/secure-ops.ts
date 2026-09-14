@@ -41,6 +41,7 @@ import {
 } from './secure-ops/threads';
 
 import {
+  getPublicFormDataSecure,
   getPublicGoalDataSecure,
   createAccountEventSecure,
   listProjectsWithCollaborationsSecure,
@@ -179,6 +180,7 @@ export {
   createthreadNoteChatSecure,
   listthreadNoteChatsSecure,
   listTagsSecure,
+  getPublicFormDataSecure,
   getPublicGoalDataSecure,
   createAccountEventSecure,
   listProjectsWithCollaborationsSecure,
