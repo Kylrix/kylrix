@@ -38,10 +38,29 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     return;
                 }
 
-                const user = await FormsService.getCurrentUser().catch(() => null);
-                setCurrentUser(user);
+                const { hasAuthSessionHint, getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
+                let user = getCurrentUserSnapshot();
+
+                if (!user && hasAuthSessionHint()) {
+                    void FormsService.getCurrentUser().then((u) => {
+                        if (u) {
+                            setCurrentUser(u);
+                            // Check for remote draft if user is populated later
+                            FormsService.getDraft(resolvedParams.id, u.$id).then((draft) => {
+                                if (draft && draft.payload) {
+                                    try {
+                                        setFormData(JSON.parse(draft.payload));
+                                    } catch (_e) {}
+                                }
+                            }).catch(() => {});
+                        }
+                    }).catch(() => {});
+                } else if (user) {
+                    setCurrentUser(user);
+                }
 
                 const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
+                const { getPublicFormData } = await import('@/lib/actions/client-ops');
 
                 await SharedOfflineSubstrate.syncSharedRoute<Forms>({
                     kind: 'form',
@@ -52,6 +71,8 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                         setLoading(false);
                     },
                     fetchRemote: async () => {
+                        const publicForm = await getPublicFormData(resolvedParams.id).catch(() => null);
+                        if (publicForm) return publicForm as unknown as Forms;
                         return await FormsService.getForm(resolvedParams.id);
                     },
                     isAccessibleRemote: (data, uid) => {
@@ -88,7 +109,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     setFormData(localData);
                 }
 
-                // If logged in, prioritize DB draft if exists
+                // If logged in immediately, check for DB draft
                 if (user) {
                     try {
                         const draft = await FormsService.getDraft(resolvedParams.id, user.$id);

@@ -223,11 +223,10 @@ export const SharedOfflineSubstrate = {
     } catch {}
 
     // 2. Inevitable Remote Synchronization & Visibility Revalidation
-    // Brief retries cover the race where the owner just opened share and
-    // isPublic/isGuest are still flushing to Appwrite.
+    // Fast single retry covers potential publish propagation race without delaying loading.
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const maxAttempts = 4;
-    const delaysMs = [0, 350, 700, 1200];
+    const maxAttempts = 2;
+    const delaysMs = [0, 200];
 
     let lastErr: any = null;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -244,7 +243,6 @@ export const SharedOfflineSubstrate = {
         }
 
         if (isAccessibleRemote && !isAccessibleRemote(remoteData, currentUserId)) {
-          // May still be racing publish flags — retry a few times before deny
           lastErr = new Error('no-access');
           if (attempt < maxAttempts - 1) continue;
           await this.evictShared(kind, id);
@@ -261,15 +259,13 @@ export const SharedOfflineSubstrate = {
       } catch (err: any) {
         lastErr = err;
         const msg = String(err?.message || '').toLowerCase();
-        const isNotFoundRace =
-          msg.includes('not found') || msg.includes('404');
         const isHardDeny =
           msg.includes('403') ||
           msg.includes('unauthorized') ||
           msg.includes('private');
 
         if (isHardDeny) break;
-        if (isNotFoundRace && attempt < maxAttempts - 1) continue;
+        if (attempt < maxAttempts - 1) continue;
         break;
       }
     }
