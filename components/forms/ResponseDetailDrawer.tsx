@@ -18,10 +18,10 @@ import {
 import { GHOST_FIELDS_REGISTRY } from '@/lib/forms/ghost-fields';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { convertResponseToGoal, createthreadNoteForProject } from '@/lib/actions/client-ops';
-import { ProjectsService } from '@/lib/appwrite/projects';
+import { convertResponseToGoal } from '@/lib/actions/client-ops';
 import { useAuth } from '@/lib/auth';
-import { toast } from 'react-hot-toast';
+import { hasPaidKylrixPlan } from '@/lib/utils';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 
 interface ResponseDetailDrawerProps {
   isOpen: boolean;
@@ -32,37 +32,11 @@ interface ResponseDetailDrawerProps {
 
 export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }: ResponseDetailDrawerProps) {
   const { user } = useAuth();
-  const { open: _openDrawer } = useUnifiedDrawer();
+  const { openProUpgrade } = useProUpgrade();
   const { showSuccess, showError } = useToast();
   
-  // Projects select & flow state
-  const [projects, setProjects] = useState<any[]>([]);
-  const [loadingProjects, setLoadingProjects] = useState(false);
-  const [showProjectSelector, setShowProjectSelector] = useState(false);
-  const [convertingProject, setConvertingProject] = useState(false);
-  
-  // Execution goal flow state
-  const [showGoalSelector, setShowGoalSelector] = useState(false);
+  // Execution goal state
   const [convertingGoal, setConvertingGoal] = useState(false);
-  const [goalTitle, setGoalTitle] = useState('');
-  const [goalDescription, setGoalDescription] = useState('');
-
-  // 1. Fetch user projects on load
-  useEffect(() => {
-    if (isOpen && user) {
-      setLoadingProjects(true);
-      ProjectsService.listProjects(true)
-        .then(res => {
-          setProjects(res.rows || []);
-        })
-        .catch(err => {
-          console.error('[ResponseDetailDrawer] Error fetching projects:', err);
-        })
-        .finally(() => {
-          setLoadingProjects(false);
-        });
-    }
-  }, [isOpen, user]);
 
   if (!submission || !isOpen) return null;
 
@@ -73,100 +47,20 @@ export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }:
     payloadData = { raw: submission.payload };
   }
 
-  // Smart natural language heuristic to guess best input for Title and Details
-  const guessFormFields = () => {
-    let titleVal = '';
-    let detailVal = '';
-
-    // Prioritize keys containing semantic keywords
-    const entries = Object.entries(payloadData);
-    
-    // 1. Try to find a Title/Subject keyword
-    const titleEntry = entries.find(([k]) => {
-      const key = k.toLowerCase();
-      return key.includes('title') || key.includes('subject') || key.includes('name') || key.includes('summary');
-    });
-    if (titleEntry) {
-      titleVal = String(titleEntry[1]);
-    } else if (entries.length > 0) {
-      titleVal = String(entries[0][1]).slice(0, 50);
+  // Instant goal creation handler
+  const handleCreateGoalInstantly = async () => {
+    if (!hasPaidKylrixPlan(user)) {
+      openProUpgrade('Execution Goal Action');
+      return;
     }
 
-    // 2. Try to find a Details/Description/Bio keyword
-    const detailEntry = entries.find(([k]) => {
-      const key = k.toLowerCase();
-      return key.includes('desc') || key.includes('detail') || key.includes('message') || key.includes('body') || key.includes('bio') || key.includes('content');
-    });
-    if (detailEntry) {
-      detailVal = String(detailEntry[1]);
-    } else {
-      // Aggregate all other entries
-      detailVal = entries
-        .filter(([k]) => k !== titleEntry?.[0])
-        .map(([k, v]) => `**${schemaMap?.[k] || k}**: ${Array.isArray(v) ? v.join(', ') : String(v)}`)
-        .join('\n');
-    }
-
-    return {
-      title: titleVal || `Response Action: ${submission.$id.slice(-6)}`,
-      description: detailVal || 'No details provided.'
-    };
-  };
-
-  // Trigger project huddle / discussion
-  const handleSelectProject = async (project: any) => {
-    setConvertingProject(true);
-    try {
-      let discussionNoteId = project.metadata ? JSON.parse(project.metadata || '{}').discussionNoteId : null;
-
-      if (!discussionNoteId) {
-        // Automatically initialize a project discussion huddle under the hood
-        const note = await createthreadNoteForProject(project.$id, `${project.title} Discussion`);
-        discussionNoteId = note.$id;
-        showSuccess('Huddle Discussion spun up successfully!');
-      }
-
-      // Format ecosystem special response markdown snippet
-      const specialSnippet = `\n\n> **Linked Response Reference**\n> 🌐 [Response ${submission.$id.slice(-8)}](source:kylrixform:${submission.formId})\n> Submitter: **${submission.submitterName || 'Anonymous'}**`;
-      
-      // Auto-open discussion sidebar or detail view in the suite via session/routing fallback
-      toast.success('Redirecting to project discussion huddle...');
-      
-      // Write snippet link reference directly into the chat draft by saving it to sessionStorage
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem(`project_discussion_draft_${project.$id}`, `Spun discussion from Form Response: ${specialSnippet}`);
-      }
-
-      onClose();
-      // Redirect to workspace share link (sets active workspace then /app)
-      window.location.href = `/workspace/${project.$id}`;
-    } catch (err: any) {
-      showError('Failed to convert to project discussion', err.message);
-    } finally {
-      setConvertingProject(false);
-    }
-  };
-
-  // Setup goal configuration and trigger goal creation
-  const handleSetupGoal = () => {
-    const guesses = guessFormFields();
-    setGoalTitle(guesses.title);
-    setGoalDescription(guesses.description);
-    setShowGoalSelector(true);
-  };
-
-  const handleCreateGoalSubmit = async () => {
     setConvertingGoal(true);
     try {
-      // Inject ecosystem special formatting pattern directly to link the form response to the goal
-
-      // Call secure-ops backend helper
       await convertResponseToGoal(submission.$id);
-      
-      showSuccess('Created Execution Goal with smart link reference!');
+      showSuccess('Created Execution Goal instantly in workspace!');
       onClose();
     } catch (err: any) {
-      showError('Failed to convert to goal', err.message);
+      showError('Failed to create goal', err?.message || 'Error converting response to goal');
     } finally {
       setConvertingGoal(false);
     }
@@ -203,226 +97,109 @@ export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }:
 
       {/* Main Panel Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
-        {!showProjectSelector && !showGoalSelector ? (
-          <>
-            {/* Metadata Section */}
-            <div className="space-y-3">
-              <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">METADATA</span>
-              <div className="grid grid-cols-1 gap-2.5">
-                <div className="p-3.5 rounded-xl bg-[#161412] border border-white/5 flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-[#9B9691] shrink-0" />
-                  <div>
-                    <span className="block text-[9px] text-[#9B9691] font-black font-mono">SUBMITTED AT</span>
-                    <span className="text-xs font-bold text-white">{new Date(submission.$createdAt).toLocaleString()}</span>
-                  </div>
-                </div>
-                <div className="p-3.5 rounded-xl bg-[#161412] border border-white/5 flex items-center gap-3">
-                  <User className="w-5 h-5 text-[#9B9691] shrink-0" />
-                  <div>
-                    <span className="block text-[9px] text-[#9B9691] font-black font-mono">SUBMITTER</span>
-                    <span className="text-xs font-bold text-white">{submission.submitterName || 'Anonymous User'}</span>
-                  </div>
-                </div>
+        {/* Metadata Section */}
+        <div className="space-y-3">
+          <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">METADATA</span>
+          <div className="grid grid-cols-1 gap-2.5">
+            <div className="p-3.5 rounded-xl bg-[#161412] border border-white/5 flex items-center gap-3">
+              <Clock className="w-5 h-5 text-[#9B9691] shrink-0" />
+              <div>
+                <span className="block text-[9px] text-[#9B9691] font-black font-mono">SUBMITTED AT</span>
+                <span className="text-xs font-bold text-white">{new Date(submission.$createdAt).toLocaleString()}</span>
               </div>
             </div>
-
-            {/* Account & Ghost Telemetry Context Card (if captured) */}
-            {payloadData._ghost && typeof payloadData._ghost === 'object' && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Ghost className="w-4 h-4 text-[#6366F1]" />
-                  <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">
-                    ACCOUNT TELEMETRY & CONTEXT
-                  </span>
-                </div>
-                <div className="p-4 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/30 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {Object.entries(payloadData._ghost).map(([gKey, gVal]: [string, any]) => {
-                      const gfDef = GHOST_FIELDS_REGISTRY[gKey];
-                      const label = gfDef?.label || gKey;
-                      const displayVal = typeof gVal === 'object' ? JSON.stringify(gVal) : String(gVal);
-                      const isPro = gKey === 'subscription_tier' && ['PRO', 'TEAM', 'LIFETIME', 'ORG'].includes(String(gVal).toUpperCase());
-
-                      return (
-                        <div key={gKey} className="p-3 rounded-xl bg-[#000000] border border-white/10 flex flex-col justify-between">
-                          <span className="text-[9px] font-mono font-bold uppercase text-[#9B9691] truncate block">
-                            {label}
-                          </span>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            {isPro && <Crown size={12} className="text-amber-400 shrink-0" />}
-                            <span className={`text-xs font-bold font-mono truncate ${isPro ? 'text-amber-300' : 'text-white'}`}>
-                              {displayVal}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+            <div className="p-3.5 rounded-xl bg-[#161412] border border-white/5 flex items-center gap-3">
+              <User className="w-5 h-5 text-[#9B9691] shrink-0" />
+              <div>
+                <span className="block text-[9px] text-[#9B9691] font-black font-mono">SUBMITTER</span>
+                <span className="text-xs font-bold text-white">{submission.submitterName || 'Anonymous User'}</span>
               </div>
-            )}
+            </div>
+          </div>
+        </div>
 
-            {/* Response Data Section */}
-            <div className="space-y-4">
-              <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">RESPONSE DATA</span>
-              <div className="space-y-3.5">
-                {Object.entries(payloadData)
-                  .filter(([key]) => key !== '_ghost')
-                  .map(([key, value]: [string, any]) => (
-                    <div key={key} className="space-y-1.5">
-                      <span className="block text-xs font-bold text-[#9B9691] capitalize font-satoshi">
-                        {schemaMap?.[key] || key.split(/(?=[A-Z])/).join(' ').replace(/_/g, ' ') || 'Field'}
+        {/* Account & Ghost Telemetry Context Card (if captured) */}
+        {payloadData._ghost && typeof payloadData._ghost === 'object' && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Ghost className="w-4 h-4 text-[#6366F1]" />
+              <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">
+                ACCOUNT TELEMETRY & CONTEXT
+              </span>
+            </div>
+            <div className="p-4 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/30 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {Object.entries(payloadData._ghost).map(([gKey, gVal]: [string, any]) => {
+                  const gfDef = GHOST_FIELDS_REGISTRY[gKey];
+                  const label = gfDef?.label || gKey;
+                  const displayVal = typeof gVal === 'object' ? JSON.stringify(gVal) : String(gVal);
+                  const isPro = gKey === 'subscription_tier' && ['PRO', 'TEAM', 'LIFETIME', 'ORG'].includes(String(gVal).toUpperCase());
+
+                  return (
+                    <div key={gKey} className="p-3 rounded-xl bg-[#000000] border border-white/10 flex flex-col justify-between">
+                      <span className="text-[9px] font-mono font-bold uppercase text-[#9B9691] truncate block">
+                        {label}
                       </span>
-                      <div className="p-4 rounded-[18px] bg-[#161412] border border-white/5 hover:border-[#10B981]/30 hover:bg-[#10B981]/[0.02] transition-all duration-200">
-                        {Array.isArray(value) ? (
-                          <div className="flex flex-wrap gap-1">
-                            {value.map((v, i) => (
-                              <span key={i} className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/5 text-white/60">
-                                {String(v)}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm font-bold text-white break-words leading-relaxed font-satoshi">
-                            {String(value)}
-                          </p>
-                        )}
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {isPro && <Crown size={12} className="text-amber-400 shrink-0" />}
+                        <span className={`text-xs font-bold font-mono truncate ${isPro ? 'text-amber-300' : 'text-white'}`}>
+                          {displayVal}
+                        </span>
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
               </div>
-            </div>
-
-            {/* Workflow Action Triggers */}
-            <div className="space-y-3 pt-2">
-              <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">INTELLIGENT WORKFLOW ACTIONS</span>
-              <div className="flex flex-col gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setShowProjectSelector(true)}
-                  className="w-full py-3.5 bg-[#6366F1] text-black font-extrabold text-xs rounded-xl shadow-[0_8px_30px_rgb(99,102,241,0.2)] hover:bg-[#5254E8] hover:translate-y-[-1px] transition-all duration-200 font-satoshi flex items-center justify-center gap-1.5"
-                >
-                  <MessageSquare size={14} />
-                  <span>Convert to Project Discussion</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSetupGoal}
-                  className="w-full py-3.5 border border-[#10B981]/30 text-[#10B981] hover:bg-[#10B981]/5 hover:border-[#10B981] font-extrabold text-xs rounded-xl transition-all duration-200 font-satoshi flex items-center justify-center gap-1.5"
-                >
-                  <Target size={14} />
-                  <span>Convert to Execution Goal</span>
-                </button>
-              </div>
-            </div>
-          </>
-        ) : showProjectSelector ? (
-          /* Project Selector Pane */
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <button 
-                type="button" 
-                onClick={() => setShowProjectSelector(false)}
-                className="text-xs font-bold text-[#9B9691] hover:text-white flex items-center gap-1"
-              >
-                <ArrowLeft size={14} />
-                <span>Back</span>
-              </button>
-            </div>
-            
-            <h3 className="text-sm font-black text-white font-mono uppercase tracking-wide">Select Target Project Thread</h3>
-            <p className="text-xs text-[#9B9691] leading-relaxed">
-              Choose a project to spin up/link a team discussion thread for this response.
-            </p>
-
-            {loadingProjects ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-[#6366F1] border-t-transparent" />
-              </div>
-            ) : projects.length === 0 ? (
-              <div className="py-12 text-center text-[#9B9691] bg-[#161412] rounded-[24px] border border-dashed border-white/5">
-                <span>No active projects found.</span>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {projects.map((project) => (
-                  <button
-                    key={project.$id}
-                    type="button"
-                    onClick={() => handleSelectProject(project)}
-                    disabled={convertingProject}
-                    className="w-full text-left p-4 rounded-2xl bg-[#161412] hover:bg-[#1C1A18] border border-white/5 hover:border-[#6366F1]/30 transition-all flex items-center justify-between group"
-                  >
-                    <div>
-                      <h4 className="text-sm font-bold text-white group-hover:text-[#6366F1] transition-colors">{project.title}</h4>
-                      <p className="text-[11px] text-[#9B9691] mt-0.5 line-clamp-1">{project.description || 'No description provided.'}</p>
-                    </div>
-                    <ChevronRight size={16} className="text-white/20 group-hover:text-white transition-colors" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Smart Goal Construction Preview Pane */
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <button 
-                type="button" 
-                onClick={() => setShowGoalSelector(false)}
-                className="text-xs font-bold text-[#9B9691] hover:text-white flex items-center gap-1"
-              >
-                <ArrowLeft size={14} />
-                <span>Back</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1.5 p-3.5 bg-[#10B981]/5 border border-[#10B981]/10 rounded-xl">
-              <Sparkles size={14} className="text-[#10B981] shrink-0" />
-              <p className="text-[11px] text-[#10B981] font-semibold">
-                Smart heuristic suggestions mapped title and details from response inputs.
-              </p>
-            </div>
-
-            <div className="space-y-4 pt-2">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">Suggested Goal Title</label>
-                <input
-                  type="text"
-                  value={goalTitle}
-                  onChange={(e) => setGoalTitle(e.target.value)}
-                  className="w-full px-4.5 py-3 rounded-xl bg-[#161412] border border-white/5 text-white focus:outline-none focus:border-[#10B981] font-satoshi text-sm"
-                  placeholder="Goal Title..."
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">Suggested Goal Details</label>
-                <textarea
-                  rows={6}
-                  value={goalDescription}
-                  onChange={(e) => setGoalDescription(e.target.value)}
-                  className="w-full px-4.5 py-3 rounded-xl bg-[#161412] border border-white/5 text-white focus:outline-none focus:border-[#10B981] font-satoshi leading-relaxed text-sm resize-none"
-                  placeholder="Goal Details..."
-                />
-              </div>
-
-              <div className="flex items-center gap-2 text-[11px] text-[#9B9691] bg-white/[0.02] p-3 rounded-xl border border-white/5">
-                <LinkIcon size={12} className="text-[#10B981] shrink-0" />
-                <span>Response link metadata `source:kylrixform:${submission.formId}` will be appended automatically.</span>
-              </div>
-
-              <button
-                type="button"
-                disabled={convertingGoal || !goalTitle.trim()}
-                onClick={handleCreateGoalSubmit}
-                className="w-full py-3.5 bg-[#10B981] text-black font-extrabold text-xs rounded-xl shadow-[0_8px_30px_rgb(16,185,129,0.2)] hover:bg-[#0ea673] hover:translate-y-[-1px] transition-all duration-200 font-satoshi flex items-center justify-center gap-1.5"
-              >
-                {convertingGoal ? 'Constructing Goal...' : 'Confirm and Create Goal'}
-              </button>
             </div>
           </div>
         )}
+
+        {/* Response Data Section */}
+        <div className="space-y-4">
+          <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">RESPONSE DATA</span>
+          <div className="space-y-3.5">
+            {Object.entries(payloadData)
+              .filter(([key]) => key !== '_ghost')
+              .map(([key, value]: [string, any]) => (
+                <div key={key} className="space-y-1.5">
+                  <span className="block text-xs font-bold text-[#9B9691] capitalize font-satoshi">
+                    {schemaMap?.[key] || key.split(/(?=[A-Z])/).join(' ').replace(/_/g, ' ') || 'Field'}
+                  </span>
+                  <div className="p-4 rounded-[18px] bg-[#161412] border border-white/5 hover:border-[#10B981]/30 hover:bg-[#10B981]/[0.02] transition-all duration-200">
+                    {Array.isArray(value) ? (
+                      <div className="flex flex-wrap gap-1">
+                        {value.map((v, i) => (
+                          <span key={i} className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/5 text-white/60">
+                            {String(v)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm font-bold text-white break-words leading-relaxed font-satoshi">
+                        {String(value)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* Workflow Action Triggers */}
+        <div className="space-y-3 pt-2">
+          <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">INTELLIGENT WORKFLOW ACTIONS</span>
+          <div className="flex flex-col gap-2.5">
+            <button
+              type="button"
+              disabled={convertingGoal}
+              onClick={handleCreateGoalInstantly}
+              className="w-full py-3.5 bg-[#10B981] hover:bg-[#0ea673] text-black font-extrabold text-xs rounded-xl shadow-[0_8px_30px_rgb(16,185,129,0.2)] hover:translate-y-[-1px] transition-all duration-200 font-satoshi flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              <Target size={14} />
+              <span>{convertingGoal ? 'Spinning up Execution Goal...' : 'Spin up Execution Goal in Workspace'}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Footer raw dump */}
