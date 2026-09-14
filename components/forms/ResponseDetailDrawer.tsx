@@ -11,8 +11,11 @@ import {
   ChevronRight,
   MessageSquare,
   Sparkles,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Ghost,
+  Crown
 } from 'lucide-react';
+import { GHOST_FIELDS_REGISTRY } from '@/lib/forms/ghost-fields';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { convertResponseToGoal, createthreadNoteForProject } from '@/lib/actions/client-ops';
@@ -223,32 +226,70 @@ export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }:
               </div>
             </div>
 
+            {/* Account & Ghost Telemetry Context Card (if captured) */}
+            {payloadData._ghost && typeof payloadData._ghost === 'object' && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Ghost className="w-4 h-4 text-[#6366F1]" />
+                  <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">
+                    ACCOUNT TELEMETRY & CONTEXT
+                  </span>
+                </div>
+                <div className="p-4 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/30 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {Object.entries(payloadData._ghost).map(([gKey, gVal]: [string, any]) => {
+                      const gfDef = GHOST_FIELDS_REGISTRY[gKey];
+                      const label = gfDef?.label || gKey;
+                      const displayVal = typeof gVal === 'object' ? JSON.stringify(gVal) : String(gVal);
+                      const isPro = gKey === 'subscription_tier' && ['PRO', 'TEAM', 'LIFETIME', 'ORG'].includes(String(gVal).toUpperCase());
+
+                      return (
+                        <div key={gKey} className="p-3 rounded-xl bg-[#000000] border border-white/10 flex flex-col justify-between">
+                          <span className="text-[9px] font-mono font-bold uppercase text-[#9B9691] truncate block">
+                            {label}
+                          </span>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            {isPro && <Crown size={12} className="text-amber-400 shrink-0" />}
+                            <span className={`text-xs font-bold font-mono truncate ${isPro ? 'text-amber-300' : 'text-white'}`}>
+                              {displayVal}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Response Data Section */}
             <div className="space-y-4">
               <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">RESPONSE DATA</span>
               <div className="space-y-3.5">
-                {Object.entries(payloadData).map(([key, value]: [string, any]) => (
-                  <div key={key} className="space-y-1.5">
-                    <span className="block text-xs font-bold text-[#9B9691] capitalize font-satoshi">
-                      {schemaMap?.[key] || key.split(/(?=[A-Z])/).join(' ').replace(/_/g, ' ') || 'Field'}
-                    </span>
-                    <div className="p-4 rounded-[18px] bg-[#161412] border border-white/5 hover:border-[#10B981]/30 hover:bg-[#10B981]/[0.02] transition-all duration-200">
-                      {Array.isArray(value) ? (
-                        <div className="flex flex-wrap gap-1">
-                          {value.map((v, i) => (
-                            <span key={i} className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/5 text-white/60">
-                              {String(v)}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm font-bold text-white break-words leading-relaxed font-satoshi">
-                          {String(value)}
-                        </p>
-                      )}
+                {Object.entries(payloadData)
+                  .filter(([key]) => key !== '_ghost')
+                  .map(([key, value]: [string, any]) => (
+                    <div key={key} className="space-y-1.5">
+                      <span className="block text-xs font-bold text-[#9B9691] capitalize font-satoshi">
+                        {schemaMap?.[key] || key.split(/(?=[A-Z])/).join(' ').replace(/_/g, ' ') || 'Field'}
+                      </span>
+                      <div className="p-4 rounded-[18px] bg-[#161412] border border-white/5 hover:border-[#10B981]/30 hover:bg-[#10B981]/[0.02] transition-all duration-200">
+                        {Array.isArray(value) ? (
+                          <div className="flex flex-wrap gap-1">
+                            {value.map((v, i) => (
+                              <span key={i} className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/5 text-white/60">
+                                {String(v)}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm font-bold text-white break-words leading-relaxed font-satoshi">
+                            {String(value)}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
 

@@ -4,6 +4,8 @@ import React, { useEffect, useState, use } from 'react';
 import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ArrowLeft } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
+import { getEnabledGhostFields, resolveGhostFields } from '@/lib/forms/ghost-fields';
+import { GhostFieldsNotice } from '@/components/forms/GhostFieldsNotice';
 import { secureUploadFile, createthreadNoteChat } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
@@ -235,7 +237,14 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
         setError(null);
 
         try {
-            await FormsService.submitForm(resolvedParams.id, JSON.stringify(formData));
+            const enabledGhost = getEnabledGhostFields(form?.settings);
+            let submissionPayload = { ...formData };
+            if (enabledGhost.length > 0) {
+                const ghostData = await resolveGhostFields(enabledGhost, currentUser);
+                submissionPayload._ghost = ghostData;
+            }
+
+            await FormsService.submitForm(resolvedParams.id, JSON.stringify(submissionPayload));
             setSubmitted(true);
             // Clear local draft from RxDB
             await LocalEngine.cacheDelete(`form_draft_${resolvedParams.id}`);
@@ -604,15 +613,18 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     <div className="flex flex-col gap-8">
                         {/* Title and description on the very first question */}
                         {currentStep === 0 && (
-                            <div className="mb-4">
-                                <h1 className="text-3xl md:text-4.5xl font-extrabold font-clash text-white tracking-tight leading-tight">
-                                    {form?.title}
-                                </h1>
-                                {form?.description && (
-                                    <p className="text-zinc-400 font-satoshi font-normal leading-relaxed text-sm md:text-base mt-2">
-                                        {form.description}
-                                    </p>
-                                )}
+                            <div className="mb-4 space-y-3">
+                                <div>
+                                    <h1 className="text-3xl md:text-4.5xl font-extrabold font-clash text-white tracking-tight leading-tight">
+                                        {form?.title}
+                                    </h1>
+                                    {form?.description && (
+                                        <p className="text-zinc-400 font-satoshi font-normal leading-relaxed text-sm md:text-base mt-2">
+                                            {form.description}
+                                        </p>
+                                    )}
+                                </div>
+                                <GhostFieldsNotice ghostFields={getEnabledGhostFields(form?.settings)} />
                             </div>
                         )}
 
