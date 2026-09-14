@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   X, 
   ArrowLeft, 
@@ -8,16 +8,11 @@ import {
   User, 
   Database,
   Target,
-  ChevronRight,
-  MessageSquare,
-  Sparkles,
-  Link as LinkIcon,
   Ghost,
   Crown
 } from 'lucide-react';
 import { GHOST_FIELDS_REGISTRY } from '@/lib/forms/ghost-fields';
 import { useToast } from '@/components/ui/Toast';
-import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { convertResponseToGoal } from '@/lib/actions/client-ops';
 import { useAuth } from '@/lib/auth';
 import { hasPaidKylrixPlan } from '@/lib/utils';

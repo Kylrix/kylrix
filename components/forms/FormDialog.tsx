@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   Plus,
@@ -232,7 +232,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
-  const isPro = hasPaidKylrixPlan(user);
+  const _isPro = hasPaidKylrixPlan(user);
   const { invalidate } = useDataNexus();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const { setIsDrawerOpen } = useDrawerState();
@@ -763,7 +763,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                       removeOption={removeOption}
                       isChoiceType={isChoiceType}
                       user={user}
-                      openProUpgrade={openPro}
+                      openProUpgrade={openProUpgrade}
                       openSettingsDrawer={openSettingsDrawer}
                     />
                   ))}
