@@ -2100,3 +2100,102 @@ export async function purgeExpiredTrashSecure(input?: { retentionDays?: number; 
   };
 }
 
+/**
+ * Server action to replicate account details and master keychain (encryption system)
+ * from self-hosted instance to cloud (or between nodes) using System Client and Server SDK.
+ */
+export async function replicateAccountAndKeychainSecure(params: {
+  cloudEndpoint?: string;
+  token?: string;
+  jwt?: string;
+}) {
+  try {
+    const actor = await getActor(params.jwt);
+    if (!actor || !actor.$id) {
+      return { success: false, error: 'Unauthorized: Valid user session required.' };
+    }
+
+    const { createSystemClient, createSystemTablesDB } = await import('@/lib/appwrite-admin');
+    const { normalizeCloudEndpoint } = await import('@/lib/sync/cloud-sync-client');
+    const systemClient = createSystemClient();
+    const tables: any = createSystemTablesDB();
+
+    // 1. Fetch local account info
+    let localUser: any = null;
+    try {
+      localUser = await systemClient.users.get(actor.$id);
+    } catch {
+      localUser = { $id: actor.$id, email: actor.email, name: actor.name };
+    }
+
+    // 2. Fetch local keychain rows
+    let localKeychainRows: any[] = [];
+    try {
+      const keychainRes = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+        queries: [Query.equal('userId', actor.$id), Query.limit(20)],
+      });
+      localKeychainRows = keychainRes.rows || [];
+    } catch (err) {
+      console.warn('[replicateAccountAndKeychainSecure] Local keychain query warning:', err);
+    }
+
+    const cleanEndpoint = normalizeCloudEndpoint(params.cloudEndpoint || '');
+    const cleanToken = (params.token || '').trim();
+
+    if (cleanToken && cleanEndpoint) {
+      const res = await fetch(`${cleanEndpoint}/sync/account`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${cleanToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          account: {
+            userId: localUser.$id,
+            email: localUser.email,
+            name: localUser.name,
+          },
+          keychain: localKeychainRows.map((r: any) => ({
+            type: r.type,
+            wrappedKey: r.wrappedKey,
+            salt: r.salt,
+            params: r.params,
+            isArgon: r.isArgon,
+            authPass: r.authPass,
+          })),
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        return {
+          success: false,
+          error: errJson?.error?.message || errJson?.error || `HTTP ${res.status}: ${res.statusText}`,
+        };
+      }
+
+      const responseData = await res.json();
+      return {
+        success: true,
+        data: responseData?.data || responseData,
+        keychainCount: localKeychainRows.length,
+      };
+    }
+
+    return {
+      success: true,
+      userId: localUser.$id,
+      email: localUser.email,
+      keychainCount: localKeychainRows.length,
+    };
+  } catch (error: any) {
+    console.error('Error in replicateAccountAndKeychainSecure:', error);
+    return {
+      success: false,
+      error: error?.message || 'Failed to replicate account and keychain',
+    };
+  }
+}

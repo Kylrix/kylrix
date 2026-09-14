@@ -244,11 +244,14 @@ export function CloudSyncSection() {
               <Cloud size={20} />
             </div>
             <div>
-              <h3 className="text-sm font-black text-white font-mono tracking-tight flex items-center gap-2">
+              <h3 className="text-sm font-black text-white font-mono tracking-tight flex items-center gap-2 flex-wrap">
                 Cloud Replication & Sync
-                {isSelfHosted && (
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                    Self-Hosted Node
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  {isSelfHosted ? 'Self-Hosted Node' : 'Cloud Instance'}
+                </span>
+                {config?.cloudAccount?.node && (
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
+                    Target: {config.cloudAccount.node.isKylrixCloud ? 'Kylrix Cloud' : config.cloudAccount.node.isCloud ? 'Cloud' : 'Remote Node'}
                   </span>
                 )}
               </h3>
@@ -334,16 +337,18 @@ export function CloudSyncSection() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
               <div className="bg-[#000000] p-2 rounded-lg border border-white/10">
+                <span className="text-[10px] text-white/50 block font-mono">ACCOUNT & VAULT</span>
+                <span className="font-black text-emerald-400">
+                  {lastStats.accountReplicated ? 'Synced & Replicated' : 'Connected'}
+                </span>
+              </div>
+              <div className="bg-[#000000] p-2 rounded-lg border border-white/10">
                 <span className="text-[10px] text-white/50 block font-mono">PULLED</span>
                 <span className="font-black text-white">{lastStats.notesPulled + lastStats.goalsPulled} items</span>
               </div>
               <div className="bg-[#000000] p-2 rounded-lg border border-white/10">
                 <span className="text-[10px] text-white/50 block font-mono">PUSHED</span>
                 <span className="font-black text-emerald-400">{lastStats.notesPushed + lastStats.goalsPushed} items</span>
-              </div>
-              <div className="bg-[#000000] p-2 rounded-lg border border-white/10">
-                <span className="text-[10px] text-white/50 block font-mono">SKIPPED/CLEAN</span>
-                <span className="font-black text-white/70">{lastStats.notesSkipped + lastStats.goalsSkipped} items</span>
               </div>
               <div className="bg-[#000000] p-2 rounded-lg border border-white/10">
                 <span className="text-[10px] text-white/50 block font-mono">RESOLVED</span>
