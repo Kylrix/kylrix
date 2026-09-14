@@ -358,6 +358,21 @@ export const FormsService = {
             }
         }
 
+        // Execute default automated response action: convert response to workspace goal
+        try {
+            if (settings.autoGoalAction !== false) {
+                if (typeof window !== 'undefined') {
+                    const { convertResponseToGoal } = await import('@/lib/actions/client-ops');
+                    void convertResponseToGoal(submission.$id).catch(() => {});
+                } else {
+                    const { convertResponseToGoalSecure } = await import('@/lib/actions/secure-ops/projects');
+                    void convertResponseToGoalSecure(submission.$id).catch(() => {});
+                }
+            }
+        } catch (e) {
+            console.error('[Forms] Auto goal action execution failed', e);
+        }
+
         return submission;
     },
 

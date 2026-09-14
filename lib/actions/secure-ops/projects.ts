@@ -17,7 +17,7 @@ import {
   ProjectSchema
 } from '@/lib/validations/schemas';
 import { filterRootWorkspaceProjects, isWorkspaceRecord } from '@/lib/projects/sub-projects';
-import { ownedWorkspaceListQueries, subProjectsListQueries } from '@/lib/projects/workspace-queries';
+import { ownedWorkspaceListQueries } from '@/lib/projects/workspace-queries';
 
 // Import interfaces / types from shared
 
@@ -164,27 +164,6 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
   return filterRootWorkspaceProjects(Array.from(projectsListMap.values()));
 }
 
-export async function listSubProjectsForWorkspaceSecure(workspaceId: string, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor || !actor.$id) {
-    throw new Error('Unauthorized');
-  }
-
-  const hasAccess = await verifyProjectPermission(workspaceId, actor.$id, 'viewer');
-  if (!hasAccess) {
-    throw new Error('Forbidden: Insufficient permissions to view projects in this workspace');
-  }
-
-  const tables = createSystemTablesDB();
-  const res = await tables.listRows({
-    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-    tableId: 'projects',
-    queries: subProjectsListQueries(workspaceId) as any,
-  });
-
-  return res.rows;
-}
-
 export async function createProjectSecure(data: any, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
@@ -194,21 +173,6 @@ export async function createProjectSecure(data: any, jwt?: string) {
   // Rigorous runtime validation
   const validated = ProjectSchema.parse(data);
   const userTier = getUserSubscriptionTier(actor);
-  const kind = validated.kind ?? 'workspace';
-  const parentProjectId = validated.parentProjectId ?? null;
-
-  if (kind === 'project') {
-    if (!parentProjectId) {
-      throw new Error('parentProjectId is required when creating a project');
-    }
-    if (!allowsCollaboratorSharing(userTier, 'project')) {
-      throw new Error('Projects require a Teams plan. Upgrade to organize work inside workspaces.');
-    }
-    const canManageParent = await verifyProjectPermission(parentProjectId, actor.$id, 'editor');
-    if (!canManageParent) {
-      throw new Error('Forbidden: Cannot create a project in this workspace');
-    }
-  }
 
   const tables = createSystemTablesDB();
   const existingProjects = await tables.listRows({
@@ -219,7 +183,7 @@ export async function createProjectSecure(data: any, jwt?: string) {
     ] as any
   });
   const maxProjects = getProjectCap(userTier);
-  if (kind !== 'project' && existingProjects.rows.length >= maxProjects) {
+  if (existingProjects.rows.length >= maxProjects) {
     throw new Error(`Limit reached: ${userTier} plan is limited to ${maxProjects} project${maxProjects === 1 ? '' : 's'}. Upgrade to PRO or TEAMS to create more projects.`);
   }
 
@@ -231,8 +195,8 @@ export async function createProjectSecure(data: any, jwt?: string) {
     visibility,
     isPublic: validated.isPublic ?? visibility === 'public',
     isGuest: validated.isGuest ?? visibility === 'public',
-    kind,
-    parentProjectId: kind === 'project' ? parentProjectId : null,
+    kind: 'workspace',
+    parentProjectId: null,
     ownerId: actor.$id};
 
   const isCreateAllowed = await verifyResourcePermissionSecure({

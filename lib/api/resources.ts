@@ -56,15 +56,12 @@ import {
   shapeTotpSecret,
   shapeWorkspace,
   shapeWorkspaceCollaborator,
-  shapeWorkspaceProject,
 } from '@/sdk/contracts';
 import {
   filterRootWorkspaceProjects,
-  getParentProjectId,
-  isSubProjectRecord,
   isWorkspaceRecord,
 } from '@/lib/projects/sub-projects';
-import { ownedWorkspaceListQueries, subProjectsListQueries } from '@/lib/projects/workspace-queries';
+import { ownedWorkspaceListQueries } from '@/lib/projects/workspace-queries';
 import { assertActorFeatureAccess } from '@/lib/tools/gate';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
@@ -1758,7 +1755,7 @@ export const ApiResources = {
     return { id, deleted: true };
   },
 
-  async listWorkspaceProjects(actor: ApiActor, workspaceId: string, limit = 25) {
+  async listWorkspaceProjects(actor: ApiActor, workspaceId: string, _limit = 25) {
     requireScope(actor, 'workspaces:read');
     await assertActorFeatureAccess(actor.userId, 'projects');
     await this.getWorkspace(actor, workspaceId);
@@ -1766,114 +1763,28 @@ export const ApiResources = {
     const canView = await verifyProjectPermission(workspaceId, actor.userId, 'viewer');
     if (!canView) forbidden('Insufficient permissions on workspace');
 
-    const tables = systemTables();
-    const res = await tables.listRows({
-      databaseId: FLOW_DB,
-      tableId: 'projects',
-      queries: [
-        ...subProjectsListQueries(workspaceId),
-        Query.limit(Math.min(100, Math.max(1, limit))),
-      ] as any,
-    });
-
-    return (res.rows || []).map((row: any) => shapeWorkspaceProject(row, workspaceId));
+    return [];
   },
 
-  async createWorkspaceProject(actor: ApiActor, workspaceId: string, body: Record<string, unknown>) {
-    requireScope(actor, 'workspaces:write');
-    await assertActorFeatureAccess(actor.userId, 'projects');
-    await this.getWorkspace(actor, workspaceId);
-    const { verifyProjectPermission } = await import('@/lib/actions/secure-ops/shared');
-    const canEdit = await verifyProjectPermission(workspaceId, actor.userId, 'editor');
-    if (!canEdit) forbidden('Insufficient permissions on workspace');
-
-    const title = String(body.title || '').trim();
-    if (!title) badRequest('title required');
-
-    const now = new Date().toISOString();
-    const tables = systemTables();
-    const visibility = String(body.visibility || 'private');
-    const row = await tables.createRow({
-      databaseId: FLOW_DB,
-      tableId: 'projects',
-      rowId: ID.unique(),
-      data: {
-        title: title.slice(0, 255),
-        summary: body.summary != null ? String(body.summary) : '',
-        ownerId: actor.userId,
-        visibility,
-        status: 'active',
-        kind: 'project',
-        parentProjectId: workspaceId,
-        isPublic: visibility === 'public',
-        isGuest: visibility === 'public',
-        createdAt: now,
-        updatedAt: now,
-      },
-      permissions: [Permission.read(Role.user(actor.userId))],
-    });
-    return shapeWorkspaceProject(row as Record<string, unknown>, workspaceId);
+  async createWorkspaceProject(_actor: ApiActor, _workspaceId: string, _body: Record<string, unknown>) {
+    badRequest('Sub-projects are no longer supported. Create a Workspace or Goal instead.');
   },
 
-  async getWorkspaceProject(actor: ApiActor, workspaceId: string, projectId: string) {
-    requireScope(actor, 'workspaces:read');
-    await assertActorFeatureAccess(actor.userId, 'projects');
-    const row = await this.resolveWorkspaceSubProject(actor, workspaceId, projectId);
-    return shapeWorkspaceProject(row, workspaceId);
+  async getWorkspaceProject(_actor: ApiActor, _workspaceId: string, _projectId: string) {
+    notFound('Project not found');
   },
 
   async updateWorkspaceProject(
-    actor: ApiActor,
-    workspaceId: string,
-    projectId: string,
-    body: Record<string, unknown>,
+    _actor: ApiActor,
+    _workspaceId: string,
+    _projectId: string,
+    _body: Record<string, unknown>,
   ) {
-    requireScope(actor, 'workspaces:write');
-    await assertActorFeatureAccess(actor.userId, 'projects');
-    await this.resolveWorkspaceSubProject(actor, workspaceId, projectId, 'editor');
-    const tables = systemTables();
-    const patch: Record<string, unknown> = { updatedAt: new Date().toISOString() };
-    if (body.title !== undefined) patch.title = String(body.title).trim().slice(0, 255);
-    if (body.summary !== undefined) patch.summary = String(body.summary);
-    if (body.visibility !== undefined) {
-      patch.visibility = String(body.visibility);
-      patch.isPublic = String(body.visibility) === 'public';
-    }
-    const row = await tables.updateRow({
-      databaseId: FLOW_DB,
-      tableId: 'projects',
-      rowId: projectId,
-      data: patch as any,
-    });
-    return shapeWorkspaceProject(row as Record<string, unknown>, workspaceId);
+    notFound('Project not found');
   },
 
-  async deleteWorkspaceProject(actor: ApiActor, workspaceId: string, projectId: string) {
-    requireScope(actor, 'workspaces:write');
-    await assertActorFeatureAccess(actor.userId, 'projects');
-    await this.resolveWorkspaceSubProject(actor, workspaceId, projectId, 'editor');
-    const tables = systemTables();
-    await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: projectId });
-    return { id: projectId, workspaceId, deleted: true };
-  },
-
-  async resolveWorkspaceSubProject(
-    actor: ApiActor,
-    workspaceId: string,
-    projectId: string,
-    minLevel: 'viewer' | 'editor' = 'viewer',
-  ) {
-    await this.getWorkspace(actor, workspaceId);
-    const tables = systemTables();
-    const row = (await tables
-      .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: projectId })
-      .catch(() => null)) as Record<string, unknown> | null;
-    if (!row || !isSubProjectRecord(row)) notFound('Project not found');
-    if (getParentProjectId(row) !== workspaceId) notFound('Project not found');
-    const { verifyProjectPermission } = await import('@/lib/actions/secure-ops/shared');
-    const ok = await verifyProjectPermission(workspaceId, actor.userId, minLevel);
-    if (!ok) forbidden('Insufficient permissions on workspace');
-    return row;
+  async deleteWorkspaceProject(_actor: ApiActor, _workspaceId: string, _projectId: string) {
+    notFound('Project not found');
   },
 
   async attachObjectToWorkspace(actor: ApiActor, workspaceId: string, body: Record<string, unknown>) {

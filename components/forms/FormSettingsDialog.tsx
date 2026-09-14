@@ -4,12 +4,18 @@ import {
   Copy, 
   Clock, 
   Globe,
-  Ghost
+  Ghost,
+  Target,
+  Sparkles,
+  Crown
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { GHOST_FIELDS_REGISTRY, getEnabledGhostFields } from '@/lib/forms/ghost-fields';
 import { Forms, FormsStatus } from '@/generated/appwrite/types';
 import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/lib/auth';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 interface FormSettingsDialogProps {
   open: boolean;
@@ -20,10 +26,16 @@ interface FormSettingsDialogProps {
 
 export default function FormSettingsDialog({ open, onClose, form, onSaved }: FormSettingsDialogProps) {
   const { showSuccess } = useToast();
+  const { user } = useAuth();
+  const { openProUpgrade } = useProUpgrade();
+  const isPaidUser = hasPaidKylrixPlan(user);
+
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'draft' | 'published' | 'archived'>('draft');
   const [allowAnonymousView, setAllowAnonymousView] = useState(false);
   const [allowAnonymousFill, setAllowAnonymousFill] = useState(false);
+  const [autoGoalAction, setAutoGoalAction] = useState(true);
+  const [aiTriageEnabled, setAiTriageEnabled] = useState(false);
   const [expiresAt, setExpiresAt] = useState('');
   const [enabledGhostFields, setEnabledGhostFields] = useState<string[]>([]);
 
@@ -38,6 +50,8 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
       // Migrate to the new direct column paradigms
       setAllowAnonymousView(form.isPublic ?? (status === 'published'));
       setAllowAnonymousFill(form.isGuest ?? settings.allowAnonymousFill ?? false);
+      setAutoGoalAction(settings.autoGoalAction !== false);
+      setAiTriageEnabled(Boolean(settings.aiTriageEnabled));
       setExpiresAt(settings.expiresAt ? settings.expiresAt.slice(0, 16) : '');
       setEnabledGhostFields(getEnabledGhostFields(settings));
     }
@@ -63,6 +77,8 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
         ...existingSettings,
         allowAnonymousView,
         allowAnonymousFill,
+        autoGoalAction,
+        aiTriageEnabled: isPaidUser ? aiTriageEnabled : false,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
         ghostFields: enabledGhostFields,
       };
@@ -166,6 +182,77 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
                 <span>Copy Portal Link</span>
               </button>
             )}
+          </div>
+
+          <div className="border-t border-white/5" />
+
+          {/* Automated Response Actions */}
+          <div className="space-y-3">
+            <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">AUTOMATED RESPONSE ACTIONS</span>
+
+            {/* Default Form Action: Response to Goal */}
+            <div className="p-3.5 rounded-xl bg-black border border-white/10 flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <Target size={14} className="text-[#10B981]" />
+                  <span className="text-xs font-bold text-white font-satoshi">Auto-create Goal in Workspace</span>
+                </div>
+                <span className="block text-[10px] text-[#9B9691] mt-0.5 leading-normal">
+                  Automatically convert incoming form responses into execution Goals in this workspace.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAutoGoalAction(!autoGoalAction)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none shrink-0 ${
+                  autoGoalAction ? 'bg-[#10B981]' : 'bg-white/10'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-black transition-transform ${
+                    autoGoalAction ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* AI Auto-Triage Action */}
+            <div className="p-3.5 rounded-xl bg-black border border-white/10 flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={14} className="text-[#6366F1]" />
+                  <span className="text-xs font-bold text-white font-satoshi">AI Response Auto-Triage</span>
+                  {!isPaidUser && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-bold font-mono uppercase flex items-center gap-1">
+                      <Crown size={10} />
+                      PRO
+                    </span>
+                  )}
+                </div>
+                <span className="block text-[10px] text-[#9B9691] mt-0.5 leading-normal">
+                  Automatically categorize, score, and extract action items from form responses using AI.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isPaidUser) {
+                    openProUpgrade('AI Response Triage');
+                    return;
+                  }
+                  setAiTriageEnabled(!aiTriageEnabled);
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none shrink-0 ${
+                  aiTriageEnabled && isPaidUser ? 'bg-[#6366F1]' : 'bg-white/10'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-black transition-transform ${
+                    aiTriageEnabled && isPaidUser ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           <div className="border-t border-white/5" />

@@ -1,40 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { ProjectsService } from '@/lib/appwrite/projects';
-import type { Projects } from '@/types/appwrite';
-
 /**
- * Sub-projects under a parent workspace (projects.kind=project + parentProjectId).
+ * Deprecated hook — sub-projects removed from ecosystem in favor of workspaces + goals.
  */
-export function useSubProjects(workspaceId: string | null | undefined) {
-  const [projects, setProjects] = useState<Projects[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!workspaceId) {
-      setProjects([]);
-      return;
-    }
-    setLoading(true);
-    try {
-      const rows = await ProjectsService.listSubProjects(workspaceId);
-      setProjects(Array.isArray(rows) ? (rows as unknown as Projects[]) : []);
-    } catch {
-      setProjects([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [workspaceId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
+export function useSubProjects(_workspaceId?: string | null) {
   return {
-    projects,
-    loading,
-    refetch: load,
+    projects: [],
+    loading: false,
+    refetch: async () => {},
     invalidate: () => {},
   };
 }
