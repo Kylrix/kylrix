@@ -3464,4 +3464,171 @@ export const ApiResources = {
     await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'agentic_sessions', rowId: id });
     return { id, deleted: true };
   },
+
+  async syncHandshake(actor: ApiActor) {
+    const { isSelfHostedDeployment, isKylrixCloud } = await import('@/lib/deployment/surface');
+    const tables = systemTables();
+    let keychainCount = 0;
+    try {
+      const res = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+        queries: [Query.equal('userId', actor.userId), Query.limit(20)],
+      });
+      keychainCount = res.rows.length;
+    } catch {
+      keychainCount = 0;
+    }
+
+    return {
+      node: {
+        isCloud: !isSelfHostedDeployment() || isKylrixCloud(),
+        isSelfHosted: isSelfHostedDeployment(),
+        isKylrixCloud: isKylrixCloud(),
+        nodeVersion: '1.0.0',
+        capabilities: ['account_sync', 'keychain_sync', 'notes_sync', 'goals_sync'],
+      },
+      account: {
+        userId: actor.userId,
+        hasKeychain: keychainCount > 0,
+        keychainCount,
+      },
+    };
+  },
+
+  async syncAccount(actor: ApiActor, body: Record<string, unknown>) {
+    const { createSystemClient, createSystemTablesDB } = await import('@/lib/appwrite-admin');
+    const { isSelfHostedDeployment, isKylrixCloud } = await import('@/lib/deployment/surface');
+
+    const accountObj = (body.account || {}) as Record<string, any>;
+    const targetEmail = String(accountObj.email || body.email || '').trim().toLowerCase();
+    const sourceUserId = String(accountObj.userId || body.userId || actor.userId).trim();
+    const sourceName = String(accountObj.name || body.name || '').trim();
+
+    const keychainEntries = Array.isArray(body.keychain)
+      ? body.keychain
+      : Array.isArray(accountObj.keychain)
+      ? accountObj.keychain
+      : [];
+
+    const sysClient = createSystemClient();
+    const sysUsers = sysClient.users;
+    const sysTables: any = createSystemTablesDB();
+
+    let targetUserId = actor.userId;
+    let replicatedAccount = false;
+
+    // Failsafe 1: Look up user on Cloud target by email first to prevent duplicate user creation errors in Appwrite
+    if (targetEmail) {
+      const existingByEmail = await sysUsers.list([Query.equal('email', targetEmail), Query.limit(1)]).catch(() => ({ total: 0, users: [] }));
+      if (existingByEmail.total > 0 && existingByEmail.users[0]) {
+        targetUserId = existingByEmail.users[0].$id;
+      } else {
+        // Look up by sourceUserId
+        const existingById = await sysUsers.get(sourceUserId).catch(() => null);
+        if (existingById) {
+          targetUserId = existingById.$id;
+        } else {
+          // Create new user account on Cloud via Server SDK
+          try {
+            const newUser = await sysUsers.create(
+              sourceUserId || ID.unique(),
+              targetEmail,
+              undefined,
+              undefined,
+              sourceName || targetEmail.split('@')[0]
+            );
+            targetUserId = newUser.$id;
+            replicatedAccount = true;
+          } catch (err: any) {
+            console.warn('[syncAccount] Failed to replicate user, falling back to actor.userId:', err?.message);
+            targetUserId = actor.userId;
+          }
+        }
+      }
+    }
+
+    // Master Keychain & Encryption System Replication
+    let replicatedKeychain = false;
+    let syncedKeychainCount = 0;
+
+    if (keychainEntries.length > 0) {
+      const now = new Date().toISOString();
+
+      const existingKeychain = await sysTables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+        queries: [Query.equal('userId', targetUserId), Query.limit(20)],
+      }).catch(() => ({ rows: [] }));
+
+      const existingMap = new Map<string, any>();
+      for (const r of existingKeychain.rows || []) {
+        if (r.type) existingMap.set(r.type, r);
+      }
+
+      for (const entry of keychainEntries) {
+        if (!entry.wrappedKey || !entry.salt) continue;
+        const entryType = String(entry.type || 'password');
+        const existingRow = existingMap.get(entryType);
+
+        if (!existingRow) {
+          await sysTables.createRow({
+            databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+            tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+            rowId: ID.unique(),
+            data: {
+              userId: targetUserId,
+              type: entryType,
+              authPass: entry.authPass ?? true,
+              wrappedKey: String(entry.wrappedKey),
+              salt: String(entry.salt),
+              params: typeof entry.params === 'string' ? entry.params : JSON.stringify(entry.params || { algo: 'Argon2id', memory: 65536, iterations: 3, parallelism: 4 }),
+              isArgon: entry.isArgon ?? true,
+              isPending: false,
+              createdAt: now,
+              updatedAt: now,
+            },
+            permissions: [
+              Permission.read(Role.user(targetUserId)),
+              Permission.update(Role.user(targetUserId)),
+              Permission.delete(Role.user(targetUserId)),
+            ],
+          }).catch((e: any) => console.warn('[syncAccount] Keychain row create warn:', e?.message));
+          replicatedKeychain = true;
+          syncedKeychainCount++;
+        } else {
+          if (existingRow.wrappedKey !== entry.wrappedKey || existingRow.salt !== entry.salt) {
+            await sysTables.updateRow({
+              databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+              tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+              rowId: existingRow.$id,
+              data: {
+                wrappedKey: String(entry.wrappedKey),
+                salt: String(entry.salt),
+                authPass: entry.authPass ?? true,
+                params: typeof entry.params === 'string' ? entry.params : JSON.stringify(entry.params || { algo: 'Argon2id', memory: 65536, iterations: 3, parallelism: 4 }),
+                isArgon: entry.isArgon ?? true,
+                updatedAt: now,
+              },
+            }).catch((e: any) => console.warn('[syncAccount] Keychain row update warn:', e?.message));
+            replicatedKeychain = true;
+          }
+          syncedKeychainCount++;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      targetUserId,
+      email: targetEmail || undefined,
+      replicatedAccount,
+      replicatedKeychain,
+      syncedKeychainCount,
+      node: {
+        isCloud: !isSelfHostedDeployment() || isKylrixCloud(),
+        isSelfHosted: isSelfHostedDeployment(),
+      },
+    };
+  },
 };

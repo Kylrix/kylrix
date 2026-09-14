@@ -15,6 +15,16 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     return jsonOk(await ApiResources.me(actor));
   }
 
+  // Cloud & Node Sync Handshake / Account Replication
+  if (a === 'sync') {
+    if ((b === 'handshake' || !b) && (method === 'GET' || method === 'POST')) {
+      return jsonOk(await ApiResources.syncHandshake(actor));
+    }
+    if (b === 'account' && method === 'POST') {
+      return jsonOk(await ApiResources.syncAccount(actor, await readBody()));
+    }
+  }
+
   // Token self-service
   if (a === S.token && !b && method === 'GET') return jsonOk(await ApiResources.tokenMe(actor));
   if (a === S.token && b === SUB.scopes && !c) {

@@ -31,6 +31,12 @@ export interface CloudAccountInfo {
     exportAllowed?: boolean;
     aiRateLimitMultiplier?: number;
   };
+  node?: {
+    isCloud?: boolean;
+    isSelfHosted?: boolean;
+    isKylrixCloud?: boolean;
+    capabilities?: string[];
+  };
 }
 
 export interface CloudSyncConfig {
@@ -49,6 +55,8 @@ export interface CloudSyncConfig {
 }
 
 export interface CloudSyncStats {
+  accountReplicated?: boolean;
+  keychainCount?: number;
   notesPulled: number;
   notesPushed: number;
   notesSkipped: number;
@@ -162,6 +170,31 @@ export async function verifyCloudConnection(
       },
     };
 
+    // Attempt node handshake probe for instance nature discovery
+    try {
+      const hsRes = await fetch(`${cleanEndpoint}/sync/handshake`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${cleanToken}`,
+          Accept: 'application/json',
+        },
+      });
+      if (hsRes.ok) {
+        const hsData = await hsRes.json();
+        const payload = hsData?.data || hsData;
+        if (payload?.node) {
+          account.node = {
+            isCloud: Boolean(payload.node.isCloud),
+            isSelfHosted: Boolean(payload.node.isSelfHosted),
+            isKylrixCloud: Boolean(payload.node.isKylrixCloud),
+            capabilities: Array.isArray(payload.node.capabilities) ? payload.node.capabilities : [],
+          };
+        }
+      }
+    } catch (_e) {
+      // Non-fatal handshake probe fallback
+    }
+
     return { ok: true, account };
   } catch (err: any) {
     return {
@@ -214,6 +247,25 @@ export async function executeCloudSync(
     }
     const cloudAccount = conn.account;
     await saveCloudSyncConfig({ cloudAccount });
+
+    // Priority 1: Account Identity & Master Encryption Keychain Replication
+    onProgress?.('Replicating account identity & master encryption keychain...', stats);
+    try {
+      const { replicateAccountAndKeychainSecure } = await import('@/lib/actions/secure-ops/misc');
+      const replRes = await replicateAccountAndKeychainSecure({
+        cloudEndpoint: endpoint,
+        token,
+      });
+
+      if (replRes.success) {
+        stats.accountReplicated = true;
+        stats.keychainCount = replRes.keychainCount ?? 1;
+      } else if (replRes.error) {
+        stats.errors.push(`Account/Keychain replication warning: ${replRes.error}`);
+      }
+    } catch (err: any) {
+      stats.errors.push(`Account/Keychain replication error: ${err?.message || err}`);
+    }
 
     const lastSyncTime = config.lastSyncAt ? new Date(config.lastSyncAt).getTime() : 0;
 
