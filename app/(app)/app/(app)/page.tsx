@@ -13,6 +13,7 @@ import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 
 import Link from 'next/link';
@@ -478,8 +479,10 @@ export default function IdeasPage() {
   );
 
   const activeNotes = useMemo(() => sourceNotes.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true), [sourceNotes]);
-  const pinnedNotes = useMemo(() => activeNotes.filter(checkIsPinned), [activeNotes, checkIsPinned]);
-  const unpinnedNotes = useMemo(() => activeNotes.filter((n: any) => !checkIsPinned(n)), [activeNotes, checkIsPinned]);
+  const { filteredItems: workspaceScopedNotes } = useWorkspaceFilteredItems(activeNotes, 'note');
+
+  const pinnedNotes = useMemo(() => workspaceScopedNotes.filter(checkIsPinned), [workspaceScopedNotes, checkIsPinned]);
+  const unpinnedNotes = useMemo(() => workspaceScopedNotes.filter((n: any) => !checkIsPinned(n)), [workspaceScopedNotes, checkIsPinned]);
 
   const tags = useMemo(() => {
     const fromNotes = activeNotes.flatMap((n: any) => n.tags || []).filter(Boolean);
