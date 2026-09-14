@@ -30,6 +30,7 @@ import {
     Download,
     AlertTriangle,
     ArrowUpDown,
+    LogOut,
 } from 'lucide-react';
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
 import { AgentsSettingsTab } from '@/components/settings/AgentsSettingsTab';
@@ -102,7 +103,7 @@ export default function SettingsPage() {
 }
 
 function SettingsPageInner() {
-    const { user, refreshUser, getJWT } = useAuth();
+    const { user, refreshUser, getJWT, logout } = useAuth();
     const { currentTier, expiresAt} = useSubscription();
     const {} = useAppwriteVault();
     const router = useRouter();
@@ -1148,6 +1149,31 @@ function SettingsPageInner() {
                             <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize mt-0.5">
                                 Account Management
                             </h2>
+                        </div>
+
+                        {/* Sign Out Card */}
+                        <div className="p-6 md:p-7 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0 border-2 border-rose-500/30">
+                                    <LogOut size={20} />
+                                </div>
+                                <div className="min-w-0">
+                                    <h3 className="text-base font-black text-white font-clash m-0">
+                                        Sign Out
+                                    </h3>
+                                    <p className="text-xs text-white/50 leading-relaxed font-medium mt-0.5 m-0">
+                                        End your active session on this device cleanly.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => void logout()}
+                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#161412] hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-2 border-rose-500/40 shrink-0"
+                            >
+                                <LogOut size={14} />
+                                <span>Sign Out</span>
+                            </button>
                         </div>
 
                         {/* Export & Data Sovereignty Card */}
