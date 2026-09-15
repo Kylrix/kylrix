@@ -5,7 +5,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
-import { getSessionProjectsList, projectObjectsKindCacheKey } from '@/lib/projects/projects-cache';
+import { getSessionProjectsList, projectObjectsCacheKey, projectObjectsKindCacheKey } from '@/lib/projects/projects-cache';
 import { normalizeProjectsList, warmProjectsList } from '@/lib/projects/warm-projects-list';
 import { isWorkspaceRecord } from '@/lib/projects/sub-projects';
 import type { ProjectObjects } from '@/types/appwrite';
@@ -721,16 +721,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const cacheKey = projectObjectsKindCacheKey(activeWorkspace.id, entityKind);
+        const overallCacheKey = projectObjectsCacheKey(activeWorkspace.id);
         const existing = (await LocalEngine.cacheGet<ProjectObjects[]>(cacheKey)) || [];
+        const existingOverall = (await LocalEngine.cacheGet<ProjectObjects[]>(overallCacheKey)) || [];
+        const optimisticRow = {
+          $id: `${activeWorkspace.id}:${entityKind}:${entityId}`,
+          entityId,
+          entityKind,
+          projectId: activeWorkspace.id,
+          $createdAt: new Date().toISOString(),
+        } as unknown as ProjectObjects;
+
         if (!existing.some((r) => r.entityId === entityId && r.entityKind === entityKind)) {
-          const optimisticRow = {
-            $id: `${activeWorkspace.id}:${entityKind}:${entityId}`,
-            entityId,
-            entityKind,
-            projectId: activeWorkspace.id,
-            $createdAt: new Date().toISOString(),
-          } as unknown as ProjectObjects;
           await LocalEngine.cacheSet(cacheKey, [...existing, optimisticRow]);
+        }
+        if (!existingOverall.some((r) => r.entityId === entityId && r.entityKind === entityKind)) {
+          await LocalEngine.cacheSet(overallCacheKey, [...existingOverall, optimisticRow]);
         }
       } catch {}
       try {

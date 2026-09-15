@@ -110,6 +110,7 @@ export default function EventList() {
             coverImageId: eventData.coverImage || '',
             recurrenceRule: '',
             isWorkspace: isCustomWorkspace,
+            projectId: isCustomWorkspace ? activeWorkspace!.id : undefined,
           } as any,
           eventPermissions,
         );
