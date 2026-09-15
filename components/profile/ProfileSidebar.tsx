@@ -71,8 +71,16 @@ export function ProfileSidebar({
     let cancelled = false;
     const cached = userId ? getCachedIdentityById(userId) : null;
     if (cached && !cancelled) setProfile((prev: any) => prev || cached);
+
     void (async () => {
       try {
+        const key = userId ? `profile_${userId}` : (username ? `profile_${username.replace(/^@/, '').toLowerCase()}` : null);
+        if (key) {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const localCopy = await LocalEngine.cacheGet<any>(key).catch(() => null);
+          if (localCopy && !cancelled) setProfile((prev: any) => prev || localCopy);
+        }
+
         let row: any = null;
         if (username) row = await UsersService.getProfile(username);
         else if (userId) row = await UsersService.getProfileById(userId);
