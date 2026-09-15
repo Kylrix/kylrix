@@ -13,15 +13,11 @@ import {
   ListItemIcon,
   ListItemText,
   CircularProgress,
-  alpha,
   useTheme,
   Tabs,
   Tab,
   Stack,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent} from '@/lib/openbricks/primitives';
+  Button} from '@/lib/openbricks/primitives';
 import { 
   X, 
   Search, 
@@ -32,8 +28,7 @@ import {
   Calendar,
   Tag as TagIcon,
   ClipboardList,
-  KeyRound,
-  Sparkles} from 'lucide-react';
+  KeyRound} from 'lucide-react';
 import { listFlowTasks, listKeepCredentials, Query, listTagsByUser } from '@/lib/appwrite';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';

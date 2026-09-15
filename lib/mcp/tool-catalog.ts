@@ -38,13 +38,6 @@ import {
   MCP_GOAL_LIST_INPUT,
   MCP_GOAL_LIST_OUTPUT,
   MCP_GOAL_UPDATE_INPUT,
-  MCP_MOMENT_COMMENT_CREATE_INPUT,
-  MCP_MOMENT_COMMENTS_LIST_INPUT,
-  MCP_MOMENT_COMMENTS_LIST_OUTPUT,
-  MCP_MOMENT_CREATE_INPUT,
-  MCP_MOMENT_GET_INPUT,
-  MCP_MOMENT_LIST_INPUT,
-  MCP_MOMENT_LIST_OUTPUT,
   MCP_NOTE_CREATE_INPUT,
   MCP_NOTE_DELETE_INPUT,
   MCP_NOTE_GET_INPUT,
@@ -79,8 +72,6 @@ import {
   MCP_WORKSPACE_LIST_INPUT,
   MCP_WORKSPACE_LIST_OUTPUT,
   MCP_WORKSPACE_UPDATE_INPUT,
-  MOMENT_COMMENT_JSON_SCHEMA,
-  MOMENT_RECORD_JSON_SCHEMA,
   NOTE_RECORD_JSON_SCHEMA,
   PROFILE_RECORD_JSON_SCHEMA,
   SCOPE_CATALOG_JSON_SCHEMA,
@@ -402,44 +393,7 @@ export const MCP_TOOL_ENTRIES: McpTool[] = [
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: true, priority: 0.5 },
   },
 
-  // ── 10. Moments / Feed ──
-  {
-    name: 'list_moments',
-    description: 'List public or personal moments (updates, notes, activity feed).',
-    inputSchema: MCP_MOMENT_LIST_INPUT,
-    outputSchema: MCP_MOMENT_LIST_OUTPUT,
-    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.7 },
-  },
-  {
-    name: 'get_moment',
-    description: 'Retrieve a specific moment update by ID.',
-    inputSchema: MCP_MOMENT_GET_INPUT,
-    outputSchema: MOMENT_RECORD_JSON_SCHEMA,
-    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.65 },
-  },
-  {
-    name: 'create_moment',
-    description: 'Publish a new status moment or social update to the feed.',
-    inputSchema: MCP_MOMENT_CREATE_INPUT,
-    outputSchema: MOMENT_RECORD_JSON_SCHEMA,
-    annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.7 },
-  },
-  {
-    name: 'list_moment_comments',
-    description: 'List comments on a moment.',
-    inputSchema: MCP_MOMENT_COMMENTS_LIST_INPUT,
-    outputSchema: MCP_MOMENT_COMMENTS_LIST_OUTPUT,
-    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.65 },
-  },
-  {
-    name: 'create_moment_comment',
-    description: 'Add a comment to a moment.',
-    inputSchema: MCP_MOMENT_COMMENT_CREATE_INPUT,
-    outputSchema: MOMENT_COMMENT_JSON_SCHEMA,
-    annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.65 },
-  },
-
-  // ── 11. Discussion Threads ──
+  // ── 10. Discussion Threads ──
   {
     name: 'list_threads',
     description: 'List discussion threads, optionally filtered by parent object (workspace, note, goal).',

@@ -1450,53 +1450,6 @@ export const ChatWindow = ({
         setTimeout(() => scrollToBottom(), 50);
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-        if (conversationId.startsWith('nostr_dm_')) {
-            try {
-                const peerPubkey = conversationId.replace(/^nostr_dm_/, '');
-                const { getActiveNostrKeyPair, sendNostrDirectMessage } = await import('@/lib/nostr/dm');
-                const activeNostr = await getActiveNostrKeyPair();
-
-                if (!activeNostr?.privateKeyBytes || !activeNostr?.pubkeyHex) {
-                    toast.error('Active Nostr identity or key unavailable in this session.');
-                    startTransition(() => {
-                        setMessages((prev) => prev.map((m) => (m.$id === optimisticId ? ({ ...m, status: 'error' } as any) : m)));
-                    });
-                    return false;
-                }
-
-                const sentEvent = await sendNostrDirectMessage({
-                    senderPrivateKey: activeNostr.privateKeyBytes,
-                    senderPubkeyHex: activeNostr.pubkeyHex,
-                    recipientPubkeyHex: peerPubkey,
-                    text: finalText,
-                });
-
-                const sentMsg = {
-                    $id: sentEvent.id,
-                    conversationId,
-                    senderId: user.$id,
-                    content: finalText,
-                    type: 'text',
-                    attachments: [],
-                    $createdAt: new Date(sentEvent.created_at * 1000).toISOString(),
-                    createdAt: new Date(sentEvent.created_at * 1000).toISOString(),
-                    status: 'sent',
-                };
-
-                startTransition(() => {
-                    setMessages((prev) => prev.map((m) => (m.$id === optimisticId ? (sentMsg as any) : m)));
-                });
-                return true;
-            } catch (err: any) {
-                toast.error(err?.message || 'Failed to send Nostr DM');
-                startTransition(() => {
-                    setMessages((prev) => prev.map((m) => (m.$id === optimisticId ? ({ ...m, status: 'error' } as any) : m)));
-                });
-                return false;
-            } finally {
-                setSending(false);
-            }
-        }
 
         try {
             const isThreadHangout = !!(conversation as any)?.isThreadFallback || (conversation as any)?.type === 'thread' || !!(conversation as any)?.isthreadChat || !!(conversation as any)?.isSelfBookmarks || (()=>{ try { const mem:any[]=(require('@/lib/chat/local-chat-cache') as any).peekThreadsListMemory?.()||[]; return !!mem.find((c:any)=>c.$id===conversationId||c.id===conversationId); } catch { return false; } })() || !conversation;

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Zap, X, Shield, Check, Coins } from 'lucide-react';
+import { Zap, X, Shield, Check } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
 import { isConfirmBeforeZapEnabled } from '@/components/settings/ZapSecuritySettings';

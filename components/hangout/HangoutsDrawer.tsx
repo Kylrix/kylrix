@@ -13,7 +13,6 @@ import {
   Sparkles,
   Maximize2,
   Minimize2,
-  Radio,
 } from 'lucide-react';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';

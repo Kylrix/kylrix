@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { PanelType } from '@/components/layout/panel-types';
 
 // Object detail components imports
-import { PostViewClient } from '@/app/(app)/connect/post/[id]/PostViewClient';
 import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
 import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
 import EventDetails from '@/components/events/EventDetails';
@@ -26,7 +25,7 @@ import NoteReactions from '@/app/(app)/app/(app)/notes/NoteReactions';
 import { useNotes } from '@/context/NotesContext';
 
 export interface ActiveDetail {
-  type: 'note' | 'moment' | 'goal' | 'form' | 'event' | 'tag' | 'secret' | 'chat';
+  type: 'note' | 'goal' | 'form' | 'event' | 'tag' | 'secret' | 'chat';
   id: string;
   data?: any; // Extra initial payload if we have it
 }
@@ -442,8 +441,6 @@ function ChatDetailContainer({ conversationId, onBack }: { conversationId: strin
  */
 function DetailSectionWrapper({ detail, onClose }: { detail: ActiveDetail; onClose: () => void }) {
   switch (detail.type) {
-    case 'moment':
-      return <PostViewClient id={detail.id} onBack={onClose} />;
     case 'note':
       return <NoteDetailContainer noteId={detail.id} seed={detail.data || null} onBack={onClose} />;
     case 'goal':
