@@ -140,6 +140,13 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
 
   // 2. Set virtual permission in polymorphic flow.collaborators table
   if (resourceType === 'note' || resourceType === 'task' || resourceType === 'project' || resourceType === 'secret' || resourceType === 'totp') {
+    const { getUserSubscriptionTierServer } = await import('@/lib/services/internal/subscription-entitlement');
+    const { allowsCollaboratorSharing } = await import('@/lib/entitlements');
+    const actorTier = await getUserSubscriptionTierServer(requester.$id);
+    if (!allowsCollaboratorSharing(actorTier, resourceType)) {
+      throw new Error('Forbidden: Collaborator sharing requires a paid plan');
+    }
+
     const tables = createSystemTablesDB();
     const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
     const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
@@ -150,8 +157,6 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
           Query.equal('resourceType', 'credential'),
         ])
       : Query.equal('resourceType', resourceType);
-
-    // Note: Collaborators are free and limitless on all plans
 
     const existingCollab = await tables.listRows({
       databaseId: FLOW_DATABASE_ID,
@@ -503,6 +508,13 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const { getUserSubscriptionTierServer } = await import('@/lib/services/internal/subscription-entitlement');
+  const { allowsCollaboratorSharing } = await import('@/lib/entitlements');
+  const actorTier = await getUserSubscriptionTierServer(actor.$id);
+  if (!allowsCollaboratorSharing(actorTier, 'project')) {
+    throw new Error('Forbidden: Collaborator sharing requires a paid plan');
+  }
+
   const isAllowed = await verifyProjectPermission(projectId, actor.$id, 'admin');
   if (!isAllowed) {
     throw new Error('Forbidden: Insufficient permissions to manage collaborators');
@@ -679,6 +691,13 @@ export async function addFormCollaboratorSecure(formId: string, targetUserId: st
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const { getUserSubscriptionTierServer } = await import('@/lib/services/internal/subscription-entitlement');
+  const { allowsCollaboratorSharing } = await import('@/lib/entitlements');
+  const actorTier = await getUserSubscriptionTierServer(actor.$id);
+  if (!allowsCollaboratorSharing(actorTier, 'form')) {
+    throw new Error('Forbidden: Collaborator sharing requires a paid plan');
   }
 
   const isAllowed = await verifyFormPermission(formId, actor.$id, 'admin');

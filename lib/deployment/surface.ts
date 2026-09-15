@@ -63,5 +63,19 @@ export function isKylrixCloud(): boolean {
     typeof window === 'undefined'
       ? process.env.KYLRIX_CLOUD || process.env.NEXT_PUBLIC_KYLRIX_CLOUD
       : process.env.NEXT_PUBLIC_KYLRIX_CLOUD || (window as any)?.__KYLRIX_CLOUD__;
-  return parseEnvFlag(flag);
+  if (parseEnvFlag(flag)) {
+    return true;
+  }
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname.toLowerCase();
+    if (
+      hostname === 'kylrix.com' ||
+      hostname.endsWith('.kylrix.com') ||
+      hostname === 'kylrix.space' ||
+      hostname.endsWith('.kylrix.space')
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
