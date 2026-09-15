@@ -10,7 +10,6 @@ import {
   FolderKanban,
   Lock,
   Key,
-  Radio,
   Zap,
   Bot,
   User,
@@ -21,8 +20,6 @@ import type { ParsedPublicResource } from '@/lib/share/parse-public-url';
 import { splitEcosystemLinks } from '@/lib/share/parse-public-url';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/lib/auth';
-import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
-import { useOverlay } from '@/components/ui/OverlayContext';
 import { FormattedText } from '@/components/common/FormattedText';
 import { useEffect, useState } from 'react';
 

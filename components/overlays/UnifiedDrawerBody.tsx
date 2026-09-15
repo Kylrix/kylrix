@@ -430,8 +430,6 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           username={drawerData?.username}
           name={drawerData?.name}
           avatar={drawerData?.avatar}
-          npub={drawerData?.npub}
-          pubkey={drawerData?.pubkey}
           bio={drawerData?.bio}
           source={drawerData?.source}
         />

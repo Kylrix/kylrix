@@ -33,8 +33,6 @@ import { account } from '@/lib/appwrite/client';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
-import { useOverlay } from '@/components/ui/OverlayContext';
 
 export type NotificationCategory = 'all' | 'replies' | 'likes' | 'zaps' | 'follows' | 'system';
 
@@ -380,8 +378,6 @@ export function NotificationDrawer({
   };
 
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
-  const { openSidebar, closeSidebar } = useDynamicSidebar();
-  const { openOverlay, closeOverlay } = useOverlay();
 
   const isFollowingActor = useCallback(
     (actor?: KylrixNotification['actor']) => {
@@ -615,24 +611,6 @@ export function NotificationDrawer({
               {unreadCounts.all > 0 ? `${unreadCounts.all} UNREAD` : 'CAUGHT UP'}
             </Box>
 
-            {identity?.npub ? (
-              <Typography
-                component="span"
-                sx={{
-                  fontSize: '11px',
-                  color: 'rgba(255,255,255,0.45)',
-                  lineHeight: 1.3,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  minWidth: 0,
-                  flex: 1,
-                  fontFamily: 'monospace',
-                }}
-              >
-                {identity.npub.slice(0, 10)}…{identity.npub.slice(-4)}
-              </Typography>
-            ) : null}
           </Box>
         </Box>
 
@@ -805,28 +783,6 @@ export function NotificationDrawer({
                 {renderCategoryIcon(notif.category)}
               </Box>
 
-              {notif.source === 'nostr' && (
-                <Box
-                  title="Nostr event"
-                  sx={{
-                    position: 'absolute',
-                    bottom: -3,
-                    right: -3,
-                    width: 15,
-                    height: 15,
-                    borderRadius: '50%',
-                    bgcolor: '#8B5CF6',
-                    color: '#FFFFFF',
-                    fontSize: '8px',
-                    fontWeight: 900,
-                    display: 'grid',
-                    placeItems: 'center',
-                    border: '1.5px solid #000000',
-                  }}
-                >
-                  ⚡
-                </Box>
-              )}
             </Box>
 
             {/* 2. Structured Stacked Copy Column */}

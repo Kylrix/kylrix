@@ -12,7 +12,6 @@ import { shapeChatListItem, shapeChatDetail, shapeChatMessage } from './chats';
 import { shapeEventListItem, shapeEventDetail } from './events';
 import { shapeFlowListItem, shapeFlowInstallListItem, resolveFlowCreateFields } from './flows';
 import { shapeFormListItem, shapeFormDetail } from './forms';
-import { shapeMoment, shapeMomentCommentEcosystem, shapeMomentCommentNostr, shapeMomentCommentCreated } from './moments';
 import { shapeTag } from './tags';
 import { shapeTrashNoteItem, shapeTrashGoalItem, shapeTrashVaultItem, shapeTrashEventItem, shapeTrashFormItem } from './trash';
 
@@ -162,7 +161,7 @@ describe('sdk/contracts helpers', () => {
     expect(refresh.hint).toBe('hint-text');
   });
 
-  it('chats, events, flows, forms, moments, tags, trash contract helpers', () => {
+  it('chats, events, flows, forms, tags, trash contract helpers', () => {
     const chatListItem = shapeChatListItem({ $id: 'c1', name: 'General', participants: ['u1', 'u2'] });
     expect(chatListItem.id).toBe('c1');
 
@@ -194,18 +193,6 @@ describe('sdk/contracts helpers', () => {
 
     const formDetail = shapeFormDetail({ $id: 'fm1', title: 'Feedback', schema: '[]' });
     expect(formDetail.fields).toEqual([]);
-
-    const moment = shapeMoment({ $id: 'm1', caption: 'Great day' });
-    expect(moment.id).toBe('m1');
-
-    const momentNostr = shapeMomentCommentNostr({ id: 'n1', content: 'test', pubkey: 'p1', created_at: 1000 });
-    expect(momentNostr.id).toBe('n1');
-
-    const momentEco = shapeMomentCommentEcosystem({ $id: 'e1', caption: 'test' });
-    expect(momentEco.id).toBe('e1');
-
-    const momentCreated = shapeMomentCommentCreated({ id: 'c1', content: 'text', userId: 'u1', createdAt: 'now' });
-    expect(momentCreated.id).toBe('c1');
 
     const tag = shapeTag({ $id: 't1', name: 'release', metadata: '{"color":"#fff","description":"desc"}' });
     expect(tag.id).toBe('t1');

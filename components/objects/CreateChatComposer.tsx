@@ -222,10 +222,10 @@ export function CreateChatComposer({
       return;
     }
     await doCreate(encryptedEnabled);
-  }, [user, selectedUsers, sendViaNostr, isNostrOnlyUser, hangoutName, encryptedEnabled, existingDirectInfo, hasBothDirects, isImpossibleDirect, openConversation, requestSudo]);
+  }, [user, selectedUsers, hangoutName, encryptedEnabled, existingDirectInfo, hasBothDirects, isImpossibleDirect, openConversation, requestSudo]);
 
   const isGroup = selectedUsers.length > 1;
-  const canCreate = selectedUsers.length > 0 && !busy && (sendViaNostr || isNostrOnlyUser || (!hasBothDirects && !isImpossibleDirect && (!isGroup || hangoutName.trim().length > 0 || !encryptedEnabled)));
+  const canCreate = selectedUsers.length > 0 && !busy && (!hasBothDirects && !isImpossibleDirect && (!isGroup || hangoutName.trim().length > 0 || !encryptedEnabled));
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#161412] text-white font-satoshi">
@@ -363,7 +363,7 @@ export function CreateChatComposer({
           onClick={() => void handleCreate()}
           className="flex-1 h-12 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm disabled:opacity-40 hover:bg-amber-500 transition-colors"
         >
-          {busy ? 'Creating…' : sendViaNostr ? 'Start Nostr DM' : isImpossibleDirect ? 'Chat exists' : hasBothDirects ? 'Both exist' : isGroup ? 'Create hangout' : 'Start hangout'}
+          {busy ? 'Creating…' : isImpossibleDirect ? 'Chat exists' : hasBothDirects ? 'Both exist' : isGroup ? 'Create hangout' : 'Start hangout'}
         </button>
       </div>
     </div>

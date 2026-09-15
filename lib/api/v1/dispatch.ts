@@ -368,36 +368,6 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     return jsonOk(await ApiResources.purgeTrash(actor, { kind: b, id: c }));
   }
 
-  // Feeds
-  if (a === S.feeds && !b && method === 'GET') {
-    const source = (params.get('source') || 'all') as
-      | 'ecosystem'
-      | 'nostr'
-      | 'all';
-    return jsonOk(await ApiResources.listFeed(actor, limit(), { source }));
-  }
-
-  // Moments (internal + nostr view; comments on internal)
-  if (a === S.moments && !b) {
-    if (method === 'GET') {
-      const mine = params.get('mine') === '1';
-      return jsonOk(await ApiResources.listMoments(actor, limit(), { mine }));
-    }
-    if (method === 'POST') {
-      return jsonOk(await ApiResources.createMoment(actor, await readBody()));
-    }
-  }
-  if (a === S.moments && b && !c && method === 'GET') {
-    return jsonOk(await ApiResources.getMoment(actor, b));
-  }
-  if (a === S.moments && b && c === SUB.comments && !d) {
-    if (method === 'GET') {
-      return jsonOk(await ApiResources.listMomentComments(actor, b, limit()));
-    }
-    if (method === 'POST') {
-      return jsonOk(await ApiResources.createMomentComment(actor, b, await readBody()));
-    }
-  }
 
   if (a === S.tags && !b) {
     if (method === 'GET') return jsonOk(await ApiResources.listTags(actor, limit()));

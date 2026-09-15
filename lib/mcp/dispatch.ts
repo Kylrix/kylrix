@@ -111,19 +111,6 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
   create_tag: (actor, args) => ApiResources.createTag(actor, args),
   delete_tag: (actor, args) => ApiResources.deleteTag(actor, String(args.id)),
 
-  list_moments: async (actor, args) =>
-    mcpListResult(await ApiResources.listMoments(actor, args.limit || 25, { mine: args.mine })),
-  get_moment: (actor, args) => ApiResources.getMoment(actor, String(args.id)),
-  create_moment: (actor, args) => ApiResources.createMoment(actor, args),
-  list_moment_comments: async (actor, args) =>
-    mcpListResult(
-      await ApiResources.listMomentComments(actor, String(args.momentId), args.limit || 50),
-    ),
-  create_moment_comment: (actor, args) =>
-    ApiResources.createMomentComment(actor, String(args.momentId), {
-      text: args.content || args.text,
-    }),
-
   list_thread_messages: async (actor, args) =>
     mcpListResult(
       await ApiResources.listThreadMessages(actor, String(args.threadId), args.limit || 50),
