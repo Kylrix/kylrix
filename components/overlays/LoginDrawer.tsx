@@ -10,6 +10,7 @@ import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
 import { getCurrentLoginMethod, isMfaRequiredError } from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import { account, invalidateCurrentUserCache } from '@/lib/appwrite/client';
 import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction, selfHostedSignUpAction } from '@/lib/actions/auth-actions';
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
@@ -40,6 +41,8 @@ function useIsDesktop() {
 }
 
 export function LoginDrawer() {
+  const router = useRouter();
+  const pathname = usePathname();
   const { activeContent, drawerData, close } = useUnifiedDrawer();
   const { loginWithEmailOTP, verifyEmailOTP, refreshUser } = useAuth();
   const { setIsDrawerOpen } = useDrawerState();
@@ -49,6 +52,13 @@ export function LoginDrawer() {
   const emailPasswordSignupEnabled = isEmailPasswordSignupEnabled();
   const emailPasswordSigninEnabled = isEmailPasswordSigninEnabled();
   const passkeySignupEnabled = isPasskeySignupEnabled();
+
+  const navigateToAppAfterAuth = useCallback(() => {
+    close();
+    if (!pathname || pathname === '/' || pathname === '/landing') {
+      router.push('/app');
+    }
+  }, [close, pathname, router]);
 
   const customTitle = drawerData?.title || 'Continue to Kylrix';
   const customSubtitle = drawerData?.subtitle;
@@ -216,7 +226,7 @@ export function LoginDrawer() {
       }
 
       await refreshUser(true);
-      close();
+      navigateToAppAfterAuth();
     } catch (err: any) {
       console.error('Email/password auth failed:', err);
       toast.error(err.message || 'Authentication failed');
@@ -253,7 +263,7 @@ export function LoginDrawer() {
 
       toast.success('Authenticated via Passkey!');
       await refreshUser(true);
-      close();
+      navigateToAppAfterAuth();
     } catch (err: any) {
       if (err.name === 'NotAllowedError') {
         // User cancelled or timed out
@@ -292,7 +302,7 @@ export function LoginDrawer() {
       try {
         const current = await refreshUser(true);
         if (!cancelled && current) {
-          close();
+          navigateToAppAfterAuth();
         }
       } finally {
         if (!cancelled) setCheckingSession(false);
@@ -330,7 +340,7 @@ export function LoginDrawer() {
     setLoading(true);
     try {
       await verifyEmailOTP(email, userId, code);
-      close();
+      navigateToAppAfterAuth();
     } catch (err: unknown) {
       if (isMfaRequiredError(err)) {
         const loginMethod = await getCurrentLoginMethod().catch(() => 'email-otp' as const);
@@ -754,7 +764,7 @@ export function LoginDrawer() {
         onSuccess={async () => {
           setMfaDrawerOpen(false);
           await refreshUser(true);
-          close();
+          navigateToAppAfterAuth();
         }}
       />
     </>

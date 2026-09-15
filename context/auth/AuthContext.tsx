@@ -271,11 +271,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         idmWindowRef.current.close();
       }
       idmWindowRef.current = null;
+      if (!pathname || pathname === '/' || pathname === '/landing') {
+        router.push('/app');
+      }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [refreshUser]);
+  }, [refreshUser, pathname, router]);
 
   const openIDMWindow = useCallback((target?: string) => {
     if (typeof window === 'undefined' || isAuthenticating) return;

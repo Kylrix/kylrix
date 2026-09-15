@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -45,9 +45,15 @@ import { ThreadNoteClaimer } from '@/components/landing/ThreadNoteClaimer';
 
 export default function LandingPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
   const { openAgenticDrawer } = useAgenticDrawer();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/app');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   // Copy states
   const [copiedSelfHost, setCopiedSelfHost] = useState(false);
