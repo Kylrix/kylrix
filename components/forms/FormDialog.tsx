@@ -522,6 +522,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         const newForm = await FormsService.createForm(user.$id, {
           ...formDataPayload,
           isWorkspace: isCustomWorkspace,
+          projectId: isCustomWorkspace ? activeWorkspace!.id : undefined,
         } as any);
         if (isCustomWorkspace && newForm?.$id) {
           void attachEntityToActiveWorkspace('form', newForm.$id);

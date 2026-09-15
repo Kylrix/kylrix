@@ -1035,16 +1035,21 @@ export async function createFormSecure(data: any, jwt?: string) {
   const isPublic = data.isPublic !== undefined ? data.isPublic : status === 'published';
   const isGuest = data.isGuest !== undefined ? data.isGuest : status === 'published';
 
+  const formData: Record<string, any> = {
+    ...data,
+    userId: actor.$id,
+    status,
+    isPublic,
+    isGuest,
+  };
+  if (data.isWorkspace !== undefined) formData.isWorkspace = Boolean(data.isWorkspace);
+  if (data.projectId !== undefined) formData.projectId = data.projectId;
+
   const form = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
       rowId: ID.unique(),
-      data: {
-      ...data,
-      userId: actor.$id,
-      status,
-      isPublic,
-      isGuest},
+      data: formData,
       permissions: permissions});
 
   return JSON.parse(JSON.stringify(form));

@@ -1031,6 +1031,8 @@ export default function CreateNoteForm({
           isPublic: payload.isPublic,
           isGuest: payload.isGuest,
           title: generatedTitle,
+          isWorkspace: activeWorkspace && !activeWorkspace.isPersonal ? true : payload.isWorkspace,
+          projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : payload.projectId,
         })) as Notes;
         markNotePersistedRemote(saved.$id);
         if (saved?.$id && activeWorkspace && !activeWorkspace.isPersonal) {

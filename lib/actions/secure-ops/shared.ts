@@ -891,6 +891,7 @@ export function sanitizeEventData(data: any) {
     'keepPermission',
     'source',
     'isWorkspace',
+    'projectId',
     'attendeeCount',
     'isAgentic',
     'dek',
