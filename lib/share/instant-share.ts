@@ -140,61 +140,77 @@ async function enqueueShareFlush(
   }
 }
 
+const activePublishPromises = new Map<string, Promise<InstantShareResult>>();
+
 /**
  * Flush row + set isPublic/isGuest on Appwrite. Does not build URL.
+ * Deduplicates in-flight calls so component unmount or rapid multi-clicks share the same background promise.
  */
 export async function ensureSharePublished(
   resourceType: PublicResourceType,
   resourceId: string,
   options: Pick<InstantShareOptions, 'projectId'> = {},
 ): Promise<InstantShareResult> {
-  const url = buildInstantShareUrl(resourceType, resourceId, { projectId: options.projectId });
-  try {
-    await enqueueShareFlush(resourceType, resourceId);
-    await autonomicSyncEngine.runCycle().catch(() => {});
+  const cacheKey = `${resourceType}:${resourceId}:${options.projectId || ''}`;
+  const existing = activePublishPromises.get(cacheKey);
+  if (existing) {
+    return existing;
+  }
 
-    const publishRes = await toggleResourcePublicGuest({
-      resourceType,
-      resourceId,
-      mode: 'publish',
-      projectId: options.projectId,
-    });
+  const promise = (async (): Promise<InstantShareResult> => {
+    const url = buildInstantShareUrl(resourceType, resourceId, { projectId: options.projectId });
+    try {
+      await enqueueShareFlush(resourceType, resourceId);
+      await autonomicSyncEngine.runCycle().catch(() => {});
 
-    if (!publishRes?.success || !publishRes.isPublic || !publishRes.isGuest) {
+      const publishRes = await toggleResourcePublicGuest({
+        resourceType,
+        resourceId,
+        mode: 'publish',
+        projectId: options.projectId,
+      });
+
+      if (!publishRes?.success || !publishRes.isPublic || !publishRes.isGuest) {
+        return {
+          success: false,
+          // Always keep client-built URL — Server Actions resolve to kylrix.space
+          url,
+          copied: false,
+          published: false,
+          pending: false,
+          isPublic: publishRes?.isPublic === true,
+          isGuest: publishRes?.isGuest === true,
+          error: 'Could not confirm public sharing on the server',
+        };
+      }
+
+      return {
+        success: true,
+        url,
+        copied: false,
+        published: true,
+        pending: false,
+        isPublic: true,
+        isGuest: true,
+      };
+    } catch (syncErr) {
+      const message = syncErr instanceof Error ? syncErr.message : 'Share sync failed';
+      console.error('[InstantShare] Share publish error:', syncErr);
       return {
         success: false,
-        // Always keep client-built URL — Server Actions resolve to kylrix.space
         url,
         copied: false,
         published: false,
         pending: false,
-        isPublic: publishRes?.isPublic === true,
-        isGuest: publishRes?.isGuest === true,
-        error: 'Could not confirm public sharing on the server',
+        error: message,
       };
+    } finally {
+      activePublishPromises.delete(cacheKey);
     }
+  })();
 
-    return {
-      success: true,
-      url,
-      copied: false,
-      published: true,
-      pending: false,
-      isPublic: true,
-      isGuest: true,
-    };
-  } catch (syncErr) {
-    const message = syncErr instanceof Error ? syncErr.message : 'Share sync failed';
-    console.error('[InstantShare] Share publish error:', syncErr);
-    return {
-      success: false,
-      url,
-      copied: false,
-      published: false,
-      pending: false,
-      error: message,
-    };
-  }
+  activePublishPromises.set(cacheKey, promise);
+  return promise;
 }
 
 /**

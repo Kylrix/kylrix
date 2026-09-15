@@ -263,13 +263,17 @@ export function ShareContextDrawer() {
           openLoginDrawer: (ctx) => open('login', ctx),
           openMasterpassPrompt: () => open('masterpass'),
           onPublishSettled: (settled) => {
-            if (!active) return;
-            setIsConfirming(false);
-            if (settled.published && settled.success) {
-              setShareLive(true);
-              if (settled.url) setResolvedUrl(settled.url);
-            } else {
-              setShareLive(false);
+            if (active) {
+              setIsConfirming(false);
+              if (settled.published && settled.success) {
+                setShareLive(true);
+                if (settled.url) setResolvedUrl(settled.url);
+              } else {
+                setShareLive(false);
+                toast.error(settled.error || 'Sharing did not save. Link may not work yet.');
+              }
+            } else if (!settled.published || !settled.success) {
+              // Notify even if drawer has closed
               toast.error(settled.error || 'Sharing did not save. Link may not work yet.');
             }
           },
@@ -335,6 +339,21 @@ export function ShareContextDrawer() {
   const handleCopyLink = async () => {
     if (!resolvedUrl) return;
     try {
+      // Ensure publish finishes so recipient never gets an unauthorized/broken link
+      if (isConfirming || confirmPending) {
+        const publishPromise = ensureSharePublished(resourceType, resourceId, { projectId });
+        // Don't block copy indefinitely, but await confirmation with a short race for instantaneous UX
+        const publishResult = await Promise.race([
+          publishPromise,
+          new Promise<null>((r) => setTimeout(() => r(null), 1200)),
+        ]);
+        if (publishResult && publishResult.published && publishResult.url) {
+          setResolvedUrl(publishResult.url);
+          setIsConfirming(false);
+          setShareLive(true);
+        }
+      }
+
       if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(resolvedUrl);
         setCopied(true);
