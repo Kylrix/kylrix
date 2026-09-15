@@ -248,6 +248,12 @@ export async function executeCloudSync(
     const cloudAccount = conn.account;
     await saveCloudSyncConfig({ cloudAccount });
 
+    const { effectiveTierHasPaidAccess } = await import('@/lib/entitlements');
+    const isPaidCloud = Boolean(cloudAccount.quotas?.isPro) || effectiveTierHasPaidAccess(cloudAccount.tier);
+    if (!isPaidCloud) {
+      throw new Error('Cloud sync requires a paid plan. Upgrade your Cloud account to enable replication.');
+    }
+
     // Priority 1: Account Identity & Master Encryption Keychain Replication
     onProgress?.('Replicating account identity & master encryption keychain...', stats);
     try {

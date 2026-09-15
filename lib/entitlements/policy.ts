@@ -44,14 +44,18 @@ export function effectiveTierHasPaidAccess(tier?: BillingUiTier | string | null)
   return billingTierHasPaidAccess(tier || 'FREE');
 }
 
-export function allowsCollaboratorSharing(_tier?: BillingUiTier | string, _resourceType?: string): boolean {
-  // Collaborators are free and limitless on all plans across selfhosted and cloud deployments
-  return true;
+export function allowsCollaboratorSharing(tier?: BillingUiTier | string, _resourceType?: string): boolean {
+  if (isSelfHostedDeployment()) {
+    return true;
+  }
+  return effectiveTierHasPaidAccess(tier);
 }
 
-export function getCollaboratorCap(_tier?: BillingUiTier | string, _resourceType?: string): number {
-  // Collaborators are free and limitless on all plans across selfhosted and cloud deployments
-  return Number.POSITIVE_INFINITY;
+export function getCollaboratorCap(tier?: BillingUiTier | string, _resourceType?: string): number {
+  if (isSelfHostedDeployment()) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return effectiveTierHasPaidAccess(tier) ? Number.POSITIVE_INFINITY : 0;
 }
 
 export function getProjectCap(_tier: BillingUiTier | string): number {
