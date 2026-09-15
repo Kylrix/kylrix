@@ -2,8 +2,6 @@ import { ID, Query } from 'appwrite';
 import { tablesDB, realtime, storage } from '../appwrite/client';
 import { UsersService } from './users';
 import { APPWRITE_CONFIG } from '../appwrite/config';
-import { getCachedMomentPreview, seedMomentPreview } from '../moment-preview';
-import { getCachedMomentThread } from '../moment-thread-cache';
 import { getTablesDbRowCached } from '../ecosystem/tablesdb-row-cache';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -1009,15 +1007,8 @@ export const SocialService = {
     },
 
     async getMomentById(momentId: string, currentUserId?: string) {
-        const cachedThread = getCachedMomentThread(momentId);
-        if (cachedThread?.moment) return cachedThread.moment;
-
-        const cachedPreview = getCachedMomentPreview(momentId);
-        if (cachedPreview) return cachedPreview;
-
         const moment = await tablesDB.getRow(DB_ID, MOMENTS_TABLE, momentId);
         const enriched = await this.enrichMoment(moment, currentUserId);
-        seedMomentPreview(enriched);
         return enriched;
     },
 
@@ -1074,9 +1065,6 @@ export const SocialService = {
     },
 
     async getReplies(momentId: string, currentUserId?: string) {
-        const cachedThread = getCachedMomentThread(momentId);
-        if (cachedThread?.replies?.length) return cachedThread.replies;
-
         const moments = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
             Query.select(MOMENT_LIST_SELECT),
             Query.equal('sourceId', momentId),

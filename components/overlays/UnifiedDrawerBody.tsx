@@ -70,10 +70,7 @@ const AgenticPreviewDrawer = dynamic(
   () => import('../agentic/AgenticPreviewDrawer').then((m) => m.AgenticPreviewDrawer),
   { ssr: false },
 );
-const MomentComposerDrawer = dynamic(
-  () => import('./MomentComposerDrawer').then((m) => m.MomentComposerDrawer),
-  { ssr: false },
-);
+
 const ProjectSettingsDrawer = dynamic(() => import('../projects/ProjectSettingsDrawer'), { ssr: false });
 const ProjectVisibilityDrawer = dynamic(() => import('../projects/ProjectVisibilityDrawer'), {
   ssr: false,
@@ -101,10 +98,7 @@ const HangoutsDrawer = dynamic(
   () => import('../hangout/HangoutsDrawer').then((m) => m.HangoutsDrawer),
   { ssr: false },
 );
-const MomentsDrawer = dynamic(
-  () => import('../connect/MomentsDrawer').then((m) => m.MomentsDrawer),
-  { ssr: false },
-);
+
 const FlowsDrawer = dynamic(
   () => import('../flows/FlowsDrawer').then((m) => m.FlowsDrawer),
   { ssr: false },
@@ -144,8 +138,6 @@ export function unifiedDrawerWidth(content: DrawerContent): number {
       return 440;
     case 'flows':
       return 560;
-    case 'moments':
-      return 480;
     case 'follow-list':
       return 460;
     case 'zap':
@@ -160,7 +152,6 @@ export function isUnifiedOverlayOnly(content: DrawerContent): boolean {
   return (
     content === 'navbar' ||
     content === 'login' ||
-    content === 'moment-composer' ||
     content === 'new-chat' ||
     content === 'note'  // NoteDrawer manages its own sidebar + overlay — no Drawer shell needed
   );
@@ -376,8 +367,6 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           onSaved={drawerData?.onSaved}
         />
       );
-    case 'moment-composer':
-      return <MomentComposerDrawer onClose={onClose} />;
     case 'project-join-request-confirm':
       return <JoinRequestConfirmDrawer />;
     case 'access-control':
@@ -421,13 +410,6 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           onClose={onClose}
         />
       );
-    case 'moments':
-      return (
-        <MomentsDrawer
-          onClose={onClose}
-          initialTab={drawerData?.initialTab}
-        />
-      );
     case 'flows':
       return (
         <FlowsDrawer
@@ -457,8 +439,7 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
     case 'follow-list':
       return (
         <FollowListDrawer
-          pubkey={drawerData?.pubkey}
-          npub={drawerData?.npub}
+          userId={drawerData?.userId}
           type={drawerData?.type}
           targetName={drawerData?.targetName}
           onClose={onClose}
@@ -496,13 +477,10 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           isOpen
           onClose={onClose}
           targetId={drawerData?.targetId || drawerData?.noteId || ''}
-          source={drawerData?.source || 'ecosystem'}
-          availableSources={drawerData?.availableSources}
+          source="ecosystem"
           ecosystemTargetId={drawerData?.ecosystemTargetId}
-          nostrTargetId={drawerData?.nostrTargetId}
-          targetKind={drawerData?.targetKind || 'moment'}
+          targetKind={drawerData?.targetKind || 'note'}
           targetOwnerId={drawerData?.targetOwnerId}
-          targetPubkey={drawerData?.targetPubkey || drawerData?.recipientPubkey}
           authorName={drawerData?.authorName || drawerData?.recipientName || 'Creator'}
           onZapSuccess={drawerData?.onZapSuccess}
         />

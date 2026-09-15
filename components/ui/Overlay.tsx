@@ -67,7 +67,6 @@ const Overlay: React.FC = () => {
     (content.props as any).form !== undefined ||
     (content.props as any).eventId !== undefined ||
     (content.props as any).conversationId !== undefined ||
-    (content.props as any).momentId !== undefined ||
     (content.props as any)['data-porter'] === true ||
     (content.type as any).name === 'NoteDetailSidebar' ||
     (content.type as any).name === 'NoteObjectDetail' ||
@@ -75,7 +74,6 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'GoalObjectDetail' ||
     (content.type as any).name === 'FormDetail' ||
     (content.type as any).name === 'CommObjectDetail' ||
-    (content.type as any).name === 'MomentObjectDetail' ||
     (content.type as any).name === 'EventDetails' ||
     (content.type as any).name === 'EcosystemPorter' ||
     (content.type as any).displayName === 'EcosystemPorter' ||

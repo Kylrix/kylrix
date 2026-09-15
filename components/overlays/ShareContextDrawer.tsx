@@ -136,15 +136,6 @@ async function resolveObjectContent(
           title = item.title || title;
           content = item.content || '';
         }
-      } else if (resourceType === 'moment') {
-        const cached = localStorage.getItem('kylrix_nostr_feed_cache');
-        if (cached) {
-          const events = JSON.parse(cached);
-          const ev = events.find((e: any) => e.id === resourceId.replace(/^nostr_/, ''));
-          if (ev) {
-            content = ev.content || '';
-          }
-        }
       } else if (resourceType === 'goal' || resourceType === 'task') {
         const cached = await LocalEngine.cacheGet<{ rows: any[] }>('f_goals_all');
         const item = cached?.rows?.find((r: any) => r.$id === resourceId);

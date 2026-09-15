@@ -36,14 +36,6 @@ import { UnifiedLeftSidebar } from '@/components/UnifiedLeftSidebar';
 
 // Lazy Components
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
-const MomentComposerDrawer = dynamic(
-  () => import('./overlays/MomentComposerDrawer').then((m) => m.MomentComposerDrawer),
-  { ssr: false },
-);
-const MomentsDrawer = dynamic(
-  () => import('./connect/MomentsDrawer').then((m) => m.MomentsDrawer),
-  { ssr: false },
-);
 const FlowsDrawer = dynamic(
   () => import('./flows/FlowsDrawer').then((m) => m.FlowsDrawer),
   { ssr: false },
@@ -345,12 +337,6 @@ const isSpecificPostPage = useMemo(
             'security-confirm',
             'access-control',
           ].includes(unifiedDrawerActive as string)) && <UnifiedBottomDrawer />}
-      {unifiedDrawerActive === 'moment-composer' && (
-        <MomentComposerDrawer onClose={() => closeUnified()} />
-      )}
-      {!isDesktopShell && unifiedDrawerActive === 'moments' && (
-        <MomentsDrawer onClose={() => closeUnified()} />
-      )}
       {!isDesktopShell && unifiedDrawerActive === 'flows' && (
         <FlowsDrawer onClose={() => closeUnified()} />
       )}

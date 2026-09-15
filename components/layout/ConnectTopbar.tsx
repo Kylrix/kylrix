@@ -79,7 +79,6 @@ import { useSidebar } from '@/components/ui/SidebarContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
-import { openMomentObjectDetail } from '@/components/objects/MomentObjectDetail';
 import { useSection } from '@/context/SectionContext';
 import { executeInstantShare } from '@/lib/share/instant-share';
 
@@ -202,7 +201,6 @@ export default function ConnectTopbar({
   const [localTags, setLocalTags] = useState<any[]>([]);
   const [localTrash, setLocalTrash] = useState<any[]>([]);
   const [localForms, setLocalForms] = useState<any[]>([]);
-  const [localMoments, setLocalMoments] = useState<any[]>([]);
   const [localVaultCreds, setLocalVaultCreds] = useState<any[]>([]);
   const [localVaultTotp, setLocalVaultTotp] = useState<any[]>([]);
 
@@ -223,18 +221,14 @@ export default function ConnectTopbar({
           LocalEngine.cacheGet<any[]>(`f_forms_${uid}`).catch(() => []),
         ),
         import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
-          LocalEngine.cacheGet<any[]>('f_unified_moments_feed').then(r => r || LocalEngine.cacheGet<any[]>('f_moments_list')).catch(() => []),
-        ),
-        import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
           LocalEngine.cacheGet<any[]>('f_vault_creds').catch(() => []),
         ),
         import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
           LocalEngine.cacheGet<any[]>('f_vault_totp').catch(() => []),
         ),
-      ]).then(([trashData, formsData, momentsData, credsData, totpData]) => {
+      ]).then(([trashData, formsData, credsData, totpData]) => {
         if (Array.isArray(trashData) && trashData.length) setLocalTrash(trashData);
         if (Array.isArray(formsData) && formsData.length) setLocalForms(formsData);
-        if (Array.isArray(momentsData) && momentsData.length) setLocalMoments(momentsData);
         if (Array.isArray(credsData) && credsData.length) setLocalVaultCreds(credsData);
         if (Array.isArray(totpData) && totpData.length) setLocalVaultTotp(totpData);
       });
@@ -252,13 +246,13 @@ export default function ConnectTopbar({
       flows: [],
       vaultCreds: localVaultCreds,
       vaultTotp: localVaultTotp,
-      moments: localMoments,
+      moments: [],
       chats: [],
       threads: [],
       tags: localTags,
       trash: localTrash,
     });
-  }, [debouncedSearchQuery, notes, tasks, projects, localEvents, localForms, localVaultCreds, localVaultTotp, localMoments, localTags, localTrash]);
+  }, [debouncedSearchQuery, notes, tasks, projects, localEvents, localForms, localVaultCreds, localVaultTotp, localTags, localTrash]);
   const groupedGlobalResults = useMemo(() => {
     const byKind: Record<string, GlobalResult[]> = {};
     for (const r of globalResults) {
@@ -604,7 +598,6 @@ export default function ConnectTopbar({
   }, [activePanel, handleCloseAll]);
 
   const [_searchMode, setSearchMode] = useState<'global' | 'feed'>('global');
-  const [feedSearchResults, setFeedSearchResults] = useState<any[]>([]);
 
   useEffect(() => {
     const handleOpenTopbarSearch = (event?: any) => {
@@ -619,73 +612,6 @@ export default function ConnectTopbar({
     window.addEventListener('kylrix:open-topbar-search' as any, handleOpenTopbarSearch);
     return () => window.removeEventListener('kylrix:open-topbar-search' as any, handleOpenTopbarSearch);
   }, [openSearch]);
-
-  // Debounced feed search across LocalEngine & live Nostr relays
-  useEffect(() => {
-    const query = searchQuery.trim();
-    if (query.length < 2) {
-      setFeedSearchResults([]);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      const words = query.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) || [query.toLowerCase()];
-      if (words.length) {
-        void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) => {
-          recordFeedInteraction({ topics: words, searchWeight: 3 });
-        });
-      }
-
-      let cancelled = false;
-      void (async () => {
-        try {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const moments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
-          const localMatches = moments.filter((m) => {
-            const text = `${m.caption || m.content || ''} ${m.userName || m.user?.name || ''} ${m.username || ''}`.toLowerCase();
-            return words.some((w) => text.includes(w));
-          });
-
-          // Optimistically load matching Nostr posts from relays
-          const { NostrRelayPool } = await import('@/lib/nostr/nostr');
-          const { getNostrReadRelays } = await import('@/lib/connect/feed-settings');
-          const relays = await getNostrReadRelays();
-          const pool = new NostrRelayPool(relays);
-          await pool.connect();
-
-          const nostrMatches: any[] = [];
-          pool.addListener((ev) => {
-            if (cancelled || ev.kind !== 1) return;
-            const content = (ev.content || '').toLowerCase();
-            if (words.some((w) => content.includes(w))) {
-              if (!nostrMatches.some((m) => m.id === ev.id)) {
-                nostrMatches.push({
-                  id: `nostr_${ev.id}`,
-                  content: ev.content,
-                  userName: `npub…${ev.pubkey.slice(-8)}`,
-                  pubkey: ev.pubkey,
-                  source: 'nostr',
-                  createdAt: ev.created_at * 1000,
-                });
-                if (!cancelled) {
-                  setFeedSearchResults([...localMatches, ...nostrMatches].slice(0, 25));
-                }
-              }
-            }
-          });
-
-          pool.subscribe('feed-live-search', [{ kinds: [1], limit: 30 }]);
-          if (!cancelled) setFeedSearchResults(localMatches.slice(0, 20));
-
-          setTimeout(() => {
-            if (pool) pool.close();
-          }, 3000);
-        } catch {}
-      })();
-    }, 280);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   useEffect(() => {
     const handleGlobalEscape = (event: KeyboardEvent) => {
@@ -753,7 +679,6 @@ export default function ConnectTopbar({
         q: '/forms',
         e: '/events',
         h: 'hangouts',
-        m: 'moments',
       };
 
       const action = builtInActions[key];
@@ -784,9 +709,6 @@ export default function ConnectTopbar({
           break;
         case 'hangouts':
           openUnified('hangouts');
-          break;
-        case 'moments':
-          openUnified('moments');
           break;
         default:
           break;
@@ -1066,63 +988,6 @@ export default function ConnectTopbar({
           ) : (
             /* Results View */
             <Box sx={{ display: 'grid', gap: 2 }}>
-              {/* Live Feed Moments Results */}
-              {feedSearchResults.length > 0 && (
-                <Box sx={{ display: 'grid', gap: 0.75 }}>
-                  <Typography sx={{ color: '#fff', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
-                    Feed Moments · {feedSearchResults.length}
-                  </Typography>
-                  <Box sx={{ display: 'grid', gap: 0.75 }}>
-                    {feedSearchResults.map((moment) => (
-                      <Box
-                        key={moment.$id || moment.id}
-                        component="button"
-                        onClick={() => {
-                          handleCloseAll();
-                          const mid = String(moment.$id || moment.id || '');
-                          if (!mid) return;
-                          openMomentObjectDetail({
-                            momentId: mid,
-                            source: 'ecosystem',
-                            preview: {
-                              authorName: moment.userName || moment.username,
-                              content: moment.caption || moment.content,
-                            },
-                            openSidebar,
-                            openOverlay,
-                            closeSidebar,
-                            closeOverlay,
-                          });
-                        }}
-                        sx={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.25,
-                          px: 2,
-                          py: 1.5,
-                          borderRadius: '16px',
-                          bgcolor: '#161412',
-                          border: '2px solid rgba(255, 255, 255, 0.22)',
-                          color: '#fff',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.04)', borderColor: 'rgba(245, 158, 11, 0.5)' }
-                        }}
-                      >
-                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                          <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
-                            {moment.userName || moment.user?.name || moment.username || 'Moment'}
-                          </Typography>
-                          <Typography component="span" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.72rem', lineHeight: 1.3 }} noWrap>
-                            {moment.caption || moment.content || 'Shared an update'}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              )}
 
               {/* Global LocalEngine Results — miniature cards, desktop uses sidebar grid */}
               {globalResults.length > 0 && (
@@ -1170,29 +1035,6 @@ export default function ConnectTopbar({
                                 } else {
                                   openOverlay(
                                     <GoalObjectDetailComp taskId={r.id} onClose={closeOverlay} embedded />
-                                  );
-                                }
-                                return;
-                              }
-                              if (r.kind === 'moment') {
-                                const MomentObjectDetailComp = require('@/components/objects/MomentObjectDetail').MomentObjectDetail;
-                                const isWide = typeof window !== 'undefined' && window.innerWidth >= 900;
-                                const source = r.raw?.source || (r.id.startsWith('nostr_') ? 'nostr' : 'internal');
-                                const cleanId = r.id.replace(/^nostr_/, '');
-                                const preview = r.raw ? {
-                                  authorName: r.raw.authorName || r.raw.author?.name || r.raw.authorUsername,
-                                  authorAvatar: r.raw.authorAvatar || r.raw.author?.avatar,
-                                  content: r.raw.content || r.raw.caption,
-                                } : undefined;
-                                if (isWide) {
-                                  openSidebar(
-                                    <MomentObjectDetailComp momentId={cleanId} source={source} embedded preview={preview} onClose={closeSidebar} />,
-                                    r.id,
-                                    { hideHeader: true }
-                                  );
-                                } else {
-                                  openOverlay(
-                                    <MomentObjectDetailComp momentId={cleanId} source={source} preview={preview} onClose={closeOverlay} embedded />
                                   );
                                 }
                                 return;

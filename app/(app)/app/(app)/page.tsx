@@ -18,7 +18,7 @@ import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 import Link from 'next/link';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
-import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 
 
@@ -536,7 +536,6 @@ export default function IdeasPage() {
 
             <div className="flex items-center gap-2">
               <FlowTabTrigger />
-              <MomentTabTrigger />
               <HangoutTabTrigger />
               <button
 

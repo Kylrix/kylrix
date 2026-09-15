@@ -32,16 +32,9 @@ import { sanitizeInAppHref } from '@/lib/routing/app-paths';
 import { account } from '@/lib/appwrite/client';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
-import { useNostrIdentity } from '@/hooks/useNostrIdentity';
-import { NostrRelayPool, type NostrEvent } from '@/lib/nostr/nostr';
-import { npubToBytes, bytesToHex, bytesToNpub, hexToBytes } from '@/lib/nostr/crypto';
-import { queueNostrProfileFetch, getCachedNostrProfile } from '@/lib/nostr/metadata';
-import { getNostrReadRelays } from '@/lib/connect/feed-settings';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
-import { openMomentObjectDetail } from '@/components/objects/MomentObjectDetail';
-import { parseMomentRouteId } from '@/lib/connect/moment-engagement';
 
 export type NotificationCategory = 'all' | 'replies' | 'likes' | 'zaps' | 'follows' | 'system';
 
@@ -65,7 +58,7 @@ export interface KylrixNotification {
     npub?: string;
     pubkey?: string;
   };
-  source?: 'nostr' | 'kylrix' | 'system';
+  source?: 'kylrix' | 'system';
 }
 
 interface NotificationDrawerProps {
@@ -76,13 +69,6 @@ interface NotificationDrawerProps {
   nativeSidebar?: boolean;
 }
 
-const DEFAULT_NOTIFICATION_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://relay.primal.net',
-  'wss://relay.nostr.band',
-  'wss://purplepag.es',
-];
 
 function formatTimeAgo(ts: number): string {
   const diffMin = Math.max(1, Math.round((Date.now() - ts) / 60000));
@@ -100,13 +86,11 @@ export function NotificationDrawer({
 }: NotificationDrawerProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { identity } = useNostrIdentity();
   const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
   const [notifications, setNotifications] = useState<KylrixNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [syncing, setSyncing] = useState(false);
-  const poolRef = useRef<NostrRelayPool | null>(null);
   const notificationsRef = useRef<KylrixNotification[]>([]);
   const lastHarvestAtRef = useRef<number>(0);
   const isHarvestingRef = useRef<boolean>(false);
@@ -117,19 +101,8 @@ export function NotificationDrawer({
     notificationsRef.current = notifications;
   }, [notifications]);
 
-  // 1. Extract user pubkey (Hex and Npub)
-  const userPubkeyHex = useMemo(() => {
-    if (!identity?.npub) return null;
-    try {
-      const bytes = npubToBytes(identity.npub);
-      return bytesToHex(bytes);
-    } catch {
-      return null;
-    }
-  }, [identity?.npub]);
-
   const userId = user?.$id || 'guest';
-  const notifPartitionKey = `${userId}_${userPubkeyHex ? userPubkeyHex.slice(0, 16) : 'default'}`;
+  const notifPartitionKey = `${userId}_default`;
   const cacheKey = `kylrix_activity_notifications_${notifPartitionKey}`;
   const readStorageKey = `kylrix_notif_read_${notifPartitionKey}`;
   const dismissedStorageKey = `kylrix_notif_dismissed_${notifPartitionKey}`;
@@ -171,7 +144,7 @@ export function NotificationDrawer({
         if (Array.isArray(rawLogs) && rawLogs.length > 0) {
           cached = rawLogs.map((log: any) => ({
             id: log.$id || log.id || `notif_${Math.random()}`,
-            category: (log.targetType === 'moment' ? 'replies' : 'system') as any,
+            category: 'system' as any,
             title: log.action || 'Activity Notification',
             message: log.details || 'New activity on your account.',
             time: formatTimeAgo(new Date(log.$createdAt || log.createdAt || Date.now()).getTime()),
@@ -232,11 +205,6 @@ export function NotificationDrawer({
     void (async () => {
       try {
         const discovered = new Set<string>();
-        if (userPubkeyHex) {
-          const { fetchNostrFollowing } = await import('@/lib/nostr/user-activity');
-          const nostrFollowing = await fetchNostrFollowing(userPubkeyHex, 3500).catch(() => []);
-          nostrFollowing.forEach((k) => discovered.add(k.toLowerCase()));
-        }
         if (userId && userId !== 'guest') {
           const { SocialService } = await import('@/lib/services/social');
           const appFollows = await SocialService.getFollowing(userId).catch(() => []);
@@ -258,9 +226,9 @@ export function NotificationDrawer({
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [isOpen, userPubkeyHex, userId]);
+  }, [isOpen, userId]);
 
-  // 4. Stable Activity Harvesting from LocalEngine & Nostr (Throttled, 0 loop)
+  // 4. Stable Activity Harvesting from LocalEngine (Throttled, 0 loop)
   const harvestLiveActivity = useCallback(async (force: boolean = false) => {
     if (typeof window === 'undefined') return;
     const now = Date.now();
@@ -332,216 +300,6 @@ export function NotificationDrawer({
         } catch {}
       }
 
-      // B. Real Moments Discussions & Reactions from Local Engine (0 network round-trips)
-      try {
-        const moments =
-          (await LocalEngine.cacheGet<any[]>('f_unified_moments_feed')) ||
-          (await LocalEngine.cacheGet<any[]>('f_moments_list')) ||
-          [];
-
-        for (const m of moments.slice(0, 30)) {
-          const ts = new Date(m.$createdAt || m.createdAt || Date.now()).getTime();
-          const timeStr = formatTimeAgo(ts);
-
-          if (m.commentsCount && m.commentsCount > 0) {
-            const id = `rep_moment_${m.$id || m.id}`;
-            itemsMap.set(id, {
-              id,
-              category: 'replies',
-              title: `Discussion on "${(m.caption || m.content || 'Moment').slice(0, 45)}"`,
-              message: `${m.commentsCount} active replies and comments on your moment.`,
-              time: timeStr,
-              timestamp: ts + 1000,
-              read: false,
-              accent: '#6366F1',
-              actionHref: `/moment/${m.$id || m.id}`,
-              actor: {
-                name: m.userName || m.username || 'Community Member',
-                username: m.username,
-                isNostr: !!m.isNostr,
-              },
-              source: m.isNostr ? 'nostr' : 'kylrix',
-            });
-          }
-
-          if (m.likesCount && m.likesCount > 0) {
-            const id = `like_moment_${m.$id || m.id}`;
-            itemsMap.set(id, {
-              id,
-              category: 'likes',
-              title: 'Reactions on your post',
-              message: `${m.likesCount} people liked your moment "${(m.caption || m.content || '').slice(0, 45)}"`,
-              time: timeStr,
-              timestamp: ts + 500,
-              read: false,
-              accent: '#EC4899',
-              actionHref: `/moment/${m.$id || m.id}`,
-              source: m.isNostr ? 'nostr' : 'kylrix',
-            });
-          }
-        }
-      } catch {}
-
-      // C. Live Nostr Relays Notification Harvesting (`#p` targeted query)
-      if (userPubkeyHex) {
-        try {
-          const configuredRelays = await getNostrReadRelays().catch(() => DEFAULT_NOTIFICATION_RELAYS);
-          const relayUrls = Array.from(new Set([...DEFAULT_NOTIFICATION_RELAYS, ...configuredRelays]));
-
-          if (!poolRef.current) {
-            poolRef.current = new NostrRelayPool(relayUrls);
-            poolRef.current.connect();
-          }
-
-          const subId = `kylrix_notif_sub_${Date.now()}`;
-          const authorsToFetch: string[] = [];
-
-          // Query Nostr relays for events tagging the user's pubkey
-          poolRef.current.subscribe(subId, [
-            {
-              '#p': [userPubkeyHex],
-              kinds: [1, 3, 6, 7, 9735],
-              limit: 50,
-            },
-          ]);
-
-          const handleNostrEvent = (event: NostrEvent) => {
-            if (!event || !event.id) return;
-            const ts = (event.created_at || Date.now() / 1000) * 1000;
-            const timeStr = formatTimeAgo(ts);
-            const cachedAuthor = getCachedNostrProfile(event.pubkey);
-            const authorDisplayName = cachedAuthor?.name || cachedAuthor?.displayName || `npub…${event.pubkey.slice(-6)}`;
-            let npubStr: string | undefined;
-            try {
-              npubStr = bytesToNpub(hexToBytes(event.pubkey));
-            } catch {}
-
-            const actorMetadata = {
-              name: authorDisplayName,
-              username: cachedAuthor?.nip05 || (cachedAuthor?.name ? `@${cachedAuthor.name}` : undefined),
-              avatar: cachedAuthor?.picture,
-              isNostr: true,
-              npub: npubStr,
-              pubkey: event.pubkey,
-            };
-
-            authorsToFetch.push(event.pubkey);
-
-            if (event.kind === 1) {
-              const notifId = `nostr_reply_${event.id}`;
-              const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
-              const targetId = targetNoteTag ? targetNoteTag[1] : event.id;
-
-              itemsMap.set(notifId, {
-                id: notifId,
-                category: 'replies',
-                title: `${authorDisplayName} replied to your post`,
-                message: (event.content || '').slice(0, 140),
-                time: timeStr,
-                timestamp: ts,
-                read: false,
-                accent: '#8B5CF6',
-                actionHref: `/moment/nostr_${targetId}`,
-                actor: actorMetadata,
-                source: 'nostr',
-              });
-            } else if (event.kind === 3) {
-              const notifId = `nostr_follow_${event.pubkey}`;
-              itemsMap.set(notifId, {
-                id: notifId,
-                category: 'follows',
-                title: `${authorDisplayName} followed you`,
-                message: `Started following your Nostr profile.`,
-                time: timeStr,
-                timestamp: ts,
-                read: false,
-                accent: '#3B82F6',
-                actionHref: `/connect`,
-                actor: actorMetadata,
-                source: 'nostr',
-              });
-            } else if (event.kind === 7) {
-              const notifId = `nostr_like_${event.id}`;
-              const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
-              const targetId = targetNoteTag ? targetNoteTag[1] : event.id;
-              const emoji = event.content && event.content !== '+' ? event.content : '❤️';
-
-              itemsMap.set(notifId, {
-                id: notifId,
-                category: 'likes',
-                title: `${authorDisplayName} reacted ${emoji}`,
-                message: `Liked your Nostr note.`,
-                time: timeStr,
-                timestamp: ts,
-                read: false,
-                accent: '#EC4899',
-                actionHref: `/moment/nostr_${targetId}`,
-                actor: actorMetadata,
-                source: 'nostr',
-              });
-            } else if (event.kind === 6) {
-              const notifId = `nostr_repost_${event.id}`;
-              const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
-              const targetId = targetNoteTag ? targetNoteTag[1] : event.id;
-
-              itemsMap.set(notifId, {
-                id: notifId,
-                category: 'replies',
-                title: `${authorDisplayName} boosted your post`,
-                message: `Shared your Nostr note with their followers.`,
-                time: timeStr,
-                timestamp: ts,
-                read: false,
-                accent: '#10B981',
-                actionHref: `/moment/nostr_${targetId}`,
-                actor: actorMetadata,
-                source: 'nostr',
-              });
-            } else if (event.kind === 9735) {
-              const notifId = `nostr_zap_${event.id}`;
-              const targetNoteTag = event.tags?.find((t) => t[0] === 'e');
-              const targetId = targetNoteTag ? targetNoteTag[1] : undefined;
-
-              itemsMap.set(notifId, {
-                id: notifId,
-                category: 'zaps',
-                title: `⚡ Lightning Zap received!`,
-                message: `${authorDisplayName} sent you a Lightning Zap on Nostr.`,
-                time: timeStr,
-                timestamp: ts,
-                read: false,
-                accent: '#F59E0B',
-                actionHref: targetId ? `/moment/nostr_${targetId}` : `/connect`,
-                actor: actorMetadata,
-                source: 'nostr',
-              });
-            }
-          };
-
-          (poolRef.current as any).listeners.add(handleNostrEvent);
-
-          setTimeout(() => {
-            if (poolRef.current) {
-              (poolRef.current as any).listeners.delete(handleNostrEvent);
-              poolRef.current.unsubscribe(subId);
-            }
-            if (authorsToFetch.length) {
-              void queueNostrProfileFetch(Array.from(new Set(authorsToFetch)));
-            }
-            const finalSorted = Array.from(itemsMap.values())
-              .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-              .slice(0, 100);
-            setNotifications(finalSorted);
-            void LocalEngine.cacheSet(cacheKey, finalSorted);
-            void LocalEngine.cacheSet(`kylrix_activity_notifications_${userId}`, finalSorted);
-            setSyncing(false);
-            isHarvestingRef.current = false;
-          }, 1500);
-        } catch (err) {
-          console.warn('[NotificationDrawer] Nostr harvest warning:', err);
-        }
-      }
-
       const sorted = Array.from(itemsMap.values())
         .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
         .slice(0, 100);
@@ -549,12 +307,10 @@ export function NotificationDrawer({
       await LocalEngine.cacheSet(cacheKey, sorted).catch(() => {});
       await LocalEngine.cacheSet(`kylrix_activity_notifications_${userId}`, sorted).catch(() => {});
     } finally {
-      if (!userPubkeyHex) {
-        setSyncing(false);
-        isHarvestingRef.current = false;
-      }
+      setSyncing(false);
+      isHarvestingRef.current = false;
     }
-  }, [user?.$id, userPubkeyHex, cacheKey, userId]);
+  }, [user?.$id, cacheKey, userId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -627,34 +383,6 @@ export function NotificationDrawer({
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
 
-  const openMomentFromNotification = useCallback(
-    (rawId: string, actor?: KylrixNotification['actor']) => {
-      const cleaned = String(rawId || '')
-        .replace(/^\/moment\//, '')
-        .split(/[?#]/)[0]
-        .trim();
-      if (!cleaned) return false;
-      const { source, id } = parseMomentRouteId(cleaned);
-      if (!id) return false;
-      openMomentObjectDetail({
-        momentId: id,
-        source,
-        preview: actor
-          ? {
-              authorName: actor.name,
-              authorAvatar: actor.avatar,
-            }
-          : undefined,
-        openSidebar,
-        openOverlay,
-        closeSidebar,
-        closeOverlay,
-      });
-      return true;
-    },
-    [openSidebar, openOverlay, closeSidebar, closeOverlay],
-  );
-
   const isFollowingActor = useCallback(
     (actor?: KylrixNotification['actor']) => {
       if (!actor) return false;
@@ -723,37 +451,6 @@ export function NotificationDrawer({
         } catch {}
       })();
     }
-
-    if (actor.pubkey && userPubkeyHex && identity) {
-      void (async () => {
-        try {
-          const { getNostrReadRelays } = await import('@/lib/connect/feed-settings');
-          const relays = await getNostrReadRelays().catch(() => DEFAULT_NOTIFICATION_RELAYS);
-          const activePool = poolRef.current || new NostrRelayPool(relays);
-          if (!poolRef.current) {
-            poolRef.current = activePool;
-            activePool.connect();
-          }
-          const storedFollows = (await LocalEngine.cacheGet<string[]>('kylrix:follows')) || [];
-          const followedPubkeys = storedFollows.filter((k) => /^[0-9a-f]{64}$/i.test(k));
-          const tags = followedPubkeys.map((pk) => ['p', pk]);
-          const { signEvent } = await import('@/lib/nostr/nostr');
-          if (identity.privateKeyBytes) {
-            const ev = signEvent(
-              {
-                kind: 3,
-                pubkey: userPubkeyHex,
-                created_at: Math.floor(Date.now() / 1000),
-                tags,
-                content: '',
-              },
-              identity.privateKeyBytes
-            );
-            await activePool.publish(ev);
-          }
-        } catch {}
-      })();
-    }
   };
 
   const handleNotificationClick = (notif: KylrixNotification) => {
@@ -768,25 +465,12 @@ export function NotificationDrawer({
         avatar: notif.actor.avatar,
         npub: notif.actor.npub,
         pubkey: notif.actor.pubkey,
-        source: notif.actor.isNostr ? 'nostr' : 'ecosystem',
+        source: 'ecosystem',
       });
       return;
     }
 
     const href = notif.actionHref ? sanitizeInAppHref(notif.actionHref) : '';
-    if (href.startsWith('/moment/')) {
-      openMomentFromNotification(href, notif.actor);
-      return;
-    }
-
-    if (notif.id.includes('moment')) {
-      const parts = notif.id.split('_');
-      const momentId = parts[parts.length - 1];
-      if (momentId && openMomentFromNotification(momentId, notif.actor)) {
-        return;
-      }
-    }
-
     if (href) {
       router.push(href);
     }

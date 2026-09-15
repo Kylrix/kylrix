@@ -1,0 +1,14 @@
+# Moments & Nostr Removal Checklist
+
+## Completed:
+1. Deleted all moment UI routes: `app/(app)/moment/`, `connect/post/`, and `connect/page.tsx`.
+2. Deleted `lib/nostr/` entirely (crypto, dm, metadata, server-query, thread, user-activity, zap).
+3. Deleted moment/nostr hooks, contract definitions, and components (`MomentCard`, `MomentsDrawer`, `MomentComposerDrawer`, `ConnectMomentsPanel`, `ConnectNostrSettingsView`, `ConnectFeedSettingsPanel`).
+4. Cleaned all app navigation triggers (`MomentTabTrigger` removed across all main pages).
+5. Cleaned `sdk/contracts/index.ts`, `SocialService`, `UnifiedProfileView`, `FollowListDrawer`, and `ZapDrawer`.
+
+## What's Left:
+1. `components/chat/ChatWindow.tsx`: Remove `conversationId.startsWith('nostr_dm_')` block in message send (~lines 1453–1499).
+2. `lib/api/resources.ts`: Remove residual `fetchNostrFeed`, `fetchNostrEventById`, `fetchNostrReplies`, and moment helper methods.
+3. `lib/api/v1/dispatch.ts` & `lib/mcp/dispatch.ts`: Remove remaining `getMoment`, `createMoment` dispatch calls.
+4. Git commit & push.

@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 import { useAuth } from '@/context/auth/AuthContext';
 import { writeSurfaceForeground } from '@/lib/ui/surface-memory';
 
-type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'share-context' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'add-to-project' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'agent-create' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'pricing' | 'tags' | 'trash' | 'project-invite' | 'form' | 'form-response-detail' | 'sanitize' | 'agentic-preview' | 'project-settings' | 'project-visibility' | 'project-auto-sweep' | 'project-join-request-confirm' | 'moment-composer' | 'access-control' | 'milestone-details' | 'ecosystem-send' | 'hangouts' | 'moments' | 'flows' | 'profile-preview' | 'follow-list' | 'zap' | 'reaction-detail';
+type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'share-context' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'add-to-project' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'agent-create' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'pricing' | 'tags' | 'trash' | 'project-invite' | 'form' | 'form-response-detail' | 'sanitize' | 'agentic-preview' | 'project-settings' | 'project-visibility' | 'project-auto-sweep' | 'project-join-request-confirm' | 'access-control' | 'milestone-details' | 'ecosystem-send' | 'hangouts' | 'flows' | 'profile-preview' | 'follow-list' | 'zap' | 'reaction-detail';
 
 export type { DrawerContent };
 
@@ -20,7 +20,7 @@ const UnifiedDrawerContext = createContext<UnifiedDrawerContextType | undefined>
 /** Tiny fingerprint for restore — never store full blobs. */
 function drawerMemoryId(content: DrawerContent, data: any): string | null {
   if (!data || typeof data !== 'object') return null;
-  const keys = ['parentMomentId', 'momentId', 'noteId', 'goalId', 'id', 'chatId', 'projectId', 'resourceId'];
+  const keys = ['noteId', 'goalId', 'id', 'chatId', 'projectId', 'resourceId'];
   for (const k of keys) {
     const v = data[k];
     if (v != null && String(v).trim()) return `${k}:${String(v).trim().slice(0, 80)}`;
@@ -32,8 +32,6 @@ function drawerMemoryId(content: DrawerContent, data: any): string | null {
 /** Surfaces that count as exclusive route foreground (not ephemeral confirm sheets). */
 function isForegroundDrawer(content: DrawerContent): boolean {
   return (
-    content === 'moments' ||
-    content === 'moment-composer' ||
     content === 'hangouts' ||
     content === 'flows' ||
     content === 'note' ||
@@ -54,7 +52,7 @@ export function UnifiedDrawerProvider({ children }: { children: ReactNode }) {
     (content: DrawerContent, data?: any) => {
       setDrawerData(data || null);
       setActiveContent(content);
-      // Exclusive last-wins foreground — opening moments replaces note/etc. for this route.
+      // Exclusive last-wins foreground — track which surface is active.
       if (user?.$id && isForegroundDrawer(content)) {
         void writeSurfaceForeground(user.$id, {
           kind: `unified:${content}`,

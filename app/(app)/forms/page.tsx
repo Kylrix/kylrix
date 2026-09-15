@@ -33,7 +33,7 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
-import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 
@@ -343,7 +343,6 @@ export default function FormsDashboard() {
 
                         <div className="flex items-center gap-2">
                             <FlowTabTrigger />
-                            <MomentTabTrigger />
                             <HangoutTabTrigger />
                             <button 
                                 type="button"

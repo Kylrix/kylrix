@@ -23,7 +23,7 @@ import { TOTPPageContent } from './totp/page';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
-import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 import { useOpenEcosystemPorter } from '@/components/porter/useOpenEcosystemPorter';
 
@@ -517,7 +517,6 @@ function DashboardPageContent() {
 
               <div className="flex items-center gap-2">
                 <FlowTabTrigger />
-                <MomentTabTrigger />
                 <HangoutTabTrigger />
               </div>
 

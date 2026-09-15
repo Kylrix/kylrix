@@ -78,7 +78,6 @@ export function DynamicSidebar() {
     typeName === 'TaskDetails' ||
     typeName === 'EventDetails' ||
     typeName === 'EcosystemPorter' ||
-    typeName === 'MomentObjectDetail' ||
     typeName === 'PricingDrawer' ||
     typeName === 'TagObjectDetail' ||
     typeName === 'TrashObjectDetail' ||
@@ -86,8 +85,7 @@ export function DynamicSidebar() {
       React.isValidElement(content) &&
       ((content.props as { note?: unknown })?.note !== undefined ||
         (content.props as { taskId?: unknown })?.taskId !== undefined ||
-        (content.props as { eventId?: unknown })?.eventId !== undefined ||
-        (content.props as { momentId?: unknown })?.momentId !== undefined));
+        (content.props as { eventId?: unknown })?.eventId !== undefined));
 
   const shouldHideHeader = options?.hideHeader || isObjectDetail;
   const isSelfContained =

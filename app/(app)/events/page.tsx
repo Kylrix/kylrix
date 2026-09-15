@@ -4,7 +4,7 @@ import { Target, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import EventList from '@/components/events/EventList';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
-import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 
 export default function EventsPage() {
@@ -42,7 +42,6 @@ export default function EventsPage() {
 
             <div className="flex items-center gap-2">
               <FlowTabTrigger />
-              <MomentTabTrigger />
               <HangoutTabTrigger />
             </div>
           </div>

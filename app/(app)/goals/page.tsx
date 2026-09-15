@@ -8,7 +8,7 @@ import { MultiSectionContainer } from '@/context/SectionContext';
 import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { useAuth } from '@/context/auth/AuthContext';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
-import { MomentTabTrigger } from '@/components/connect/MomentTabTrigger';
+
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 
 export default function GoalsPage() {
@@ -56,7 +56,6 @@ export default function GoalsPage() {
 
             <div className="flex items-center gap-2">
               <FlowTabTrigger />
-              <MomentTabTrigger />
               <HangoutTabTrigger />
               <button
 

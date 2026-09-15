@@ -21,10 +21,8 @@ import type { ParsedPublicResource } from '@/lib/share/parse-public-url';
 import { splitEcosystemLinks } from '@/lib/share/parse-public-url';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/lib/auth';
-import { openMomentObjectDetail } from '@/components/objects/MomentObjectDetail';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
-import { parseMomentRouteId } from '@/lib/connect/moment-engagement';
 import { FormattedText } from '@/components/common/FormattedText';
 import { useEffect, useState } from 'react';
 
@@ -46,8 +44,6 @@ function KindIcon({ parsed }: { parsed: ParsedPublicResource }) {
       return <Lock {...props} />;
     case 'totp':
       return <Key {...props} />;
-    case 'moment':
-      return <Radio {...props} />;
     case 'flow':
       return <Zap {...props} />;
     case 'agent_session':
@@ -106,14 +102,6 @@ async function resolveTitle(
       const hit = events.find((ev) => (ev.$id || ev.id) === parsed.id);
       if (hit?.title || hit?.name) return String(hit.title || hit.name);
     }
-    if (parsed.resourceType === 'moment') {
-      const moments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
-      const clean = parseMomentRouteId(parsed.id).id;
-      const hit = moments.find((m) => (m.$id || m.id) === clean || (m.$id || m.id) === parsed.id);
-      if (hit?.caption || hit?.content) {
-        return String(hit.caption || hit.content).slice(0, 80);
-      }
-    }
   } catch {
     /* local cache optional */
   }
@@ -130,8 +118,6 @@ export function EcosystemLinkCard({
 }) {
   const router = useRouter();
   const { user } = useAuth();
-  const { openSidebar, closeSidebar } = useDynamicSidebar();
-  const { openOverlay, closeOverlay } = useOverlay();
   const [title, setTitle] = useState(
     parsed.resourceType === 'profile' && parsed.id
       ? `@${parsed.id.replace(/^@/, '')}`
@@ -156,20 +142,6 @@ export function EcosystemLinkCard({
   const open = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (parsed.resourceType === 'moment' && parsed.id) {
-      const { source, id } = parseMomentRouteId(parsed.id);
-      openMomentObjectDetail({
-        momentId: id,
-        source,
-        preview: { content: title !== parsed.label ? title : undefined },
-        openSidebar,
-        openOverlay,
-        closeSidebar,
-        closeOverlay,
-      });
-      return;
-    }
 
     router.push(parsed.pathname || '/app');
   };

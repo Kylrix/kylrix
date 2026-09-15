@@ -120,13 +120,7 @@ import {
   listOAuthAppInstallsSecure,
 } from './secure-ops/pats';
 
-import {
-  getNostrIdentityAction,
-  listNostrIdentitiesAction,
-  registerNostrIdentityAction,
-  setActiveNostrIdentityAction,
-  deleteNostrIdentityAction,
-  resolveNostrPubkeysAction} from './secure-ops/nostr';
+
 
 import {
   listAgentByokKeysAction,
@@ -260,12 +254,6 @@ export {
   listPatsSecure,
   revokePatSecure,
   listOAuthAppInstallsSecure,
-  getNostrIdentityAction,
-  listNostrIdentitiesAction,
-  registerNostrIdentityAction,
-  setActiveNostrIdentityAction,
-  deleteNostrIdentityAction,
-  resolveNostrPubkeysAction,
   listAgentByokKeysAction,
   saveAgentByokKeyAction,
   deleteAgentByokKeyAction,

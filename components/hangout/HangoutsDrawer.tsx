@@ -94,7 +94,6 @@ export function HangoutsDrawer({
   const openedInitialRef = useRef(false);
 
   const [secureChats, setSecureChats] = useState<any[]>(() => peekChatsListMemory());
-  const [nostrChats, setNostrChats] = useState<any[]>([]);
   const [threads, setThreads] = useState<any[]>(() => peekThreadsListMemory());
   const [initialLoading, setInitialLoading] = useState<boolean>(() => !peekChatsListMemory().length && !peekThreadsListMemory().length);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -228,42 +227,7 @@ export function HangoutsDrawer({
         hasAnyLocal = true;
       }
 
-      // Fetch Nostr DMs for current user
-      try {
-        const { getActiveNostrKeyPair, fetchNostrDirectMessages } = await import('@/lib/nostr/dm');
-        const activeNostr = await getActiveNostrKeyPair();
-        if (activeNostr?.pubkeyHex) {
-          const nostrDms = await fetchNostrDirectMessages({
-            myPubkeyHex: activeNostr.pubkeyHex,
-            myPrivateKey: activeNostr.privateKeyBytes,
-          });
-          const { resolveNostrPubkeysAction } = await import('@/lib/actions/secure-ops/nostr');
-          const npubs = nostrDms.map((d) => d.peerNpub).filter(Boolean);
-          const resolvedProfiles: Record<string, any> = await resolveNostrPubkeysAction(npubs).catch(() => ({}));
 
-          const mappedNostr = nostrDms.map((d) => {
-            const profile = resolvedProfiles[d.peerNpub];
-            return {
-              id: d.id,
-              label: profile?.username ? `@${profile.username}` : `npub…${d.peerNpub.slice(-8)}`,
-              otherUserId: profile?.userId || undefined,
-              isSelf: false,
-              kind: 'secure' as const,
-              type: 'direct',
-              raw: d,
-              isEncrypted: true,
-              isNostrDm: true,
-              participants: [activeNostr.pubkeyHex, d.peerPubkey],
-              lastMessageText: d.lastMessageText,
-              lastMessageAt: d.lastMessageAt,
-              isWorkspace: false,
-            };
-          });
-          startTransition(() => setNostrChats(mappedNostr));
-        }
-      } catch (nostrErr) {
-        console.warn('[HangoutsDrawer] Nostr DMs fetch warning:', nostrErr);
-      }
 
       const shouldEscape = shouldRunEmptyEscapeHatch('chats', user?.$id);
 
@@ -512,7 +476,6 @@ export function HangoutsDrawer({
         type: c.type || 'direct',
         raw: c,
         isEncrypted: !!c.isEncrypted,
-        isNostrDm: false,
         participants: c.participants || [],
         lastMessageText: c.lastMessageText || '',
         lastMessageAt: c.lastMessageAt || c.updatedAt || c.createdAt,
@@ -532,17 +495,16 @@ export function HangoutsDrawer({
       type: 'thread',
       raw: t,
       isEncrypted: false,
-      isNostrDm: false,
       participants: t.participants || [],
       lastMessageText: t.lastMessageText || '',
       lastMessageAt: t.lastMessageAt || t.updatedAt || t.createdAt,
       isWorkspace: false,
     }));
-    return [...secure, ...nostrChats, ...discuss].sort(
+    return [...secure, ...discuss].sort(
       (a, b) =>
         new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime(),
     );
-  }, [secureChats, nostrChats, threads, user?.$id, currentWorkspaceTitle, identityHydrationTick]);
+  }, [secureChats, threads, user?.$id, currentWorkspaceTitle, identityHydrationTick]);
 
   const filteredTargets = useMemo(() => {
     return allTargets.filter((t) => {
@@ -750,7 +712,7 @@ export function HangoutsDrawer({
           <div className="space-y-2 px-4 py-2">
             {filteredTargets.map((target) => {
               const isSelected = selected.has(target.id);
-              const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !target.isNostrDm && !isVaultUnlocked;
+              const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !isVaultUnlocked;
               const previewFallback =
                 target.kind === 'secure'
                   ? target.type === 'group'
@@ -758,14 +720,14 @@ export function HangoutsDrawer({
                     : 'No messages yet'
                   : 'Resource discussion';
               const displayPreview = resolveConversationPreviewText(target.lastMessageText, {
-                isEncrypted: target.isEncrypted && !target.isNostrDm,
+                isEncrypted: target.isEncrypted,
                 isVaultUnlocked,
                 fallback: previewFallback,
               });
               const previewIsEncrypted = displayPreview === ENCRYPTED_LIST_PREVIEW_LABEL;
               const avatarUserId =
                 target.otherUserId ||
-                (target.kind === 'secure'
+                  (target.kind === 'secure'
                   ? target.participants?.find((p: string) => p !== user?.$id)
                   : undefined);
               const timeLabel = formatConversationListTime(target.lastMessageAt);
@@ -804,11 +766,7 @@ export function HangoutsDrawer({
                         <MessageCircleMore size={20} />
                       </div>
                     )}
-                    {target.isNostrDm ? (
-                      <div className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-[#000000] bg-purple-600">
-                        <Radio size={8} className="text-white" />
-                      </div>
-                    ) : target.isWorkspace ? (
+                    {target.isWorkspace ? (
                       <div className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-[#000000] bg-[#A855F7]">
                         <Sparkles size={8} className="text-white" />
                       </div>
@@ -821,9 +779,7 @@ export function HangoutsDrawer({
                         <span className="truncate text-[15px] font-bold leading-tight text-white">
                           {target.label}
                         </span>
-                        {target.isNostrDm ? (
-                          <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">Nostr DM</span>
-                        ) : target.isEncrypted ? (
+                        {target.isEncrypted ? (
                           <Lock size={12} className="shrink-0 text-[#F59E0B]" aria-hidden />
                         ) : null}
                       </div>

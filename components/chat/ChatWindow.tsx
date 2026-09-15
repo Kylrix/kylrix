@@ -389,43 +389,6 @@ export const ChatWindow = ({
 
     const loadConversation = React.useCallback(async () => {
         if (!user?.$id) return;
-        if (conversationId.startsWith('nostr_dm_')) {
-            try {
-                const peerPubkey = conversationId.replace(/^nostr_dm_/, '');
-                let peerNpub = peerPubkey;
-                try {
-                    const { bytesToNpub, hexToBytes } = await import('@/lib/nostr/crypto');
-                    peerNpub = bytesToNpub(hexToBytes(peerPubkey));
-                } catch {}
-
-                let name = seedTitle || `npub…${peerNpub.slice(-8)}`;
-                try {
-                    const { resolveNostrPubkeysAction } = await import('@/lib/actions/secure-ops/nostr');
-                    const resolved: Record<string, any> = await resolveNostrPubkeysAction([peerNpub]).catch(() => ({}));
-                    if (resolved[peerNpub]?.username) {
-                        name = `@${resolved[peerNpub].username}`;
-                    }
-                } catch {}
-
-                const nostrConv = {
-                    $id: conversationId,
-                    id: conversationId,
-                    name,
-                    title: name,
-                    type: 'direct',
-                    isEncrypted: true,
-                    isNostrDm: true,
-                    peerPubkey,
-                    peerNpub,
-                    participants: [peerPubkey],
-                };
-
-                startTransition(() => setConversation(nostrConv));
-            } catch (err) {
-                console.warn('[ChatWindow] Failed to load Nostr conversation:', err);
-            }
-            return;
-        }
         try {
             const cachedConv = await LocalEngine.cacheGet<any>(chatConversationCacheKey(conversationId));
             if (cachedConv?.$id || cachedConv?.id) {
@@ -610,38 +573,6 @@ export const ChatWindow = ({
 
     const loadMessages = React.useCallback(async () => {
         if (!conversationId) return;
-        if (conversationId.startsWith('nostr_dm_')) {
-            setMessagesLoading(true);
-            try {
-                const peerPubkey = conversationId.replace(/^nostr_dm_/, '');
-                const { getActiveNostrKeyPair, fetchNostrDirectMessages } = await import('@/lib/nostr/dm');
-                const activeNostr = await getActiveNostrKeyPair();
-
-                if (activeNostr?.pubkeyHex) {
-                    const dms = await fetchNostrDirectMessages({
-                        myPubkeyHex: activeNostr.pubkeyHex,
-                        myPrivateKey: activeNostr.privateKeyBytes,
-                    });
-                    const match = dms.find((c) => c.peerPubkey === peerPubkey);
-                    const msgs = (match?.messages || []).map((m) => ({
-                        $id: m.id,
-                        conversationId,
-                        senderId: m.isOutgoing ? user?.$id : peerPubkey,
-                        content: m.decryptedText || m.content,
-                        type: 'text',
-                        attachments: [],
-                        $createdAt: new Date(m.createdAt).toISOString(),
-                        createdAt: new Date(m.createdAt).toISOString(),
-                    }));
-                    startTransition(() => setMessages(msgs as any));
-                }
-            } catch (err) {
-                console.warn('[ChatWindow] Failed to load Nostr DM messages:', err);
-            } finally {
-                setMessagesLoading(false);
-            }
-            return;
-        }
         try {
             // 0ms memory → LocalEngine paint, then network refresh
             const mem = peekMessagesMemory(conversationId) as ChatMessage[];

@@ -50,7 +50,6 @@ import {
 // Service Imports
 import { FormsService } from '@/lib/services/forms';
 import { EcosystemService } from '@/lib/services/ecosystem';
-import { SocialService } from '@/lib/services/social';
 import { events as eventApi } from '@/lib/kylrixflow';
 import { permissions } from '@/lib/permissions';
 
@@ -90,106 +89,10 @@ function kindForTab(tab: number): string {
     case 4: return 'event';
     case 5: return 'tag';
     case 6: return 'totp';
-    case 7: return 'moment';
     default: return 'note';
   }
 }
 
-function CreateMomentDialog({ 
-  open, 
-  onClose, 
-  onSaved, 
-  userId,
-  showSuccess,
-  showError
-}: { 
-  open: boolean; 
-  onClose: () => void; 
-  onSaved: () => void; 
-  userId: string;
-  showSuccess: (msg: string) => void;
-  showError: (title: string, msg: string) => void;
-}) {
-  const [caption, setCaption] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!caption.trim()) return;
-    setLoading(true);
-    try {
-      await SocialService.createMoment(userId, caption, 'post');
-      showSuccess('Moment published successfully!');
-      onSaved();
-      onClose();
-    } catch (err: any) {
-      showError('Failed to publish moment', err.message || '');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      PaperProps={{
-        sx: {
-          borderRadius: '24px',
-          bgcolor: '#161412',
-          border: '1px solid rgba(255,255,255,0.06)',
-          backgroundImage: 'none',
-          maxWidth: '400px',
-          width: '100%'}
-      }}
-    >
-      <DialogTitle sx={{ color: 'white', fontWeight: 900, fontFamily: 'var(--font-satoshi)' }}>Create New Moment</DialogTitle>
-      <form onSubmit={handleSubmit}>
-        <DialogContent sx={{ pb: 3 }}>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            variant="outlined"
-            placeholder="What's on your mind?"
-            value={caption}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCaption(e.target.value)}
-            required
-            sx={{
-              '& .ob-input-root': {
-                borderRadius: '16px',
-                bgcolor: '#0A0908',
-                color: 'white',
-                '& fieldset': { borderColor: '#1C1A18' },
-                '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                '&.ob-focused fieldset': { borderColor: '#10B981' }
-              }
-            }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 } as any}>
-          <Button onClick={onClose} sx={{ color: 'rgba(255,255,255,0.4)', textTransform: 'none' }}>Cancel</Button>
-          <Button 
-            type="submit" 
-            variant="contained" 
-            disabled={loading}
-            sx={{ 
-              borderRadius: '12px', 
-              bgcolor: '#10B981', 
-              color: 'white',
-              '&:hover': { bgcolor: alpha('#10B981', 0.8) },
-              textTransform: 'none'
-            }}
-          >
-            {loading ? <CircularProgress size={20} color="inherit" /> : 'Publish'}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
-  );
-}
-
-import { DialogActions } from '@/lib/openbricks/primitives';
 
 export default function ProjectAddObjectModal({
   open,
@@ -218,7 +121,6 @@ export default function ProjectAddObjectModal({
   const [results, setResults] = useState<any[]>([]);
   const [adding, setAdding] = useState<string | null>(null);
   const [removingTagId, setRemovingTagId] = useState<string | null>(null);
-  const [isMomentDialogOpen, setIsMomentDialogOpen] = useState(false);
 
   const linkedIdsForTab = useMemo(() => {
     const kind = kindForTab(tab);
@@ -314,16 +216,6 @@ export default function ProjectAddObjectModal({
             if (query.trim()) {
               return rows.filter((t: any) => 
                 (t.issuer || t.accountName || '').toLowerCase().includes(query.toLowerCase())
-              );
-            }
-            return rows;
-          }
-          case 7: { // Moment
-            const momentRes = await SocialService.getFeed(undefined, user.$id);
-            const rows = momentRes.rows || [];
-            if (query.trim()) {
-              return rows.filter((m: any) => 
-                (m.caption || '').toLowerCase().includes(query.toLowerCase())
               );
             }
             return rows;
@@ -518,9 +410,6 @@ export default function ProjectAddObjectModal({
           />
         );
         break;
-      case 7: // Moment
-        setIsMomentDialogOpen(true);
-        break;
       default:
         break;
     }
@@ -535,7 +424,6 @@ export default function ProjectAddObjectModal({
       case 4: return 'Event';
       case 5: return 'Tag';
       case 6: return 'TOTP';
-      case 7: return 'Moment';
       default: return 'Object';
     }
   };
@@ -600,7 +488,6 @@ export default function ProjectAddObjectModal({
             <Tab icon={<Calendar size={14} />} iconPosition="start" label="Event" />
             <Tab icon={<TagIcon size={14} />} iconPosition="start" label="Tag" />
             <Tab icon={<KeyRound size={14} />} iconPosition="start" label="TOTP" />
-            <Tab icon={<Sparkles size={14} />} iconPosition="start" label="Moment" />
         </Tabs>
       </Box>
 
@@ -711,19 +598,6 @@ export default function ProjectAddObjectModal({
             </List>
         )}
       </Box>
-
-      {isMomentDialogOpen && (
-        <CreateMomentDialog
-          open={isMomentDialogOpen}
-          onClose={() => setIsMomentDialogOpen(false)}
-          onSaved={() => {
-            fetchResults();
-          }}
-          userId={user?.$id || ''}
-          showSuccess={showSuccess}
-          showError={showError}
-        />
-      )}
     </Drawer>
   );
 }
