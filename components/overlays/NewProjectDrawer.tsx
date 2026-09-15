@@ -43,7 +43,7 @@ export function NewProjectDrawer() {
   const isOpen = activeContent === 'new-project';
   const { showSuccess, showError } = useToast();
   const { user } = useAuth();
-  const { refreshWorkspaces } = useWorkspace();
+  const { refreshWorkspaces, pushLiveWorkspace } = useWorkspace();
 
   const template = drawerData?.template;
   const onSuccess = drawerData?.onCreated as ((project: any) => void) | undefined;
@@ -202,6 +202,9 @@ export function NewProjectDrawer() {
           } as any);
         }
       }
+
+      // 0ms instant local-first live copy insertion into WorkspaceContext and LocalEngine
+      void pushLiveWorkspace(project);
 
       showSuccess('Workspace created');
       void refreshWorkspaces();

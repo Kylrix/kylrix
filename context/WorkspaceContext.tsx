@@ -34,6 +34,7 @@ interface WorkspaceContextType {
   markWorkspacePublic: (workspaceId: string) => void;
   refreshWorkspaces: () => Promise<void>;
   createWorkspace: (title: string, summary?: string) => Promise<WorkspaceItem | null>;
+  pushLiveWorkspace: (project: any) => Promise<WorkspaceItem | null>;
   attachEntityToActiveWorkspace: (entityKind: string, entityId: string) => Promise<void>;
   setEntityPersonalWorkspaceState: (entityKind: string, entityId: string, inPersonal: boolean) => Promise<void>;
   isEntityPendingInActiveWorkspace: (entityKind: string, entityId: string) => boolean;
@@ -603,6 +604,76 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     [workspaces, userId]
   );
 
+  const pushLiveWorkspace = useCallback(
+    async (created: any): Promise<WorkspaceItem | null> => {
+      if (!created || (!created.$id && !created.id)) return null;
+      const id = String(created.$id || created.id).trim();
+      const ownerId = created.ownerId || created.userId || userId;
+      const isAgentic = created.isAgentic === true || String(created.isAgentic) === 'true';
+      const isOwned = !ownerId || ownerId === userId || userId === 'guest';
+      const isShared =
+        Boolean(created.isShared === true && !isOwned) ||
+        Boolean(!isOwned && !isAgentic) ||
+        Boolean(created.collabStatus && created.collabStatus !== 'owner' && !isOwned);
+
+      const newItem: WorkspaceItem = {
+        id,
+        title: created.title || created.name || 'Untitled Workspace',
+        ownerId,
+        isPersonal: false,
+        isShared: Boolean(isShared && !isAgentic),
+        isAgentic,
+        agentId: created.agentId || null,
+        isPublic: !!created.isPublic,
+        role: created.role || (isOwned ? 'owner' : 'viewer'),
+      };
+
+      // 1. Immediately update React state so UI updates with zero latency
+      setWorkspaces((prev) => {
+        const next = [
+          personalWorkspace,
+          newItem,
+          ...prev.filter((w) => w.id !== personalWorkspace.id && w.id !== newItem.id),
+        ];
+        persistWorkspacesOffline(next, userId);
+        return next;
+      });
+
+      // 2. Switch active workspace to new workspace and dispatch event
+      setActiveWorkspaceId(id);
+
+      // 3. Write instantly to LocalEngine and session cache so warmProjectsList sees it immediately
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { setSessionProjectsList, getSessionProjectsList } = await import('@/lib/projects/projects-cache');
+        const cacheKey = `f_projects_list_${userId}`;
+        const currentCached = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
+        const currentSession = getSessionProjectsList(userId) || [];
+        
+        const updatedProjects = [
+          created,
+          ...currentCached.filter((p: any) => (p.$id || p.id) !== id),
+        ];
+        const updatedSession = [
+          created,
+          ...currentSession.filter((p: any) => (p.$id || p.id) !== id),
+        ];
+
+        await LocalEngine.cacheSet(cacheKey, updatedProjects);
+        await LocalEngine.cacheSet('f_projects_list', updatedProjects);
+        await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, id);
+        setSessionProjectsList(updatedSession, userId);
+      } catch (e) {
+        console.warn('[WorkspaceContext] LocalEngine cacheSet failed in pushLiveWorkspace:', e);
+      }
+
+      // 4. Background refresh to confirm remote state without blocking
+      void refreshWorkspaces();
+      return newItem;
+    },
+    [userId, personalWorkspace, persistWorkspacesOffline, setActiveWorkspaceId, ACTIVE_WORKSPACE_CACHE_KEY, refreshWorkspaces]
+  );
+
   const createWorkspace = useCallback(
     async (title: string, summary?: string): Promise<WorkspaceItem | null> => {
       try {
@@ -627,50 +698,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             $updatedAt: new Date().toISOString(),
           };
         }
-        const newItem: WorkspaceItem = {
-          id: created.$id,
-          title: created.title || title,
-          ownerId: userId,
-          isPersonal: false,
-          isShared: false,
-          role: 'owner',
-        };
-        setWorkspaces((prev) => {
-          const next = [
-            personalWorkspace,
-            newItem,
-            ...prev.filter((w) => w.id !== personalWorkspace.id && w.id !== newItem.id),
-          ];
-          persistWorkspacesOffline(next, userId);
-          return next;
-        });
-        setActiveWorkspaceIdState(created.$id);
-        lastSetIdRef.current = created.$id;
-
-        // Instantly write to LocalEngine caches and session workspace cache
-        try {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const { setSessionProjectsList } = await import('@/lib/projects/projects-cache');
-          const cacheKey = `f_projects_list_${userId}`;
-          const currentCached = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
-          const updatedProjects = [
-            created,
-            ...currentCached.filter((p: any) => (p.$id || p.id) !== created.$id),
-          ];
-          await LocalEngine.cacheSet(cacheKey, updatedProjects);
-          await LocalEngine.cacheSet('f_projects_list', updatedProjects);
-          await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, created.$id);
-          setSessionProjectsList(updatedProjects, userId);
-        } catch {}
-
-        void refreshWorkspaces();
-        return newItem;
+        return await pushLiveWorkspace(created);
       } catch (err) {
         console.error('[WorkspaceContext] Create workspace failed:', err);
         return null;
       }
     },
-    [userId, refreshWorkspaces, personalWorkspace, persistWorkspacesOffline, ACTIVE_WORKSPACE_CACHE_KEY]
+    [userId, pushLiveWorkspace]
   );
 
 
@@ -795,6 +829,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       markWorkspacePublic,
       refreshWorkspaces,
       createWorkspace,
+      pushLiveWorkspace,
       attachEntityToActiveWorkspace,
       setEntityPersonalWorkspaceState,
       isEntityPendingInActiveWorkspace,
@@ -811,6 +846,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       markWorkspacePublic,
       refreshWorkspaces,
       createWorkspace,
+      pushLiveWorkspace,
       attachEntityToActiveWorkspace,
       setEntityPersonalWorkspaceState,
       isEntityPendingInActiveWorkspace,
@@ -841,6 +877,7 @@ const fallbackWorkspaceContext: WorkspaceContextType = {
   markWorkspacePublic: () => {},
   refreshWorkspaces: async () => {},
   createWorkspace: async () => null,
+  pushLiveWorkspace: async () => null,
   attachEntityToActiveWorkspace: async () => {},
   setEntityPersonalWorkspaceState: async () => {},
   isEntityPendingInActiveWorkspace: () => false,
