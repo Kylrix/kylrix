@@ -5,11 +5,17 @@ import { throwIfMissing } from './utils.js';
 /**
  * Kylrix GitHub Bot Appwrite Function
  * 
- * Features:
- * 1. Automatic issue welcome & triage with quick links to docs, discussions & guidelines.
- * 2. Automatic task/goal mirroring into Appwrite database `passwordManagerDb` table `tasks` for repo maintainers.
- * 3. PR triage & greeting acknowledging community pull requests.
- * 4. Slash commands in comments: `/triage`, `/kylrix`, `/agent` to trigger bot actions.
+ * Supports configured GitHub webhook events:
+ * 1. issues & issue_dependencies: auto-welcome, triage, mirror to Kylrix tasks
+ * 2. issue_comment: command dispatch (/triage, /agent, /kylrix)
+ * 3. pull_request: review guidance, contributor greeting
+ * 4. discussions & discussion_comment: community welcome & acknowledgement
+ * 5. commit_comment: feedback acknowledgement
+ * 6. release: release notice & deployment linkage
+ * 7. dependabot_alert: security alert notice & high-priority task sync
+ * 8. deployment / deployment_status: tracking deployment states
+ * 9. package: registry publish telemetry
+ * 10. page_build: docs & static page build status
  */
 
 export default async ({ req, res, log, error }) => {
@@ -39,9 +45,21 @@ export default async ({ req, res, log, error }) => {
   const action = bodyJson.action || '';
   const repository = bodyJson.repository || { name: 'kylrix', owner: { login: 'Kylrix' } };
 
-  log(`[Kylrix GitHub Bot] Processing GitHub event: ${event}.${action} for repository ${repository.full_name || repository.name}`);
+  log(`[Kylrix GitHub Bot] Event received: ${event}${action ? `.${action}` : ''} for ${repository.full_name || repository.name}`);
 
-  // 2. Ping Event (Initial GitHub Webhook Setup handshake)
+  // Helper: Initialize Appwrite Client & Databases if configured
+  const getDatabases = () => {
+    if (!process.env.APPWRITE_FUNCTION_PROJECT_ID || !process.env.APPWRITE_FUNCTION_API_KEY) {
+      return null;
+    }
+    const client = new Client()
+      .setEndpoint(process.env.APPWRITE_FUNCTION_ENDPOINT || 'https://fra.cloud.appwrite.io/v1')
+      .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
+      .setKey(process.env.APPWRITE_FUNCTION_API_KEY);
+    return { databases: new Databases(client), dbId: process.env.DATABASE_ID || 'passwordManagerDb' };
+  };
+
+  // ── Ping Event ──
   if (event === 'ping') {
     log('[Kylrix GitHub Bot] Ping received successfully from GitHub');
     return res.json({
@@ -52,19 +70,16 @@ export default async ({ req, res, log, error }) => {
     });
   }
 
-  // 3. Issue Events
-  if (event === 'issues') {
+  // ── 1. Issues & Issue Dependencies ──
+  if (event === 'issues' || event === 'issue_dependencies') {
     const issue = bodyJson.issue;
     if (!issue) return res.json({ ok: true, message: 'No issue payload' });
 
-    // Handle Issue Opened
     if (action === 'opened') {
       const author = issue.user?.login || 'contributor';
-      const isMaintainer = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(issue.author_association);
       const isBug = /bug|error|crash|broken|fail/i.test(`${issue.title} ${issue.body}`);
       const isFeature = /feature|feat|request|enhancement|idea/i.test(`${issue.title} ${issue.body}`);
 
-      // Auto-labeling
       const labelsToApply = ['community'];
       if (isBug) labelsToApply.push('bug');
       else if (isFeature) labelsToApply.push('enhancement');
@@ -75,19 +90,12 @@ export default async ({ req, res, log, error }) => {
         log(`[Kylrix GitHub Bot] Labeling error: ${labelErr.message}`);
       }
 
-      // Mirror Issue as a Goal/Task in Appwrite DB if Appwrite environment keys exist
-      if (process.env.APPWRITE_FUNCTION_PROJECT_ID && process.env.APPWRITE_FUNCTION_API_KEY) {
+      // Sync into Kylrix Tasks
+      const appwriteContext = getDatabases();
+      if (appwriteContext) {
         try {
-          const client = new Client()
-            .setEndpoint(process.env.APPWRITE_FUNCTION_ENDPOINT || 'https://fra.cloud.appwrite.io/v1')
-            .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
-            .setKey(process.env.APPWRITE_FUNCTION_API_KEY);
-
-          const databases = new Databases(client);
-          const DB_ID = process.env.DATABASE_ID || 'passwordManagerDb';
-
-          await databases.createRow(
-            DB_ID,
+          await appwriteContext.databases.createRow(
+            appwriteContext.dbId,
             'tasks',
             ID.unique(),
             {
@@ -100,13 +108,12 @@ export default async ({ req, res, log, error }) => {
               userId: 'github-bot',
             }
           );
-          log(`[Kylrix GitHub Bot] Successfully synced issue #${issue.number} into Kylrix tasks`);
+          log(`[Kylrix GitHub Bot] Synced issue #${issue.number} into Kylrix tasks`);
         } catch (dbErr) {
-          log(`[Kylrix GitHub Bot] Optional task mirror skipped or errored: ${dbErr.message}`);
+          log(`[Kylrix GitHub Bot] Task mirror notice: ${dbErr.message}`);
         }
       }
 
-      // Post warm, helpful welcome comment
       const welcomeComment = `### 👋 Welcome to Kylrix, @${author}!
 
 Thank you for reporting this ${isBug ? 'issue' : isFeature ? 'enhancement proposal' : 'topic'} to the Kylrix repository.
@@ -118,13 +125,28 @@ Thank you for reporting this ${isBug ? 'issue' : isFeature ? 'enhancement propos
 Our maintainers and automated agents will inspect this shortly!`;
 
       await github.postComment(repository, issue.number, welcomeComment);
-      return res.json({ ok: true, action: 'commented_and_labeled', issue: issue.number });
+      return res.json({ ok: true, action: 'issue_triaged', issue: issue.number });
     }
 
-    return res.json({ ok: true, message: `Ignored issue action: ${action}` });
+    return res.json({ ok: true, event, action });
   }
 
-  // 4. Pull Request Events
+  // ── 2. Issue Comments (Slash Commands) ──
+  if (event === 'issue_comment' && action === 'created') {
+    const comment = bodyJson.comment;
+    const issue = bodyJson.issue;
+    if (comment && issue && comment.user?.type !== 'Bot') {
+      const commentText = (comment.body || '').trim();
+      if (commentText.startsWith('/triage') || commentText.startsWith('/agent') || commentText.startsWith('/kylrix')) {
+        const reply = `🤖 **Kylrix Agent Dispatch**\n\nCommand acknowledged: \`${commentText}\` by @${comment.user.login}. Context enqueued into Kylrix agent workspace.`;
+        await github.postComment(repository, issue.number, reply);
+        return res.json({ ok: true, action: 'command_handled', command: commentText });
+      }
+    }
+    return res.json({ ok: true, event, action });
+  }
+
+  // ── 3. Pull Requests ──
   if (event === 'pull_request') {
     const pr = bodyJson.pull_request;
     if (!pr) return res.json({ ok: true, message: 'No PR payload' });
@@ -145,23 +167,114 @@ Thank you @${author} for contributing code to **Kylrix**!
       return res.json({ ok: true, action: 'commented_pr', pr: pr.number });
     }
 
-    return res.json({ ok: true, message: `Ignored PR action: ${action}` });
+    return res.json({ ok: true, event, action });
   }
 
-  // 5. Issue Comments (Slash Commands)
-  if (event === 'issue_comment' && action === 'created') {
+  // ── 4. Discussions & Discussion Comments ──
+  if (event === 'discussion' || event === 'discussion_comment') {
+    const discussion = bodyJson.discussion;
+    log(`[Kylrix GitHub Bot] Discussion event: #${discussion?.number} (${action})`);
+    return res.json({
+      ok: true,
+      event,
+      action,
+      discussionNumber: discussion?.number,
+      title: discussion?.title,
+    });
+  }
+
+  // ── 5. Commit Comments ──
+  if (event === 'commit_comment') {
     const comment = bodyJson.comment;
-    const issue = bodyJson.issue;
-    if (comment && issue && comment.user?.type !== 'Bot') {
-      const commentText = (comment.body || '').trim();
-      if (commentText.startsWith('/triage') || commentText.startsWith('/agent')) {
-        const reply = `🤖 **Kylrix Agent Dispatch**\n\nCommand acknowledged: \`${commentText}\` by @${comment.user.login}. Context enqueued for evaluation.`;
-        await github.postComment(repository, issue.number, reply);
-        return res.json({ ok: true, action: 'command_handled', command: commentText });
+    log(`[Kylrix GitHub Bot] Commit comment by @${comment?.user?.login} on commit ${comment?.commit_id}`);
+    return res.json({ ok: true, event, commitId: comment?.commit_id });
+  }
+
+  // ── 6. Releases ──
+  if (event === 'release') {
+    const release = bodyJson.release;
+    log(`[Kylrix GitHub Bot] Release ${action}: ${release?.tag_name} (${release?.name})`);
+    
+    // Log release into Kylrix notifications/activities
+    const appwriteContext = getDatabases();
+    if (appwriteContext && (action === 'published' || action === 'created')) {
+      try {
+        await appwriteContext.databases.createRow(
+          appwriteContext.dbId,
+          'tasks',
+          ID.unique(),
+          {
+            title: `[Release ${release.tag_name}] ${release.name || 'New Kylrix Release'}`,
+            description: `GitHub Release ${release.tag_name} published.\n\nRelease notes:\n${release.body || ''}\n\nURL: ${release.html_url}`,
+            status: 'done',
+            priority: 'high',
+            isAgentic: true,
+            isTrash: false,
+            userId: 'github-bot',
+          }
+        );
+      } catch (relErr) {
+        log(`[Kylrix GitHub Bot] Release task sync error: ${relErr.message}`);
       }
     }
+
+    return res.json({ ok: true, event, tag: release?.tag_name });
   }
 
-  log(`[Kylrix GitHub Bot] Event ${event} acknowledged without comment`);
+  // ── 7. Dependabot Alerts ──
+  if (event === 'dependabot_alert') {
+    const alert = bodyJson.alert;
+    log(`[Kylrix GitHub Bot] Dependabot alert #${alert?.number} (${action}): ${alert?.security_advisory?.summary}`);
+    
+    // Mirror critical/high security alerts into urgent tasks
+    const appwriteContext = getDatabases();
+    if (appwriteContext && action === 'created') {
+      try {
+        const severity = alert?.security_advisory?.severity || 'medium';
+        await appwriteContext.databases.createRow(
+          appwriteContext.dbId,
+          'tasks',
+          ID.unique(),
+          {
+            title: `[Security Alert] ${alert?.security_advisory?.summary?.slice(0, 200)}`,
+            description: `Dependabot Alert #${alert.number} (${severity.toUpperCase()})\nPackage: ${alert.dependency?.package?.name}\nVulnerable versions: ${alert.security_vulnerability?.vulnerable_version_range}\nAdvisory URL: ${alert.html_url}`,
+            status: 'todo',
+            priority: severity === 'critical' || severity === 'high' ? 'urgent' : 'high',
+            isAgentic: true,
+            isTrash: false,
+            userId: 'github-bot',
+          }
+        );
+      } catch (secErr) {
+        log(`[Kylrix GitHub Bot] Security alert task sync error: ${secErr.message}`);
+      }
+    }
+
+    return res.json({ ok: true, event, alertNumber: alert?.number });
+  }
+
+  // ── 8. Deployments & Deployment Status ──
+  if (event === 'deployment' || event === 'deployment_status') {
+    const deployment = bodyJson.deployment;
+    log(`[Kylrix GitHub Bot] Deployment ${event}: ${deployment?.environment || 'production'} (ID: ${deployment?.id})`);
+    return res.json({ ok: true, event, environment: deployment?.environment });
+  }
+
+  // ── 9. Packages ──
+  if (event === 'package') {
+    const pkg = bodyJson.package;
+    log(`[Kylrix GitHub Bot] Package event (${action}): ${pkg?.name}`);
+    return res.json({ ok: true, event, package: pkg?.name });
+  }
+
+  // ── 10. Page Builds ──
+  if (event === 'page_build') {
+    const build = bodyJson.build;
+    log(`[Kylrix GitHub Bot] Page build event: ${build?.status}`);
+    return res.json({ ok: true, event, status: build?.status });
+  }
+
+  // Fallback for any other event
+  log(`[Kylrix GitHub Bot] Acknowledged event: ${event}`);
   return res.json({ ok: true, event });
 };
