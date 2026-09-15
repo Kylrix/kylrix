@@ -29,6 +29,10 @@ export const getNoteInputZod = z.object({
   id: z.string().min(1),
 });
 
+export const getGoalInputZod = z.object({
+  id: z.string().min(1),
+});
+
 export interface AgenticToolDefinition {
   key: string;
   name: string;
@@ -46,6 +50,7 @@ export const AGENTIC_TOOL_SCHEMAS = {
   get_note: getNoteInputZod,
   create_goal: goalCreateInputZod,
   update_goal: goalUpdateInputZod.extend({ id: z.string().min(1) }),
+  get_goal: getGoalInputZod,
   create_project: workspaceCreateInputZod,
   link_to_project: linkToProjectInputZod,
   switch_workspace: switchWorkspaceInputZod,
@@ -94,6 +99,14 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
       'Modify status/priority/details of a goal. Preferred: args.id (goal $id) + fields. Legacy specifier goal_id still works.',
     requiresAuthorization: false,
     parameters: ['id', 'title', 'status', 'priority', 'dueDate'],
+  },
+  {
+    key: 'get_goal',
+    name: 'Get Goal/Task',
+    description:
+      'Load one Goal/Task by $id for detailed reading, subtasks inspection, and explanation. Preferred: args.id (goal $id). Legacy specifier goal_$id still accepted. Prefer ids from attached resources or [SESSION OBJECTS].',
+    requiresAuthorization: false,
+    parameters: ['id'],
   },
   {
     key: 'create_project',
@@ -217,8 +230,8 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     key: 'wallet_get_balance',
     name: 'Get Wallet Balance & Chains',
     description:
-      'Fetch current balances and chain addresses for Kylrix, Solana, ETH, BTC, SUI, Base, Polygon, Arbitrum. Optional args: token (string, e.g. "SOL", "KYLRIX", "ALL"). Requires authorization confirmation to access on-chain assets.',
-    requiresAuthorization: true,
+      'Fetch current balances and chain addresses for Kylrix, Solana, ETH, BTC, SUI, Base, Polygon, Arbitrum. Optional args: token (string, e.g. "SOL", "KYLRIX", "ALL"). Reads verified balances and addresses without requiring auth prompts.',
+    requiresAuthorization: false,
     parameters: ['token'],
   },
   {
@@ -291,6 +304,13 @@ export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
       "priority": "low|medium|high — optional, default medium",
       "dueDate": "ISO date optional",
       "isAgentic": true
+    }
+  },
+  "get_goal": {
+    "toolKey": "get_goal",
+    "specifier": null,
+    "args": {
+      "id": "string — required, goal $id"
     }
   },
   "list_goals": {

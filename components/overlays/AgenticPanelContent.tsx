@@ -866,7 +866,10 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
       try {
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
-        const contextualPrompt = buildInstantPrompt(trimmed, pageContext);
+        const contextualPrompt = buildInstantPrompt(promptWithAttachment, {
+          ...pageContext,
+          resourceId: pendingObject?.payload?.childId || pageContext.resourceId,
+        });
         const res = await runInstantAgenticRequest({
           prompt: contextualPrompt,
           user,
@@ -876,9 +879,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             route: pageContext.route,
             title: pageContext.title,
             systemHint: pageContext.systemHint,
-            resourceId: pageContext.resourceId,
-            userMessage: trimmed},
-          userMessage: trimmed});
+            resourceId: pendingObject?.payload?.childId || pageContext.resourceId,
+            userMessage: promptWithAttachment,
+          },
+          userMessage: promptWithAttachment,
+        });
 
         if (res.success) {
           if (res.sessionId) {
@@ -1045,6 +1050,17 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       onClose,
                       setActiveWorkspaceId,
                       openDetailOverlay: (kind: string, id: string) => {
+                        if (kind === 'goal') {
+                          const GoalObjectDetail = require('@/components/objects/GoalObjectDetail').GoalObjectDetail;
+                          if (GoalObjectDetail) {
+                            if (isDesktop) {
+                              openSidebar(<GoalObjectDetail taskId={id} onClose={() => {}} />, id, { fullscreen: true });
+                            } else {
+                              openOverlay(<GoalObjectDetail taskId={id} onClose={() => {}} />);
+                            }
+                          }
+                          return;
+                        }
                         const targetNote = allNotes.find((n: any) => n.$id === id);
                         const NoteDetailSidebar = require('@/components/ui/NoteDetailSidebar').default;
                         if (targetNote && NoteDetailSidebar) {

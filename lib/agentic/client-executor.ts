@@ -315,6 +315,43 @@ async function executeAgenticToolCall(
       return { success: true, summary: `Listed ${filtered.length} goals`, skipToast: true };
     }
 
+    if ((key === 'get_goal' || key === 'objects.goal.read') && (call.specifier || (args as any).id)) {
+      const gid = (call.specifier || (args as any).id) as string;
+      let task = ctx.tasks?.find((t: any) => (t.id || t.$id) === gid);
+      if (!task) {
+        try {
+          const { tasks: taskApi } = await import('@/lib/kylrixflow');
+          const loaded = await taskApi.get(gid);
+          if (loaded) {
+            task = loaded as any;
+          }
+        } catch {}
+      }
+      const goalTitle = task?.title || 'Goal';
+      const goalDesc = task?.description || '';
+      const goalStatus = task?.status || 'todo';
+      const goalPriority = task?.priority || 'medium';
+      const subtasksList = Array.isArray(task?.subtasks) && task.subtasks.length > 0
+        ? `\n\n**Subtasks (${task.subtasks.length}):**\n` + task.subtasks.map((st: any) => `- [${st.completed ? 'x' : ' '}] ${st.title}`).join('\n')
+        : '';
+
+      await ctx.recordSessionObject?.({
+        objectId: gid,
+        objectType: 'goal',
+        title: goalTitle,
+        toolKey: key});
+      ctx.openDetailOverlay?.('goal', gid);
+
+      const body = `### Goal: ${goalTitle}\n- **Status**: ${goalStatus}\n- **Priority**: ${goalPriority}${goalDesc ? `\n\n**Description:**\n${goalDesc}` : ''}${subtasksList}`;
+      ctx.appendMessage?.('assistant', body, { blocks: [{ type: 'markdown', content: body }] });
+      return {
+        success: true,
+        summary: `Loaded goal: "${goalTitle}"`,
+        skipToast: true,
+        messageBlocks: [{ type: 'markdown', content: body }],
+      };
+    }
+
     if ((key === 'update_goal' || key === 'objects.goal.update') && (call.specifier || (args as any).id)) {
       const gid = (call.specifier || (args as any).id) as string;
       await ctx.updateTask?.(gid, {

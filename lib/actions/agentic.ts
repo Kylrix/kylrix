@@ -300,6 +300,39 @@ ${activeTasks || 'None'}
 Active Projects:
 ${activeProjects || 'None'}
 `;
+
+    // If prompt contains an attached resource tag or pageContext has resourceId, preload its full record
+    const attachMatch = String(prompt || '').match(/\[Attached:\s*([^(\]]+)\s*\(([^)]+)\)\s*-\s*ID:\s*([a-f0-9]+)\]/i);
+    const attachedId = attachMatch ? attachMatch[3] : pageContext?.resourceId;
+    const attachedKind = attachMatch ? attachMatch[2].toLowerCase() : '';
+    if (attachedId) {
+      try {
+        if (attachedKind.includes('goal') || attachedKind.includes('task') || !attachedKind) {
+          const matchedTask = (tasksRes?.rows || []).find((t: any) => t.$id === attachedId);
+          if (matchedTask) {
+            userResourceSummaries += `\n[CURRENTLY ATTACHED GOAL]\n- ID: ${matchedTask.$id}\n- Title: "${matchedTask.title}"\n- Status: ${matchedTask.status}\n- Priority: ${matchedTask.priority || 'medium'}\n- Description: ${matchedTask.description || '(no description)'}\n`;
+          } else {
+            const fetchedTask = await databases.getRow('passwordManagerDb', 'tasks', attachedId).catch(() => null);
+            if (fetchedTask) {
+              userResourceSummaries += `\n[CURRENTLY ATTACHED GOAL]\n- ID: ${fetchedTask.$id}\n- Title: "${fetchedTask.title}"\n- Status: ${fetchedTask.status}\n- Priority: ${fetchedTask.priority || 'medium'}\n- Description: ${fetchedTask.description || '(no description)'}\n`;
+            }
+          }
+        }
+        if (attachedKind.includes('note') || attachedKind.includes('idea')) {
+          const matchedNote = (notesRes?.rows || []).find((n: any) => n.$id === attachedId);
+          if (matchedNote) {
+            userResourceSummaries += `\n[CURRENTLY ATTACHED NOTE]\n- ID: ${matchedNote.$id}\n- Title: "${matchedNote.title}"\n- Content: ${String(matchedNote.content || '').slice(0, 1500)}\n`;
+          } else {
+            const fetchedNote = await databases.getRow('passwordManagerDb', '67ff05f3002502ef239e', attachedId).catch(() => null);
+            if (fetchedNote) {
+              userResourceSummaries += `\n[CURRENTLY ATTACHED NOTE]\n- ID: ${fetchedNote.$id}\n- Title: "${fetchedNote.title}"\n- Content: ${String(fetchedNote.content || '').slice(0, 1500)}\n`;
+            }
+          }
+        }
+      } catch (attachLoadErr) {
+        console.warn('[executeInstantRequestAction] Failed to preload attached item:', attachLoadErr);
+      }
+    }
   } catch (err) {
     console.error('[executeInstantRequestAction] Failed to retrieve context details:', err);
   }
@@ -365,6 +398,9 @@ If the target is ambiguous, ask the user to clarify or list the available titles
     // explicit get_note with id
     const getMatch = raw.match(/get_note\s*[:\s]*([a-f0-9]{24,})/i);
     if (getMatch) return { toolKey: 'get_note', specifier: getMatch[1], args: {} };
+    // explicit get_goal with id
+    const getGoalMatch = raw.match(/get_goal\s*[:\s]*([a-f0-9]{20,})/i);
+    if (getGoalMatch) return { toolKey: 'get_goal', specifier: getGoalMatch[1], args: { id: getGoalMatch[1] } };
     // search_ecosystem { query: "..." }  or  search_ecosystem query "..."
     const searchMatch = raw.match(/search_ecosystem\s*\{[^}]*query\s*:\s*["']([^"']+)["'][^}]*\}/i) || raw.match(/search_ecosystem\s*\{[^}]*query\s*:\s*["']([^"']+)["']/i);
     if (searchMatch) return { toolKey: 'search_ecosystem', args: { query: searchMatch[1] } };
@@ -498,10 +534,10 @@ ${lifetimeMemoryContext}
     '  "lifetimeMemoryUpdate": "Optional high-quality lifelong memory. Leave blank if none.",',
     '  "toolCalls": [',
     '     {',
-    '        "toolKey": "wallet_get_balance | wallet_send_tokens | search_users | create_note | update_note | get_note | create_goal | update_goal | list_goals | create_project | ui.navigate | navigate_workspace | search_ecosystem | objects.form.read | objects.form.submit | link_to_project | suggest_next_steps | toggle_privacy | delete_resource | ui.open_drawer | ui.preview.open",',
+    '        "toolKey": "wallet_get_balance | wallet_send_tokens | search_users | create_note | update_note | get_note | create_goal | update_goal | get_goal | list_goals | create_project | ui.navigate | navigate_workspace | search_ecosystem | objects.form.read | objects.form.submit | link_to_project | suggest_next_steps | toggle_privacy | delete_resource | ui.open_drawer | ui.preview.open",',
     '        "specifier": "resource id, form id, target id, or \'.all\' when required; null otherwise",',
     '        "subSpecifier": "optional field name",',
-    '        "args": { "token": "KYLRIX|SOL|ALL", "amount": "...", "recipientUsername": "...", "title": "...", "content": "...", "description": "...", "query": ".all", "target": "settings.passkeys", "route": "/settings", "tags": [], "isPublic": false, "isAgentic": true, "suggestions": [{ "label": "...", "prompt": "..." }], "objectType": "note", "objectId": "...", "type": "note", "payload": {} }',
+    '        "args": { "id": "...", "token": "KYLRIX|SOL|ALL", "amount": "...", "recipientUsername": "...", "title": "...", "content": "...", "description": "...", "query": ".all", "target": "settings.passkeys", "route": "/settings", "tags": [], "isPublic": false, "isAgentic": true, "suggestions": [{ "label": "...", "prompt": "..." }], "objectType": "note", "objectId": "...", "type": "note", "payload": {} }',
     '     }',
     '  ]',
     '}',
