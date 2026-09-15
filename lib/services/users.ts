@@ -71,12 +71,26 @@ function rememberProfileRow(row: any | null, lookupKey: string) {
     profileRowCache.set(lookupKey, { row, at });
     if (row.$id) profileRowCache.set(row.$id, { row, at });
     if (row.userId) profileRowCache.set(row.userId, { row, at });
+    if (row.username) profileRowCache.set(row.username.toLowerCase(), { row, at });
     seedIdentityCache(row);
+
+    if (typeof window !== 'undefined') {
+        import('./LocalEngine').then(({ LocalEngine }) => {
+            if (row.userId) void LocalEngine.cacheSet(`profile_${row.userId}`, row);
+            if (row.$id) void LocalEngine.cacheSet(`profile_${row.$id}`, row);
+            if (row.username) void LocalEngine.cacheSet(`profile_${row.username.toLowerCase()}`, row);
+        }).catch(() => {});
+    }
 }
 
 export function invalidateUsersProfileRowCache(userId?: string | null) {
   if (!userId) return;
   profileRowCache.delete(userId);
+  if (typeof window !== 'undefined') {
+    import('./LocalEngine').then(({ LocalEngine }) => {
+      void LocalEngine.cacheDelete(`profile_${userId}`);
+    }).catch(() => {});
+  }
 }
 
 async function processProfileBatch() {
@@ -146,7 +160,19 @@ export const UsersService = {
             return hit.row ? { ...hit.row } : null;
         }
 
-        // 2. Batched Network Request
+        // 2. LocalEngine Cache (Browser environment)
+        if (typeof window !== 'undefined') {
+            try {
+                const { LocalEngine } = await import('./LocalEngine');
+                const cached = await LocalEngine.cacheGet<any>(`profile_${userId}`, PROFILE_ROW_TTL_MS);
+                if (cached) {
+                    rememberProfileRow(cached, userId);
+                    return { ...cached };
+                }
+            } catch {}
+        }
+
+        // 3. Batched Network Request
         return new Promise((resolve, reject) => {
             const existing = batchState.promises.get(userId);
             if (existing) {
@@ -296,6 +322,17 @@ export const UsersService = {
         const hit = profileRowCache.get(normalized);
         if (hit && Date.now() - hit.at < PROFILE_ROW_TTL_MS) {
             return hit.row ? { ...hit.row } : null;
+        }
+
+        if (typeof window !== 'undefined') {
+            try {
+                const { LocalEngine } = await import('./LocalEngine');
+                const cached = await LocalEngine.cacheGet<any>(`profile_${normalized}`, PROFILE_ROW_TTL_MS);
+                if (cached) {
+                    rememberProfileRow(cached, normalized);
+                    return { ...cached };
+                }
+            } catch {}
         }
 
         try {

@@ -83,6 +83,7 @@ export function UnifiedProfileView({
     avatar?: string; 
     bio?: string;
     links?: Array<{ title?: string; url: string }>;
+    tags?: string[];
     socials?: { twitter?: string; github?: string; website?: string; telegram?: string; lightning?: string };
     createdAt?: string;
   }>({
@@ -91,6 +92,7 @@ export function UnifiedProfileView({
     avatar: avatar || initialProfile?.avatar || initialProfile?.avatarUrl,
     bio: bio || initialProfile?.bio,
     links: initialProfile?.preferences?.links || initialProfile?.links || [],
+    tags: initialProfile?.preferences?.tags || initialProfile?.tags || [],
     socials: initialProfile?.socials || {},
     createdAt: initialProfile?.$createdAt || initialProfile?.createdAt,
   });
@@ -102,54 +104,80 @@ export function UnifiedProfileView({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
 
-  // Lookup profile info
+  // Instant 0ms LocalEngine hydration & lookup profile info
   useEffect(() => {
     let cancelled = false;
     const lookup = async () => {
       try {
+        const key = targetUid ? `profile_${targetUid}` : (username ? `profile_${username.replace(/^@/, '').toLowerCase()}` : null);
+        if (key) {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cached = await LocalEngine.cacheGet<any>(key).catch(() => null);
+          if (cached && !cancelled) {
+            let prefsObj: any = {};
+            try {
+              prefsObj = typeof cached.preferences === 'string' ? JSON.parse(cached.preferences) : cached.preferences || {};
+              if (typeof prefsObj.tipEnabled === 'boolean') setTipEnabled(prefsObj.tipEnabled);
+            } catch {}
+            setResolvedProfile(prev => ({
+              name: prev.name || cached.displayName || cached.name,
+              username: isCleanUsername(cached.username) ? cached.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
+              avatar: prev.avatar || cached.avatar || cached.avatarUrl,
+              bio: prev.bio || cached.bio,
+              links: prev.links?.length ? prev.links : prefsObj.links || cached.links || [],
+              tags: prev.tags?.length ? prev.tags : prefsObj.tags || cached.tags || [],
+              createdAt: prev.createdAt || cached.$createdAt || cached.createdAt,
+            }));
+          }
+        }
+
         if (targetUid) {
           const { UsersService } = await import('@/lib/services/users');
-          const prof = await UsersService.getProfile(targetUid).catch(() => null);
+          const prof = await UsersService.getProfileById(targetUid).catch(() => null);
           if (cancelled || !prof) return;
 
+          let prefs: any = {};
           try {
-            const prefs = typeof (prof as any).preferences === 'string'
+            prefs = typeof (prof as any).preferences === 'string'
               ? JSON.parse((prof as any).preferences)
-              : (prof as any).preferences;
-            if (prefs && typeof prefs.tipEnabled === 'boolean') {
+              : (prof as any).preferences || {};
+            if (typeof prefs.tipEnabled === 'boolean') {
               setTipEnabled(prefs.tipEnabled);
             }
           } catch {}
 
           setResolvedProfile(prev => ({
-            name: prev.name || prof.displayName || prof.name,
-            username: isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
-            avatar: prev.avatar || prof.avatar || prof.avatarUrl,
-            bio: prev.bio || prof.bio,
-            links: prev.links?.length ? prev.links : (prof as any).preferences?.links || (prof as any).links || [],
-            createdAt: prev.createdAt || (prof as any).$createdAt,
+            name: prof.displayName || prof.name || prev.name,
+            username: isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : prev.username,
+            avatar: prof.avatar || prof.avatarUrl || prev.avatar,
+            bio: prof.bio ?? prev.bio,
+            links: prefs.links || (prof as any).links || prev.links || [],
+            tags: prefs.tags || (prof as any).tags || prev.tags || [],
+            createdAt: (prof as any).$createdAt || prev.createdAt,
           }));
         } else if (username) {
           const { UsersService } = await import('@/lib/services/users');
           const prof = await UsersService.getProfile(username).catch(() => null);
           if (cancelled || !prof) return;
 
+          let prefs: any = {};
           try {
-            const prefs = typeof (prof as any).preferences === 'string'
+            prefs = typeof (prof as any).preferences === 'string'
               ? JSON.parse((prof as any).preferences)
-              : (prof as any).preferences;
-            if (prefs && typeof prefs.tipEnabled === 'boolean') {
+              : (prof as any).preferences || {};
+            if (typeof prefs.tipEnabled === 'boolean') {
               setTipEnabled(prefs.tipEnabled);
             }
           } catch {}
 
           setResolvedProfile(prev => ({
-            name: prev.name || prof.displayName || prof.name,
-            username: isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
-            avatar: prev.avatar || prof.avatar || prof.avatarUrl,
-            bio: prev.bio || prof.bio,
-            links: prev.links?.length ? prev.links : (prof as any).preferences?.links || (prof as any).links || [],
-            createdAt: prev.createdAt || (prof as any).$createdAt,
+            name: prof.displayName || prof.name || prev.name,
+            username: isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : prev.username,
+            avatar: prof.avatar || prof.avatarUrl || prev.avatar,
+            bio: prof.bio ?? prev.bio,
+            links: prefs.links || (prof as any).links || prev.links || [],
+            tags: prefs.tags || (prof as any).tags || prev.tags || [],
+            createdAt: (prof as any).$createdAt || prev.createdAt,
           }));
         }
       } catch {}
@@ -511,11 +539,19 @@ export function UnifiedProfileView({
               </p>
             )}
 
-            {/* Badges */}
-            {badges.length > 0 && (
+            {/* Badges & Tags */}
+            {(badges.length > 0 || (resolvedProfile.tags && resolvedProfile.tags.length > 0)) && (
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 {badges.map((b) => (
                   <BadgeChip key={b.$id || b.id} badge={b} size="sm" />
+                ))}
+                {resolvedProfile.tags?.map((t) => (
+                  <span
+                    key={t}
+                    className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#161412] border border-white/10 text-xs font-mono text-zinc-300"
+                  >
+                    #{t}
+                  </span>
                 ))}
               </div>
             )}
