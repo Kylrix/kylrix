@@ -1,7 +1,7 @@
 import { Query, ID } from 'node-appwrite';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { getOpenSuiteEntitlement, isSelfHostedDeployment, isKylrixCloud } from '@/lib/entitlements';
+import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
 import { type SubscriptionRow } from '@/lib/billing/subscription-helpers';
 import {
   maxBillingUiTier,

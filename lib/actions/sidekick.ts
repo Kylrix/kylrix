@@ -130,7 +130,7 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
   return { success: true, result: parsed, sessionId };
 }
 
-export async function executeSidekickChat(opts: { target: { type: string; id: string; title?: string }; message: string; sessionId?: string; jwt?: string }) {
+export async function executeSidekickChat(opts: { target: { type: string; id: string; title?: string; content?: string }; message: string; sessionId?: string; jwt?: string }) {
   const actor = await getActor(opts.jwt);
   if (!actor?.$id) return { success: false, error: 'Unauthorized' };
   const { userHasPaidAiAccess } = await import('@/lib/server/ai-subscription-gate');
@@ -166,10 +166,10 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
   const genAI = new GoogleGenerativeAI(apiKey);
   // Use sidekick system instruction focused on object itself + chat history
   const { buildSidekickSystemInstruction } = await import('@/lib/agentic/prompts/sidekick');
-  const systemInstruction = buildSidekickSystemInstruction({ id: opts.target.id, type: opts.target.type as any, title: opts.target.title });
+  const systemInstruction = buildSidekickSystemInstruction({ id: opts.target.id, type: opts.target.type as any, title: opts.target.title, content: opts.target.content });
   const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash', systemInstruction });
   const transcript = history.map((m: any) => `${m.role}: ${typeof m.content === 'string' ? m.content.slice(0, 2000) : JSON.stringify(m.content).slice(0, 2000)}`).join('\n');
-  const prompt = `${transcript}\n\nuser: ${opts.message}\n\nContinue as Sidekick for ${opts.target.type} ${opts.target.id}. Keep focus on this object.`;
+  const prompt = `${transcript}\n\nuser: ${opts.message}\n\nContinue as Sidekick for ${opts.target.type} "${opts.target.title || opts.target.id}". Answer the user's questions directly in formatted markdown. Keep focus on this object.`;
   const result = await model.generateContent(prompt);
   const text = result.response.text().trim();
   const newHistory = [...history, { role: 'user', content: opts.message, at: new Date().toISOString() }, { role: 'assistant', content: text, at: new Date().toISOString() }].slice(-200);

@@ -5,6 +5,7 @@ import { X, Sparkles, FileText, ListChecks, Map as MapIcon, Lightbulb, Send, Pap
 import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
+import { AgenticMarkdown } from '@/components/agentic/AgenticMarkdown';
 import toast from 'react-hot-toast';
 
 // Sidekick — flagship per-object companion. One session per object (targetType/targetId).
@@ -83,11 +84,17 @@ async function getRedactedObjectExcerpt(childId: string, _childKind: string): Pr
 function renderMessageContent(content: string) {
   const attachRegex = /\[Attached:\s*(.*?)\s*\((.*?)\)\s*-\s*ID:\s*(.*?)\]/g;
   const matches = [...content.matchAll(attachRegex)];
-  if (matches.length > 0) {
-    const cleanText = content.replace(attachRegex, '').trim();
-    return (
-      <div className="flex flex-col gap-2">
-        {cleanText && <div>{cleanText}</div>}
+  let cleanText = content.replace(attachRegex, '').trim();
+
+  try {
+    const p = JSON.parse(cleanText);
+    if (p?.oneLiner) cleanText = p.oneLiner;
+  } catch {}
+
+  return (
+    <div className="flex flex-col gap-2">
+      {cleanText && <AgenticMarkdown content={cleanText} />}
+      {matches.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-1">
           {matches.map((match, idx) => (
             <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/30 border border-white/10 text-xs text-purple-200">
@@ -97,14 +104,9 @@ function renderMessageContent(content: string) {
             </div>
           ))}
         </div>
-      </div>
-    );
-  }
-  try {
-    const p = JSON.parse(content);
-    if (p?.oneLiner) return p.oneLiner;
-  } catch {}
-  return content;
+      )}
+    </div>
+  );
 }
 
 function Skeleton() {
@@ -318,51 +320,78 @@ export function SidekickDrawer({
 
   useEffect(()=> { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }, [messages, result]);
 
-  const handleCreateGoalFromTarget = useCallback(async () => {
+  const handleIntelligentAction = useCallback(async (actionType: 'goal' | 'form' | 'note', promptText?: string) => {
     if (!target) return;
+    setSending(true);
     try {
-      const { createTaskFromNote } = await import('@/lib/appwrite');
-      const task = await createTaskFromNote({
-        $id: target.id,
-        title: target.title || 'Goal from ' + target.type,
-        content: target.content || '',
-      } as any);
-      toast.success('Goal created from ' + target.type);
-      const assistantMsg: ChatMsg = {
-        id: `a_${Date.now()}`,
-        role: 'assistant',
-        content: `Created goal "${task?.title || target.title}" (ID: ${task?.$id || task?.id || 'new'}).`,
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
+      if (actionType === 'goal') {
+        const goalTitle = promptText ? promptText.replace(/^create\s+(a\s+)?goal\s*(to|for)?\s*/i, '').trim() : target.title || 'Goal';
+        const formattedTitle = goalTitle ? goalTitle.charAt(0).toUpperCase() + goalTitle.slice(1) : `Goal for ${target.title || target.type}`;
+        const { createTaskFromNote } = await import('@/lib/appwrite');
+        const task = await createTaskFromNote({
+          $id: target.id,
+          title: formattedTitle,
+          content: target.content || `Goal derived from ${target.type}: ${target.title || target.id}`,
+        } as any);
+        toast.success(`Goal created: ${task?.title || formattedTitle}`);
+        const assistantMsg: ChatMsg = {
+          id: `a_${Date.now()}`,
+          role: 'assistant',
+          content: `🎯 **Created Goal:** **"${task?.title || formattedTitle}"**\n\n- **Status:** To Do\n- **Linked Object:** ${target.type} (${target.title || target.id})`,
+        };
+        const updated = [...messages, assistantMsg];
+        setMessages(updated);
+        LocalEngine.cacheSet(`sidekick:chat:${target.type}:${target.id}`, updated).catch(() => {});
+      } else if (actionType === 'form') {
+        const { generateObjectAssistSchemaAction } = await import('@/lib/actions/ai');
+        const formPrompt = promptText || `Create a form tailored for ${target.type}: ${target.title || 'Untitled'}. Content context: ${target.content?.slice(0, 500) || ''}`;
+        const schemaRes = await generateObjectAssistSchemaAction({ kind: 'form', prompt: formPrompt });
+        const generated = schemaRes?.data || {};
+        const { createForm } = await import('@/lib/actions/client-ops');
+        const newForm = await createForm({
+          title: generated.title || `Form: ${target.title || 'Untitled'}`,
+          description: generated.description || `Generated for ${target.type}: ${target.title || target.id}`,
+          schema: JSON.stringify(generated.fields || [
+            { id: 'f1', type: 'text', label: 'Response / Feedback', required: true },
+            { id: 'f2', type: 'email', label: 'Contact Email', required: false },
+          ]),
+          status: 'draft',
+        });
+        toast.success(`Form created: ${newForm.title}`);
+        const assistantMsg: ChatMsg = {
+          id: `a_${Date.now()}`,
+          role: 'assistant',
+          content: `📝 **Created Form:** **"${newForm.title}"**\n\n- **Description:** ${newForm.description}\n- **Questions:** ${Array.isArray(generated.fields) ? generated.fields.length : 2} dynamic fields created based on ${target.type}.`,
+        };
+        const updated = [...messages, assistantMsg];
+        setMessages(updated);
+        LocalEngine.cacheSet(`sidekick:chat:${target.type}:${target.id}`, updated).catch(() => {});
+      } else if (actionType === 'note') {
+        const { createNote } = await import('@/lib/actions/client-ops');
+        const noteTitle = promptText ? promptText.replace(/^draft\s+(a\s+)?(note|summary)\s*(for|on)?\s*/i, '').trim() : `Summary of ${target.title || target.type}`;
+        const formattedTitle = noteTitle ? noteTitle.charAt(0).toUpperCase() + noteTitle.slice(1) : `Note: ${target.title || target.type}`;
+        const newNote = await createNote({
+          title: formattedTitle,
+          content: `### Executive Note for ${target.title || target.type}\n\n**Source Object:** ${target.type} (${target.id})\n\n**Context:**\n${target.content || 'N/A'}`,
+          tags: target.tags || ['sidekick', 'ai'],
+          isPublic: false,
+        });
+        toast.success(`Note created: ${newNote.title}`);
+        const assistantMsg: ChatMsg = {
+          id: `a_${Date.now()}`,
+          role: 'assistant',
+          content: `💡 **Created Note:** **"${newNote.title}"**\n\nSaved to Ideas & Notes with relevant context from this ${target.type}.`,
+        };
+        const updated = [...messages, assistantMsg];
+        setMessages(updated);
+        LocalEngine.cacheSet(`sidekick:chat:${target.type}:${target.id}`, updated).catch(() => {});
+      }
     } catch (e: any) {
-      toast.error('Failed to create goal: ' + (e?.message || 'Error'));
+      toast.error('Action failed: ' + (e?.message || 'Error'));
+    } finally {
+      setSending(false);
     }
-  }, [target]);
-
-  const handleCreateFormFromTarget = useCallback(async () => {
-    if (!target) return;
-    try {
-      const { createForm } = await import('@/lib/actions/client-ops');
-      const newForm = await createForm({
-        title: `Form: ${target.title || 'Untitled'}`,
-        description: `Generated from ${target.type}: ${target.title || target.id}`,
-        schema: JSON.stringify([
-          { id: 'f1', type: 'text', label: 'Response / Feedback', required: true },
-          { id: 'f2', type: 'email', label: 'Contact Email', required: false },
-        ]),
-        status: 'draft',
-      });
-      toast.success('Form created successfully');
-      const assistantMsg: ChatMsg = {
-        id: `a_${Date.now()}`,
-        role: 'assistant',
-        content: `Created form "${newForm.title}" (ID: ${newForm.$id}). You can open it in Forms.`,
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-    } catch (e: any) {
-      toast.error('Failed to create form: ' + (e?.message || 'Error'));
-    }
-  }, [target]);
+  }, [target, messages]);
 
   const handleCopySummary = useCallback(() => {
     if (!result?.oneLiner && !target) return;
@@ -564,50 +593,102 @@ export function SidekickDrawer({
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-300">{error}</div>
         ) : (
           <>
-            {/* Object-specific tools & Quick actions */}
+            {/* Intelligent Contextual Actions */}
             <div className="rounded-2xl bg-[#161412] border border-white/5 p-4 flex flex-col gap-3">
-              <div className="text-xs font-black uppercase tracking-wider text-purple-400 font-mono flex items-center gap-1.5">
-                <Sparkles size={14} />
-                <span>Sidekick Tools</span>
+              <div className="text-xs font-black uppercase tracking-wider text-purple-400 font-mono flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles size={14} />
+                  <span>Contextual Intelligent Actions</span>
+                </div>
+                <span className="text-[10px] text-white/40 font-normal">Auto-tailored to this {target.type}</span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={handleCreateGoalFromTarget}
-                  className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
-                >
-                  <Target size={15} className="text-purple-400 shrink-0 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-bold text-white/80 group-hover:text-white">Create Goal</span>
-                </button>
 
-                <button
-                  type="button"
-                  onClick={handleCreateFormFromTarget}
-                  className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
-                >
-                  <FormInput size={15} className="text-indigo-400 shrink-0 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-bold text-white/80 group-hover:text-white">Create Form</span>
-                </button>
+              {/* Dynamic Suggestions or AI Fallback Actions */}
+              <div className="flex flex-col gap-2">
+                {result?.suggestions?.length ? (
+                  result.suggestions.map((s, idx) => {
+                    const isGoal = /goal/i.test(s.label || s.prompt);
+                    const isForm = /form/i.test(s.label || s.prompt);
+                    const isNote = /note|summary|draft/i.test(s.label || s.prompt);
 
-                <button
-                  type="button"
-                  onClick={handleCopySummary}
-                  className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
-                >
-                  <Copy size={15} className="text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-bold text-white/80 group-hover:text-white">Copy Summary</span>
-                </button>
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          if (isGoal) handleIntelligentAction('goal', s.prompt);
+                          else if (isForm) handleIntelligentAction('form', s.prompt);
+                          else if (isNote) handleIntelligentAction('note', s.prompt);
+                          else {
+                            setInput(s.prompt);
+                            handleSend();
+                          }
+                        }}
+                        className="p-3 rounded-xl bg-[#0A0908] border border-white/5 hover:border-[#A855F7]/40 hover:bg-[#A855F7]/10 transition-all text-left flex items-center justify-between cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {isGoal ? (
+                            <Target size={15} className="text-purple-400 shrink-0 group-hover:scale-110 transition-transform" />
+                          ) : isForm ? (
+                            <FormInput size={15} className="text-indigo-400 shrink-0 group-hover:scale-110 transition-transform" />
+                          ) : isNote ? (
+                            <FileText size={15} className="text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+                          ) : (
+                            <Sparkles size={15} className="text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-white group-hover:text-[#E9D5FF] truncate">{s.label}</p>
+                            <p className="text-[10px] text-white/40 truncate mt-0.5">{s.prompt}</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/5 text-white/60 group-hover:bg-[#A855F7]/20 group-hover:text-white shrink-0 ml-2">
+                          Run
+                        </span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleIntelligentAction('goal')}
+                      className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
+                    >
+                      <Target size={15} className="text-purple-400 shrink-0 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-white/80 group-hover:text-white">Create Goal for {target.type}</span>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => setInput(`Suggest tags and key topics for this ${target.type}`)}
-                  className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
-                >
-                  <Tag size={15} className="text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-bold text-white/80 group-hover:text-white">Suggest Tags</span>
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => handleIntelligentAction('form')}
+                      className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
+                    >
+                      <FormInput size={15} className="text-indigo-400 shrink-0 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-white/80 group-hover:text-white">Create Tailored Form</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleIntelligentAction('note')}
+                      className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
+                    >
+                      <FileText size={15} className="text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-white/80 group-hover:text-white">Draft Summary Note</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopySummary}
+                      className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
+                    >
+                      <Copy size={15} className="text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-white/80 group-hover:text-white">Copy Summary</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
+
             {result && (
               <>
                 <div className="rounded-2xl bg-[#161412] border border-white/5 p-4 flex gap-3">
@@ -640,11 +721,11 @@ export function SidekickDrawer({
                     ))}
                   </div>
                 </div>
-                {(result.suggestions?.length || result.nextSteps?.length) ? (
+                {result.nextSteps?.length ? (
                   <div className="rounded-2xl bg-[#161412] border border-white/5 p-4 flex flex-col gap-2">
-                    <div className="text-xs font-black uppercase tracking-wider text-white">Quick actions</div>
+                    <div className="text-xs font-black uppercase tracking-wider text-white">Suggested Next Steps</div>
                     <div className="flex flex-wrap gap-2">
-                      {[...(result.suggestions || []), ...(result.nextSteps || [])].slice(0, 6).map((s, idx) => (
+                      {result.nextSteps.slice(0, 6).map((s, idx) => (
                         <button key={idx} onClick={() => setInput(s.prompt)} className="px-3 py-1.5 rounded-full bg-[#A855F7]/10 border border-[#A855F7]/20 text-xs font-bold text-[#E9D5FF] hover:bg-[#A855F7]/15 hover:border-[#A855F7]/30 transition-colors">
                           {s.label}
                         </button>
@@ -655,19 +736,17 @@ export function SidekickDrawer({
               </>
             )}
 
-            {/* Chat history — if pre-existing conversation, we show it instead of re-querying summary */}
+            {/* Chat history — conversation panel */}
             {messages.length > 0 && (
               <div className="flex flex-col gap-3">
                 <div className="text-[11px] font-black tracking-widest text-white/30 uppercase">Conversation</div>
                 {messages.map((m) => (
-                  <div key={m.id} className={`max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${m.role === 'user' ? 'bg-[#A855F7] text-white self-end' : 'bg-[#161412] border border-white/5 text-[#D6D1CA] self-start'}`}>
+                  <div key={m.id} className={`max-w-[88%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${m.role === 'user' ? 'bg-[#A855F7] text-white self-end' : 'bg-[#161412] border border-white/5 text-[#D6D1CA] self-start'}`}>
                     {renderMessageContent(m.content)}
                   </div>
                 ))}
               </div>
             )}
-
-            {sessionId && <div className="text-[11px] text-white/30 text-center">Sidekick session {sessionId.slice(0, 8)} • one per object • targetType/targetId — return months later</div>}
           </>
         )}
       </div>
