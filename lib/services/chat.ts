@@ -814,8 +814,8 @@ export const ChatService = {
 
     async _unwrapConversationKey(conv: any, myUserId: string): Promise<CryptoKey | null> {
         const key = await resolveConversationKey(conv, myUserId);
-        if (key) {
-            conversationKeyCache.set(conv.$id, key);
+        if (key && conv?.$id) {
+            cacheResolvedConversationKey(conv.$id, key);
         }
         return key;
     },

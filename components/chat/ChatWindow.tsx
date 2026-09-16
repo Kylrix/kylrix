@@ -84,6 +84,8 @@ import {
     peekChatsListMemory,
     peekMessagesMemory,
     patchConversationListPreview,
+    readChatsListLocal,
+    readThreadsListLocal,
     readMessagesLocal,
     writeMessagesLocal,
 } from '@/lib/chat/local-chat-cache';
@@ -390,9 +392,15 @@ export const ChatWindow = ({
     const loadConversation = React.useCallback(async () => {
         if (!user?.$id) return;
         try {
-            const cachedConv = await LocalEngine.cacheGet<any>(chatConversationCacheKey(conversationId));
-            if (cachedConv?.$id || cachedConv?.id) {
-                startTransition(() => setConversation(applyDisplayName(cachedConv)));
+            let localHit = await LocalEngine.cacheGet<any>(chatConversationCacheKey(conversationId));
+            if (!localHit?.$id && !localHit?.id) {
+                const chats = await readChatsListLocal();
+                const threads = await readThreadsListLocal();
+                localHit = chats.find((c: any) => (c.$id || c.id) === conversationId) ||
+                           threads.find((t: any) => (t.$id || t.id) === conversationId) || null;
+            }
+            if (localHit?.$id || localHit?.id) {
+                startTransition(() => setConversation(applyDisplayName(localHit)));
             }
 
             if (ecosystemSecurity.status.isUnlocked) {
@@ -583,29 +591,33 @@ export const ChatWindow = ({
             const cachedMessages = mem.length
                 ? mem
                 : ((await readMessagesLocal(conversationId)) as ChatMessage[]);
+
             if (cachedMessages?.length) {
-                startTransition(() => setMessages(cachedMessages));
-                setMessagesLoading(false);
+                let localConv = conversation;
+                if (!localConv?.$id && !localConv?.id) {
+                    localConv = await LocalEngine.cacheGet<any>(chatConversationCacheKey(conversationId));
+                }
+                if (!localConv?.$id && !localConv?.id) {
+                    const list = peekChatsListMemory();
+                    localConv = list.find((c: any) => (c.$id || c.id) === conversationId) || null;
+                }
+                const fallbackConv = localConv || { $id: conversationId, id: conversationId, isEncrypted: true };
 
                 if (ecosystemSecurity.status.isUnlocked && user?.$id) {
-                    void (async () => {
-                        try {
-                            const convForDecrypt = await ChatService.getConversationById(
-                                conversationId,
-                                user.$id,
-                            ).catch(() => null);
-                            if (!convForDecrypt) return;
-                            const hydrated = (await ChatService.decryptMessageRows(
-                                cachedMessages,
-                                convForDecrypt,
-                                user.$id,
-                            )) as ChatMessage[];
-                            startTransition(() => setMessages(hydrated));
-                        } catch {
-                            /* keep cache until network */
-                        }
-                    })();
+                    try {
+                        const hydrated = (await ChatService.decryptMessageRows(
+                            cachedMessages,
+                            fallbackConv,
+                            user.$id,
+                        )) as ChatMessage[];
+                        startTransition(() => setMessages(hydrated));
+                    } catch {
+                        startTransition(() => setMessages(cachedMessages));
+                    }
+                } else {
+                    startTransition(() => setMessages(cachedMessages));
                 }
+                setMessagesLoading(false);
             } else {
                 setMessagesLoading(true);
             }
@@ -1493,7 +1505,17 @@ export const ChatWindow = ({
                     status: 'sent',
                 } as unknown as ChatMessage;
                 startTransition(() => {
-                    setMessages(prev => prev.map(m => m.$id === optimisticId ? messageForState : m));
+                    setMessages(prev => {
+                        const next = prev.map(m => m.$id === optimisticId ? messageForState : m);
+                        writeMessagesLocal(conversationId, next, false);
+                        patchConversationListPreview(conversationId, {
+                            lastMessageText: finalText,
+                            lastMessageAt: String(sent.createdAt || sent.$createdAt || new Date().toISOString()),
+                            lastMessageId: String(sent.id || sent.$id),
+                            isEncrypted: false,
+                        });
+                        return next;
+                    });
                 });
                 // also persist to thread_messages cache if needed via loadMessages refresh
                 void loadMessages();
