@@ -41,6 +41,7 @@ import {
   readMessagesLocal,
   readThreadsListLocal,
   writeChatsListLocal,
+  writeThreadsListLocal,
 } from '@/lib/chat/local-chat-cache';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import type { PublicResourceType } from '@/lib/share/resource-types';
@@ -373,9 +374,19 @@ export function HangoutsDrawer({
                 try {
                   if (target.kind === 'secure') {
                     await ChatService.deleteConversationFully(target.id);
+                    setSecureChats((prev) => {
+                      const next = prev.filter((c: any) => (c.$id || c.id) !== target.id);
+                      void writeChatsListLocal(next);
+                      return next;
+                    });
                   } else {
                     const { ThreadService } = await import('@/lib/services/threads');
                     await (ThreadService as any).deleteThread?.(target.id);
+                    setThreads((prev) => {
+                      const next = prev.filter((t: any) => (t.$id || t.id) !== target.id);
+                      void writeThreadsListLocal(next);
+                      return next;
+                    });
                   }
                   toast.success('Hangout deleted');
                   void refreshChats();
@@ -411,6 +422,14 @@ export function HangoutsDrawer({
 
   useEffect(() => {
     void refreshChats();
+  }, [refreshChats]);
+
+  useEffect(() => {
+    const handleTrashUpdated = () => {
+      void refreshChats();
+    };
+    window.addEventListener('kylrix:trash-updated', handleTrashUpdated);
+    return () => window.removeEventListener('kylrix:trash-updated', handleTrashUpdated);
   }, [refreshChats]);
 
   useEffect(() => {

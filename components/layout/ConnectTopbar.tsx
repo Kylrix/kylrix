@@ -557,7 +557,7 @@ export default function ConnectTopbar({
     if (!textToCopy) return;
     await navigator.clipboard.writeText(textToCopy);
     setCopyState('copied-username');
-    toast.success(`Copied ${textToCopy}`);
+    toast.success(`Copied ${textToCopy}`, { duration: 1500 });
     window.setTimeout(() => setCopyState('idle'), 1600);
   }, [profileUsername, profileDisplayName, profileSeed.userId]);
 
@@ -570,6 +570,7 @@ export default function ConnectTopbar({
     const refLink = `${base}/?ref=${refCode}`;
     await navigator.clipboard.writeText(refLink);
     setCopyState('copied-referral');
+    toast.success('Referral link copied', { duration: 1500 });
     window.setTimeout(() => setCopyState('idle'), 1600);
   }, [profileUsername, profileSeed.userId]);
 

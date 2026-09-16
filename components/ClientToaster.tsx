@@ -9,13 +9,14 @@ export default function ClientToaster() {
   return (
     <Toaster
       position="top-center"
-      containerStyle={{ zIndex: 2147483000 }}
+      containerStyle={{ zIndex: 2147483000, pointerEvents: 'none' }}
       toastOptions={{
         style: {
           background: '#161412',
           color: '#f2f2f2',
           border: '1px solid rgba(255,255,255,0.08)',
           zIndex: 2147483000,
+          pointerEvents: 'none',
         }}}
     />
   );

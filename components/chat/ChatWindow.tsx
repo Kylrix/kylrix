@@ -1283,9 +1283,13 @@ export const ChatWindow = ({
                           toast.success("Conversation permanently wiped");
                           try {
                             const { LocalEngine } = await import('@/lib/services/LocalEngine');
-                            const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
+                            const { chatConversationCacheKey, chatMessagesCacheKey, peekChatsListMemory, writeChatsListLocal } = await import('@/lib/chat/local-chat-cache');
                             await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), null as any).catch(() => null);
                             await LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), []).catch(() => null);
+                            const current = peekChatsListMemory();
+                            if (current.length) {
+                              writeChatsListLocal(current.filter((c: any) => (c.$id || c.id) !== conversationId));
+                            }
                           } catch {}
                           onBack?.();
                         }
