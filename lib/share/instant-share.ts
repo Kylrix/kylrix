@@ -4,6 +4,7 @@ import { masterPassCrypto, looksEncrypted, decryptField } from '@/lib/masterpass
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 function toUrlSafeBase64(base64: string): string {
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -249,6 +250,16 @@ export async function executeInstantShare(
       copied: false,
       published: false,
       requiresAuth: true,
+    };
+  }
+
+  if (!hasPaidKylrixPlan(currentUser)) {
+    return {
+      success: false,
+      url: '',
+      copied: false,
+      published: false,
+      error: 'Sharing requires a paid plan.',
     };
   }
 

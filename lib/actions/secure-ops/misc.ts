@@ -1411,6 +1411,13 @@ export async function toggleResourcePublicGuestSecure(params: {
      throw new Error('Only the owner can manage public sharing');
   }
 
+  if (mode !== 'make_private' && mode !== 'guest_off') {
+    const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+    if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+      throw new Error('Public sharing requires a paid plan.');
+    }
+  }
+
   let isPublic = !!row.isPublic;
   let isGuest = !!row.isGuest;
 

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { writeSurfaceForeground } from '@/lib/ui/surface-memory';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'share-context' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'add-to-project' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'agent-create' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'pricing' | 'tags' | 'trash' | 'project-invite' | 'form' | 'form-response-detail' | 'sanitize' | 'agentic-preview' | 'project-settings' | 'project-visibility' | 'project-auto-sweep' | 'project-join-request-confirm' | 'access-control' | 'milestone-details' | 'ecosystem-send' | 'hangouts' | 'flows' | 'profile-preview' | 'follow-list' | 'zap' | 'reaction-detail';
 
@@ -50,6 +51,11 @@ export function UnifiedDrawerProvider({ children }: { children: ReactNode }) {
 
   const open = useCallback(
     (content: DrawerContent, data?: any) => {
+      if ((content === 'share-note' || content === 'share-context') && !hasPaidKylrixPlan(user)) {
+        setDrawerData({ feature: 'Sync & Share' });
+        setActiveContent('pro-upgrade');
+        return;
+      }
       setDrawerData(data || null);
       setActiveContent(content);
       // Exclusive last-wins foreground — track which surface is active.

@@ -18,6 +18,7 @@ import { executeInstantShare, buildInstantShareUrl, ensureSharePublished } from 
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { account } from '@/lib/appwrite/client';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { exportToMarkdown, exportToICS } from '@/lib/utils/export';
 import toast from 'react-hot-toast';
 
@@ -194,6 +195,11 @@ export function ShareContextDrawer() {
   useEffect(() => {
     let active = true;
     async function init() {
+      if (!hasPaidKylrixPlan(user)) {
+        close();
+        open('pro-upgrade', { feature: 'Sync & Share' });
+        return;
+      }
       const quick =
         (instantUrl && String(instantUrl).trim()) ||
         (resourceId ? buildInstantShareUrl(resourceType, resourceId, { projectId }) : '');

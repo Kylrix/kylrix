@@ -6,6 +6,7 @@
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { ownerRowPermissions } from '@/lib/appwrite/owner-acl';
 import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 const STANDARD_CONTENT_LIMIT = 65535;
 const ARTICLE_CONTENT_LIMIT = 655300000;
@@ -47,10 +48,11 @@ function isAclMiss(err: any): boolean {
 
 /** Signed-in actor editing their own row (payload does not claim another owner). */
 function canOwnerDirect(data: any): string | null {
-  const actorId = getCurrentUserSnapshot()?.$id;
-  if (!actorId || actorId === 'guest') return null;
-  if (claimedOtherOwner(data, actorId)) return null;
-  return actorId;
+  const user = getCurrentUserSnapshot();
+  if (!user || !user.$id || user.$id === 'guest') return null;
+  if (!hasPaidKylrixPlan(user)) return null;
+  if (claimedOtherOwner(data, user.$id)) return null;
+  return user.$id;
 }
 
 function tagSignature(tags: unknown): string {
