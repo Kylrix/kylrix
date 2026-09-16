@@ -171,15 +171,16 @@ let flushQueuedDuringSync = false;
 let persistWriteChain: Promise<void> = Promise.resolve();
 let firstPendingTimestamp: number | null = null;
 
-/** Coalesce keystroke/CRUD bursts — rAF-fast (16ms) for typing, 0ms for discrete actions.
- * 1000x perceived speedup: UI already green via local copy; engine flush is now frame-coalesced
- * not 150ms, plus pre-warmed JWT and parallel bulk flush. DB reads go DOWN (soft-pull
- * gated, Realtime replenishes). */
-const FLUSH_COALESCE_MS = 450; // typing bursts → one Server/Appwrite write (was 16ms = Vercel burn)
+/** Adaptive rapid opportunistic sync timing:
+ * - While typing / active keystrokes: debounce flush (~1500ms) to prevent DB writes on every single keystroke.
+ * - When user pauses or triggers discrete actions (close, commit, blur): flush instantly (0ms).
+ * - HARD_CEILING_MS forces opportunistic flush when changes have been pending.
+ */
+const FLUSH_TYPING_DEBOUNCE_MS = 1500;
 const FLUSH_DISCRETE_MS = 0;
-const HARD_CEILING_MS = 500;
-const RETRY_BASE_MS = 1_000;
-const RETRY_MAX_MS = 30_000;
+const HARD_CEILING_MS = 1000;
+const RETRY_BASE_MS = 500;
+const RETRY_MAX_MS = 15_000;
 
 // Pre-warmed JWT — avoids 100-300ms createJWT per flush (kept warm in background)
 let cachedJwt: string | null = null;
@@ -363,7 +364,8 @@ if (typeof window !== 'undefined') {
       else if (delta < 1000) globalIntensity = Math.min(10, globalIntensity + 0.5);
       else globalIntensity = Math.max(0.5, globalIntensity - 1);
       activityListeners.forEach((l) => l(globalIntensity));
-      triggerAutonomicSyncScheduler();
+      // User is actively editing — reschedule flush with typing debounce delay
+      triggerAutonomicSyncScheduler({ activeEditing: true });
     } else {
       globalIntensity = Math.max(0.2, globalIntensity - 0.2);
       activityListeners.forEach((l) => l(globalIntensity));
@@ -407,7 +409,7 @@ function maxFailedAttempts(): number {
  * - Never re-arms itself into a 0ms spin loop
  * - Retries only when unpaid work remains, with exponential backoff
  */
-function scheduleDemandFlush(opts?: { immediate?: boolean; retry?: boolean; discrete?: boolean }) {
+function scheduleDemandFlush(opts?: { immediate?: boolean; retry?: boolean; discrete?: boolean; activeEditing?: boolean }) {
   if (typeof window === 'undefined') return;
   if (isSyncing) {
     flushQueuedDuringSync = true;
@@ -432,7 +434,7 @@ function scheduleDemandFlush(opts?: { immediate?: boolean; retry?: boolean; disc
 
   if (opts?.retry) {
     if (retryTimeout) return;
-    const backoff = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(1.6, maxFailedAttempts()));
+    const backoff = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(1.4, maxFailedAttempts()));
     retryTimeout = setTimeout(() => {
       retryTimeout = null;
       void autonomicSyncEngine.runCycle();
@@ -440,20 +442,17 @@ function scheduleDemandFlush(opts?: { immediate?: boolean; retry?: boolean; disc
     return;
   }
 
-  // 1000x fix: discrete actions (pin, tag, create) flush on next microtask (0ms),
-  // typing bursts coalesce (~450ms) to cut invocation/CPU burn.
-  const delay = opts?.discrete ? FLUSH_DISCRETE_MS : FLUSH_COALESCE_MS;
+  // Adaptive delay: 0ms for discrete actions/stops; FLUSH_TYPING_DEBOUNCE_MS (1500ms) while actively editing
+  const now = Date.now();
+  const isActivelyEditing = opts?.activeEditing || (now - lastKeystrokeTime < 1500);
+  const delay = opts?.discrete ? FLUSH_DISCRETE_MS : (isActivelyEditing ? FLUSH_TYPING_DEBOUNCE_MS : FLUSH_DISCRETE_MS);
+
   if (syncTimeout) clearTimeout(syncTimeout);
   if (delay === 0) {
-    // Microtask — still coalesces multiple markPending in same tick, but no timer
     syncTimeout = setTimeout(() => {
       syncTimeout = null;
       void autonomicSyncEngine.runCycle();
     }, 0) as any;
-    // Also schedule rAF as fallback to batch within frame
-    if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
-      window.requestAnimationFrame(() => {});
-    }
   } else {
     syncTimeout = setTimeout(() => {
       syncTimeout = null;
@@ -462,8 +461,8 @@ function scheduleDemandFlush(opts?: { immediate?: boolean; retry?: boolean; disc
   }
 }
 
-function triggerAutonomicSyncScheduler() {
-  scheduleDemandFlush();
+function triggerAutonomicSyncScheduler(opts?: { activeEditing?: boolean }) {
+  scheduleDemandFlush(opts);
 }
 
 function revisionOf(note: Notes | null | undefined): string {
@@ -499,6 +498,61 @@ function goalRevisionOf(task: Task | null | undefined): string {
     return String(u ?? '').trim();
   } catch {
     return '';
+  }
+}
+
+async function flushFormPending(
+  pendingKey: string,
+  formId: string,
+  queuedRevision: string,
+  db: Awaited<ReturnType<typeof import('@/lib/webrtc/RxDBManager').getRxDB>> | null,
+  activeUserId: string | null
+) {
+  let payload: any =
+    pendingPayloads.get(pendingKey) ||
+    pendingPayloads.get(formId);
+
+  if (!payload && db) {
+    try {
+      const doc = await db.cache.findOne(`form_${formId}`).exec();
+      payload = doc?.data || null;
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!payload) {
+    // Ack clean if no payload, to avoid backoff lock
+    failedSyncAttempts.delete(pendingKey);
+    failedSyncAttempts.delete(formId);
+    autonomicSyncEngine.ack(pendingKey, queuedRevision);
+    autonomicSyncEngine.ack(formId, queuedRevision);
+    return;
+  }
+
+  if (!activeUserId) return;
+
+  const flushRevision = queuedRevision || new Date().toISOString();
+  const { FormsService } = await import('@/lib/services/forms');
+
+  try {
+    await FormsService.updateForm(formId, payload);
+    failedSyncAttempts.delete(pendingKey);
+    failedSyncAttempts.delete(formId);
+    autonomicSyncEngine.ack(pendingKey, flushRevision);
+    autonomicSyncEngine.ack(formId, flushRevision);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('kylrix:sync-complete', {
+          detail: { formId, revision: flushRevision, kind: 'form' },
+        })
+      );
+    }
+  } catch (err: any) {
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: Date.now() };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
+    throw err;
   }
 }
 
@@ -1133,7 +1187,8 @@ export const autonomicSyncEngine = {
                 const eventId = pendingId.replace(/^event:/, '');
                 await flushEventPending(pendingId, eventId, queuedRevision, db, activeUserId);
               } else if (pendingId.startsWith('form:')) {
-                autonomicSyncEngine.ack(pendingId, queuedRevision);
+                const formId = pendingId.replace(/^form:/, '');
+                await flushFormPending(pendingId, formId, queuedRevision, db, activeUserId);
               } else if (pendingId.startsWith('tag:')) {
                 autonomicSyncEngine.ack(pendingId, queuedRevision);
               } else if (goalId) {
