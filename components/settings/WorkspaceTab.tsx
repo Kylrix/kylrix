@@ -11,7 +11,6 @@ import {
   Trash2, 
   Save, 
   RefreshCw, 
-  Mail,
   AlertTriangle,
   KeyRound,
   Plus,
@@ -27,6 +26,10 @@ import { toast } from 'react-hot-toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { listPats, revokePat } from '@/lib/actions/client-ops';
 import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
+import UserSearch from '@/components/UserSearch';
+import { IdentityAvatar } from '@/components/common/IdentityBadge';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+
 export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => void } = {}) {
   const { activeWorkspace, refreshWorkspaces } = useWorkspace();
   const { user: _user } = useAuth();
@@ -47,7 +50,8 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
 
   // Collaborators / Members
   const [collaborators, setCollaborators] = useState<any[]>([]);
-  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
+  const [permissionRole, setPermissionRole] = useState<'member' | 'editor' | 'admin' | 'viewer'>('member');
   const [addingMember, setAddingMember] = useState(false);
 
   // Workspace Keys
@@ -80,8 +84,28 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
   const loadWorkspaceDetails = useCallback(async () => {
     if (!isCustomWorkspace || !activeWorkspace?.id) return;
     setLoading(true);
+    const cacheKey = `ws_details_${activeWorkspace.id}`;
+
+    // Check LocalEngine cache first for 0ms hydration
+    try {
+      const cached = await LocalEngine.cacheGet<any>(cacheKey);
+      if (cached) {
+        if (cached.project) {
+          setProject(cached.project);
+          setTitle(cached.project.title || '');
+          setSummary(cached.project.summary || '');
+          setVisibility(cached.project.visibility === 'public' || cached.project.isPublic ? 'public' : 'private');
+          setStatus(cached.project.status === 'archived' ? 'archived' : 'active');
+        }
+        if (cached.collaborators) {
+          setCollaborators(cached.collaborators);
+        }
+      }
+    } catch {}
+
     try {
       const data = await ProjectsService.getProject(activeWorkspace.id);
+      let rows: any[] = [];
       if (data) {
         setProject(data);
         setTitle(data.title || '');
@@ -90,13 +114,17 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
         setStatus(data.status === 'archived' ? 'archived' : 'active');
       }
 
-      // Load collaborators
       try {
         const res = await ProjectsService.listProjectCollaborators(activeWorkspace.id);
-        setCollaborators(res?.rows || []);
+        rows = res?.rows || [];
+        setCollaborators(rows);
       } catch {
+        rows = [];
         setCollaborators([]);
       }
+
+      // Cache updated payload in LocalEngine
+      void LocalEngine.cacheSet(cacheKey, { project: data, collaborators: rows });
     } catch (err: any) {
       toast.error('Failed to load workspace details: ' + (err.message || 'Error'));
     } finally {
@@ -140,12 +168,18 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeWorkspace?.id || !newMemberEmail.trim()) return;
+    if (!activeWorkspace?.id || selectedUsers.length === 0) return;
     setAddingMember(true);
     try {
-      await ProjectsService.addCollaborator(activeWorkspace.id, newMemberEmail.trim(), 'member');
-      toast.success('Invitation sent');
-      setNewMemberEmail('');
+      let count = 0;
+      for (const targetUser of selectedUsers) {
+        const targetId = targetUser.id || targetUser.userId || targetUser.$id || targetUser.email;
+        const role = permissionRole === 'viewer' ? 'viewer' : (permissionRole === 'admin' ? 'admin' : 'member');
+        await ProjectsService.addCollaborator(activeWorkspace.id, targetId, role);
+        count++;
+      }
+      toast.success(count === 1 ? `Invitation sent to ${selectedUsers[0].title || selectedUsers[0].displayName || selectedUsers[0].id}` : `${count} invitations sent`);
+      setSelectedUsers([]);
       void loadWorkspaceDetails();
     } catch (err: any) {
       toast.error(err.message || 'Failed to send invite');
@@ -383,25 +417,40 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
           </button>
         </div>
 
-        <form onSubmit={handleAddMember} className="flex gap-2.5">
-          <div className="relative flex-1 min-w-0">
-            <Mail className="absolute left-3.5 top-3 h-4 w-4 text-white/40" />
-            <input
-              type="text"
-              value={newMemberEmail}
-              onChange={(e) => setNewMemberEmail(e.target.value)}
-              placeholder="Enter User ID or Email to invite..."
-              className="w-full h-10 pl-10 pr-3.5 rounded-xl bg-[#0A0908] border-2 border-white/15 text-white text-xs placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] transition-colors"
-            />
+        <form onSubmit={handleAddMember} className="p-4 rounded-2xl bg-[#0A0908] border-2 border-white/15 space-y-4">
+          <UserSearch
+            label="SEARCH AND SELECT USERS TO INVITE"
+            placeholder="Search by username, display name, or email..."
+            selectedUsers={selectedUsers}
+            onSelect={(newUser) => setSelectedUsers([...selectedUsers, newUser])}
+            onRemove={(id) => setSelectedUsers(selectedUsers.filter((u) => u.id !== id))}
+            multiple={true}
+            excludeIds={[_user?.$id, ...collaborators.map(c => c.userId || c.entityId || c.$id)].filter(Boolean)}
+          />
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-white/10">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono font-bold text-white/60 uppercase tracking-wider">Access Role:</span>
+              <select
+                value={permissionRole}
+                onChange={(e: any) => setPermissionRole(e.target.value)}
+                className="h-9 px-3 rounded-xl bg-[#161412] border border-white/15 text-white text-xs font-bold focus:outline-none focus:border-[#6366F1]"
+              >
+                <option value="member">Editor / Member</option>
+                <option value="viewer">Viewer (Read Only)</option>
+                <option value="admin">Admin (Full Access)</option>
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              disabled={addingMember || selectedUsers.length === 0}
+              className="px-4 h-9 bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold rounded-xl transition-all disabled:opacity-40 inline-flex items-center justify-center gap-1.5 cursor-pointer border-2 border-[#6366F1] shadow-md shrink-0"
+            >
+              <UserPlus size={13} />
+              <span>{addingMember ? 'Sending Invites...' : `Send ${selectedUsers.length > 1 ? `${selectedUsers.length} Invites` : 'Invite'}`}</span>
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={addingMember || !newMemberEmail.trim()}
-            className="px-4 h-10 bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold rounded-xl transition-all disabled:opacity-40 inline-flex items-center gap-1.5 cursor-pointer border-2 border-[#6366F1] shadow-md shrink-0"
-          >
-            <UserPlus size={13} />
-            <span>{addingMember ? 'Adding...' : 'Add Member'}</span>
-          </button>
         </form>
 
         {/* Collaborators Subsections: Join Requests, Pending Invites, Active Members */}
@@ -426,12 +475,18 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                     {joinRequests.map((c) => (
                       <div key={c.$id || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border border-amber-500/20 hover:border-amber-500/40 transition-colors gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center text-xs font-mono font-bold shrink-0">
-                            {(c.displayName || c.username || c.userId || '?').charAt(0).toUpperCase()}
-                          </div>
+                          <IdentityAvatar
+                            fileId={c.avatar || c.profilePicId || null}
+                            alt={c.displayName || c.username || c.userId}
+                            fallback={(c.displayName || c.username || c.userId || '?').charAt(0).toUpperCase()}
+                            size={34}
+                            userId={c.userId || c.$id}
+                            displayName={c.displayName}
+                            username={c.username}
+                          />
                           <div className="min-w-0">
-                            <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || c.username || c.userId}</div>
-                            <div className="text-[10px] text-amber-400/70 font-mono">Requested via link</div>
+                            <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || (c.username ? `@${c.username}` : c.userId)}</div>
+                            <div className="text-[10px] text-amber-400/70 font-mono">Requested via invite link</div>
                           </div>
                         </div>
 
@@ -497,12 +552,18 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                     {pendingInvites.map((c) => (
                       <div key={c.$id || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border border-white/15 hover:border-white/30 transition-colors gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center text-xs font-mono font-bold shrink-0">
-                            {(c.displayName || c.username || c.userId || '?').charAt(0).toUpperCase()}
-                          </div>
+                          <IdentityAvatar
+                            fileId={c.avatar || c.profilePicId || null}
+                            alt={c.displayName || c.username || c.userId}
+                            fallback={(c.displayName || c.username || c.userId || '?').charAt(0).toUpperCase()}
+                            size={34}
+                            userId={c.userId || c.$id}
+                            displayName={c.displayName}
+                            username={c.username}
+                          />
                           <div className="min-w-0">
-                            <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || c.username || c.userId}</div>
-                            <div className="text-[10px] text-white/40 uppercase font-mono font-bold">{c.permissionLevel || c.permission || 'Invited'}</div>
+                            <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || (c.username ? `@${c.username}` : c.userId)}</div>
+                            <div className="text-[10px] text-[#818CF8] uppercase font-mono font-bold">Role: {c.permissionLevel || c.permission || 'Member'}</div>
                           </div>
                         </div>
 
@@ -532,11 +593,17 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                   activeMembers.map((c) => (
                     <div key={c.$id || c.entityId || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors gap-3">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center text-xs font-mono font-bold shrink-0">
-                          {(c.displayName || c.username || c.userId || c.entityId || '?').charAt(0).toUpperCase()}
-                        </div>
+                        <IdentityAvatar
+                          fileId={c.avatar || c.profilePicId || null}
+                          alt={c.displayName || c.username || c.userId || c.entityId}
+                          fallback={(c.displayName || c.username || c.userId || c.entityId || '?').charAt(0).toUpperCase()}
+                          size={34}
+                          userId={c.userId || c.entityId || c.$id}
+                          displayName={c.displayName}
+                          username={c.username}
+                        />
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || c.username || c.userId || c.entityId}</div>
+                          <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || (c.username ? `@${c.username}` : (c.userId || c.entityId))}</div>
                           <div className="text-[10px] text-white/40 uppercase font-mono font-bold">{c.permissionLevel || c.role || c.permission || 'Member'}</div>
                         </div>
                       </div>
