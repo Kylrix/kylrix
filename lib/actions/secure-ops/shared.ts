@@ -410,6 +410,34 @@ export async function getRowCached(params: { databaseId: string; tableId: string
 export async function getActor(jwt?: string) {
   try {
     const actor = await Registry.getAuth().getActor(jwt);
+    if (!actor) return null;
+
+    // Fraud Protection on Kylrix Cloud: Verify paid claim if present
+    const { isKylrixCloud } = await import('@/lib/deployment/surface');
+    if (isKylrixCloud()) {
+      const { getUserSubscriptionTierServer, suspendAccountAndLogIpSecure } = await import('@/lib/services/internal/subscription-entitlement');
+      const tier = await getUserSubscriptionTierServer(actor.$id);
+
+      // If user's account is disabled / suspended in Appwrite, reject
+      if (actor.status === false) {
+        return null;
+      }
+
+      // If user claims paid status in preferences but server verification returns FREE, suspend account for spoofing
+      const userPrefsRaw = actor.prefs || {};
+      const userPrefs = typeof userPrefsRaw === 'string' ? JSON.parse(userPrefsRaw) : userPrefsRaw;
+      const claimedTier = String(userPrefs.subscriptionTier || userPrefs.tier || 'FREE').toUpperCase();
+
+      if (['PRO', 'TEAMS', 'ORG', 'LIFETIME'].includes(claimedTier) && tier === 'FREE') {
+        console.warn(`[getActor] Spoofed paid tier detected for user ${actor.$id}. Triggering instant account suspension.`);
+        await suspendAccountAndLogIpSecure({
+          userId: actor.$id,
+          reason: `Account attempted spoofed paid tier '${claimedTier}' without verified active subscription ledger entry.`
+        });
+        return null;
+      }
+    }
+
     return actor;
   } catch (err) {
     console.error('[secure-ops] getActor exception:', err);

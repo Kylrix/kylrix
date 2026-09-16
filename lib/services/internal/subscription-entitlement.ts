@@ -1,7 +1,7 @@
-import { Query } from 'node-appwrite';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { Query, ID } from 'node-appwrite';
+import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
+import { getOpenSuiteEntitlement, isSelfHostedDeployment, isKylrixCloud } from '@/lib/entitlements';
 import { type SubscriptionRow } from '@/lib/billing/subscription-helpers';
 import {
   maxBillingUiTier,
@@ -57,11 +57,63 @@ const entitlementCache = new Map<string, {
     uiTier: BillingUiTier;
   };
   ts: number;
+  ttlMs: number;
 }>();
 
 export function invalidateEntitlementCache(userId?: string) {
   if (userId) entitlementCache.delete(userId);
   else entitlementCache.clear();
+}
+
+/**
+ * Modular Account Suspension & Fraud Defense
+ * Instantly disables an Appwrite user account and logs security audit records.
+ * Zero resource wastage — no emails or notifications dispatched.
+ */
+export async function suspendAccountAndLogIpSecure(params: {
+  userId: string;
+  ipAddress?: string;
+  userAgent?: string;
+  reason?: string;
+}): Promise<boolean> {
+  if (!params.userId) return false;
+  try {
+    const { users } = createSystemClient();
+    // 1. Instantly disable user account natively in Appwrite
+    await users.updateStatus(params.userId, false);
+
+    // 2. Log incident to securityLogs table
+    try {
+      const tables = createSystemTablesDB();
+      const dbId = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
+      const tableId = APPWRITE_CONFIG.TABLES.VAULT.SECURITY_LOGS || 'securityLogs';
+
+      await tables.createRow({
+        databaseId: dbId,
+        tableId: tableId,
+        rowId: ID.unique(),
+        data: {
+          userId: params.userId,
+          eventType: 'account_suspended_fraud',
+          ipAddress: params.ipAddress || null,
+          userAgent: params.userAgent || null,
+          details: params.reason || 'Account suspended due to fraudulent/spoofed paid access attempt',
+          success: false,
+          severity: 'critical',
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (logErr) {
+      console.error('[suspendAccountAndLogIpSecure] Failed to log security incident:', logErr);
+    }
+
+    // Clear entitlement cache for suspended user
+    invalidateEntitlementCache(params.userId);
+    return true;
+  } catch (err) {
+    console.error('[suspendAccountAndLogIpSecure] Failed to suspend account:', err);
+    return false;
+  }
 }
 
 /**
@@ -84,7 +136,7 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
   }
 
   const cached = entitlementCache.get(userId);
-  if (cached && Date.now() - cached.ts < 1000 * 60 * 5) {
+  if (cached && Date.now() - cached.ts < cached.ttlMs) {
     return cached.data;
   }
 
@@ -155,7 +207,8 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
       expiresAt: null,
       source: 'none' as SubscriptionEntitlementSource,
       uiTier: 'FREE' as BillingUiTier};
-    entitlementCache.set(userId, { data: res, ts: Date.now() });
+    // Cache FREE resolution for 10 minutes to prevent repeat DB trips for free users
+    entitlementCache.set(userId, { data: res, ts: Date.now(), ttlMs: 1000 * 60 * 10 });
     return res;
   }
 
@@ -173,7 +226,18 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
     source: source === 'none' ? ('prefs_sync' as SubscriptionEntitlementSource) : source,
     uiTier};
 
-  entitlementCache.set(userId, { data: result, ts: Date.now() });
+  // Cache verified paid status up to the period expiration date (max 30 days)
+  let ttlMs = 1000 * 60 * 60 * 24; // Default 24 hours
+  if (expiresAt) {
+    const expTime = new Date(expiresAt).getTime();
+    if (!Number.isNaN(expTime) && expTime > Date.now()) {
+      const remainingMs = expTime - Date.now();
+      const maxMs = 1000 * 60 * 60 * 24 * 30; // 30 days max
+      ttlMs = Math.min(remainingMs, maxMs);
+    }
+  }
+
+  entitlementCache.set(userId, { data: result, ts: Date.now(), ttlMs });
   return result;
 }
 

@@ -82,6 +82,7 @@ export function LoginDrawer() {
   const [showPassword, setShowPassword] = useState(false);
   const [useOTPAlternative, setUseOTPAlternative] = useState(false);
   const [copiedSkill, setCopiedSkill] = useState(false);
+  const [accountSuspended, setAccountSuspended] = useState(false);
   const [authPolicy, setAuthPolicy] = useState({
     isSelfHosted,
     emailPasswordSignup: emailPasswordSignupEnabled,
@@ -145,6 +146,18 @@ export function LoginDrawer() {
 
     return () => clearTimeout(timer);
   }, [email, step, isSelfHosted, emailPasswordSignupEnabled]);
+
+  const isAccountSuspendedError = (err: unknown) => {
+    const e = err as { code?: number; type?: string; message?: string; status?: number };
+    const msg = String(e?.message || '').toLowerCase();
+    const type = String(e?.type || '').toLowerCase();
+    return (
+      (e?.code === 401 && (type.includes('user_blocked') || type.includes('user_disabled') || msg.includes('blocked') || msg.includes('disabled') || msg.includes('suspended'))) ||
+      msg.includes('user is blocked') ||
+      msg.includes('user is disabled') ||
+      msg.includes('account suspended')
+    );
+  };
 
   const isInvalidCredentialsError = (err: unknown) => {
     const e = err as { code?: number; type?: string; message?: string };
@@ -228,6 +241,10 @@ export function LoginDrawer() {
       await refreshUser(true);
       navigateToAppAfterAuth();
     } catch (err: any) {
+      if (isAccountSuspendedError(err)) {
+        setAccountSuspended(true);
+        return;
+      }
       console.error('Email/password auth failed:', err);
       toast.error(err.message || 'Authentication failed');
     } finally {
@@ -329,6 +346,10 @@ export function LoginDrawer() {
       setStep('otp');
       toast.success('Code sent to your email');
     } catch (err: any) {
+      if (isAccountSuspendedError(err)) {
+        setAccountSuspended(true);
+        return;
+      }
       toast.error(err.message || 'Failed to send login email');
     } finally {
       setLoading(false);
@@ -386,6 +407,34 @@ export function LoginDrawer() {
   if (!isOpen) return null;
 
   const renderStep = () => {
+    if (accountSuspended) {
+      return (
+        <div className="space-y-4 animate-fadeIn font-satoshi">
+          <div className="p-5 rounded-2xl bg-red-950/40 border border-red-500/30 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center mx-auto">
+              <X className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-base font-extrabold text-white m-0">Account Suspended</h4>
+              <p className="text-xs text-red-200/70 mt-1.5 leading-relaxed m-0 font-medium">
+                This account has been disabled due to security or subscription access policy violations.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setAccountSuspended(false);
+              handleReset();
+            }}
+            className="w-full h-[48px] rounded-xl bg-white/10 hover:bg-white/15 text-white font-extrabold text-xs transition-all cursor-pointer flex items-center justify-center border border-white/10"
+          >
+            Return to Login
+          </button>
+        </div>
+      );
+    }
+
     switch (step) {
       case 'initial':
         const isEmailLastUsed = lastUsedMethod === 'email';
