@@ -383,12 +383,12 @@ function SettingsPageInner() {
     useEffect(() => {
         if (user?.$id) {
             const username = getEffectiveUsername(user);
-            import('@/lib/actions/referrals')
-                .then(m => m.getReferralStatsAction(username))
+            getJWT()
+                .then(jwt => import('@/lib/actions/referrals').then(m => m.getReferralStatsAction(username, jwt || undefined)))
                 .then(stats => setReferralStats(stats))
                 .catch(() => null);
         }
-    }, [user]);
+    }, [user, getJWT]);
 
     const handleCopyReferral = async () => {
         if (!user?.$id) return;

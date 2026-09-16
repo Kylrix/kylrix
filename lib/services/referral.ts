@@ -280,42 +280,47 @@ export const ReferralService = {
       ? this.buildReferralLink(cleanUsername, 'user')
       : this.buildReferralLink(userId, 'userid', undefined, true);
 
-    try {
-      const res = await tables.listRows({
-        databaseId: DB,
-        tableId: REFERRALS_TABLE,
-        queries: [
-          Query.equal('referrerId', userId),
-          Query.orderDesc('$createdAt'),
-          Query.limit(100)
-        ]
-      });
+    const baseQueries = [Query.equal('referrerId', userId), Query.limit(100)];
+    const queryAttempts = [
+      [...baseQueries, Query.orderDesc('$createdAt')],
+      [...baseQueries, Query.orderDesc('createdAt')],
+      baseQueries,
+    ];
 
-      const totalReferred = res.total ?? res.rows.length;
-      const rewardedCount = res.rows.filter((r: any) => r.tokensRewarded !== false).length;
-      const totalTokensEarned = (rewardedCount * 1.5).toFixed(1);
+    let rows: any[] = [];
+    let totalCount = 0;
 
-      return {
-        totalReferred,
-        totalTokensEarned,
-        referralLink,
-        referrals: res.rows.map((r: any) => ({
-          id: r.$id,
-          userId: r.userId,
-          refCode: r.refCode || '',
-          src: r.src || 'user',
-          origin: r.origin || 'direct',
-          createdAt: r.$createdAt,
-        }))
-      };
-    } catch {
-      return {
-        totalReferred: 0,
-        totalTokensEarned: '0.0',
-        referralLink,
-        referrals: []
-      };
+    for (const queries of queryAttempts) {
+      try {
+        const res = await tables.listRows({
+          databaseId: DB,
+          tableId: REFERRALS_TABLE,
+          queries,
+        });
+        rows = res.rows ?? [];
+        totalCount = Math.max(res.total ?? 0, rows.length);
+        break;
+      } catch (err) {
+        console.warn('[ReferralService.getReferralStats] Query attempt failed, trying fallback query:', err);
+      }
     }
+
+    const rewardedCount = rows.filter((r: any) => r.tokensRewarded === true || Boolean(r.tokensRewarded)).length;
+    const totalTokensEarned = (rewardedCount * 1.5).toFixed(1);
+
+    return {
+      totalReferred: totalCount,
+      totalTokensEarned,
+      referralLink,
+      referrals: rows.map((r: any) => ({
+        id: r.$id,
+        userId: r.userId,
+        refCode: r.refCode || '',
+        src: r.src || 'user',
+        origin: r.origin || 'direct',
+        createdAt: r.$createdAt || r.createdAt || '',
+      })),
+    };
   },
 
   /**
