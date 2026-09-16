@@ -211,6 +211,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     const resourceId = `event:${eventId}`;
     if (options?.pending !== false) {
       autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), normalized);
+      autonomicSyncEngine.nudge(true);
     }
 
     if (typeof window !== 'undefined') {

@@ -1282,9 +1282,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       }
       void persistGoalsLocalCopy(state.userId, updatedList);
       if (options?.pending !== false) {
-        // markPending schedules a coalesced demand flush; nudge() triggers the scheduled flush
+        // markPending schedules demand flush; nudge(true) forces microtask discrete flush
         autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString(), stamped);
-        autonomicSyncEngine.nudge();
+        autonomicSyncEngine.nudge(true);
       }
     },
     [setCachedData, state.userId],
