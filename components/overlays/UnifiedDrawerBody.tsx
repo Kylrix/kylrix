@@ -172,6 +172,7 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
       return (
         <AgenticPanelContent
           isDesktop
+          data-agentic
           onClose={onClose}
         />
       );

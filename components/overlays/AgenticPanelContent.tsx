@@ -486,7 +486,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       const { listAgentSessions } = await import('@/lib/actions/agentic');
       const { account } = await import('@/lib/appwrite/client');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
-      const list = await listAgentSessions(jwt);
+      const list = await listAgentSessions(jwt, activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined);
       setSessions(list);
       if (user?.$id) await AgenticSessionLocalStore.setSessionsList(user.$id, list);
     } catch (err) {
@@ -682,7 +682,12 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         const activeId = await AgenticSessionLocalStore.getActiveSessionId(user.$id);
         if (activeId) {
           const localSession: any = await AgenticSessionLocalStore.getSession(activeId);
-          if (localSession?.chatHistory?.length && !localSession?.targetType && !localSession?.targetId) {
+          const isCustomWs = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+          const matchesWs = isCustomWs
+            ? (localSession?.projectId === activeWorkspace?.id || localSession?.isWorkspace)
+            : (!localSession?.isWorkspace && (!localSession?.projectId || localSession?.projectId === activeWorkspace?.id));
+
+          if (matchesWs && localSession?.chatHistory?.length && !localSession?.targetType && !localSession?.targetId) {
             setActiveSessionId(activeId);
             setMessages(
               localSession.chatHistory.map((m: any) => ({
@@ -694,10 +699,14 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 isPublic: m.isPublic,
                 isGuest: m.isGuest,
                 nextSteps: m.nextSteps})));
-          } else if (localSession?.targetType) {
-            // Active is object sidekick — find latest general session instead
+          } else if (localSession?.targetType || !matchesWs) {
+            // Active is object sidekick or belongs to another workspace — find latest general session for this workspace instead
             const list = await AgenticSessionLocalStore.getSessionsList(user.$id);
-            const general = list.find((s: any) => !s.targetType && !s.targetId);
+            const general = list.find((s: any) => {
+              if (s.targetType || s.targetId) return false;
+              if (isCustomWs) return s.projectId === activeWorkspace?.id || s.isWorkspace;
+              return !s.isWorkspace && (!s.projectId || s.projectId === activeWorkspace?.id);
+            });
             if (general) {
               const genSession: any = await AgenticSessionLocalStore.getSession(general.id);
               if (genSession?.chatHistory?.length) {
@@ -719,6 +728,10 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   await account.updatePrefs({ ...prefs, activeAgentSessionId: general.id }).catch(() => {});
                 } catch {}
               }
+            } else {
+              // No session in this workspace yet — clear active session so user starts fresh
+              setActiveSessionId(null);
+              setMessages([]);
             }
           }
         }
@@ -766,7 +779,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       }
     };
     void loadSessionHistory();
-  }, [user?.$id]);
+  }, [user?.$id, activeWorkspace?.id]);
 
   useEffect(() => {
     if (!showSessionsDrawer || !user?.$id) return;
@@ -894,6 +907,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 void LocalEngine.cacheSet(`f_agent_active_session_${user.$id}`, res.sessionId).catch(() => {});
               });
               void account.getPrefs().then((p: any) => account.updatePrefs({ ...p, activeAgentSessionId: res.sessionId }).catch(() => {})).catch(() => {});
+            }
+            if (activeWorkspace && !activeWorkspace.isPersonal) {
+              void attachEntityToActiveWorkspace('agent_session', res.sessionId);
             }
           }
           const assistantId = res.conversationId || `${Date.now()}-a`;

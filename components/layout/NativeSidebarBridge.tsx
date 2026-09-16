@@ -101,6 +101,7 @@ export function NativeSidebarBridge() {
         overlay.openOverlay(
           <AgenticPanelContent
             isDesktop={false}
+            data-agentic
             onClose={() => {
               agentic.closeAgenticDrawer();
               overlay.closeOverlay();
