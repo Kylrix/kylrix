@@ -89,7 +89,8 @@ export const WalletSidebar = ({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user } = useAuth();
-    const { tokenBalance, wallets, refreshBalances } = useSubscription();
+    const { tokenBalance, wallets: rawWallets, refreshBalances } = useSubscription();
+    const wallets = useMemo(() => Array.isArray(rawWallets) ? rawWallets : [], [rawWallets]);
     
     const { requestSudo } = useSudo();
     

@@ -10,7 +10,6 @@ import React, {
   Suspense,
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
 
 interface WalletOverlayContextType {
   isWalletOpen: boolean;
@@ -85,12 +84,10 @@ export function WalletOverlayProvider({ children }: { children: React.ReactNode 
 
   return (
     <WalletOverlayContext.Provider value={value}>
-      <SubscriptionProvider>
-        {children}
-        <Suspense fallback={null}>
-          <OpenWalletFromQueryEffect pathname={pathname} onOpenRequested={openWallet} />
-        </Suspense>
-      </SubscriptionProvider>
+      {children}
+      <Suspense fallback={null}>
+        <OpenWalletFromQueryEffect pathname={pathname} onOpenRequested={openWallet} />
+      </Suspense>
     </WalletOverlayContext.Provider>
   );
 }

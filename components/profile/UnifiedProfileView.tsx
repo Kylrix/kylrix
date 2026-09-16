@@ -353,6 +353,7 @@ export function UnifiedProfileView({
                 <button
                   type="button"
                   onClick={() => {
+                    if (onClose) onClose();
                     openWalletWithIntent({
                       mode: 'send',
                       toUser: {
