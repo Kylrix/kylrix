@@ -33,6 +33,8 @@ interface OpenFileDrawerOptions {
   initialTab?: UnifiedFileDrawerMainTab;
   /** Objects sub-tab when initialTab is objects (default goals). */
   initialSubTab?: UnifiedFileDrawerObjectSubTab;
+  /** Main tabs to disable/hide (e.g. ['synced', 'upload']). */
+  disabledTabs?: UnifiedFileDrawerMainTab[];
 }
 
 interface UnifiedFileDrawerContextType {

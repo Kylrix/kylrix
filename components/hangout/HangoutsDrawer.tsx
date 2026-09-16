@@ -200,6 +200,86 @@ export function HangoutsDrawer({
     [onClose, openSidebar, openOverlay, closeSidebar, closeOverlay],
   );
 
+  const currentWorkspaceId = propWorkspaceId || (!activeWorkspace?.isPersonal ? activeWorkspace?.id : undefined);
+  const currentWorkspaceTitle = propWorkspaceTitle || (!activeWorkspace?.isPersonal ? (activeWorkspace?.title || (activeWorkspace as any)?.name) : undefined);
+
+  // Eagerly hydrate chats, Nostr DMs, and threads
+  const refreshChats = useCallback(async () => {
+    try {
+      const [cachedChats, cachedThreads] = await Promise.all([
+        readChatsListLocal(),
+        readThreadsListLocal(),
+      ]);
+
+      const enrichFromMessageCache = async (rows: any[]) => {
+        const next = [...rows];
+        await Promise.all(
+          next.map(async (row, i) => {
+            const id = String(row?.$id || row?.id || '');
+            if (!id) return;
+            const msgs = peekMessagesMemory(id);
+            const localMsgs = msgs.length ? msgs : await readMessagesLocal(id);
+            if (!localMsgs.length) return;
+            const latest = localMsgs[localMsgs.length - 1];
+            const at = String(latest?.$createdAt || latest?.createdAt || '');
+            const text = String(latest?.content || '');
+            const rowAt = String(row.lastMessageAt || '');
+            if (at && (!rowAt || new Date(at).getTime() >= new Date(rowAt).getTime())) {
+              next[i] = {
+                ...row,
+                lastMessageAt: at || row.lastMessageAt,
+                lastMessageText: row.isEncrypted
+                  ? isLikelyChatCiphertext(text)
+                    ? text
+                    : row.lastMessageText
+                  : text || row.lastMessageText,
+                lastMessageId: latest?.$id || row.lastMessageId,
+              };
+            }
+          }),
+        );
+        return next;
+      };
+
+      let hasAnyLocal = false;
+      if (cachedChats?.length) {
+        const enriched = await enrichFromMessageCache(cachedChats);
+        const decryptedCached = await hydrateDecryptedSecureChats(enriched);
+        startTransition(() => setSecureChats(decryptedCached));
+        void writeChatsListLocal(enriched);
+        hasAnyLocal = true;
+      }
+      if (cachedThreads?.length) {
+        startTransition(() => setThreads(cachedThreads));
+        hasAnyLocal = true;
+      }
+
+
+
+      const shouldEscape = shouldRunEmptyEscapeHatch('chats', user?.$id);
+
+      if (user?.$id && (!hasAnyLocal || shouldEscape)) {
+        try {
+          const res = await ChatService.getConversations(user.$id, { forceRefresh: !hasAnyLocal });
+          const rows = Array.isArray(res) ? res : res?.rows || [];
+          if (rows.length) {
+            const enriched = await enrichFromMessageCache(rows);
+            const decryptedRows = await hydrateDecryptedSecureChats(enriched);
+            startTransition(() => setSecureChats(decryptedRows));
+            void writeChatsListLocal(enriched);
+          }
+          markEmptyEscapeHatchRan('chats', user.$id);
+        } catch (fetchErr) {
+          console.warn('[HangoutsDrawer] Escape hatch fetch error:', fetchErr);
+        }
+      }
+    } catch (err) {
+      console.warn('[HangoutsDrawer] Local read error:', err);
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [user?.$id, hydrateDecryptedSecureChats]);
+
   const openHangoutMenu = useCallback(
     (target: any, e?: React.MouseEvent | React.TouchEvent) => {
       e?.preventDefault?.();
@@ -289,7 +369,7 @@ export function HangoutsDrawer({
               onConfirm: async () => {
                 try {
                   if (target.kind === 'secure') {
-                    await ChatService.deleteConversation(target.id, user?.$id || '');
+                    await ChatService.deleteConversationFully(target.id);
                   } else {
                     const { ThreadService } = await import('@/lib/services/threads');
                     await (ThreadService as any).deleteThread?.(target.id);
@@ -325,86 +405,6 @@ export function HangoutsDrawer({
       user?.$id,
     ],
   );
-
-  const currentWorkspaceId = propWorkspaceId || (!activeWorkspace?.isPersonal ? activeWorkspace?.id : undefined);
-  const currentWorkspaceTitle = propWorkspaceTitle || (!activeWorkspace?.isPersonal ? (activeWorkspace?.title || (activeWorkspace as any)?.name) : undefined);
-
-  // Eagerly hydrate chats, Nostr DMs, and threads
-  const refreshChats = useCallback(async () => {
-    try {
-      const [cachedChats, cachedThreads] = await Promise.all([
-        readChatsListLocal(),
-        readThreadsListLocal(),
-      ]);
-
-      const enrichFromMessageCache = async (rows: any[]) => {
-        const next = [...rows];
-        await Promise.all(
-          next.map(async (row, i) => {
-            const id = String(row?.$id || row?.id || '');
-            if (!id) return;
-            const msgs = peekMessagesMemory(id);
-            const localMsgs = msgs.length ? msgs : await readMessagesLocal(id);
-            if (!localMsgs.length) return;
-            const latest = localMsgs[localMsgs.length - 1];
-            const at = String(latest?.$createdAt || latest?.createdAt || '');
-            const text = String(latest?.content || '');
-            const rowAt = String(row.lastMessageAt || '');
-            if (at && (!rowAt || new Date(at).getTime() >= new Date(rowAt).getTime())) {
-              next[i] = {
-                ...row,
-                lastMessageAt: at || row.lastMessageAt,
-                lastMessageText: row.isEncrypted
-                  ? isLikelyChatCiphertext(text)
-                    ? text
-                    : row.lastMessageText
-                  : text || row.lastMessageText,
-                lastMessageId: latest?.$id || row.lastMessageId,
-              };
-            }
-          }),
-        );
-        return next;
-      };
-
-      let hasAnyLocal = false;
-      if (cachedChats?.length) {
-        const enriched = await enrichFromMessageCache(cachedChats);
-        const decryptedCached = await hydrateDecryptedSecureChats(enriched);
-        startTransition(() => setSecureChats(decryptedCached));
-        void writeChatsListLocal(enriched);
-        hasAnyLocal = true;
-      }
-      if (cachedThreads?.length) {
-        startTransition(() => setThreads(cachedThreads));
-        hasAnyLocal = true;
-      }
-
-
-
-      const shouldEscape = shouldRunEmptyEscapeHatch('chats', user?.$id);
-
-      if (user?.$id && (!hasAnyLocal || shouldEscape)) {
-        try {
-          const res = await ChatService.getConversations(user.$id, { forceRefresh: !hasAnyLocal });
-          const rows = Array.isArray(res) ? res : res?.rows || [];
-          if (rows.length) {
-            const enriched = await enrichFromMessageCache(rows);
-            const decryptedRows = await hydrateDecryptedSecureChats(enriched);
-            startTransition(() => setSecureChats(decryptedRows));
-            void writeChatsListLocal(enriched);
-          }
-          markEmptyEscapeHatchRan('chats', user.$id);
-        } catch (fetchErr) {
-          console.warn('[HangoutsDrawer] Escape hatch fetch error:', fetchErr);
-        }
-      }
-    } catch (err) {
-      console.warn('[HangoutsDrawer] Local read error:', err);
-    } finally {
-      setInitialLoading(false);
-    }
-  }, [user?.$id, hydrateDecryptedSecureChats]);
 
   useEffect(() => {
     void refreshChats();

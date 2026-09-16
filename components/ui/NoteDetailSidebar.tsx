@@ -717,29 +717,31 @@ export function NoteDetailSidebar({
 
       {/* Actions List */}
       <div className="flex flex-col gap-2.5 pt-1">
-        {/* Zap Idea */}
-        <button
-          type="button"
-          onClick={() => {
-            closeContextActions();
-            openUnified('zap', {
-              targetId: liveNote.$id,
-              source: 'ecosystem',
-              targetKind: 'note',
-              targetOwnerId: (liveNote as any).userId || (note as any).userId,
-              authorName: (liveNote as any).userName || (liveNote as any).title || 'Creator',
-            });
-          }}
-          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-amber-400/20 hover:border-amber-400/40 hover:bg-amber-400/5 transition-all text-left cursor-pointer group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
-            <Zap size={18} className="fill-current" />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-bold text-amber-300">Zap Idea (Send rix)</span>
-            <span className="text-[11px] font-semibold text-amber-400/60">Tip creator with instant tokens</span>
-          </div>
-        </button>
+        {/* Zap Idea — hidden if current user is the owner/creator of the note */}
+        {user?.$id && ((liveNote as any).userId || (note as any).userId) !== user.$id && (
+          <button
+            type="button"
+            onClick={() => {
+              closeContextActions();
+              openUnified('zap', {
+                targetId: liveNote.$id,
+                source: 'ecosystem',
+                targetKind: 'note',
+                targetOwnerId: (liveNote as any).userId || (note as any).userId,
+                authorName: (liveNote as any).userName || (liveNote as any).title || 'Creator',
+              });
+            }}
+            className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-amber-400/20 hover:border-amber-400/40 hover:bg-amber-400/5 transition-all text-left cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
+              <Zap size={18} className="fill-current" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold text-amber-300">Zap Idea (Send rix)</span>
+              <span className="text-[11px] font-semibold text-amber-400/60">Tip creator with instant tokens</span>
+            </div>
+          </button>
+        )}
 
         {/* Copy All Content */}
         <button
