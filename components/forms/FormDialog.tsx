@@ -8,7 +8,7 @@ import {
   GripVertical,
   Settings,
   Trash2,
-  Sparkles,
+  Wand2,
   ChevronDown,
   ArrowUp,
   ArrowDown,
@@ -618,10 +618,10 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
             <button
               type="button"
               onClick={() => setAssistDrawerOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#EC4899] hover:from-[#5254E8] hover:to-[#DB2777] text-white font-clash font-extrabold text-xs flex items-center gap-1.5 shadow-[0_4px_16px_rgba(99,102,241,0.3)] transition-all cursor-pointer"
+              title="Kylrix Assist — AI Auto-Creator"
+              className="w-9 h-9 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#EC4899] hover:from-[#5254E8] hover:to-[#DB2777] text-white flex items-center justify-center shrink-0 shadow-[0_4px_16px_rgba(99,102,241,0.3)] transition-all cursor-pointer"
             >
-              <Sparkles size={14} className="animate-pulse" />
-              <span>AI Assist</span>
+              <Wand2 size={16} className="animate-pulse" />
             </button>
 
             {/* Add Field */}
@@ -667,13 +667,13 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
               className="w-full bg-transparent border-b border-white/10 focus:border-[#6366F1] outline-none text-2xl sm:text-3xl font-black text-white font-clash pb-2 placeholder:text-white/20 transition-all"
             />
 
-            <div className="relative min-h-[72px]">
+            <div className="relative">
               <textarea
-                rows={3}
+                rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Briefly describe the purpose or instructions for this form..."
-                className="relative w-full bg-transparent border-0 outline-none text-sm text-white/70 placeholder:text-white/30 focus:ring-0 resize-none font-satoshi leading-relaxed"
+                className="w-full bg-[#161412]/50 border border-white/5 focus:border-[#6366F1]/50 rounded-xl p-3 outline-none text-sm text-white/80 placeholder:text-white/30 focus:ring-0 resize-y font-satoshi leading-relaxed min-h-[60px]"
               />
             </div>
 

@@ -46,7 +46,22 @@ export const AGENTIC_TOOL_SCHEMAS = {
   create_note: noteCreateInputZod.extend({
     content: z.string().describe('Full markdown content of the note'),
   }),
-  update_note: noteUpdateInputZod,
+  update_note: noteUpdateInputZod.extend({
+    patches: z.array(z.object({
+      before: z.string().optional(),
+      after: z.string().optional(),
+      target: z.string().optional(),
+      replacement: z.string()
+    })).optional()
+  }),
+  patch_note: noteUpdateInputZod.extend({
+    patches: z.array(z.object({
+      before: z.string().optional(),
+      after: z.string().optional(),
+      target: z.string().optional(),
+      replacement: z.string()
+    }))
+  }),
   get_note: getNoteInputZod,
   create_goal: goalCreateInputZod,
   update_goal: goalUpdateInputZod.extend({ id: z.string().min(1) }),
@@ -72,9 +87,17 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     key: 'update_note',
     name: 'Update Idea (Note)',
     description:
-      'Edit an existing Idea. Preferred: args.id (note $id) + fields to change (title, content, tags, isPublic). Legacy specifier note_$id still works. Use [SESSION OBJECTS] for ids.',
+      'Edit an existing Idea. Preferred: args.id (note $id) + fields to change (title, content, tags, isPublic) OR args.patches [{ before, after, target, replacement }] for surgical text edits without re-emitting full content.',
     requiresAuthorization: false,
-    parameters: ['id', 'title', 'content', 'tags', 'isPublic'],
+    parameters: ['id', 'title', 'content', 'patches', 'tags', 'isPublic'],
+  },
+  {
+    key: 'patch_note',
+    name: 'Surgically Patch Idea (Note)',
+    description:
+      'Surgically update sections of an Idea markdown body using string anchors (before, after, target, replacement) without returning the entire text. Preferred for long notes.',
+    requiresAuthorization: false,
+    parameters: ['id', 'patches'],
   },
   {
     key: 'get_note',

@@ -691,7 +691,7 @@ ${lifetimeMemoryContext}
     conversationId};
 }
 
-export async function getAgentSession(jwt?: string) {
+export async function getAgentSession(jwt?: string, projectId?: string) {
   const user = await requireUser(jwt);
   const { account } = await createServerClient(jwt);
   const prefs = await account.getPrefs().catch(() => ({}));
@@ -699,21 +699,63 @@ export async function getAgentSession(jwt?: string) {
 
   const { TelemetryService } = await import('@/lib/services/telemetry');
   
-  let session = null;
+  let session: any = null;
   if (activeSessionId) {
     session = await TelemetryService.loadSession(user.$id, activeSessionId);
+    if (session && projectId && (session.projectId !== projectId || !session.isWorkspace)) {
+      session = null;
+    }
   }
 
   if (!session || !session.rowId) {
-    session = await TelemetryService.loadSession(user.$id);
-    if (session.rowId) {
-      activeSessionId = session.rowId;
+    const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
+    const tables = createSystemTablesDB();
+    const queries = [
+      Query.equal('userId', user.$id),
+      Query.notEqual('isMemory', true),
+      Query.orderDesc('$updatedAt'),
+      Query.limit(20)
+    ];
+    if (projectId) {
+      queries.push(Query.equal('projectId', projectId));
+    }
+    const res = await tables.listRows({
+      databaseId: 'passwordManagerDb',
+      tableId: 'agentic_sessions',
+      queries
+    }).catch(() => null);
+
+    const matchedRow = res?.rows?.find((row: any) => {
+      if (row.targetType || row.targetId) return false;
+      if (projectId) return row.projectId === projectId || row.isWorkspace === true;
+      return !row.isWorkspace && !row.projectId;
+    });
+
+    if (matchedRow) {
+      activeSessionId = matchedRow.$id;
+      session = {
+        context: matchedRow.context || '',
+        chatHistory: matchedRow.chatHistory || '[]',
+        seen: matchedRow.seen !== false,
+        rowId: matchedRow.$id,
+        projectId: matchedRow.projectId || null,
+        isWorkspace: matchedRow.isWorkspace === true
+      };
       await account.updatePrefs({ ...prefs, activeAgentSessionId: activeSessionId }).catch(() => {});
+    } else if (projectId) {
+      // In custom workspace with no session yet, return empty
+      session = { context: '', chatHistory: '[]', seen: false, rowId: undefined };
     } else {
-      const newSessionId = await TelemetryService.saveSession(user.$id, '', '[]', false);
-      activeSessionId = newSessionId;
-      await account.updatePrefs({ ...prefs, activeAgentSessionId: activeSessionId }).catch(() => {});
-      session = { context: '', chatHistory: '[]', seen: false, rowId: newSessionId };
+      session = await TelemetryService.loadSession(user.$id);
+      if (session?.rowId) {
+        activeSessionId = session.rowId;
+        await account.updatePrefs({ ...prefs, activeAgentSessionId: activeSessionId }).catch(() => {});
+      } else {
+        const newSessionId = await TelemetryService.saveSession(user.$id, '', '[]', false);
+        activeSessionId = newSessionId;
+        await account.updatePrefs({ ...prefs, activeAgentSessionId: activeSessionId }).catch(() => {});
+        session = { context: '', chatHistory: '[]', seen: false, rowId: newSessionId };
+      }
     }
   }
 

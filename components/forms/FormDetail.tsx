@@ -9,7 +9,7 @@ import {
   FileText, 
   Copy, 
   Check,
-  Sparkles
+  Wand2
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
@@ -186,10 +186,10 @@ export function FormDetail({
                 })
               );
             }}
-            className="w-8 h-8 rounded-xl bg-[#000000] border border-[#A855F7]/30 hover:border-[#A855F7]/60 flex items-center justify-center text-[#A855F7] hover:text-white transition-all cursor-pointer"
+            className="w-8 h-8 rounded-xl bg-[#000000] border border-[#A855F7]/30 hover:border-[#A855F7]/60 flex items-center justify-center text-[#A855F7] hover:text-white transition-all cursor-pointer shrink-0"
             title="Sidekick Companion"
           >
-            <Sparkles size={15} />
+            <Wand2 size={15} />
           </button>
 
           <button

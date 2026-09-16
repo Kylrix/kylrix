@@ -742,14 +742,28 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         const { account } = await import('@/lib/appwrite/client');
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
         const { getAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
-        const session: any = await getAgentSession(jwt);
+        const customWsId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined;
+        const session: any = await getAgentSession(jwt, customWsId);
         // General Kylie sidebar must not auto-adopt object Sidekick session as default
         if (session?.targetType || session?.targetId) {
           // skip — keep current general messages, don't overwrite with Sidekick
           return;
         }
-        if (session.rowId) setActiveSessionId(session.rowId);
-        const historyArr = JSON.parse(session.chatHistory || '[]');
+
+        const isCustomWs = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+        const matchesWs = isCustomWs
+          ? (session?.projectId === activeWorkspace?.id || session?.isWorkspace)
+          : (!session?.isWorkspace && (!session?.projectId || session?.projectId === activeWorkspace?.id));
+
+        if (!matchesWs && customWsId) {
+          // Server returned session from another workspace, clear active session
+          setActiveSessionId(null);
+          setMessages([]);
+          return;
+        }
+
+        if (session?.rowId) setActiveSessionId(session.rowId);
+        const historyArr = JSON.parse(session?.chatHistory || '[]');
         if (Array.isArray(historyArr) && historyArr.length > 0) {
           const sessionId = session.rowId || '';
           const toolCalls = sessionId

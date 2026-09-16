@@ -210,12 +210,24 @@ async function executeAgenticToolCall(
       return { success: true, summary: `Created idea: ${saved.title || title}` };
     }
 
-    if ((key === 'update_note' || key === 'objects.idea.update') && (call.specifier || (args as any).id)) {
+    if ((key === 'update_note' || key === 'patch_note' || key === 'objects.idea.update') && (call.specifier || (args as any).id)) {
       const noteId = (call.specifier || (args as any).id) as string;
+      const patches = (args as any).patches;
+      let finalContent = args.content as string | undefined;
+
+      if (Array.isArray(patches) && patches.length > 0) {
+        const targetNote = (ctx.notes || []).find((n: any) => n.$id === noteId);
+        const { applyTextPatch } = await import('@/lib/agentic/patching-engine');
+        const patchResult = applyTextPatch(targetNote?.content || '', patches);
+        if (patchResult.success || patchResult.appliedCount > 0) {
+          finalContent = patchResult.text;
+        }
+      }
+
       const { updateNote } = await import('@/lib/actions/client-ops');
       const saved = await updateNote(noteId, {
         title: args.title as string | undefined,
-        content: args.content as string | undefined,
+        content: finalContent,
         tags:
           args.tags !== undefined
             ? Array.isArray(args.tags)
