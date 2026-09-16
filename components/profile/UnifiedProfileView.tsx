@@ -73,9 +73,9 @@ export function UnifiedProfileView({
 
   const isOwnProfile = isOwnCheck();
 
-  const initialCleanUsername = isCleanUsername(username)
-    ? username!.trim().replace(/^@/, '')
-    : (isCleanUsername(initialProfile?.username) ? initialProfile.username.trim().replace(/^@/, '') : undefined);
+  const initialCleanUsername = typeof username === 'string' && isCleanUsername(username)
+    ? username.trim().replace(/^@/, '')
+    : (typeof initialProfile?.username === 'string' && isCleanUsername(initialProfile.username) ? initialProfile.username.trim().replace(/^@/, '') : undefined);
 
   const [resolvedProfile, setResolvedProfile] = useState<{ 
     name?: string; 
@@ -91,8 +91,8 @@ export function UnifiedProfileView({
     username: initialCleanUsername,
     avatar: avatar || initialProfile?.avatar || initialProfile?.avatarUrl,
     bio: bio || initialProfile?.bio,
-    links: initialProfile?.preferences?.links || initialProfile?.links || [],
-    tags: initialProfile?.preferences?.tags || initialProfile?.tags || [],
+    links: Array.isArray(initialProfile?.preferences?.links) ? initialProfile.preferences.links : (Array.isArray(initialProfile?.links) ? initialProfile.links : []),
+    tags: Array.isArray(initialProfile?.preferences?.tags) ? initialProfile.preferences.tags : (Array.isArray(initialProfile?.tags) ? initialProfile.tags : []),
     socials: initialProfile?.socials || {},
     createdAt: initialProfile?.$createdAt || initialProfile?.createdAt,
   });
@@ -121,11 +121,11 @@ export function UnifiedProfileView({
             } catch {}
             setResolvedProfile(prev => ({
               name: prev.name || cached.displayName || cached.name,
-              username: isCleanUsername(cached.username) ? cached.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
+              username: typeof cached.username === 'string' && isCleanUsername(cached.username) ? cached.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
               avatar: prev.avatar || cached.avatar || cached.avatarUrl,
               bio: prev.bio || cached.bio,
-              links: prev.links?.length ? prev.links : prefsObj.links || cached.links || [],
-              tags: prev.tags?.length ? prev.tags : prefsObj.tags || cached.tags || [],
+              links: prev.links?.length ? prev.links : (Array.isArray(prefsObj.links) ? prefsObj.links : (Array.isArray(cached.links) ? cached.links : [])),
+              tags: prev.tags?.length ? prev.tags : (Array.isArray(prefsObj.tags) ? prefsObj.tags : (Array.isArray(cached.tags) ? cached.tags : [])),
               createdAt: prev.createdAt || cached.$createdAt || cached.createdAt,
             }));
           }
@@ -148,11 +148,11 @@ export function UnifiedProfileView({
 
           setResolvedProfile(prev => ({
             name: prof.displayName || prof.name || prev.name,
-            username: isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : prev.username,
+            username: typeof prof.username === 'string' && isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : prev.username,
             avatar: prof.avatar || prof.avatarUrl || prev.avatar,
             bio: prof.bio ?? prev.bio,
-            links: prefs.links || (prof as any).links || prev.links || [],
-            tags: prefs.tags || (prof as any).tags || prev.tags || [],
+            links: Array.isArray(prefs.links) ? prefs.links : (Array.isArray((prof as any).links) ? (prof as any).links : (prev.links || [])),
+            tags: Array.isArray(prefs.tags) ? prefs.tags : (Array.isArray((prof as any).tags) ? (prof as any).tags : (prev.tags || [])),
             createdAt: (prof as any).$createdAt || prev.createdAt,
           }));
         } else if (username) {
@@ -172,11 +172,11 @@ export function UnifiedProfileView({
 
           setResolvedProfile(prev => ({
             name: prof.displayName || prof.name || prev.name,
-            username: isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : prev.username,
+            username: typeof prof.username === 'string' && isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : prev.username,
             avatar: prof.avatar || prof.avatarUrl || prev.avatar,
             bio: prof.bio ?? prev.bio,
-            links: prefs.links || (prof as any).links || prev.links || [],
-            tags: prefs.tags || (prof as any).tags || prev.tags || [],
+            links: Array.isArray(prefs.links) ? prefs.links : (Array.isArray((prof as any).links) ? (prof as any).links : (prev.links || [])),
+            tags: Array.isArray(prefs.tags) ? prefs.tags : (Array.isArray((prof as any).tags) ? (prof as any).tags : (prev.tags || [])),
             createdAt: (prof as any).$createdAt || prev.createdAt,
           }));
         }
@@ -274,15 +274,15 @@ export function UnifiedProfileView({
 
   const activeDisplayName = resolvedProfile.name || name || username || 'Kylrix User';
 
-  const rawUsername = isCleanUsername(resolvedProfile.username)
+  const rawUsername = typeof resolvedProfile.username === 'string' && isCleanUsername(resolvedProfile.username)
     ? resolvedProfile.username
-    : (isCleanUsername(username)
+    : (typeof username === 'string' && isCleanUsername(username)
         ? username
         : (isOwnProfile
-            ? (isCleanUsername(user?.prefs?.username) ? user?.prefs?.username : (isCleanUsername(user?.username) ? user?.username : null))
+            ? (typeof user?.prefs?.username === 'string' && isCleanUsername(user?.prefs?.username) ? user?.prefs?.username : (typeof user?.username === 'string' && isCleanUsername(user?.username) ? user?.username : null))
             : null));
 
-  const cleanUsername = rawUsername ? rawUsername.trim().replace(/^@/, '') : null;
+  const cleanUsername = typeof rawUsername === 'string' ? rawUsername.trim().replace(/^@/, '') : null;
   const activeHandle = cleanUsername ? `@${cleanUsername}` : '';
   const activeBio = resolvedProfile.bio || bio || '';
 
@@ -476,7 +476,7 @@ export function UnifiedProfileView({
                   </p>
                 )}
 
-                {resolvedProfile.createdAt && (
+                {resolvedProfile.createdAt && !isNaN(new Date(resolvedProfile.createdAt).getTime()) && (
                   <p className="text-[11px] font-mono text-white/40 truncate m-0 pt-0.5">
                     Member since {new Date(resolvedProfile.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
                   </p>

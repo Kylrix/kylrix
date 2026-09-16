@@ -74,7 +74,7 @@ export function ProfileSidebar({
 
     void (async () => {
       try {
-        const key = userId ? `profile_${userId}` : (username ? `profile_${username.replace(/^@/, '').toLowerCase()}` : null);
+        const key = userId ? `profile_${userId}` : (typeof username === 'string' && username ? `profile_${username.replace(/^@/, '').toLowerCase()}` : null);
         if (key) {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
           const localCopy = await LocalEngine.cacheGet<any>(key).catch(() => null);
