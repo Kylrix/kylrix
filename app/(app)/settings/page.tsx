@@ -609,79 +609,14 @@ function SettingsPageInner() {
                 <span>Back</span>
             </button>
 
-            {/* Header Title Section / Compact Account Summary */}
-            <header 
-                onClick={() => {
-                    const username = getEffectiveUsername(user);
-                    if (username) router.push(`/u/${username}`);
-                }}
-                className="mb-6 p-5 sm:p-6 bg-[#000000] border-2 border-white/20 rounded-[24px] shadow-2xl overflow-hidden relative group cursor-pointer hover:border-white/40 transition-all"
-            >
-                <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#6366F1]/10 rounded-full pointer-events-none" />
-                
-                <div className={`flex flex-col gap-6 items-center relative z-10 ${isRightRailPushing ? 'xl:flex-row' : 'md:flex-row'}`}>
-                    {/* Profile */}
-                    <div className="flex-shrink-0">
-                        <IdentityAvatar 
-                            userId={user?.$id}
-                            pro={isPro}
-                            size={56}
-                            fallback={getEffectiveDisplayName(user).slice(0, 1).toUpperCase()}
-                        />
-                    </div>
-
-                    {/* Account Info */}
-                    <div className="flex-1 min-w-0 text-center md:text-left flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-white font-black text-xl tracking-tight leading-tight font-mono truncate">
-                                {getEffectiveDisplayName(user)}
-                            </h1>
-                            <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
-                                <span className="text-[10px] font-black text-[#EC4899] uppercase tracking-wider">
-                                    {currentTier} PLAN
-                                </span>
-                                {isPro && expiresAt && (
-                                    <span className="text-[10px] font-bold text-white/50 uppercase font-mono">
-                                        • Ends {new Date(expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsEditModalOpen(true);
-                            }}
-                            className="py-2.5 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center justify-center gap-1.5 border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)] select-none w-full md:w-auto cursor-pointer"
-                        >
-                            <Edit3 size={14} />
-                            <span>Edit Profile</span>
-                        </button>
-                    </div>
-
-                    {/* AI Compute Section (Usage 0-100%) */}
-                    <div className={`w-full flex flex-col gap-2 ${isRightRailPushing ? 'xl:w-[220px]' : 'md:w-[220px]'}`}>
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[9px] font-black text-white/50 tracking-widest uppercase font-mono">
-                                AI Compute Usage
-                            </span>
-                            <span className="text-sm font-black font-mono text-white">
-                                {computeBalance ? Math.round(100 - computeBalance.percent) : '0'}%
-                            </span>
-                        </div>
-                        
-                        <div className="h-2.5 w-full bg-[#161412] rounded-full overflow-hidden border-2 border-white/20">
-                            <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${100 - (computeBalance?.percent ?? 100)}%` }}
-                                transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-                                className="h-full bg-gradient-to-r from-[#6366F1] to-[#EC4899] relative"
-                            >
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shine" />
-                            </motion.div>
-                        </div>
-                    </div>
-                </div>
+            {/* Header Title Section */}
+            <header className="mb-6 flex flex-col gap-1">
+                <h1 className="text-2xl md:text-3xl font-black font-clash text-white tracking-tight">
+                    Settings
+                </h1>
+                <p className="text-xs md:text-sm text-white/50 font-medium">
+                    Manage your account preferences, subscription, security, and workspaces.
+                </p>
             </header>
 
             {/* Desktop: fluid canvas — vertical nav + content; Mobile: horizontal pills */}

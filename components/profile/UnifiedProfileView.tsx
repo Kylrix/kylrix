@@ -44,6 +44,139 @@ export interface UnifiedProfileViewProps {
   onClose?: () => void;
 }
 
+export function ProfilePublishedTabs({ targetUid, username }: { targetUid?: string; username?: string | null }) {
+  const [activeTab, setActiveTab] = useState<'articles' | 'forms' | 'events' | 'flows'>('articles');
+  const [publishedItems, setPublishedItems] = useState<{
+    articles: any[];
+    forms: any[];
+    events: any[];
+    flows: any[];
+  }>({
+    articles: [],
+    forms: [],
+    events: [],
+    flows: [],
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPublished() {
+      if (!targetUid && !username) return;
+      setLoading(true);
+      try {
+        // Foundational published content fetcher
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const [localNotes, localForms, localEvents, localFlows] = await Promise.all([
+          LocalEngine.cacheGet<any[]>('notes_published').catch(() => []),
+          LocalEngine.cacheGet<any[]>('forms_published').catch(() => []),
+          LocalEngine.cacheGet<any[]>('events_published').catch(() => []),
+          LocalEngine.cacheGet<any[]>('flows_published').catch(() => []),
+        ]);
+
+        if (!cancelled) {
+          const filterUser = (items: any[]) =>
+            Array.isArray(items)
+              ? items.filter(
+                  (i) =>
+                    (i.status === 'published' || i.isPublished === true) &&
+                    (i.userId === targetUid || i.ownerId === targetUid || i.author === targetUid)
+                )
+              : [];
+
+          setPublishedItems({
+            articles: filterUser(localNotes || []),
+            forms: filterUser(localForms || []),
+            events: filterUser(localEvents || []),
+            flows: filterUser(localFlows || []),
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to fetch published user content:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void loadPublished();
+    return () => {
+      cancelled = true;
+    };
+  }, [targetUid, username]);
+
+  const tabs: Array<{ id: 'articles' | 'forms' | 'events' | 'flows'; label: string }> = [
+    { id: 'articles', label: 'Articles' },
+    { id: 'forms', label: 'Forms' },
+    { id: 'events', label: 'Events' },
+    { id: 'flows', label: 'Flows' },
+  ];
+
+  const currentList = publishedItems[activeTab] || [];
+
+  return (
+    <div className="rounded-3xl bg-[#000000] border border-white/20 p-5 sm:p-6 space-y-4 shadow-sm">
+      {/* Tab bar */}
+      <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
+        {tabs.map((tab) => {
+          const count = publishedItems[tab.id]?.length || 0;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                isActive
+                  ? 'bg-[#6366F1] text-white shadow-[0_0_12px_rgba(99,102,241,0.35)]'
+                  : 'bg-[#161412] text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <span>{tab.label}</span>
+              {count > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'}`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Content list or empty state */}
+      <div className="min-h-[120px] flex flex-col justify-center">
+        {loading ? (
+          <div className="text-center py-8 text-xs font-mono text-white/40 animate-pulse">
+            Loading published content…
+          </div>
+        ) : currentList.length > 0 ? (
+          <div className="space-y-2">
+            {currentList.map((item: any, idx: number) => (
+              <div
+                key={item.$id || item.id || idx}
+                className="p-3.5 rounded-2xl bg-[#161412] border border-white/10 hover:border-white/20 transition-all flex items-center justify-between"
+              >
+                <div>
+                  <h4 className="text-xs font-extrabold text-white font-clash">{item.title || item.name || 'Untitled'}</h4>
+                  <p className="text-[10px] text-white/40 font-mono mt-0.5">{item.description || item.summary || 'Published content'}</p>
+                </div>
+                <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Published
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-xs text-white/40 font-satoshi space-y-1">
+            <p className="font-bold text-white/60">No published {activeTab} yet</p>
+            <p className="text-[11px] text-white/30">
+              Only items marked as published will appear here.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function UnifiedProfileView({
   userId,
   username,
@@ -592,6 +725,9 @@ export function UnifiedProfileView({
               </div>
             )}
           </div>
+
+          {/* Published Content Tabs Section */}
+          <ProfilePublishedTabs targetUid={targetUid} username={rawUsername || activeHandle} />
         </div>
       </main>
 

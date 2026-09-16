@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/auth';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getUserBadgesAction } from '@/lib/actions/sponsor-actions';
 import { BadgeChip } from '@/components/sponsor/SponsorBadges';
+import { ProfilePublishedTabs } from './UnifiedProfileView';
 
 import toast from 'react-hot-toast';
 
@@ -332,6 +333,13 @@ export function ProfileSidebar({
             </div>
           ) : null}
         </div>
+
+        {/* Published Content Tabs Section for user profile */}
+        {!isGroup && (
+          <div className="mx-4">
+            <ProfilePublishedTabs targetUid={uid} username={handle} />
+          </div>
+        )}
       </div>
     </div>
   );
