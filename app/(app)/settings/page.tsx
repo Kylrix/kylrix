@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { motion } from 'framer-motion';
 import { 
     ArrowLeft, 
     Fingerprint,
@@ -13,7 +12,6 @@ import {
     Bot,
     Lightbulb,
     Loader2 as SpinnerIcon,
-    Edit3,
     ShieldCheck as SecurityIcon,
     ShieldCheck,
     MonitorSmartphone as SessionsIcon,
@@ -51,8 +49,7 @@ import { TelegramDrawer } from '@/components/overlays/TelegramDrawer';
 import { checkTelegramConnection } from '@/lib/actions/telegram';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import { useAppwriteVault } from '@/context/appwrite-context';
-import { getUserProfilePicId, getEffectiveDisplayName, getEffectiveUsername } from '@/lib/utils';
-import { IdentityAvatar } from '@/components/common/IdentityBadge';
+import { getUserProfilePicId, getEffectiveUsername } from '@/lib/utils';
 import { getComputeBalanceAction } from '@/lib/actions/ai';
 import { getCachedProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/user-utils';
@@ -104,7 +101,7 @@ export default function SettingsPage() {
 
 function SettingsPageInner() {
     const { user, refreshUser, getJWT, logout } = useAuth();
-    const { currentTier, expiresAt} = useSubscription();
+    const { currentTier } = useSubscription();
     const {} = useAppwriteVault();
     const router = useRouter();
     const searchParams = useSearchParams();
