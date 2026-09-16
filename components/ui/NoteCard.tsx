@@ -27,7 +27,7 @@ import { useAccessControlMenuItems } from '../share/AccessControlMenuItems';
 import { SidekickDrawer } from '@/components/agentic/SidekickDrawer';
 
 import { resolveNoteCardTitle, isEncryptedCiphertext } from '@/constants/noteTitle';
-import { createTaskFromNote, getNotePublicState, lockNote, unlockNote } from '@/lib/appwrite';
+import { getNotePublicState, lockNote, unlockNote } from '@/lib/appwrite';
 import { updateNote, deleteNote as deleteNoteAction } from '@/lib/actions/client-ops';
 import { useToast } from './Toast';
 import { useSudo } from '@/context/SudoContext';

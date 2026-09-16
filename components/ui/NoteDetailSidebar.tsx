@@ -73,8 +73,7 @@ import {
   getShareableUrl, 
   getCurrentPublicNoteShareUrl, 
   getNotePublicState, 
-  decryptPublicEncryptedNote, 
-  createTaskFromNote 
+  decryptPublicEncryptedNote
 } from '@/lib/appwrite';
 import { convertNoteToGoalAgentic } from '@/lib/ai-actions';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';

@@ -14,7 +14,6 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { createNoteCreationService } from '@/sdk';
 import { buildAutoTitleFromContent, clampNoteTitle } from '@/constants/noteTitle';
 import { buildSourceNoteTags } from '@/sdk/crosslinks';
-import { hasPaidKylrixPlan } from '@/lib/utils';
 import { invalidateTablesDbRowCache } from '@/lib/ecosystem/tablesdb-row-cache';
 import { publishNexusInvalidate } from '@/lib/ecosystem/nexus-bridge';
 import { ownerRowPermissions } from '@/lib/appwrite/owner-acl';
