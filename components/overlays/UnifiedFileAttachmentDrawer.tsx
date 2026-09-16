@@ -115,16 +115,25 @@ export function UnifiedFileAttachmentDrawer() {
   const [activeSubTab, setActiveSubTab] = useState<ObjectSubTab>('goals');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const disabledTabs = options?.disabledTabs || [];
+  const availableTabs: MainTab[] = (['objects', 'synced', 'upload'] as MainTab[]).filter(
+    (tab) => !disabledTabs.includes(tab)
+  );
+
   // Honor caller defaults each open (e.g. moment composer → Objects / Ideas).
   useEffect(() => {
     if (!isOpen) return;
-    setActiveTab(options?.initialTab || 'synced');
+    const requestedTab = options?.initialTab || 'synced';
+    const effectiveTab = disabledTabs.includes(requestedTab)
+      ? availableTabs[0] || 'objects'
+      : requestedTab;
+    setActiveTab(effectiveTab);
     setActiveSubTab(options?.initialSubTab || 'goals');
     setSearchQuery('');
     setSelectedFile(null);
     setSelectedMediaIds([]);
     setPreviewFile(null);
-  }, [isOpen, options?.initialTab, options?.initialSubTab]);
+  }, [isOpen, options?.initialTab, options?.initialSubTab, options?.disabledTabs]);
 
   // Auto MasterPass when switching to encrypted sub-tabs — suppressed when unlock-on-demand (default).
   useEffect(() => {
@@ -557,39 +566,47 @@ export function UnifiedFileAttachmentDrawer() {
           </div>
         </div>
 
-        {/* Main 3-Tab Switcher (Objects, Synced, Upload) */}
-        <div className="flex items-center gap-2 mt-4 p-1.5 bg-[#0A0908] rounded-2xl border border-[#1C1A18] shrink-0">
-          <button
-            onClick={() => setActiveTab('objects')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-              activeTab === 'objects'
-                ? 'bg-[#161412] text-[#F5F2ED] border border-[#34322F] shadow-md'
-                : 'text-[#9B9691] hover:text-[#F5F2ED]'
-            }`}
-          >
-            Objects
-          </button>
-          <button
-            onClick={() => setActiveTab('synced')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-              activeTab === 'synced'
-                ? 'bg-[#161412] text-[#F5F2ED] border border-[#34322F] shadow-md'
-                : 'text-[#9B9691] hover:text-[#F5F2ED]'
-            }`}
-          >
-            Synced ({mediaFiles.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('upload')}
-            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-              activeTab === 'upload'
-                ? 'bg-[#161412] text-[#F5F2ED] border border-[#34322F] shadow-md'
-                : 'text-[#9B9691] hover:text-[#F5F2ED]'
-            }`}
-          >
-            Upload
-          </button>
-        </div>
+        {/* Main Tab Switcher (Objects, Synced, Upload) — Hides disabled tabs */}
+        {availableTabs.length > 1 && (
+          <div className="flex items-center gap-2 mt-4 p-1.5 bg-[#0A0908] rounded-2xl border border-[#1C1A18] shrink-0">
+            {!disabledTabs.includes('objects') && (
+              <button
+                onClick={() => setActiveTab('objects')}
+                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
+                  activeTab === 'objects'
+                    ? 'bg-[#161412] text-[#F5F2ED] border border-[#34322F] shadow-md'
+                    : 'text-[#9B9691] hover:text-[#F5F2ED]'
+                }`}
+              >
+                Objects
+              </button>
+            )}
+            {!disabledTabs.includes('synced') && (
+              <button
+                onClick={() => setActiveTab('synced')}
+                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
+                  activeTab === 'synced'
+                    ? 'bg-[#161412] text-[#F5F2ED] border border-[#34322F] shadow-md'
+                    : 'text-[#9B9691] hover:text-[#F5F2ED]'
+                }`}
+              >
+                Synced ({mediaFiles.length})
+              </button>
+            )}
+            {!disabledTabs.includes('upload') && (
+              <button
+                onClick={() => setActiveTab('upload')}
+                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
+                  activeTab === 'upload'
+                    ? 'bg-[#161412] text-[#F5F2ED] border border-[#34322F] shadow-md'
+                    : 'text-[#9B9691] hover:text-[#F5F2ED]'
+                }`}
+              >
+                Upload
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Tab 1: Objects */}
         {activeTab === 'objects' && (

@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { X, Sparkles, FileText, ListChecks, Map as MapIcon, Lightbulb, Send, Paperclip, Link2, Image as ImageIcon, Target, FormInput, Tag, Copy } from 'lucide-react';
+import { X, Sparkles, FileText, ListChecks, Map as MapIcon, Lightbulb, Send, Paperclip, Target, FormInput, Tag, Copy, FolderKanban, ShieldAlert, FileCode, Calendar, Bot, Layers, Trash2 } from 'lucide-react';
 import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import toast from 'react-hot-toast';
 
 // Sidekick — flagship per-object companion. One session per object (targetType/targetId).
@@ -20,6 +21,91 @@ type SidekickResult = {
 };
 
 type ChatMsg = { id: string; role: 'user' | 'assistant'; content: string; at?: string };
+
+type PendingAttachment = { childId: string; childKind: string; name: string; bucketId?: string };
+
+function renderKindIcon(kind: string) {
+  switch (kind) {
+    case 'task': case 'goal': return <Target size={13} className="text-purple-400 shrink-0" />;
+    case 'note': case 'idea': return <FileText size={13} className="text-indigo-400 shrink-0" />;
+    case 'project': return <FolderKanban size={13} className="text-blue-400 shrink-0" />;
+    case 'vault': case 'totp': return <ShieldAlert size={13} className="text-amber-400 shrink-0" />;
+    case 'form': return <FileCode size={13} className="text-emerald-400 shrink-0" />;
+    case 'event': return <Calendar size={13} className="text-pink-400 shrink-0" />;
+    case 'session': return <Bot size={13} className="text-cyan-400 shrink-0" />;
+    case 'tag': return <Tag size={13} className="text-yellow-400 shrink-0" />;
+    default: return <Layers size={13} className="text-purple-400 shrink-0" />;
+  }
+}
+
+function deriveChildKind(bucketId?: string, mimeType?: string): string {
+  if (bucketId === 'ideas') return 'note';
+  if (bucketId === 'goals') return 'task';
+  if (bucketId === 'projects') return 'project';
+  if (bucketId === 'threads') return 'note';
+  if (bucketId === 'totps' || bucketId === 'vault') return 'vault';
+  if (bucketId === 'forms') return 'form';
+  if (bucketId === 'events') return 'event';
+  if (bucketId === 'sessions') return 'session';
+  if (bucketId === 'tags') return 'tag';
+  if (mimeType?.startsWith('image/')) return 'image';
+  if (mimeType) return 'file';
+  return 'note';
+}
+
+async function getRedactedObjectExcerpt(childId: string, _childKind: string): Promise<string> {
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const { redactSensitiveEnvContent } = await import('@/lib/unorganic-email-api');
+    const { redactPIIAndSensitiveFields } = await import('@/lib/tools/registry');
+
+    let text = '';
+    const note = await LocalEngine.cacheGet<any>(`note_${childId}`).catch(() => null);
+    if (note) {
+      text = `${note.title || ''}\n${note.content || ''}`.trim();
+    } else {
+      const task = await LocalEngine.cacheGet<any>(`task_${childId}`).catch(() => null);
+      if (task) {
+        text = `${task.title || ''}\n${task.description || ''}`.trim();
+      }
+    }
+
+    if (text) {
+      const step1 = redactSensitiveEnvContent(text);
+      const step2 = redactPIIAndSensitiveFields({ content: step1 });
+      const redacted = (step2 as any).content || step1;
+      return redacted.slice(0, 500);
+    }
+  } catch {}
+  return '';
+}
+
+function renderMessageContent(content: string) {
+  const attachRegex = /\[Attached:\s*(.*?)\s*\((.*?)\)\s*-\s*ID:\s*(.*?)\]/g;
+  const matches = [...content.matchAll(attachRegex)];
+  if (matches.length > 0) {
+    const cleanText = content.replace(attachRegex, '').trim();
+    return (
+      <div className="flex flex-col gap-2">
+        {cleanText && <div>{cleanText}</div>}
+        <div className="flex flex-wrap gap-1.5 mt-1">
+          {matches.map((match, idx) => (
+            <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/30 border border-white/10 text-xs text-purple-200">
+              <Paperclip size={12} className="text-purple-400" />
+              <span className="font-bold">{match[1]}</span>
+              <span className="text-[10px] opacity-60 uppercase">({match[2]})</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  try {
+    const p = JSON.parse(content);
+    if (p?.oneLiner) return p.oneLiner;
+  } catch {}
+  return content;
+}
 
 function Skeleton() {
   return (
@@ -78,6 +164,7 @@ export function SidekickDrawer({
   onClose: () => void;
   target: SidekickTarget | null;
 }) {
+  const { openFileDrawer } = useUnifiedFileDrawer();
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SidekickResult | null>(null);
@@ -86,6 +173,9 @@ export function SidekickDrawer({
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [attachedSessionObjects, setAttachedSessionObjects] = useState<any[]>([]);
+  const [showAttachedObjectsDrawer, setShowAttachedObjectsDrawer] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -107,6 +197,29 @@ export function SidekickDrawer({
     return ()=> clearTimeout(t);
   }, [input, draftKey]);
 
+  // Load attached objects for this sidekick session (0ms LocalEngine + background sync)
+  const loadSidekickAttachments = useCallback(async (sid?: string | null) => {
+    if (!sid && !target) return;
+    const cacheKey = sid ? `sidekick:attachments:${sid}` : `sidekick:attachments:${target?.type}:${target?.id}`;
+    const cached = await LocalEngine.cacheGet<any[]>(cacheKey).catch(() => null);
+    if (Array.isArray(cached)) {
+      setAttachedSessionObjects(cached);
+    }
+    if (sid) {
+      try {
+        const { getObjectsByParent } = await import('@/lib/actions/client-ops');
+        const rows = await getObjectsByParent(sid, 'sidekick');
+        if (Array.isArray(rows)) {
+          setAttachedSessionObjects(rows);
+          LocalEngine.cacheSet(cacheKey, rows).catch(() => {});
+          if (target) {
+            LocalEngine.cacheSet(`sidekick:attachments:${target.type}:${target.id}`, rows).catch(() => {});
+          }
+        }
+      } catch {}
+    }
+  }, [target]);
+
   // Load or create sidekick session — if pre-existing conversation, show chat instead of re-querying summary
   useEffect(() => {
     if (!open || !target) return;
@@ -117,6 +230,8 @@ export function SidekickDrawer({
       setResult(null);
       setMessages([]);
       setSessionId(null);
+      setPendingAttachments([]);
+      setAttachedSessionObjects([]);
       try {
         const { account } = await import('@/lib/appwrite/client');
         const jwt = await account.createJWT().then((r: any) => r.jwt || '').catch(() => undefined);
@@ -154,6 +269,7 @@ export function SidekickDrawer({
                   setLoading(false);
                   // Persist to LocalEngine for offline
                   if (msgs.length) LocalEngine.cacheSet(`sidekick:chat:${target.type}:${target.id}`, msgs).catch(()=>{});
+                  void loadSidekickAttachments(localMatch.id);
                   return; // Don't re-query summary — show existing chat
                 }
               }
@@ -170,6 +286,7 @@ export function SidekickDrawer({
           await LocalEngine.cacheSet(localCacheKey, res.result).catch(()=>{});
           if (res.sessionId) {
             setSessionId(res.sessionId);
+            void loadSidekickAttachments(res.sessionId);
             const newMsgs: ChatMsg[] = [
               { id: `u_${Date.now()}`, role: 'user', content: `Analyze ${target.type} ${target.title || target.id}` },
               { id: `a_${Date.now()}`, role: 'assistant', content: JSON.stringify(res.result) },
@@ -254,11 +371,69 @@ export function SidekickDrawer({
     toast.success('Summary copied to clipboard');
   }, [result, target]);
 
+  const handleOpenAttachDrawer = () => {
+    openFileDrawer({
+      title: 'Attach Object to Sidekick',
+      initialTab: 'objects',
+      disabledTabs: ['synced', 'upload'],
+      onSelectFile: (file) => {
+        if (pendingAttachments.length >= 10) {
+          toast.error('Maximum 10 objects can be attached at once.');
+          return;
+        }
+        if (pendingAttachments.some((a) => a.childId === file.$id)) {
+          toast.error('Object already attached to message.');
+          return;
+        }
+        const childKind = deriveChildKind(file.bucketId, file.mimeType);
+        setPendingAttachments((prev) => [
+          ...prev,
+          { childId: file.$id, childKind, name: file.name, bucketId: file.bucketId },
+        ]);
+        toast.success(`Attached ${file.name}`);
+      },
+    });
+  };
+
+  const handleDetachSessionObject = async (childId: string) => {
+    const currentSessionId = sessionId;
+    if (!currentSessionId) return;
+    try {
+      const { detachObjectByRelation, getObjectsByParent } = await import('@/lib/actions/client-ops');
+      await detachObjectByRelation({ parentId: currentSessionId, childId });
+      const updated = await getObjectsByParent(currentSessionId, 'sidekick').catch(() => []);
+      setAttachedSessionObjects(updated);
+      const cacheKey = `sidekick:attachments:${currentSessionId}`;
+      LocalEngine.cacheSet(cacheKey, updated).catch(() => {});
+      if (target) {
+        LocalEngine.cacheSet(`sidekick:attachments:${target.type}:${target.id}`, updated).catch(() => {});
+      }
+      toast.success('Object detached from session');
+    } catch {
+      toast.error('Failed to detach object');
+    }
+  };
+
   const handleSend = async () => {
     const trimmed = input.trim();
-    if (!trimmed || !target || sending) return;
+    if ((!trimmed && pendingAttachments.length === 0) || !target || sending) return;
     setSending(true);
-    const userMsg: ChatMsg = { id: `u_${Date.now()}`, role: 'user', content: trimmed };
+
+    const attachmentsToProcess = [...pendingAttachments];
+    setPendingAttachments([]);
+
+    let promptWithAttachments = trimmed;
+    if (attachmentsToProcess.length > 0) {
+      const attachmentTexts = await Promise.all(
+        attachmentsToProcess.map(async (att) => {
+          const excerpt = await getRedactedObjectExcerpt(att.childId, att.childKind);
+          return `[Attached: ${att.name} (${att.childKind}) - ID: ${att.childId}]${excerpt ? `\nContent: ${excerpt}` : ''}`;
+        })
+      );
+      promptWithAttachments = trimmed ? `${trimmed}\n\n${attachmentTexts.join('\n\n')}` : attachmentTexts.join('\n\n');
+    }
+
+    const userMsg: ChatMsg = { id: `u_${Date.now()}`, role: 'user', content: promptWithAttachments };
     const next = [...messages, userMsg];
     setMessages(next);
     setInput('');
@@ -268,12 +443,39 @@ export function SidekickDrawer({
       const { account } = await import('@/lib/appwrite/client');
       const jwt = await account.createJWT().then((r:any)=> r.jwt || '').catch(()=> undefined);
       const { executeSidekickChat } = await import('@/lib/actions/sidekick');
-      const res: any = await executeSidekickChat({ target, message: trimmed, sessionId: sessionId || undefined, jwt });
+      const res: any = await executeSidekickChat({ target, message: promptWithAttachments, sessionId: sessionId || undefined, jwt });
       const assistant: ChatMsg = { id: `a_${Date.now()}`, role: 'assistant', content: res?.response || res?.result ? JSON.stringify(res.result) : 'Done.' };
       const updated = [...next, assistant];
       setMessages(updated);
       await LocalEngine.cacheSet(`sidekick:chat:${target.type}:${target.id}`, updated).catch(()=>{});
+
+      const activeSid = res?.sessionId || sessionId;
       if (res?.sessionId && !sessionId) setSessionId(res.sessionId);
+
+      // Persist attached objects to DB and local cache for sidekick session
+      if (activeSid && attachmentsToProcess.length > 0) {
+        try {
+          const { attachObject, getObjectsByParent } = await import('@/lib/actions/client-ops');
+          for (const att of attachmentsToProcess) {
+            await attachObject({
+              parentId: activeSid,
+              parentKind: 'sidekick',
+              childId: att.childId,
+              childKind: att.childKind,
+              metadata: { name: att.name, bucketId: att.bucketId },
+            }).catch(() => {});
+          }
+          const updatedObjs = await getObjectsByParent(activeSid, 'sidekick').catch(() => []);
+          setAttachedSessionObjects(updatedObjs);
+          const cacheKey = `sidekick:attachments:${activeSid}`;
+          LocalEngine.cacheSet(cacheKey, updatedObjs).catch(() => {});
+          if (target) {
+            LocalEngine.cacheSet(`sidekick:attachments:${target.type}:${target.id}`, updatedObjs).catch(() => {});
+          }
+        } catch (attachErr) {
+          console.warn('Failed to persist session attachments:', attachErr);
+        }
+      }
       // If response is new summary JSON, update result
       try {
         const parsed = JSON.parse(assistant.content);
@@ -319,9 +521,24 @@ export function SidekickDrawer({
             <div className="text-sm font-black text-white font-clash -mt-1 truncate max-w-[180px]">{target?.title || 'Research companion'}</div>
           </div>
         </div>
-        <button onClick={onClose} className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5">
-          <X size={18} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAttachedObjectsDrawer(true)}
+            className="relative p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-center"
+            title="Attached Objects in this Sidekick Session"
+          >
+            <Paperclip size={18} />
+            {attachedSessionObjects.length > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-4.5 px-1 rounded-full bg-[#A855F7] text-[10px] font-black text-white flex items-center justify-center">
+                {attachedSessionObjects.length}
+              </span>
+            )}
+          </button>
+          <button onClick={onClose} className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5">
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       <div ref={listRef} className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-6">
@@ -444,34 +661,153 @@ export function SidekickDrawer({
                 <div className="text-[11px] font-black tracking-widest text-white/30 uppercase">Conversation</div>
                 {messages.map((m) => (
                   <div key={m.id} className={`max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${m.role === 'user' ? 'bg-[#A855F7] text-white self-end' : 'bg-[#161412] border border-white/5 text-[#D6D1CA] self-start'}`}>
-                    {(() => { try { const p = JSON.parse(m.content); if (p?.oneLiner) return p.oneLiner; } catch {} return m.content; })()}
+                    {renderMessageContent(m.content)}
                   </div>
                 ))}
               </div>
             )}
 
             {sessionId && <div className="text-[11px] text-white/30 text-center">Sidekick session {sessionId.slice(0, 8)} • one per object • targetType/targetId — return months later</div>}
-
-            {/* Future hooks placeholder */}
-            <div className="rounded-2xl bg-white/[0.02] border border-dashed border-white/5 p-3 flex flex-col gap-2">
-              <div className="text-xs font-bold text-white/60 flex items-center gap-2"><Paperclip size={14} /> Attachments & Linked Objects — coming soon</div>
-              <div className="flex gap-2">
-                <button onClick={()=> {}} className="flex-1 py-2 rounded-xl bg-white/5 border border-white/5 text-xs font-bold text-white/50 flex items-center justify-center gap-1.5"><ImageIcon size={14}/> Upload file</button>
-                <button onClick={()=> {}} className="flex-1 py-2 rounded-xl bg-white/5 border border-white/5 text-xs font-bold text-white/50 flex items-center justify-center gap-1.5"><Link2 size={14}/> Attach note</button>
-              </div>
-              <div className="text-[11px] text-white/20">Sidekick session is itself an object — later: objects table, file uploads via StorageService, mental model map attachments.</div>
-            </div>
           </>
         )}
       </div>
 
-      {/* Chat bar — plugged into LocalEngine */}
-      <div className="p-4 border-t border-white/5 bg-[#0A0908] shrink-0 flex gap-2">
-        <input value={input} onChange={(e)=> setInput(e.target.value)} onKeyDown={(e)=> { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }}} placeholder={target ? `Ask Sidekick about ${target.title || target.type}…` : 'Ask Sidekick…'} className="flex-1 bg-[#161412] border border-white/5 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#A855F7]/30" />
-        <button onClick={handleSend} disabled={sending || !input.trim()} className="px-4 py-3 rounded-xl bg-[#A855F7] hover:bg-[#9333EA] disabled:opacity-40 text-white font-black flex items-center justify-center">
-          <Send size={16} />
-        </button>
+      {/* Chat bar — plugged into LocalEngine with pending attachment pills */}
+      <div className="p-4 border-t border-white/5 bg-[#0A0908] shrink-0 flex flex-col gap-2">
+        {/* Pending attachment pills directly above input bar */}
+        {pendingAttachments.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+            {pendingAttachments.map((att) => (
+              <div
+                key={att.childId}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#161412] border border-[#A855F7]/30 text-xs text-white shrink-0 shadow-sm"
+              >
+                {renderKindIcon(att.childKind)}
+                <span className="truncate max-w-[120px] text-[11px] font-semibold">{att.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setPendingAttachments((prev) => prev.filter((p) => p.childId !== att.childId))}
+                  className="p-0.5 rounded hover:bg-white/10 text-white/40 hover:text-white ml-0.5 cursor-pointer"
+                  title="Remove attachment"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleOpenAttachDrawer}
+            className="p-3 rounded-xl bg-[#161412] border border-white/5 text-white/60 hover:text-[#A855F7] hover:border-[#A855F7]/30 transition-colors flex items-center justify-center cursor-pointer shrink-0"
+            title="Attach Object"
+          >
+            <Paperclip size={18} />
+          </button>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder={target ? `Ask Sidekick about ${target.title || target.type}…` : 'Ask Sidekick…'}
+            className="flex-1 bg-[#161412] border border-white/5 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#A855F7]/30 min-w-0"
+          />
+          <button
+            onClick={handleSend}
+            disabled={sending || (!input.trim() && pendingAttachments.length === 0)}
+            className="px-4 py-3 rounded-xl bg-[#A855F7] hover:bg-[#9333EA] disabled:opacity-40 text-white font-black flex items-center justify-center shrink-0 cursor-pointer"
+          >
+            <Send size={16} />
+          </button>
+        </div>
       </div>
+
+      {/* Session Attached Objects Bottom Drawer */}
+      {showAttachedObjectsDrawer && (
+        <Drawer
+          anchor="bottom"
+          open={showAttachedObjectsDrawer}
+          onClose={() => setShowAttachedObjectsDrawer(false)}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              p: 3,
+              maxWidth: '600px',
+              mx: 'auto',
+              maxHeight: '60dvh',
+              overflowY: 'auto',
+            },
+          }}
+          ModalProps={{ keepMounted: false, disablePortal: true, sx: { zIndex: 1500 } }}
+        >
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Paperclip size={18} className="text-[#A855F7]" />
+                <h4 className="font-clash font-extrabold text-base text-white">
+                  Attached Objects ({attachedSessionObjects.length})
+                </h4>
+              </div>
+              <button
+                onClick={() => setShowAttachedObjectsDrawer(false)}
+                className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {attachedSessionObjects.length === 0 ? (
+              <div className="py-8 text-center text-xs text-white/40">
+                No objects attached to this Sidekick session yet.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {attachedSessionObjects.map((obj, idx) => {
+                  const meta = typeof obj.metadata === 'string' ? JSON.parse(obj.metadata || '{}') : obj.metadata || {};
+                  const titleText = meta.name || meta.label || obj.childId;
+                  const kind = obj.childKind || 'object';
+
+                  return (
+                    <div
+                      key={obj.$id || obj.childId || idx}
+                      className="flex items-center justify-between p-3 rounded-2xl bg-[#0A0908] border border-white/5"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 rounded-xl bg-[#161412] border border-white/5">
+                          {renderKindIcon(kind)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">{titleText}</p>
+                          <p className="text-[10px] font-mono text-white/40 uppercase mt-0.5">
+                            {kind} • ID: {obj.childId?.slice(0, 12)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDetachSessionObject(obj.childId)}
+                        className="p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer shrink-0 ml-2"
+                        title="Detach object"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </Drawer>
+      )}
     </div>
   );
 
