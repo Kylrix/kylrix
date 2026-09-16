@@ -213,6 +213,11 @@ export async function createProjectSecure(data: any, jwt?: string) {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+  }
+
   // Rigorous runtime validation
   const validated = ProjectSchema.parse(data);
   const userTier = getUserSubscriptionTier(actor);
@@ -275,6 +280,11 @@ export async function updateProjectSecure(projectId: string, data: any, permissi
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+  }
+
   const isAllowed = await verifyProjectPermission(projectId, actor.$id, 'editor');
   if (!isAllowed) {
     throw new Error('Forbidden: Insufficient permissions to update this project');
@@ -335,6 +345,11 @@ export async function deleteProjectSecure(
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
   }
 
   const isAllowed = await verifyProjectPermission(projectId, actor.$id, 'admin');
@@ -625,6 +640,11 @@ export async function addObjectToProjectSecure(
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
   }
 
   const isAllowed = await verifyProjectPermission(projectId, actor.$id, 'editor');
@@ -981,6 +1001,11 @@ export async function removeObjectFromProjectSecure(objectId: string, jwt?: stri
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+  }
+
   const tables = createSystemTablesDB();
 
   const obj = await tables.getRow({
@@ -1008,6 +1033,11 @@ export async function createFormSecure(data: any, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
   }
 
   // Mathematically tie the create operation to the current user
@@ -1088,6 +1118,11 @@ export async function updateFormSecure(formId: string, data: any, jwt?: string) 
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+  }
+
   const isAllowed = await verifyFormPermission(formId, actor.$id, 'editor');
   if (!isAllowed) {
     throw new Error('Forbidden: Insufficient permissions to update this form');
@@ -1144,6 +1179,11 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
   }
 
   // Clear memory row cache to prevent stale ownership/permission state from blocking the delete

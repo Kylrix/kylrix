@@ -1070,6 +1070,17 @@ export const autonomicSyncEngine = {
       return;
     }
 
+    const { hasPaidKylrixPlan } = await import('@/lib/utils');
+    if (!hasPaidKylrixPlan(activeUser)) {
+      // Free plan users on Cloud do not consume backend sync / DB storage.
+      // Acknowledge pending items locally so local-first UI is green/saved offline.
+      const pendingIds = Array.from(pendingById.keys());
+      for (const pendingId of pendingIds) {
+        autonomicSyncEngine.ack(pendingId);
+      }
+      return;
+    }
+
     isSyncing = true;
 
     try {

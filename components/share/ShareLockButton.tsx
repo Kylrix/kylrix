@@ -8,6 +8,7 @@ import { IconButton } from '@/lib/openbricks/primitives';
 import { buildInstantShareUrl, ensureSharePublished } from '@/lib/share/instant-share';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 interface ShareLockButtonProps {
   resourceType: PublicResourceType;
@@ -58,6 +59,11 @@ export function ShareLockButton({
         subtitle: `Create an account or log in to share ${friendlyName} with others.`,
         objectKind: resourceType,
       });
+      return;
+    }
+
+    if (!hasPaidKylrixPlan(user)) {
+      open('pro-upgrade', { feature: 'Sync & Share' });
       return;
     }
 

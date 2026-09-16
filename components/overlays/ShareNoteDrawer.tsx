@@ -10,6 +10,7 @@ import UserSearch from '@/components/UserSearch';
 import { useAuth } from '@/context/auth/AuthContext';
 import { account } from '@/lib/appwrite/client';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 // Unified config builder for dynamic resource terminology & branding
@@ -185,12 +186,19 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
 
   useEffect(() => {
     setIsDrawerOpen(isOpen);
-    if (isOpen && activeResourceId) {
-        fetchExistingCollaborators();
+    if (isOpen) {
+        if (!hasPaidKylrixPlan(user)) {
+          onClose();
+          open('pro-upgrade', { feature: 'Sync & Share' });
+          return;
+        }
+        if (activeResourceId) {
+          fetchExistingCollaborators();
 
-        if (drawerData?.initialCollaborator) {
-            setEditingCollaborator(drawerData.initialCollaborator);
-            setPermission(drawerData.initialCollaborator.permissionLevel || 'viewer');
+          if (drawerData?.initialCollaborator) {
+              setEditingCollaborator(drawerData.initialCollaborator);
+              setPermission(drawerData.initialCollaborator.permissionLevel || 'viewer');
+          }
         }
     }
     if (!isOpen) {

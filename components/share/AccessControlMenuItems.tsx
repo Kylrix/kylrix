@@ -3,6 +3,8 @@
 import React from 'react';
 import { Share2, ShieldAlert, Send } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { useToast } from '@/hooks/useToast';
 
@@ -31,6 +33,7 @@ export function useAccessControlMenuItems({
   onUpdate
 }: AccessControlMenuItemsProps) {
   const { open: openUnified } = useUnifiedDrawer();
+  const { user } = useAuth();
   const { showSuccess, showError } = useToast();
 
   const isActive = isPublic || isGuest;
@@ -102,6 +105,10 @@ export function useAccessControlMenuItems({
         ]
       } : {
         onClick: async () => {
+          if (!hasPaidKylrixPlan(user)) {
+            openUnified('pro-upgrade', { feature: 'Sync & Share' });
+            return;
+          }
           try {
             const { LocalEngine } = await import('@/lib/services/LocalEngine');
             const cacheKey = `share:${resourceType}:${resourceId}`;
