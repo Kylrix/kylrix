@@ -138,7 +138,7 @@ export function BillingContent() {
                 )}
                 {expiresAt && (isPro || isTeams) && (
                   <span className="text-[10px] text-white/40 font-mono block mt-0.5">
-                    Active until {new Date(expiresAt).toLocaleDateString()}
+                    Active until {new Date(expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
                 )}
               </div>
