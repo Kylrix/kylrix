@@ -237,8 +237,6 @@ export async function deleteCredential(id: string) {
   return await VaultService.deleteCredential(id);
 }
 
-export const deleteTotp = deleteTotpSecret;
-
 /**
  * Logs out the current user from Appwrite and clears session/local storage.
  * Use this everywhere for a consistent logout experience.
