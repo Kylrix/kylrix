@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Calendar, Clock, MapPin, Share2, Video, ExternalLink, Edit3, Globe, Lock, ChevronDown, Check, Users } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, Share2, Video, ExternalLink, Edit3, Globe, Lock, ChevronDown, Check, Users, Sparkles } from 'lucide-react';
 import { formatTime } from '@/lib/time-util';
 import { useLayout } from '@/context/LayoutContext';
 import { exportToICS } from '@/lib/utils/export';
@@ -372,21 +372,44 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
       <div className="flex-1 overflow-y-auto p-3 sm:p-5 flex flex-col gap-4 scrollbar-thin">
         {/* Header Title info */}
         <div>
-          <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsVisibilityDrawerOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-[#1C1A18] hover:bg-[#242220] border border-[#34322F] hover:border-emerald-500/50 text-white text-[11px] font-bold font-satoshi capitalize transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                {isPublic ? <Globe className="w-3 h-3 text-emerald-400" /> : <Lock className="w-3 h-3 text-purple-400" />}
+                <span>{visibility}</span>
+                <ChevronDown className="w-3 h-3 text-white/40" />
+              </button>
+              {(event as any).status === 'cancelled' && (
+                <span className="px-2.5 py-0.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-[11px] font-mono font-bold uppercase">
+                  Cancelled
+                </span>
+              )}
+            </div>
+
             <button
               type="button"
-              onClick={() => setIsVisibilityDrawerOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-[#1C1A18] hover:bg-[#242220] border border-[#34322F] hover:border-emerald-500/50 text-white text-[11px] font-bold font-satoshi capitalize transition-all cursor-pointer flex items-center gap-1.5"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent('kylrix:open-sidekick', {
+                    detail: {
+                      type: 'event',
+                      id: eventIdValue,
+                      title: event.title || 'Event',
+                      content: event.description || '',
+                    },
+                  })
+                );
+              }}
+              className="p-1.5 rounded-lg bg-purple-500/15 border border-purple-500/25 text-purple-400 hover:bg-purple-500/25 transition-all cursor-pointer flex items-center gap-1 text-xs font-bold font-mono"
+              title="Sidekick Companion"
             >
-              {isPublic ? <Globe className="w-3 h-3 text-emerald-400" /> : <Lock className="w-3 h-3 text-purple-400" />}
-              <span>{visibility}</span>
-              <ChevronDown className="w-3 h-3 text-white/40" />
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span>Sidekick</span>
             </button>
-            {(event as any).status === 'cancelled' && (
-              <span className="px-2.5 py-0.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-[11px] font-mono font-bold uppercase">
-                Cancelled
-              </span>
-            )}
           </div>
 
           {isEditingTitle ? (

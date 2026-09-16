@@ -600,11 +600,31 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             </button>
             <button
               type="button"
-              onClick={() => setShowProjectLinker(true)}
-              className="p-2 text-[#A855F7] hover:text-white rounded-xl bg-[#A855F7]/10 hover:bg-[#A855F7]/20 transition-all"
-              title="Link Workspace"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent('kylrix:open-sidekick', {
+                    detail: {
+                      type: 'goal',
+                      id: task.id,
+                      title: task.title,
+                      content: task.description || '',
+                      tags: task.labels || [],
+                    },
+                  })
+                );
+              }}
+              className="p-2 text-[#A855F7] hover:text-white rounded-xl bg-[#A855F7]/15 border border-[#A855F7]/25 hover:bg-[#A855F7]/25 transition-all cursor-pointer"
+              title="Sidekick Companion"
             >
               <Sparkles className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowProjectLinker(true)}
+              className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-all cursor-pointer"
+              title="Link Workspace"
+            >
+              <Activity className="w-4 h-4" />
             </button>
             <ShareLockButton
               resourceType="goal"

@@ -174,6 +174,26 @@ export function FormDetail({
 
           <button
             type="button"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent('kylrix:open-sidekick', {
+                  detail: {
+                    type: 'form',
+                    id: form.$id,
+                    title: form.title || 'Untitled Form',
+                    content: form.description || '',
+                  },
+                })
+              );
+            }}
+            className="w-8 h-8 rounded-xl bg-[#000000] border border-[#A855F7]/30 hover:border-[#A855F7]/60 flex items-center justify-center text-[#A855F7] hover:text-white transition-all cursor-pointer"
+            title="Sidekick Companion"
+          >
+            <Sparkles size={15} />
+          </button>
+
+          <button
+            type="button"
             onClick={() => openDrawer('sanitize', {
               targetKind: 'form',
               targetId: form.$id,
@@ -183,7 +203,7 @@ export function FormDetail({
             className="w-8 h-8 rounded-xl bg-[#000000] border border-white/10 hover:border-[#6366F1]/40 flex items-center justify-center text-[#6366F1] hover:text-white transition-all cursor-pointer"
             title="Sanitize Responses (Spam & Duplicates)"
           >
-            <Sparkles size={15} />
+            <Settings size={15} />
           </button>
 
           <button

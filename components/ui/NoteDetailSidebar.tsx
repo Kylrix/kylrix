@@ -9,15 +9,12 @@ import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 import {
   Mic,
   Square,
-  FolderKanban,
   Trash2 as TrashIcon,
   ExternalLink as OpenIcon,
   Pin as PinIcon,
   EyeOff as EyeOffIcon,
   ArrowLeft as BackIcon,
   Link2 as LinkIcon,
-  Lock as LockIcon,
-  Unlock as UnlockIcon,
   X as CloseIcon,
   Sparkles as ActionIcon,
   CheckSquare as TaskIcon,
@@ -339,13 +336,12 @@ export function NoteDetailSidebar({
   const [_isLoadingSecrets, setIsLoadingSecrets] = useState(false);
   const [_linkedSecrets, setLinkedSecrets] = useState<any[]>([]);
 
-  const [showActionHub, setShowActionHub] = useState(false);
   const [showRotateConfirm, setShowRotateConfirm] = useState(false);
   const [showProjectLinker, setShowProjectLinker] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
-  const [isCreatingTaskFromNote, setIsCreatingTaskFromNote] = useState(false);
-  const [crossSuggestions, setCrossSuggestions] = useState<any[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [_isCreatingTaskFromNote, _setIsCreatingTaskFromNote] = useState(false);
+  const [_crossSuggestions, setCrossSuggestions] = useState<any[]>([]);
+  const [_isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isLocallyDecrypted, setIsLocallyDecrypted] = useState(false);
   const [_attachedObjects, setAttachedObjects] = useState<any[]>([]);
 
@@ -571,7 +567,7 @@ export function NoteDetailSidebar({
     }
   }, [liveNote.$id, toggleNoteVisibility, updateLocalAndParentNote, showSuccess, showError, promptSudo]);
 
-  const rotateNoteLink = useCallback(() => setShowRotateConfirm(true), []);
+  const _rotateNoteLink = useCallback(() => setShowRotateConfirm(true), []);
 
   const handleConfirmedRotate = useCallback(async () => {
     setIsRotating(true);
@@ -636,24 +632,22 @@ export function NoteDetailSidebar({
     closeSidebar();
   }, [closeSidebar]);
 
-  const handleCreateTaskFromNote = useCallback(async () => {
-    setIsCreatingTaskFromNote(true);
+  const _handleCreateTaskFromNote = useCallback(async () => {
+    _setIsCreatingTaskFromNote(true);
     try {
       const task = await createTaskFromNote(liveNote as any);
       if (task) {
         updateLocalAndParentNote({ ...liveNote, linkedTaskId: task.$id } as any);
         showSuccess('Goal created from note');
-        setShowActionHub(false);
       }
     } catch (_err) {
       showError('Failed to create goal');
     } finally {
-      setIsCreatingTaskFromNote(false);
+      _setIsCreatingTaskFromNote(false);
     }
   }, [liveNote, updateLocalAndParentNote, showSuccess, showError, createTaskFromNote]);
 
-  const handleAddToProject = useCallback(() => {
-    setShowActionHub(false);
+  const _handleAddToProject = useCallback(() => {
     if (!activeWorkspace || activeWorkspace.isPersonal) {
       showError('Switch to a workspace first');
       return;
@@ -1282,17 +1276,27 @@ export function NoteDetailSidebar({
             />
           )}
 
-          {/* Action Hub — only for editors */}
-          {!readOnly && (
-            <button 
-              type="button"
-              onClick={() => setShowActionHub(true)} 
-              className="p-1.5 rounded-lg bg-pink-500/15 border border-pink-500/25 text-pink-400 hover:bg-pink-500/25 transition-colors flex items-center justify-center"
-              title="Action Hub"
-            >
-              <ActionIcon className="w-4 h-4" />
-            </button>
-          )}
+          {/* Sidekick Companion */}
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent('kylrix:open-sidekick', {
+                  detail: {
+                    type: 'note',
+                    id: liveNote.$id,
+                    title: liveNote.title || title || 'Untitled note',
+                    content: liveNote.content || content || '',
+                    tags: liveNote.tags || [],
+                  },
+                })
+              );
+            }}
+            className="p-1.5 rounded-lg bg-purple-500/15 border border-purple-500/25 text-purple-400 hover:bg-purple-500/25 transition-colors flex items-center justify-center cursor-pointer"
+            title="Sidekick Companion"
+          >
+            <ActionIcon className="w-4 h-4" />
+          </button>
 
           {/* Agentic Diff Badge indicator when object has agentic edits */}
           {liveNote && (liveNote as any).agenticDiffs && (liveNote as any).agenticDiffs.length > 0 ? (
@@ -1571,92 +1575,6 @@ export function NoteDetailSidebar({
         </div>
       </div>
 
-      {/* Action Hub overlay */}
-      {showActionHub && (
-        <div className="fixed inset-0 z-[11050] flex items-start justify-center bg-black/70 animate-in fade-in duration-200" onClick={() => setShowActionHub(false)}>
-          <div className="w-full max-w-lg md:max-w-[420px] md:ml-auto md:mr-0 md:h-full md:rounded-none rounded-b-[24px] bg-[#161412] border-b md:border-b-0 md:border-l border-white/5 p-5 shadow-2xl flex flex-col gap-4 animate-in slide-in-from-top-1/3 md:slide-in-from-right duration-200" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center">
-              <h3 className="font-extrabold font-space-grotesk text-indigo-400 text-sm uppercase tracking-wide">Action Hub</h3>
-              <button type="button" onClick={() => setShowActionHub(false)} className="p-1.5 text-white/60 hover:text-white rounded-lg hover:bg-white/5"><CloseIcon className="w-4 h-4" /></button>
-            </div>
-            
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => { setShowActionHub(false); void handleTogglePublic(); }}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs font-mono font-bold text-white hover:bg-white/5 hover:text-white transition-colors"
-              >
-                {isPublic ? <LockIcon className="w-4 h-4" /> : <UnlockIcon className="w-4 h-4" />}
-                <span>{isPublic ? 'Make Private' : 'Make Public'}</span>
-              </button>
-
-              <button 
-                type="button"
-                onClick={handleCreateTaskFromNote} 
-                disabled={isCreatingTaskFromNote} 
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 text-black font-extrabold text-xs font-mono uppercase transition-colors hover:bg-indigo-500 disabled:opacity-50"
-              >
-                <TaskIcon className="w-4 h-4 text-black" />
-                <span>Create Goal</span>
-              </button>
-
-              <button 
-                type="button"
-                onClick={() => { setShowActionHub(false); setShowProjectLinker(true); }} 
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs font-mono font-bold text-white hover:bg-white/5 hover:text-white transition-colors"
-              >
-                <FolderKanban className="w-4 h-4" />
-                <span>Add to Workspace</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleAddToProject}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs font-mono font-bold text-white hover:bg-white/5 hover:text-white transition-colors"
-              >
-                <FolderKanban className="w-4 h-4" />
-                <span>Add to Project</span>
-              </button>
-
-              <button 
-                type="button"
-                onClick={() => { setShowActionHub(false); rotateNoteLink(); }} 
-                disabled={!isPublic} 
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs font-mono font-bold text-white hover:bg-white/5 hover:text-white transition-colors disabled:opacity-40"
-              >
-                <LockIcon className="w-4 h-4" />
-                <span>Rotate Link</span>
-              </button>
-            </div>
-
-            <div className="border-t border-white/5 pt-3">
-              <span className="text-xs font-mono font-bold tracking-wider text-white/45 uppercase block mb-2.5">Suggestions</span>
-              {isLoadingSuggestions ? (
-                <div className="px-2 py-1 text-xs text-white/40 font-mono flex items-center gap-2">
-                  <div className="w-3.5 h-3.5 border border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                  <span>Loading suggestions...</span>
-                </div>
-              ) : crossSuggestions.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {crossSuggestions.map(s => (
-                    <div key={s.id} className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl flex justify-between items-center">
-                      <div>
-                        <span className="text-xs font-bold text-white/85 block">{s.label}</span>
-                        <span className="text-xs font-sans text-white/40 block mt-0.5">{s.description}</span>
-                      </div>
-                      <button type="button" onClick={() => window.open(`https://kylrix.space/integrations?action=${s.id}`, '_blank')} className="px-2.5 py-1 bg-indigo-500 hover:bg-indigo-400 text-black font-extrabold text-xs font-mono rounded-lg transition-colors">
-                        USE
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-xs font-mono text-white/30 italic">No suggestions available</span>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Delete uses unified chrome: bottom drawer on mobile, right sidebar on desktop (ui.chrome-surfaces) — local fixed modal retired */}
 
