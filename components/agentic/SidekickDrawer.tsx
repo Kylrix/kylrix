@@ -81,10 +81,13 @@ async function getRedactedObjectExcerpt(childId: string, _childKind: string): Pr
   return '';
 }
 
-function renderMessageContent(content: string) {
+function renderMessageContent(content?: string | null) {
+  const text = typeof content === 'string' ? content : (content ? String(content) : '');
+  if (!text) return null;
+
   const attachRegex = /\[Attached:\s*(.*?)\s*\((.*?)\)\s*-\s*ID:\s*(.*?)\]/g;
-  const matches = [...content.matchAll(attachRegex)];
-  let cleanText = content.replace(attachRegex, '').trim();
+  const matches = [...text.matchAll(attachRegex)];
+  let cleanText = text.replace(attachRegex, '').trim();
 
   try {
     const p = JSON.parse(cleanText);
@@ -345,7 +348,9 @@ export function SidekickDrawer({
       } else if (actionType === 'form') {
         const { generateObjectAssistSchemaAction } = await import('@/lib/actions/ai');
         const formPrompt = promptText || `Create a form tailored for ${target.type}: ${target.title || 'Untitled'}. Content context: ${target.content?.slice(0, 500) || ''}`;
-        const schemaRes = await generateObjectAssistSchemaAction({ kind: 'form', prompt: formPrompt });
+        const { account } = await import('@/lib/appwrite/client');
+        const jwt = await account.createJWT().then((r: any) => r.jwt || '').catch(() => undefined);
+        const schemaRes = await generateObjectAssistSchemaAction({ kind: 'form', prompt: formPrompt, jwt });
         const generated = schemaRes?.data || {};
         const { createForm } = await import('@/lib/actions/client-ops');
         const newForm = await createForm({

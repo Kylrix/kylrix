@@ -56,8 +56,22 @@ export function ObjectAssistDrawer({
   subtitle,
   onApply,
 }: ObjectAssistDrawerProps) {
-  const { user } = useAuth();
+  const { user, getJWT } = useAuth();
   const { openProUpgrade } = useProUpgrade();
+
+  const getJWTToken = async () => {
+    try {
+      if (getJWT) {
+        const token = await getJWT();
+        if (token) return token;
+      }
+      const { account } = await import('@/lib/appwrite/client');
+      const res = await account.createJWT();
+      return res?.jwt || undefined;
+    } catch {
+      return undefined;
+    }
+  };
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatedResult, setGeneratedResult] = useState<any | null>(null);
@@ -117,9 +131,11 @@ export function ObjectAssistDrawer({
     setGeneratedResult(null);
 
     try {
+      const jwt = await getJWTToken();
       const res = await generateObjectAssistSchemaAction({
         kind,
         prompt: activePrompt.trim(),
+        jwt,
       });
 
       if (res.success && res.data) {
@@ -153,12 +169,14 @@ export function ObjectAssistDrawer({
     if (chatMessages.length === 0) {
       setChatLoading(true);
       try {
+        const jwt = await getJWTToken();
         const res = await executeSidekickAction({
           target: {
             type: kind,
             id: effectiveTargetId,
             title: displayTitle,
           },
+          jwt,
         });
         if (res.success && res.result) {
           setSessionId(res.sessionId || null);
@@ -194,10 +212,12 @@ export function ObjectAssistDrawer({
     setChatLoading(true);
 
     try {
+      const jwt = await getJWTToken();
       const res = await executeSidekickChat({
         target: { type: kind, id: effectiveTargetId, title: displayTitle },
         message: msgText,
         sessionId: sessionId || undefined,
+        jwt,
       });
 
       if (res.success && res.response) {
