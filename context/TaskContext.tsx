@@ -30,6 +30,20 @@ import {
   TaskCollaborator,
   CollaboratorPermission} from '@/types';
 import { isFlowPath, isWorkspacesPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
+
+function parseSafeDate(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date) return isNaN(val.getTime()) ? new Date() : val;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
+function parseSafeOptionalDate(val: any): Date | undefined {
+  if (!val) return undefined;
+  if (val instanceof Date) return isNaN(val.getTime()) ? undefined : val;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? undefined : d;
+}
 import { registerLiveGoalGetter } from '@/lib/sync/pending-sync-bridge';
 import { goalPendingKey } from '@/lib/sync/goal-keys';
 import { shouldSoftPull } from '@/lib/sync/local-copy-sync';
@@ -68,10 +82,10 @@ function coerceCachedTask(row: any): Task | null {
       creatorId: row.creatorId || row.userId || 'guest',
       userId: row.userId || row.creatorId || 'guest',
       parentTaskId: row.parentTaskId || row.parentId || null,
-      dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
-      createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
-      updatedAt: row.updatedAt ? new Date(row.updatedAt) : new Date(),
-      completedAt: row.completedAt ? new Date(row.completedAt) : undefined,
+      dueDate: parseSafeOptionalDate(row.dueDate),
+      createdAt: parseSafeDate(row.createdAt),
+      updatedAt: parseSafeDate(row.updatedAt),
+      completedAt: parseSafeOptionalDate(row.completedAt),
       position: typeof row.position === 'number' ? row.position : 0,
       isArchived: row.isArchived === true || String(row.isArchived) === 'true',
       isPinned: row.isPinned === true || String(row.isPinned) === 'true',
@@ -169,9 +183,9 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
     creatorId: raw.userId,
     userId: raw.userId || 'guest',
     parentTaskId: raw.parentId || null,
-    dueDate: raw.dueDate ? new Date(raw.dueDate) : undefined,
-    createdAt: doc.$createdAt ? new Date(doc.$createdAt) : raw.createdAt ? new Date(raw.createdAt) : new Date(),
-    updatedAt: doc.$updatedAt ? new Date(doc.$updatedAt) : raw.updatedAt ? new Date(raw.updatedAt) : new Date(),
+    dueDate: parseSafeOptionalDate(raw.dueDate),
+    createdAt: parseSafeDate(doc.$createdAt || raw.createdAt),
+    updatedAt: parseSafeDate(doc.$updatedAt || raw.updatedAt),
     position: 0,
     isArchived: raw.isArchived === true || String(raw.isArchived) === 'true',
     isPinned: raw.isPinned === true || String(raw.isPinned) === 'true',
