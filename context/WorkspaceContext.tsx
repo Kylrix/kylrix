@@ -441,6 +441,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const trimmed = String(id || '').trim();
     if (!trimmed) return;
     if (trimmed === lastSetIdRef.current) return;
+    const previousId = lastSetIdRef.current;
     lastSetIdRef.current = trimmed;
     hydratedRef.current = true;
     setActiveWorkspaceIdState(trimmed);
@@ -453,17 +454,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('kylrix:workspace-changed', {
-          detail: { previousId: lastSetIdRef.current, workspaceId: trimmed }
+          detail: { previousId, workspaceId: trimmed }
         })
       );
     }
     if (pendingPrefSyncRef.current) clearTimeout(pendingPrefSyncRef.current);
-    pendingPrefSyncRef.current = setTimeout(() => {
+    pendingPrefSyncRef.current = setTimeout(async () => {
       if (user?.$id && typeof updatePreferences === 'function') {
-        void updatePreferences({ activeWorkspaceId: trimmed });
+        try {
+          const { effectiveTierHasPaidAccess } = await import('@/lib/entitlements');
+          if (effectiveTierHasPaidAccess(user?.prefs?.tier)) {
+            await updatePreferences({ activeWorkspaceId: trimmed });
+          }
+        } catch {}
       }
     }, 800);
-  }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, updatePreferences]);
+  }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, user?.prefs?.tier, updatePreferences]);
 
   // High-performance background prewarming for active workspace objects
   useEffect(() => {
