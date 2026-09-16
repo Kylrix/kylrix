@@ -192,8 +192,36 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
   const { buildSidekickSystemInstruction } = await import('@/lib/agentic/prompts/sidekick');
   const systemInstruction = buildSidekickSystemInstruction({ id: opts.target.id, type: opts.target.type as any, title: opts.target.title, content: opts.target.content });
   const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash', systemInstruction });
-  const transcript = history.map((m: any) => `${m.role}: ${typeof m.content === 'string' ? m.content.slice(0, 2000) : JSON.stringify(m.content).slice(0, 2000)}`).join('\n');
-  const prompt = `${transcript}\n\nuser: ${opts.message}\n\nContinue as Sidekick for ${opts.target.type} "${opts.target.title || opts.target.id}". Answer the user's questions directly in formatted markdown. Keep focus on this object.`;
+  const transcript = history
+    .map((m: any) => {
+      let contentStr = '';
+      if (typeof m.content === 'string') {
+        const str = m.content.trim();
+        if (str.startsWith('{') && str.endsWith('}')) {
+          try {
+            const parsed = JSON.parse(str);
+            if (parsed.oneLiner) {
+              contentStr = parsed.oneLiner;
+              if (Array.isArray(parsed.sections)) {
+                contentStr += '\n' + parsed.sections.map((s: any) => `${s.heading}: ${Array.isArray(s.bullets) ? s.bullets.join('; ') : ''}`).join('\n');
+              }
+            } else {
+              contentStr = str.slice(0, 2000);
+            }
+          } catch {
+            contentStr = str.slice(0, 2000);
+          }
+        } else {
+          contentStr = str.slice(0, 2000);
+        }
+      } else {
+        contentStr = JSON.stringify(m.content).slice(0, 2000);
+      }
+      return `${m.role}: ${contentStr}`;
+    })
+    .join('\n');
+
+  const prompt = `${transcript}\n\nuser: ${opts.message}\n\nContinue as Sidekick for ${opts.target.type} "${opts.target.title || opts.target.id}". Answer the user's questions directly in formatted markdown. Keep focus on this object. Do not return JSON.`;
   const result = await model.generateContent(prompt);
   const text = result.response.text().trim();
   const newHistory = [...history, { role: 'user', content: opts.message, at: new Date().toISOString() }, { role: 'assistant', content: text, at: new Date().toISOString() }].slice(-200);

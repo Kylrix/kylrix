@@ -374,12 +374,16 @@ export function UnifiedFileAttachmentDrawer() {
 
   useEffect(() => {
     if (isOpen) {
-      setActiveTab('synced');
+      const requestedTab = options?.initialTab || 'synced';
+      const effectiveTab = disabledTabs.includes(requestedTab)
+        ? availableTabs[0] || 'objects'
+        : requestedTab;
+      setActiveTab(effectiveTab);
       setSelectedFile(null);
       void loadLocalObjects();
       void loadSyncedMedia();
     }
-  }, [isOpen, loadLocalObjects, loadSyncedMedia]);
+  }, [isOpen, options?.initialTab, options?.disabledTabs, disabledTabs, availableTabs, loadLocalObjects, loadSyncedMedia]);
 
   // Re-hydrate when unlocked; clear RAM list when locked (never keep plaintext rows).
   useEffect(() => {
