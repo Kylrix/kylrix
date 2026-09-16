@@ -3,25 +3,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Tag, X, ChevronRight, Plus, FileText, FileSpreadsheet } from 'lucide-react';
 
-
-
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { useNotes } from '@/context/NotesContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useWorkspace } from '@/context/WorkspaceContext';
-import { useResourcePins } from '@/context/ResourcePinContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
-
-
 import Link from 'next/link';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
-
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
-
-
 
 const TAG_COLOR_MAP: Record<string, string> = {
   Personal: '#3B82F6',
@@ -43,15 +34,8 @@ function getTagColor(tagName: string): string | null {
 }
 
 export default function IdeasPage() {
-  const [loading, setLoading] = useState(true);
-  const [notes, setNotes] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const { notes: contextNotes, upsertNote, isPinned: isNotePinned } = useNotes();
-  const { isPinned: isResourcePinned, pinSets } = useResourcePins();
-  const { activeWorkspace } = useWorkspace();
-
+  const { notes, isLoading: loading, error, removeNote } = useNotes();
   const { openSidebar } = useDynamicSidebar();
-
   const { open: openUnified } = useUnifiedDrawer();
   const { setConfiguration, resetConfiguration } = useFAB();
   const [isDesktop, setIsDesktop] = useState(false);
@@ -62,151 +46,6 @@ export default function IdeasPage() {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
-
-  const fetchNotesBarebones = async (hasLocal = false) => {
-    if (!hasLocal) {
-      setLoading(true);
-    }
-    setError(null);
-
-    // If offline, don't stall on network
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { account, getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
-      const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
-      const { LocalEngine } = await import('@/lib/services/LocalEngine');
-
-      const user = (await account.get().catch(() => null)) || getCurrentUserSnapshot();
-      if (!user?.$id) {
-        if (!hasLocal) {
-          setError('Unauthenticated user session');
-        }
-        setLoading(false);
-        return;
-      }
-
-      const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
-      const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
-      const cacheKey = `f_ideas_${user.$id}`;
-
-      const rows = await LocalEngine.query<any[]>(
-        cacheKey,
-        async () => {
-          const { Query, Client, TablesDB } = await import('appwrite');
-          const { databases } = await import('@/lib/appwrite/client');
-          const client = new Client()
-            .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-            .setProject(APPWRITE_CONFIG.PROJECT_ID);
-          const tablesDB = new TablesDB(client);
-
-          const res = await tablesDB.listRows(dbId, tableId, [
-            Query.equal('userId', user.$id),
-            Query.limit(50),
-            Query.orderDesc('$updatedAt')
-          ]).catch(async () => {
-            return await (databases as any).listDocuments(dbId, tableId, [
-              Query.equal('userId', user.$id),
-              Query.limit(50),
-              Query.orderDesc('$updatedAt')
-            ]);
-          });
-          return Array.isArray(res?.rows) ? res.rows : Array.isArray(res?.documents) ? res.documents : [];
-        },
-        {
-          ttl: 1000 * 60 * 5,
-          realtimeChannel: `databases.${dbId}.collections.${tableId}.documents`,
-          force: !hasLocal
-        }
-      );
-      // Merge with local RxDB notes so local unsynced creations are never dropped
-      const { getRxDB: getRxDBInstance } = await import('@/lib/webrtc/RxDBManager');
-      const localDb = await getRxDBInstance().catch(() => null);
-      let localRxRows: any[] = [];
-      if (localDb?.notes) {
-        const localDocs = (await localDb.notes.find({ selector: { _deleted: { $ne: true } } }).exec().catch(() => []))
-          .map((d: any) => (d.toJSON ? d.toJSON() : d));
-        localRxRows = localDocs.map((doc: any) => ({
-          $id: doc.id || doc.$id,
-          $createdAt: doc.updatedAt || doc.createdAt || doc.$createdAt || new Date().toISOString(),
-          $updatedAt: doc.updatedAt || doc.$updatedAt || new Date().toISOString(),
-          title: doc.title,
-          content: doc.content,
-          format: doc.format || 'text',
-          tags: doc.tags || [],
-          userId: doc.userId || user.$id,
-          isPublic: Boolean(doc.isPublic),
-          isGuest: Boolean(doc.isGuest),
-          metadata: doc.metadata || '{}',
-        }));
-      }
-
-      const existingIds = new Set((rows || []).map((r: any) => r.$id || r.id));
-      const combinedRows = [
-        ...localRxRows.filter((lr: any) => !existingIds.has(lr.$id)),
-        ...(rows || []),
-      ];
-
-      const validRows = combinedRows.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true');
-
-      // Read local pins state directly from ResourcePinContext storage key
-      let pinnedMap: Record<string, boolean> = {};
-      try {
-        const storedPins = localStorage.getItem(`kylrix_resource_pins_${user.$id}`);
-        if (storedPins) {
-          const parsed = JSON.parse(storedPins);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((id: string) => { pinnedMap[id] = true; });
-          }
-        }
-      } catch {}
-
-      // Pure client-side sort: Pinned first, then newest updatedAt
-      const sorted = [...validRows].sort((a: any, b: any) => {
-        const aPinned = Boolean(a.isPinned || pinnedMap[a.$id]);
-        const bPinned = Boolean(b.isPinned || pinnedMap[b.$id]);
-        if (aPinned && !bPinned) return -1;
-        if (!aPinned && bPinned) return 1;
-        const aTime = new Date(a.$updatedAt || a.updatedAt || a.$createdAt || 0).getTime();
-        const bTime = new Date(b.$updatedAt || b.updatedAt || b.$createdAt || 0).getTime();
-        return bTime - aTime;
-      });
-
-      // Stamp isPinned and isGuest from local data, then feed into NotesContext
-      // so NoteCard's liveNote lookup finds the correctly stamped object
-      const stamped = sorted.map((n: any) => {
-        const isShared = Boolean(n.isGuest || (n.$permissions && n.$permissions.some((p: string) => p.includes('user:') && !p.includes(`user:${n.userId}`))));
-        return {
-          ...n,
-          isPinned: Boolean(n.isPinned || pinnedMap[n.$id]),
-          isGuest: Boolean(n.isGuest || isShared),
-        };
-      });
-
-      // Feed into NotesContext so NoteCard's liveNote resolves correctly
-      stamped.forEach((n: any) => upsertNote(n));
-
-      setNotes(stamped);
-
-      // Non-blocking LocalEngine background copy write (Goals/Vault local-first pattern)
-      void (async () => {
-        try {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          await LocalEngine.cacheSet(`f_ideas_${user.$id}`, { rows: stamped, total: stamped.length });
-          await LocalEngine.cacheSet(`f_notes_list_${user.$id}`, stamped);
-        } catch {}
-      })();
-    } catch (err: any) {
-      if (!hasLocal) {
-        setError(err?.message || String(err));
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openCreateNote = useCallback(() => {
     openUnified('note', { isPublic: false, isGuest: false });
@@ -228,267 +67,16 @@ export default function IdeasPage() {
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, openCreateNote, isDesktop]);
 
-  useEffect(() => {
-    let hasLocalCopy = false;
-
-    // Instant local-first render (0ms) from LocalEngine, RxDB, and Nexus caches
-    void (async () => {
-      try {
-        const { getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
-        const snap = getCurrentUserSnapshot();
-        const userId = snap?.$id || (typeof window !== 'undefined' ? (localStorage.getItem('kylrix_last_logged_in_user_acc_default') ? JSON.parse(localStorage.getItem('kylrix_last_logged_in_user_acc_default') || '{}').$id : null) : null) || 'guest';
-
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const { tagsCacheKey } = await import('@/lib/data');
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        const db = await getRxDB().catch(() => null);
-
-        const [cachedIdeas, cachedNotesList, cachedInitial, cachedTags, rxDocs] = await Promise.all([
-          LocalEngine.cacheGet<{ rows?: any[] } | any[]>(`f_ideas_${userId}`).catch(() => null),
-          LocalEngine.cacheGet<any[]>(`f_notes_list_${userId}`).catch(() => null),
-          LocalEngine.cacheGet<{ notes?: any[]; rows?: any[] } | any[]>(`initial_notes_${userId}`).catch(() => null),
-          LocalEngine.cacheGet<any>(tagsCacheKey(userId)).catch(() => null),
-          db?.notes
-            ? db.notes
-                .find({ selector: { _deleted: { $ne: true } } })
-                .exec()
-                .catch(() => [])
-            : Promise.resolve([]),
-        ]);
-
-        const rxRows = (rxDocs || []).map((d: any) => (d.toJSON ? d.toJSON() : d)).map((doc: any) => ({
-          $id: doc.id || doc.$id,
-          $createdAt: doc.updatedAt || doc.createdAt || doc.$createdAt || new Date().toISOString(),
-          $updatedAt: doc.updatedAt || doc.$updatedAt || new Date().toISOString(),
-          title: doc.title,
-          content: doc.content,
-          format: doc.format || 'text',
-          tags: doc.tags || [],
-          userId: doc.userId || userId,
-          isPublic: Boolean(doc.isPublic),
-          isGuest: Boolean(doc.isGuest),
-          metadata: doc.metadata || '{}',
-        }));
-
-        const rawRows = [
-          ...rxRows,
-          ...((Array.isArray(cachedIdeas) ? cachedIdeas : cachedIdeas?.rows) || []),
-          ...(cachedNotesList || []),
-          ...((Array.isArray(cachedInitial) ? cachedInitial : cachedInitial?.notes || cachedInitial?.rows) || []),
-        ];
-
-        // Deduplicate rows by $id
-        const seenIds = new Set<string>();
-        const uniqueRawRows: any[] = [];
-        for (const row of rawRows) {
-          const id = row?.$id || row?.id;
-          if (id && !seenIds.has(id)) {
-            seenIds.add(id);
-            uniqueRawRows.push(row);
-          }
-        }
-
-        const validRawRows = uniqueRawRows.filter(
-          (n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true'
-        );
-
-        if (validRawRows.length > 0) {
-          hasLocalCopy = true;
-
-          // Read local pins
-          let pinnedMap: Record<string, boolean> = {};
-          try {
-            const storedPins = localStorage.getItem(`kylrix_resource_pins_${userId}`);
-            if (storedPins) {
-              const parsed = JSON.parse(storedPins);
-              if (Array.isArray(parsed)) {
-                parsed.forEach((id: string) => { pinnedMap[id] = true; });
-              }
-            }
-          } catch {}
-
-          const sorted = [...validRawRows].sort((a: any, b: any) => {
-            const aPinned = Boolean(a.isPinned || pinnedMap[a.$id || a.id]);
-            const bPinned = Boolean(b.isPinned || pinnedMap[b.$id || b.id]);
-            if (aPinned && !bPinned) return -1;
-            if (!aPinned && bPinned) return 1;
-            const aTime = new Date(a.$updatedAt || a.updatedAt || a.$createdAt || 0).getTime();
-            const bTime = new Date(b.$updatedAt || b.updatedAt || b.$createdAt || 0).getTime();
-            return bTime - aTime;
-          });
-
-          const stamped = sorted.map((n: any) => ({
-            ...n,
-            $id: n.$id || n.id,
-            isPinned: Boolean(n.isPinned || pinnedMap[n.$id || n.id]),
-          }));
-
-          stamped.forEach((n: any) => upsertNote(n));
-          setNotes(stamped);
-          setLoading(false);
-        } else {
-          // If no local copy exists, clear loading quickly so it never says loading forever
-          setLoading(false);
-        }
-
-        if (cachedTags?.rows && Array.isArray(cachedTags.rows) && cachedTags.rows.length > 0) {
-          setEcosystemTagsList(cachedTags.rows);
-        } else if (Array.isArray(cachedTags) && cachedTags.length > 0) {
-          setEcosystemTagsList(cachedTags);
-        }
-      } catch {
-        setLoading(false);
-      }
-
-      if (!hasLocalCopy) {
-        void fetchNotesBarebones(false);
-      }
-    })();
-  }, []);
-
-  // Eagerly pull custom workspace notes into local notes state when switching workspaces
-  useEffect(() => {
-    if (!activeWorkspace || activeWorkspace.isPersonal) return;
-    const wsId = activeWorkspace.id;
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const { ProjectsService } = await import('@/lib/appwrite/projects');
-        const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
-        if (tagged?.notes && Array.isArray(tagged.notes) && tagged.notes.length > 0 && !cancelled) {
-          setNotes((prev) => {
-            const byId = new Map(prev.map((n) => [n.$id, n]));
-            tagged.notes.forEach((n: any) => {
-              const id = n.$id || n.id;
-              if (id) byId.set(id, { ...byId.get(id), ...n, $id: id, projectId: wsId, isWorkspace: true });
-            });
-            return Array.from(byId.values());
-          });
-        }
-      } catch {}
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeWorkspace?.id]);
-
-  // Instantly reflect any created / updated notes from NotesContext (0ms live-copy)
-  useEffect(() => {
-    if (contextNotes && contextNotes.length > 0) {
-      setNotes((prev) => {
-        const byId = new Map(prev.map((n) => [n.$id, n]));
-        let hasChanges = false;
-        for (const cn of contextNotes) {
-          const existing = byId.get(cn.$id);
-          if (!existing) {
-            byId.set(cn.$id, cn);
-            hasChanges = true;
-          } else if (
-            existing.title !== cn.title ||
-            existing.content !== cn.content ||
-            existing.isPinned !== cn.isPinned
-          ) {
-            byId.set(cn.$id, { ...existing, ...cn });
-            hasChanges = true;
-          }
-        }
-        if (!hasChanges && prev.length === byId.size) return prev;
-        return Array.from(byId.values()).sort((a: any, b: any) => {
-          const aPinned = Boolean(a.isPinned);
-          const bPinned = Boolean(b.isPinned);
-          if (aPinned && !bPinned) return -1;
-          if (!aPinned && bPinned) return 1;
-          const aTime = new Date(a.$updatedAt || a.updatedAt || a.$createdAt || 0).getTime();
-          const bTime = new Date(b.$updatedAt || b.updatedAt || b.$createdAt || 0).getTime();
-          return bTime - aTime;
-        });
-      });
-      setLoading(false);
-    }
-  }, [contextNotes]);
-
-  // Listen for instant live note creation and save events
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handleLiveNote = (e: Event) => {
-      const detail = (e as CustomEvent)?.detail;
-      const note = detail?.note || detail?.syncedNote;
-      if (!note?.$id && !note?.id) return;
-      const id = note.$id || note.id;
-      const stamped = { ...note, $id: id };
-      setNotes((prev) => {
-        const existing = prev.find((n) => n.$id === id);
-        if (existing) {
-          return prev.map((n) => (n.$id === id ? { ...existing, ...stamped } : n));
-        }
-        return [stamped, ...prev];
-      });
-      setLoading(false);
-    };
-    window.addEventListener('kylrix:live-note-saved', handleLiveNote);
-    window.addEventListener('kylrix:sync-complete', handleLiveNote);
-    return () => {
-      window.removeEventListener('kylrix:live-note-saved', handleLiveNote);
-      window.removeEventListener('kylrix:sync-complete', handleLiveNote);
-    };
-  }, []);
-
-  // Listen for instant optimistic pin toggles across cards, sidebars, and drawers
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handlePinEvent = (e: Event) => {
-      const detail = (e as CustomEvent)?.detail;
-      if (!detail?.noteId) return;
-      setNotes((prev) =>
-        prev.map((n) => (n.$id === detail.noteId ? { ...n, isPinned: detail.isPinned } : n))
-      );
-    };
-    window.addEventListener('kylrix:note-pinned', handlePinEvent);
-    return () => window.removeEventListener('kylrix:note-pinned', handlePinEvent);
-  }, []);
-
-  const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
-
-  const sourceNotes = useMemo(() => {
-    const map = new Map<string, any>();
-    (contextNotes || []).forEach((n: any) => {
-      if (n?.$id) map.set(n.$id, n);
-    });
-    (notes || []).forEach((n: any) => {
-      if (n?.$id) {
-        const existing = map.get(n.$id);
-        map.set(n.$id, existing ? { ...existing, ...n } : n);
-      }
-    });
-    return Array.from(map.values());
-  }, [notes, contextNotes]);
-
-  const checkIsPinned = useCallback(
-    (n: any) => {
-      if (!n) return false;
-      const id = n.$id || n.id;
-      if (n.isPinned === true || String(n.isPinned) === 'true') return true;
-      if (pinSets?.note?.has(id)) return true;
-      if (isNotePinned?.(id)) return true;
-      if (isResourcePinned?.('note', id, n.userId, n.isPinned)) return true;
-      return false;
-    },
-    [isNotePinned, isResourcePinned, pinSets]
-  );
-
-  const activeNotes = useMemo(() => sourceNotes.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true), [sourceNotes]);
+  const activeNotes = useMemo(() => (notes || []).filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true), [notes]);
   const { filteredItems: workspaceScopedNotes } = useWorkspaceFilteredItems(activeNotes, 'note');
 
-  const pinnedNotes = useMemo(() => workspaceScopedNotes.filter(checkIsPinned), [workspaceScopedNotes, checkIsPinned]);
-  const unpinnedNotes = useMemo(() => workspaceScopedNotes.filter((n: any) => !checkIsPinned(n)), [workspaceScopedNotes, checkIsPinned]);
+  const pinnedNotes = useMemo(() => workspaceScopedNotes.filter((n: any) => Boolean(n.isPinned)), [workspaceScopedNotes]);
+  const unpinnedNotes = useMemo(() => workspaceScopedNotes.filter((n: any) => !n.isPinned), [workspaceScopedNotes]);
 
   const tags = useMemo(() => {
-    const fromNotes = activeNotes.flatMap((n: any) => n.tags || []).filter(Boolean);
-    const fromEcosystem = ecosystemTagsList.map((t) => t.name).filter(Boolean);
-    return Array.from(new Set([...fromEcosystem, ...fromNotes])).slice(0, 16);
-  }, [activeNotes, ecosystemTagsList]);
+    const fromNotes = workspaceScopedNotes.flatMap((n: any) => n.tags || []).filter(Boolean);
+    return Array.from(new Set(fromNotes)).slice(0, 16);
+  }, [workspaceScopedNotes]);
 
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
@@ -500,10 +88,9 @@ export default function IdeasPage() {
     return selectedTag ? unpinnedNotes.filter((n: any) => n.tags?.includes(selectedTag)) : unpinnedNotes;
   }, [unpinnedNotes, selectedTag]);
 
-
   const handleDeleteNote = useCallback((noteId: string) => {
-    setNotes((prev) => prev.filter((n) => n.$id !== noteId));
-  }, []);
+    removeNote(noteId);
+  }, [removeNote]);
 
   return (
     <div className="flex-1 min-h-screen pointer-events-auto">
@@ -532,14 +119,10 @@ export default function IdeasPage() {
               </Link>
             </div>
 
-
-
             <div className="flex items-center gap-2">
               <FlowTabTrigger />
               <HangoutTabTrigger />
               <button
-
-
                 type="button"
                 onClick={openCreateNote}
                 className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#EC4899] text-white hover:bg-[#db2777] active:scale-95 transition-all shadow-[0_4px_14px_rgba(236,72,153,0.3)] select-none shrink-0"
@@ -550,7 +133,7 @@ export default function IdeasPage() {
             </div>
           </div>
 
-          {/* Tags Filter Row (positioned under top nav switcher like Goals) */}
+          {/* Tags Filter Row */}
           {tags.length > 0 && (
             <div className="overflow-x-auto scrollbar-none p-2 bg-[#000000] border-2 border-white/20 rounded-[24px] flex items-center gap-2 select-none shadow-md">
               <Tag size={14} className="text-[#EC4899] ml-2 shrink-0" />
@@ -591,72 +174,71 @@ export default function IdeasPage() {
             </div>
           )}
 
-      {error && (
-        <div className="p-4 bg-red-950/60 border border-red-500/50 rounded-2xl text-red-300 text-sm">
-          {error}
-        </div>
-      )}
-
-      {loading && activeNotes.length === 0 ? (
-        <div className="p-8 text-center text-white text-sm font-semibold">Loading ideas...</div>
-      ) : activeNotes.length === 0 ? (
-
-        <div className="p-12 text-center flex flex-col items-center justify-center gap-4 bg-[#000000] border border-white/[0.08] rounded-3xl">
-          <p className="text-white text-sm font-semibold">No ideas found.</p>
-          <button
-            type="button"
-            onClick={openCreateNote}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#EC4899] text-white hover:bg-[#db2777] transition-all shadow-[0_4px_12px_rgba(236,72,153,0.25)] select-none"
-          >
-            <Plus size={14} strokeWidth={2.5} />
-            <span>Create your first idea</span>
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {/* Pinned Section */}
-          {displayPinned.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between px-1">
-                <h2 className="text-[11px] font-mono font-bold text-white uppercase tracking-wider">
-                  Pinned ({Math.min(3, displayPinned.length)})
-                </h2>
-                {displayPinned.length > 3 && (
-                  <button
-                    type="button"
-                    onClick={() => openSidebar(<PinnedNotesSidebar offset={3} notes={displayPinned} />, 'pinned-notes', { hideHeader: true })}
-                    className="text-xs font-bold text-[#EC4899] hover:text-[#f472b6] transition-colors flex items-center gap-1 font-mono select-none"
-                  >
-                    <span>See More ({displayPinned.length - 3})</span>
-                    <ChevronRight size={14} />
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {displayPinned.slice(0, 3).map((note) => (
-                  <NoteObjectRow key={note.$id} note={note} onDelete={handleDeleteNote} />
-                ))}
-              </div>
+          {error && (
+            <div className="p-4 bg-red-950/60 border border-red-500/50 rounded-2xl text-red-300 text-sm">
+              {error}
             </div>
           )}
 
-          {/* All Ideas Section */}
-          {displayUnpinned.length > 0 && (
-            <div className="space-y-3">
+          {loading && workspaceScopedNotes.length === 0 ? (
+            <div className="p-8 text-center text-white text-sm font-semibold">Loading ideas...</div>
+          ) : workspaceScopedNotes.length === 0 ? (
+            <div className="p-12 text-center flex flex-col items-center justify-center gap-4 bg-[#000000] border border-white/[0.08] rounded-3xl">
+              <p className="text-white text-sm font-semibold">No ideas found.</p>
+              <button
+                type="button"
+                onClick={openCreateNote}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#EC4899] text-white hover:bg-[#db2777] transition-all shadow-[0_4px_12px_rgba(236,72,153,0.25)] select-none"
+              >
+                <Plus size={14} strokeWidth={2.5} />
+                <span>Create your first idea</span>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Pinned Section */}
               {displayPinned.length > 0 && (
-                <h2 className="text-[11px] font-mono font-bold text-white uppercase tracking-wider px-1 pt-2">
-                  All Ideas ({displayUnpinned.length})
-                </h2>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <h2 className="text-[11px] font-mono font-bold text-white uppercase tracking-wider">
+                      Pinned ({Math.min(3, displayPinned.length)})
+                    </h2>
+                    {displayPinned.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => openSidebar(<PinnedNotesSidebar offset={3} notes={displayPinned} />, 'pinned-notes', { hideHeader: true })}
+                        className="text-xs font-bold text-[#EC4899] hover:text-[#f472b6] transition-colors flex items-center gap-1 font-mono select-none"
+                      >
+                        <span>See More ({displayPinned.length - 3})</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {displayPinned.slice(0, 3).map((note) => (
+                      <NoteObjectRow key={note.$id} note={note} onDelete={handleDeleteNote} />
+                    ))}
+                  </div>
+                </div>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {displayUnpinned.map((note) => (
-                  <NoteObjectRow key={note.$id} note={note} onDelete={handleDeleteNote} />
-                ))}
-              </div>
+
+              {/* All Ideas Section */}
+              {displayUnpinned.length > 0 && (
+                <div className="space-y-3">
+                  {displayPinned.length > 0 && (
+                    <h2 className="text-[11px] font-mono font-bold text-white uppercase tracking-wider px-1 pt-2">
+                      All Ideas ({displayUnpinned.length})
+                    </h2>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {displayUnpinned.map((note) => (
+                      <NoteObjectRow key={note.$id} note={note} onDelete={handleDeleteNote} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
         </div>
       </div>
     </div>
