@@ -812,14 +812,14 @@ export default function ConnectTopbar({
                     px: 2,
                     py: 1.25,
                     borderRadius: '16px',
-                    bgcolor: '#000000',
+                    bgcolor: '#161412',
                     border: '1px solid rgba(255, 255, 255, 0.12)',
                     color: '#fff',
                     textAlign: 'left',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                     '&:hover': {
-                      bgcolor: '#0A0908',
+                      bgcolor: '#1C1917',
                       borderColor: 'rgba(255, 255, 255, 0.3)',
                       transform: 'translateX(2px)'}}}
                 >
@@ -863,7 +863,7 @@ export default function ConnectTopbar({
                       }}
                       sx={{
                         borderRadius: '16px',
-                        bgcolor: '#000000',
+                        bgcolor: '#161412',
                         border: '1px solid rgba(255, 255, 255, 0.12)',
                         px: 1.5,
                         py: 1.25,
@@ -872,7 +872,7 @@ export default function ConnectTopbar({
                         gap: 1.25,
                         transition: 'all 0.15s ease',
                         '&:hover': {
-                          bgcolor: '#0A0908',
+                          bgcolor: '#1C1917',
                           borderColor: alpha(app.color, 0.4),
                           transform: 'translateY(-1px)'
                         }
@@ -908,14 +908,14 @@ export default function ConnectTopbar({
                       px: 2,
                       py: 1.25,
                       borderRadius: '16px',
-                      bgcolor: '#000000',
+                      bgcolor: '#161412',
                       border: '1px solid rgba(255, 255, 255, 0.12)',
                       color: '#fff',
                       textAlign: 'left',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                       '&:hover': {
-                        bgcolor: '#0A0908',
+                        bgcolor: '#1C1917',
                         borderColor: 'rgba(168, 85, 247, 0.4)',
                         transform: 'translateX(2px)'}}}
                   >
@@ -947,14 +947,14 @@ export default function ConnectTopbar({
                         px: 2,
                         py: 1.25,
                         borderRadius: '16px',
-                        bgcolor: '#000000',
+                        bgcolor: '#161412',
                         border: '1px solid rgba(255, 255, 255, 0.12)',
                         color: '#fff',
                         textAlign: 'left',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                         '&:hover': {
-                          bgcolor: '#0A0908',
+                          bgcolor: '#1C1917',
                           borderColor: alpha(action.accent, 0.4),
                           transform: 'translateX(2px)'
                         }
@@ -1089,12 +1089,12 @@ export default function ConnectTopbar({
                               px: 2,
                               py: 1.25,
                               borderRadius: '16px',
-                              bgcolor: '#000000',
+                              bgcolor: '#161412',
                               border: '1px solid rgba(255, 255, 255, 0.12)',
                               color: '#fff',
                               textAlign: 'left',
                               cursor: 'pointer',
-                              '&:hover': { bgcolor: '#0A0908', borderColor: alpha(r.accent, 0.4) },
+                              '&:hover': { bgcolor: '#1C1917', borderColor: alpha(r.accent, 0.4) },
                             }}
                           >
                             {r.kind === 'note' ? <FileText size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
@@ -1148,12 +1148,12 @@ export default function ConnectTopbar({
                           px: 2,
                           py: 1.25,
                           borderRadius: '16px',
-                          bgcolor: '#000000',
+                          bgcolor: '#161412',
                           border: '1px solid rgba(255, 255, 255, 0.12)',
                           color: '#fff',
                           textAlign: 'left',
                           cursor: 'pointer',
-                          '&:hover': { bgcolor: '#0A0908', borderColor: 'rgba(255, 255, 255, 0.3)' }
+                          '&:hover': { bgcolor: '#1C1917', borderColor: 'rgba(255, 255, 255, 0.3)' }
                         }}
                       >
                         <Search size={18} style={{ color: '#fff', flexShrink: 0 }} />
@@ -1203,12 +1203,12 @@ export default function ConnectTopbar({
                             px: 2,
                             py: 1.25,
                             borderRadius: '16px',
-                            bgcolor: '#000000',
+                            bgcolor: '#161412',
                             border: '1px solid rgba(255, 255, 255, 0.12)',
                             color: '#fff',
                             textAlign: 'left',
                             cursor: 'pointer',
-                            '&:hover': { bgcolor: '#0A0908', borderColor: 'rgba(255, 255, 255, 0.3)' }
+                            '&:hover': { bgcolor: '#1C1917', borderColor: 'rgba(255, 255, 255, 0.3)' }
                           }}
                         >
                           <IdentityAvatar
@@ -1254,12 +1254,12 @@ export default function ConnectTopbar({
                         px: 2,
                         py: 1.25,
                         borderRadius: '16px',
-                        bgcolor: '#000000',
+                        bgcolor: '#161412',
                         border: '1px solid rgba(255, 255, 255, 0.12)',
                         color: '#fff',
                         textAlign: 'left',
                         cursor: 'pointer',
-                        '&:hover': { bgcolor: '#0A0908', borderColor: 'rgba(255, 255, 255, 0.3)' }
+                        '&:hover': { bgcolor: '#1C1917', borderColor: 'rgba(255, 255, 255, 0.3)' }
                       }}
                     >
                       <Logo app={action.kind as any} size={18} variant="icon" />
@@ -1454,7 +1454,7 @@ export default function ConnectTopbar({
           borderTop: '1px solid rgba(255,255,255,0.15)',
           borderBottom: '1px solid rgba(255,255,255,0.2)',
           borderRadius: '0 0 28px 28px',
-          bgcolor: '#161412',
+          bgcolor: '#000000',
           overflow: 'hidden',
           boxShadow: '0 16px 42px rgba(0,0,0,0.6)',
           p: { xs: 2, sm: 2.5 },
