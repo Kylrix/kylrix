@@ -16,6 +16,9 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
   const actor = await getActor(opts.jwt);
   if (!actor?.$id) return { success: false, error: 'Unauthorized' };
   const target = opts.target;
+  if (['vault', 'totp', 'credential', 'secret'].includes(target.type)) {
+    return { success: false, error: 'Sidekick is disabled for vault and security items.' };
+  }
   const { userHasPaidAiAccess } = await import('@/lib/server/ai-subscription-gate');
   const { AI_REQUIRES_PRO_MESSAGE } = await import('@/lib/agentic/access');
   const hasAccess = await userHasPaidAiAccess(actor.$id);
@@ -158,7 +161,28 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
       if (res.rows.length) session = res.rows[0];
     } catch {}
   }
-  if (!session) return { success: false, error: 'No sidekick session — open sidekick first' };
+  if (!session) {
+    const sid = opts.sessionId || (opts.target.id.startsWith('search-') || opts.target.id.startsWith('wallet-') ? opts.target.id : ID.unique());
+    try {
+      session = await databases.createRow('passwordManagerDb', 'agentic_sessions', sid, {
+        userId: actor.$id,
+        context: `Sidekick: ${opts.target.title || opts.target.id}`.slice(0, 200),
+        chatHistory: '[]',
+        seen: false,
+        isMemory: false,
+        isPublic: false,
+        isGuest: false,
+        isPinned: false,
+        targetType: opts.target.type,
+        targetId: opts.target.id,
+      });
+    } catch {
+      try {
+        session = await databases.getRow('passwordManagerDb', 'agentic_sessions', sid);
+      } catch {}
+    }
+  }
+  if (!session) return { success: false, error: 'Could not resolve sidekick session' };
   const history: any[] = (() => { try { return JSON.parse((session as any).chatHistory || '[]'); } catch { return []; } })();
   const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '';
   if (!apiKey) throw new Error('Gemini is not configured on this deployment.');

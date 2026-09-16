@@ -1293,11 +1293,32 @@ export default function ConnectTopbar({
             <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#000000', boxSizing: 'border-box' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
                 <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
-                  Search
+                        Search & Sidekick
                 </Typography>
-                <IconButton onClick={handleCloseAll} sx={{ color: '#fff', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' }, width: 30, height: 30 }}>
-                  <CloseIcon size={15} />
-                </IconButton>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <IconButton
+                          onClick={() => {
+                            const searchId = activeWorkspace?.id ? `search-${activeWorkspace.id}` : `search-${user?.$id || 'personal'}`;
+                            window.dispatchEvent(
+                              new CustomEvent('kylrix:open-sidekick', {
+                                detail: {
+                                  type: 'search',
+                                  id: searchId,
+                                  title: 'Search Assistant',
+                                  content: searchQuery ? `Query: ${searchQuery}` : 'Search surface query context',
+                                },
+                              })
+                            );
+                          }}
+                          sx={{ color: '#A855F7', '&:hover': { bgcolor: 'rgba(168,85,247,0.15)' }, width: 30, height: 30 }}
+                          title="Open Search Sidekick"
+                        >
+                          <Sparkles size={15} />
+                        </IconButton>
+                        <IconButton onClick={handleCloseAll} sx={{ color: '#fff', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' }, width: 30, height: 30 }}>
+                          <CloseIcon size={15} />
+                        </IconButton>
+                      </Box>
               </Box>
               <Box
                 sx={{

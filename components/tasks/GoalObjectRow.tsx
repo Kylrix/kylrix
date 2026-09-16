@@ -261,15 +261,25 @@ export default function GoalObjectRow({ task }: Props) {
           void handleRemindToggle();
         },
       },
+      {
+        label: 'Sidekick',
+        icon: <Sparkles size={16} className="text-[#A855F7]" />,
+        onClick: () => {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:open-sidekick', {
+              detail: {
+                type: 'goal',
+                id: task.id,
+                title: task.title,
+                content: task.description || '',
+                tags: task.labels || [],
+              },
+            })
+          );
+        },
+      },
       ...(isPro
         ? [
-            {
-              label: 'Kylie Assist',
-              icon: <Sparkles size={16} className="text-[#A855F7]" />,
-              onClick: () => {
-                openUnified('agentic');
-              },
-            },
             {
               label: 'Integrate',
               icon: <FileText size={16} className="text-[#3B82F6]" />,
@@ -294,13 +304,7 @@ export default function GoalObjectRow({ task }: Props) {
               ],
             },
           ]
-        : [
-            {
-              label: 'Kylie Assist',
-              icon: <Sparkles size={16} className="text-[#A855F7]" />,
-              onClick: () => openProUpgrade('Kylie Assist'),
-            },
-          ]),
+        : []),
       {
         label: 'Collaborators',
         icon: <Share2 size={16} />,

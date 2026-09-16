@@ -30,7 +30,8 @@ import {
     ArrowUpRight,
     ArrowDownLeft,
     QrCode,
-    Download} from 'lucide-react';
+    Download,
+    Sparkles} from 'lucide-react';
 import { QRCodeCanvas } from './QRCodeCanvas';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
@@ -1763,6 +1764,31 @@ export const WalletSidebar = ({
                 <Stack direction="row" alignItems="center" gap={0.75}>
                     {isUnlocked && !isSubView && (
                         <>
+                            <IconButton
+                                size="small"
+                                onClick={() => {
+                                    if (user?.$id) {
+                                        window.dispatchEvent(
+                                            new CustomEvent('kylrix:open-sidekick', {
+                                                detail: {
+                                                    type: 'wallet',
+                                                    id: `wallet-${user.$id}`,
+                                                    title: 'Wallet AI Assistant',
+                                                    content: `Balances: SOL=${onChainBalances['SOL'] || '0'}, ETH=${onChainBalances['ETH'] || '0'}, KYLRIX=${tokenBalance?.amount || '0'}`,
+                                                    metadata: {
+                                                        walletsCount: wallets.length,
+                                                        tokenBalance: tokenBalance?.amount,
+                                                    },
+                                                },
+                                            })
+                                        );
+                                    }
+                                }}
+                                title="Wallet Sidekick Companion"
+                                sx={{ color: ACCENT, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}
+                            >
+                                <Sparkles size={18} />
+                            </IconButton>
                             <IconButton size="small" onClick={() => setActiveSubView('history')} title="Activity History" sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
                                 <History size={18} />
                             </IconButton>

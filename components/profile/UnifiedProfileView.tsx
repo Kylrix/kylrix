@@ -15,7 +15,8 @@ import {
   Wallet,
   Coins,
   Share2,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useRouter } from 'next/navigation';
@@ -533,6 +534,32 @@ export function UnifiedProfileView({
               </button>
             </>
           )}
+
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent('kylrix:open-sidekick', {
+                  detail: {
+                    type: 'profile',
+                    id: targetUid || activeHandle || 'profile',
+                    title: activeDisplayName,
+                    content: activeBio || '',
+                    metadata: {
+                      handle: activeHandle,
+                      following: kylrixFollowingCount,
+                      followers: kylrixFollowersCount,
+                    },
+                  },
+                })
+              );
+            }}
+            className="p-2 rounded-xl bg-[#A855F7]/15 border border-[#A855F7]/25 text-[#A855F7] hover:text-white hover:bg-[#A855F7]/25 transition-all cursor-pointer"
+            title="Sidekick Companion"
+            aria-label="Sidekick Companion"
+          >
+            <Sparkles size={15} />
+          </button>
 
           <button
             type="button"
