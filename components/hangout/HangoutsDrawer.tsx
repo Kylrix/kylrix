@@ -13,10 +13,21 @@ import {
   Sparkles,
   Maximize2,
   Minimize2,
+  MoreVertical,
+  Pin,
+  Share2,
+  Users,
+  Trash2,
+  MessageSquare,
 } from 'lucide-react';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
+import { useContextMenu } from '@/components/ui/ContextMenuContext';
+import { useResourcePins } from '@/context/ResourcePinContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { ChatService } from '@/lib/services/chat';
 import { UsersService } from '@/lib/services/users';
 import { realtime } from '@/lib/appwrite/client';
@@ -89,8 +100,25 @@ export function HangoutsDrawer({
   const { activeWorkspace } = useWorkspace();
   const { openOverlay, closeOverlay } = useOverlay();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const contextMenu = useContextMenu();
+  const openMenu = contextMenu?.openMenu;
+  const { open: openUnified } = useUnifiedDrawer();
+  const { openProUpgrade } = useProUpgrade();
+  const { isPinned: isResourcePinned, togglePin } = useResourcePins();
+  const isPro = hasPaidKylrixPlan(user);
   const [, startTransition] = useTransition();
   const openedInitialRef = useRef(false);
+
+  const LONG_PRESS_MS = 480;
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFired = useRef(false);
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
 
   const [secureChats, setSecureChats] = useState<any[]>(() => peekChatsListMemory());
   const [threads, setThreads] = useState<any[]>(() => peekThreadsListMemory());
@@ -170,6 +198,132 @@ export function HangoutsDrawer({
       });
     },
     [onClose, openSidebar, openOverlay, closeSidebar, closeOverlay],
+  );
+
+  const openHangoutMenu = useCallback(
+    (target: any, e?: React.MouseEvent | React.TouchEvent) => {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      if (!openMenu) return;
+
+      const clientX = e && 'clientX' in e ? e.clientX : 0;
+      const clientY = e && 'clientY' in e ? e.clientY : 0;
+      const isPinned = isResourcePinned('conversation', target.id, user?.$id, false);
+
+      const items = [
+        {
+          label: 'Open Hangout',
+          icon: <MessageSquare size={16} className="text-[#A855F7]" />,
+          onClick: () => {
+            openConversation(
+              target.id,
+              target.kind === 'thread' ? 'thread' : 'chat',
+              target.label,
+            );
+          },
+        },
+        {
+          label: isPinned ? 'Unpin Hangout' : 'Pin Hangout',
+          icon: <Pin size={16} className={isPinned ? 'rotate-45 text-[#A855F7]' : ''} />,
+          onClick: async () => {
+            try {
+              await togglePin({
+                resourceType: 'conversation',
+                resourceId: target.id,
+                ownerId: user?.$id || '',
+                rowIsPinned: false,
+                setOwnerRowPin: async () => {},
+              });
+              toast.success(isPinned ? 'Hangout unpinned' : 'Hangout pinned');
+            } catch (err: any) {
+              toast.error(err?.message || 'Failed to toggle pin');
+            }
+          },
+        },
+        {
+          label: 'Copy Public Link',
+          icon: <Share2 size={16} className="text-emerald-500" />,
+          onClick: async () => {
+            try {
+              const url = `${window.location.origin}/connect?chat=${target.id}`;
+              await navigator.clipboard.writeText(url);
+              toast.success('Hangout link copied');
+            } catch {
+              toast.error('Failed to copy link');
+            }
+          },
+        },
+        {
+          label: 'Collaborators & Members',
+          icon: <Users size={16} />,
+          onClick: () => {
+            openUnified('share-note', {
+              resourceType: 'chat',
+              noteId: target.id,
+              noteTitle: target.label,
+            });
+          },
+        },
+        isPro
+          ? {
+              label: 'Kylie Assist',
+              icon: <Sparkles size={16} className="text-[#A855F7]" />,
+              onClick: () => {
+                openUnified('agentic');
+              },
+            }
+          : {
+              label: 'Kylie Assist',
+              icon: <Sparkles size={16} className="text-[#A855F7]" />,
+              onClick: () => openProUpgrade('Kylie Assist'),
+            },
+        {
+          label: 'Delete Hangout',
+          icon: <Trash2 size={16} className="text-red-500" />,
+          variant: 'destructive' as const,
+          onClick: () => {
+            openUnified('delete-confirm', {
+              title: `Delete "${target.label}"?`,
+              resourceName: 'this hangout',
+              confirmLabel: 'Delete Hangout',
+              onConfirm: async () => {
+                try {
+                  if (target.kind === 'secure') {
+                    await ChatService.deleteConversation(target.id, user?.$id || '');
+                  } else {
+                    const { ThreadService } = await import('@/lib/services/threads');
+                    await (ThreadService as any).deleteThread?.(target.id);
+                  }
+                  toast.success('Hangout deleted');
+                  void refreshChats();
+                } catch (err: any) {
+                  toast.error(err?.message || 'Failed to delete hangout');
+                }
+              },
+            });
+          },
+        },
+      ];
+
+      openMenu({
+        x: clientX,
+        y: clientY,
+        items,
+        appType: 'connect',
+        title: target.label,
+      });
+    },
+    [
+      isPro,
+      isResourcePinned,
+      openConversation,
+      openMenu,
+      openProUpgrade,
+      openUnified,
+      refreshChats,
+      togglePin,
+      user?.$id,
+    ],
   );
 
   const currentWorkspaceId = propWorkspaceId || (!activeWorkspace?.isPersonal ? activeWorkspace?.id : undefined);
@@ -712,6 +866,7 @@ export function HangoutsDrawer({
             {filteredTargets.map((target) => {
               const isSelected = selected.has(target.id);
               const isSecureLocked = target.kind === 'secure' && target.isEncrypted && !isVaultUnlocked;
+              const isPinned = isResourcePinned('conversation', target.id, user?.$id, false);
               const previewFallback =
                 target.kind === 'secure'
                   ? target.type === 'group'
@@ -731,11 +886,31 @@ export function HangoutsDrawer({
                   : undefined);
               const timeLabel = formatConversationListTime(target.lastMessageAt);
 
+              const handleTouchStart = (e: React.TouchEvent) => {
+                if (mode === 'share' || isSecureLocked) return;
+                longPressFired.current = false;
+                clearLongPress();
+                const touch = e.touches[0];
+                longPressTimer.current = setTimeout(() => {
+                  longPressFired.current = true;
+                  openHangoutMenu(target, {
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                    clientX: touch?.clientX ?? 0,
+                    clientY: touch?.clientY ?? 0,
+                  } as any);
+                }, LONG_PRESS_MS);
+              };
+
               return (
                 <button
                   key={target.id}
                   type="button"
                   onClick={() => {
+                    if (longPressFired.current) {
+                      longPressFired.current = false;
+                      return;
+                    }
                     if (mode === 'share') {
                       toggleShareSelect(target.id, isSecureLocked);
                     } else if (!isSecureLocked) {
@@ -746,8 +921,16 @@ export function HangoutsDrawer({
                       );
                     }
                   }}
+                  onContextMenu={(e) => {
+                    if (mode === 'share' || isSecureLocked) return;
+                    openHangoutMenu(target, e);
+                  }}
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={clearLongPress}
+                  onTouchMove={clearLongPress}
+                  onTouchCancel={clearLongPress}
                   disabled={mode === 'share' && isSecureLocked}
-                  className={`flex w-full max-w-full items-center gap-3.5 p-3.5 rounded-2xl bg-[#000000] border-2 border-white/20 text-left transition-all ${
+                  className={`group relative flex w-full max-w-full items-center gap-3.5 p-3.5 rounded-2xl bg-[#000000] border-2 border-white/20 text-left transition-all ${
                     isSecureLocked
                       ? 'cursor-not-allowed opacity-45'
                       : 'hover:border-white/40 hover:bg-white/[0.04] active:scale-[0.99]'
@@ -799,7 +982,7 @@ export function HangoutsDrawer({
                     </p>
                   </div>
 
-                  {mode === 'share' && (
+                  {mode === 'share' ? (
                     <div
                       className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
                         isSelected
@@ -808,6 +991,23 @@ export function HangoutsDrawer({
                       }`}
                     >
                       <Check size={12} strokeWidth={3} />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isPinned ? (
+                        <Pin size={14} className="text-[#A855F7] fill-[#A855F7] shrink-0" />
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openHangoutMenu(target, e);
+                        }}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#161412] border border-white/10 text-white/50 transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white cursor-pointer"
+                        title="Hangout actions"
+                      >
+                        <MoreVertical size={15} />
+                      </button>
                     </div>
                   )}
                 </button>
