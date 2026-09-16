@@ -1,7 +1,6 @@
 'use client';
 
 import { account } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   createNoteSecure,
   updateNoteSecure,
@@ -33,12 +32,10 @@ import {
   updateRowSecure,
   deleteRowSecure,
   convertResponseToGoalSecure,
-  createthreadNoteForProjectSecure,
   createthreadNoteForResourceSecure,
   promotethreadResourceThreadToStorySecure,
   getResourceCollaboratorsSecure,
   createthreadNoteChatSecure,
-  listthreadNoteChatsSecure,
   getCrossSuggestionsSecure,
   initGoalDiscussionSecure,
   toggleResourcePublicGuestSecure,
@@ -122,29 +119,6 @@ export async function getSharedNoteData(noteId: string) {
 export async function getPublicFormData(formId: string) {
   const { getPublicFormDataSecure } = await import('./secure-ops');
   return getPublicFormDataSecure(formId);
-}
-
-export async function getNoteSecondaryObjectPreview(input: {
-  noteId: string;
-  childKind: string;
-  childId: string;
-  bucketId?: string;
-  label?: string;
-  href?: string;
-  mimeType?: string;
-}) {
-  const jwt = await getJwt();
-  const { getNoteSecondaryObjectPreviewSecure } = await import('./secure-ops');
-  return getNoteSecondaryObjectPreviewSecure(input, jwt);
-}
-
-export async function getNoteInheritedFileBlob(
-  noteId: string,
-  fileId: string,
-  bucketId: string) {
-  const jwt = await getJwt();
-  const { getNoteInheritedFileBlobSecure } = await import('./secure-ops');
-  return getNoteInheritedFileBlobSecure(noteId, fileId, bucketId, jwt);
 }
 
 export async function grantPermission(input: any) {
@@ -314,18 +288,6 @@ export async function convertResponseToGoal(submissionId: string) {
   return convertResponseToGoalSecure(submissionId, jwt);
 }
 
-export async function createthreadNoteForProject(projectId: string, title?: string) {
-  const jwt = await getJwt();
-  return createthreadNoteForProjectSecure(projectId, title, jwt);
-}
-
-export async function deletethreadNoteForProject(noteId: string) {
-  const jwt = await getJwt();
-  return deleteRowSecure(APPWRITE_CONFIG.DATABASES.NOTE, APPWRITE_CONFIG.TABLES.NOTE.NOTES, noteId, jwt);
-}
-
-
-
 export async function createthreadNoteForResource(
   resourceId: string,
   resourceType: 'task' | 'project' | 'tag' | 'event' | 'form',
@@ -391,11 +353,6 @@ export async function createthreadNoteChat(title: string, participants: string[]
   return createthreadNoteChatSecure({ title, participants, customRowId, jwt });
 }
 
-export async function listthreadNoteChats() {
-  const jwt = await getJwt();
-  return listthreadNoteChatsSecure(jwt);
-}
-
 export async function getResourceCollaborators(params: { resourceId: string; resourceType: string }) {
   const jwt = await getJwt();
   const normalizedType = (await import('@/lib/utils/resource-ids')).normalizeCollaboratorResourceType(params.resourceType);
@@ -411,24 +368,6 @@ export async function getResourceCollaborators(params: { resourceId: string; res
 export async function getCrossSuggestions(params: { sourceApp: string; sourceType: string; sourceId: string | null }) {
   const jwt = await getJwt();
   return getCrossSuggestionsSecure(params, jwt);
-}
-
-
-export async function deletethreadThread(threadId: string) {
-    const jwt = await getJwt();
-    const { deletethreadThreadSecure } = await import('./secure-ops');
-    return deletethreadThreadSecure(threadId, jwt);
-}
-
-export async function recordAnonymizedTelemetry(params: {
-  niche: any;
-  app: string;
-  action: string;
-  intent?: string | null;
-  metadata?: any | null;
-}) {
-  const { recordAnonymizedTelemetrySecure } = await import('./secure-ops');
-  return recordAnonymizedTelemetrySecure(params);
 }
 
 // --- Ruthless Sharing ---
@@ -544,27 +483,6 @@ export async function installFlow(params: {
   return installFlowSecure({ ...params, jwt });
 }
 
-export async function listMyFlowInstalls() {
-  const jwt = await getJwt();
-  const { listMyFlowInstallsSecure } = await import('./secure-ops');
-  return listMyFlowInstallsSecure(jwt);
-}
-
-export async function revokeFlowInstall(installId: string) {
-  const jwt = await getJwt();
-  const { revokeFlowInstallSecure } = await import('./secure-ops');
-  return revokeFlowInstallSecure({ installId, jwt });
-}
-
-export async function requestFlowPublish(params: {
-  flowId: string;
-  confirmAware: boolean;
-}) {
-  const jwt = await getJwt();
-  const { requestFlowPublishSecure } = await import('./secure-ops');
-  return requestFlowPublishSecure({ ...params, jwt });
-}
-
 export async function createPat(params: {
   name: string;
   scopes: string[];
@@ -594,12 +512,6 @@ export async function revokePat(patId: string) {
   const jwt = await getJwt();
   const { revokePatSecure } = await import('./secure-ops');
   return revokePatSecure({ patId, jwt });
-}
-
-export async function listOAuthAppInstalls() {
-  const jwt = await getJwt();
-  const { listOAuthAppInstallsSecure } = await import('./secure-ops');
-  return listOAuthAppInstallsSecure(jwt);
 }
 
 export async function purgeExpiredTrash(retentionDays: number = 90) {

@@ -191,8 +191,8 @@ export default function UniversalFAB() {
               } catch {}
             } else if (selection.activeKind === 'totp') {
               try {
-                const { deleteTotp } = await import('@/lib/appwrite');
-                await deleteTotp(id).catch(() => null);
+                const { deleteTotpSecret } = await import('@/lib/appwrite');
+                await deleteTotpSecret(id).catch(() => null);
               } catch {}
             }
           }

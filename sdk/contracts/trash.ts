@@ -9,59 +9,48 @@ function trashTimestamps(row: Record<string, unknown>) {
   return { updatedAt: ts, deletedAt: ts };
 }
 
-export function shapeTrashNoteItem(row: Record<string, unknown>) {
+function shapeBaseTrashItem<K extends string>(row: Record<string, unknown>, kind: K, defaultTitle: string) {
   const r = row as any;
   return {
     id: String(r.$id || r.id),
-    kind: 'note' as const,
-    title: r.title || 'Untitled note',
-    summary: r.summary || (r.content ? String(r.content).slice(0, 140) : ''),
+    kind,
+    title: r.title || r.name || defaultTitle,
     ...trashTimestamps(row),
+  };
+}
+
+export function shapeTrashNoteItem(row: Record<string, unknown>) {
+  const r = row as any;
+  return {
+    ...shapeBaseTrashItem(row, 'note', 'Untitled note'),
+    summary: r.summary || (r.content ? String(r.content).slice(0, 140) : ''),
   };
 }
 
 export function shapeTrashGoalItem(row: Record<string, unknown>) {
   const r = row as any;
   return {
-    id: String(r.$id || r.id),
-    kind: 'goal' as const,
-    title: r.title || 'Untitled goal',
+    ...shapeBaseTrashItem(row, 'goal', 'Untitled goal'),
     status: r.status || 'trash',
-    ...trashTimestamps(row),
   };
 }
 
 export function shapeTrashVaultItem(row: Record<string, unknown>) {
   const r = row as any;
   return {
-    id: String(r.$id || r.id),
-    kind: 'vault' as const,
-    title: r.name || 'Untitled secret',
+    ...shapeBaseTrashItem(row, 'vault', 'Untitled secret'),
     itemType: r.itemType || 'login',
     username: r.username || null,
     url: r.url || null,
-    ...trashTimestamps(row),
   };
 }
 
 export function shapeTrashEventItem(row: Record<string, unknown>) {
-  const r = row as any;
-  return {
-    id: String(r.$id || r.id),
-    kind: 'event' as const,
-    title: r.title || r.name || 'Untitled event',
-    ...trashTimestamps(row),
-  };
+  return shapeBaseTrashItem(row, 'event', 'Untitled event');
 }
 
 export function shapeTrashFormItem(row: Record<string, unknown>) {
-  const r = row as any;
-  return {
-    id: String(r.$id || r.id),
-    kind: 'form' as const,
-    title: r.title || r.name || 'Untitled form',
-    ...trashTimestamps(row),
-  };
+  return shapeBaseTrashItem(row, 'form', 'Untitled form');
 }
 
 const TRASH_ITEM_SCHEMA = {

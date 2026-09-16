@@ -82,8 +82,8 @@ export function UniversalSelectionActions() {
             } catch {}
           } else if (activeKind === 'totp') {
             try {
-              const { deleteTotp } = await import('@/lib/appwrite');
-              await deleteTotp(id).catch(() => null);
+              const { deleteTotpSecret } = await import('@/lib/appwrite');
+              await deleteTotpSecret(id).catch(() => null);
             } catch {}
           }
         }
