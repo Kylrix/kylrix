@@ -810,17 +810,17 @@ export default function ConnectTopbar({
                     alignItems: 'center',
                     gap: 1.25,
                     px: 2,
-                    py: 1.5,
+                    py: 1.25,
                     borderRadius: '16px',
-                    bgcolor: '#161412',
-                    border: '2px solid rgba(255, 255, 255, 0.22)',
+                    bgcolor: '#000000',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
                     color: '#fff',
                     textAlign: 'left',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                     '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.04)',
-                      borderColor: 'rgba(255,255,255,0.4)',
+                      bgcolor: '#0A0908',
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
                       transform: 'translateX(2px)'}}}
                 >
                   <Keyboard size={18} style={{ color: '#fff', flexShrink: 0 }} />
@@ -840,7 +840,7 @@ export default function ConnectTopbar({
                 <Typography sx={{ color: '#fff', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
                   Apps
                 </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
                   {[
                     { name: 'note', label: 'Ideas', color: '#EC4899', href: '/app', Icon: FileText },
                     { name: 'goals', label: 'Goals', color: '#A855F7', href: '/goals', Icon: Target },
@@ -863,24 +863,23 @@ export default function ConnectTopbar({
                       }}
                       sx={{
                         borderRadius: '16px',
-                        bgcolor: '#161412',
-                        border: '2px solid rgba(255, 255, 255, 0.22)',
-                        px: 2,
-                        py: 1.75,
+                        bgcolor: '#000000',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        px: 1.5,
+                        py: 1.25,
                         display: 'flex',
-                        flexDirection: 'column',
                         alignItems: 'center',
                         gap: 1.25,
                         transition: 'all 0.15s ease',
                         '&:hover': {
-                          bgcolor: 'rgba(255, 255, 255, 0.04)',
+                          bgcolor: '#0A0908',
                           borderColor: alpha(app.color, 0.4),
-                          transform: 'translateY(-2px)'
+                          transform: 'translateY(-1px)'
                         }
                       }}
                     >
-                      <AppIcon size={20} strokeWidth={2} style={{ color: app.color, flexShrink: 0 }} />
-                      <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.82rem' }}>
+                      <AppIcon size={18} strokeWidth={2} style={{ color: app.color, flexShrink: 0 }} />
+                      <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {app.label}
                       </Typography>
                     </ButtonBase>
@@ -907,16 +906,16 @@ export default function ConnectTopbar({
                       alignItems: 'center',
                       gap: 1.25,
                       px: 2,
-                      py: 1.5,
+                      py: 1.25,
                       borderRadius: '16px',
-                      bgcolor: '#161412',
-                      border: '2px solid rgba(255, 255, 255, 0.22)',
+                      bgcolor: '#000000',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
                       color: '#fff',
                       textAlign: 'left',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                       '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.04)',
+                        bgcolor: '#0A0908',
                         borderColor: 'rgba(168, 85, 247, 0.4)',
                         transform: 'translateX(2px)'}}}
                   >
@@ -946,17 +945,17 @@ export default function ConnectTopbar({
                         alignItems: 'center',
                         gap: 1.25,
                         px: 2,
-                        py: 1.5,
+                        py: 1.25,
                         borderRadius: '16px',
-                        bgcolor: '#161412',
-                        border: '2px solid rgba(255, 255, 255, 0.22)',
+                        bgcolor: '#000000',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
                         color: '#fff',
                         textAlign: 'left',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                         '&:hover': {
-                          bgcolor: 'rgba(255,255,255,0.04)',
-                          borderColor: 'rgba(255,255,255,0.4)',
+                          bgcolor: '#0A0908',
+                          borderColor: alpha(action.accent, 0.4),
                           transform: 'translateX(2px)'
                         }
                       }}
@@ -1088,14 +1087,14 @@ export default function ConnectTopbar({
                               alignItems: 'center',
                               gap: 1.25,
                               px: 2,
-                              py: 1.35,
+                              py: 1.25,
                               borderRadius: '16px',
-                              bgcolor: '#161412',
-                              border: '2px solid rgba(255, 255, 255, 0.22)',
+                              bgcolor: '#000000',
+                              border: '1px solid rgba(255, 255, 255, 0.12)',
                               color: '#fff',
                               textAlign: 'left',
                               cursor: 'pointer',
-                              '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' },
+                              '&:hover': { bgcolor: '#0A0908', borderColor: alpha(r.accent, 0.4) },
                             }}
                           >
                             {r.kind === 'note' ? <FileText size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
@@ -1147,14 +1146,14 @@ export default function ConnectTopbar({
                           alignItems: 'center',
                           gap: 1.25,
                           px: 2,
-                          py: 1.5,
+                          py: 1.25,
                           borderRadius: '16px',
-                          bgcolor: '#161412',
-                          border: '2px solid rgba(255, 255, 255, 0.22)',
+                          bgcolor: '#000000',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
                           color: '#fff',
                           textAlign: 'left',
                           cursor: 'pointer',
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' }
+                          '&:hover': { bgcolor: '#0A0908', borderColor: 'rgba(255, 255, 255, 0.3)' }
                         }}
                       >
                         <Search size={18} style={{ color: '#fff', flexShrink: 0 }} />
@@ -1202,14 +1201,14 @@ export default function ConnectTopbar({
                             alignItems: 'center',
                             gap: 1.25,
                             px: 2,
-                            py: 1.5,
+                            py: 1.25,
                             borderRadius: '16px',
-                            bgcolor: '#161412',
-                            border: '2px solid rgba(255, 255, 255, 0.22)',
+                            bgcolor: '#000000',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
                             color: '#fff',
                             textAlign: 'left',
                             cursor: 'pointer',
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' }
+                            '&:hover': { bgcolor: '#0A0908', borderColor: 'rgba(255, 255, 255, 0.3)' }
                           }}
                         >
                           <IdentityAvatar
@@ -1253,14 +1252,14 @@ export default function ConnectTopbar({
                         alignItems: 'center',
                         gap: 1.25,
                         px: 2,
-                        py: 1.5,
+                        py: 1.25,
                         borderRadius: '16px',
-                        bgcolor: '#161412',
-                        border: '2px solid rgba(255, 255, 255, 0.22)',
+                        bgcolor: '#000000',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
                         color: '#fff',
                         textAlign: 'left',
                         cursor: 'pointer',
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.4)' }
+                        '&:hover': { bgcolor: '#0A0908', borderColor: 'rgba(255, 255, 255, 0.3)' }
                       }}
                     >
                       <Logo app={action.kind as any} size={18} variant="icon" />
@@ -1728,7 +1727,7 @@ export default function ConnectTopbar({
               sx={{ minHeight: 44, borderRadius: '16px', bgcolor: 'rgba(236,72,153,0.08)', color: '#EC4899', border: '1px solid rgba(236,72,153,0.22)', px: 2, py: 1.1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, minWidth: 0, overflow: 'hidden', '&:hover': { bgcolor: 'rgba(236,72,153,0.15)' } }}
               startIcon={<Sparkles size={14} style={{ flexShrink: 0 }} />}
             >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, lineHeight: 1.3 }}>Upgrade to Pro</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, lineHeight: 1.3 }}>Sync</span>
             </Button>
           )}
 
