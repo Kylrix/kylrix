@@ -22,6 +22,7 @@ import {
   Copy,
   Check,
   FileCode2,
+  Sparkles,
 } from 'lucide-react';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
@@ -427,6 +428,25 @@ export default function CredentialDetail({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent('kylrix:open-sidekick', {
+                    detail: {
+                      type: 'credential',
+                      id: liveCredential.$id,
+                      title: liveCredential.name || 'Secret',
+                      content: liveCredential.notes || '',
+                    },
+                  })
+                );
+              }}
+              className="p-2 rounded-xl text-purple-400 bg-purple-500/15 border border-purple-500/25 hover:bg-purple-500/25 transition-colors cursor-pointer"
+              title="Sidekick Companion"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
             {isEnv && customFields.length > 0 && (
               <button
                 type="button"

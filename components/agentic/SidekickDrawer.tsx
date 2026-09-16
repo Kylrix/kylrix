@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { X, Sparkles, FileText, ListChecks, Map as MapIcon, Lightbulb, Send, Paperclip, Link2, Image as ImageIcon } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { X, Sparkles, FileText, ListChecks, Map as MapIcon, Lightbulb, Send, Paperclip, Link2, Image as ImageIcon, Target, FormInput, Tag, Copy } from 'lucide-react';
 import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import toast from 'react-hot-toast';
 
 // Sidekick — flagship per-object companion. One session per object (targetType/targetId).
 // Migrated from SummarizeDrawer: keeps summarize skeleton but adds full chat + LocalEngine + sidekick prompt.
@@ -200,6 +201,59 @@ export function SidekickDrawer({
 
   useEffect(()=> { if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight; }, [messages, result]);
 
+  const handleCreateGoalFromTarget = useCallback(async () => {
+    if (!target) return;
+    try {
+      const { createTaskFromNote } = await import('@/lib/appwrite');
+      const task = await createTaskFromNote({
+        $id: target.id,
+        title: target.title || 'Goal from ' + target.type,
+        content: target.content || '',
+      } as any);
+      toast.success('Goal created from ' + target.type);
+      const assistantMsg: ChatMsg = {
+        id: `a_${Date.now()}`,
+        role: 'assistant',
+        content: `Created goal "${task?.title || target.title}" (ID: ${task?.$id || task?.id || 'new'}).`,
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (e: any) {
+      toast.error('Failed to create goal: ' + (e?.message || 'Error'));
+    }
+  }, [target]);
+
+  const handleCreateFormFromTarget = useCallback(async () => {
+    if (!target) return;
+    try {
+      const { createForm } = await import('@/lib/actions/client-ops');
+      const newForm = await createForm({
+        title: `Form: ${target.title || 'Untitled'}`,
+        description: `Generated from ${target.type}: ${target.title || target.id}`,
+        schema: JSON.stringify([
+          { id: 'f1', type: 'text', label: 'Response / Feedback', required: true },
+          { id: 'f2', type: 'email', label: 'Contact Email', required: false },
+        ]),
+        status: 'draft',
+      });
+      toast.success('Form created successfully');
+      const assistantMsg: ChatMsg = {
+        id: `a_${Date.now()}`,
+        role: 'assistant',
+        content: `Created form "${newForm.title}" (ID: ${newForm.$id}). You can open it in Forms.`,
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (e: any) {
+      toast.error('Failed to create form: ' + (e?.message || 'Error'));
+    }
+  }, [target]);
+
+  const handleCopySummary = useCallback(() => {
+    if (!result?.oneLiner && !target) return;
+    const text = result?.oneLiner || `${target?.title || 'Object'}\n\n${target?.content || ''}`;
+    navigator.clipboard.writeText(text);
+    toast.success('Summary copied to clipboard');
+  }, [result, target]);
+
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || !target || sending) return;
@@ -293,19 +347,50 @@ export function SidekickDrawer({
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-300">{error}</div>
         ) : (
           <>
-            {/* Reuse agentic runtime quick suggestions — same logic as create-idea drawer */}
-            {!result && messages.length === 0 && (
-              <div className="rounded-2xl bg-[#161412] border border-white/5 p-4">
-                <div className="text-xs font-black uppercase tracking-wider text-white mb-2">Quick actions</div>
-                <div className="flex flex-wrap gap-2">
-                  {(['Add tags: ' + (target.title || '').split(' ').slice(0, 2).join(', ') || 'Add tags', 'Summarize again', 'Create goal from this'].map((label) => (
-                    <button key={label} onClick={() => setInput(label)} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-xs font-bold text-white/70 hover:bg-[#A855F7]/10 hover:border-[#A855F7]/20 hover:text-white transition-colors">
-                      {label}
-                    </button>
-                  )))}
-                </div>
+            {/* Object-specific tools & Quick actions */}
+            <div className="rounded-2xl bg-[#161412] border border-white/5 p-4 flex flex-col gap-3">
+              <div className="text-xs font-black uppercase tracking-wider text-purple-400 font-mono flex items-center gap-1.5">
+                <Sparkles size={14} />
+                <span>Sidekick Tools</span>
               </div>
-            )}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleCreateGoalFromTarget}
+                  className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
+                >
+                  <Target size={15} className="text-purple-400 shrink-0 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold text-white/80 group-hover:text-white">Create Goal</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCreateFormFromTarget}
+                  className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
+                >
+                  <FormInput size={15} className="text-indigo-400 shrink-0 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold text-white/80 group-hover:text-white">Create Form</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopySummary}
+                  className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
+                >
+                  <Copy size={15} className="text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold text-white/80 group-hover:text-white">Copy Summary</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setInput(`Suggest tags and key topics for this ${target.type}`)}
+                  className="p-2.5 rounded-xl bg-[#0A0908] border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all text-left flex items-center gap-2 cursor-pointer group"
+                >
+                  <Tag size={15} className="text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold text-white/80 group-hover:text-white">Suggest Tags</span>
+                </button>
+              </div>
+            </div>
             {result && (
               <>
                 <div className="rounded-2xl bg-[#161412] border border-white/5 p-4 flex gap-3">
