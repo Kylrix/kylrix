@@ -76,6 +76,7 @@ import {
   decryptPublicEncryptedNote, 
   createTaskFromNote 
 } from '@/lib/appwrite';
+import { convertNoteToGoalAgentic } from '@/lib/ai-actions';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { StorageService } from '@/lib/services/storage';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
@@ -635,7 +636,7 @@ export function NoteDetailSidebar({
   const _handleCreateTaskFromNote = useCallback(async () => {
     _setIsCreatingTaskFromNote(true);
     try {
-      const task = await createTaskFromNote(liveNote as any);
+      const task = await convertNoteToGoalAgentic(liveNote as any);
       if (task) {
         updateLocalAndParentNote({ ...liveNote, linkedTaskId: task.$id } as any);
         showSuccess('Goal created from note');
@@ -645,7 +646,7 @@ export function NoteDetailSidebar({
     } finally {
       _setIsCreatingTaskFromNote(false);
     }
-  }, [liveNote, updateLocalAndParentNote, showSuccess, showError, createTaskFromNote]);
+  }, [liveNote, updateLocalAndParentNote, showSuccess, showError]);
 
   const _handleAddToProject = useCallback(() => {
     if (!activeWorkspace || activeWorkspace.isPersonal) {
