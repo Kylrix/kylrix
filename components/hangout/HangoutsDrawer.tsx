@@ -344,19 +344,22 @@ export function HangoutsDrawer({
             });
           },
         },
-        isPro
-          ? {
-              label: 'Kylie Assist',
-              icon: <Sparkles size={16} className="text-[#A855F7]" />,
-              onClick: () => {
-                openUnified('agentic');
-              },
-            }
-          : {
-              label: 'Kylie Assist',
-              icon: <Sparkles size={16} className="text-[#A855F7]" />,
-              onClick: () => openProUpgrade('Kylie Assist'),
-            },
+        {
+          label: 'Sidekick',
+          icon: <Sparkles size={16} className="text-[#A855F7]" />,
+          onClick: () => {
+            window.dispatchEvent(
+              new CustomEvent('kylrix:open-sidekick', {
+                detail: {
+                  type: target.kind === 'thread' ? 'hangout' : 'chat',
+                  id: target.id,
+                  title: target.label,
+                  content: target.lastMessageText || '',
+                },
+              })
+            );
+          },
+        },
         {
           label: 'Delete Hangout',
           icon: <Trash2 size={16} className="text-red-500" />,

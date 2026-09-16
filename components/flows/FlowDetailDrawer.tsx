@@ -35,7 +35,7 @@ export function VerifiedMark({ kind }: { kind: FlowVerifyKind }) {
   );
 }
 
-import { Download, Check, Trash2, Eye, Bot, FileText, Target, Boxes, Lock, Search, Tag } from 'lucide-react';
+import { Download, Check, Trash2, Eye, Bot, FileText, Target, Boxes, Lock, Search, Tag, Sparkles } from 'lucide-react';
 
 type Props = {
   flow: WorkflowChain;
@@ -167,13 +167,35 @@ export function FlowDetailDrawer({
             </div>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.06] text-white/45 hover:text-white cursor-pointer shrink-0"
-        >
-          <X size={16} />
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent('kylrix:open-sidekick', {
+                  detail: {
+                    type: 'flow',
+                    id: local.id,
+                    title: local.name,
+                    content: local.description || '',
+                    tags: ['flow', 'automation'],
+                  },
+                })
+              );
+            }}
+            className="p-2 rounded-xl bg-[#A855F7]/15 border border-[#A855F7]/25 text-[#A855F7] hover:text-white hover:bg-[#A855F7]/25 transition-all cursor-pointer"
+            title="Sidekick Companion"
+          >
+            <Sparkles size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.06] text-white/45 hover:text-white cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-4">

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell, CheckSquare } from 'lucide-react';
+import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell, CheckSquare, Sparkles } from 'lucide-react';
 import { useSelection } from '@/context/SelectionContext';
 import type { Event } from '@/types';
 import { formatTime } from '@/lib/time-util';
@@ -99,6 +99,28 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
         label: pinned ? 'Unpin' : 'Pin',
         icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />,
         onClick: () => void handlePinToggle(),
+      },
+      {
+        label: 'Sidekick',
+        icon: <Sparkles size={16} className="text-[#A855F7]" />,
+        onClick: () => {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:open-sidekick', {
+              detail: {
+                type: 'event',
+                id: event.id,
+                title: event.title,
+                content: event.description || '',
+                metadata: {
+                  startTime: event.startTime,
+                  endTime: event.endTime,
+                  location: event.location,
+                  attendees: event.attendees,
+                },
+              },
+            })
+          );
+        },
       },
       {
         label: 'Select',
