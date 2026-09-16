@@ -23,6 +23,7 @@ import {
     updateConversationAction,
 } from '@/lib/actions/chat';
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import { peekChatsListMemory, writeChatsListLocal } from '@/lib/chat/local-chat-cache';
 
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -1711,6 +1712,15 @@ export const ChatService = {
         const res = await deleteConversationFullyAction({ conversationId, jwt: jwt as any });
         this.clearConversationPreviewCache(conversationId);
         conversationKeyCache.delete(conversationId);
+        try {
+            const current = peekChatsListMemory();
+            if (current.length) {
+                const next = current.filter((c: any) => (c.$id || c.id) !== conversationId);
+                writeChatsListLocal(next);
+            }
+        } catch {
+            /* ignore local cache patch error */
+        }
         const { success: _ignoredSuccess2, ...rest } = res || {};
         return { ...rest, success: true, conversation };
     },
