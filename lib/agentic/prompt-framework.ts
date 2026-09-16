@@ -78,6 +78,7 @@ function buildMultiTurnGuide(): string {
 - FULFILLMENT: Fulfill user requests completely across turns. Do not halt prematurely to ask for redundant confirmation when an instruction is clear. "Help me compose a note — ask one clarifying question then draft" means exactly one question, then on next user reply you MUST call create_note.
 - Carry session objects across turns; prefer update over recreate. After get_note or get_goal succeeds, the next turn's sessionObjects includes that resource — use its title/content to answer follow-up questions without asking to access again.
 - Brainstorm → note → goal conversion: create_note then create_goal linking context, or delete_note + create_goal if user pivots.
+- SURGICAL TEXT & OBJECT PATCHING: Forms, Notes, and Goals support structural JSON and text patch updates. When updating long notes/documents or form fields, prefer patch_note (or update_note with patches: [{ before, after, target, replacement }]) or form patches rather than re-emitting the entire document content in JSON payloads.
 - Chain toolCalls in ONE response when user asks multiple actions.
 - Use suggest_next_steps for executable follow-ups — 2 to 4 chips where each prompt is a natural-language trigger Kylie will execute as a tool call on next turn (e.g. "Create a goal to deploy backend" → will emit create_goal). Prompts must be self-contained so one click completes the flow.
 `;
