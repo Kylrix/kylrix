@@ -284,7 +284,10 @@ export function SidekickDrawer({
 
         // 3) No local hit — invoke dedicated sidekick prompt (not standard template) via server action
         const { executeSidekickAction } = await import('@/lib/actions/sidekick');
-        const res: any = await executeSidekickAction({ target, jwt });
+        const res: any = await executeSidekickAction({ target, jwt }).catch((err: any) => ({
+          success: false,
+          error: err?.message || 'Sidekick service unavailable',
+        }));
         if (cancelled) return;
         if (res?.result) {
           setResult(res.result as SidekickResult);
@@ -477,7 +480,15 @@ export function SidekickDrawer({
       const { account } = await import('@/lib/appwrite/client');
       const jwt = await account.createJWT().then((r:any)=> r.jwt || '').catch(()=> undefined);
       const { executeSidekickChat } = await import('@/lib/actions/sidekick');
-      const res: any = await executeSidekickChat({ target, message: promptWithAttachments, sessionId: sessionId || undefined, jwt });
+      const res: any = await executeSidekickChat({ target, message: promptWithAttachments, sessionId: sessionId || undefined, jwt }).catch((err: any) => ({
+        success: false,
+        error: err?.message || 'Sidekick chat unavailable',
+      }));
+      if (res?.error) {
+        setError(res.error);
+        toast.error(res.error);
+        return;
+      }
       const assistant: ChatMsg = { id: `a_${Date.now()}`, role: 'assistant', content: res?.response || res?.result ? JSON.stringify(res.result) : 'Done.' };
       const updated = [...next, assistant];
       setMessages(updated);
