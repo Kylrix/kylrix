@@ -5,6 +5,20 @@
 
 import type { Task } from '@/types';
 
+function parseSafeDate(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date) return isNaN(val.getTime()) ? new Date() : val;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
+function parseSafeOptionalDate(val: any): Date | undefined {
+  if (!val) return undefined;
+  if (val instanceof Date) return isNaN(val.getTime()) ? undefined : val;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
 function normalizeGoalRow(row: any): Task | null {
   if (!row || typeof row !== 'object') return null;
   if (row.isTrash === true || row.isDeleted === true || String(row.isTrash) === 'true' || String(row.isDeleted) === 'true') {
@@ -41,9 +55,9 @@ function normalizeGoalRow(row: any): Task | null {
     creatorId: row.creatorId || row.userId || 'guest',
     userId: row.userId || row.creatorId || 'guest',
     parentTaskId: row.parentTaskId || row.parentId || null,
-    dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
-    createdAt: row.$createdAt ? new Date(row.$createdAt) : row.createdAt ? new Date(row.createdAt) : new Date(),
-    updatedAt: row.$updatedAt ? new Date(row.$updatedAt) : row.updatedAt ? new Date(row.updatedAt) : new Date(),
+    dueDate: parseSafeOptionalDate(row.dueDate),
+    createdAt: parseSafeDate(row.$createdAt || row.createdAt),
+    updatedAt: parseSafeDate(row.$updatedAt || row.updatedAt),
     position: typeof row.position === 'number' ? row.position : 0,
     isArchived: row.isArchived === true || String(row.isArchived) === 'true',
     isPinned: row.isPinned === true || String(row.isPinned) === 'true',

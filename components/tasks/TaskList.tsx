@@ -84,8 +84,8 @@ export default function TaskList() {
       rows.map((t) => ({
         $id: t.id,
         dueDate: t.dueDate,
-        createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt ?? ''),
-        updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : String(t.updatedAt ?? ''),
+        createdAt: t.createdAt instanceof Date && !isNaN(t.createdAt.getTime()) ? t.createdAt.toISOString() : String(t.createdAt ?? ''),
+        updatedAt: t.updatedAt instanceof Date && !isNaN(t.updatedAt.getTime()) ? t.updatedAt.toISOString() : String(t.updatedAt ?? ''),
         isPinned: t.isPinned,
       })),
     ).map((row) => row.$id);
