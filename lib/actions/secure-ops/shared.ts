@@ -419,7 +419,7 @@ export async function getActor(jwt?: string) {
       const tier = await getUserSubscriptionTierServer(actor.$id);
 
       // If user's account is disabled / suspended in Appwrite, reject
-      if (actor.status === false) {
+      if ((actor as any).status === false || (actor as any).status === 'disabled') {
         return null;
       }
 
