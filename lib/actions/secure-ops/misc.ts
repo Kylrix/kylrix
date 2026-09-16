@@ -2165,6 +2165,10 @@ export async function replicateAccountAndKeychainSecure(params: {
             email: localUser.email,
             name: localUser.name,
           },
+          prefs: {
+            ...(localUser.prefs || {}),
+            activeWorkspaceId: localUser.prefs?.activeWorkspaceId || undefined,
+          },
           keychain: localKeychainRows.map((r: any) => ({
             type: r.type,
             wrappedKey: r.wrappedKey,
