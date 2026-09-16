@@ -78,6 +78,8 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'EcosystemPorter' ||
     (content.type as any).displayName === 'EcosystemPorter' ||
     (content.type as any).name === 'AgenticPanelContent' ||
+    (content.type as any).displayName === 'AgenticPanelContent' ||
+    (content.props as any)['data-agentic'] === true ||
     (content.type as any).name === 'PricingDrawer' ||
     (content.type as any).name === 'TagObjectDetail' ||
     (content.type as any).name === 'TrashObjectDetail'

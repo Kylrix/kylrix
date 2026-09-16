@@ -885,19 +885,23 @@ export async function listAgentToolCallsAction(sessionId: string, jwt?: string) 
   return TelemetryService.listToolCalls(user.$id, sessionId, 120);
 }
 
-export async function listAgentSessions(jwt?: string) {
+export async function listAgentSessions(jwt?: string, projectId?: string) {
   const user = await requireUser(jwt);
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
   const tables = createSystemTablesDB();
+  const queries = [
+    Query.equal('userId', user.$id),
+    Query.notEqual('isMemory', true),
+    Query.orderDesc('$createdAt'),
+    Query.limit(100)
+  ];
+  if (projectId) {
+    queries.push(Query.equal('projectId', projectId));
+  }
   const res = await tables.listRows({
     databaseId: 'passwordManagerDb',
     tableId: 'agentic_sessions',
-    queries: [
-      Query.equal('userId', user.$id),
-      Query.notEqual('isMemory', true),
-      Query.orderDesc('$createdAt'),
-      Query.limit(100)
-    ]
+    queries
   });
   return res.rows.map((row: any) => ({
     id: row.$id,
@@ -909,6 +913,8 @@ export async function listAgentSessions(jwt?: string) {
     isPinned: row.isPinned === true,
     targetType: row.targetType || null,
     targetId: row.targetId || null,
+    projectId: row.projectId || null,
+    isWorkspace: row.isWorkspace === true,
     createdAt: row.$createdAt,
     updatedAt: row.$updatedAt
   }));
