@@ -34,7 +34,7 @@ import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
-import { generateAIAction } from '@/lib/ai-actions';
+import { generateAIAction, convertNoteToGoalAgentic } from '@/lib/ai-actions';
 import { ObjectCard } from '@/components/objects/ObjectCard';
 import { ObjectCardMeta } from '@/components/objects/ObjectCardMeta';
 import { noteToCard } from '@/lib/objects/adapters';
@@ -229,12 +229,12 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const handleCreateTodo = async () => {
     if (isAIProcessing) return;
     setIsAIProcessing(true);
-    showInfo('Converting note to task in Kylrix Flow...');
+    showInfo('Reading the room & crafting goal...');
     try {
-      await createTaskFromNote(note);
-      showSuccess('Linked task created in Kylrix Flow');
+      await convertNoteToGoalAgentic(liveNote);
+      showSuccess('Created Goal in Kylrix Flow');
     } catch (err: any) {
-      showError(err.message || 'Failed to create task');
+      showError(err.message || 'Failed to create goal');
     } finally {
       setIsAIProcessing(false);
     }

@@ -330,8 +330,8 @@ export function SidekickDrawer({
       if (actionType === 'goal') {
         const goalTitle = promptText ? promptText.replace(/^create\s+(a\s+)?goal\s*(to|for)?\s*/i, '').trim() : target.title || 'Goal';
         const formattedTitle = goalTitle ? goalTitle.charAt(0).toUpperCase() + goalTitle.slice(1) : `Goal for ${target.title || target.type}`;
-        const { createTaskFromNote } = await import('@/lib/appwrite');
-        const task = await createTaskFromNote({
+        const { convertNoteToGoalAgentic } = await import('@/lib/ai-actions');
+        const task = await convertNoteToGoalAgentic({
           $id: target.id,
           title: formattedTitle,
           content: target.content || `Goal derived from ${target.type}: ${target.title || target.id}`,

@@ -1281,37 +1281,49 @@ export async function createTaskFromNote(note: Notes) {
   const user = await getCurrentUser();
   if (!user || !user.$id) throw new Error("User not authenticated");
 
-  if (!hasPaidKylrixPlan(user)) {
-    throw new Error("AI Actions are available for PRO subscribers only.");
+  const now = new Date().toISOString();
+  const projectId = (note as any).projectId || undefined;
+  const isWorkspace = Boolean((note as any).isWorkspace || projectId);
+
+  const goalPayload: Record<string, any> = {
+    title: note.title || 'Goal from Idea',
+    status: 'todo',
+    priority: 'medium',
+    userId: user.$id,
+    creatorId: user.$id,
+    tags: buildSourceNoteTags([note.$id]),
+    createdAt: now,
+    updatedAt: now,
+    description: `${note.content || ''}\n\n--- Origin: Kylrix Idea (${note.$id}) ---`,
+  };
+
+  if (projectId) goalPayload.projectId = projectId;
+  if (isWorkspace) goalPayload.isWorkspace = true;
+
+  // Unified goal creation via unifiedCreate or createGoalSecure
+  let taskDoc: any = null;
+  try {
+    const { unifiedCreate } = await import('@/lib/services/unified-object-service');
+    taskDoc = await unifiedCreate('goal', goalPayload);
+  } catch (err) {
+    console.warn('[createTaskFromNote] unifiedCreate goal failed, using fallback createGoal:', err);
+    const { createGoal } = await import('@/lib/actions/client-ops');
+    taskDoc = await createGoal(goalPayload);
   }
 
-  const taskId = ID.unique();
-  const now = new Date().toISOString();
+  const taskId = taskDoc?.$id || taskDoc?.id;
 
-  // Create row in Kylrix Flow tasks table
-  // Table schema: title, description, status, priority, userId, parentId, etc.
-  const taskDoc = await databases.createRow(
-    FLOW_DATABASE_ID,
-    FLOW_TABLE_ID_TASKS,
-    taskId,
-    {
-      title: note.title || 'Task from Note',
-      status: 'todo',
-      priority: 'medium',
-      userId: user.$id,
-      tags: buildSourceNoteTags([note.$id]),
-      createdAt: now,
-      updatedAt: now,
-      // No metadata column in tasks table, using description to reference note
-      description: `${note.content || ''}\n\n--- Origin: Kylrix Note (${note.$id}) ---`
+  // Link the task back to the note if note.$id is valid
+  if (note.$id && taskId) {
+    try {
+      await updateNote(note.$id, {
+        linkedTaskId: taskId,
+        linkedSource: 'kylrixflow'
+      });
+    } catch (err) {
+      console.warn('[createTaskFromNote] Failed to link goal ID back to note:', err);
     }
-  );
-
-  // Link the task back to the note
-  await updateNote(note.$id, {
-    linkedTaskId: taskId,
-    linkedSource: 'kylrixflow'
-  });
+  }
 
   return taskDoc;
 }
