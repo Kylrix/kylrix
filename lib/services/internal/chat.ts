@@ -39,6 +39,12 @@ export async function findWorkspaceConversationInternal(workspaceId: string) {
   if (!workspaceId) return null;
   const { databases } = createSystemClient();
   try {
+    const directDoc = await databases.getRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, `ws-${workspaceId}`);
+    if (directDoc) return JSON.parse(JSON.stringify(directDoc));
+  } catch {
+    /* non-fatal */
+  }
+  try {
     const existing = await databases.listRows(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [
       Query.equal('contextType', 'workspace'),
       Query.equal('contextId', workspaceId),
@@ -1087,7 +1093,8 @@ export async function createConversationTransactionalInternal(payload: {
   }
 
   const now = new Date().toISOString();
-  const convId = ID.unique();
+  const isWorkspaceHangout = (payload.contextType === 'workspace' || !!payload.isWorkspace) && !!payload.contextId;
+  const convId = isWorkspaceHangout ? `ws-${payload.contextId}` : ID.unique();
   const convData: Record<string, unknown> = {
     participants: uniqueParticipants,
     participantCount: uniqueParticipants.length,
@@ -1151,7 +1158,7 @@ export async function createConversationTransactionalInternal(payload: {
     return { $id: convId, ...convData } as any;
   }, { ttl: 60 });
   } catch (error) {
-    if (payload.contextType === 'workspace' && payload.contextId && isUniqueConstraintError(error)) {
+    if ((payload.contextType === 'workspace' || payload.isWorkspace) && payload.contextId && isUniqueConstraintError(error)) {
       const existingWorkspace = await findWorkspaceConversationInternal(payload.contextId);
       if (existingWorkspace) return existingWorkspace;
     }

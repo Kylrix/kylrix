@@ -58,6 +58,13 @@ function isUniqueConstraintError(error: unknown): boolean {
 
 async function findWorkspaceConversation(workspaceId: string) {
     try {
+        const directDoc = await tablesDB.getRow(DB_ID, CONV_TABLE, `ws-${workspaceId}`);
+        if (directDoc) return directDoc;
+    } catch {
+        // Non-fatal, try fallback
+    }
+
+    try {
         const existing = await tablesDB.listRows(DB_ID, CONV_TABLE, [
             Query.equal('contextType', 'workspace'),
             Query.equal('contextId', workspaceId),
