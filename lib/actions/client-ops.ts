@@ -48,6 +48,7 @@ import {
   findThreadSecure,
   listThreadMessagesSecure,
   postThreadMessageSecure,
+  deleteThreadSecure,
 } from './secure-ops';
 import { PublicResourceType } from '@/lib/share/resource-types';
 
@@ -338,6 +339,11 @@ export async function postThreadMessage(data: {
 }) {
   const jwt = await getJwt();
   return postThreadMessageSecure({ ...data, jwt });
+}
+
+export async function deleteThread(threadId: string) {
+  const jwt = await getJwt();
+  return deleteThreadSecure(threadId, jwt);
 }
 
 export async function promotethreadResourceThreadToStory(resourceId: string, resourceType: string) {

@@ -406,40 +406,44 @@ export async function deleteConversationFullyInternal(payload: {
   }
 
   const { databases, storage } = createSystemClient();
-  const conversation = await databases.getRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.conversationId);
-  const participantIds = await resolveConversationParticipants(databases, conversation);
+  const conversation = await databases.getRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.conversationId).catch(() => null);
 
-  if (!participantIds.includes(verifiedActorId)) {
-    throw new Error('Forbidden: Not a participant');
+  if (conversation) {
+    const participantIds = await resolveConversationParticipants(databases, conversation);
+    if (participantIds.length > 0 && !participantIds.includes(verifiedActorId) && conversation.creatorId !== verifiedActorId) {
+      throw new Error('Forbidden: Not a participant');
+    }
   }
 
   const messages = await listAllDocuments(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, [
-    Query.equal('conversationId', payload.conversationId)]);
+    Query.equal('conversationId', payload.conversationId)]).catch(() => []);
   const reactions = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
-    Query.equal('conversationId', payload.conversationId)]);
+    Query.equal('conversationId', payload.conversationId)]).catch(() => []);
   const members = await listAllDocuments(databases, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, [
-    Query.equal('conversationId', payload.conversationId)]);
+    Query.equal('conversationId', payload.conversationId)]).catch(() => []);
   const epochs = await listAllDocuments(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, [
-    Query.equal('resourceId', payload.conversationId)]);
+    Query.equal('resourceId', payload.conversationId)]).catch(() => []);
   const keyMappings = await listAllDocuments(
     databases,
     APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
     APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING,
-    [Query.equal('resourceId', payload.conversationId)]);
+    [Query.equal('resourceId', payload.conversationId)]).catch(() => []);
   const joinRequests = await listAllDocuments(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, [
-    Query.equal('resourceId', payload.conversationId)]);
+    Query.equal('resourceId', payload.conversationId)]).catch(() => []);
   const projectObjects = await listAllDocuments(databases, CHAT_DB_ID, 'project_objects', [
     Query.equal('entityId', payload.conversationId)]).catch(() => []);
 
   // Wipe storage files, media attachments, and message reactions
-  await deleteConversationArtifacts(databases, storage, payload.conversationId, messages);
+  await deleteConversationArtifacts(databases, storage, payload.conversationId, messages).catch(() => null);
 
   // Wipe avatar file if stored in storage bucket
-  const avatarFileIds = [
-    typeof conversation?.avatarFileId === 'string' ? conversation.avatarFileId : '',
-    typeof conversation?.avatar === 'string' && !conversation.avatar.startsWith('http') ? conversation.avatar : '',
-  ].filter(Boolean);
-  await Promise.all(avatarFileIds.map((fileId: string) => storage.deleteFile(APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS, fileId).catch(() => null)));
+  if (conversation) {
+    const avatarFileIds = [
+      typeof conversation?.avatarFileId === 'string' ? conversation.avatarFileId : '',
+      typeof conversation?.avatar === 'string' && !conversation.avatar.startsWith('http') ? conversation.avatar : '',
+    ].filter(Boolean);
+    await Promise.all(avatarFileIds.map((fileId: string) => storage.deleteFile(APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS, fileId).catch(() => null)));
+  }
 
   // Wipe linked project object bindings — transactional when possible
   if (projectObjects.length) {
@@ -461,16 +465,17 @@ export async function deleteConversationFullyInternal(payload: {
   // Transactional cascade: conversation + members + epochs + joinRequests (CHAT DB) atomically.
   // Key mappings live in PASSWORD_MANAGER DB — separate transaction (cross-DB cannot share same txId on all Appwrite versions).
   const keyMappingIds = keyMappings.map((row: any) => row.$id);
+  const convIds = conversation ? [conversation.$id] : [payload.conversationId];
   try {
     await withSystemTransaction(async (txId) => {
-      await deleteRowsTransactional(txId, CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [conversation.$id]);
+      await deleteRowsTransactional(txId, CHAT_DB_ID, CONVERSATIONS_TABLE_ID, convIds);
       await deleteRowsTransactional(txId, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, members.map((row: any) => row.$id));
       await deleteRowsTransactional(txId, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, epochs.map((row: any) => row.$id));
       await deleteRowsTransactional(txId, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, joinRequests.map((row: any) => row.$id));
     }, { ttl: 60 });
   } catch {
     await Promise.all([
-      deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [conversation.$id]),
+      deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATIONS_TABLE_ID, convIds),
       deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, members.map((row: any) => row.$id)),
       deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, epochs.map((row: any) => row.$id)),
       deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, joinRequests.map((row: any) => row.$id))]);
@@ -488,6 +493,7 @@ export async function deleteConversationFullyInternal(payload: {
   return {
     success: true,
     conversationId: payload.conversationId,
+    alreadyDeleted: !conversation,
     messagesDeleted: messages.length,
     reactionsDeleted: reactions.length,
     membersDeleted: members.length,

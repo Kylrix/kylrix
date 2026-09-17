@@ -38,6 +38,7 @@ import {
   findThreadSecure,
   listThreadMessagesSecure,
   postThreadMessageSecure,
+  deleteThreadSecure,
 } from './secure-ops/threads';
 
 import {
@@ -204,6 +205,7 @@ export {
   findThreadSecure,
   listThreadMessagesSecure,
   postThreadMessageSecure,
+  deleteThreadSecure,
   approveProjectJoinRequestSecure,
   mintDailyLoginSecure,
   runTokenOperationSecure,

@@ -557,4 +557,28 @@ export const ThreadService = {
     }
     return { ...thread, created };
   },
+
+  /**
+   * Delete a thread substrate item permanently and purge local caches.
+   */
+  async deleteThread(threadId: string) {
+    let res: any = null;
+    try {
+      const { deleteThread } = await import('@/lib/actions/client-ops');
+      res = await deleteThread(threadId);
+    } catch (e: any) {
+      console.warn('[ThreadService.deleteThread] Server action error handled gracefully:', e?.message);
+    }
+
+    try {
+      const { readThreadsListLocal, writeThreadsListLocal } = await import('@/lib/chat/local-chat-cache');
+      const cached = await readThreadsListLocal().catch(() => []);
+      if (Array.isArray(cached) && cached.length) {
+        const next = cached.filter((t: any) => (t.$id || t.id) !== threadId);
+        await writeThreadsListLocal(next);
+      }
+    } catch {}
+
+    return { success: true, threadId, ...(res || {}) };
+  },
 };

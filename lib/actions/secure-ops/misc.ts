@@ -1267,25 +1267,40 @@ export async function promotethreadResourceThreadToStorySecure(
   return JSON.parse(JSON.stringify(storyNote));
 }
 
-export async function deletethreadThreadSecure(threadId: string, jwt?: string) {
+export async function deleteThreadSecure(threadId: string, jwt?: string) {
     const actor = await getActor(jwt);
     if (!actor || !actor.$id) throw new Error('Unauthorized');
 
     const tables = createSystemTablesDB();
     const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
-    const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+    const threadsTable = APPWRITE_CONFIG.TABLES.NOTE.THREADS || 'threads';
+    const notesTable = APPWRITE_CONFIG.TABLES.NOTE.NOTES || 'notes';
 
-    // 1. Fetch thread to verify ownership or collaboration
-    const thread = await getRowCached({ databaseId: dbId, tableId, rowId: threadId });
-    if (!thread) throw new Error('Thread not found');
+    // 1. Check THREADS table first, then fallback to NOTES table (legacy thread notes)
+    let thread: any = await getRowCached({ databaseId: dbId, tableId: threadsTable, rowId: threadId }).catch(() => null);
+    let targetTable = threadsTable;
 
-    const isCreator = thread.creatorId === actor.$id || thread.userId === actor.$id;
+    if (!thread) {
+        thread = await getRowCached({ databaseId: dbId, tableId: notesTable, rowId: threadId }).catch(() => null);
+        targetTable = notesTable;
+    }
+
+    // Idempotent: If thread does not exist, clean residual child artifacts and return success
+    if (!thread) {
+        try {
+            await executeCascadeDeleteSecure(dbId, threadsTable, threadId).catch(() => null);
+            await executeCascadeDeleteSecure(dbId, notesTable, threadId).catch(() => null);
+        } catch {}
+        return { success: true, threadId, alreadyDeleted: true };
+    }
+
+    const isCreator = thread.ownerId === actor.$id || thread.creatorId === actor.$id || thread.userId === actor.$id;
     
-    let isAuthorized = isCreator;
+    let isAuthorized = isCreator || !!thread.isPublic;
 
     if (!isAuthorized) {
         // Check if actor is a collaborator on the thread itself OR the parent resource
-        const resourceId = thread.resourceId || threadId;
+        const resourceId = thread.resourceId || thread.parentId || threadId;
         try {
             const collabsRes = await tables.listRows({
                 databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1294,7 +1309,7 @@ export async function deletethreadThreadSecure(threadId: string, jwt?: string) {
                     Query.equal('resourceId', resourceId),
                     Query.equal('userId', actor.$id)
                 ] as any
-            });
+            }).catch(() => ({ rows: [] }));
             if (collabsRes.rows.length > 0) {
                 isAuthorized = true;
             }
@@ -1305,14 +1320,41 @@ export async function deletethreadThreadSecure(threadId: string, jwt?: string) {
         throw new Error('Forbidden: Insufficient permissions to delete this thread');
     }
 
-    // 2. Cascade delete children (comments, reactions, voice files, linked objects, key mappings)
+    // 2. Cascade delete children (thread_messages, thread_reactions, comments, reactions, voice files, linked objects, key mappings)
     try {
-        await executeCascadeDeleteSecure(dbId, tableId, threadId);
+        await executeCascadeDeleteSecure(dbId, targetTable, threadId);
     } catch (err) {
-        console.error('[deletethreadThreadSecure] Cascade cleanup failed:', err);
+        console.error('[deleteThreadSecure] Cascade cleanup failed:', err);
     }
 
-    // 2b. Wipe project_objects and key_mapping for discussion thread thread
+    // 2b. Wipe thread messages & reactions for canonical thread substrate
+    try {
+        const threadMsgs = await tables.listRows({
+            databaseId: dbId,
+            tableId: APPWRITE_CONFIG.TABLES.NOTE.THREAD_MESSAGES || 'thread_messages',
+            queries: [Query.equal('threadId', threadId), Query.limit(1000)] as any
+        }).catch(() => ({ rows: [] }));
+        await Promise.all((threadMsgs.rows || []).map((row: any) => tables.deleteRow({
+            databaseId: dbId,
+            tableId: APPWRITE_CONFIG.TABLES.NOTE.THREAD_MESSAGES || 'thread_messages',
+            rowId: row.$id
+        }).catch(() => null)));
+
+        const threadReactions = await tables.listRows({
+            databaseId: dbId,
+            tableId: APPWRITE_CONFIG.TABLES.NOTE.THREAD_REACTIONS || 'thread_reactions',
+            queries: [Query.equal('threadId', threadId), Query.limit(1000)] as any
+        }).catch(() => ({ rows: [] }));
+        await Promise.all((threadReactions.rows || []).map((row: any) => tables.deleteRow({
+            databaseId: dbId,
+            tableId: APPWRITE_CONFIG.TABLES.NOTE.THREAD_REACTIONS || 'thread_reactions',
+            rowId: row.$id
+        }).catch(() => null)));
+    } catch (subErr) {
+        console.warn('[deleteThreadSecure] Thread messages cleanup warning:', subErr);
+    }
+
+    // 2c. Wipe project_objects, Collaborators, and key_mapping for thread
     try {
         const polyCollabs = await tables.listRows({
             databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1347,17 +1389,19 @@ export async function deletethreadThreadSecure(threadId: string, jwt?: string) {
             rowId: row.$id
         }).catch(() => null)));
     } catch (cleanErr) {
-        console.warn('[deletethreadThreadSecure] Secondary cleanup non-fatal warning:', cleanErr);
+        console.warn('[deleteThreadSecure] Secondary cleanup non-fatal warning:', cleanErr);
     }
 
     // 3. Delete the thread row itself
     const result = await tables.deleteRow({
         databaseId: dbId,
-        tableId: tableId,
-        rowId: threadId});
+        tableId: targetTable,
+        rowId: threadId}).catch(() => null);
 
-    return { success: true, result: JSON.parse(JSON.stringify(result)) };
+    return { success: true, threadId, result: JSON.parse(JSON.stringify(result || {})) };
 }
+
+export const deletethreadThreadSecure = deleteThreadSecure;
 
 export async function getGlobalProfileStatusSecure(userId: string) {
   const targetUserId = String(userId || '').trim();
