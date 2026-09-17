@@ -29,16 +29,108 @@ import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
 import UserSearch from '@/components/UserSearch';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import { acceptProjectInviteSecure } from '@/lib/actions/secure-ops';
 
 export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => void } = {}) {
   const { activeWorkspace, refreshWorkspaces } = useWorkspace();
-  const { user: _user } = useAuth();
+  const { user } = useAuth();
   const { open: openDrawer } = useUnifiedDrawer();
 
   const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
   const [_project, setProject] = useState<Projects | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Global Inbound Invites & Sent Requests across ALL workspaces
+  const [globalInvites, setGlobalInvites] = useState<any[]>([]);
+  const [globalRequests, setGlobalRequests] = useState<any[]>([]);
+  const [loadingGlobalInvites, setLoadingGlobalInvites] = useState(false);
+  const [processingInviteId, setProcessingInviteId] = useState<string | null>(null);
+
+  const loadGlobalInvitesAndRequests = useCallback(async () => {
+    if (!user?.$id) return;
+    const cacheKey = `f_user_workspace_invites_${user.$id}`;
+
+    // 0ms LocalEngine Hydration
+    try {
+      const cached = await LocalEngine.cacheGet<any>(cacheKey);
+      if (cached) {
+        if (Array.isArray(cached.invites)) setGlobalInvites(cached.invites);
+        if (Array.isArray(cached.requests)) setGlobalRequests(cached.requests);
+      }
+    } catch {}
+
+    setLoadingGlobalInvites(true);
+    try {
+      const remoteProjects = await ProjectsService.fetchRemoteProjects(true);
+      const invites = remoteProjects.filter((p: any) => p.isPending || p.collabStatus === 'pending');
+      const requests = remoteProjects.filter((p: any) => p.isRequested || p.collabStatus === 'requested');
+
+      setGlobalInvites(invites);
+      setGlobalRequests(requests);
+
+      void LocalEngine.cacheSet(cacheKey, { invites, requests });
+    } catch (err) {
+      console.warn('[WorkspaceTab] Failed to fetch global invites:', err);
+    } finally {
+      setLoadingGlobalInvites(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    void loadGlobalInvitesAndRequests();
+  }, [loadGlobalInvitesAndRequests]);
+
+  const handleAcceptGlobalInvite = async (project: any) => {
+    if (!project?.$id) return;
+    setProcessingInviteId(project.$id);
+    try {
+      let jwt: string | undefined = undefined;
+      try {
+        const { account } = await import('@/lib/appwrite/client');
+        const tokenRes = await account.createJWT().catch(() => null);
+        jwt = tokenRes?.jwt;
+      } catch {}
+
+      await acceptProjectInviteSecure(project.$id, jwt);
+      toast.success(`Joined workspace "${project.title}"!`);
+      void refreshWorkspaces();
+      void loadGlobalInvitesAndRequests();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to accept workspace invite');
+    } finally {
+      setProcessingInviteId(null);
+    }
+  };
+
+  const handleDeclineGlobalInvite = async (project: any) => {
+    if (!project?.$id || !user?.$id) return;
+    setProcessingInviteId(project.$id);
+    try {
+      await ProjectsService.removeCollaborator(project.$id, user.$id);
+      toast.success(`Declined invite to "${project.title}"`);
+      void refreshWorkspaces();
+      void loadGlobalInvitesAndRequests();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to decline invite');
+    } finally {
+      setProcessingInviteId(null);
+    }
+  };
+
+  const handleCancelGlobalRequest = async (project: any) => {
+    if (!project?.$id || !user?.$id) return;
+    setProcessingInviteId(project.$id);
+    try {
+      await ProjectsService.removeCollaborator(project.$id, user.$id);
+      toast.success(`Cancelled request for "${project.title}"`);
+      void loadGlobalInvitesAndRequests();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to cancel request');
+    } finally {
+      setProcessingInviteId(null);
+    }
+  };
 
   // Form states initialized optimistically from activeWorkspace
   const [title, setTitle] = useState(activeWorkspace?.title || '');
@@ -130,7 +222,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
     } finally {
       setLoading(false);
     }
-  }, [activeWorkspace?.id, isCustomWorkspace]);
+  }, [activeWorkspace, isCustomWorkspace]);
 
   useEffect(() => {
     void loadWorkspaceDetails();
@@ -246,9 +338,131 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
     });
   };
 
+  const renderGlobalInvitesSection = () => {
+    if (globalInvites.length === 0 && globalRequests.length === 0) return null;
+
+    return (
+      <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border-2 border-indigo-500/30 shadow-xl space-y-5">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="text-base md:text-lg font-black text-white font-clash m-0 flex items-center gap-2">
+              <span>Workspace Invites & Requests</span>
+              {loadingGlobalInvites && <RefreshCw size={14} className="animate-spin text-[#6366F1]" />}
+            </h2>
+            <p className="text-xs text-white/50 mt-0.5 m-0">
+              Workspaces you have been invited to or requested to join across the ecosystem
+            </p>
+          </div>
+        </div>
+
+        {/* Inbound Pending Invites */}
+        {globalInvites.length > 0 && (
+          <div className="space-y-3 p-4 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/30">
+            <span className="text-xs font-black uppercase tracking-wider text-[#818CF8] font-clash flex items-center gap-1.5">
+              <UserPlus size={14} />
+              Inbound Workspace Invites ({globalInvites.length})
+            </span>
+
+            <div className="space-y-2.5">
+              {globalInvites.map((proj) => {
+                const isProcessing = processingInviteId === proj.$id;
+                return (
+                  <div
+                    key={proj.$id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-[#0A0908] border border-[#6366F1]/20 hover:border-[#6366F1]/40 transition-colors gap-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-white font-clash">{proj.title}</span>
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#6366F1]/20 text-[#818CF8] font-bold">
+                          Role: {proj.role || 'Member'}
+                        </span>
+                      </div>
+                      {proj.summary && (
+                        <p className="text-xs text-white/50 mt-1 line-clamp-1">{proj.summary}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                      <button
+                        type="button"
+                        disabled={isProcessing}
+                        onClick={() => handleAcceptGlobalInvite(proj)}
+                        className="px-4 py-2 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-md border border-emerald-400/40 disabled:opacity-50"
+                      >
+                        {isProcessing ? <RefreshCw size={13} className="animate-spin" /> : <UserCheck size={13} />}
+                        <span>Accept Workspace</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isProcessing}
+                        onClick={() => handleDeclineGlobalInvite(proj)}
+                        className="px-3 py-2 text-xs font-bold text-white/50 hover:text-red-400 hover:bg-red-500/10 border border-white/10 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* My Sent Join Requests */}
+        {globalRequests.length > 0 && (
+          <div className="space-y-3 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+            <span className="text-xs font-black uppercase tracking-wider text-amber-400 font-clash flex items-center gap-1.5">
+              <Clock size={14} />
+              My Sent Join Requests ({globalRequests.length})
+            </span>
+
+            <div className="space-y-2.5">
+              {globalRequests.map((proj) => {
+                const isProcessing = processingInviteId === proj.$id;
+                return (
+                  <div
+                    key={proj.$id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-[#0A0908] border border-amber-500/20 hover:border-amber-500/40 transition-colors gap-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-white font-clash">{proj.title}</span>
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">
+                          Awaiting Admin Approval
+                        </span>
+                      </div>
+                      {proj.summary && (
+                        <p className="text-xs text-white/50 mt-1 line-clamp-1">{proj.summary}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                      <button
+                        type="button"
+                        disabled={isProcessing}
+                        onClick={() => handleCancelGlobalRequest(proj)}
+                        className="px-3.5 py-1.5 text-xs font-bold text-white/50 hover:text-red-400 hover:bg-red-500/10 border border-white/10 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        Cancel Request
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (!isCustomWorkspace) {
     return (
       <div className="space-y-6 max-w-4xl mx-auto font-satoshi">
+        {renderGlobalInvitesSection()}
+
         <div className="p-8 md:p-10 text-center rounded-[24px] bg-[#161412] border-2 border-white/20 shadow-xl">
           <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border-2 border-white/20 text-white/40 grid place-items-center mx-auto mb-4">
             <FolderKanban className="h-7 w-7" />
@@ -295,6 +509,8 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto font-satoshi">
+      {renderGlobalInvitesSection()}
+
       {/* Overview & Metadata */}
       <div className="p-6 md:p-8 rounded-[24px] bg-[#161412] border-2 border-white/20 shadow-xl space-y-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -425,7 +641,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
             onSelect={(newUser) => setSelectedUsers([...selectedUsers, newUser])}
             onRemove={(id) => setSelectedUsers(selectedUsers.filter((u) => u.id !== id))}
             multiple={true}
-            excludeIds={[_user?.$id, ...collaborators.map(c => c.userId || c.entityId || c.$id)].filter(Boolean)}
+            excludeIds={[user?.$id, ...collaborators.map(c => c.userId || c.entityId || c.$id)].filter(Boolean)}
           />
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-white/10">
@@ -463,34 +679,41 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
             <div className="space-y-4">
               {/* 1. Inbound Join Requests */}
               {joinRequests.length > 0 && (
-                <div className="space-y-2 p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20">
+                <div className="space-y-3 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 font-clash flex items-center gap-1.5">
-                      <Clock size={12} />
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-400 font-clash flex items-center gap-1.5">
+                      <Clock size={13} />
                       Pending Join Requests ({joinRequests.length})
                     </span>
-                    <span className="text-[10px] text-amber-400/60 font-mono">Requires Admin Approval</span>
+                    <span className="text-[11px] text-amber-400/70 font-mono">Requires Admin Approval</span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {joinRequests.map((c) => (
-                      <div key={c.$id || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border border-amber-500/20 hover:border-amber-500/40 transition-colors gap-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div key={c.$id || c.userId} className="flex items-center justify-between p-4 rounded-xl bg-[#0A0908] border border-amber-500/25 hover:border-amber-500/40 transition-colors gap-4">
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
                           <IdentityAvatar
                             fileId={c.avatar || c.profilePicId || null}
                             alt={c.displayName || c.username || c.userId}
                             fallback={(c.displayName || c.username || c.userId || '?').charAt(0).toUpperCase()}
-                            size={34}
+                            size={40}
                             userId={c.userId || c.$id}
                             displayName={c.displayName}
                             username={c.username}
                           />
-                          <div className="min-w-0">
-                            <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || (c.username ? `@${c.username}` : c.userId)}</div>
-                            <div className="text-[10px] text-amber-400/70 font-mono">Requested via invite link</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-bold text-white font-satoshi truncate">
+                              {c.displayName || (c.username ? `@${c.username}` : c.userId)}
+                            </div>
+                            {c.username && c.displayName && (
+                              <div className="text-xs text-white/50 font-mono truncate">
+                                @{c.username}
+                              </div>
+                            )}
+                            <div className="text-[11px] text-amber-400/80 font-mono mt-0.5">Requested to join this workspace</div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
                             onClick={() => {
@@ -506,9 +729,9 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                                 },
                               });
                             }}
-                            className="px-2.5 py-1 text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1"
+                            className="px-3.5 py-1.5 text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
                           >
-                            <UserCheck size={12} />
+                            <UserCheck size={13} />
                             <span>Approve</span>
                           </button>
 
@@ -526,10 +749,10 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                                 },
                               });
                             }}
-                            className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                            className="p-2 text-white/40 hover:text-red-400 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                             title="Deny Request"
                           >
-                            <UserMinus size={14} />
+                            <UserMinus size={15} />
                           </button>
                         </div>
                       </div>
@@ -540,38 +763,41 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
 
               {/* 2. Outbound Pending Invites */}
               {pendingInvites.length > 0 && (
-                <div className="space-y-2 p-3.5 rounded-2xl bg-[#6366F1]/5 border border-[#6366F1]/20">
+                <div className="space-y-3 p-4 rounded-2xl bg-[#6366F1]/5 border border-[#6366F1]/20">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#818CF8] font-clash flex items-center gap-1.5">
-                      <Clock size={12} />
+                    <span className="text-xs font-black uppercase tracking-wider text-[#818CF8] font-clash flex items-center gap-1.5">
+                      <Clock size={13} />
                       Pending Outbound Invites ({pendingInvites.length})
                     </span>
-                    <span className="text-[10px] text-white/40 font-mono">Awaiting User Acceptance</span>
+                    <span className="text-[11px] text-white/50 font-mono">Awaiting User Acceptance</span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {pendingInvites.map((c) => (
-                      <div key={c.$id || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border border-white/15 hover:border-white/30 transition-colors gap-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div key={c.$id || c.userId} className="flex items-center justify-between p-4 rounded-xl bg-[#0A0908] border border-white/15 hover:border-white/30 transition-colors gap-4">
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
                           <IdentityAvatar
                             fileId={c.avatar || c.profilePicId || null}
                             alt={c.displayName || c.username || c.userId}
                             fallback={(c.displayName || c.username || c.userId || '?').charAt(0).toUpperCase()}
-                            size={34}
+                            size={40}
                             userId={c.userId || c.$id}
                             displayName={c.displayName}
                             username={c.username}
                           />
-                          <div className="min-w-0">
-                            <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || (c.username ? `@${c.username}` : c.userId)}</div>
-                            <div className="text-[10px] text-[#818CF8] uppercase font-mono font-bold">Role: {c.permissionLevel || c.permission || 'Member'}</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-bold text-white font-satoshi truncate">{c.displayName || (c.username ? `@${c.username}` : c.userId)}</div>
+                            {c.username && c.displayName && (
+                              <div className="text-xs text-white/50 font-mono truncate">@{c.username}</div>
+                            )}
+                            <div className="text-[11px] text-[#818CF8] uppercase font-mono font-bold mt-0.5">Role: {c.permissionLevel || c.permission || 'Member'}</div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
                             onClick={() => handleRemoveMember(c.userId)}
-                            className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer text-xs font-medium"
+                            className="px-3 py-1.5 text-xs font-bold text-white/60 hover:text-red-400 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 rounded-xl transition-colors cursor-pointer"
                             title="Cancel Invite"
                           >
                             Cancel Invite
@@ -584,31 +810,34 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
               )}
 
               {/* 3. Active Workspace Members */}
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {activeMembers.length === 0 && joinRequests.length === 0 && pendingInvites.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-white/40 rounded-xl bg-[#0A0908] border-2 border-white/15">
+                  <div className="p-5 text-center text-xs text-white/40 rounded-xl bg-[#0A0908] border-2 border-white/15">
                     No additional collaborators registered. You are the sole workspace owner.
                   </div>
                 ) : (
                   activeMembers.map((c) => (
-                    <div key={c.$id || c.entityId || c.userId} className="flex items-center justify-between p-3 rounded-xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                    <div key={c.$id || c.entityId || c.userId} className="flex items-center justify-between p-4 rounded-xl bg-[#0A0908] border-2 border-white/15 hover:border-white/30 transition-colors gap-4">
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
                         <IdentityAvatar
                           fileId={c.avatar || c.profilePicId || null}
                           alt={c.displayName || c.username || c.userId || c.entityId}
                           fallback={(c.displayName || c.username || c.userId || c.entityId || '?').charAt(0).toUpperCase()}
-                          size={34}
+                          size={40}
                           userId={c.userId || c.entityId || c.$id}
                           displayName={c.displayName}
                           username={c.username}
                         />
-                        <div className="min-w-0">
-                          <div className="text-xs font-bold text-white font-mono truncate">{c.displayName || (c.username ? `@${c.username}` : (c.userId || c.entityId))}</div>
-                          <div className="text-[10px] text-white/40 uppercase font-mono font-bold">{c.permissionLevel || c.role || c.permission || 'Member'}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-bold text-white font-satoshi truncate">{c.displayName || (c.username ? `@${c.username}` : (c.userId || c.entityId))}</div>
+                          {c.username && c.displayName && (
+                            <div className="text-xs text-white/50 font-mono truncate">@{c.username}</div>
+                          )}
+                          <div className="text-[11px] text-[#818CF8] uppercase font-mono font-bold mt-0.5">{c.permissionLevel || c.role || c.permission || 'Member'}</div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2 shrink-0">
                         <button
                           type="button"
                           onClick={() => {
@@ -626,7 +855,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                               onShared: () => { void loadWorkspaceDetails(); },
                             });
                           }}
-                          className="p-1.5 text-xs text-[#818CF8] hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer font-medium"
+                          className="px-3 py-1.5 text-xs text-[#818CF8] hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer font-bold border border-[#6366F1]/30"
                           title="Edit Access Level"
                         >
                           Edit Access
@@ -634,10 +863,10 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                         <button
                           type="button"
                           onClick={() => handleRemoveMember(c.userId || c.entityId)}
-                          className="p-1.5 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                          className="p-2 text-white/40 hover:text-red-400 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                           title="Remove Member"
                         >
-                          <UserMinus size={14} />
+                          <UserMinus size={15} />
                         </button>
                       </div>
                     </div>
