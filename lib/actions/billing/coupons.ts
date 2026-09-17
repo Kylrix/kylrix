@@ -23,6 +23,17 @@ export async function listCouponsAction(jwt?: string) {
   return result.rows;
 }
 
+function parseMetadata(value: unknown): Record<string, any> {
+  if (!value) return {};
+  if (typeof value === 'object') return value as Record<string, any>;
+  if (typeof value !== 'string') return {};
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+}
+
 export async function invalidateCouponAction(couponId: string, jwt?: string) {
   const user = await getActor(jwt);
   if (!user) throw new Error('Unauthorized');
@@ -33,6 +44,80 @@ export async function invalidateCouponAction(couponId: string, jwt?: string) {
     status: 'revoked'
   });
   return { success: true };
+}
+
+export async function deleteCouponByIdAction(couponId: string, jwt?: string) {
+  const user = await getActor(jwt);
+  if (!user) throw new Error('Unauthorized');
+  requireAdmin(user);
+
+  const { databases } = createAdminClient(user.email);
+  await databases.deleteRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId);
+  return { success: true, deletedId: couponId };
+}
+
+export async function deleteCouponsBulkAction(
+  filter: {
+    mode: 'open' | 'active' | 'used' | 'user';
+    targetUserId?: string;
+  },
+  jwt?: string
+) {
+  const user = await getActor(jwt);
+  if (!user) throw new Error('Unauthorized');
+  requireAdmin(user);
+
+  const { databases } = createAdminClient(user.email);
+  let pageOffset = 0;
+  const batchSize = 100;
+  let allRows: any[] = [];
+
+  while (true) {
+    const res = await databases.listRows(NOTE_DB_ID, COUPONS_TABLE_ID, [
+      Query.limit(batchSize),
+      Query.offset(pageOffset)
+    ]);
+    allRows = allRows.concat(res.rows);
+    if (res.rows.length < batchSize) break;
+    pageOffset += batchSize;
+  }
+
+  let toDelete: any[] = [];
+
+  if (filter.mode === 'open') {
+    toDelete = allRows.filter((row: any) => {
+      const meta = parseMetadata(row.metadata);
+      const scope = meta?.coupon?.scope || meta?.scope || (row.targetUserId || row.relatedUserId ? 'targeted' : 'open');
+      return scope === 'open' || (!row.targetUserId && !row.relatedUserId);
+    });
+  } else if (filter.mode === 'active') {
+    toDelete = allRows.filter((row: any) => String(row.status || 'active').toLowerCase() === 'active');
+  } else if (filter.mode === 'used') {
+    toDelete = allRows.filter((row: any) => {
+      const status = String(row.status || '').toLowerCase();
+      const count = Number(row.redemptionCount || 0);
+      const limit = Number(row.redemptionLimit || 1);
+      return status === 'used' || (limit > 0 && count >= limit);
+    });
+  } else if (filter.mode === 'user') {
+    if (!filter.targetUserId) {
+      throw new Error('Target user ID is required to delete coupons by user');
+    }
+    const uid = filter.targetUserId;
+    toDelete = allRows.filter((row: any) => row.targetUserId === uid || row.relatedUserId === uid || row.userId === uid);
+  }
+
+  let deletedCount = 0;
+  for (const row of toDelete) {
+    try {
+      await databases.deleteRow(NOTE_DB_ID, COUPONS_TABLE_ID, row.$id);
+      deletedCount++;
+    } catch (err) {
+      console.warn(`[Admin] Failed to delete coupon ${row.$id}:`, err);
+    }
+  }
+
+  return { success: true, count: deletedCount };
 }
 
 export async function createCouponAction(input: {

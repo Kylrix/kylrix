@@ -2,19 +2,21 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Copy, RefreshCw, Ticket, Search, Check, X, Loader2 } from 'lucide-react';
+import { Copy, RefreshCw, Ticket, Search, Check, X, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import AdminLayout from '@/components/admin/components/AdminLayout';
-import { createCouponAction, listCouponsAction, invalidateCouponAction } from '@/lib/actions/billing/coupons';
+import { createCouponAction, listCouponsAction, invalidateCouponAction, deleteCouponByIdAction, deleteCouponsBulkAction } from '@/lib/actions/billing/coupons';
 import { getAdminUserByIdAction, searchAdminUserByIdAction, searchAdminUserByEmailAction } from '@/lib/actions/billing/admin';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { AppwriteService } from '@/lib/appwrite';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { getAdminCouponsCacheKey } from '@/lib/admin/admin-cache';
+import { getCachedIdentityById, resolveIdentityById, seedIdentityCache, CachedIdentity } from '@/lib/identity-cache';
 
 type CouponRow = {
   $id: string;
   userId?: string | null;
+  targetUserId?: string | null;
   relatedUserId?: string | null;
   actorId?: string | null;
   status?: string | null;
@@ -23,6 +25,70 @@ type CouponRow = {
   metadata?: string | null;
   $createdAt?: string;
 };
+
+function CouponTargetBadge({ targetUserId }: { targetUserId: string }) {
+  const { getJWT } = useAuth();
+  const [identity, setIdentity] = useState<CachedIdentity | null>(() => getCachedIdentityById(targetUserId));
+  const [loading, setLoading] = useState(!identity);
+
+  useEffect(() => {
+    let active = true;
+    const sync = getCachedIdentityById(targetUserId);
+    if (sync) {
+      setIdentity(sync);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    void resolveIdentityById(targetUserId, async () => {
+      try {
+        const jwt = await getJWT();
+        const res = await searchAdminUserByIdAction(targetUserId, jwt || undefined);
+        if (!res) return null;
+        return {
+          userId: res.id,
+          $id: res.id,
+          username: res.username || null,
+          displayName: res.displayName || res.name || null,
+        };
+      } catch {
+        return null;
+      }
+    }).then((res) => {
+      if (active) {
+        setIdentity(res);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [targetUserId, getJWT]);
+
+  if (loading && !identity) {
+    return (
+      <span className="flex items-center gap-1 text-[11px] font-mono text-white/50 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+        <Loader2 size={11} className="animate-spin text-[#818CF8]" />
+        <span>Target: {targetUserId.slice(0, 8)}...</span>
+      </span>
+    );
+  }
+
+  const label = identity?.username
+    ? `@${identity.username}`
+    : identity?.displayName
+    ? identity.displayName
+    : targetUserId;
+
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#818CF8] bg-[#6366F1]/10 px-2.5 py-1 rounded-lg border border-[#6366F1]/30">
+      <span className="text-white/40 uppercase tracking-wider text-[9px]">Target:</span>
+      <span className="truncate max-w-[160px]">{label}</span>
+    </div>
+  );
+}
 
 function parseMetadata(value: unknown): Record<string, any> {
   if (!value) return {};
@@ -56,6 +122,16 @@ export default function AdminCouponsPage() {
   const [selectedTargets, setSelectedTargets] = useState<any[]>([]);
   type SearchMode = 'username' | 'userid' | 'email';
   const [searchMode, setSearchMode] = useState<SearchMode>('username');
+
+  // Delete drawer state
+  const [deleteDrawerOpen, setDeleteDrawerOpen] = useState(false);
+  type DeleteMode = 'open' | 'active' | 'used' | 'username' | 'single';
+  const [deleteMode, setDeleteMode] = useState<DeleteMode>('open');
+  const [singleCouponId, setSingleCouponId] = useState<string | null>(null);
+  const [deleteUsernameQuery, setDeleteUsernameQuery] = useState('');
+  const [resolvedUserForDelete, setResolvedUserForDelete] = useState<any | null>(null);
+  const [resolvingDeleteUser, setResolvingDeleteUser] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [form, setForm] = useState({
     discountPercent: '50',
@@ -132,6 +208,12 @@ export default function AdminCouponsPage() {
       const jwt = await getJWT();
       if (searchMode === 'userid') {
         const result = await searchAdminUserByIdAction(q, jwt || undefined);
+        seedIdentityCache({
+          userId: result.id,
+          $id: result.id,
+          username: result.username || null,
+          displayName: result.displayName || result.name || null,
+        });
         setSelectedTargets(prev => {
           if (prev.some(t => t.id === result.id)) return prev;
           return [...prev, {
@@ -147,6 +229,12 @@ export default function AdminCouponsPage() {
           setError('No account found for that email address.');
           return;
         }
+        seedIdentityCache({
+          userId: result.id,
+          $id: result.id,
+          username: result.username || null,
+          displayName: result.displayName || result.name || null,
+        });
         setSelectedTargets(prev => {
           if (prev.some(t => t.id === result.id)) return prev;
           return [...prev, {
@@ -165,6 +253,12 @@ export default function AdminCouponsPage() {
   };
 
   const selectProfile = async (profile: any) => {
+    seedIdentityCache({
+      userId: profile.userId,
+      $id: profile.userId,
+      username: profile.username || null,
+      displayName: profile.displayName || profile.username || null,
+    });
     if (selectedTargets.some(t => t.id === profile.userId)) {
       setProfileQuery('');
       setSearchResults([]);
@@ -265,6 +359,102 @@ export default function AdminCouponsPage() {
 
   const totalCoupons = useMemo(() => coupons.length, [coupons]);
 
+  const handleResolveDeleteUsername = async () => {
+    const q = deleteUsernameQuery.trim();
+    if (!q) return;
+    setResolvingDeleteUser(true);
+    setError(null);
+    try {
+      const docs = await AppwriteService.searchGlobalProfiles(q, 1);
+      if (docs && docs.length > 0) {
+        const p = docs[0];
+        seedIdentityCache({
+          userId: p.userId,
+          $id: p.userId,
+          username: p.username || null,
+          displayName: p.displayName || p.username || null,
+        });
+        setResolvedUserForDelete({
+          id: p.userId,
+          username: p.username,
+          displayName: p.displayName,
+        });
+        return;
+      }
+      const jwt = await getJWT();
+      const res = await searchAdminUserByIdAction(q, jwt || undefined);
+      if (res) {
+        seedIdentityCache({
+          userId: res.id,
+          $id: res.id,
+          username: res.username || null,
+          displayName: res.displayName || res.name || null,
+        });
+        setResolvedUserForDelete({
+          id: res.id,
+          username: res.username || res.name || 'User',
+          displayName: res.displayName || res.name,
+        });
+        return;
+      }
+      setError('User not found for deletion query');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to resolve user');
+    } finally {
+      setResolvingDeleteUser(false);
+    }
+  };
+
+  const handleExecuteDelete = async () => {
+    setDeleting(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const jwt = await getJWT();
+      if (deleteMode === 'single') {
+        if (!singleCouponId) return;
+        await deleteCouponByIdAction(singleCouponId, jwt || undefined);
+        setSuccess('Coupon deleted successfully.');
+      } else if (deleteMode === 'username') {
+        if (!resolvedUserForDelete?.id) {
+          setError('Please search and select a user first.');
+          setDeleting(false);
+          return;
+        }
+        const res = await deleteCouponsBulkAction({ mode: 'user', targetUserId: resolvedUserForDelete.id }, jwt || undefined);
+        setSuccess(`Deleted ${res.count || 0} coupon(s) for @${resolvedUserForDelete.username}.`);
+      } else {
+        const res = await deleteCouponsBulkAction({ mode: deleteMode as 'open' | 'active' | 'used' }, jwt || undefined);
+        setSuccess(`Deleted ${res.count || 0} ${deleteMode} coupon(s).`);
+      }
+      setDeleteDrawerOpen(false);
+      setSingleCouponId(null);
+      setDeleteUsernameQuery('');
+      setResolvedUserForDelete(null);
+      const cacheKey = getAdminCouponsCacheKey(user?.$id);
+      if (cacheKey) await LocalEngine.cacheDelete(cacheKey);
+      await loadCoupons(true);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to execute deletion');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openDeleteDrawerForSingle = (id: string) => {
+    setSingleCouponId(id);
+    setDeleteMode('single');
+    setDeleteDrawerOpen(true);
+  };
+
+  const openDeleteDrawerForBulk = () => {
+    setSingleCouponId(null);
+    setDeleteMode('open');
+    setDeleteUsernameQuery('');
+    setResolvedUserForDelete(null);
+    setDeleteDrawerOpen(true);
+  };
+
   return (
     <AdminLayout>
       <div className="flex flex-col gap-6 text-white font-satoshi">
@@ -277,14 +467,24 @@ export default function AdminCouponsPage() {
               Create open or targeted coupons. Open coupons are first-claim wins, targeted coupons are restricted to named users.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => loadCoupons(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-white/20 bg-[#000000] text-white font-extrabold text-xs hover:bg-white/10 hover:border-white/40 transition-all cursor-pointer self-start sm:self-auto shadow-lg"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            <span>Refresh</span>
-          </button>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={openDeleteDrawerForBulk}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 font-extrabold text-xs transition-all cursor-pointer shadow-lg"
+            >
+              <Trash2 size={14} />
+              <span>Delete Controls</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => loadCoupons(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-white/20 bg-[#000000] text-white font-extrabold text-xs hover:bg-white/10 hover:border-white/40 transition-all cursor-pointer shadow-lg"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -553,7 +753,10 @@ export default function AdminCouponsPage() {
                       </p>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(coupon.targetUserId || coupon.relatedUserId || (coupon as any).userId) && formatScope(coupon) !== 'open' && (
+                      <CouponTargetBadge targetUserId={(coupon.targetUserId || coupon.relatedUserId || (coupon as any).userId)!} />
+                    )}
                     <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-white/10 border-white/20 text-white/70">
                       {(coupon as any).redemptionCount || 0} / {(coupon as any).redemptionLimit || 1} uses
                     </span>
@@ -598,15 +801,25 @@ export default function AdminCouponsPage() {
                   >
                     Open Coupon Page
                   </Link>
-                  {String(coupon.status || 'active') !== 'revoked' && (
+                  <div className="flex items-center gap-2 ml-auto">
+                    {String(coupon.status || 'active') !== 'revoked' && (
+                      <button
+                        type="button"
+                        onClick={() => revokeCoupon(coupon.$id)}
+                        className="px-4 py-2 rounded-xl text-xs font-black text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors cursor-pointer border-2 border-amber-500/30"
+                      >
+                        Revoke
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => revokeCoupon(coupon.$id)}
-                      className="px-4 py-2 rounded-xl text-xs font-black text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors cursor-pointer ml-auto border-2 border-rose-500/30"
+                      onClick={() => openDeleteDrawerForSingle(coupon.$id)}
+                      className="p-2 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors cursor-pointer border-2 border-rose-500/30"
+                      title="Delete Coupon"
                     >
-                      Revoke
+                      <Trash2 size={16} />
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
             ))
@@ -617,6 +830,150 @@ export default function AdminCouponsPage() {
           )}
         </div>
       </div>
+
+      {/* OpenBricks 4.0 Delete Confirmation Bottom Drawer */}
+      {deleteDrawerOpen && (
+        <div className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-[#161412] border-t-2 border-x-2 border-white/20 rounded-t-[28px] h-[60dvh] flex flex-col overflow-hidden shadow-2xl animate-slide-up">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#161412] shrink-0">
+              <div className="flex items-center gap-2.5 text-rose-400">
+                <AlertTriangle size={18} />
+                <h3 className="font-black font-clash text-lg text-white">Delete Coupon Controls</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteDrawerOpen(false)}
+                className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white transition-all cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Inner Well */}
+            <div className="flex-1 p-6 bg-[#000000] overflow-y-auto space-y-5">
+              {singleCouponId ? (
+                <div className="p-4 rounded-xl bg-rose-500/10 border-2 border-rose-500/30 text-rose-300 text-xs font-mono font-bold leading-relaxed">
+                  Are you sure you want to permanently delete coupon ID: <span className="text-white">{singleCouponId}</span>? This operation cannot be undone.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <span className="text-xs font-mono font-black uppercase text-white/50 tracking-wider block">
+                    Select Deletion Target Scope:
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setDeleteMode('open')}
+                      className={`p-4 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${
+                        deleteMode === 'open'
+                          ? 'bg-[#6366F1]/20 border-[#6366F1] text-white'
+                          : 'bg-[#161412] border-white/10 text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <span className="font-black text-sm text-white">Delete All Open Coupons</span>
+                      <span className="text-[11px] text-white/50 mt-1">Purge all open/unassigned coupon links</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeleteMode('active')}
+                      className={`p-4 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${
+                        deleteMode === 'active'
+                          ? 'bg-[#6366F1]/20 border-[#6366F1] text-white'
+                          : 'bg-[#161412] border-white/10 text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <span className="font-black text-sm text-white">Delete All Active Coupons</span>
+                      <span className="text-[11px] text-white/50 mt-1">Remove all active unclaimed coupons</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeleteMode('used')}
+                      className={`p-4 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${
+                        deleteMode === 'used'
+                          ? 'bg-[#6366F1]/20 border-[#6366F1] text-white'
+                          : 'bg-[#161412] border-white/10 text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <span className="font-black text-sm text-white">Delete All Used Coupons</span>
+                      <span className="text-[11px] text-white/50 mt-1">Purge coupons that reached redemption limit</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeleteMode('username')}
+                      className={`p-4 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${
+                        deleteMode === 'username'
+                          ? 'bg-[#6366F1]/20 border-[#6366F1] text-white'
+                          : 'bg-[#161412] border-white/10 text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <span className="font-black text-sm text-white">Delete Coupon By Username</span>
+                      <span className="text-[11px] text-white/50 mt-1">Target all coupons allocated to a specific user</span>
+                    </button>
+                  </div>
+
+                  {deleteMode === 'username' && (
+                    <div className="p-4 rounded-xl bg-[#161412] border-2 border-white/20 space-y-3">
+                      <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">
+                        Target Username or User ID
+                      </span>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter username or account ID..."
+                          value={deleteUsernameQuery}
+                          onChange={(e) => setDeleteUsernameQuery(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleResolveDeleteUsername(); }}
+                          className="flex-1 bg-[#000000] px-4 py-2.5 rounded-xl border-2 border-white/20 text-white text-xs font-mono font-bold focus:border-[#6366F1] focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleResolveDeleteUsername}
+                          disabled={resolvingDeleteUser || !deleteUsernameQuery.trim()}
+                          className="px-4 py-2.5 bg-[#6366F1] hover:bg-[#5254E8] disabled:opacity-40 text-white font-black text-xs rounded-xl transition-all cursor-pointer border-2 border-[#6366F1]"
+                        >
+                          {resolvingDeleteUser ? <Loader2 size={14} className="animate-spin" /> : 'Search'}
+                        </button>
+                      </div>
+
+                      {resolvedUserForDelete && (
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-[#000000] border border-emerald-500/40 text-emerald-400 font-mono text-xs font-bold">
+                          <span>Target Selected: @{resolvedUserForDelete.username} ({resolvedUserForDelete.id})</span>
+                          <Check size={14} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Non-scrolling Footer */}
+            <div className="p-4 sm:p-6 border-t border-white/10 bg-[#161412] flex items-center justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setDeleteDrawerOpen(false)}
+                className="px-5 py-2.5 rounded-xl border-2 border-white/20 text-white font-black text-xs hover:bg-white/10 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                disabled={deleting}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black text-xs transition-all cursor-pointer border-2 border-rose-500 shadow-lg"
+              >
+                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                <span>{deleting ? 'Deleting...' : 'Confirm Deletion'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
