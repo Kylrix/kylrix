@@ -231,7 +231,11 @@ export default function SudoModal({
                 }
 
                 toast.success("Verified");
-                handleSuccessWithSync();
+                if (intent === "upgrade" || intent === "change-masterpass") {
+                    setMode("change-masterpass");
+                } else {
+                    handleSuccessWithSync();
+                }
             } else {
                 // Suppressed when user intentionally switched to password (abort/interrupt is not a failure)
                 if (isManualSwitchRef.current) return;
@@ -348,7 +352,11 @@ export default function SudoModal({
                 if (intent === "initialize") {
                     setMode("initialize");
                 } else if (intent === "change-masterpass") {
-                    setMode("change-masterpass");
+                    if (!ecosystemSecurity.status.isUnlocked) {
+                        setMode(passkeyAllowed && usePasskeysByDefault ? "passkey" : "password");
+                    } else {
+                        setMode("change-masterpass");
+                    }
                 } else if (intent === "reset") {
                     setMode("reset-confirm");
                     setResetStep(1);
@@ -363,7 +371,14 @@ export default function SudoModal({
                 }
 
                 // Trigger passkey verification immediately if it's default
-                if (passkeyAllowed && usePasskeysByDefault && !passkeyTriggeredRef.current) {
+                if (
+                    passkeyAllowed &&
+                    usePasskeysByDefault &&
+                    !passkeyTriggeredRef.current &&
+                    intent !== "change-masterpass" &&
+                    intent !== "initialize" &&
+                    intent !== "reset"
+                ) {
                     passkeyTriggeredRef.current = true;
                     // Run async to avoid blocking
                     setTimeout(() => {
@@ -441,8 +456,11 @@ export default function SudoModal({
                 if (isMigratingRef.current) {
                     return;
                 }
-                if (intent === "upgrade") {
+                if (intent === "upgrade" || intent === "change-masterpass") {
                     setMode("change-masterpass");
+                    if (password) {
+                        setCurrentPassword(password);
+                    }
                     setPassword("");
                     setConfirmPassword("");
                 } else {
@@ -690,12 +708,24 @@ export default function SudoModal({
                         </div>
                         <div className="min-w-0">
                             <h3 className="font-clash font-black text-white text-lg tracking-tight leading-tight truncate">
-                                {(user?.name && user.name.trim() !== 'User')
+                                {mode === "change-masterpass"
+                                    ? "Change Master Password"
+                                    : mode === "initialize"
+                                    ? "Setup Vault MasterPass"
+                                    : mode === "reset-confirm"
+                                    ? "Reset Security Vault"
+                                    : (user?.name && user.name.trim() !== 'User')
                                     ? user.name
                                     : (user?.username || user?.email?.split('@')[0] || (user?.$id ? `Account ${user.$id.slice(0, 8)}` : 'Local Account'))}
                             </h3>
                             <p className="text-xs text-white/40 font-semibold font-satoshi mt-1">
-                                Enter MasterPass to continue
+                                {mode === "change-masterpass"
+                                    ? "Enter current & new password"
+                                    : mode === "initialize"
+                                    ? "Set master password to encrypt vault"
+                                    : mode === "reset-confirm"
+                                    ? "Danger zone: Vault purge"
+                                    : "Enter MasterPass to continue"}
                             </p>
                         </div>
                     </div>

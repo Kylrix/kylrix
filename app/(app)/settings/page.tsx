@@ -922,6 +922,7 @@ function SettingsPageInner() {
                         onSetupVault={() => {
                             requestSudo({
                                 intent: 'initialize',
+                                forcePrompt: true,
                                 onSuccess: () => {
                                     // Refresh masterpass state
                                     if (user?.$id) {
