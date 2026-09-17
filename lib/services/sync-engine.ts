@@ -953,8 +953,14 @@ export const autonomicSyncEngine = {
    * Enqueue a live revision for push. Client-only — never an Appwrite field.
    * Also mirrors compose-draft membership for create-lifecycle helpers.
    * @param opts.force — skip baseline-diff suppression (share / discrete publish).
+   * @param opts.discrete — discrete user action (task toggle, status edit, modal close).
    */
-  markPending(noteId: string, revision?: string | null, payload?: any, opts?: { force?: boolean }) {
+  markPending(
+    noteId: string,
+    revision?: string | null,
+    payload?: any,
+    opts?: { force?: boolean; discrete?: boolean }
+  ) {
     const rawId = String(noteId || '').trim();
     if (!rawId) return;
     const rev = String(revision || Date.now()).trim() || String(Date.now());
@@ -964,10 +970,13 @@ export const autonomicSyncEngine = {
       id = goalPendingKey(rawId);
     }
 
-    // Baseline diff: suppress no-op re-marks only when we already have a remote/ack baseline.
-    // First create (no baseline) must ALWAYS enqueue — hasObjectDiff fails open.
+    const isDiscreteAction = opts?.discrete === true;
+
+    // Baseline diff: suppress no-op re-marks only when we already have a remote/ack baseline
+    // AND it is not a discrete user action (discrete state toggles must always bypass diff suppression).
     if (
       !opts?.force &&
+      !isDiscreteAction &&
       payload &&
       !id.startsWith('live-') &&
       !id.startsWith('thread-') &&
@@ -994,7 +1003,7 @@ export const autonomicSyncEngine = {
     notifyStatusListeners();
 
     const duration = Date.now() - (firstPendingTimestamp || Date.now());
-    if (duration >= HARD_CEILING_MS || opts?.force) {
+    if (duration >= HARD_CEILING_MS || opts?.force || isDiscreteAction) {
       firstPendingTimestamp = Date.now();
       scheduleDemandFlush({ immediate: true });
     } else {
@@ -1111,29 +1120,32 @@ export const autonomicSyncEngine = {
 
     if (pendingById.size === 0) return;
 
-    // Pre-warm JWT once for the whole batch — avoids N * 100ms createJWT
-    await getPrewarmedJwt().catch(() => {});
-
     const { hasAuthSessionHint, getCurrentUserSnapshot } = await import('@/lib/appwrite');
     const hasSession = hasAuthSessionHint();
     const activeUser = getCurrentUserSnapshot();
     const activeUserId = activeUser?.$id || null;
 
     if (!hasSession && !activeUserId) {
-      // No account — unpaid work stays amber locally until claim/login.
+      // No account — unpaid work stays local.
       return;
     }
 
     const { hasPaidKylrixPlan } = await import('@/lib/utils');
     if (!hasPaidKylrixPlan(activeUser)) {
-      // Free plan users on Cloud do not consume backend sync / DB storage.
-      // Acknowledge pending items locally so local-first UI is green/saved offline.
-      const pendingIds = Array.from(pendingById.keys());
-      for (const pendingId of pendingIds) {
-        autonomicSyncEngine.ack(pendingId);
+      // Free plan users operate 100% locally via RxDB/Dexie.
+      // Never trigger network requests, JWT calls, or DB operations for free users.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('kylrix:sync-status', {
+            detail: { status: 'local-only' },
+          })
+        );
       }
       return;
     }
+
+    // Pre-warm JWT once for Pro batch flush — avoids N * 100ms createJWT
+    await getPrewarmedJwt().catch(() => {});
 
     isSyncing = true;
 
@@ -1155,55 +1167,60 @@ export const autonomicSyncEngine = {
       });
 
       if (tasksToFlush.length > 0) {
-        await Promise.allSettled(
-          tasksToFlush.map(async (pendingId) => {
-            const queuedRevision = pendingById.get(pendingId) || '';
-            try {
-              let goalId = parseGoalPendingKey(pendingId);
-              if (!goalId) {
-                // Runtime rescue: payload/cache shaped like a goal → flush as goal, not note.
-                const payload = pendingPayloads.get(pendingId);
-                const looksLikeGoal =
-                  !!payload &&
-                  typeof payload === 'object' &&
-                  !!(payload as any).status &&
-                  !!(payload as any).priority &&
-                  !(payload as any).content;
-                if (looksLikeGoal || getLiveGoalForSync(pendingId)) {
-                  goalId = pendingId;
-                  const namespaced = goalPendingKey(pendingId);
-                  if (namespaced !== pendingId) {
-                    pendingById.set(namespaced, queuedRevision);
-                    pendingById.delete(pendingId);
-                    if (payload) {
-                      pendingPayloads.set(namespaced, payload);
+        // Micro-batch execution in chunks of 5 to preserve quota & handle parallel pushes cleanly
+        const chunkSize = 5;
+        for (let i = 0; i < tasksToFlush.length; i += chunkSize) {
+          const chunk = tasksToFlush.slice(i, i + chunkSize);
+          await Promise.allSettled(
+            chunk.map(async (pendingId) => {
+              const queuedRevision = pendingById.get(pendingId) || '';
+              try {
+                let goalId = parseGoalPendingKey(pendingId);
+                if (!goalId) {
+                  // Runtime rescue: payload/cache shaped like a goal → flush as goal, not note.
+                  const payload = pendingPayloads.get(pendingId);
+                  const looksLikeGoal =
+                    !!payload &&
+                    typeof payload === 'object' &&
+                    !!(payload as any).status &&
+                    !!(payload as any).priority &&
+                    !(payload as any).content;
+                  if (looksLikeGoal || getLiveGoalForSync(pendingId)) {
+                    goalId = pendingId;
+                    const namespaced = goalPendingKey(pendingId);
+                    if (namespaced !== pendingId) {
+                      pendingById.set(namespaced, queuedRevision);
+                      pendingById.delete(pendingId);
+                      if (payload) {
+                        pendingPayloads.set(namespaced, payload);
+                      }
+                      await flushGoalPending(namespaced, goalId, queuedRevision, db, activeUserId);
+                      return;
                     }
-                    await flushGoalPending(namespaced, goalId, queuedRevision, db, activeUserId);
-                    return;
                   }
                 }
+                if (pendingId.startsWith('event:')) {
+                  const eventId = pendingId.replace(/^event:/, '');
+                  await flushEventPending(pendingId, eventId, queuedRevision, db, activeUserId);
+                } else if (pendingId.startsWith('form:')) {
+                  const formId = pendingId.replace(/^form:/, '');
+                  await flushFormPending(pendingId, formId, queuedRevision, db, activeUserId);
+                } else if (pendingId.startsWith('tag:')) {
+                  autonomicSyncEngine.ack(pendingId, queuedRevision);
+                } else if (goalId) {
+                  await flushGoalPending(pendingId, goalId, queuedRevision, db, activeUserId);
+                } else {
+                  await flushNotePending(pendingId, queuedRevision, db, activeUserId);
+                }
+              } catch (err: any) {
+                console.error(`[SyncEngine] Sync failed for item ${pendingId}:`, err);
+                const prev = failedSyncAttempts.get(pendingId) || { count: 0, lastFailedAt: 0 };
+                failedSyncAttempts.set(pendingId, { count: prev.count + 1, lastFailedAt: Date.now() });
+                notifyStatusListeners();
               }
-              if (pendingId.startsWith('event:')) {
-                const eventId = pendingId.replace(/^event:/, '');
-                await flushEventPending(pendingId, eventId, queuedRevision, db, activeUserId);
-              } else if (pendingId.startsWith('form:')) {
-                const formId = pendingId.replace(/^form:/, '');
-                await flushFormPending(pendingId, formId, queuedRevision, db, activeUserId);
-              } else if (pendingId.startsWith('tag:')) {
-                autonomicSyncEngine.ack(pendingId, queuedRevision);
-              } else if (goalId) {
-                await flushGoalPending(pendingId, goalId, queuedRevision, db, activeUserId);
-              } else {
-                await flushNotePending(pendingId, queuedRevision, db, activeUserId);
-              }
-            } catch (err: any) {
-              console.error(`[SyncEngine] Sync failed for item ${pendingId}:`, err);
-              const prev = failedSyncAttempts.get(pendingId) || { count: 0, lastFailedAt: 0 };
-              failedSyncAttempts.set(pendingId, { count: prev.count + 1, lastFailedAt: Date.now() });
-              notifyStatusListeners();
-            }
-          })
-        );
+            })
+          );
+        }
       }
     } catch (error) {
       console.error('[SyncEngine] Autonomic sync error:', error);
