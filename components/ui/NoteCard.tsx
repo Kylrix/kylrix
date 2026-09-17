@@ -362,7 +362,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           }
           const url = await resolveNoteShareUrl();
           await navigator.clipboard.writeText(url);
-          showSuccess(isLocked ? 'Public link copied with key' : 'Public link copied');
         } catch (err: any) {
           showError(err?.message || 'Failed to copy share link');
         }

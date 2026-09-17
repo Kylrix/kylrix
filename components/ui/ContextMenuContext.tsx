@@ -129,7 +129,6 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
             icon: <Copy size={16} />,
             onClick: () => {
               navigator.clipboard.writeText(selectedText);
-              showSuccess('Copied', 'Selection copied to clipboard');
             },
           },
           {
@@ -182,7 +181,6 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
             icon: <Share2 size={16} />,
             onClick: () => {
               navigator.clipboard.writeText(src);
-              showSuccess('Copied', 'Image link copied to clipboard');
             },
           },
         ];

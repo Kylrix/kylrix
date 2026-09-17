@@ -584,7 +584,6 @@ export function NoteDetailSidebar({
           if (updated.decryptionKey) {
             const shareUrl = getShareableUrl(liveNote.$id, updated.decryptionKey);
             navigator.clipboard.writeText(shareUrl);
-            showSuccess('Public link rotated', 'New link copied to clipboard.');
           }
           setShowRotateConfirm(false);
         }
@@ -608,7 +607,6 @@ export function NoteDetailSidebar({
 
     if (url) {
       await navigator.clipboard.writeText(url);
-      showSuccess('Link copied to clipboard');
     } else {
       showError('Shared link unavailable', 'Could not resolve the shared note URL.');
     }
@@ -752,7 +750,6 @@ export function NoteDetailSidebar({
           type="button"
           onClick={() => {
             navigator.clipboard.writeText(content);
-            showSuccess('Copied', 'Entire note content copied to clipboard.');
             closeContextActions();
           }}
           className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
@@ -1242,7 +1239,6 @@ export function NoteDetailSidebar({
               type="button"
               onClick={() => {
                 void navigator.clipboard.writeText(liveNote.$id);
-                showSuccess('Copied Object ID', liveNote.$id);
               }}
               className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-white/70 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
               title="Click to copy Object ID"
@@ -1257,7 +1253,6 @@ export function NoteDetailSidebar({
               type="button"
               onClick={() => {
                 void navigator.clipboard.writeText(activeWorkspace.id);
-                showSuccess('Copied Workspace ID', activeWorkspace.id);
               }}
               className="px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-[11px] font-mono text-indigo-300 hover:text-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
               title="Click to copy Workspace ID"
@@ -1436,7 +1431,6 @@ export function NoteDetailSidebar({
                   onClick={(e) => {
                     e.stopPropagation();
                     navigator.clipboard.writeText(content);
-                    showSuccess('Copied', 'Note content copied to clipboard');
                   }}
                   className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0B0A09] border border-white/8 text-white/55 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer"
                   title="Copy content"

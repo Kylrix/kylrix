@@ -53,7 +53,6 @@ import Logo from '@/components/common/Logo';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getUserProfilePicId, getEffectiveUsername, hasEffectivePaidAccess } from '@/lib/utils';
 import { getCachedIdentityById } from '@/lib/identity-cache';
-import { toast } from 'react-hot-toast';
 import { APP_BASE_PATHS } from '@/lib/constants';
 import { type KylrixApp } from '@/sdk/design';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
@@ -557,7 +556,6 @@ export default function ConnectTopbar({
     if (!textToCopy) return;
     await navigator.clipboard.writeText(textToCopy);
     setCopyState('copied-username');
-    toast.success(`Copied ${textToCopy}`, { duration: 1500 });
     window.setTimeout(() => setCopyState('idle'), 1600);
   }, [profileUsername, profileDisplayName, profileSeed.userId]);
 
@@ -570,7 +568,6 @@ export default function ConnectTopbar({
     const refLink = `${base}/?ref=${refCode}`;
     await navigator.clipboard.writeText(refLink);
     setCopyState('copied-referral');
-    toast.success('Referral link copied', { duration: 1500 });
     window.setTimeout(() => setCopyState('idle'), 1600);
   }, [profileUsername, profileSeed.userId]);
 
