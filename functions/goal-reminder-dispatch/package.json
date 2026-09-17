@@ -1,13 +1,13 @@
 {
   "name": "@kylrix/goal-reminder-dispatch",
   "version": "1.0.0",
-  "description": "Appwrite function to dispatch goal reminders via Telegram broadcast or Email fallback",
+  "description": "Appwrite function to dispatch scheduled reminders for time-sensitive goals, events, and subscriptions",
   "main": "src/main.js",
   "type": "module",
   "scripts": {
     "start": "node src/main.js"
   },
   "dependencies": {
-    "node-appwrite": "^14.1.0"
+    "node-appwrite": "^19.1.0"
   }
 }

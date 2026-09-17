@@ -430,7 +430,7 @@
             "deploymentRetention": 0
         },
         {
-            "$id": "goal-reminder-dispatch",
+            "$id": "goal-reminder-dispatch-placeholder-id",
             "name": "goal-reminder-dispatch",
             "runtime": "node-25",
             "path": "functions/goal-reminder-dispatch",
@@ -441,7 +441,7 @@
             "enabled": true,
             "logging": true,
             "events": [],
-            "schedule": "",
+            "schedule": "0 0 */2 * *",
             "timeout": 30,
             "commands": "npm install -g pnpm && pnpm install",
             "scopes": [
@@ -449,6 +449,7 @@
                 "tables.read",
                 "collections.read",
                 "rows.read",
+                "rows.write",
                 "users.read",
                 "messages.write"
             ],
