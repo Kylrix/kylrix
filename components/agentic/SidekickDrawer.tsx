@@ -456,6 +456,7 @@ export function SidekickDrawer({
     const trimmed = input.trim();
     if ((!trimmed && pendingAttachments.length === 0) || !target || sending) return;
     setSending(true);
+    setError(null);
 
     const attachmentsToProcess = [...pendingAttachments];
     setPendingAttachments([]);
