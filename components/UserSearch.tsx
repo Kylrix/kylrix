@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
 import { IdentityAvatar, computeIdentityFlags } from './common/IdentityBadge';
 import { seedIdentityCache } from '@/lib/identity-cache';
@@ -93,6 +93,7 @@ export default function UserSearch({
   const [query, setQuery] = useState('');
   const [rawResults, setRawResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const searchReqIdRef = useRef(0);
 
   const results = useMemo(() => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -116,22 +117,32 @@ export default function UserSearch({
   }, [rawResults, selectedUsers, excludeIds, query, isSearching]);
 
   const debouncedSearch = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim() || searchQuery.length < 2) {
+    const trimmed = searchQuery.trim();
+    if (!trimmed || trimmed.length < 2) {
       setRawResults([]);
+      setIsSearching(false);
       return;
     }
 
+    searchReqIdRef.current += 1;
+    const currentReqId = searchReqIdRef.current;
     setIsSearching(true);
+
     try {
       const { searchGlobalUsers } = await import('@/lib/ecosystem/identity');
-      const res = await searchGlobalUsers(searchQuery);
+      const res = await searchGlobalUsers(trimmed);
+      if (searchReqIdRef.current !== currentReqId) {
+        // Discard stale out-of-order response
+        return;
+      }
+
       const nextRows = Array.isArray(res) ? res : (res as any)?.rows || [];
       
       // Seed identity cache
       nextRows.forEach((u: any) => seedIdentityCache(u));
 
       const normalized = nextRows.map((u: any) => {
-        const labels = buildCollaboratorSearchLabels(u, searchQuery);
+        const labels = buildCollaboratorSearchLabels(u, trimmed);
         return {
           ...u,
           id: u.id || u.userId || u.$id,
@@ -146,17 +157,22 @@ export default function UserSearch({
           isEcosystemUser: u.isEcosystemUser !== undefined ? u.isEcosystemUser : true,
           nostrNpub: u.nostrNpub || null,
           nostrPubkeyHex: u.nostrPubkeyHex || null,
-          email: isEmailLike(searchQuery) ? (u.email || undefined) : undefined,
+          email: isEmailLike(trimmed) ? (u.email || undefined) : undefined,
         };
       });
+
       setRawResults(normalized as User[]);
     } catch (err) {
-      console.error('User search failed:', err);
-      setRawResults([]);
+      if (searchReqIdRef.current === currentReqId) {
+        console.error('User search failed:', err);
+        setRawResults([]);
+      }
     } finally {
-      setIsSearching(false);
+      if (searchReqIdRef.current === currentReqId) {
+        setIsSearching(false);
+      }
     }
-  }, []);
+  }, [searchReqIdRef]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
