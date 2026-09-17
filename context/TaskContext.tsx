@@ -50,6 +50,7 @@ import { shouldSoftPull } from '@/lib/sync/local-copy-sync';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { loadGoalsFromLocalCopy } from '@/lib/goals/load-local-goals';
 import { subscribeLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 import { useProjectObjects } from '@/hooks/useProjectObjects';
@@ -922,7 +923,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     const liveById = new Map(tasksRef.current.map((t) => [t.id, t]));
     const byId = new Map<string, Task>();
 
+    const activeUid = state.userId || flowWarmOwnerRef.current || 'guest';
     for (const row of mergedTasks) {
+      if (LocalEngine.isDeleted(row.id, activeUid)) continue;
       const live = liveById.get(row.id);
       if (
         live &&
@@ -938,6 +941,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
 
     for (const live of tasksRef.current) {
+      if (LocalEngine.isDeleted(live.id, activeUid)) continue;
       if (!byId.has(live.id)) byId.set(live.id, live);
     }
 
@@ -1533,6 +1537,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   }, [state.projects, state.userId, isResourcePinned, togglePin, setLocalPin, invalidateTasksNexus]);
 
   const deleteTask = useCallback(async (id: string) => {
+    const uid = state.userId || 'guest';
+    void LocalEngine.markDeleted(id, uid);
     dispatch({ type: 'DELETE_TASK', payload: id });
     autonomicSyncEngine.cancelPending(id);
     autonomicSyncEngine.cancelPending(goalPendingKey(id));
@@ -1848,7 +1854,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   // Computed values
   const getFilteredTasks = useCallback(() => {
-    let sourceTasks = state.tasks.filter((t: any) => !t.isTrash && !t.isDeleted && String(t.isTrash) !== 'true' && String(t.isDeleted) !== 'true');
+    const activeUid = state.userId || 'guest';
+    let sourceTasks = state.tasks.filter((t: any) => !t.isTrash && !t.isDeleted && String(t.isTrash) !== 'true' && String(t.isDeleted) !== 'true' && !LocalEngine.isDeleted(t.id, activeUid));
     if (!activeWorkspace || activeWorkspace.isPersonal) {
       sourceTasks = sourceTasks.filter(isDefaultWorkspaceObject);
     } else {

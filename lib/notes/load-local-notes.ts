@@ -4,6 +4,7 @@
  */
 
 import type { Notes } from '@/types/appwrite';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 
 export type InitialNotesCachePayload = {
   notes: Notes[];
@@ -24,13 +25,16 @@ function asNotesArray(value: unknown): Notes[] {
   return [];
 }
 
-function normalizeNoteRow(row: any): Notes | null {
+function normalizeNoteRow(row: any, userId?: string): Notes | null {
   if (!row || typeof row !== 'object') return null;
   if (row.isTrash === true || row.isDeleted === true || String(row.isTrash) === 'true' || String(row.isDeleted) === 'true') {
     return null;
   }
   const id = String(row.$id || row.id || '').trim();
   if (!id) return null;
+  if (LocalEngine.isDeleted(id, userId)) {
+    return null;
+  }
   return {
     ...row,
     $id: id} as Notes;
@@ -42,22 +46,26 @@ export async function loadNotesFromLocalCopy(opts: {
   getCachedDataSync?: (key: string) => unknown;
   getCachedDataAsync?: (key: string) => Promise<unknown>;
 }): Promise<InitialNotesCachePayload | null> {
+  const userId = String(opts.userId || '').trim() || 'guest';
+
   if (opts.existingNotes?.length) {
-    return {
-      notes: opts.existingNotes,
-      totalNotes: opts.existingNotes.length,
-      cursor: null,
-      hasMore: true};
+    const activeExisting = opts.existingNotes.filter((n) => !LocalEngine.isDeleted(n.$id, userId));
+    if (activeExisting.length) {
+      return {
+        notes: activeExisting,
+        totalNotes: activeExisting.length,
+        cursor: null,
+        hasMore: true};
+    }
   }
 
-  const userId = String(opts.userId || '').trim() || 'guest';
   const nexusKeys = [`initial_notes_${userId}`];
 
   // 1) Sync Nexus memory (0ms)
   for (const key of nexusKeys) {
     const syncHit = opts.getCachedDataSync?.(key);
     const notes = asNotesArray(syncHit)
-      .map(normalizeNoteRow)
+      .map((row) => normalizeNoteRow(row, userId))
       .filter((n): n is Notes => !!n);
     if (notes.length) {
       const payload = syncHit as InitialNotesCachePayload;
@@ -80,7 +88,7 @@ export async function loadNotesFromLocalCopy(opts: {
       }
       const rxRows = (await db.notes.find({ selector }).exec().catch(() => []))
         .map((d: any) => (d.toJSON ? d.toJSON() : d));
-      const notes = rxRows.map(normalizeNoteRow).filter((n): n is Notes => !!n);
+      const notes = rxRows.map((row) => normalizeNoteRow(row, userId)).filter((n): n is Notes => !!n);
       if (notes.length) {
         return {
           notes,
@@ -102,7 +110,7 @@ export async function loadNotesFromLocalCopy(opts: {
     ]);
     const ideasList = Array.isArray(ideasObj) ? ideasObj : ideasObj?.rows;
     const candidates = (list && list.length > 0 ? list : ideasList) || [];
-    const notes = candidates.map(normalizeNoteRow).filter((n): n is Notes => !!n);
+    const notes = candidates.map((row) => normalizeNoteRow(row, userId)).filter((n): n is Notes => !!n);
     if (notes.length) {
       return {
         notes,
@@ -120,7 +128,7 @@ export async function loadNotesFromLocalCopy(opts: {
       try {
         const asyncHit = await opts.getCachedDataAsync(key);
         const notes = asNotesArray(asyncHit)
-          .map(normalizeNoteRow)
+          .map((row) => normalizeNoteRow(row, userId))
           .filter((n): n is Notes => !!n);
         if (notes.length) {
           const payload = asyncHit as InitialNotesCachePayload;

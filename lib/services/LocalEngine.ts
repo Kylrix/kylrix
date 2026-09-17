@@ -42,7 +42,127 @@ const inflightQueries = new Map<string, Promise<any>>();
 /** Cooldown registry for background revalidations (cooldown: 2 minutes) */
 const backgroundRevalidationCooldowns = new Map<string, number>();
 
+/** Local deleted tombstones registry */
+const inMemoryDeletedIds = new Set<string>();
+
+function ensureDeletedIdsLoaded(userId?: string): Set<string> {
+  if (typeof window === 'undefined') return inMemoryDeletedIds;
+  const uid = userId || 'guest';
+  if (inMemoryDeletedIds.size === 0) {
+    try {
+      const raw = localStorage.getItem(`f_deleted_ids_${uid}`);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          arr.forEach((id) => inMemoryDeletedIds.add(String(id)));
+        }
+      }
+    } catch {}
+  }
+  return inMemoryDeletedIds;
+}
+
 export const LocalEngine = {
+  /** Mark an object ID as locally deleted (tombstone) and purge from all local caches */
+  async markDeleted(id: string, userId?: string): Promise<void> {
+    if (!id || typeof window === 'undefined') return;
+    const uid = userId || 'guest';
+    ensureDeletedIdsLoaded(uid);
+    inMemoryDeletedIds.add(id);
+
+    try {
+      localStorage.setItem(`f_deleted_ids_${uid}`, JSON.stringify(Array.from(inMemoryDeletedIds)));
+    } catch {}
+
+    // Invalidate baseline and cancel any pending sync mutation
+    delete (window as any)[`__kylrix_baseline_${id}`];
+    try {
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.cancelPending(id);
+      autonomicSyncEngine.cancelPending(`goal:${id}`);
+    } catch {}
+
+    // Synchronously purge from caches
+    await Promise.all([
+      this.cacheDelete(`local:note:${id}`),
+      this.cacheDelete(`local:goal:${id}`),
+      this.cacheDelete(`local:task:${id}`),
+      this.cacheDelete(`note_${id}`),
+      this.cacheDelete(`goal_${id}`),
+      this.cacheDelete(id),
+    ]);
+
+    // Purge from list caches
+    const listKeys = [
+      `f_notes_list_${uid}`,
+      `f_ideas_${uid}`,
+      `f_tasks_${uid}`,
+      `f_goals_list_${uid}`,
+      `f_goals_list`,
+      `initial_notes_${uid}`,
+    ];
+
+    for (const key of listKeys) {
+      try {
+        const cached = await this.cacheGet<any>(key);
+        if (!cached) continue;
+        if (Array.isArray(cached)) {
+          const updated = cached.filter((item: any) => (item?.$id || item?.id) !== id);
+          await this.cacheSet(key, updated);
+        } else if (cached && Array.isArray(cached.rows)) {
+          const updatedRows = cached.rows.filter((item: any) => (item?.$id || item?.id) !== id);
+          await this.cacheSet(key, { ...cached, rows: updatedRows, total: updatedRows.length });
+        }
+      } catch {}
+    }
+
+    // Purge from RxDB
+    try {
+      const db = await getRxDB().catch(() => null);
+      if (db) {
+        if (db.notes) await db.notes.findOne(id).remove().catch(() => {});
+        if (db.tasks) await db.tasks.findOne(id).remove().catch(() => {});
+        await db.cache.findOne(`note_${id}`).remove().catch(() => {});
+        await db.cache.findOne(`goal_${id}`).remove().catch(() => {});
+        await db.cache.findOne(id).remove().catch(() => {});
+        await db.cache.upsert({ id: `f_deleted_ids_${uid}`, data: Array.from(inMemoryDeletedIds), timestamp: Date.now() }).catch(() => {});
+      }
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('kylrix:nexus:delete', { detail: { id, userId: uid } }));
+  },
+
+  /** Unmark a restored object ID from local tombstones */
+  async unmarkDeleted(id: string, userId?: string): Promise<void> {
+    if (!id || typeof window === 'undefined') return;
+    const uid = userId || 'guest';
+    ensureDeletedIdsLoaded(uid);
+    inMemoryDeletedIds.delete(id);
+
+    try {
+      localStorage.setItem(`f_deleted_ids_${uid}`, JSON.stringify(Array.from(inMemoryDeletedIds)));
+      const db = await getRxDB().catch(() => null);
+      if (db?.cache) {
+        await db.cache.upsert({ id: `f_deleted_ids_${uid}`, data: Array.from(inMemoryDeletedIds), timestamp: Date.now() }).catch(() => {});
+      }
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('kylrix:nexus:restore', { detail: { id, userId: uid } }));
+  },
+
+  /** Check if an object ID is marked as deleted locally */
+  isDeleted(id: string, userId?: string): boolean {
+    if (!id || typeof window === 'undefined') return false;
+    const uid = userId || 'guest';
+    ensureDeletedIdsLoaded(uid);
+    return inMemoryDeletedIds.has(id);
+  },
+
+  /** Get all deleted object IDs for a user */
+  getDeletedIds(userId?: string): Set<string> {
+    const uid = userId || 'guest';
+    return ensureDeletedIdsLoaded(uid);
+  },
   /** Retrieve generic cached payload by key */
   async cacheGet<T = any>(id: string, maxAgeMs?: number): Promise<T | null> {
     if (typeof window === 'undefined') return null;
