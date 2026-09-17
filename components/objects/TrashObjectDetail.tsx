@@ -152,6 +152,7 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
 
   const handleRestore = async (item: TrashItem) => {
     try {
+      await LocalEngine.unmarkDeleted(item.id, user?.$id);
       const remaining = itemsAll.filter((it) => !(it.id === item.id && it.tableId === item.tableId));
       setItemsAll(remaining);
       if (cacheKeyAll) await LocalEngine.cacheSet(cacheKeyAll, remaining).catch(() => {});
@@ -174,6 +175,7 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
       confirmLabel: 'Delete Forever',
       onConfirm: async () => {
         try {
+          await LocalEngine.markDeleted(item.id, user?.$id);
           const remaining = itemsAll.filter((it) => !(it.id === item.id && it.tableId === item.tableId));
           setItemsAll(remaining);
           if (cacheKeyAll) await LocalEngine.cacheSet(cacheKeyAll, remaining).catch(() => {});

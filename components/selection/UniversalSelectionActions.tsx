@@ -49,7 +49,9 @@ export function UniversalSelectionActions() {
         const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
         const db = await getRxDB().catch(() => null);
 
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
         for (const id of selectedIds) {
+          void LocalEngine.markDeleted(id, user?.$id);
           autonomicSyncEngine.cancelPending(id);
           if (db) {
             db.cache.findOne(`goal_${id}`).remove().catch(() => {});

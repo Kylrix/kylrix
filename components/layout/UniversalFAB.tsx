@@ -158,7 +158,9 @@ export default function UniversalFAB() {
           const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
           const db = await getRxDB().catch(() => null);
 
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
           for (const id of selection.selectedIds) {
+            void LocalEngine.markDeleted(id, user?.$id);
             autonomicSyncEngine.cancelPending(id);
             if (db) {
               db.cache.findOne(`goal_${id}`).remove().catch(() => {});

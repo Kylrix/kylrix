@@ -32,6 +32,7 @@ import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { registerLiveNoteGetter } from '@/lib/sync/pending-sync-bridge';
 import { loadNotesFromLocalCopy, warmNotesLocalCopy } from '@/lib/notes/load-local-notes';
 import { subscribeLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
@@ -312,14 +313,17 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         void (async () => {
           const local = await loadNotesFromLocalCopy({
             userId: activeUserId,
-            existingNotes: notesRef.current,
+            existingNotes: notesRef.current.filter((n) => !LocalEngine.isDeleted(n.$id, activeUserId)),
             getCachedDataSync: (key) => getCachedData(key),
             getCachedDataAsync: (key) => getCachedDataAsync(key),
           });
           if (local?.notes?.length) {
             setNotes((prev) => {
-              const liveById = new Map(prev.map((n) => [n.$id, n]));
-              const next = local.notes.map((n) => liveById.get(n.$id) || n);
+              const liveById = new Map(prev.filter((n) => !LocalEngine.isDeleted(n.$id, activeUserId)).map((n) => [n.$id, n]));
+              const next = local.notes
+                .filter((n) => !LocalEngine.isDeleted(n.$id, activeUserId))
+                .map((n) => liveById.get(n.$id) || n)
+                .filter((n) => liveById.has(n.$id) || !LocalEngine.isDeleted(n.$id, activeUserId));
               return next;
             });
           }
@@ -361,7 +365,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     try {
       // Load thread notes and deleted IDs
       const historyRaw = typeof window !== 'undefined' ? localStorage.getItem('kylrix_thread_notes_v2') : null;
-      const deletedIds = new Set<string>();
+      const deletedIds = new Set<string>(LocalEngine.getDeletedIds(activeUserId));
       if (historyRaw) {
         try {
           const history = JSON.parse(historyRaw);
@@ -722,6 +726,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated, opportunisticallyDecryptNote]);
 
   const removeNote = useCallback((noteId: string) => {
+    void LocalEngine.markDeleted(noteId, activeUserId);
     setNotes((prev) => prev.filter((note) => note.$id !== noteId));
     setTotalNotes((prev) => Math.max(0, prev - 1));
     // Also remove from pinned if it was pinned
@@ -732,7 +737,14 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     activeComposeNoteIdsRef.current.delete(noteId);
     // Invalidate caches
     invalidate(`note_${noteId}`);
-    if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
+    if (INITIAL_NOTES_CACHE_KEY) {
+      invalidate(INITIAL_NOTES_CACHE_KEY);
+      const cached = getCachedData<any>(INITIAL_NOTES_CACHE_KEY);
+      if (cached && Array.isArray(cached.notes)) {
+        const updated = cached.notes.filter((n: any) => n.$id !== noteId);
+        setCachedData(INITIAL_NOTES_CACHE_KEY, { ...cached, notes: updated, totalNotes: updated.length });
+      }
+    }
     // Best-effort RxDB cleanup
     if (typeof window !== 'undefined') {
       import('@/lib/webrtc/RxDBManager').then(({ getRxDB }) => {
@@ -742,7 +754,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         }).catch(() => {});
       }).catch(() => {});
     }
-  }, [invalidate, INITIAL_NOTES_CACHE_KEY]);
+  }, [invalidate, INITIAL_NOTES_CACHE_KEY, activeUserId, getCachedData, setCachedData]);
 
   const migrateDraftNoteId = useCallback((ephemeralId: string, savedId: string) => {
     if (!ephemeralId || !savedId || ephemeralId === savedId) return;
