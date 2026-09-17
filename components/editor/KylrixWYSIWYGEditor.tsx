@@ -296,6 +296,7 @@ export function KylrixWYSIWYGEditor({
   const viewRef = useRef<EditorView | null>(null);
   const lastEmittedValueRef = useRef(value);
   const isExternalSyncRef = useRef(false);
+  const lastEditAtRef = useRef(0);
 
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
@@ -416,6 +417,7 @@ export function KylrixWYSIWYGEditor({
         EditorView.updateListener.of((update) => {
           if (isExternalSyncRef.current) return;
           if (update.docChanged) {
+            lastEditAtRef.current = Date.now();
             const isUserChange = update.transactions.some(
               (tr) =>
                 tr.isUserEvent('input') ||
@@ -463,13 +465,21 @@ export function KylrixWYSIWYGEditor({
     if (!viewRef.current) return;
     if (value === lastEmittedValueRef.current) return;
 
+    // Guard: Don't clobber if editor is focused and user actively typed within last 2500ms
+    if (viewRef.current.hasFocus && Date.now() - lastEditAtRef.current < 2500) {
+      return;
+    }
+
     const currentDoc = viewRef.current.state.doc.toString();
     if (value !== currentDoc) {
       lastEmittedValueRef.current = value;
       isExternalSyncRef.current = true;
       try {
+        const sel = viewRef.current.state.selection;
+        const validSel = sel.main.to <= value.length ? sel : undefined;
         viewRef.current.dispatch({
           changes: { from: 0, to: currentDoc.length, insert: value },
+          selection: validSel,
         });
       } finally {
         isExternalSyncRef.current = false;

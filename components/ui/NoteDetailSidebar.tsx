@@ -242,7 +242,12 @@ export function NoteDetailSidebar({
         if (isDirty) return;
         if (!remoteNewer) return;
         // Only update if not currently focused typing
-        if (typeof document !== 'undefined' && document.hasFocus() && (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA')) {
+        if (typeof document !== 'undefined' && document.hasFocus() && (
+          document.activeElement?.tagName === 'INPUT' ||
+          document.activeElement?.tagName === 'TEXTAREA' ||
+          document.activeElement?.closest?.('.cm-content') ||
+          document.activeElement?.closest?.('.kylrix-cm-container')
+        )) {
           // Defer to next blur
           return;
         }
@@ -283,6 +288,8 @@ export function NoteDetailSidebar({
     // Never clobber while user is typing — preserves cursor/selection
     const active = typeof document !== 'undefined' ? document.activeElement : null;
     if (active === contentTextareaRef.current) return;
+    const isEditingInCM = Boolean(active && (active.closest?.('.cm-content') || active.closest?.('.kylrix-cm-container') || active.getAttribute?.('contenteditable') === 'true'));
+    if (isEditingInCM) return;
     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
       // Also guard title tag input focus
       const titleActive = active.getAttribute?.('placeholder') === 'Untitled note';

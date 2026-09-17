@@ -167,9 +167,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const [_isSearchingNotes, setIsSearchingNotes] = useState(false);
   const [_linkedNoteTitles, setLinkedNoteTitles] = useState<Record<string, string>>({});
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isEditingDescription, _setIsEditingDescription] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const lastEditAtRef = React.useRef(0);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isPriorityOpen, setIsPriorityOpen] = useState(false);
   const [_taskParticipantProfiles, setTaskParticipantProfiles] = useState<any[]>([]);
@@ -328,10 +328,12 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
 
   React.useEffect(() => {
     if (task) {
+      // Guard against clobbering active edits from incoming task context state updates
+      if (Date.now() - lastEditAtRef.current < 2000) return;
       if (!isEditingTitle) setEditTitle(task.title || '');
-      if (!isEditingDescription) setEditDescription(task.description || '');
+      setEditDescription(task.description || '');
     }
-  }, [task?.id, task?.title, task?.description, isEditingTitle, isEditingDescription]);
+  }, [task?.id, task?.title, task?.description, isEditingTitle]);
 
   const handleStartEditTitle = () => {
     const currentTask = task;
@@ -341,38 +343,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   };
 
   const handleSaveEditTitle = () => {
-    // Live copy already mirrored via pushLiveGoal while typing (notes 1:1).
+    // Live copy already mirrored via pushLiveGoal while typing.
     setIsEditingTitle(false);
   };
-
-  // 1:1 NoteDetailSidebar: dirty editor → pushLiveGoal (engine enqueues amber).
-  useEffect(() => {
-    if (!task) return;
-    if (!isEditingTitle && !isEditingDescription) return;
-    const nextTitle = isEditingTitle ? editTitle.trim() : task.title;
-    const nextDescription = isEditingDescription
-      ? editDescription.trim()
-      : (task.description || '');
-    if (
-      nextTitle === task.title &&
-      nextDescription === (task.description || '')
-    ) {
-      return;
-    }
-    if (!nextTitle) return;
-    pushLiveGoal({
-      ...task,
-      title: nextTitle,
-      description: nextDescription || undefined,
-      updatedAt: new Date()});
-  }, [
-    editTitle,
-    editDescription,
-    isEditingTitle,
-    isEditingDescription,
-    task,
-    pushLiveGoal,
-  ]);
 
   const handleAddSubtask = async () => {
     const currentTask = task;
@@ -718,7 +691,18 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             <input
               type="text"
               value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
+              onChange={(e) => {
+                const nextTitle = e.target.value;
+                setEditTitle(nextTitle);
+                lastEditAtRef.current = Date.now();
+                if (task && nextTitle.trim()) {
+                  pushLiveGoal({
+                    ...task,
+                    title: nextTitle,
+                    updatedAt: new Date(),
+                  });
+                }
+              }}
               onBlur={handleSaveEditTitle}
               onKeyDown={(e) => e.key === 'Enter' && handleSaveEditTitle()}
               autoFocus
@@ -822,7 +806,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
         <div className="p-5 rounded-[28px] bg-[#000000] border border-white/[0.08] shadow-[0_12px_32px_rgba(0,0,0,0.4)] flex flex-col">
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider font-mono">Objective details</span>
-            {task.description && !isEditingDescription && (
+            {task.description && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -839,7 +823,17 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
           <div className="min-h-[120px] w-full">
             <KylrixWYSIWYGEditor
               value={editDescription}
-              onChange={(nextVal) => setEditDescription(nextVal)}
+              onChange={(nextVal) => {
+                setEditDescription(nextVal);
+                lastEditAtRef.current = Date.now();
+                if (task) {
+                  pushLiveGoal({
+                    ...task,
+                    description: nextVal,
+                    updatedAt: new Date(),
+                  });
+                }
+              }}
               parentId={task.id}
               parentKind="task"
               placeholder="Provide detailed parameters, voice notes, or attached objects for this goal..."
