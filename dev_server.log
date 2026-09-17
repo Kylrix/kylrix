@@ -1,0 +1,140 @@
+
+> kylrix@1.0.0 dev /app
+> next dev --turbopack -H localhost -p ${PORT:-3005}
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3005
+- Network:       http://localhost:3005
+- Experiments (use with caution):
+  · optimizePackageImports
+  ✓ taint
+
+✓ Starting...
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 2.2s
+○ Compiling /app ...
+ HEAD /app 200 in 419ms (compile: 57ms, proxy.ts: 34ms, render: 329ms)
+✓ Finished writing to filesystem cache in 13.4s
+ GET /app 200 in 281ms (compile: 52ms, proxy.ts: 13ms, render: 217ms)
+ POST /app 200 in 797ms (compile: 65ms, proxy.ts: 72ms, render: 660ms)
+⨯ Error: Unauthorized
+    at listMyFlowInstallsSecure (lib/actions/secure-ops/flows.ts:45:26)
+  43 | export async function listMyFlowInstallsSecure(jwt?: string) {
+  44 |   const actor = await getActor(jwt);
+> 45 |   if (!actor?.$id) throw new Error('Unauthorized');
+     |                          ^
+  46 |   const rows = await FlowInstallService.listForInstaller(actor.$id);
+  47 |   return { success: true, data: rows };
+  48 | } {
+  digest: '1081951768'
+}
+ GET /app 200 in 201ms (compile: 10ms, proxy.ts: 12ms, render: 179ms)
+⨯ Error: Unauthorized
+    at listMyFlowInstallsSecure (lib/actions/secure-ops/flows.ts:45:26)
+  43 | export async function listMyFlowInstallsSecure(jwt?: string) {
+  44 |   const actor = await getActor(jwt);
+> 45 |   if (!actor?.$id) throw new Error('Unauthorized');
+     |                          ^
+  46 |   const rows = await FlowInstallService.listForInstaller(actor.$id);
+  47 |   return { success: true, data: rows };
+  48 | } {
+  digest: '1081951768'
+}
+ POST /app 500 in 764ms (compile: 24ms, proxy.ts: 12ms, render: 729ms)
+⨯ Error: Unauthorized
+    at listMyFlowInstallsSecure (lib/actions/secure-ops/flows.ts:45:26)
+  43 | export async function listMyFlowInstallsSecure(jwt?: string) {
+  44 |   const actor = await getActor(jwt);
+> 45 |   if (!actor?.$id) throw new Error('Unauthorized');
+     |                          ^
+  46 |   const rows = await FlowInstallService.listForInstaller(actor.$id);
+  47 |   return { success: true, data: rows };
+  48 | } {
+  digest: '1081951768'
+}
+ POST /app 500 in 550ms (compile: 45ms, proxy.ts: 8ms, render: 497ms)
+⨯ Error: Unauthorized
+    at listProjectsWithCollaborationsSecure (lib/actions/secure-ops/projects.ts:141:11)
+  139 |   const actor = await getActor(jwt);
+  140 |   if (!actor || !actor.$id) {
+> 141 |     throw new Error('Unauthorized');
+      |           ^
+  142 |   }
+  143 |
+  144 |   const tables = createSystemTablesDB(); {
+  digest: '1949629845'
+}
+ POST /app 500 in 593ms (compile: 14ms, proxy.ts: 5ms, render: 574ms)
+⨯ Error: Unauthorized
+    at listProjectsWithCollaborationsSecure (lib/actions/secure-ops/projects.ts:141:11)
+  139 |   const actor = await getActor(jwt);
+  140 |   if (!actor || !actor.$id) {
+> 141 |     throw new Error('Unauthorized');
+      |           ^
+  142 |   }
+  143 |
+  144 |   const tables = createSystemTablesDB(); {
+  digest: '1949629845'
+}
+ POST /app 500 in 443ms (compile: 10ms, proxy.ts: 7ms, render: 426ms)
+⨯ Error: Unauthorized
+    at listProjectsWithCollaborationsSecure (lib/actions/secure-ops/projects.ts:141:11)
+  139 |   const actor = await getActor(jwt);
+  140 |   if (!actor || !actor.$id) {
+> 141 |     throw new Error('Unauthorized');
+      |           ^
+  142 |   }
+  143 |
+  144 |   const tables = createSystemTablesDB(); {
+  digest: '1949629845'
+}
+ POST /app 500 in 472ms (compile: 10ms, proxy.ts: 6ms, render: 456ms)
+ GET /app 200 in 245ms (compile: 15ms, proxy.ts: 6ms, render: 224ms)
+⨯ Error: Unauthorized
+    at listMyFlowInstallsSecure (lib/actions/secure-ops/flows.ts:45:26)
+  43 | export async function listMyFlowInstallsSecure(jwt?: string) {
+  44 |   const actor = await getActor(jwt);
+> 45 |   if (!actor?.$id) throw new Error('Unauthorized');
+     |                          ^
+  46 |   const rows = await FlowInstallService.listForInstaller(actor.$id);
+  47 |   return { success: true, data: rows };
+  48 | } {
+  digest: '1081951768'
+}
+ POST /app 500 in 873ms (compile: 16ms, proxy.ts: 8ms, render: 850ms)
+⨯ Error: Unauthorized
+    at listProjectsWithCollaborationsSecure (lib/actions/secure-ops/projects.ts:141:11)
+  139 |   const actor = await getActor(jwt);
+  140 |   if (!actor || !actor.$id) {
+> 141 |     throw new Error('Unauthorized');
+      |           ^
+  142 |   }
+  143 |
+  144 |   const tables = createSystemTablesDB(); {
+  digest: '1949629845'
+}
+ POST /app 500 in 462ms (compile: 8ms, proxy.ts: 5ms, render: 448ms)
+⨯ Error: Unauthorized
+    at listMyFlowInstallsSecure (lib/actions/secure-ops/flows.ts:45:26)
+  43 | export async function listMyFlowInstallsSecure(jwt?: string) {
+  44 |   const actor = await getActor(jwt);
+> 45 |   if (!actor?.$id) throw new Error('Unauthorized');
+     |                          ^
+  46 |   const rows = await FlowInstallService.listForInstaller(actor.$id);
+  47 |   return { success: true, data: rows };
+  48 | } {
+  digest: '1081951768'
+}
+ POST /app 500 in 451ms (compile: 9ms, proxy.ts: 4ms, render: 438ms)
+⨯ Error: Unauthorized
+    at listProjectsWithCollaborationsSecure (lib/actions/secure-ops/projects.ts:141:11)
+  139 |   const actor = await getActor(jwt);
+  140 |   if (!actor || !actor.$id) {
+> 141 |     throw new Error('Unauthorized');
+      |           ^
+  142 |   }
+  143 |
+  144 |   const tables = createSystemTablesDB(); {
+  digest: '1949629845'
+}
+ POST /app 500 in 877ms (compile: 8ms, proxy.ts: 4ms, render: 865ms)

@@ -11,6 +11,7 @@ import {
   Bell,
   BellOff,
   Sparkles,
+  Wand2,
   FileText,
   CheckSquare,
 } from 'lucide-react';
@@ -398,16 +399,25 @@ export default function GoalObjectRow({ task }: Props) {
         <>
           <button
             type="button"
-            onClick={handlePinToggle}
-            className={`p-1.5 rounded-lg transition-all duration-200 ${
-              pinned
-                ? 'text-[#A855F7] bg-[#A855F7]/10'
-                : 'text-white/25 hover:text-[#A855F7] hover:bg-[#A855F7]/10'
-            }`}
-            title={pinned ? 'Unpin' : 'Pin'}
-            aria-label={pinned ? 'Unpin' : 'Pin'}
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(
+                new CustomEvent('kylrix:open-sidekick', {
+                  detail: {
+                    type: 'goal',
+                    id: task.id,
+                    title: task.title,
+                    content: task.description || '',
+                    tags: task.labels || [],
+                  },
+                })
+              );
+            }}
+            className="p-1.5 rounded-lg transition-all duration-200 text-white/25 hover:text-[#A855F7] hover:bg-[#A855F7]/10"
+            title="Sidekick Assist"
+            aria-label="Sidekick Assist"
           >
-            <Pin size={15} className={pinned ? 'fill-[#A855F7]' : ''} />
+            <Wand2 size={15} />
           </button>
           <ShareLockButton
             resourceType="goal"

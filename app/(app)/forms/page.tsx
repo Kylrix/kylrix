@@ -8,6 +8,7 @@ import {
     Trash2, 
     FileText, 
     Sparkles, 
+    Wand2,
     History, 
     Settings, 
     Pin, 
@@ -603,6 +604,7 @@ function FormCard({
     });
 
     const contextMenuItems = [
+        { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: () => onTogglePin(form) },
         { label: 'Workflows', icon: <Sparkles size={16} className="text-[#A855F7]" />, onClick: () => onOpenWorkflows(form) },
         { label: 'View Details', icon: <FileText size={16} />, onClick: onSelect },
         { 
@@ -615,7 +617,6 @@ function FormCard({
                 onSanitized: onUpdate
             })
         },
-        { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: () => onTogglePin(form) },
         ...accessControlItems,
         { label: 'Edit Schema', icon: <Edit size={16} />, onClick: () => onEdit(form) },
         { label: 'Settings', icon: <Settings size={16} />, onClick: () => onOpenSettings(form) },
@@ -671,6 +672,27 @@ function FormCard({
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                window.dispatchEvent(
+                                    new CustomEvent('kylrix:open-sidekick', {
+                                        detail: {
+                                            type: 'form',
+                                            id: form.$id,
+                                            title: form.title,
+                                            content: form.description || '',
+                                        },
+                                    })
+                                );
+                            }}
+                            className="p-1.5 rounded-lg transition-all duration-200 text-white/40 hover:text-[#6366F1] hover:bg-[#6366F1]/10"
+                            title="Sidekick Assist"
+                            aria-label="Sidekick Assist"
+                        >
+                            <Wand2 size={15} />
+                        </button>
                         <ShareLockButton
                             resourceType="form"
                             resourceId={form.$id}
@@ -687,7 +709,6 @@ function FormCard({
                         }`}>
                             {form.status || 'draft'}
                         </span>
-                        {pinned && <Pin size={13} className="rotate-45 text-[#F59E0B] fill-[#F59E0B]" />}
                     </div>
                 </div>
 
