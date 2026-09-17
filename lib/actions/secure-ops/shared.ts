@@ -674,8 +674,11 @@ export async function verifyResourcePermissionSecure(params: {
   }
 
   if (action === 'read') {
-    if (isPublic || isInheritedGeneralRead) return true;
-    if (isGuest && !actorId) return true; 
+    // Guest enabled: serve immediately to anyone (unauthenticated or logged in)
+    if (isGuest) return true;
+    // Public enabled: serve to logged-in / authenticated users
+    if (isPublic && actorId) return true;
+    if (isInheritedGeneralRead) return true;
   }
 
   // 3. Discrete Access Control: Collaborators table / legacy metadata.collaborators
