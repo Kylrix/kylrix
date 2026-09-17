@@ -110,7 +110,14 @@ export function SudoProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        if (isUnlocked && !options.forcePrompt && options.intent !== "upgrade") {
+        if (
+            isUnlocked &&
+            !options.forcePrompt &&
+            options.intent !== "upgrade" &&
+            options.intent !== "change-masterpass" &&
+            options.intent !== "initialize" &&
+            options.intent !== "reset"
+        ) {
             options.onSuccess();
             return;
         }

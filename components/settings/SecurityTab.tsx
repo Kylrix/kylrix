@@ -542,7 +542,7 @@ export function SecurityTab({
             vaultLoading
               ? 'Checking vault…'
               : needsSetup
-              ? 'Vault not configured'
+              ? 'Master password not configured'
               : isUnlocked
               ? 'Vault unlocked'
               : 'Vault locked'
@@ -551,7 +551,7 @@ export function SecurityTab({
             vaultLoading
               ? 'Verifying status…'
               : needsSetup
-              ? 'Set up a master password to encrypt your credentials and notes'
+              ? 'Set up a master password to encrypt your credentials, keychains, and private notes'
               : isUnlocked
               ? 'Decrypted encryption key active in memory'
               : 'Locked with your master password or passkey'
@@ -561,9 +561,9 @@ export function SecurityTab({
               <button
                 type="button"
                 onClick={onSetupVault}
-                className="shrink-0 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-[#6366F1]/40 bg-[#6366F1]/10 text-[#6366F1]"
+                className="shrink-0 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-[#6366F1]/40 bg-[#6366F1]/10 text-[#6366F1] hover:bg-[#6366F1]/20 transition-all"
               >
-                Configure
+                Set up vault
               </button>
             ) : vaultSetup ? (
               <button
