@@ -70,6 +70,10 @@ const AgenticPreviewDrawer = dynamic(
   () => import('../agentic/AgenticPreviewDrawer').then((m) => m.AgenticPreviewDrawer),
   { ssr: false },
 );
+const KeeperHubExecutionDrawer = dynamic(
+  () => import('./KeeperHubExecutionDrawer').then((m) => m.KeeperHubExecutionDrawer),
+  { ssr: false },
+);
 
 const ProjectSettingsDrawer = dynamic(() => import('../projects/ProjectSettingsDrawer'), { ssr: false });
 const ProjectVisibilityDrawer = dynamic(() => import('../projects/ProjectVisibilityDrawer'), {
@@ -488,6 +492,13 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
       return (
         <ReactionDetailDrawer
           data={drawerData}
+          onClose={onClose}
+        />
+      );
+    case 'keeperhub-execution':
+      return (
+        <KeeperHubExecutionDrawer
+          drawerData={drawerData}
           onClose={onClose}
         />
       );

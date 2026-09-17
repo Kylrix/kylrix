@@ -6,6 +6,7 @@ import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { AgenticMarkdown } from '@/components/agentic/AgenticMarkdown';
+import { KeeperHubWalletSelector } from '@/components/agentic/KeeperHubWalletSelector';
 import { getAgenticUserMessage } from '@/lib/agentic/errors';
 import toast from 'react-hot-toast';
 
@@ -568,6 +569,7 @@ export function SidekickDrawer({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <KeeperHubWalletSelector compact />
           <button
             type="button"
             onClick={() => setShowAttachedObjectsDrawer(true)}

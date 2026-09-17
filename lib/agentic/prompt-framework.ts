@@ -61,10 +61,12 @@ function buildWalletGuide(): string {
    - When user asks to find users, tip someone, or look up a username/avatar (e.g. "find user Alice", "search for Bob", "who can I send tokens to?"):
    - Emit toolCall "search_users" with args.query.
    - The UI automatically renders user directory cards with avatars and direct tip actions in chat.
-3. SENDING TOKENS:
-   - When user requests a transfer (e.g. "send 50 KYLRIX to @nath", "tip Alice 10 tokens", "transfer SOL to Bob"):
+3. SENDING TOKENS & KEEPERHUB ONCHAIN EXECUTION:
+   - When user requests a KeeperHub execution or onchain transfer (e.g. "Fund bounty: Send 0.001 Sepolia ETH to 0x... via KeeperHub", "Send 0.001 ETH via KeeperHub", "Execute transfer on Sepolia"):
+   - IMMEDIATELY emit toolCall "keeperhub_execute_transaction" (or "execute_transfer") with args: recipient, amount, symbol ("ETH" or "Sepolia ETH"), network ("Ethereum Sepolia"), chainId (11155111), intent ("Fund bounty: Send 0.001 Sepolia ETH").
+   - When user requests a standard tip or transfer (e.g. "send 50 KYLRIX to @nath"):
    - Emit toolCall "wallet_send_tokens" with args: token, amount, recipientUsername (or recipientUserId).
-   - If recipient is not yet determined, first emit "search_users" or ask to select recipient from the directory cards.
+   - If recipient is not yet determined, first emit "search_users" or ask to select recipient from directory cards.
 `;
 }
 
