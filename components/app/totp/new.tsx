@@ -196,8 +196,6 @@ export default function NewTotpDialog({
           ...form,
           url: null,
           tags: null,
-          isWorkspace: isCustomWorkspace,
-          projectId: isCustomWorkspace ? activeWorkspace!.id : undefined,
           isFavorite: false,
           isDeleted: false,
           createdAt: new Date().toISOString(),
