@@ -371,28 +371,29 @@ export function HangoutsDrawer({
               resourceName: 'this hangout',
               confirmLabel: 'Delete Hangout',
               onConfirm: async () => {
-                try {
-                  if (target.kind === 'secure') {
-                    await ChatService.deleteConversationFully(target.id);
+                if (target.kind === 'secure') {
+                  startTransition(() => {
                     setSecureChats((prev) => {
                       const next = prev.filter((c: any) => (c.$id || c.id) !== target.id);
                       void writeChatsListLocal(next);
                       return next;
                     });
-                  } else {
-                    const { ThreadService } = await import('@/lib/services/threads');
-                    await (ThreadService as any).deleteThread?.(target.id);
+                  });
+                  await ChatService.deleteConversationFully(target.id).catch(() => null);
+                } else {
+                  startTransition(() => {
                     setThreads((prev) => {
                       const next = prev.filter((t: any) => (t.$id || t.id) !== target.id);
                       void writeThreadsListLocal(next);
                       return next;
                     });
-                  }
-                  toast.success('Hangout deleted');
-                  void refreshChats();
-                } catch (err: any) {
-                  toast.error(err?.message || 'Failed to delete hangout');
+                  });
+                  const { ThreadService } = await import('@/lib/services/threads');
+                  await ThreadService.deleteThread(target.id).catch(() => null);
                 }
+                toast.success('Hangout deleted');
+                window.dispatchEvent(new CustomEvent('kylrix:trash-updated', { detail: { id: target.id } }));
+                void refreshChats();
               },
             });
           },

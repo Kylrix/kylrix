@@ -1278,6 +1278,7 @@ export const ChatWindow = ({
                             await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), null as any).catch(() => null);
                             await LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), []).catch(() => null);
                           } catch {}
+                          window.dispatchEvent(new CustomEvent('kylrix:trash-updated', { detail: { id: conversationId } }));
                           onBack?.();
                         } else {
                           toast.success("Conversation permanently wiped");
@@ -1291,6 +1292,7 @@ export const ChatWindow = ({
                               writeChatsListLocal(current.filter((c: any) => (c.$id || c.id) !== conversationId));
                             }
                           } catch {}
+                          window.dispatchEvent(new CustomEvent('kylrix:trash-updated', { detail: { id: conversationId } }));
                           onBack?.();
                         }
                         return;

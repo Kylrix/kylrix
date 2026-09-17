@@ -78,3 +78,8 @@ export async function postThreadMessageSecure(data: {
     parentMessageId: data.parentMessageId,
   });
 }
+
+export async function deleteThreadSecure(threadId: string, jwt?: string) {
+  const { deleteThreadSecure: delSecure } = await import('./misc');
+  return delSecure(threadId, jwt);
+}

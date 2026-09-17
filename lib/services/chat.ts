@@ -1707,9 +1707,16 @@ export const ChatService = {
     },
 
     async deleteConversationFully(conversationId: string) {
-        const conversation = await this.getConversationById(conversationId).catch(() => null);
-        const jwt = await getAuth();
-        const res = await deleteConversationFullyAction({ conversationId, jwt: jwt as any });
+        let conversation = null;
+        let res: any = null;
+        try {
+            conversation = await this.getConversationById(conversationId).catch(() => null);
+            const jwt = await getAuth();
+            res = await deleteConversationFullyAction({ conversationId, jwt: jwt as any });
+        } catch (err: any) {
+            console.warn('[deleteConversationFully] Non-fatal server error:', err?.message);
+        }
+
         this.clearConversationPreviewCache(conversationId);
         conversationKeyCache.delete(conversationId);
         try {
@@ -1722,7 +1729,7 @@ export const ChatService = {
             /* ignore local cache patch error */
         }
         const { success: _ignoredSuccess2, ...rest } = res || {};
-        return { ...rest, success: true, conversation };
+        return { ...rest, success: true, conversationId, conversation };
     },
 
     async updateConversation(conversationId: string, data: Partial<{
