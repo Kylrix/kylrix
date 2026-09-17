@@ -72,23 +72,22 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     const { isUnlocked, hasMasterpass, hasPasskey } = securityStatus;
 
     useEffect(() => {
-        if (user?.$id) {
-            ecosystemSecurity.fetchSecuritySnapshot(user.$id);
-            void import('@/lib/security/enclave').then(({ SecurityEnclave }) => {
-                void SecurityEnclave.hydrateFromRemote(user.$id!).catch(() => {});
-            });
+        const actorId = user?.$id || 'guest_local_user';
+        ecosystemSecurity.fetchSecuritySnapshot(actorId);
+        void import('@/lib/security/enclave').then(({ SecurityEnclave }) => {
+            void SecurityEnclave.hydrateFromRemote(actorId).catch(() => {});
+        });
 
-            if (!isUnlocked) {
-                const recoverMEK = async () => {
-                    const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
-                    const recovered = await masterPassCrypto.recoverFromServiceWorker();
-                    if (recovered) {
-                        console.log('[SudoContext] Session re-hydrated from Service Worker.');
-                        ecosystemSecurity.fetchSecuritySnapshot(user.$id, true);
-                    }
-                };
-                recoverMEK();
-            }
+        if (!isUnlocked) {
+            const recoverMEK = async () => {
+                const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+                const recovered = await masterPassCrypto.recoverFromServiceWorker();
+                if (recovered) {
+                    console.log('[SudoContext] Session re-hydrated from Service Worker.');
+                    ecosystemSecurity.fetchSecuritySnapshot(actorId, true);
+                }
+            };
+            recoverMEK();
         }
     }, [user?.$id, isUnlocked]);
 
