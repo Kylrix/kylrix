@@ -9,6 +9,7 @@ import { AI_REQUIRES_PRO_MESSAGE } from "@/lib/agentic/access";
 import { createSystemClient, createSystemTablesDB } from "@/lib/appwrite-admin";
 import { Query, ID } from "node-appwrite";
 import { TelemetryService } from "@/lib/services/telemetry";
+import { getAgenticUserMessage } from "@/lib/agentic/errors";
 
 const MODEL_NAME = process.env.GEMINI_MODEL_NAME || "gemini-2.0-flash";
 
@@ -286,7 +287,7 @@ Please utilize this contextual memory to optimize your recommendations if releva
     return { success: true, data: text };
   } catch (error: unknown) {
     console.error("AI Generation Error:", error);
-    return { success: false, error: "Failed to generate AI response" };
+    return { success: false, error: getAgenticUserMessage(error) };
   }
 }
 

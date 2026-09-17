@@ -3,6 +3,7 @@
 import { Query, ID } from 'node-appwrite';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { buildSidekickSystemInstruction, buildSidekickUserPrompt } from '@/lib/agentic/prompts/sidekick';
+import { getAgenticUserMessage } from '@/lib/agentic/errors';
 
 async function getActor(jwt?: string) {
   const { getActor } = await import('./secure-ops');
@@ -133,7 +134,7 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
     return { success: true, result: parsed, sessionId };
   } catch (err: any) {
     console.error('executeSidekickAction failed:', err);
-    return { success: false, error: err?.message || 'Sidekick execution failed' };
+    return { success: false, error: getAgenticUserMessage(err) };
   }
 }
 
@@ -236,6 +237,6 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
     return { success: true, response: text, sessionId: (session as any).$id };
   } catch (err: any) {
     console.error('executeSidekickChat failed:', err);
-    return { success: false, error: err?.message || 'Sidekick chat failed' };
+    return { success: false, error: getAgenticUserMessage(err) };
   }
 }
