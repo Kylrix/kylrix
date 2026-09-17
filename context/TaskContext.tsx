@@ -1268,6 +1268,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     (task: Task, options?: { pending?: boolean }) => {
       if (!task?.id) return;
       const ownerId = task.userId || task.creatorId || state.userId || 'guest';
+      const isPending = options?.pending !== false;
       const stamped: Task = {
         ...task,
         userId: ownerId,
@@ -1281,14 +1282,47 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         void setCachedData(tasksKey, { rows: updatedList, total: updatedList.length });
       }
       void persistGoalsLocalCopy(state.userId, updatedList);
-      if (options?.pending !== false) {
+      if (isPending) {
         // markPending schedules demand flush; nudge(true) forces microtask discrete flush
         autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString(), stamped);
         autonomicSyncEngine.nudge(true);
+      } else {
+        autonomicSyncEngine.markConfirmed(goalPendingKey(stamped.id));
+        autonomicSyncEngine.markConfirmed(stamped.id);
       }
     },
     [setCachedData, state.userId],
   );
+
+  // Sync completion event listener to update local task state with server-confirmed fields
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onSyncComplete = (event: Event) => {
+      const detail = (event as CustomEvent)?.detail;
+      if (detail?.kind !== 'goal') return;
+      const goalId = String(detail?.goalId || detail?.noteId || '').replace(/^goal:/, '').trim();
+      if (!goalId) return;
+
+      const syncedGoalRaw = detail?.syncedGoal;
+      if (syncedGoalRaw) {
+        const mapped = mapAppwriteTaskToTask(syncedGoalRaw);
+        dispatch({ type: 'UPSERT_TASK', payload: mapped });
+        void setCachedData(`goal_${mapped.id}`, mapped);
+        const updatedList = [mapped, ...tasksRef.current.filter((t) => t.id !== mapped.id)];
+        if (state.userId) {
+          const tasksKey = `f_tasks_${state.userId}`;
+          void setCachedData(tasksKey, { rows: updatedList, total: updatedList.length });
+        }
+        void persistGoalsLocalCopy(state.userId, updatedList);
+      }
+    };
+
+    window.addEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
+    return () => {
+      window.removeEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
+    };
+  }, [setCachedData, state.userId]);
 
   // Eagerly pull custom workspace tasks into local state when switching workspaces
   useEffect(() => {

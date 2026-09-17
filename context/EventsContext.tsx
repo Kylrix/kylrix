@@ -212,6 +212,9 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     if (options?.pending !== false) {
       autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), normalized);
       autonomicSyncEngine.nudge(true);
+    } else {
+      autonomicSyncEngine.markConfirmed(resourceId);
+      autonomicSyncEngine.markConfirmed(eventId);
     }
 
     if (typeof window !== 'undefined') {
