@@ -2,16 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
-import { useToast } from '@/components/ui/Toast';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 
 /**
  * Idle ambient runner: occasional workspace tips → LocalEngine notifications.
- * No create-drawer UX. No Appwrite table reads on the tick path.
+ * Unprompted notifications land in topbar / right sidebar integrated compact pill.
  */
 export function WorkspaceIntelAmbientProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const { showInfo } = useToast();
   const ranRef = useRef(false);
 
   useEffect(() => {
@@ -36,10 +34,6 @@ export function WorkspaceIntelAmbientProvider({ children }: { children: React.Re
           force,
         });
         if (cancelled || !res.emitted) return;
-        // Soft surface — tip also lives in the bell via LocalEngine
-        if (res.title && res.message && Math.random() < 0.55) {
-          showInfo(res.title, res.message);
-        }
       } catch {}
     };
 
@@ -61,7 +55,7 @@ export function WorkspaceIntelAmbientProvider({ children }: { children: React.Re
       if (bootTimer) clearTimeout(bootTimer);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [user, showInfo]);
+  }, [user]);
 
   return <>{children}</>;
 }

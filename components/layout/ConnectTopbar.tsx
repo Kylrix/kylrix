@@ -88,7 +88,8 @@ import {
   type PageMatch,
 } from './connect-topbar-utils';
 import { SyncIndicator } from './SyncIndicator';
-import { NotificationDrawer } from './NotificationDrawer';
+import { NotificationDrawer, CompactNotificationPill, type KylrixNotification } from './NotificationDrawer';
+import { useLayout } from '@/context/LayoutContext';
 
 
 
@@ -168,9 +169,11 @@ export default function ConnectTopbar({
     };
   }, []);
 
+  const { secondarySidebar, openSecondarySidebar, closeSecondarySidebar } = useLayout();
   const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username' | 'copied-referral'>('idle');
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [passiveNotification, setPassiveNotification] = useState<KylrixNotification | null>(null);
   const [notifHint, setNotifHint] = useState<{ id: string; title: string; description: string; accent: string } | null>(null);
   const [dismissedHintId, _setDismissedHintId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -265,24 +268,39 @@ export default function ConnectTopbar({
 
   const { suggestions } = useLocalContext();
 
-  // Watch for new intelligence pulses (suggestions) to show in Dynamic Island
+  // Listen for local notifications dispatched unprompted across ecosystem
+  useEffect(() => {
+    const onLocal = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { userId?: string; notification?: KylrixNotification } | undefined;
+      if (detail?.userId && user?.$id && detail.userId !== user.$id) return;
+      const row = detail?.notification;
+      if (row && !notificationsOpen && (!secondarySidebar.isOpen || (secondarySidebar.type !== 'notification' && secondarySidebar.type !== 'notifications'))) {
+        setPassiveNotification(row);
+      }
+    };
+    window.addEventListener('kylrix:local-notifications', onLocal as EventListener);
+    return () => window.removeEventListener('kylrix:local-notifications', onLocal as EventListener);
+  }, [user?.$id, notificationsOpen, secondarySidebar]);
+
+  // Watch for new intelligence pulses (suggestions)
   useEffect(() => {
     if (suggestions.length > 0) {
       const latest = suggestions[0];
-      // Only show hint if it's new, not already the hint, and not dismissed
-      if (latest.id !== dismissedHintId && (!notifHint || notifHint.id !== latest.id)) {
-        setNotifHint({
+      if (latest.id !== dismissedHintId && (!passiveNotification || passiveNotification.id !== latest.id)) {
+        setPassiveNotification({
           id: latest.id,
+          category: 'system',
           title: latest.title,
-          description: latest.description,
-          accent: latest.niche === 'intelligence' ? '#6366F1' : '#10B981'
+          message: latest.description,
+          time: 'Just now',
+          timestamp: Date.now(),
+          read: false,
+          accent: latest.niche === 'intelligence' ? '#6366F1' : '#10B981',
+          source: 'system',
         });
-        // Clear hint after 8 seconds to return to standard search expansion
-        const timer = setTimeout(() => setNotifHint(null), 8000);
-        return () => clearTimeout(timer);
       }
     }
-  }, [suggestions, notifHint, dismissedHintId]);
+  }, [suggestions, passiveNotification, dismissedHintId]);
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
   const appAccent = getAppColor(activeApp);
@@ -366,6 +384,9 @@ export default function ConnectTopbar({
     }, 10);
   }, []);
 
+  const isNotificationOpenOnDesktop = isDesktop && secondarySidebar.isOpen && (secondarySidebar.type === 'notification' || secondarySidebar.type === 'notifications');
+  const isNotificationOpenActive = isDesktop ? isNotificationOpenOnDesktop : notificationsOpen;
+
   const handleCloseAll = useCallback(() => {
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
@@ -373,8 +394,12 @@ export default function ConnectTopbar({
     setSearchShortcutsView(false);
     setNotificationsOpen(false);
     setNotifHint(null);
+    setPassiveNotification(null);
     closeAgenticDrawer();
-  }, [closeAgenticDrawer]);
+    if (secondarySidebar.type === 'notification' || secondarySidebar.type === 'notifications') {
+      closeSecondarySidebar();
+    }
+  }, [closeAgenticDrawer, secondarySidebar, closeSecondarySidebar]);
 
   const openAgenticFromTopbar = useCallback(() => {
     setProfileMenuAnchorEl(null);
@@ -396,14 +421,24 @@ export default function ConnectTopbar({
   }, []);
 
   const toggleNotifications = useCallback(() => {
-    if (!notificationsOpen) {
-      handleCloseAll();
-      setNotificationsOpen(true);
+    if (isDesktop) {
+      if (secondarySidebar.isOpen && (secondarySidebar.type === 'notification' || secondarySidebar.type === 'notifications')) {
+        closeSecondarySidebar();
+      } else {
+        handleCloseAll();
+        openSecondarySidebar('notification', 'notifications');
+      }
     } else {
-      setNotificationsOpen(false);
+      if (!notificationsOpen) {
+        handleCloseAll();
+        setNotificationsOpen(true);
+      } else {
+        setNotificationsOpen(false);
+      }
     }
     setNotifHint(null);
-  }, [notificationsOpen, handleCloseAll]);
+    setPassiveNotification(null);
+  }, [isDesktop, secondarySidebar, openSecondarySidebar, closeSecondarySidebar, notificationsOpen, handleCloseAll]);
 
   const openAppMenu = useCallback((event: MouseEvent<HTMLElement>) => {
     setAppMenuAnchorEl(event.currentTarget);
@@ -719,13 +754,13 @@ export default function ConnectTopbar({
   }, [handleCloseAll, openSearch, openAgenticFromTopbar, router]);
 
   const renderNotificationDrawer = () => {
+    if (isDesktop) return null;
     return (
       <NotificationDrawer
         isOpen={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
         appAccent={appAccent}
-        isDesktop={isDesktop}
-        nativeSidebar={!!nativeSidebar}
+        isDesktop={false}
       />
     );
   };
@@ -2598,6 +2633,27 @@ export default function ConnectTopbar({
                         <IconButton size="small" onClick={() => { setSearchOpen(false); setSearchQuery(''); }} sx={{ color: '#FFFFFF', opacity: 0.6, '&:hover': { opacity: 1 } }}><CloseIcon size={16} /></IconButton>
                       </Paper>
                     </motion.div>
+                  ) : passiveNotification && !isDesktop ? (
+                    <motion.div
+                      key="passive-pill-mobile"
+                      initial={{ scale: 0.9, opacity: 0, y: -6 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.9, opacity: 0, y: -6 }}
+                      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                      style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 'calc(100vw - 120px)' }}
+                    >
+                      <CompactNotificationPill
+                        notification={passiveNotification}
+                        onExpand={() => {
+                          setPassiveNotification(null);
+                          handleCloseAll();
+                          setNotificationsOpen(true);
+                        }}
+                        onDismiss={() => setPassiveNotification(null)}
+                        appAccent={appAccent}
+                        isDesktop={false}
+                      />
+                    </motion.div>
                   ) : isMounted ? (
                     <motion.div 
                       key="island-rest"
@@ -2622,7 +2678,7 @@ export default function ConnectTopbar({
                         transition: 'all 0.2s ease',
                         '&:hover': {
                           borderColor: 'rgba(99, 102, 241, 0.4)',
-                          bgcolor: '#201D1A',
+                          bgcolor: '#1C1917',
                           boxShadow: '0 0 20px rgba(99, 102, 241, 0.15)'
                         }
                       }}>
@@ -2652,7 +2708,7 @@ export default function ConnectTopbar({
                         transition: 'all 0.2s ease',
                         '&:hover': {
                           borderColor: 'rgba(99, 102, 241, 0.4)',
-                          bgcolor: '#201D1A',
+                          bgcolor: '#1C1917',
                           boxShadow: '0 0 20px rgba(99, 102, 241, 0.15)'
                         }
                       }}>
@@ -2665,6 +2721,31 @@ export default function ConnectTopbar({
                   )}
                 </AnimatePresence>
               ) : <Box sx={{ height: 44 }} />}
+
+              {/* Desktop Flush Passive Notification Pill Trigger */}
+              {passiveNotification && isDesktop && !searchOpen && (
+                <motion.div
+                  key="passive-pill-desktop"
+                  initial={{ scale: 0.95, opacity: 0, x: 10 }}
+                  animate={{ scale: 1, opacity: 1, x: 0 }}
+                  exit={{ scale: 0.95, opacity: 0, x: 10 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  style={{ position: 'relative', zIndex: 10, maxWidth: 360 }}
+                >
+                  <CompactNotificationPill
+                    notification={passiveNotification}
+                    onExpand={() => {
+                      setPassiveNotification(null);
+                      handleCloseAll();
+                      openSecondarySidebar('notification', 'notifications');
+                    }}
+                    onDismiss={() => setPassiveNotification(null)}
+                    appAccent={appAccent}
+                    isDesktop={true}
+                  />
+                </motion.div>
+              )}
+
               {user && (
                 <IconButton
                   onClick={(e: React.MouseEvent) => {
@@ -2675,17 +2756,17 @@ export default function ConnectTopbar({
                     width: 44,
                     height: 44,
                     borderRadius: '999px',
-                    bgcolor: notificationsOpen ? 'rgba(99,102,241,0.18)' : '#161412',
+                    bgcolor: isNotificationOpenActive ? 'rgba(99,102,241,0.18)' : '#161412',
                     border: '1px solid',
-                    borderColor: notificationsOpen ? 'rgba(99,102,241,0.45)' : 'rgba(255,255,255,0.1)',
-                    color: (suggestions.length > 0 || notifHint) ? '#6366F1' : '#FFFFFF',
+                    borderColor: isNotificationOpenActive ? 'rgba(99,102,241,0.45)' : 'rgba(255,255,255,0.1)',
+                    color: (suggestions.length > 0 || notifHint || passiveNotification) ? '#6366F1' : '#FFFFFF',
                     position: 'relative',
                     flexShrink: 0,
-                    '&:hover': { bgcolor: '#201D1A', borderColor: 'rgba(255,255,255,0.18)', color: '#FFFFFF' }
+                    '&:hover': { bgcolor: '#1C1917', borderColor: 'rgba(255,255,255,0.18)', color: '#FFFFFF' }
                   }}
                 >
                   <Bell size={18} strokeWidth={2.2} />
-                  {(suggestions.length > 0 || notifHint) && (
+                  {(suggestions.length > 0 || notifHint || passiveNotification) && (
                     <Box sx={{ position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: '50%', bgcolor: '#EC4899', border: '1.5px solid #000' }} />
                   )}
                 </IconButton>

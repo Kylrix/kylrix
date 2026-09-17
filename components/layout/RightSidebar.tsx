@@ -5,6 +5,7 @@ import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { useLayout } from '@/context/LayoutContext';
 import TaskDetails from '@/components/tasks/TaskDetails';
 import EventDetails from '@/components/events/EventDetails';
+import { NotificationContent } from '@/components/layout/NotificationDrawer';
 
 export default function RightSidebar() {
   const { secondarySidebar, closeSecondarySidebar } = useLayout();
@@ -15,7 +16,13 @@ export default function RightSidebar() {
         return <TaskDetails taskId={secondarySidebar.itemId || ''} />;
       case 'event':
         return <EventDetails eventId={secondarySidebar.itemId || ''} initialData={secondarySidebar.data} />;
-      // Add other cases (event, focus) as they are implemented
+      case 'notification':
+      case 'notifications':
+        return (
+          <Box sx={{ p: 2, height: '100%', boxSizing: 'border-box', bgcolor: '#000000' }}>
+            <NotificationContent onClose={closeSecondarySidebar} isDesktop={true} />
+          </Box>
+        );
       default:
         return null;
     }

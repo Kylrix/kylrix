@@ -24,6 +24,7 @@ import {
   Trash2,
   X as CloseIcon,
   RotateCw,
+  Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
@@ -59,15 +60,6 @@ export interface KylrixNotification {
   source?: 'kylrix' | 'system';
 }
 
-interface NotificationDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  appAccent: string;
-  isDesktop: boolean;
-  nativeSidebar?: boolean;
-}
-
-
 function formatTimeAgo(ts: number): string {
   const diffMin = Math.max(1, Math.round((Date.now() - ts) / 60000));
   if (diffMin < 60) return `${diffMin}m ago`;
@@ -75,13 +67,21 @@ function formatTimeAgo(ts: number): string {
   return `${Math.floor(diffMin / 1440)}d ago`;
 }
 
-export function NotificationDrawer({
-  isOpen,
+export interface NotificationContentProps {
+  onClose: () => void;
+  appAccent?: string;
+  isDesktop?: boolean;
+}
+
+/**
+ * Core Notification Presentation Component.
+ * Pure presentation & activity stream component integrated across mobile top-drawer and desktop right-sidebar.
+ */
+export function NotificationContent({
   onClose,
-  appAccent,
-  isDesktop,
-  nativeSidebar,
-}: NotificationDrawerProps) {
+  appAccent = '#6366F1',
+  isDesktop = false,
+}: NotificationContentProps) {
   const router = useRouter();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
@@ -105,7 +105,7 @@ export function NotificationDrawer({
   const readStorageKey = `kylrix_notif_read_${notifPartitionKey}`;
   const dismissedStorageKey = `kylrix_notif_dismissed_${notifPartitionKey}`;
 
-  // 2. Load persisted read/dismissed state for this specific account/identity
+  // Load persisted read/dismissed state for this specific account/identity
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
@@ -117,26 +117,22 @@ export function NotificationDrawer({
     } catch {}
   }, [readStorageKey, dismissedStorageKey]);
 
-  // 3. 0ms Initial Cache Hydration from LocalEngine for this partition & Follows
+  // Initial Cache Hydration from LocalEngine for this partition & Follows
   useEffect(() => {
     if (typeof window === 'undefined') return;
     let cancelled = false;
 
     void (async () => {
-      // Check primary partition cache first
       let cached = await LocalEngine.cacheGet<KylrixNotification[]>(cacheKey).catch(() => null);
       
-      // Fallback 1: Generic user notification cache
       if (!Array.isArray(cached) || cached.length === 0) {
         cached = await LocalEngine.cacheGet<KylrixNotification[]>(`kylrix_activity_notifications_${userId}`).catch(() => null);
       }
 
-      // Fallback 2: General notification cache
       if (!Array.isArray(cached) || cached.length === 0) {
         cached = await LocalEngine.cacheGet<KylrixNotification[]>('kylrix_activity_notifications_global').catch(() => null);
       }
 
-      // Fallback 3: Convert raw activity logs from LocalEngine if available
       if (!Array.isArray(cached) || cached.length === 0) {
         const rawLogs = await LocalEngine.cacheGet<any[]>(`f_notifications_${userId}`).catch(() => null);
         if (Array.isArray(rawLogs) && rawLogs.length > 0) {
@@ -158,7 +154,6 @@ export function NotificationDrawer({
         setNotifications(cached);
       }
 
-      // Merge LocalEngine workspace-intel tips (0 DB)
       try {
         const { listWorkspaceIntelNotifications } = await import('@/lib/agentic/local-notifications');
         const intel = await listWorkspaceIntelNotifications(userId);
@@ -195,38 +190,7 @@ export function NotificationDrawer({
     };
   }, [cacheKey, userId]);
 
-  // 3b. Realtime background sync of active user follows on drawer open
-  useEffect(() => {
-    if (!isOpen || typeof window === 'undefined') return;
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const discovered = new Set<string>();
-        if (userId && userId !== 'guest') {
-          const { SocialService } = await import('@/lib/services/social');
-          const appFollows = await SocialService.getFollowing(userId).catch(() => []);
-          appFollows.forEach((f: any) => {
-            const target = f.followingId || f.targetUserId || f.userId;
-            if (target) discovered.add(String(target).toLowerCase());
-          });
-        }
-        if (!cancelled && discovered.size > 0) {
-          setFollowingKeys((prev) => {
-            const next = new Set([...Array.from(prev), ...Array.from(discovered)]);
-            void LocalEngine.cacheSet('kylrix:follows', Array.from(next)).catch(() => {});
-            if (userId && userId !== 'guest') {
-              void LocalEngine.cacheSet(`kylrix:follows_${userId}`, Array.from(next)).catch(() => {});
-            }
-            return next;
-          });
-        }
-      } catch {}
-    })();
-    return () => { cancelled = true; };
-  }, [isOpen, userId]);
-
-  // 4. Stable Activity Harvesting from LocalEngine (Throttled, 0 loop)
+  // Stable Activity Harvesting from LocalEngine
   const harvestLiveActivity = useCallback(async (force: boolean = false) => {
     if (typeof window === 'undefined') return;
     const now = Date.now();
@@ -241,12 +205,10 @@ export function NotificationDrawer({
     try {
       const itemsMap = new Map<string, KylrixNotification>();
 
-      // Preserve existing valid cached items first
       for (const n of notificationsRef.current) {
         itemsMap.set(n.id, n);
       }
 
-      // A0. Workspace ambient tips from LocalEngine (never remote)
       try {
         const { listWorkspaceIntelNotifications } = await import('@/lib/agentic/local-notifications');
         const intel = await listWorkspaceIntelNotifications(userId);
@@ -255,7 +217,6 @@ export function NotificationDrawer({
         }
       } catch {}
 
-      // A. Real Appwrite Security & Session Logs (Cached with 30-min TTL in LocalEngine)
       if (user?.$id) {
         try {
           const cachedLogs = await LocalEngine.cacheGet<{ logs: any[]; at: number }>('kylrix_session_logs_cache', 30 * 60 * 1000).catch(() => null);
@@ -311,10 +272,8 @@ export function NotificationDrawer({
   }, [user?.$id, cacheKey, userId]);
 
   useEffect(() => {
-    if (isOpen) {
-      void harvestLiveActivity(false);
-    }
-  }, [isOpen, harvestLiveActivity]);
+    void harvestLiveActivity(false);
+  }, [harvestLiveActivity]);
 
   // Live merge when ambient workspace tip lands in LocalEngine
   useEffect(() => {
@@ -419,13 +378,11 @@ export function NotificationDrawer({
       }
       const nextArr = Array.from(nextSet);
 
-      // 1. LocalEngine 0ms persistence
       void LocalEngine.cacheSet('kylrix:follows', nextArr).catch(() => {});
       if (userId && userId !== 'guest') {
         void LocalEngine.cacheSet(`kylrix:follows_${userId}`, nextArr).catch(() => {});
       }
 
-      // 2. Realtime local broadcast
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('kylrix:follows-updated', { detail: nextArr }));
       }
@@ -434,7 +391,6 @@ export function NotificationDrawer({
 
     toast.success(currentlyFollowing ? `Unfollowed ${actor.name || 'user'}` : `Following ${actor.name || 'user'}`);
 
-    // 3. Background remote dispatch (optimistic)
     if (actor.userId && userId && userId !== 'guest') {
       void (async () => {
         try {
@@ -472,7 +428,6 @@ export function NotificationDrawer({
     }
   };
 
-  // Filter visible items
   const visibleNotifications = useMemo(() => {
     return notifications
       .filter((n) => !dismissedIds.has(n.id))
@@ -484,7 +439,6 @@ export function NotificationDrawer({
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   }, [notifications, dismissedIds, readIds]);
 
-  // Category unread counters
   const unreadCounts = useMemo(() => {
     const counts = { all: 0, replies: 0, likes: 0, zaps: 0, follows: 0, system: 0 };
     for (const n of visibleNotifications) {
@@ -498,7 +452,6 @@ export function NotificationDrawer({
     return counts;
   }, [visibleNotifications]);
 
-  // Active tab items
   const filteredNotifications = useMemo(() => {
     let list = visibleNotifications;
     if (activeTab !== 'all') {
@@ -506,8 +459,6 @@ export function NotificationDrawer({
     }
     return list.slice(0, 100);
   }, [visibleNotifications, activeTab]);
-
-  if (!isOpen) return null;
 
   const tabs: Array<{ id: NotificationCategory; label: string; icon: React.ReactNode }> = [
     { id: 'all', label: 'All', icon: <Bell size={13} /> },
@@ -534,10 +485,9 @@ export function NotificationDrawer({
     }
   };
 
-  // OpenBricks 4.0 Tactile Content Architecture (1:1 with renderProfilePanel)
-  const notificationBody = (
+  return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, width: '100%', maxWidth: '100%', height: '100%', flex: 1, boxSizing: 'border-box', px: 0.5 }}>
-      {/* 1. Header Identity Tile (Generous padding, avatar/icon slot, title, and close button) */}
+      {/* 1. Header Identity Tile */}
       <Box
         sx={{
           width: '100%',
@@ -549,13 +499,12 @@ export function NotificationDrawer({
           py: 1.75,
           borderRadius: '20px',
           border: '1px solid rgba(255,255,255,0.08)',
-          bgcolor: 'rgba(255,255,255,0.03)',
+          bgcolor: '#161412',
           minWidth: 0,
           flexShrink: 0,
           boxSizing: 'border-box',
         }}
       >
-        {/* Left Icon Slot */}
         <Box
           sx={{
             flexShrink: 0,
@@ -572,7 +521,6 @@ export function NotificationDrawer({
           <Bell size={20} strokeWidth={2.5} />
         </Box>
 
-        {/* Stacked Copy Column */}
         <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.4, pr: 0.5 }}>
           <Typography
             component="span"
@@ -610,17 +558,15 @@ export function NotificationDrawer({
             >
               {unreadCounts.all > 0 ? `${unreadCounts.all} UNREAD` : 'CAUGHT UP'}
             </Box>
-
           </Box>
         </Box>
 
-        {/* Action Controls & Close */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
           <IconButton
-            onClick={() => harvestLiveActivity()}
+            onClick={() => harvestLiveActivity(true)}
             disabled={syncing}
             size="small"
-            title="Sync Nostr relays & activity"
+            title="Sync activity"
             sx={{
               width: 32,
               height: 32,
@@ -628,7 +574,7 @@ export function NotificationDrawer({
               color: 'rgba(255,255,255,0.6)',
               bgcolor: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.06)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' },
+              '&:hover': { bgcolor: '#1C1917', color: 'white' },
             }}
           >
             <RotateCw size={14} className={syncing ? 'animate-spin text-[#F59E0B]' : ''} />
@@ -643,7 +589,7 @@ export function NotificationDrawer({
               borderRadius: '999px',
               color: 'rgba(255,255,255,0.4)',
               bgcolor: 'rgba(255,255,255,0.03)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' },
+              '&:hover': { bgcolor: '#1C1917', color: 'white' },
             }}
           >
             <CloseIcon size={14} />
@@ -719,7 +665,7 @@ export function NotificationDrawer({
         })}
       </Box>
 
-      {/* 3. Notifications List Column (Freely scrollable row stream) */}
+      {/* 3. Notifications List Column */}
       <Box
         sx={{
           display: 'flex',
@@ -750,7 +696,7 @@ export function NotificationDrawer({
               px: 2.25,
               py: 1.75,
               borderRadius: '18px',
-              bgcolor: notif.read ? '#161412' : '#1C1A18',
+              bgcolor: notif.read ? '#161412' : '#1C1917',
               border: '1px solid',
               borderColor: notif.read ? 'rgba(255,255,255,0.08)' : alpha(notif.accent, 0.35),
               color: '#FFFFFF',
@@ -760,13 +706,13 @@ export function NotificationDrawer({
               minWidth: 0,
               boxSizing: 'border-box',
               '&:hover': {
-                bgcolor: '#22201D',
+                bgcolor: '#1C1917',
                 borderColor: alpha(notif.accent, 0.5),
                 transform: 'translateY(-1px)',
               },
             }}
           >
-            {/* 1. Fixed Icon Slot */}
+            {/* Fixed Icon Slot */}
             <Box sx={{ position: 'relative', flexShrink: 0, mt: 0.25 }}>
               <Box
                 sx={{
@@ -782,10 +728,9 @@ export function NotificationDrawer({
               >
                 {renderCategoryIcon(notif.category)}
               </Box>
-
             </Box>
 
-            {/* 2. Structured Stacked Copy Column */}
+            {/* Structured Copy Column */}
             <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.4, pr: 0.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                 <Typography
@@ -856,7 +801,7 @@ export function NotificationDrawer({
                     boxSizing: 'border-box',
                     '&:hover': {
                       bgcolor: isFollowingActor(notif.actor)
-                        ? 'rgba(255,255,255,0.1)'
+                        ? '#1C1917'
                         : alpha(appAccent, 0.2),
                       borderColor: isFollowingActor(notif.actor)
                         ? 'rgba(255,255,255,0.2)'
@@ -898,21 +843,6 @@ export function NotificationDrawer({
                       >
                         {isFollowingActor(notif.actor) ? 'Mutual Connection' : 'Follows you'}
                       </Typography>
-                      <Typography
-                        component="span"
-                        sx={{
-                          color: '#FFFFFF',
-                          opacity: 0.65,
-                          fontWeight: 500,
-                          fontSize: '0.66rem',
-                          lineHeight: 1.2,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {isFollowingActor(notif.actor) ? 'You follow each other' : 'You are not following back yet'}
-                      </Typography>
                     </Box>
                   </Box>
 
@@ -930,7 +860,6 @@ export function NotificationDrawer({
                       alignItems: 'center',
                       gap: 0.4,
                       flexShrink: 0,
-                      boxShadow: isFollowingActor(notif.actor) ? 'none' : `0 2px 8px ${alpha(appAccent, 0.3)}`,
                       transition: 'all 0.15s ease',
                     }}
                   >
@@ -950,7 +879,7 @@ export function NotificationDrawer({
               )}
             </Box>
 
-            {/* 3. Dismiss & Right Action */}
+            {/* Dismiss & Action */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mt: 0.4 }}>
               <IconButton
                 size="small"
@@ -971,7 +900,6 @@ export function NotificationDrawer({
           </Box>
         ))}
 
-        {/* Clean Empty State */}
         {filteredNotifications.length === 0 && (
           <Box
             sx={{
@@ -1012,21 +940,13 @@ export function NotificationDrawer({
                 lineHeight: 1.35,
               }}
             >
-              {activeTab === 'replies'
-                ? 'Nostr replies and moment discussions will appear here.'
-                : activeTab === 'likes'
-                ? 'Likes and reactions on your posts.'
-                : activeTab === 'zaps'
-                ? 'Lightning zaps sent to you on Nostr.'
-                : activeTab === 'follows'
-                ? 'New followers and workspace invites.'
-                : 'All caught up across ecosystem and Nostr relays.'}
+              All caught up across ecosystem activity.
             </Typography>
           </Box>
         )}
       </Box>
 
-      {/* 4. Action Buttons (Mark All Read & Clear Side-by-Side matching Profile Panel) */}
+      {/* 4. Action Controls */}
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25, minWidth: 0, width: '100%', pt: 0.5 }}>
         <Button
           onClick={markAllRead}
@@ -1044,7 +964,7 @@ export function NotificationDrawer({
             fontWeight: 800,
             minWidth: 0,
             overflow: 'hidden',
-            '&:hover': { bgcolor: '#22201D', borderColor: 'rgba(255,255,255,0.2)' },
+            '&:hover': { bgcolor: '#1C1917', borderColor: 'rgba(255,255,255,0.2)' },
             '&:disabled': { opacity: 0.35 },
           }}
           startIcon={<CheckCheck size={14} style={{ flexShrink: 0 }} />}
@@ -1082,6 +1002,195 @@ export function NotificationDrawer({
       </Box>
     </Box>
   );
+}
+
+export interface CompactNotificationPillProps {
+  notification: KylrixNotification;
+  onExpand: () => void;
+  onDismiss: () => void;
+  onApply?: () => void;
+  appAccent?: string;
+  isDesktop?: boolean;
+}
+
+/**
+ * Compact Pill Banner Component for Passive / Unprompted Notifications.
+ * Strictly adheres to OpenBricks design tokens:
+ * - Canvas: Pitch-Black (#000000)
+ * - Container: Ash (#161412) with #1C1917 hover state
+ * - Geometry: Pill (999px radius)
+ * - Compact typography with truncated single-line copy preview and quick inline action controls.
+ */
+export function CompactNotificationPill({
+  notification,
+  onExpand,
+  onDismiss,
+  onApply,
+  appAccent = '#6366F1',
+}: CompactNotificationPillProps) {
+  const router = useRouter();
+
+  const handlePillClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onExpand();
+  };
+
+  const handleApplyClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onApply) {
+      onApply();
+    } else if (notification.actionHref) {
+      const href = sanitizeInAppHref(notification.actionHref);
+      if (href) router.push(href);
+      onDismiss();
+    } else {
+      onExpand();
+    }
+  };
+
+  const handleDismissClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDismiss();
+  };
+
+  return (
+    <Box
+      onClick={handlePillClick}
+      sx={{
+        height: 44,
+        maxHeight: 44,
+        px: 1.5,
+        borderRadius: '999px',
+        bgcolor: '#161412',
+        border: '1px solid',
+        borderColor: alpha(notification.accent || appAccent, 0.35),
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.25,
+        color: '#FFFFFF',
+        cursor: 'pointer',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        minWidth: 0,
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        position: 'relative',
+        zIndex: 10,
+        '&:hover': {
+          bgcolor: '#1C1917',
+          borderColor: alpha(notification.accent || appAccent, 0.55),
+          boxShadow: `0 0 20px ${alpha(notification.accent || appAccent, 0.2)}`,
+        },
+      }}
+    >
+      {/* Icon Badge */}
+      <Box
+        sx={{
+          width: 28,
+          height: 28,
+          borderRadius: '999px',
+          bgcolor: alpha(notification.accent || appAccent, 0.2),
+          color: notification.accent || appAccent,
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <Sparkles size={14} strokeWidth={2.4} />
+      </Box>
+
+      {/* Single-line Truncated Copy */}
+      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        <Typography
+          sx={{
+            fontFamily: 'var(--font-satoshi)',
+            fontWeight: 800,
+            fontSize: '0.8rem',
+            color: '#FFFFFF',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: 1.2,
+          }}
+        >
+          {notification.title}
+        </Typography>
+        <Typography
+          sx={{
+            fontFamily: 'var(--font-satoshi)',
+            fontWeight: 500,
+            fontSize: '0.78rem',
+            color: 'rgba(255,255,255,0.7)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: 1.2,
+            display: { xs: 'none', sm: 'inline' },
+          }}
+        >
+          — {notification.message}
+        </Typography>
+      </Box>
+
+      {/* Quick Action Controls: Open/Apply + Dismiss */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+        <Button
+          size="small"
+          onClick={handleApplyClick}
+          sx={{
+            minWidth: 0,
+            px: 1.25,
+            py: 0.4,
+            height: 26,
+            borderRadius: '999px',
+            bgcolor: alpha(appAccent, 0.2),
+            color: appAccent,
+            border: `1px solid ${alpha(appAccent, 0.35)}`,
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            textTransform: 'none',
+            lineHeight: 1,
+            '&:hover': {
+              bgcolor: alpha(appAccent, 0.35),
+            },
+          }}
+        >
+          {notification.actionHref ? 'Open' : 'View'}
+        </Button>
+
+        <IconButton
+          size="small"
+          onClick={handleDismissClick}
+          sx={{
+            width: 26,
+            height: 26,
+            color: 'rgba(255,255,255,0.5)',
+            '&:hover': { color: '#FF4D4D', bgcolor: 'rgba(255,77,77,0.15)' },
+          }}
+        >
+          <CloseIcon size={13} />
+        </IconButton>
+      </Box>
+    </Box>
+  );
+}
+
+interface NotificationDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  appAccent: string;
+  isDesktop: boolean;
+  nativeSidebar?: boolean;
+}
+
+export function NotificationDrawer({
+  isOpen,
+  onClose,
+  appAccent,
+  isDesktop,
+  nativeSidebar,
+}: NotificationDrawerProps) {
+  if (!isOpen) return null;
 
   // Desktop View (Matching Native Sidebar & Right Drawer)
   if (isDesktop) {
@@ -1094,7 +1203,7 @@ export function NotificationDrawer({
           title="Notifications"
         >
           <Box sx={{ p: 3, overflowX: 'hidden', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', bgcolor: '#000000' }}>
-            {notificationBody}
+            <NotificationContent onClose={onClose} appAccent={appAccent} isDesktop={true} />
           </Box>
         </NativeSidebarMount>
       );
@@ -1133,12 +1242,12 @@ export function NotificationDrawer({
           </IconButton>
         </Box>
 
-        {notificationBody}
+        <NotificationContent onClose={onClose} appAccent={appAccent} isDesktop={true} />
       </Drawer>
     );
   }
 
-  // Mobile Topbar Dropdown Panel (Exact 1:1 match with renderProfilePanel)
+  // Mobile Topbar Dropdown Panel
   return (
     <Box
       data-kylrix-topbar-panel
@@ -1179,7 +1288,7 @@ export function NotificationDrawer({
           }}
         >
           <Box sx={{ p: { xs: 1.5, sm: 2.25 }, boxSizing: 'border-box' }}>
-            {notificationBody}
+            <NotificationContent onClose={onClose} appAccent={appAccent} isDesktop={false} />
           </Box>
         </Paper>
       </Box>
