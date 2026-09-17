@@ -24,6 +24,7 @@ import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
+import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
 
 
 // Stable TOTPCard - defined outside parent to prevent remount on every currentTime tick (1s).
@@ -58,6 +59,7 @@ function TOTPCardStable({
   const { activeWorkspace } = useWorkspace();
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
+  const [showWorkflows, setShowWorkflows] = useState(false);
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
   const [displayTotp, setDisplayTotp] = useState<TotpItem>(totp);
   const [isVaultUnlockedState, setIsVaultUnlockedState] = useState(() => {
@@ -266,6 +268,7 @@ function TOTPCardStable({
   const isSelected = selection.isSelected(totp.$id, 'totp');
 
   const contextMenuItems = useMemo(() => [
+      { label: 'Workflows', icon: <Shield size={16} className="text-[#A855F7]" />, onClick: () => setShowWorkflows(true) },
       { label: pinned ? 'Unpin Code' : 'Pin Code', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: handlePinToggle },
       { label: 'Select', icon: <CheckSquare size={16} className="text-[#10B981]" />, onClick: () => selection.enterSelectMode('totp', totp.$id) },
       { label: 'Share Options', icon: <LinkIcon size={16} className="text-emerald-500" />, submenu: [
@@ -283,6 +286,7 @@ function TOTPCardStable({
   };
   const radius = 10; const circumference = 2 * Math.PI * radius; const strokeDashoffset = circumference - (progress / 100) * circumference;
   return (
+    <>
     <div
       onClick={() => {
         if (selection.isSelectMode) {
@@ -327,6 +331,18 @@ function TOTPCardStable({
         <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}><button onClick={handlePinToggle} className={`p-1.5 rounded-lg transition-all duration-200 ${pinned ? 'text-[#F59E0B] bg-[#F59E0B]/5' : 'text-white/20 hover:text-[#F59E0B] hover:bg-[#F59E0B]/5'}`} title={pinned ? 'Unpin' : 'Pin'}><Pin size={16} className={pinned ? 'fill-[#F59E0B]' : ''} /></button><ShareLockButton resourceType="totp" resourceId={totp.$id} isPublic={!!totp.isPublic} isGuest={!!totp.isGuest} accentColor="#10B981" canPublish={true} getCustomShareUrl={async () => { let currentDek = (totp as any).dek; if (!currentDek) { const { decryptField, encryptField } = await import('@/lib/masterpass-crypto'); const { ecosystemSecurity } = await import('@/lib/ecosystem/security'); const { VaultService } = await import('@/lib/appwrite/vault'); const newDek = await ecosystemSecurity.generateRandomMEK(); const rawKey = await crypto.subtle.exportKey("raw", newDek); const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey))); const wrappedDek = await encryptField(dekBase64); let decryptedSecret = totp.secretKey; if (looksEncrypted(decryptedSecret)) decryptedSecret = await decryptField(decryptedSecret); let decryptedIssuer = totp.issuer; if (looksEncrypted(decryptedIssuer)) decryptedIssuer = await decryptField(decryptedIssuer); let decryptedAccount = totp.accountName; if (looksEncrypted(decryptedAccount)) decryptedAccount = await decryptField(decryptedAccount); await VaultService.updateTOTPSecret(totp.$id, { dek: wrappedDek, secretKey: decryptedSecret, issuer: decryptedIssuer ?? undefined, accountName: decryptedAccount ?? undefined}); totp.dek = wrappedDek; totp.secretKey = decryptedSecret; currentDek = wrappedDek; } let keyFragment = ''; if (currentDek) { const { decryptField } = await import('@/lib/masterpass-crypto'); const dekBase64 = await decryptField(currentDek); const urlSafeDek = dekBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); keyFragment = `/${urlSafeDek}`; } const { buildPublicResourceUrl } = await import('@/lib/share/public-url'); const baseUrl = buildPublicResourceUrl('totp', totp.$id); return keyFragment ? `${baseUrl}${keyFragment}` : baseUrl; }} /></div>
       </div>
     </div>
+    <ObjectWorkflowsDrawer
+      isOpen={showWorkflows}
+      onClose={() => setShowWorkflows(false)}
+      objectType="totp"
+      targetObject={{
+        id: totp.$id,
+        title: (displayTotp as any).issuer || 'TOTP Code',
+        content: (displayTotp as any).accountName || '',
+        raw: totp,
+      }}
+    />
+    </>
   );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Check,
   Pin,
@@ -22,6 +22,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { ObjectCard } from '@/components/objects/ObjectCard';
 import { ObjectCardMeta, PRIORITY_COLORS } from '@/components/objects/ObjectCardMeta';
 import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
+import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
 import { goalToCard } from '@/lib/objects/adapters';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useResourcePins } from '@/context/ResourcePinContext';
@@ -64,6 +65,7 @@ function formatDue(due?: Date | null) {
 
 /** Goal tile — uniform ObjectCard; footer = priority + colored tags (no status copy). */
 export default function GoalObjectRow({ task }: Props) {
+  const [showWorkflows, setShowWorkflows] = useState(false);
   const {
     selectTask,
     completeTask,
@@ -261,6 +263,11 @@ export default function GoalObjectRow({ task }: Props) {
         },
       },
       {
+        label: 'Workflows',
+        icon: <FileText size={16} className="text-[#A855F7]" />,
+        onClick: () => setShowWorkflows(true),
+      },
+      {
         label: 'Sidekick',
         icon: <Sparkles size={16} className="text-[#A855F7]" />,
         onClick: () => {
@@ -277,33 +284,6 @@ export default function GoalObjectRow({ task }: Props) {
           );
         },
       },
-      ...(isPro
-        ? [
-            {
-              label: 'Integrate',
-              icon: <FileText size={16} className="text-[#3B82F6]" />,
-              submenu: [
-                {
-                  label: 'Convert to Idea',
-                  icon: <FileText size={16} className="text-[#3B82F6]" />,
-                  onClick: async () => {
-                    try {
-                      const { createNote } = await import('@/lib/appwrite');
-                      await createNote({
-                        title: locked ? 'Goal' : task.title || 'Untitled goal',
-                        content: locked ? '' : task.description || '',
-                        tags: ['from:goal'],
-                      } as any);
-                      toast.success('Idea created from goal');
-                    } catch (err: any) {
-                      toast.error(err?.message || 'Failed to create idea');
-                    }
-                  },
-                },
-              ],
-            },
-          ]
-        : []),
       {
         label: 'Collaborators',
         icon: <Share2 size={16} />,
@@ -392,6 +372,7 @@ export default function GoalObjectRow({ task }: Props) {
   }, [task, pinned, isActuallyLocked]);
 
   return (
+    <>
     <ObjectCard
       item={item}
       variant="task"
@@ -451,5 +432,18 @@ export default function GoalObjectRow({ task }: Props) {
         />
       }
     />
+    <ObjectWorkflowsDrawer
+      isOpen={showWorkflows}
+      onClose={() => setShowWorkflows(false)}
+      objectType="goal"
+      targetObject={{
+        id: task.id,
+        title: task.title || 'Untitled Goal',
+        description: task.description || '',
+        tags: task.labels || [],
+        raw: task,
+      }}
+    />
+    </>
   );
 }

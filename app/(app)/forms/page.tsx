@@ -36,6 +36,8 @@ import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
+import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
+import { FormResponsesWorkflowDrawer } from '@/components/forms/FormResponsesWorkflowDrawer';
 
 
 
@@ -57,6 +59,10 @@ export default function FormsDashboard() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [selectedForm, setSelectedForm] = useState<Forms | null>(null);
     const [selectedDraft, setSelectedDraft] = useState<FormDraft | null>(null);
+
+    const [showWorkflows, setShowWorkflows] = useState(false);
+    const [showResponsesWorkflow, setShowResponsesWorkflow] = useState(false);
+    const [workflowTargetForm, setWorkflowTargetForm] = useState<Forms | null>(null);
 
     const handleCreate = () => {
         setSelectedForm(null);
@@ -438,10 +444,39 @@ export default function FormsDashboard() {
                                                 onOpenSettings={handleOpenSettings}
                                                 onDelete={handleDelete}
                                                 onUpdate={() => fetchForms(false)}
+                                                onOpenWorkflows={(f) => {
+                                                    setWorkflowTargetForm(f);
+                                                    setShowWorkflows(true);
+                                                }}
                                             />
                                         ))}
                                     </div>
                                 )}
+                            </>
+                        )}
+                        {workflowTargetForm && (
+                            <>
+                                <ObjectWorkflowsDrawer
+                                    isOpen={showWorkflows}
+                                    onClose={() => setShowWorkflows(false)}
+                                    objectType="form"
+                                    targetObject={{
+                                        id: workflowTargetForm.$id,
+                                        title: workflowTargetForm.title || 'Form',
+                                        description: workflowTargetForm.description || '',
+                                        raw: workflowTargetForm,
+                                    }}
+                                    onOpenFormResponsesWorkflow={() => setShowResponsesWorkflow(true)}
+                                />
+                                <FormResponsesWorkflowDrawer
+                                    isOpen={showResponsesWorkflow}
+                                    onClose={() => setShowResponsesWorkflow(false)}
+                                    formId={workflowTargetForm.$id}
+                                    formTitle={workflowTargetForm.title || 'Form'}
+                                    submissions={(workflowTargetForm as any).submissions || (workflowTargetForm as any).responses || []}
+                                    liveFields={workflowTargetForm.schema ? (typeof workflowTargetForm.schema === 'string' ? JSON.parse(workflowTargetForm.schema) : workflowTargetForm.schema) : []}
+                                    activeWorkspaceId={activeWorkspace?.id || null}
+                                />
                             </>
                         )}
 
@@ -540,7 +575,8 @@ function FormCard({
     onEdit,
     onOpenSettings,
     onDelete,
-    onUpdate
+    onUpdate,
+    onOpenWorkflows
 }: {
     form: any;
     onSelect: () => void;
@@ -549,6 +585,7 @@ function FormCard({
     onOpenSettings: (form: any) => void;
     onDelete: (form: any) => void;
     onUpdate: () => void;
+    onOpenWorkflows: (form: any) => void;
 }) {
     const { isPinned: isResourcePinned } = useResourcePins();
     const contextMenu = useContextMenu();
@@ -566,6 +603,7 @@ function FormCard({
     });
 
     const contextMenuItems = [
+        { label: 'Workflows', icon: <Sparkles size={16} className="text-[#A855F7]" />, onClick: () => onOpenWorkflows(form) },
         { label: 'View Details', icon: <FileText size={16} />, onClick: onSelect },
         { 
             label: 'Sanitize', 

@@ -25,6 +25,7 @@ import { useSection } from '@/context/SectionContext';
 import { ShareLockButton } from '../share/ShareLockButton';
 import { useAccessControlMenuItems } from '../share/AccessControlMenuItems';
 import { SidekickDrawer } from '@/components/agentic/SidekickDrawer';
+import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
 
 import { resolveNoteCardTitle, isEncryptedCiphertext } from '@/constants/noteTitle';
 import { getNotePublicState, lockNote, unlockNote } from '@/lib/appwrite';
@@ -52,6 +53,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const [mounted, setMounted] = React.useState(false);
   const [isAIProcessing, setIsAIProcessing] = React.useState(false);
   const [showSidekick, setShowSidekick] = React.useState(false);
+  const [showWorkflows, setShowWorkflows] = React.useState(false);
 
   const { enterSelectMode } = useSelection();
   const contextMenu = useContextMenu();
@@ -370,18 +372,16 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     ...accessControlItems,
     { label: isLocked ? 'Unlock' : 'Lock', icon: isLocked ? <Unlock size={16} /> : <PrivateIcon size={16} />, onClick: () => { handleLockToggle(); } },
     
+    {
+      label: 'Workflows',
+      icon: <TodoIcon size={16} className="text-[#A855F7]" />,
+      onClick: () => { setShowWorkflows(true); },
+    },
     ...(isPro ? [
       { 
         label: 'Sidekick', 
         icon: <Sparkles size={16} className="text-[#A855F7]" />, 
         onClick: () => { setShowSidekick(true); },
-      },
-      {
-        label: 'Integrate',
-        icon: <TodoIcon size={16} className="text-[#3B82F6]" />,
-        submenu: [
-            { label: 'Convert to Goal', icon: <TodoIcon size={16} className="text-[#3B82F6]" />, onClick: () => { handleCreateTodo(); } },
-        ]
       }
     ] : []),
     { label: 'Collaborators', icon: <ShareIcon size={16} />, onClick: openShare },
@@ -549,6 +549,18 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         open={showSidekick}
         onClose={() => setShowSidekick(false)}
         target={showSidekick ? { type: 'note', id: note.$id, title: liveNote.title || cardTitle, content: liveNote.content || '' } : null}
+      />
+      <ObjectWorkflowsDrawer
+        isOpen={showWorkflows}
+        onClose={() => setShowWorkflows(false)}
+        objectType="idea"
+        targetObject={{
+          id: note.$id,
+          title: liveNote.title || cardTitle,
+          content: liveNote.content || '',
+          tags: Array.isArray(liveNote.tags) ? (liveNote.tags as string[]) : [],
+          raw: liveNote,
+        }}
       />
     </>
   );
