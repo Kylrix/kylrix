@@ -1272,7 +1272,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         ...task,
         userId: ownerId,
         creatorId: task.creatorId || ownerId,
-        updatedAt: new Date()};
+        updatedAt: task.updatedAt || new Date()};
       dispatch({ type: 'UPSERT_TASK', payload: stamped });
       void setCachedData(`goal_${stamped.id}`, stamped);
       const updatedList = [stamped, ...tasksRef.current.filter((t) => t.id !== stamped.id)];
@@ -1407,7 +1407,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       }),
       ...updates,
       id,
-      updatedAt: new Date(),
+      updatedAt: updates.updatedAt || ((updates as any)._dekViewDecrypted && currentTask?.updatedAt ? currentTask.updatedAt : new Date()),
     };
 
     pushLiveGoal(mergedTask);
@@ -1852,7 +1852,14 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       filtered = filtered.filter(t => t.projectId === state.filter.projectId);
     }
     if (state.filter.labels?.length) {
-      filtered = filtered.filter(t => t.labels.some(l => state.filter.labels!.includes(l)));
+      filtered = filtered.filter(t => {
+        const userLabels = t.labels || [];
+        const extractedTags = Array.isArray((t as any).tags)
+          ? (t as any).tags.filter((tag: string) => !String(tag).startsWith('project:') && !String(tag).startsWith('source:'))
+          : [];
+        const allTaskTags = [...userLabels, ...extractedTags];
+        return allTaskTags.some(l => state.filter.labels!.includes(l));
+      });
     }
     if (!state.filter.showCompleted) {
       filtered = filtered.filter(t => t.status !== 'done');
@@ -1952,7 +1959,13 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   }, [state.projects, state.selectedProjectId]);
 
   const getTagFilterOptions = useCallback((): string[] => {
-    const fromTasks = state.tasks.flatMap((task) => task.labels || []);
+    const fromTasks = state.tasks.flatMap((task) => {
+      const userLabels = task.labels || [];
+      const extractedTags = Array.isArray((task as any).tags)
+        ? (task as any).tags.filter((t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'))
+        : [];
+      return [...userLabels, ...extractedTags];
+    });
     const fromEcosystem = state.ecosystemTags.map((tag) => tag.name);
     return Array.from(new Set([...fromEcosystem, ...fromTasks].filter((name): name is string => Boolean(name)))).sort((a, b) =>
       a.localeCompare(b, undefined, { sensitivity: 'base' }),
