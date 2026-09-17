@@ -560,7 +560,6 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 type="button"
                 onClick={() => {
                   void navigator.clipboard.writeText(task.id);
-                  showSuccess('Copied Goal ID', task.id);
                 }}
                 className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-white/70 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
                 title="Click to copy Goal ID"
@@ -575,7 +574,6 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 type="button"
                 onClick={() => {
                   void navigator.clipboard.writeText(task.projectId!);
-                  showSuccess('Copied Workspace ID', task.projectId!);
                 }}
                 className="px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-[11px] font-mono text-indigo-300 hover:text-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
                 title="Click to copy Workspace ID"
@@ -830,7 +828,6 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 onClick={(e) => {
                   e.stopPropagation();
                   navigator.clipboard.writeText(task.description || '');
-                  showSuccess('Copied', 'Objective details copied to clipboard');
                 }}
                 className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                 title="Copy details"

@@ -203,7 +203,6 @@ export default function GoalObjectRow({ task }: Props) {
       }
       const url = await getGoalShareUrlWithDek(task.id, task.dek);
       await navigator.clipboard.writeText(url);
-      toast.success(locked ? 'Public link copied with key' : 'Public link copied');
     } catch (err: any) {
       toast.error(err?.message || 'Failed to copy share link');
     }

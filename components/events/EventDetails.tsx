@@ -630,7 +630,6 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
             type="button"
             onClick={() => {
               navigator.clipboard.writeText(`${window.location.origin}/events/${eventIdValue}`);
-              toast.success('Event link copied!');
             }}
             className="w-full py-3 px-4 rounded-[14px] bg-[#1C1A18] hover:bg-[#242220] border border-[#34322F] hover:border-[#6366F1] text-white font-bold text-sm text-center font-satoshi transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
