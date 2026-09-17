@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Credentials } from '@/lib/appwrite/types';
-import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Share2, ShieldCheck, FileCode2 } from 'lucide-react';
+import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Wand2, Share2, ShieldCheck, FileCode2 } from 'lucide-react';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { useSelection } from '@/context/SelectionContext';
@@ -264,8 +264,8 @@ export default function CredentialItem({
   };
 
   const contextMenuItems = [
-    { label: "Workflows", icon: <Lock size={16} className="text-[#A855F7]" />, onClick: () => setShowWorkflows(true) },
     { label: pinned ? "Unpin Secret" : "Pin Secret", icon: <Pin size={16} className={pinned ? "text-[#F59E0B]" : ""} />, onClick: () => onTogglePin?.() },
+    { label: "Workflows", icon: <Lock size={16} className="text-[#A855F7]" />, onClick: () => setShowWorkflows(true) },
     { label: "Select", icon: <CheckSquare size={16} className="text-[#10B981]" />, onClick: () => selection.enterSelectMode('credential', credential.$id) },
     { label: "Copy Public Link (DEK)", icon: <Share2 size={16} className="text-emerald-500" />, onClick: handleShareLink },
     ...accessControlItems,
@@ -398,14 +398,27 @@ export default function CredentialItem({
         )}
       </div>
 
-      {/* Actions (Pin, Lock/Link) */}
+      {/* Actions (Sidekick, Lock/Link) */}
       <div className="relative flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
         <button 
-          onClick={(e) => { e.stopPropagation(); onTogglePin?.(); }}
-          className={`p-1.5 rounded-lg transition-all duration-200 ${pinned ? 'text-[#F59E0B] bg-[#F59E0B]/5' : 'text-white/20 hover:text-[#F59E0B] hover:bg-[#F59E0B]/5'}`}
-          title={pinned ? 'Unpin' : 'Pin'}
+          onClick={(e) => {
+            e.stopPropagation();
+            window.dispatchEvent(
+              new CustomEvent('kylrix:open-sidekick', {
+                detail: {
+                  type: 'credential',
+                  id: credential.$id,
+                  title: (displayCredential as any).name,
+                  content: (displayCredential as any).username || '',
+                },
+              })
+            );
+          }}
+          className="p-1.5 rounded-lg transition-all duration-200 text-white/20 hover:text-[#10B981] hover:bg-[#10B981]/5"
+          title="Sidekick Assist"
+          aria-label="Sidekick Assist"
         >
-          <Pin size={16} className={pinned ? 'fill-[#F59E0B]' : ''} />
+          <Wand2 size={16} />
         </button>
 
         <ShareLockButton 

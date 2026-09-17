@@ -9,6 +9,7 @@ import {
   PlusSquare as TodoIcon,
   Unlock,
   Sparkles,
+  Wand2,
   CheckSquare,
   KeyRound,
   Shield,
@@ -488,16 +489,15 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
               <>
                 <button
                   type="button"
-                  onClick={handlePinToggle}
-                  className={`p-1.5 rounded-lg transition-all duration-200 ${
-                    pinned
-                      ? 'text-[#EC4899] bg-[#EC4899]/10'
-                      : 'text-white/40 hover:text-[#EC4899] hover:bg-[#EC4899]/10'
-                  }`}
-                  title={pinned ? 'Unpin' : 'Pin'}
-                  aria-label={pinned ? 'Unpin' : 'Pin'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowSidekick(true);
+                  }}
+                  className="p-1.5 rounded-lg transition-all duration-200 text-white/40 hover:text-[#A855F7] hover:bg-[#A855F7]/10"
+                  title="Sidekick Assist"
+                  aria-label="Sidekick Assist"
                 >
-                  <PinIcon size={15} className={pinned ? 'fill-[#EC4899]' : ''} />
+                  <Wand2 size={15} />
                 </button>
                 <ShareLockButton
                   resourceType="note"

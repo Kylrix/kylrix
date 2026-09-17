@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell, CheckSquare, Sparkles } from 'lucide-react';
+import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell, CheckSquare, Sparkles, Wand2 } from 'lucide-react';
 import { useSelection } from '@/context/SelectionContext';
 import type { Event } from '@/types';
 import { formatTime } from '@/lib/time-util';
@@ -281,12 +281,30 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
         <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             type="button"
-            onClick={handlePinToggle}
-            className={`p-1.5 rounded-lg bg-black/40 border border-white/10 transition-all duration-200 ${
-              pinned ? 'text-[#F59E0B]' : 'text-white/40 hover:text-[#F59E0B]'
-            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(
+                new CustomEvent('kylrix:open-sidekick', {
+                  detail: {
+                    type: 'event',
+                    id: event.id,
+                    title: event.title,
+                    content: event.description || '',
+                    metadata: {
+                      startTime: event.startTime,
+                      endTime: event.endTime,
+                      location: event.location,
+                      attendees: event.attendees,
+                    },
+                  },
+                })
+              );
+            }}
+            className="p-1.5 rounded-lg bg-black/40 border border-white/10 transition-all duration-200 text-white/40 hover:text-[#22C55E]"
+            title="Sidekick Assist"
+            aria-label="Sidekick Assist"
           >
-            <Pin size={14} className={pinned ? 'fill-[#F59E0B]' : ''} />
+            <Wand2 size={14} />
           </button>
           <div
             className="bg-black/40 border border-white/10 rounded-lg"
