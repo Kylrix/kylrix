@@ -523,10 +523,6 @@ export default function CredentialDialog({
     try {
       const credentialData = buildCredentialData();
       const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
-      if (isCustomWorkspace) {
-        (credentialData as any).isWorkspace = true;
-        (credentialData as any).projectId = activeWorkspace!.id;
-      }
 
       // RAM-only optimistic UX. Never write plaintext secrets to LocalEngine / RxDB /
       // localStorage — disk cache must stay ciphertext (raw Appwrite rows only).
