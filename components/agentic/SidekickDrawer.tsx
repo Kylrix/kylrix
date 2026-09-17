@@ -6,6 +6,7 @@ import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { AgenticMarkdown } from '@/components/agentic/AgenticMarkdown';
+import { getAgenticUserMessage } from '@/lib/agentic/errors';
 import toast from 'react-hot-toast';
 
 // Sidekick — flagship per-object companion. One session per object (targetType/targetId).
@@ -286,7 +287,7 @@ export function SidekickDrawer({
         const { executeSidekickAction } = await import('@/lib/actions/sidekick');
         const res: any = await executeSidekickAction({ target, jwt }).catch((err: any) => ({
           success: false,
-          error: err?.message || 'Sidekick service unavailable',
+          error: getAgenticUserMessage(err),
         }));
         if (cancelled) return;
         if (res?.result) {
@@ -316,7 +317,7 @@ export function SidekickDrawer({
           }
         } else if (res?.error) setError(res.error);
       } catch (e: any) {
-        if (!cancelled) setError(e?.message || 'Sidekick failed');
+        if (!cancelled) setError(getAgenticUserMessage(e));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -482,7 +483,7 @@ export function SidekickDrawer({
       const { executeSidekickChat } = await import('@/lib/actions/sidekick');
       const res: any = await executeSidekickChat({ target, message: promptWithAttachments, sessionId: sessionId || undefined, jwt }).catch((err: any) => ({
         success: false,
-        error: err?.message || 'Sidekick chat unavailable',
+        error: getAgenticUserMessage(err),
       }));
       if (res?.error) {
         setError(res.error);
@@ -550,7 +551,7 @@ export function SidekickDrawer({
         }
       } catch {}
     } catch (e:any) {
-      setError(e?.message || 'Chat failed');
+      setError(getAgenticUserMessage(e));
     } finally { setSending(false); }
   };
 

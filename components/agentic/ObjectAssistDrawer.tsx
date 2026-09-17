@@ -9,6 +9,7 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { getAgenticUserMessage } from '@/lib/agentic/errors';
 import toast from 'react-hot-toast';
 
 export interface ObjectAssistDrawerProps {
@@ -151,7 +152,7 @@ export function ObjectAssistDrawer({
       }
     } catch (err: any) {
       console.error('[ObjectAssistDrawer] Exception:', err);
-      toast.error('AI Service unavailable or request failed.');
+      toast.error(getAgenticUserMessage(err));
     } finally {
       setLoading(false);
     }
@@ -241,6 +242,7 @@ export function ObjectAssistDrawer({
       }
     } catch (err: any) {
       console.error('Sidekick chat error:', err);
+      toast.error(getAgenticUserMessage(err));
     } finally {
       setChatLoading(false);
     }
