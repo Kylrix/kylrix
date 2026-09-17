@@ -6,7 +6,6 @@ import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { AgenticMarkdown } from '@/components/agentic/AgenticMarkdown';
-import { KeeperHubWalletSelector } from '@/components/agentic/KeeperHubWalletSelector';
 import { getAgenticUserMessage } from '@/lib/agentic/errors';
 import toast from 'react-hot-toast';
 
@@ -491,7 +490,11 @@ export function SidekickDrawer({
         toast.error(res.error);
         return;
       }
-      const assistant: ChatMsg = { id: `a_${Date.now()}`, role: 'assistant', content: res?.response || res?.result ? JSON.stringify(res.result) : 'Done.' };
+      const assistant: ChatMsg = {
+        id: `a_${Date.now()}`,
+        role: 'assistant',
+        content: res?.response ? res.response : res?.result ? JSON.stringify(res.result) : 'Done.',
+      };
       const updated = [...next, assistant];
       setMessages(updated);
       await LocalEngine.cacheSet(`sidekick:chat:${target.type}:${target.id}`, updated).catch(()=>{});
@@ -569,7 +572,6 @@ export function SidekickDrawer({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <KeeperHubWalletSelector compact />
           <button
             type="button"
             onClick={() => setShowAttachedObjectsDrawer(true)}
