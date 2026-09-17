@@ -2,7 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
 
-type ItemType = 'task' | 'event' | 'focus' | null;
+type ItemType = 'task' | 'event' | 'focus' | 'notification' | 'notifications' | null;
 
 interface SecondarySidebarState {
   isOpen: boolean;
