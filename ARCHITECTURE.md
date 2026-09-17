@@ -1,275 +1,228 @@
-# ARCHITECTURE.md — Kylrix Engineering Map
+# ARCHITECTURE.md — Kylrix Modern System Architecture
 
-> **Single-database, offline-first, agentic workspace.**
-> Next.js 16 · React 19 · TS · Appwrite · Tailwind 4 · RxDB · WebRTC · Argon2id
->
-> **North star:** decade-scale anti-fragility — adapters are swappable; end state is code on a VPS + bare metal only. See `.agents/skills/kylrix/SKILL.md`.
+> **Single-database, offline-first, agentic workspace and communication ecosystem.**
+> Next.js 16 · React 19 · TypeScript · Appwrite · RxDB / Dexie · WebRTC P2P · Argon2id · OpenBricks 4.0
 
 ---
 
-## 1. Macro-Structure
+## 1. System Macro-Structure
 
 ```
 kylrix/
-├── app/                  Next.js App Router
-│   ├── (app)/            Authenticated shell (app/note, flow, vault, connect, agents, workspaces)
-│   ├── [alias]/ + u/     Alias short-link + public profiles
-│   ├── api/v1/[...path]/ PAT + OAuth JWT REST API (resource server)
-│   ├── oauth/consent     Sign-in-with-Kylrix consent (grant_id)
-│   ├── pricing/ docs/    Public pages
-│   └── api/internal|telegram  Webhooks (BlockBee, Telegram)
-├── components/           Feature & UI
-├── context/              Auth, data, tasks, tokens, layout
-├── hooks/                useNostrIdentity, useProjectObjects, useWorkspaceFilteredItems
+├── app/                  Next.js 16 App Router
+│   ├── (app)/            Authenticated layout shell (ideas, goals, events, vault, connect, agentic sidekick, workspaces)
+│   ├── [alias]/ + u/     Short-link aliases & public published profiles / tabs
+│   ├── api/v1/[...path]/ REST API (PAT + OAuth 2.1 OIDC resource server)
+│   ├── api/dev/logs      Dev-mode error ring buffer & SSE log stream
+│   ├── oauth/consent     Sign-in-with-Kylrix consent handler (`grant_id`)
+│   └── pricing/ docs/    Public marketing & documentation
+├── components/           OpenBricks 4.0 feature components & UI drawers
+├── context/              Auth, Data, Tasks, Theme, Layout, Sudo, TaskContext
+├── hooks/                Workspace filters, resource pins, identity hooks
 ├── lib/
-│   ├── actions/          Server Actions — only write path (secure-ops + client-ops adapter)
-│   ├── agentic/          Kylie engine (tools, workflows, executor, search, prompts)
-│   ├── api/              PAT / OAuth / HTTP API shared (scopes, PatService)
-│   ├── appwrite/         SDK wrappers (client proxy, note, vault, auth, config)
-│   ├── billing/          BlockBee crypto checkout + subscription ledger
-│   ├── ecosystem/        Mesh, identity, security singleton, cache, nexus-fetcher
-│   ├── sync/             Local-first merge (local-copy-sync, pending-bridge, optimistic, interpolation)
-│   ├── services/         sync-engine (autonomic), LocalEngine (RxDB cache), chat, presence, users
-│   ├── security/enclave.ts  sec_enclave_keychain_{userId} pocket (RxDB only)
-│   ├── webrtc/           WebRTCManager (P2P + Cloudflare SFU), RxDBManager, CallRecorder
-│   ├── crypto/           noble (ed25519, secp256k1, bip32/bip39)
-│   ├── masterpass-crypto.ts  AES-256-GCM + Argon2id(64MB,3it,4p) / PBKDF2 legacy
-│   └── kylrixflow.ts     Flow CRUD facade
-├── functions/            Appwrite Functions (permission-updater, etc.)
-├── oauth2/               OAuth2 skill docs
-├── api/SKILL.md          Installable agent skill (npx skills add kylrix/kylrix/api)
-├── middleware.ts         Edge: auth-hint, rewrites, loop-breaker, reload-storm
-└── appwrite.config.json  Declarative schema (tables, buckets, functions — ~340KB)
+│   ├── actions/          Server Actions ('use server') — secure write path & AI execution
+│   ├── agentic/          Kylie & Sidekick agent engines, patching-engine, tools, prompts
+│   ├── ai/               Sanitizer, prompt schema builders, user error masks
+│   ├── api/              PAT / OAuth REST API handlers & scope verification
+│   ├── appwrite/         SDK proxy, TablesDB normalize, client proxy
+│   ├── billing/          Subscription entitlement, BlockBee crypto checkout ledger
+│   ├── ecosystem/        Mesh internal broadcast channel, identity cache, state tracker
+│   ├── services/         autonomicSyncEngine, LocalEngine (RxDB/Dexie), users, chats
+│   ├── security/         SudoModal enclave, masterpass-crypto (Argon2id + AES-256-GCM)
+│   ├── workflows/        Unified Object Workflows (deterministic vault execution)
+│   └── webrtc/           WebRTCManager (direct P2P) & PresenceService (ephemeral signaling)
+├── functions/            Appwrite Functions (permission-updater, profile-sync, etc.)
+├── appwrite.config.json  Declarative schema definition (`passwordManagerDb`)
+├── middleware.ts         Edge router: auth hint, legacy rewrites, reload storm rate limit
+└── ARCHITECTURE.md       System Architecture Documentation
 ```
 
 ---
 
-## 2. Single-Database Design
+## 2. Single-Database Design (`passwordManagerDb`)
 
-All modules share **one DB**: `passwordManagerDb` (`APPWRITE_CONFIG.TABLES.*`). Join tables replaced by composite tags where possible; additive schema only.
+All modules across Kylrix share **a single Appwrite database ID**: `passwordManagerDb` (`APPWRITE_CONFIG.TABLES.*`). Polyfill joins are handled via indexed composite tags (`source:kylrixnote:id`) or dedicated join rows (`project_objects`), eliminating cross-database dependencies and guaranteeing atomic schema deployments.
 
-| Ns | Key Tables |
-|----|-----------|
-| NOTE | notes, tags, collaborators, comments, reactions, activityLog, note_revisions |
-| VAULT | credentials, totpSecrets, folders, securityLogs, keychain, key_mapping, wallets |
-| FLOW | tasks, events, calendars, eventGuests, focusSessions, forms, agents |
-| CONNECT | conversations, conversationMembers, messages, moments, follows, calls, contacts, epochs (ephemeral) |
-| WORKSPACE | projects (=Workspaces UI), project_objects (join), discussions via conversations/threads |
-| SYSTEM | profiles, subscriptions, settings, extensions, compute_balances |
-| API/PAT | pats (prefix+hash), pat_rate_state, api_user_rate_state |
-| OAUTH (overlay) | oauth_apps, oauth_app_installs, oauth_consent_requests — cache only; Appwrite Apps/grants are SoT |
+### 2.1 Table Taxonomy
 
-**Why one DB:** single RLS surface, no cross-DB joins, `appwrite push` atomic.
+| Domain | Key Tables | Purpose |
+| :--- | :--- | :--- |
+| **NOTE** | `notes`, `tags`, `collaborators`, `comments`, `reactions`, `activityLog`, `note_revisions` | Knowledge base, ideas, collaborative notes, public articles |
+| **VAULT** | `credentials`, `totpSecrets`, `folders`, `securityLogs`, `keychain`, `key_mapping`, `wallets` | Encrypted secrets, TOTP tokens, HD wallets, enclave mappings |
+| **FLOW** | `tasks`, `events`, `calendars`, `eventGuests`, `focusSessions`, `forms`, `agents` | Productivity goals, events, form workflows, focus timers |
+| **CONNECT** | `conversations`, `conversationMembers`, `messages`, `moments`, `follows`, `calls`, `contacts`, `epochs` | Chat hangouts, unified threads, WebRTC P2P calls, social feeds |
+| **WORKSPACE** | `projects` (Workspaces UI), `project_objects` (workspace item bindings) | Workspace boundaries, cross-object workspace aggregation |
+| **SYSTEM** | `profiles`, `subscriptions`, `settings`, `extensions`, `compute_balances` | User preferences, subscription state, compute balance quotas |
+| **API/PAT** | `pats`, `pat_rate_state`, `api_user_rate_state` | Public REST API keys, rate limit buckets, quota tracking |
+| **OAUTH** | `oauth_apps`, `oauth_app_installs`, `oauth_consent_requests` | OAuth 2.1 application credentials and consent grants |
 
 ---
 
-## 3. Authentication & Identity
+## 3. Identity, Authentication & Zero-Touch Resource Protection
+
+### 3.1 Authentication Pipeline
+- **Session Auth:** Appwrite Account session cookie coupled with the `kylrix_pulse_v2` edge hint cookie for instant layout rendering.
+- **Identity Resolution (`lib/identity-cache.ts`):** Cached across in-memory state, `localStorage` (`kylrix_connect_identity_cache_v1`), and `LocalEngine` (`identity:${userId}`) to guarantee 0ms local profile rendering without redundant database reads.
+- **Zero-Touch Resource Protection:** Free plan users automatically bypass JWT generation (`getJWT()` in `AuthContext` synchronously returns `null`), avoiding unnecessary Appwrite `account.createJWT()` network requests.
+- **REST API Auth:** REST endpoints accept Personal Access Tokens (`Authorization: Bearer kylrix_pat_...`) and OAuth 2.1 Bearer JWTs verified via Appwrite JWKS.
+
+---
+
+## 4. Security Enclave & Vault Architecture
 
 ```
-AuthProvider (context/auth/)
- └── Appwrite Account (email/pass, OAuth, WebAuthn, MFA/TOTP)
-     ├── lib/appwrite/auth.ts       ensureGlobalProfile → profiles row
-     ├── lib/appwrite/vault.ts      MFA/TOTP/passkey CRUD
-     ├── lib/ecosystem/identity.ts  Global identity sync
-     ├── lib/mfa.ts, lib/passkey.ts, lib/mfa-session.ts (RAM-only), lib/auth-rate-limit.ts
-     └── PatService / OAuth JWT     /api/v1 resource-server auth (no session)
+                               ┌────────────────────────────────┐
+                               │     SudoModal (requestSudo)    │
+                               └───────────────┬────────────────┘
+                                               │
+                               ┌───────────────▼────────────────┐
+                               │ masterpass-crypto (Argon2id)   │
+                               │  64MB / 3 iterations / 4 p     │
+                               └───────────────┬────────────────┘
+                                               │
+                               ┌───────────────▼────────────────┐
+                               │ SecurityEnclave (RxDB/Dexie)   │
+                               │ sec_enclave_keychain_{userId}  │
+                               └────────────────────────────────┘
 ```
 
-**Flows:**
-- **Session:** authenticate → Appwrite cookie → `kylrix_pulse_v2` hint → middleware fast-redirect → `ensureGlobalProfile()` → `EcosystemSecurity.init()`.
-- **PAT:** `Authorization: Bearer kylrix_pat_<prefix>_<secret>` → lookup `pats` by `ID.unique()` prefix → SHA-256 hash compare → status/expiry → `pat_rate_state`/`api_user_rate_state` buckets → scope gate → handler. Secret never stored; shown once on create.
-- **OAuth:** Appwrite = authorization server. Client → Appwrite `/authorize` → redirect to `https://www.kylrix.space/oauth/consent?grant_id=…` → `oauth2.getGrant()` → approve/reject → code → Appwrite `/token` → JWT (JWKS verify) carries `scope` → `/api/v1` enforces. Discovery: `https://fra.cloud.appwrite.io/v1/oauth2/<PROJECT_ID>/.well-known/openid-configuration`.
+### 4.1 Master Password & Enclave (`masterpass-crypto.ts`)
+- **Key Derivation:** Master passwords are key-stretched using WASM **Argon2id** (64 MB memory, 3 iterations, 4 degree parallelism) to derive 256-bit keys for AES-256-GCM authenticated payload encryption.
+- **Security Enclave (`lib/security/enclave.ts`):** Master keys and decrypted pocket keychains reside strictly in client RAM and local `sec_enclave_keychain_{userId}` storage in `LocalEngine`. Encrypted vault entries are never transmitted in plaintext to backend servers.
 
-**Rate limits:** client mem counter → per-user prefs tracker → edge 30req/5s → Turnstile. PAT adds rolling 1m/24h buckets (Free 10/100, Pro 50/500, Teams 100/1000, 256KB cap).
+### 4.2 Universal `SudoModal` Verification (`SudoContext.tsx`)
+- All vault authentication and critical security triggers (unlocking vault, setting up vault, changing master password, resetting vault) flow exclusively through `SudoModal` via `requestSudo`.
+- For `change-masterpass`, `initialize`, and `reset` intents, `requestSudo` does not bypass `SudoModal` even when the vault is already unlocked, and auto-biometric passkey triggers are suppressed.
 
----
-
-## 4. Security Architecture
-
-### 4.1 Vault Crypto (`masterpass-crypto.ts`)
-Singleton: Argon2id 64MB/3it/4p → 256-bit AES-GCM; PBKDF2 600k legacy; WebAuthn PRF CryptoKey; 10-min transient lock.
-
-Pocket: dedicated `sec_enclave_keychain_{userId}` via `SecurityEnclave` (`lib/security/enclave.ts`) hydrated through `LocalEngine`/RxDB only — no direct fetch in unlock path; stale `hasMasterpass:false` hoop triggers background `hydrateFromRemote`.
-
-### 4.2 Ecosystem Security (`lib/ecosystem/security.ts`)
-Tab-scoped: identity keypair, per-chat conversation keys (transient, sealed chats only), decrypted cache (wiped on lock), `BroadcastChannel('kylrix_mesh_internal')` `LOCK_SYSTEM`, PIN PBKDF2.
-
-### 4.3 Server-Side (`lib/actions/secure-ops/`)
-All writes via `'use server'` actions: `getActor(jwt?)`, `verifyResourcePermission*`, `createRowSecure/updateRowSecure/deleteRowSecure` (inject `Permission.read(Role.user(creatorId))`), `hasWriteAccess` admin escalation only on ownership. `taintUniqueValue` on secrets in `lib/appwrite-admin.ts`. Transactions (`withSystemTransaction`) for compound flows.
-
-### 4.4 Permission Model
-RLS read-only by default (no `Role.any()`). Creator row ACL at create. `collaborators` polymorphic (`resourceType/resourceId/userId/permission`). `permission-updater` function escalates after accept. Sudo = transient confirmation; respects privacy.
+### 4.3 Deterministic Vault Workflows (`lib/workflows/object-workflows.ts`)
+- Unified Object Workflows strictly enforce **non-AI deterministic execution** for encrypted vault items (`credential`, `totp`, `secret`, `vault`), shielding credentials from external AI model processing or LLM token streams.
 
 ---
 
-## 5. Data Layer & Offline-First Sync
-
-### 5.1 Client SDK Proxy (`lib/appwrite/client.ts`)
-Wrapped `tablesDB/databases/storage/realtime/account` proxies: JWT inject, offline coalesce, `TablesDB`↔`Databases` shape normalize.
-
-### 5.2 Local-First Invariants (`architecture.local-first`)
-Paint local first; live copy = content SoT; pending = separate; auth late-binding; guests have same cascade; detail open ≠ refetch.
-
-### 5.3 Autonomic Sync Engine (`lib/services/sync-engine.ts` + `lib/sync/`)
-- **Live copy** (React context + RxDB `note_${id}`/`LocalEngine` cache) is UI SoT. **Pending queue** (`Map` + RxDB `kylrix:sync:pending-queue`) is amber/green SoT. **Appwrite** confirms.
-- **Engine:** `pushLiveNote`/`pushLiveGoal` → `markPending(id,rev)` → coalesced `runCycle` ~450ms → `getLive*ForSync` → `pick*AutosavePayload` (never pending flags) → `create/update` → `ack(id, flushedRev)` or re-queue if rev moved. No fixed-interval polling.
-- **optimisticEngine:** speculative background fetch while serving 0ms local.
-- **interpolationEngine:** if `isPending(id)` local wins; else newer `$updatedAt` wins.
-- **local-copy-sync.ts:** `mergeServerPageWithLocalCopy()` keeps local-only ids, tombstones deletes, sorts `sortPinnedThenCreatedAt`.
-- **Soft pull:** `shouldSoftPull` + focus/visibility only (10s active / 60s idle); realtime covers multi-device.
-- **Guest:** same RxDB+queue; stays local until claimed.
-
-### 5.4 Substrates & Caches
-`LocalEngine` (RxDB/Dexie) cache is primary. `RxDBManager.ts` retained for call state buffering. `queryCache` Map 15m (`kylrixflow.ts`), `nexus-fetcher` coalescer, `tablesdb-row-cache` read-through, `commentIdentityCache` session.
-
----
-
-## 6. Module Map
-
-| Route | Feature | Primary Code |
-|-------|---------|--------------|
-| `/app` (`/idea/[id]`) | Notes | `lib/appwrite/note.ts`, `NotesContext`, `lib/sync/` |
-| `/flow` `/goals` | Tasks/Goals/Events | `kylrixflow.ts`, `TaskContext` |
-| `/vault` `/vault/totp` | Secrets/TOTP | `lib/appwrite/vault.ts`, `masterpass-crypto.ts` |
-| `/connect` | Moments & Feed | `ConnectMomentsPanel`, `presence.ts` |
-| `/agents` | Kylie | `lib/agentic/`, `lib/actions/agentic.ts` |
-| `/app` + `/workspace/[id]` | Workspaces (=projects) | Active workspace filters `/app`. Share `/workspace/[id]`. Dead `/workspaces` redirects to `/app`. |
-| `/settings` | Profile/MFA/Sessions/Developers/Privacy | `ProfileManager`, `WorkspaceTab→CreatePatDrawer`, `PrivacyTab` |
-| `/oauth/consent` | OAuth consent | `oauth2.getGrant/approve/reject` |
-| `/docs` `/docs/api` | Docs | `api/SKILL.md` mirror |
-| `/api/v1/[...path]` | Public REST | `app/api/v1/route.ts`, `lib/api/*`, `PatService` |
-
----
-
-## 7. Agentic Engine (Kylie)
+## 5. Offline-First Data Layer & Autonomic Sync Engine
 
 ```
-lib/agentic/  tools-registry / context-workflows / client-executor / session-local-store
-              search-engine / hydrate-ecosystem-hits / prompt-framework / ui-catalog / spine-bridge
-lib/actions/agentic.ts + ai.ts  (Gemini, subscription gate, streaming)
-lib/context-engine.tsx  (30-event telemetry niches → CompiledLocalContext)
+UI Action → LocalEngine (0ms UI Paint) ──► Mark Pending (rev)
+                                                 │
+                                     autonomicSyncEngine
+                                  (Adaptive 1500ms debounce)
+                                                 │
+                                       Appwrite Server Ack
 ```
 
-Prompt → zone quick-action → `buildSystemPrompt(zone)` → Gemini → `tool_call` JSON → client-executor → `createRowSecure`/UI → feedback. Pro-gated; `compute_balances` (100k/reset); `agent-action-guardrail` checks ownership.
+### 5.1 Local-First Architecture
+- **0ms UI Hydration:** Local cache in `LocalEngine` (RxDB / Dexie) acts as the primary source of truth for UI state. Content paints instantly before background sync cycles execute.
+- **Autonomic Sync Engine (`lib/services/sync-engine.ts`):**
+  - **Adaptive Debouncing:** Uses a 1500ms debounce window during active typing/keystrokes to minimize network overhead and database write operations.
+  - **Microtask Flushing:** Discrete edit actions trigger immediate 0ms microtask flushes (`autonomicSyncEngine.nudge(true)`), opportunistically sweeping and flushing unsynced pending entities across goals, notes, events, forms, secrets, and TOTPs.
+  - **Confirmation Acknowledgment:** Server confirmations invoke `autonomicSyncEngine.markConfirmed` when `pending: false` to clear pending indicators across active tasks and goals.
+
+### 5.2 Persistent Tombstone Deletion
+- Local item deletions write persistent tombstones into `LocalEngine` via `markDeleted(id, userId)`. This immediately purges local cache keys, cancels pending sync in `autonomicSyncEngine`, and prevents soft refreshes or background pulls from resurrecting deleted entities.
+
+### 5.3 Cloud Entitlement Cutoff
+- On Kylrix Cloud, free plan sync engine cycles and direct session database writes in `lib/appwrite/owner-direct-write.ts` are cut off, maintaining 100% offline-first local storage in `LocalEngine` without invoking server infrastructure.
 
 ---
 
-## 8. Real-Time Communication
-
-**Appwrite Realtime:** channel `databases.{db}.tables.{table}.rows` → `subscribeToTable<T>()`. Used for messages, tasks, vault events.
-
-**WebRTC (`WebRTCManager.ts`):** Pure direct P2P `RTCPeerConnection`; **signaling via ephemeral presence channels** `call.<callId>` (`PresenceService.broadcastState` / `subscribeToPresence`) — zero `call_signals` table writes; SDP offer/answer + ICE `candidate` go over Appwrite Realtime presence `presence.call.<id>` (TTL ephemeral, zero DB thrash, zero cron purge). Direct P2P connects peers seamlessly, free for all with zero infrastructure bottlenecks; screen-share transceiver; `MediaRecorder` → `storage.createFile()` via `CallRecorder`.
-
-**Presence & Typing:** Ephemeral Appwrite `presence` channels (`PresenceService.getChatChannel` / `getCallChannel` / `getResourceChannel('presence','users',id)`). Heartbeat via `app_activity`, typing + call signaling via channel broadcast (no `epochs`/`call_signals` DB writes). Privacy tab (`profile.preferences` `{typingEnabled,onlineEnabled}` default true) enforces **mutual** gating: both peers must enable; groups always suppress.
-
----
-
-## 9. Ecosystem Mesh (`lib/ecosystem/mesh.ts`)
-
-`BroadcastChannel('kylrix_mesh_internal')` (same tab) + `postMessage` (iframes, origin-validated):
-
-| Node | Type | Capability |
-|------|------|------------|
-| `id` | control | auth/identity/quota |
-| `note` | data | knowledge graph, AI search |
-| `vault` | secure | encryption/passkeys |
-| `flow` | logic | task orchestration |
-| `connect` | message | realtime/P2P relay |
-
-`LOCK_SYSTEM` wipes in-RAM keys.
-
----
-
-## 10. Appwrite Functions
-
-| Function | Trigger | Purpose |
-|----------|---------|---------|
-| `permission-updater` | DB event | ACL propagate after collaborator accept |
-| `sync-user-profile` | Auth event | Mirror user → profiles |
-| `notify-on-share/social` | DB event | Email on share/follow/reaction |
-| `flow-event-sync` | Scheduled | Recurring events |
-| `sync-subscription-status` | Scheduled/webhook | BlockBee IPN reconcile |
-| `account-cleanup` | Auth delete | Cascade delete |
-| `connect-call-cleanup` | Scheduled | Expire stale calls (presence TTL, no DB signals) |
-| `search-users` | HTTP | Admin search |
-| `data-porter` | HTTP | Bitwarden CSV/JSON import-export |
-| `flow-agent-orchestrator` / `agent-action-guardrail` / `ecosystem-context-aggregator` | HTTP | Agent run / ownership check / context snapshot |
-| `goal-reminder-dispatch` | Scheduled | Telegram/email reminders |
-
----
-
-## 11. Billing & Subscriptions
-
-`lib/billing/` (`subscription-service`, `blockbee-urls`, `blockbee-webhook-verify`, `provider-factory`) + `lib/actions/billing/` + `functions/sync-subscription-status`. Free/Pro (Teams planned). BlockBee crypto; Pro gates AI, >10MB uploads, extended vault, agent compute.
-
----
-
-## 12. Storage Buckets
-
-`profile_pictures` · `group_avatars` · `notes_attachments` · `general_storage` · `vault_attachments` · `chat_uploads` · `kylrix_send` (7d TTL) · `event_covers` · `voice` · `backups`. Gated via `lib/actions/secure-upload.ts`.
-
----
-
-## 13. Public API & PAT Platform
-
-Tables `pats`/`pat_rate_state`/`api_user_rate_state`. Install: `npx skills add kylrix/kylrix/api` → `api/SKILL.md` (mirror `.agents/skills/api/SKILL.md`). Routes `app/api/v1/[...path]/route.ts` via `lib/api/*` + `PatService`. Resources: notes, goals, workspaces(+`/thread`), events, forms, flows/install, feeds, moments(+comments), threads, chats (E2EE meta; plaintext when unlocked), vault meta, tags, objects, agents/harness. Gaps intentional: E2EE send, Nostr sign, vault secrets, WebRTC. Scopes (`lib/api/scopes.ts`) additive; self-service `GET /token`, `GET|PATCH /token/scopes`, `POST /token/scopes/grant` (`Developers` tab).
-
----
-
-## 14. Sign in with Kylrix (OAuth2.1 / OIDC)
-
-Authorization server = Appwrite project. Clients via Console **Apps** or Client SDK `apps` (confidential PKCE). Discovery/JWKS/token/userinfo/introspect at Appwrite. Consent hosted at `/oauth/consent` using `grant_id` + `oauth2.getGrant/approve/reject` (Appwrite grants are SoT; local `oauth_*` tables are optional marketplace overlays). Custom scopes (`notes:read/write`, `goals:read/write`, `flows:read`, `profile:read` + OIDC built-ins) stamp access JWTs; `/api/v1` verifies via JWKS and enforces scopes. Also supports PAR, device code (`createGrant({userCode})`), dynamic registration.
-
----
-
-## 15. Workspaces (= Projects Table)
-
-UI **Workspaces** live in chrome (active filter on `/app`) with share links at `/workspace/[id]` over the `projects` table (`ProjectsService`). Dead `/workspaces` and `/projects` redirect. Synergy hub linking ideas/goals/forms/events/hangouts/discussions via `project_objects` join (`useProjectObjects` → `useWorkspaceFilteredItems` filters by `project_objects.entityId` or default-workspace fallback). Caps: 8 collaborators free.
-
----
-
-## 16. Cross-Cutting Patterns
-
-**Isomorphic adapter:** `if(window) import('@/lib/actions/client-ops') else import('@/lib/actions/secure-ops')` — same business logic, no admin SDK in bundle.
-
-**Unified conversations:** Every discussion lives in **standard tables** `conversations`/`messages` (and `conversationMembers`). `isEncrypted:true` = sealed with transient per-chat keys; `false` when vault locked. Former `notes.isthread/isThread` + `comments` + `thread-cleanup` model retired — task/project/event/tag/form/call threads now create a regular `conversations` row (`type:'thread'` or `direct`/`group`) and `messages` rows; `project_objects` links workspace discussions. No `notes` polymorphism, no TTL sweep.
-
-**Threads:** Same tables as hangouts; `participants` + member rows enforce RLS; retention is explicit delete, not 7-day expiry. Presence channels carry typing/online, not DB epochs.
-
-**CrossLinks (`sdk/crosslinks.ts`):** `source:kylrixnote:id` composite tags replace joins across vault/tasks/projects.
-
-**Context Engine (`lib/context-engine.tsx`):** `LocalContextProvider` buffers 30 events (workspace/productivity/connect/security/intelligence/billing/system) → `CompiledLocalContext` for Kylie; owns workflow recording.
-
-**State Tracker (`lib/ecosystem/state-tracker.ts`):** last N routes → `localStorage('kylrix_ecosystem_state_tracker')` + cookie for middleware resume.
-
----
-
-## 17. Middleware & Edge
-
-`middleware.ts` (Edge): root `/` auth-hint resume; legacy rewrites (`/app/{id}`→`/idea/{id}`); loop breaker (`_rd>=5`); reload-storm 30req/5s → 429; OAuth/PAT routes bypass session hint.
-
----
-
-## 18. DevOps & Self-Hosting
+## 6. Agentic Engine: Kylie & Sidekick
 
 ```
-Dockerfile (Node 22 standalone) · docker-compose.yml (full) / docker-compose.app-only.yml
-ota.yaml (verify, dev, selfhost) · appwrite.config.json (declarative schema)
+                     ┌─────────────────────────────────────────┐
+                     │          Kylie Agentic Topbar           │
+                     │      Full Screen Mode (100dvh)          │
+                     └────────────────────┬────────────────────┘
+                                          │
+                     ┌────────────────────▼────────────────────┐
+                     │            Sidekick Drawer              │
+                     │  Event: 'kylrix:open-sidekick'         │
+                     └────────────────────┬────────────────────┘
+                                          │
+                     ┌────────────────────▼────────────────────┐
+                     │        Patching Engine & Actions        │
+                     │   Surgical JSON/Text Anchor Edits       │
+                     └─────────────────────────────────────────┘
 ```
 
-`appwrite push` deploys tables/indexes/RLS/buckets/functions. Endpoint `https://api.kylrix.space/v1`, DB `passwordManagerDb`.
+### 6.1 Agent Execution Surface
+- **Kylie Topbar Agent (`AgenticPanelContent`):** Operates full screen (`100dvh`) across bottom drawers and mobile overlays.
+- **Sidekick Companion Drawer (`SidekickDrawer.tsx`):** Triggered globally across object detail views by dispatching the `kylrix:open-sidekick` custom event with context payload `{ type, id, title, content, tags, metadata }`. Hydrated locally with 0ms delay via `SidekickHistoryBridge`.
+
+### 6.2 Intelligent Patching Engine (`lib/agentic/patching-engine.ts`)
+- Updates documents and structural form schemas surgically using text anchor matching (`before`, `after`, `target`, `replacement`) instead of re-emitting full document payloads, ensuring low latency and preserving document formatting.
+
+### 6.3 Schema Actions & Error Sanitization
+- **Dynamic Schema Actions:** Generates contextual schemas dynamically via `generateObjectAssistSchemaAction` across Ideas, Goals, Events, Forms, Secrets, and TOTPs.
+- **Sanitized AI Errors:** AI server actions (`executeSidekickAction`, `executeSidekickChat`, `generateAIContent`) wrap execution in try-catch blocks and sanitize errors using `getAgenticUserMessage` from `lib/agentic/errors.ts` to return structured `{ success: false, error }` objects without leaking raw LLM stack traces to clients.
 
 ---
 
-## 19. Dependencies
+## 7. Real-Time Communication & P2P WebRTC
 
-| Package | Role |
-|---------|------|
-| `appwrite` v21 / `node-appwrite` v19 | Client / Admin SDK (TablesDB, Realtime) |
-| `@google/generative-ai` | Gemini for Kylie |
-| `rxdb` + `dexie` | Local-first cache |
-| `hash-wasm` | Argon2id WASM |
-| `@simplewebauthn/*` | Passkeys |
-| `@noble/ed25519` `secp256k1` `bip32/bip39` `viem` | Identity + HD wallet |
-| `framer-motion` `zod` `dompurify` | UI/validation/sanitize |
+### 7.1 Unified Conversations
+- All hangouts, direct chats, group channels, and object discussions (task, project, event, tag, form) share standard `conversations` and `messages` tables.
+- Compound row IDs (`ws-${workspaceId}`) enforce database-level uniqueness in Appwrite for workspace conversations and support direct row lookups.
 
+### 7.2 WebRTC Direct P2P Signaling (`WebRTCManager.ts`)
+- Direct Peer-to-Peer (`RTCPeerConnection`) media streams for audio, video, and screen sharing.
+- **Ephemeral Presence Signaling:** SDP offers, answers, and ICE candidates transmit over Appwrite Realtime presence channels (`presence.call.<id>`). Zero database table writes or `call_signals` rows are generated, eliminating database thrash and background cleanup crons.
+
+### 7.3 Ephemeral Presence & Typing (`PresenceService.ts`)
+- Real-time typing indicators and online state transmit over ephemeral channel broadcasts.
+- Enforces **mutual gating** via user privacy preferences (`typingEnabled`, `onlineEnabled`): typing and online indicators require both participants to have presence enabled, and group channels automatically suppress typing banners.
+
+---
+
+## 8. OpenBricks 4.0 UI Design System
+
+### 8.1 Visual Surface Language
+- **Alternating Color Scheme:** Pitch-black (`#000000`) container backgrounds paired with deep ash (`#161412`) component cards and `#1C1917` hover states across topbar and inverted drawer search surfaces.
+- **Wand2 Icon Standard:** AI assist triggers across form editing and detail UI components exclusively use the `Wand2` icon button instead of textual labels.
+
+### 8.2 Topbar & Drawer Layout Primitives
+- **Unified Notification Architecture:** Transient and unprompted notifications integrate directly into topbar layout primitives (`CompactNotificationPill` morphing to `NotificationDrawer` on mobile; compact top-right pill extending to `RightSidebar.tsx` on desktop).
+- **Toast Non-Interference:** `ClientToaster` sets `pointerEvents: 'none'` on toast containers so notifications never intercept mouse clicks or block topbar navigation.
+- **Global Unmount Policy:** Overlays, drawers, and modals strictly enforce conditional rendering (`{isOpen && <Component />}`) with `keepMounted: false` and `disablePortal: true`, physically removing hidden overlays from the DOM.
+
+---
+
+## 9. Workspace Isolation & Modularity
+
+### 9.1 Multi-Tenant Workspace Boundaries
+- Workspace-sensitive entities (notes, goals, events, forms, credentials, TOTPs, agentic sessions) strictly enforce `isWorkspace: true` and `projectId: activeWorkspace.id` during creation in custom workspaces.
+- Entities are bound locally in `LocalEngine` via `attachEntityToActiveWorkspace` updating both `projectObjectsCacheKey` and `projectObjectsKindCacheKey`.
+- Kylie live agent sessions (`getAgentSession`) match `projectId` and `isWorkspace`, automatically resetting to an empty state if no session exists for the active workspace.
+
+### 9.2 Backend Modularity (`BACKEND=false / BACKEND=true`)
+- System operates in two primary deployment modes:
+  1. **Self-Hosted / Cloud Mode (`BACKEND=true` or `BACKEND=appwrite`):** Utilizes bundled or remote Appwrite services for sync, storage, and authentication.
+  2. **Standalone Client Mode (`BACKEND=false`):** Skips local backend container initialization (MariaDB, Redis, Appwrite schema bootstrap) and runs Next.js as a local-first client relying on `LocalEngine` (RxDB/Dexie), WebRTC, and external connectors.
+
+---
+
+## 10. Public REST API & OAuth 2.1 / OIDC
+
+### 10.1 REST API (`/api/v1`)
+- Exposes structured endpoints for Notes, Goals, Events, Workspaces, Forms, Feed Moments, Conversations, Threads, and Agents.
+- Authenticated via Personal Access Tokens (`pats` prefix + SHA-256 hash lookup) and OAuth 2.1 Bearer JWTs.
+- Enforces rolling 1-minute and 24-hour rate limit buckets (`pat_rate_state`, `api_user_rate_state`).
+
+### 10.2 OAuth 2.1 / OIDC Authorization Server
+- Appwrite acts as the OpenID Connect authorization server.
+- Interactive consent is handled at `/oauth/consent` using `grant_id` parameters and `oauth2.getGrant / approve / reject`.
+- Access tokens carry scopes (`notes:read/write`, `goals:read/write`, `flows:read`, `profile:read`) enforced at `/api/v1` routes.
+
+---
+
+## 11. Core Dependencies
+
+| Package | Purpose |
+| :--- | :--- |
+| `next` v16 / `react` v19 | Core application framework & UI runtime |
+| `appwrite` / `node-appwrite` | Appwrite Client & Admin SDKs |
+| `rxdb` + `dexie` | Local-first client database (`LocalEngine`) |
+| `hash-wasm` | High-performance WASM Argon2id hashing |
+| `@simplewebauthn/*` | Passkey and WebAuthn authentication |
+| `@google/generative-ai` | Gemini LLM integration for Kylie and Sidekick |
+| `@noble/*` (`ed25519`, `secp256k1`, `bip32/bip39`) | Identity keypairs, HD wallet derivation, and cryptographic signatures |
+| `framer-motion` | Motion animations and layout transitions |
