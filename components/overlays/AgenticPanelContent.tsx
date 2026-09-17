@@ -87,6 +87,7 @@ import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { account } from '@/lib/appwrite/client';
 import { WalletService } from '@/lib/services/wallets';
+import { KeeperHubWalletSelector } from '@/components/agentic/KeeperHubWalletSelector';
 import { toast } from 'react-hot-toast';
 import { ContextMenu } from '@/components/ui/ContextMenu';
 import { useHintEngine } from '@/hooks/useHintEngine';
@@ -1598,6 +1599,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               {agentCount > 0 ? ` · ${agentCount} helper${agentCount === 1 ? '' : 's'}` : ''}
             </p>
           </div>
+          <KeeperHubWalletSelector compact />
           <button
             type="button"
             onClick={handleOpenSessions}

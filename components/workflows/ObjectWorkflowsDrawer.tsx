@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   X,
   Workflow,
@@ -10,7 +10,6 @@ import {
   Calendar,
   Lock,
   Send,
-  Plus,
   ArrowRight,
   ShieldAlert,
 } from 'lucide-react';
@@ -71,7 +70,7 @@ export function ObjectWorkflowsDrawer({
         await navigator.clipboard.writeText(textToCopy);
         showSuccess('Vault item details copied securely');
         onClose();
-      } catch (err: any) {
+      } catch (_err: any) {
         showError('Failed to copy vault item details');
       }
       return;

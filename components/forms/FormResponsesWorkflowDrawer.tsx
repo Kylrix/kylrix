@@ -27,7 +27,7 @@ export function FormResponsesWorkflowDrawer({
 }: FormResponsesWorkflowDrawerProps) {
   const { showSuccess, showError, showInfo } = useToast();
   const [loadedSubmissions, setLoadedSubmissions] = useState<any[]>(submissions);
-  const [isLoadingSubmissions, setIsLoadingSubmissions] = useState<boolean>(false);
+  const [_isLoadingSubmissions, setIsLoadingSubmissions] = useState<boolean>(false);
 
   const [selectedLiveField, setSelectedLiveField] = useState<string>('');
   const [liveFilterOp, setLiveFilterOp] = useState<'not_empty' | 'equals'>('not_empty');
@@ -62,8 +62,6 @@ export function FormResponsesWorkflowDrawer({
     };
   }, [isOpen, formId, submissions]);
 
-  if (!isOpen) return null;
-
   const effectiveSubmissions = loadedSubmissions.length > 0 ? loadedSubmissions : submissions;
 
   // Filter submissions based on specified live & ghost field criteria
@@ -95,7 +93,9 @@ export function FormResponsesWorkflowDrawer({
 
       return true;
     });
-  }, [submissions, selectedLiveField, liveFilterOp, liveFilterVal, ghostProOnly, ghostAuthOnly]);
+  }, [effectiveSubmissions, selectedLiveField, liveFilterOp, liveFilterVal, ghostProOnly, ghostAuthOnly]);
+
+  if (!isOpen) return null;
 
   const handleRunWorkflow = async () => {
     if (filteredSubmissions.length === 0) {

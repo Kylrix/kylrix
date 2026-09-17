@@ -1,4 +1,3 @@
-import { BUILTIN_FLOWS } from '@/lib/flows/builtins';
 import type { DiscoverFlow } from '@/lib/flows/types';
 
 export type WorkflowObjectType = 'idea' | 'goal' | 'event' | 'form' | 'secret' | 'totp' | 'all';
