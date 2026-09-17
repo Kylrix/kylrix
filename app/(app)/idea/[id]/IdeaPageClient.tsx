@@ -392,6 +392,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
         showHeaderDeleteButton={showDelete}
         readOnly={isReadOnly}
         accessRole={role}
+        decryptionKey={decryptionKey}
       />
     </div>
   );

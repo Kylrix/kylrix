@@ -90,6 +90,7 @@ import {
   serializeObjectBlock,
   type ParsedObjectBlock} from '@/lib/note-object-secondary';
 import { storage } from '@/lib/appwrite/client';
+import CommentsSection from '@/app/(app)/app/(app)/notes/Comments';
 
 export type NoteAccessRole = 'owner' | 'write-collab' | 'read-collab' | 'guest' | 'public';
 
@@ -107,6 +108,8 @@ export interface NoteDetailSidebarProps {
   readOnly?: boolean;
   /** The resolved access role for this viewer */
   accessRole?: NoteAccessRole;
+  /** Decryption key for encrypted note comments if available */
+  decryptionKey?: string;
 }
 
 export function NoteDetailSidebar({
@@ -120,7 +123,8 @@ export function NoteDetailSidebar({
   showHeaderDeleteButton = true,
   isLoading: _isLoading = false,
   readOnly = false,
-  accessRole}: NoteDetailSidebarProps) {
+  accessRole,
+  decryptionKey}: NoteDetailSidebarProps) {
   const { open: openUnified } = useUnifiedDrawer();
   const { openProUpgrade } = useProUpgrade();
   const { user } = useAuth();
@@ -1575,6 +1579,13 @@ export function NoteDetailSidebar({
           <span>Created {formatNoteCreatedDate(liveNote)}</span>
           <span>Updated {formatNoteUpdatedDate(liveNote)}</span>
         </div>
+
+        {/* Comments section — only for notes that are made public or published */}
+        {(getNotePublicState(liveNote) === true || liveNote?.isPublic === true || (liveNote as any)?.published === true) && (
+          <div className="pt-4 border-t border-white/10 shrink-0">
+            <CommentsSection noteId={liveNote.$id} decryptionKey={decryptionKey} />
+          </div>
+        )}
       </div>
 
 
