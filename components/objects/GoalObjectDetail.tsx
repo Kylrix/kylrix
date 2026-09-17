@@ -54,6 +54,7 @@ export function GoalObjectDetail({ taskId, onClose, embedded = false }: Props) {
           description: plain.description,
           dek: task.dek,
           _dekViewDecrypted: true,
+          updatedAt: task.updatedAt,
         } as any);
       } catch (err: any) {
         if (err?.message === 'VAULT_LOCKED') await promptSudo();

@@ -106,7 +106,13 @@ export default function TaskList() {
     new Set([
       ...rawTagOptions,
       ...(ecosystemTags || []).map((t) => t.name).filter(Boolean),
-      ...tasks.flatMap((t) => t.labels || [])
+      ...tasks.flatMap((t) => {
+        const userLabels = t.labels || [];
+        const extractedTags = Array.isArray((t as any).tags)
+          ? (t as any).tags.filter((tag: string) => !String(tag).startsWith('project:') && !String(tag).startsWith('source:'))
+          : [];
+        return [...userLabels, ...extractedTags];
+      })
     ].filter((item): item is string => Boolean(item)))
   ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   const tagFilterOptions = directTaskTags;
