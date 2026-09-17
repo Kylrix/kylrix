@@ -224,10 +224,11 @@ export const LocalEngine = {
   /** Store a clean baseline snapshot for an object ID when loaded from server/clean state. */
   snapshotBaseline(id: string, payload: any): void {
     if (typeof window === 'undefined' || !id || !payload) return;
+    const canonicalId = id.includes(':') ? id.slice(id.indexOf(':') + 1).trim() : id.trim();
     try {
       const cleanData = pickComparablePayload(payload);
       const snapshot = JSON.stringify(cleanData);
-      (window as any)[`__kylrix_baseline_${id}`] = snapshot;
+      (window as any)[`__kylrix_baseline_${canonicalId}`] = snapshot;
     } catch {}
   },
 
@@ -235,7 +236,8 @@ export const LocalEngine = {
   hasObjectDiff(id: string, payload: any): boolean {
     // Fail open: missing id/payload must not block enqueue (sync death otherwise).
     if (typeof window === 'undefined' || !id || !payload) return true;
-    const baseline = (window as any)[`__kylrix_baseline_${id}`];
+    const canonicalId = id.includes(':') ? id.slice(id.indexOf(':') + 1).trim() : id.trim();
+    const baseline = (window as any)[`__kylrix_baseline_${canonicalId}`];
     if (!baseline) {
       // No baseline = never hydrated from remote / never ack'd.
       // MUST return true so first create/edit enters the pending queue.
@@ -253,14 +255,16 @@ export const LocalEngine = {
   /** True when a remote/ack baseline exists for this id. */
   hasBaseline(id: string): boolean {
     if (typeof window === 'undefined' || !id) return false;
-    return Boolean((window as any)[`__kylrix_baseline_${id}`]);
+    const canonicalId = id.includes(':') ? id.slice(id.indexOf(':') + 1).trim() : id.trim();
+    return Boolean((window as any)[`__kylrix_baseline_${canonicalId}`]);
   },
 
   /** Clear baseline (e.g. after local delete) so next write re-enqueues. */
   clearBaseline(id: string): void {
     if (typeof window === 'undefined' || !id) return;
+    const canonicalId = id.includes(':') ? id.slice(id.indexOf(':') + 1).trim() : id.trim();
     try {
-      delete (window as any)[`__kylrix_baseline_${id}`];
+      delete (window as any)[`__kylrix_baseline_${canonicalId}`];
     } catch {}
   },
 

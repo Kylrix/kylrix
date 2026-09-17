@@ -8,6 +8,9 @@
  * 4. Pending (pre-synced / dirty) rows must survive pull until remote confirms them.
  */
 
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
+
 export type SyncableRow = {
   $id: string;
   $createdAt?: string | null;
@@ -40,12 +43,11 @@ export function getRowCreatedAt(row: SyncableRow): number {
 
 /**
  * Merge a remote page into the existing local list.
- * - Rows in both: apply guard if present; else prefer newer updatedAt (local wins if newer).
- * - Rows only local: always kept (prevents "synced then vanished" wipes).
+ * - LWW Resolution: Local copy trumps remote strictly when the item is actively pending in the uncommitted outbox queue (`autonomicSyncEngine.isPending(id)`).
+ * - Clean local items: If the local item is clean (!isPending) and the server copy is newer or equal, the server copy overwrites local.
+ * - Rows only local: preserved if dirty or unpersisted.
  * - Rows only remote: appended.
  */
-import { LocalEngine } from '@/lib/services/LocalEngine';
-
 export function mergeServerPageWithLocalCopy<T extends SyncableRow>(params: {
   serverBatch: T[];
   localNotes: T[];
@@ -75,12 +77,18 @@ export function mergeServerPageWithLocalCopy<T extends SyncableRow>(params: {
     const guard = guards?.get(serverRow.$id);
     let next: T = normalize(serverRow);
 
+    const isLocallyPending = autonomicSyncEngine.isPending(serverRow.$id);
+
     if (guard && applyGuard) {
       next = applyGuard(serverRow, guard);
+    } else if (local && isLocallyPending) {
+      // Local copy is actively pending in uncommitted outbox — keep local uncommitted fields
+      next = normalize({ ...serverRow, ...local, $id: serverRow.$id });
     } else if (local && getRowUpdatedAt(local) > getRowUpdatedAt(serverRow)) {
-      // Local copy is newer (e.g. just edited, remote page stale) — keep local fields.
+      // Fallback timestamp check for non-ack'd uncommitted state
       next = normalize({ ...serverRow, ...local, $id: serverRow.$id });
     } else if (local) {
+      // Clean local item or remote has newer timestamp — remote copy overwrites
       next = normalize({ ...local, ...serverRow, $id: serverRow.$id });
     }
 
@@ -92,7 +100,7 @@ export function mergeServerPageWithLocalCopy<T extends SyncableRow>(params: {
     if (deletedIds?.has(local.$id) || LocalEngine.isDeleted(local.$id)) continue;
     if ((local as any).isTrash === true || (local as any).isDeleted === true || String((local as any).isTrash) === 'true' || String((local as any).isDeleted) === 'true') continue;
     if (mergedById.has(local.$id)) continue;
-    // Preserve local presence: drafts, pending sync, or simply not on this remote page yet.
+    // Preserve local presence: drafts, pending sync, or local-only items not on this server page
     mergedById.set(local.$id, normalize(local));
   }
 
@@ -134,73 +142,30 @@ export function sortByDeadlineThenUpdatedAt<T extends SyncableRow & { dueDate?: 
   });
 }
 
-/** Soft-pull cadence — REDUCED reads for 1000x rethink: rely on Realtime + engine acks.
- * No more 10s/5s polling spikes. Visible active 30s, idle 120s, min gap 15s. */
-const SYNC_PULL_IDLE_MS = 120_000;
-const SYNC_PULL_ACTIVE_MS = 30_000;
-const SYNC_PULL_MIN_GAP_MS = 15_000;
+/**
+ * High-intent inbound delta guard.
+ * Replaces periodic timer-based soft polling with a minimum 60-second guard between inbound delta requests.
+ */
+const MIN_INBOUND_GAP_MS = 60_000;
 
 export function shouldSoftPull(params: {
   lastPullAt: number;
-  activityIntensity: number;
+  activityIntensity?: number;
   now?: number;
 }): boolean {
   const now = params.now ?? Date.now();
   const elapsed = now - (params.lastPullAt || 0);
-  if (elapsed < SYNC_PULL_MIN_GAP_MS) return false;
-  const isVisible = typeof document !== 'undefined' && document.visibilityState === 'visible';
-  const threshold = isVisible || params.activityIntensity > 0 ? SYNC_PULL_ACTIVE_MS : SYNC_PULL_IDLE_MS;
-  return elapsed >= threshold;
+  return elapsed >= MIN_INBOUND_GAP_MS;
 }
 
-/**
- * Rate-limited once-a-day-per-session remote escape hatch.
- * When local copy returns empty for a specific data type, allows an initial remote fetch to populate local copy.
- * Stored in sessionStorage so that logouts or new browser sessions reset the barrier cleanly without indefinite lockouts.
- */
-
-const ESCAPE_PREFIX = 'kylrix_empty_escape_';
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-export function shouldRunEmptyEscapeHatch(dataType: string, userId?: string | null): boolean {
-  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return false;
-  const uid = userId || 'anon';
-  const key = `${ESCAPE_PREFIX}${dataType}_${uid}`;
-  try {
-    const raw = sessionStorage.getItem(key);
-    if (!raw) return true;
-    const ts = parseInt(raw, 10);
-    if (isNaN(ts)) return true;
-    return Date.now() - ts >= ONE_DAY_MS;
-  } catch {
-    return true;
-  }
+export function shouldRunEmptyEscapeHatch(_dataType: string, _userId?: string | null): boolean {
+  return false;
 }
 
-export function markEmptyEscapeHatchRan(dataType: string, userId?: string | null): void {
-  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return;
-  const uid = userId || 'anon';
-  const key = `${ESCAPE_PREFIX}${dataType}_${uid}`;
-  try {
-    sessionStorage.setItem(key, String(Date.now()));
-  } catch {}
+export function markEmptyEscapeHatchRan(_dataType: string, _userId?: string | null): void {
+  // No-op: periodic/escape hatch lockout removed
 }
 
-export function resetEmptyEscapeHatch(dataType?: string, userId?: string | null): void {
-  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return;
-  try {
-    if (dataType) {
-      const uid = userId || 'anon';
-      sessionStorage.removeItem(`${ESCAPE_PREFIX}${dataType}_${uid}`);
-    } else {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const k = sessionStorage.key(i);
-        if (k && k.startsWith(ESCAPE_PREFIX)) keysToRemove.push(k);
-      }
-      for (const k of keysToRemove) {
-        sessionStorage.removeItem(k);
-      }
-    }
-  } catch {}
+export function resetEmptyEscapeHatch(_dataType?: string, _userId?: string | null): void {
+  // No-op: periodic/escape hatch lockout removed
 }

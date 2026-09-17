@@ -4,12 +4,23 @@ import { useSyncExternalStore } from 'react';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { getMissingRequiredColumns, TABLE_ID_FOR_KIND } from '@/lib/sync/required-columns';
 import { getLiveNoteForSync, getLiveGoalForSync, getLiveEventForSync } from '@/lib/sync/pending-sync-bridge';
+import { getCurrentUserSnapshot, onCurrentUserChanged } from '@/lib/appwrite/client';
+import { hasPaidKylrixPlan } from '@/lib/utils';
+
+function useIsProUser() {
+  return useSyncExternalStore(
+    (onStoreChange) => onCurrentUserChanged(onStoreChange),
+    () => hasPaidKylrixPlan(getCurrentUserSnapshot()),
+    () => false
+  );
+}
 
 function useEnginePending(resourceId?: string | null) {
   return useSyncExternalStore(
     (onStoreChange) => autonomicSyncEngine.subscribe(onStoreChange),
     () => autonomicSyncEngine.isPending(resourceId),
-    () => false);
+    () => false
+  );
 }
 
 function useMissingForResource(
@@ -84,11 +95,11 @@ function useMissingForResource(
 }
 
 /**
- * Amber/green from the sync engine pending queue only.
- * Same authority that flushes live copy → Appwrite (never UI theater).
- * Pass `resourceId` (e.g. goal:xxx) or legacy `noteId` (bare note id).
- * Optional `pending` overrides the engine (e.g. chat optimistic send).
- * Red static dot = cannot sync (missing required columns) — derived dynamically from appwrite.config.json.
+ * 3-state status dot for resource sync status:
+ * 1. Static Red: Cannot sync (missing required columns).
+ * 2. Slate/Gray (#64748B / bg-slate-500): Local Only for free users and guests ("Saved locally (Offline Mode)").
+ * 3. Amber (#F59E0B / bg-amber-500): Syncing / Pending for Pro users ("Syncing changes...").
+ * 4. Green (#10B981 / bg-emerald-500): Cloud Synced for Pro users ("Synced to cloud").
  */
 export function SyncStatusDot({
   noteId,
@@ -112,6 +123,7 @@ export function SyncStatusDot({
   /** Explicit tableId override */
   tableId?: string | null;
 }) {
+  const isPro = useIsProUser();
   const enginePending = useEnginePending(resourceId ?? noteId);
   const pending = typeof pendingOverride === 'boolean' ? pendingOverride : enginePending;
   const autoMissing = useMissingForResource(resourceId ?? noteId, row, kind, tableId);
@@ -126,11 +138,20 @@ export function SyncStatusDot({
     );
   }
 
+  if (!isPro) {
+    return (
+      <span
+        className="w-2 h-2 min-w-2 min-h-2 rounded-full bg-slate-500 dark:bg-muted-foreground shrink-0 flex-none block"
+        title="Saved locally (Offline Mode)"
+      />
+    );
+  }
+
   if (pending) {
     return (
       <span
         className="w-2 h-2 min-w-2 min-h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)] shrink-0 flex-none block"
-        title="Sending"
+        title="Syncing changes..."
       />
     );
   }
@@ -138,7 +159,7 @@ export function SyncStatusDot({
   return (
     <span
       className="w-2 h-2 min-w-2 min-h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] shrink-0 flex-none block"
-      title="Sent"
+      title="Synced to cloud"
     />
   );
 }
@@ -159,9 +180,11 @@ export function SyncStatusLabel({
   row?: Record<string, unknown> | null;
   tableId?: string | null;
 }) {
+  const isPro = useIsProUser();
   const pending = useEnginePending(resourceId ?? noteId);
   const autoMissing = useMissingForResource(resourceId ?? noteId, row, kind, tableId);
   const missing = missingColumns != null ? missingColumns : autoMissing;
+
   if (missing && missing.length > 0) {
     return (
       <span className="text-[10px] font-semibold text-red-400">
@@ -169,9 +192,18 @@ export function SyncStatusLabel({
       </span>
     );
   }
+
+  if (!isPro) {
+    return (
+      <span className="text-[10px] font-semibold text-slate-500 dark:text-muted-foreground">
+        Saved locally
+      </span>
+    );
+  }
+
   return (
     <span className="text-[10px] font-semibold text-[#9B9691]">
-      {pending ? 'Not synced' : 'Synced'}
+      {pending ? 'Syncing changes...' : 'Synced to cloud'}
     </span>
   );
 }
@@ -195,6 +227,7 @@ export function SyncStatusDetail({
   const pending = useEnginePending(resourceId ?? noteId);
   const autoMissing = useMissingForResource(resourceId ?? noteId, row, kind, tableId);
   const missing = missingColumns != null ? missingColumns : autoMissing;
+
   if (missing && missing.length > 0) {
     return (
       <span className="flex items-center gap-1.5">
@@ -203,10 +236,11 @@ export function SyncStatusDetail({
       </span>
     );
   }
+
   return (
     <span className="flex items-center gap-1.5">
-      <SyncStatusDot resourceId={resourceId} noteId={noteId} pending={pending} />
-      <SyncStatusLabel resourceId={resourceId} noteId={noteId} />
+      <SyncStatusDot resourceId={resourceId} noteId={noteId} pending={pending} kind={kind} row={row} tableId={tableId} missingColumns={missingColumns} />
+      <SyncStatusLabel resourceId={resourceId} noteId={noteId} kind={kind} row={row} tableId={tableId} missingColumns={missingColumns} />
     </span>
   );
 }
