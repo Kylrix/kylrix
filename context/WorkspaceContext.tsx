@@ -8,6 +8,7 @@ import { attachObjectToProject } from '@/lib/projects/object-attachment';
 import { getSessionProjectsList, projectObjectsCacheKey, projectObjectsKindCacheKey } from '@/lib/projects/projects-cache';
 import { normalizeProjectsList, warmProjectsList } from '@/lib/projects/warm-projects-list';
 import { isWorkspaceRecord } from '@/lib/projects/sub-projects';
+import { sortWorkspacesByActive } from '@/lib/workspaces/sort-workspaces';
 import type { ProjectObjects } from '@/types/appwrite';
 
 export interface WorkspaceItem {
@@ -589,25 +590,30 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadingWorkspaces, workspaces, activeWorkspaceId, userId, ACTIVE_WORKSPACE_CACHE_KEY]);
 
+  const sortedWorkspaces = useMemo(
+    () => sortWorkspacesByActive(workspaces, activeWorkspaceId, personalWorkspace.id),
+    [workspaces, activeWorkspaceId, personalWorkspace.id]
+  );
+
   const activeWorkspace = useMemo<WorkspaceItem>(() => {
-    const found = workspaces.find((w) => w.id === activeWorkspaceId);
+    const found = sortedWorkspaces.find((w) => w.id === activeWorkspaceId);
     if (found) return found;
     return personalWorkspace;
-  }, [workspaces, activeWorkspaceId, personalWorkspace]);
+  }, [sortedWorkspaces, activeWorkspaceId, personalWorkspace]);
 
   const agentWorkspaces = useMemo(
-    () => workspaces.filter((w) => !w.isPersonal && w.isAgentic === true),
-    [workspaces]
+    () => sortedWorkspaces.filter((w) => !w.isPersonal && w.isAgentic === true),
+    [sortedWorkspaces]
   );
 
   const ownedWorkspaces = useMemo(
-    () => workspaces.filter((w) => !w.isPersonal && !w.isAgentic && (!w.isShared || w.ownerId === userId || !w.ownerId)),
-    [workspaces, userId]
+    () => sortedWorkspaces.filter((w) => !w.isPersonal && !w.isAgentic && (!w.isShared || w.ownerId === userId || !w.ownerId)),
+    [sortedWorkspaces, userId]
   );
 
   const sharedWorkspaces = useMemo(
-    () => workspaces.filter((w) => !w.isPersonal && !w.isAgentic && w.isShared && w.ownerId && w.ownerId !== userId),
-    [workspaces, userId]
+    () => sortedWorkspaces.filter((w) => !w.isPersonal && !w.isAgentic && w.isShared && w.ownerId && w.ownerId !== userId),
+    [sortedWorkspaces, userId]
   );
 
   const pushLiveWorkspace = useCallback(
@@ -831,7 +837,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<WorkspaceContextType>(
     () => ({
       activeWorkspace,
-      workspaces,
+      workspaces: sortedWorkspaces,
       ownedWorkspaces,
       sharedWorkspaces,
       agentWorkspaces,
@@ -848,7 +854,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       activeWorkspace,
-      workspaces,
+      sortedWorkspaces,
       ownedWorkspaces,
       sharedWorkspaces,
       agentWorkspaces,

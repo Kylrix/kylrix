@@ -35,7 +35,7 @@ const NAV_COLORS: Record<NavId, string> = {
 
 
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { ChevronDown as WorkspaceChevronIcon, Plus as PlusIcon, Check as CheckIcon, Bot as BotIcon, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { ChevronDown as WorkspaceChevronIcon, Plus as PlusIcon, Check as CheckIcon, Bot as BotIcon } from 'lucide-react';
 
 export function UnifiedLeftSidebar() {
   const pathname = usePathname();
@@ -47,9 +47,8 @@ export function UnifiedLeftSidebar() {
   const { isOpen: _isOverlayOpen } = useOverlay();
   const { isCollapsed } = useSidebar();
   const { user: _user, updatePreferences } = useAuth();
-  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, agentWorkspaces, setActiveWorkspaceId, markWorkspacePublic } = useWorkspace();
+  const { activeWorkspace, workspaces, setActiveWorkspaceId, markWorkspacePublic } = useWorkspace();
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = React.useState(false);
-  const [agentWorkspacesExpanded, setAgentWorkspacesExpanded] = React.useState(false);
   const workspaceSectionRef = React.useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -293,12 +292,16 @@ export function UnifiedLeftSidebar() {
                     <PlusIcon size={12} /> New
                   </Box>
                 </Box>
-                {/* 1. Personal & Owned Workspaces */}
-                {[
-                  ...workspaces.filter((w) => w.isPersonal),
-                  ...ownedWorkspaces,
-                ].map((w) => {
+                {workspaces.map((w) => {
                   const isActive = w.id === activeWorkspace?.id;
+                  const subtitle = w.isPersonal
+                    ? 'Default workspace'
+                    : w.isAgentic
+                      ? 'Agent workspace'
+                      : w.isShared
+                        ? (w.role ? `Shared (${w.role})` : 'Shared with you')
+                        : 'Workspace';
+
                   return (
                     <Box
                       key={w.id}
@@ -320,7 +323,9 @@ export function UnifiedLeftSidebar() {
                         color: isActive ? '#F59E0B' : '#FFFFFF',
                         '&:hover': {
                           bgcolor: isActive ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.06)',
-                          color: isActive ? '#F59E0B' : '#fff'}}}
+                          color: isActive ? '#F59E0B' : '#fff',
+                        },
+                      }}
                     >
                       <Box sx={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                         <span
@@ -337,7 +342,7 @@ export function UnifiedLeftSidebar() {
                           {w.title}
                         </span>
                         <span style={{ display: 'block', fontSize: '0.62rem', color: isActive ? 'rgba(245, 158, 11, 0.8)' : 'rgba(255, 255, 255, 0.4)', fontFamily: 'var(--font-satoshi)' }}>
-                          {w.isPersonal ? 'Default workspace' : 'Workspace'}
+                          {subtitle}
                         </span>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
@@ -398,246 +403,6 @@ export function UnifiedLeftSidebar() {
                     </Box>
                   );
                 })}
-
-                {/* 2. Shared Workspaces Section */}
-                {sharedWorkspaces.length > 0 && (
-                  <>
-                    <Box sx={{ px: 1, pt: 1, pb: 0.25 }}>
-                      <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Shared Workspaces
-                      </span>
-                    </Box>
-                    {sharedWorkspaces.map((w) => {
-                      const isActive = w.id === activeWorkspace?.id;
-                      return (
-                        <Box
-                          key={w.id}
-                          onClick={() => {
-                            setActiveWorkspaceId(w.id);
-                            setWorkspaceMenuOpen(false);
-                          }}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: 1,
-                            px: 1.25,
-                            py: 0.75,
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            minWidth: 0,
-                            bgcolor: isActive ? 'rgba(99, 102, 241, 0.14)' : 'transparent',
-                            color: isActive ? '#6366F1' : '#FFFFFF',
-                            '&:hover': {
-                              bgcolor: isActive ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.06)',
-                              color: isActive ? '#6366F1' : '#fff'}}}
-                        >
-                          <Box sx={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                            <span
-                              style={{
-                                display: 'block',
-                                fontSize: '0.76rem',
-                                fontWeight: isActive ? 800 : 600,
-                                fontFamily: 'var(--font-satoshi)',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                              }}
-                            >
-                              {w.title}
-                            </span>
-                            <span style={{ display: 'block', fontSize: '0.62rem', color: isActive ? 'rgba(99, 102, 241, 0.8)' : 'rgba(255, 255, 255, 0.4)', fontFamily: 'var(--font-satoshi)' }}>
-                              {w.role ? `Shared (${w.role})` : 'Shared with you'}
-                            </span>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                            <Box
-                              component="span"
-                              onClick={(e: React.MouseEvent) => handleShareWorkspace(e, w)}
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                p: 0.5,
-                                borderRadius: '6px',
-                                color: '#10B981',
-                                bgcolor: 'rgba(16, 185, 129, 0.12)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  color: '#10B981',
-                                  bgcolor: 'rgba(16, 185, 129, 0.22)',
-                                  transform: 'scale(1.08)',
-                                },
-                              }}
-                              title="Share workspace link"
-                            >
-                              <ShareIcon size={12} />
-                            </Box>
-                            <Box
-                              component="span"
-                              onClick={(e: React.MouseEvent) => handleShareWorkspace(e, w)}
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                p: 0.5,
-                                borderRadius: '6px',
-                                color: 'rgba(255, 255, 255, 0.35)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  color: '#FFFFFF',
-                                  bgcolor: 'rgba(255, 255, 255, 0.1)',
-                                  transform: 'scale(1.08)',
-                                },
-                              }}
-                              title="More options"
-                            >
-                              <MoreIcon size={12} />
-                            </Box>
-                            {isActive && <CheckIcon size={13} color="#6366F1" style={{ flexShrink: 0 }} />}
-                          </Box>
-                        </Box>
-                      );
-                    })}
-                  </>
-                )}
-
-                {/* 3. Agent Workspaces Section (Expanded when active or toggled) */}
-                {agentWorkspaces.length > 0 && (() => {
-                  const isAgentSectionOpen = agentWorkspacesExpanded || Boolean(activeWorkspace?.isAgentic);
-                  return (
-                    <>
-                      <Box
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          setAgentWorkspacesExpanded(!isAgentSectionOpen);
-                        }}
-                        sx={{
-                          px: 1,
-                          pt: 1,
-                          pb: 0.5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          cursor: 'pointer',
-                          userSelect: 'none',
-                          '&:hover span': { color: 'rgba(255,255,255,0.7)' },
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                          <BotIcon size={12} color="#818CF8" />
-                          <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Agent Workspaces ({agentWorkspaces.length})
-                          </span>
-                        </Box>
-                        <Box sx={{ color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center' }}>
-                          {isAgentSectionOpen ? <WorkspaceChevronIcon size={12} /> : <ChevronRightIcon size={12} />}
-                        </Box>
-                      </Box>
-                      {isAgentSectionOpen && agentWorkspaces.map((w) => {
-                        const isActive = w.id === activeWorkspace?.id;
-                        return (
-                          <Box
-                            key={w.id}
-                            onClick={() => {
-                              setActiveWorkspaceId(w.id);
-                              setWorkspaceMenuOpen(false);
-                            }}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: 1,
-                            px: 1.25,
-                            py: 0.75,
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            minWidth: 0,
-                            bgcolor: isActive ? 'rgba(99, 102, 241, 0.14)' : 'transparent',
-                            color: isActive ? '#818CF8' : '#FFFFFF',
-                            '&:hover': {
-                              bgcolor: isActive ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.06)',
-                              color: isActive ? '#818CF8' : '#fff',
-                            },
-                          }}
-                        >
-                          <Box sx={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                            <span
-                              style={{
-                                display: 'block',
-                                fontSize: '0.76rem',
-                                fontWeight: isActive ? 800 : 600,
-                                fontFamily: 'var(--font-satoshi)',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                              }}
-                            >
-                              {w.title}
-                            </span>
-                            <span style={{ display: 'block', fontSize: '0.62rem', color: isActive ? 'rgba(129, 140, 248, 0.8)' : 'rgba(255, 255, 255, 0.4)', fontFamily: 'var(--font-satoshi)' }}>
-                              Agent Workspace
-                            </span>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                            <Box
-                              component="span"
-                              onClick={(e: React.MouseEvent) => handleShareWorkspace(e, w)}
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                p: 0.5,
-                                borderRadius: '6px',
-                                color: w.isPublic ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
-                                bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  color: w.isPublic ? '#10B981' : '#818CF8',
-                                  bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.15)',
-                                  transform: 'scale(1.08)',
-                                },
-                              }}
-                              title={w.isPublic ? 'Public sharing enabled (click to manage)' : 'Share workspace'}
-                            >
-                              <ShareIcon size={12} />
-                            </Box>
-                            <Box
-                              component="span"
-                              onClick={(e: React.MouseEvent) => {
-                                e.stopPropagation();
-                                openUnified('project-settings', { project: w });
-                              }}
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                p: 0.5,
-                                borderRadius: '6px',
-                                color: 'rgba(255, 255, 255, 0.35)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  color: '#FFFFFF',
-                                  bgcolor: 'rgba(255, 255, 255, 0.1)',
-                                  transform: 'scale(1.08)',
-                                },
-                              }}
-                              title="Workspace settings"
-                            >
-                              <MoreIcon size={12} />
-                            </Box>
-                            {isActive && <CheckIcon size={13} color="#818CF8" style={{ flexShrink: 0 }} />}
-                          </Box>
-                        </Box>
-                      );
-                    })}
-                  </>
-                );
-              })()}
             </Box>
           )}
         </Box>

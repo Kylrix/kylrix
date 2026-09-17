@@ -31,7 +31,6 @@ import {
   X as CloseIcon,
   Bell,
   Sparkles,
-  ChevronRight,
   Keyboard,
   Target,
   FileText,
@@ -42,7 +41,6 @@ import {
   Trash2 as TrashIcon,
   Share2 as ShareIcon,
   MoreVertical as MoreIcon,
-  ChevronDown,
   Check,
   LogOut,
   Settings,
@@ -112,8 +110,7 @@ export default function ConnectTopbar({
   const navPush = useCallback((href: string) => router.push(href), [router]);
   const pathname = usePathname();
   const { setIsCollapsed } = useSidebar();
-  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, agentWorkspaces, setActiveWorkspaceId, markWorkspacePublic, loadingWorkspaces } = useWorkspace();
-  const [agentWorkspacesExpanded, setAgentWorkspacesExpanded] = useState(false);
+  const { activeWorkspace, workspaces, setActiveWorkspaceId, markWorkspacePublic, loadingWorkspaces } = useWorkspace();
   const { notes = [] } = useNotes();
   const { tasks = [], projects = [], selectTask } = useTask();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
@@ -1944,12 +1941,16 @@ export default function ConnectTopbar({
           </Typography>
         ) : null}
 
-        {/* 1. Personal & Owned Workspaces */}
-        {[
-          ...workspaces.filter((w) => w.isPersonal),
-          ...ownedWorkspaces,
-        ].map((w) => {
+        {workspaces.map((w) => {
           const isActive = activeWorkspace?.id === w.id;
+          const subtitle = w.isPersonal
+            ? 'Default workspace'
+            : w.isAgentic
+              ? 'Agent workspace'
+              : w.isShared
+                ? (w.role ? `Shared (${w.role})` : 'Shared with you')
+                : 'Workspace';
+
           return (
             <Box
               key={w.id}
@@ -1990,11 +1991,11 @@ export default function ConnectTopbar({
               }}
             >
               <Box sx={{ minWidth: 0, flex: '1 1 0%', pr: 1, overflow: 'hidden' }}>
-                <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
+                <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? (w.isAgentic ? '#818CF8' : '#6366F1') : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
                   {w.title}
                 </Typography>
-                <Typography sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
-                  {w.isPersonal ? 'Default workspace' : 'Workspace'}
+                <Typography sx={{ fontSize: '0.72rem', color: isActive ? 'rgba(99, 102, 241, 0.8)' : 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
+                  {subtitle}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, flexGrow: 0 }}>
@@ -2061,299 +2062,12 @@ export default function ConnectTopbar({
                   </>
                 )}
                 {isActive ? (
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1', flexShrink: 0 }} />
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: w.isAgentic ? '#818CF8' : '#6366F1', boxShadow: `0 0 8px ${w.isAgentic ? '#818CF8' : '#6366F1'}`, flexShrink: 0 }} />
                 ) : null}
               </Box>
             </Box>
           );
         })}
-
-        {/* 2. Shared Workspaces Section */}
-        {sharedWorkspaces.length > 0 && (
-          <>
-            <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', px: 1, pt: 1 }}>
-              Shared Workspaces
-            </Typography>
-            {sharedWorkspaces.map((w) => {
-              const isActive = activeWorkspace?.id === w.id;
-              return (
-                <Box
-                  key={w.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    setActiveWorkspaceId(w.id);
-                    handleCloseAll();
-                  }}
-                  onKeyDown={(e: React.KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setActiveWorkspaceId(w.id);
-                      handleCloseAll();
-                    }
-                  }}
-                  sx={{
-                    width: '100%',
-                    maxWidth: '100%',
-                    boxSizing: 'border-box',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    px: { xs: 1.25, sm: 2 },
-                    py: 1.25,
-                    borderRadius: '14px',
-                    bgcolor: isActive ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid',
-                    borderColor: isActive ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.15)',
-                    color: 'white',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    '&:hover': {
-                      bgcolor: isActive ? 'rgba(99, 102, 241, 0.22)' : 'rgba(255,255,255,0.04)',
-                    },
-                  }}
-                >
-                  <Box sx={{ minWidth: 0, flex: '1 1 0%', pr: 1, overflow: 'hidden' }}>
-                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
-                      {w.title}
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.72rem', color: 'rgba(99, 102, 241, 0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
-                      {w.role ? `Shared (${w.role})` : 'Shared with you'}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, flexGrow: 0 }}>
-                    <IconButton
-                      size="small"
-                      onClick={(e: MouseEvent) => {
-                        e.stopPropagation();
-                        handleCloseAll();
-                        markWorkspacePublic(w.id);
-                        void executeInstantShare('project', w.id, {
-                          resourceTitle: w.title,
-                          isPublic: true,
-                          isGuest: true,
-                        });
-                        openUnified('share-context', {
-                          resourceType: 'project',
-                          resourceId: w.id,
-                          resourceTitle: w.title,
-                          isPublic: true,
-                          isGuest: true,
-                          accentColor: '#10B981',
-                        });
-                      }}
-                      sx={{
-                        color: '#10B981',
-                        bgcolor: 'rgba(16, 185, 129, 0.12)',
-                        p: 0.75,
-                        borderRadius: '8px',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          color: '#10B981',
-                          bgcolor: 'rgba(16, 185, 129, 0.22)',
-                          transform: 'scale(1.08)',
-                        },
-                      }}
-                      title="Share workspace link"
-                    >
-                      <ShareIcon size={14} />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={(e: MouseEvent) => {
-                        e.stopPropagation();
-                        handleCloseAll();
-                        openUnified('share-context', {
-                          resourceType: 'project',
-                          resourceId: w.id,
-                          resourceTitle: w.title,
-                          isPublic: true,
-                          isGuest: true,
-                          accentColor: '#10B981',
-                        });
-                      }}
-                      sx={{
-                        color: 'rgba(255, 255, 255, 0.35)',
-                        p: 0.75,
-                        borderRadius: '8px',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          color: '#FFFFFF',
-                          bgcolor: 'rgba(255, 255, 255, 0.1)',
-                          transform: 'scale(1.08)',
-                        },
-                      }}
-                      title="More options"
-                    >
-                      <MoreIcon size={14} />
-                    </IconButton>
-                    {isActive ? (
-                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1', flexShrink: 0 }} />
-                    ) : null}
-                  </Box>
-                </Box>
-              );
-            })}
-          </>
-        )}
-
-        {/* 3. Agent Workspaces Section (Expanded when active or toggled) */}
-        {agentWorkspaces.length > 0 && (() => {
-          const isAgentSectionOpen = agentWorkspacesExpanded || Boolean(activeWorkspace?.isAgentic);
-          return (
-            <>
-              <Box
-                role="button"
-                tabIndex={0}
-                onClick={() => setAgentWorkspacesExpanded(!isAgentSectionOpen)}
-                onKeyDown={(e: React.KeyboardEvent) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setAgentWorkspacesExpanded(!isAgentSectionOpen);
-                  }
-                }}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  px: 1,
-                  pt: 1.5,
-                  pb: 0.5,
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  '&:hover p': { color: 'rgba(255,255,255,0.7)' },
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                  <Bot size={12} color="#818CF8" />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Agent Workspaces ({agentWorkspaces.length})
-                  </Typography>
-                </Box>
-                <Box sx={{ color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center' }}>
-                  {isAgentSectionOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                </Box>
-              </Box>
-              {isAgentSectionOpen && agentWorkspaces.map((w) => {
-                const isActive = activeWorkspace?.id === w.id;
-                return (
-                  <Box
-                    key={w.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      setActiveWorkspaceId(w.id);
-                      handleCloseAll();
-                    }}
-                    onKeyDown={(e: React.KeyboardEvent) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setActiveWorkspaceId(w.id);
-                        handleCloseAll();
-                      }
-                    }}
-                    sx={{
-                      width: '100%',
-                      maxWidth: '100%',
-                      boxSizing: 'border-box',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      px: { xs: 1.25, sm: 2 },
-                      py: 1.25,
-                      borderRadius: '14px',
-                      bgcolor: isActive ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid',
-                      borderColor: isActive ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.15)',
-                      color: 'white',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      minWidth: 0,
-                      overflow: 'hidden',
-                      '&:hover': {
-                        bgcolor: isActive ? 'rgba(99, 102, 241, 0.22)' : 'rgba(255,255,255,0.04)',
-                      },
-                    }}
-                  >
-                    <Box sx={{ minWidth: 0, flex: '1 1 0%', pr: 1, overflow: 'hidden' }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#818CF8' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
-                        {w.title}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.72rem', color: 'rgba(129, 140, 248, 0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
-                        Agent Workspace
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, flexGrow: 0 }}>
-                      <IconButton
-                        size="small"
-                        onClick={(e: MouseEvent) => {
-                          e.stopPropagation();
-                          handleCloseAll();
-                          markWorkspacePublic(w.id);
-                          void executeInstantShare('project', w.id, {
-                            resourceTitle: w.title,
-                            isPublic: true,
-                            isGuest: true,
-                          });
-                          openUnified('share-context', {
-                            resourceType: 'project',
-                            resourceId: w.id,
-                            resourceTitle: w.title,
-                            isPublic: true,
-                            isGuest: true,
-                            accentColor: '#818CF8',
-                          });
-                        }}
-                        sx={{
-                          color: w.isPublic ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
-                          bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
-                          p: 0.75,
-                          borderRadius: '8px',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            color: w.isPublic ? '#10B981' : '#818CF8',
-                            bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.22)' : 'rgba(99, 102, 241, 0.15)',
-                            transform: 'scale(1.08)',
-                          },
-                        }}
-                        title={w.isPublic ? 'Public sharing enabled (click to manage)' : 'Share workspace'}
-                      >
-                        <ShareIcon size={14} />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={(e: MouseEvent) => {
-                          e.stopPropagation();
-                          handleCloseAll();
-                          openUnified('project-settings', { project: w });
-                        }}
-                        sx={{
-                          color: 'rgba(255, 255, 255, 0.35)',
-                          p: 0.75,
-                          borderRadius: '8px',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            color: '#FFFFFF',
-                            bgcolor: 'rgba(255, 255, 255, 0.1)',
-                            transform: 'scale(1.08)',
-                          },
-                        }}
-                        title="Workspace settings"
-                      >
-                        <MoreIcon size={14} />
-                      </IconButton>
-                      {isActive ? (
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#818CF8', boxShadow: '0 0 8px #818CF8', flexShrink: 0 }} />
-                      ) : null}
-                    </Box>
-                  </Box>
-                );
-              })}
-            </>
-          );
-        })()}
       </Box>
     );
 
