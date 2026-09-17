@@ -10,6 +10,7 @@ import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
 
 export default function CredentialItem({
   credential,
@@ -87,6 +88,7 @@ export default function CredentialItem({
     };
   }, []);
 
+  const [showWorkflows, setShowWorkflows] = useState(false);
   const { activeWorkspace } = useWorkspace();
 
   useEffect(() => {
@@ -262,6 +264,7 @@ export default function CredentialItem({
   };
 
   const contextMenuItems = [
+    { label: "Workflows", icon: <Lock size={16} className="text-[#A855F7]" />, onClick: () => setShowWorkflows(true) },
     { label: pinned ? "Unpin Secret" : "Pin Secret", icon: <Pin size={16} className={pinned ? "text-[#F59E0B]" : ""} />, onClick: () => onTogglePin?.() },
     { label: "Select", icon: <CheckSquare size={16} className="text-[#10B981]" />, onClick: () => selection.enterSelectMode('credential', credential.$id) },
     { label: "Copy Public Link (DEK)", icon: <Share2 size={16} className="text-emerald-500" />, onClick: handleShareLink },
@@ -310,6 +313,7 @@ export default function CredentialItem({
   };
 
   return (
+    <>
     <div
       onClick={() => {
         if (isSelectMode) {
@@ -468,5 +472,18 @@ export default function CredentialItem({
         />
       </div>
     </div>
+    <ObjectWorkflowsDrawer
+      isOpen={showWorkflows}
+      onClose={() => setShowWorkflows(false)}
+      objectType="secret"
+      targetObject={{
+        id: credential.$id,
+        title: (displayCredential as any).name || 'Credential',
+        content: (displayCredential as any).username || '',
+        description: (displayCredential as any).notes || '',
+        raw: credential,
+      }}
+    />
+    </>
   );
 }

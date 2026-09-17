@@ -14,6 +14,7 @@ import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuI
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { events as eventApi } from '@/lib/kylrixflow';
+import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
 import { useEvents } from '@/context/EventsContext';
 import toast from 'react-hot-toast';
 
@@ -35,6 +36,7 @@ function dayLabel(date: Date): 'Today' | 'Tomorrow' | null {
 
 /** Event list tile — colorful cover pattern (or cover image) + date chrome. */
 export function EventObjectRow({ event, onClick, onDelete }: Props) {
+  const [showWorkflows, setShowWorkflows] = useState(false);
   const pattern = useMemo(
     () => generateEventPattern(event.id + (event.title || '')),
     [event.id, event.title],
@@ -99,6 +101,11 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
         label: pinned ? 'Unpin' : 'Pin',
         icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />,
         onClick: () => void handlePinToggle(),
+      },
+      {
+        label: 'Workflows',
+        icon: <Sparkles size={16} className="text-[#A855F7]" />,
+        onClick: () => setShowWorkflows(true),
       },
       {
         label: 'Sidekick',
@@ -210,6 +217,7 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
   };
 
   return (
+    <>
     <div
       role="button"
       tabIndex={0}
@@ -349,5 +357,17 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
         </div>
       </div>
     </div>
+    <ObjectWorkflowsDrawer
+      isOpen={showWorkflows}
+      onClose={() => setShowWorkflows(false)}
+      objectType="event"
+      targetObject={{
+        id: event.id,
+        title: event.title || 'Untitled Event',
+        description: event.description || '',
+        raw: event,
+      }}
+    />
+    </>
   );
 }
