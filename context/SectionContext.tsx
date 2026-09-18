@@ -9,7 +9,7 @@ import { PanelType } from '@/components/layout/panel-types';
 import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
 import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
 import EventDetails from '@/components/events/EventDetails';
-import FormDetailsPage from '@/app/(app)/forms/[formId]/page';
+import { FormDetail } from '@/components/forms/FormDetail';
 import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
 import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
 import { ChatWindow } from '@/components/chat/ChatWindow';
@@ -448,7 +448,7 @@ function DetailSectionWrapper({ detail, onClose }: { detail: ActiveDetail; onClo
     case 'event':
       return <EventDetails eventId={detail.id} initialData={detail.data} onBack={onClose} />;
     case 'form':
-      return <FormDetailsPage formId={detail.id} onBack={onClose} />;
+      return <FormDetail formId={detail.id} onClose={onClose} />;
     case 'secret':
       return <CredentialDetail credential={detail.data} onClose={onClose} isMobile={false} inline={true} />;
     case 'tag':

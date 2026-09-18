@@ -29,7 +29,7 @@ import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { useServiceWorker } from '@/hooks/useServiceWorker';
-import { isFlowPath, isGoalsSurfacePath, isSharedResourcePath } from '@/lib/routing/app-paths';
+import { isSharedResourcePath } from '@/lib/routing/app-paths';
 import { submitRuntimeErrorFeedback } from '@/lib/errors/runtime-feedback';
 
 import { UnifiedLeftSidebar } from '@/components/UnifiedLeftSidebar';
