@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, ChevronDown, Check, Zap } from 'lucide-react';
+import { ShieldCheck, ChevronDown, Check, Zap, Activity, Server } from 'lucide-react';
+import { getKeeperHubStatusAction } from '@/lib/actions/keeperhub';
 
 export interface WalletAccount {
   id: string;
@@ -43,6 +44,24 @@ export function KeeperHubWalletSelector({ compact = false }: { compact?: boolean
   const [testnetMode, setTestnetMode] = useState<boolean>(true);
   const [activeWallet, setActiveWallet] = useState<WalletAccount>(DEMO_TESTNET_WALLETS[0]);
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [integrationStatus, setIntegrationStatus] = useState<{
+    status: 'connected' | 'demo_ready' | 'offline';
+    enclave: string;
+    latencyMs: number;
+  }>({ status: 'demo_ready', enclave: 'Turnkey TEE Enclave #1', latencyMs: 42 });
+
+  useEffect(() => {
+    void getKeeperHubStatusAction().then((res) => {
+      if (res.success) {
+        setIntegrationStatus({
+          status: res.status,
+          enclave: res.enclave,
+          latencyMs: res.latencyMs,
+        });
+      }
+    });
+  }, []);
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -128,14 +147,21 @@ export function KeeperHubWalletSelector({ compact = false }: { compact?: boolean
             </div>
 
             {/* Header */}
-            <div className="flex-shrink-0 px-5 py-3 border-b border-white/5 flex items-center justify-between">
+            <div className="flex-shrink-0 px-5 py-3.5 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
                   <Zap size={15} />
                 </div>
                 <div>
                   <h3 className="text-white font-extrabold text-[13px] font-clash tracking-tight">KeeperHub Accounts</h3>
-                  <p className="text-[10px] font-mono text-white/40 mt-0.5">Turnkey TEE Enclave</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] font-mono text-white/40">{integrationStatus.enclave}</span>
+                    <span className="w-1 h-1 rounded-full bg-white/20" />
+                    <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      {integrationStatus.status === 'connected' ? 'Live MCP' : 'Demo Ready'} ({integrationStatus.latencyMs}ms)
+                    </span>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -155,6 +181,7 @@ export function KeeperHubWalletSelector({ compact = false }: { compact?: boolean
                 </button>
               </div>
             </div>
+
 
             {/* Wallet list */}
             <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2.5">

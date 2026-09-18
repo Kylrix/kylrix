@@ -53,6 +53,13 @@ A single component / section uses **one continuous fill**. Do **not** split a ca
 - **On attempt / enable / use**, open the Pro upgrade drawer — never silently remove the control.
 - Same convention on Moments, object composers, agent panel, and file tools. Detail: `brand.openbricks-4.0` §12.
 
+## Layered In-Tree Confirmation Drawer Pattern (STRICT)
+
+All multi-step confirmations, account selectors, and tool execution gates MUST use layered bottom sheets (`bg-[#0B0A09]` or `#161412` with `rounded-t-[24px]` and backdrop overlay) that mount directly over their host surface (like the agentic panel) **without closing, unmounting, or navigating away** from the active context:
+- **No In-Chat Confirmation Bloat**: Never render fragile, scrollable confirmation cards inside chat text streams. Step confirmations must elevate above the conversation using a layered bottom sheet.
+- **Bidirectional Component Signaling**: The confirmation drawer accepts execution callbacks (`onConfirm`, `onSelect`, `onClose`) and dispatches event/state confirmations back to the calling component without resetting runtime state.
+- **Contained Viewport**: On desktop, the drawer covers the host right sidebar; on mobile, it covers the viewport. Both utilize in-tree conditional mounting (`{isOpen && <Drawer />}`).
+
 ## Related pointers
 
 - Chrome hosts: `ui.chrome-surfaces`
@@ -60,3 +67,4 @@ A single component / section uses **one continuous fill**. Do **not** split a ca
 - Brand hues: `colors`
 - Interaction safety: `ui.interactivity-safety`, `ui.interaction-design`
 - OpenBricks 4 tactile + plan rules: `brand.openbricks-4.0`
+
