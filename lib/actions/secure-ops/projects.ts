@@ -1796,7 +1796,9 @@ export async function createGoalSecure(data: any, jwt?: string): Promise<any> {
     (dataPayload as any).userId = actor.$id;
 
     const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
-    const permissions = ownerRowPermissions(actor.$id, { isPublic: !!data?.isPublic });
+    const permissions = ownerRowPermissions(actor.$id, {
+      isPublic: (dataPayload as any)?.isPublic !== undefined ? !!(dataPayload as any).isPublic : true,
+    });
 
     const result = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1832,11 +1834,17 @@ export async function updateGoalSecure(goalId: string, data: any, jwt?: string):
     const { pickGoalAutosavePayload } = await import('@/lib/goals/pick-goal-autosave-payload');
 
     const tables = createSystemTablesDB();
-    const existing = (await tables.getRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
-      rowId: goalId,
-    })) as { userId?: string | null; creatorId?: string | null };
+    const existing = (await tables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+        rowId: goalId,
+      })
+      .catch(() => null)) as { userId?: string | null; creatorId?: string | null } | null;
+
+    if (!existing) {
+      return await createGoalSecure({ ...data, $id: goalId }, jwt);
+    }
 
     const ownerId = String(existing?.creatorId || existing?.userId || '').trim();
     if (ownerId && ownerId !== actor.$id && ownerId !== 'guest' && ownerId !== 'thread') {

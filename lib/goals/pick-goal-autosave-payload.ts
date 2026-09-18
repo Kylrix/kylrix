@@ -68,8 +68,13 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
     eventId: null,
     recurrenceRule: emptyToNull((task as any).recurrenceRule)?.slice(0, 255) || null,
     isPinned: !!task.isPinned,
-    isPublic: !!task.isPublic,
-    isGuest: !!task.isGuest,
+    isPublic: task.isPublic !== undefined ? Boolean(task.isPublic) : true,
+    isGuest:
+      task.isGuest !== undefined
+        ? Boolean(task.isGuest)
+        : task.isPublic !== undefined
+          ? Boolean(task.isPublic)
+          : true,
     scheduled: !!task.scheduled,
     isAgentic: !!task.isAgentic,
     isArchived: !!task.isArchived,
