@@ -16,6 +16,37 @@ export function isFlowPath(pathname: string | null | undefined): boolean {
   );
 }
 
+export function isSharedResourcePath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  return Boolean(
+    pathname.includes('/shared/') ||
+    pathname.startsWith('/idea/') ||
+    pathname.startsWith('/goal/') ||
+    pathname.startsWith('/form/') ||
+    pathname.startsWith('/flow/') ||
+    (pathname.startsWith('/forms/') && pathname !== '/forms') ||
+    (pathname.startsWith('/events/') && pathname !== '/events') ||
+    (pathname.startsWith('/vault/') && pathname !== '/vault/totp' && !pathname.startsWith('/vault/reset')) ||
+    (pathname.startsWith('/workspaces/') && pathname !== '/workspaces') ||
+    pathname.startsWith('/workspace/') ||
+    pathname.startsWith('/agents/session/') ||
+    pathname.startsWith('/agents/chat/') ||
+    pathname.startsWith('/connect/hangouts/invite/') ||
+    pathname.startsWith('/connect/post/') ||
+    pathname.startsWith('/moment/') ||
+    pathname.startsWith('/send') ||
+    pathname.startsWith('/i/') ||
+    pathname.startsWith('/u/') ||
+    pathname.startsWith('/billing/') ||
+    pathname.startsWith('/oauth/') ||
+    pathname.startsWith('/docs') ||
+    pathname.startsWith('/terms') ||
+    pathname.startsWith('/privacy') ||
+    pathname.startsWith('/sponsor') ||
+    pathname.startsWith('/pair')
+  );
+}
+
 /** @deprecated use isFlowPath — Flow is workflows */
 
 export function isGoalsSurfacePath(pathname: string | null | undefined): boolean {

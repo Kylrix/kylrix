@@ -29,7 +29,7 @@ import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { useServiceWorker } from '@/hooks/useServiceWorker';
-import { isFlowPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
+import { isFlowPath, isGoalsSurfacePath, isSharedResourcePath } from '@/lib/routing/app-paths';
 
 import { UnifiedLeftSidebar } from '@/components/UnifiedLeftSidebar';
 
@@ -81,30 +81,27 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   useServiceWorker();
 
   // 1. Route Analysis
-  const isAppRoute = useMemo(() => Boolean(
-    pathname?.startsWith('/app') ||
-    isFlowPath(pathname) ||
-    isGoalsSurfacePath(pathname) ||
-    pathname?.startsWith('/vault') ||
-    pathname?.startsWith('/connect') ||
-    pathname?.startsWith('/accounts') ||
-    pathname?.startsWith('/settings')
-  ), [pathname]);
+  const isSharedPage = useMemo(() => isSharedResourcePath(pathname), [pathname]);
 
-  const isSharedPage = useMemo(() => {
-    if (!pathname) return false;
-    return (
-      pathname.includes('/shared/') ||
-      pathname.startsWith('/goal/') ||
-      pathname.startsWith('/form/') ||
-      pathname.startsWith('/events/') ||
-      pathname.startsWith('/agents/session/') ||
-      pathname.startsWith('/agents/chat/') ||
-      pathname.startsWith('/send') ||
-      pathname.startsWith('/i/') ||
-      pathname.startsWith('/u/')
+  const isAppRoute = useMemo(() => {
+    if (!pathname || isSharedPage) return false;
+    return Boolean(
+      pathname === '/app' ||
+      pathname.startsWith('/app/') ||
+      pathname === '/flows' ||
+      pathname.startsWith('/flows/') ||
+      pathname === '/goals' ||
+      pathname.startsWith('/goals/') ||
+      pathname === '/forms' ||
+      pathname === '/events' ||
+      pathname === '/vault' ||
+      pathname === '/vault/totp' ||
+      pathname === '/workspaces' ||
+      pathname.startsWith('/connect') ||
+      pathname.startsWith('/accounts') ||
+      pathname.startsWith('/settings')
     );
-  }, [pathname]);
+  }, [pathname, isSharedPage]);
   const isVaultResetRoute = pathname?.startsWith('/vault/reset');
   const isLandingPage = pathname === '/';
 
@@ -124,17 +121,17 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
   // Smart responsive Left Sidebar visibility
   const isNoteFullPageDetail = useMemo(
-    () => Boolean(pathname?.match(/^\/idea\/[^/]+$/)),
+    () => Boolean(pathname?.startsWith('/idea/')),
     [pathname]);
 
-const isSpecificPostPage = useMemo(
+  const isSpecificPostPage = useMemo(
     () =>
       Boolean(
         pathname?.startsWith('/connect/post/') || pathname?.startsWith('/moment/'),
       ),
     [pathname],
   );
-  const isProjectDetailPage = useMemo(() => Boolean(pathname?.match(/^\/workspace\/[^/]+$/)), [pathname]);
+  const isProjectDetailPage = useMemo(() => Boolean(pathname?.startsWith('/workspace/')), [pathname]);
 
   const showLeftSidebar = useMemo(() => Boolean(
     isAppRoute &&
