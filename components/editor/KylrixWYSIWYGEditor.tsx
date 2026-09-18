@@ -74,6 +74,7 @@ function buildHiddenMarkdownMarks(view: EditorView): DecorationSet {
 
   const selection = view.state.selection.main;
   const editable = view.state.facet(EditorView.editable);
+  const isFocused = view.hasFocus;
 
   for (const { from, to } of view.visibleRanges) {
     syntaxTree(view.state).iterate({
@@ -83,11 +84,11 @@ function buildHiddenMarkdownMarks(view: EditorView): DecorationSet {
         if (!MARKDOWN_MARK_NODES.has(node.name)) return;
         if (node.to <= node.from) return;
 
-        if (editable) {
+        if (editable && isFocused) {
           const parent = node.node.parent;
           const regionFrom = parent ? parent.from : node.from;
           const regionTo = parent ? parent.to : node.to;
-          // Caret inside this construct → keep modifiers visible for editing.
+          // Caret inside this construct while focused → keep modifiers visible for editing.
           if (selection.from <= regionTo && selection.to >= regionFrom) return;
         }
 
@@ -110,6 +111,7 @@ const liveMarkdownMarkHider = ViewPlugin.fromClass(
         update.docChanged ||
         update.selectionSet ||
         update.viewportChanged ||
+        update.focusChanged ||
         syntaxTree(update.startState) !== syntaxTree(update.state)
       ) {
         this.decorations = buildHiddenMarkdownMarks(update.view);
