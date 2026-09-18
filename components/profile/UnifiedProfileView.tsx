@@ -16,8 +16,10 @@ import {
   Coins,
   Share2,
   X,
-  Sparkles
+  Sparkles,
+  Crown
 } from 'lucide-react';
+import { getUserSubscriptionTier } from '@/lib/utils';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -200,12 +202,14 @@ export function UnifiedProfileView({
   function isOwnCheck() {
     return Boolean(
       (currentUserId && userId && currentUserId === userId) ||
+      (currentUserId && initialProfile && (initialProfile.userId === currentUserId || initialProfile.$id === currentUserId)) ||
       (user?.name && username && user.name.toLowerCase() === username.toLowerCase()) ||
       (user?.prefs?.username && username && user.prefs.username.toLowerCase() === username.toLowerCase())
     );
   }
 
   const isOwnProfile = isOwnCheck();
+  const currentUserTier = isOwnProfile ? getUserSubscriptionTier(user) : null;
 
   const initialCleanUsername = typeof username === 'string' && isCleanUsername(username)
     ? username.trim().replace(/^@/, '')
@@ -535,31 +539,33 @@ export function UnifiedProfileView({
             </>
           )}
 
-          <button
-            type="button"
-            onClick={() => {
-              window.dispatchEvent(
-                new CustomEvent('kylrix:open-sidekick', {
-                  detail: {
-                    type: 'profile',
-                    id: targetUid || activeHandle || 'profile',
-                    title: activeDisplayName,
-                    content: activeBio || '',
-                    metadata: {
-                      handle: activeHandle,
-                      following: kylrixFollowingCount,
-                      followers: kylrixFollowersCount,
+          {!isOwnProfile && (
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent('kylrix:open-sidekick', {
+                    detail: {
+                      type: 'profile',
+                      id: targetUid || activeHandle || 'profile',
+                      title: activeDisplayName,
+                      content: activeBio || '',
+                      metadata: {
+                        handle: activeHandle,
+                        following: kylrixFollowingCount,
+                        followers: kylrixFollowersCount,
+                      },
                     },
-                  },
-                })
-              );
-            }}
-            className="p-2 rounded-xl bg-[#A855F7]/15 border border-[#A855F7]/25 text-[#A855F7] hover:text-white hover:bg-[#A855F7]/25 transition-all cursor-pointer"
-            title="Sidekick Companion"
-            aria-label="Sidekick Companion"
-          >
-            <Sparkles size={15} />
-          </button>
+                  })
+                );
+              }}
+              className="p-2 rounded-xl bg-[#A855F7]/15 border border-[#A855F7]/25 text-[#A855F7] hover:text-white hover:bg-[#A855F7]/25 transition-all cursor-pointer"
+              title="Sidekick Companion"
+              aria-label="Sidekick Companion"
+            >
+              <Sparkles size={15} />
+            </button>
+          )}
 
           <button
             type="button"
@@ -629,6 +635,18 @@ export function UnifiedProfileView({
                   <h1 className="text-lg sm:text-xl font-black font-clash text-white tracking-tight truncate m-0">
                     {activeDisplayName}
                   </h1>
+                  {isOwnProfile && currentUserTier && (
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase font-mono border ${
+                      currentUserTier === 'TEAMS' || currentUserTier === 'ORG'
+                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                        : currentUserTier === 'PRO' || currentUserTier === 'LIFETIME'
+                        ? 'bg-[#6366F1]/15 text-[#818CF8] border-[#6366F1]/30'
+                        : 'bg-white/10 text-white/60 border-white/20'
+                    }`}>
+                      <Crown size={11} className={currentUserTier === 'FREE' ? 'text-white/40' : 'text-amber-400'} />
+                      <span>{currentUserTier} PLAN</span>
+                    </span>
+                  )}
                 </div>
 
                 {activeHandle && (
