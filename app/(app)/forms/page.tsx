@@ -65,11 +65,11 @@ export default function FormsDashboard() {
     const [showResponsesWorkflow, setShowResponsesWorkflow] = useState(false);
     const [workflowTargetForm, setWorkflowTargetForm] = useState<Forms | null>(null);
 
-    const handleCreate = () => {
+    const handleCreate = useCallback(() => {
         setSelectedForm(null);
         setSelectedDraft(null);
         setDialogOpen(true);
-    };
+    }, []);
 
     useEffect(() => {
         setConfiguration({
@@ -90,15 +90,19 @@ export default function FormsDashboard() {
     }, [forms]);
 
     const sortForms = useCallback((rows: Forms[]) => {
+        if (!Array.isArray(rows)) return [];
         return [...rows].sort((a: any, b: any) => {
-            const aPinned = isResourcePinned('form', a.$id, a.userId, a.isPinned);
-            const bPinned = isResourcePinned('form', b.$id, b.userId, b.isPinned);
+            if (!a) return 1;
+            if (!b) return -1;
+            const aId = a.$id || a.id;
+            const bId = b.$id || b.id;
+            const aPinned = aId ? isResourcePinned('form', aId, a.userId, a.isPinned) : false;
+            const bPinned = bId ? isResourcePinned('form', bId, b.userId, b.isPinned) : false;
             if (aPinned && !bPinned) return -1;
             if (!aPinned && bPinned) return 1;
-            return (
-                new Date(b.$createdAt || Date.now()).getTime() -
-                new Date(a.$createdAt || Date.now()).getTime()
-            );
+            const timeA = new Date(a.$createdAt || a.createdAt || Date.now()).getTime();
+            const timeB = new Date(b.$createdAt || b.createdAt || Date.now()).getTime();
+            return timeB - timeA;
         });
     }, [isResourcePinned]);
 
@@ -211,27 +215,27 @@ export default function FormsDashboard() {
         };
     }, [activeWorkspace?.id]);
 
-    const handleEdit = (form: Forms) => {
+    const handleEdit = useCallback((form: Forms) => {
         setSelectedForm(form);
         setSelectedDraft(null);
         setDialogOpen(true);
-    };
+    }, []);
 
-    const handleEditDraft = (draft: FormDraft) => {
-        const existingForm = forms.find(f => f.$id === draft.id);
+    const handleEditDraft = useCallback((draft: FormDraft) => {
+        const existingForm = formsRef.current.find(f => f.$id === draft.id);
         setSelectedForm(existingForm || null);
         setSelectedDraft(draft);
         setDialogOpen(true);
-    };
+    }, []);
 
-    const handleDelete = async (form: Forms) => {
+    const handleDelete = useCallback(async (form: Forms) => {
         openDrawer('delete-confirm', {
-            title: `Purge "${form.title}"?`,
+            title: `Purge "${form.title || 'this form'}"?`,
             description: 'This will permanently erase all metadata, configurations, and associated responses for this form.',
             resourceName: 'this form',
             confirmLabel: 'Confirm Purge',
             onConfirm: async () => {
-                if (!user) return;
+                if (!user?.$id) return;
                 try {
                     await FormsService.deleteForm(form.$id);
                     setForms((prev) => prev.filter((f) => f.$id !== form.$id));
@@ -242,15 +246,15 @@ export default function FormsDashboard() {
                             cached.filter((f: any) => f.$id !== form.$id),
                         );
                     } catch {}
-                    fetchForms(false);
+                    void fetchForms(false);
                 } catch (err) {
                     console.error("Failed to delete form", err);
                 }
             }
         });
-    };
+    }, [openDrawer, user?.$id, fetchForms]);
 
-    const handleDeleteDraft = (draft: FormDraft) => {
+    const handleDeleteDraft = useCallback((draft: FormDraft) => {
         openDrawer('delete-confirm', {
             title: `Delete Local Draft?`,
             description: `You are about to remove "${draft.title || 'Untitled Portal'}" from your local storage. This cannot be recovered.`,
@@ -258,16 +262,16 @@ export default function FormsDashboard() {
             confirmLabel: 'Delete Draft',
             onConfirm: async () => {
                 await DraftsService.clearDraft(draft.id);
-                fetchForms(false);
+                void fetchForms(false);
             }
         });
-    };
+    }, [openDrawer, fetchForms]);
 
-    const handleOpenSettings = (form: Forms) => {
+    const handleOpenSettings = useCallback((form: Forms) => {
         setSelectedForm(form);
         setSelectedDraft(null);
         setSettingsOpen(true);
-    };
+    }, []);
 
     const handleOpenDetail = useCallback((form: Forms) => {
         const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
@@ -298,8 +302,8 @@ export default function FormsDashboard() {
         }
     }, [openSidebar, closeSidebar, openOverlay, closeOverlay]);
 
-    const handleTogglePin = async (form: Forms) => {
-        if (!user?.$id) return;
+    const handleTogglePin = useCallback(async (form: Forms) => {
+        if (!user?.$id || !form?.$id) return;
         const ownerId = form.userId || user.$id;
         try {
             const nextPinned = await togglePin({
@@ -317,7 +321,7 @@ export default function FormsDashboard() {
                 )
             );
         } catch {}
-    };
+    }, [user?.$id, togglePin, sortForms]);
 
     return (
         <div className="flex-1 min-h-screen pointer-events-auto">
@@ -475,7 +479,14 @@ export default function FormsDashboard() {
                                     formId={workflowTargetForm.$id}
                                     formTitle={workflowTargetForm.title || 'Form'}
                                     submissions={(workflowTargetForm as any).submissions || (workflowTargetForm as any).responses || []}
-                                    liveFields={workflowTargetForm.schema ? (typeof workflowTargetForm.schema === 'string' ? JSON.parse(workflowTargetForm.schema) : workflowTargetForm.schema) : []}
+                                    liveFields={workflowTargetForm.schema ? (() => {
+                                        try {
+                                            const parsed = typeof workflowTargetForm.schema === 'string' ? JSON.parse(workflowTargetForm.schema) : workflowTargetForm.schema;
+                                            return Array.isArray(parsed) ? parsed : [];
+                                        } catch {
+                                            return [];
+                                        }
+                                    })() : []}
                                     activeWorkspaceId={activeWorkspace?.id || null}
                                 />
                             </>
