@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronUp, Copy, MessageSquare, X } from 'lucide-react';
+import { ChevronUp, Copy, Crown, MessageSquare, X } from 'lucide-react';
+import { getUserSubscriptionTier } from '@/lib/utils';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { UsersService } from '@/lib/services/users';
 import { fetchProfilePreview } from '@/lib/profile-preview';
@@ -109,6 +110,7 @@ export function ProfileSidebar({
   const bio = isGroup ? (conversation?.description || 'Group hangout channel').trim() : (profile?.bio || seed?.bio || '').trim();
   const shortBio = bio.length > 140 ? `${bio.slice(0, 139).trim()}…` : bio;
   const isOwn = Boolean(!isGroup && user?.$id && uid && user.$id === uid);
+  const currentUserTier = isOwn ? getUserSubscriptionTier(user) : null;
   const displayName = name.replace(/\s*\(You\)\s*/gi, '').trim() || name;
 
   const handleExpandToggle = useCallback(() => {
@@ -171,10 +173,24 @@ export function ProfileSidebar({
               />
             </div>
             <div className="min-w-0 flex-1 space-y-0.5">
-              <h2 className="text-white text-lg font-black tracking-tight leading-none truncate font-clash">
-                {displayName}
-                {isOwn ? <span className="text-[#6366F1] font-bold text-xs ml-1.5">(You)</span> : null}
-              </h2>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-white text-lg font-black tracking-tight leading-none truncate font-clash m-0">
+                  {displayName}
+                  {isOwn ? <span className="text-[#6366F1] font-bold text-xs ml-1.5">(You)</span> : null}
+                </h2>
+                {isOwn && currentUserTier && (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase font-mono border ${
+                    currentUserTier === 'TEAMS' || currentUserTier === 'ORG'
+                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      : currentUserTier === 'PRO' || currentUserTier === 'LIFETIME'
+                      ? 'bg-[#6366F1]/15 text-[#818CF8] border-[#6366F1]/30'
+                      : 'bg-white/10 text-white/60 border-white/20'
+                  }`}>
+                    <Crown size={10} className={currentUserTier === 'FREE' ? 'text-white/40' : 'text-amber-400'} />
+                    <span>{currentUserTier}</span>
+                  </span>
+                )}
+              </div>
               {handle ? (
                 <div className="flex items-center gap-1.5">
                   <p className="text-[#6366F1] font-mono text-xs tracking-wide truncate">@{handle}</p>
