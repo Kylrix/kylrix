@@ -6,7 +6,6 @@
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { ownerRowPermissions } from '@/lib/appwrite/owner-acl';
 import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
-import { hasPaidKylrixPlan } from '@/lib/utils';
 
 const STANDARD_CONTENT_LIMIT = 65535;
 const ARTICLE_CONTENT_LIMIT = 655300000;

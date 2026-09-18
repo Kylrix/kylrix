@@ -79,6 +79,32 @@ export function normalizeCustomFields(raw: unknown): EnvField[] {
   return [];
 }
 
+const RECOVERY_CODE_TOKEN_RE = /^[A-Za-z0-9]{3,8}(?:-[A-Za-z0-9]{3,8})+$/;
+
+/**
+ * Recognizes and extracts recovery codes formatted like `abcd-efgh` from custom field values.
+ * Returns an array of individual recovery code strings if the value consists of recovery codes.
+ */
+export function extractRecoveryCodes(value: string | null | undefined): string[] {
+  if (!value || typeof value !== 'string') return [];
+  const raw = value.trim();
+  if (!raw) return [];
+
+  const tokens = raw
+    .split(/[\s,;]+/)
+    .map((t) => t.replace(/^(?:\d+[.:\)]|\(\d+\))\s*/, '').trim())
+    .filter(Boolean);
+
+  if (!tokens.length) return [];
+
+  const validCodes = tokens.filter((t) => RECOVERY_CODE_TOKEN_RE.test(t));
+  if (validCodes.length === tokens.length) {
+    return validCodes;
+  }
+
+  return [];
+}
+
 /** Format custom-field env rows back into KEY=VALUE lines for .env pasting. */
 export function formatEnvText(
   fields: Array<{ label?: string; key?: string; value?: string }>,

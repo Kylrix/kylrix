@@ -41,6 +41,7 @@ import {
   measureEnvFieldsJson,
   normalizeCustomFields,
   parseEnvText,
+  extractRecoveryCodes,
   type EnvField,
 } from '@/lib/vault/parse-env';
 import {
@@ -943,31 +944,41 @@ export default function CredentialDialog({
                 Add
               </button>
             </div>
-            {customFields.map((field) => (
-              <div key={field.id} className="flex gap-2 items-center">
-                <input
-                  type="text"
-                  placeholder="Label"
-                  value={field.label}
-                  onChange={(e) => updateCustomField(field.id, 'label', e.target.value)}
-                  className={`${inputClass} flex-1 py-2.5`}
-                />
-                <input
-                  type="text"
-                  placeholder="Value"
-                  value={field.value}
-                  onChange={(e) => updateCustomField(field.id, 'value', e.target.value)}
-                  className={`${inputClass} flex-1 py-2.5`}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeCustomField(field.id)}
-                  className="p-2 text-white hover:bg-black rounded-lg"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+            {customFields.map((field) => {
+              const recCodes = extractRecoveryCodes(field.value);
+              return (
+                <div key={field.id} className="flex flex-col gap-1">
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      placeholder="Label"
+                      value={field.label}
+                      onChange={(e) => updateCustomField(field.id, 'label', e.target.value)}
+                      className={`${inputClass} flex-1 py-2.5`}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Value"
+                      value={field.value}
+                      onChange={(e) => updateCustomField(field.id, 'value', e.target.value)}
+                      className={`${inputClass} flex-1 py-2.5`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeCustomField(field.id)}
+                      className="p-2 text-white hover:bg-black rounded-lg"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {recCodes.length > 0 && (
+                    <span className="text-[0.65rem] text-[#10B981] font-mono px-1">
+                      Detected {recCodes.length} recovery code{recCodes.length === 1 ? '' : 's'} (formatted line-by-line when saved)
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

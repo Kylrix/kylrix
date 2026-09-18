@@ -68,7 +68,7 @@ async function decryptWithDek(ciphertext: string, dek: CryptoKey): Promise<strin
 }
 
 import { looksEncrypted } from '@/lib/masterpass-crypto';
-import { normalizeCustomFields, formatEnvText } from '@/lib/vault/parse-env';
+import { normalizeCustomFields, formatEnvText, extractRecoveryCodes } from '@/lib/vault/parse-env';
 
 export default function SharedVaultClient({ credentialId, dekFragment, rawCredential }: SharedVaultClientProps & { rawCredential: any }) {
   const [credential, setCredential] = useState<DecryptedCredential | null>(null);
@@ -320,25 +320,77 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
                 )}
               </div>
               <div className="svc-custom-fields">
-                {credential.customFields.map((field, index) => (
-                  <div key={field.id || index} className="svc-custom-row">
-                    <span className="svc-custom-key">{field.label || `Field ${index + 1}`}</span>
-                    <div className="svc-field-value">
-                      <span className="password-val">{field.value || '—'}</span>
-                      <button
-                        className="svc-btn icon-btn"
-                        onClick={() => copyToClipboard(field.value || '', `cf-${index}`)}
-                        title="Copy"
-                      >
-                        {copied === `cf-${index}` ? (
-                          <CheckCircle2 size={14} className="copied" />
-                        ) : (
-                          <Copy size={14} />
+                {credential.customFields.map((field, index) => {
+                  const recoveryCodes = extractRecoveryCodes(field.value);
+                  const isRecovery = recoveryCodes.length > 0;
+
+                  return (
+                    <div key={field.id || index} className="svc-custom-row">
+                      <span className="svc-custom-key" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{field.label || `Field ${index + 1}`}</span>
+                        {isRecovery && (
+                          <span style={{ fontSize: '10px', color: '#10B981', background: 'rgba(16,185,129,0.15)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(16,185,129,0.3)' }}>
+                            Recovery Codes ({recoveryCodes.length})
+                          </span>
                         )}
-                      </button>
+                      </span>
+                      {isRecovery ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#000', padding: '8px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                          {recoveryCodes.map((code, codeIdx) => {
+                            const fieldId = `cf-${index}-code-${codeIdx}`;
+                            return (
+                              <div
+                                key={codeIdx}
+                                onClick={() => copyToClipboard(code, fieldId)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '8px 10px',
+                                  background: '#161412',
+                                  borderRadius: '8px',
+                                  border: copied === fieldId ? '1px solid #10B981' : '1px solid rgba(255,255,255,0.1)',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <span className="password-val" style={{ fontSize: '12px', flex: 1, letterSpacing: '0.05em' }}>{code}</span>
+                                <button
+                                  className="svc-btn icon-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyToClipboard(code, fieldId);
+                                  }}
+                                  title="Copy code"
+                                >
+                                  {copied === fieldId ? (
+                                    <CheckCircle2 size={14} className="copied" />
+                                  ) : (
+                                    <Copy size={14} />
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="svc-field-value">
+                          <span className="password-val">{field.value || '—'}</span>
+                          <button
+                            className="svc-btn icon-btn"
+                            onClick={() => copyToClipboard(field.value || '', `cf-${index}`)}
+                            title="Copy"
+                          >
+                            {copied === `cf-${index}` ? (
+                              <CheckCircle2 size={14} className="copied" />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
