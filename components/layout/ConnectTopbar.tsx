@@ -173,7 +173,10 @@ export default function ConnectTopbar({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [passiveNotification, setPassiveNotification] = useState<KylrixNotification | null>(null);
   const [notifHint, setNotifHint] = useState<{ id: string; title: string; description: string; accent: string } | null>(null);
-  const [dismissedHintId, _setDismissedHintId] = useState<string | null>(null);
+  const [dismissedHintId, setDismissedHintId] = useState<string | null>(null);
+  // Track dismissed passive notification IDs via a ref so the suggestions effect
+  // can read the latest value without being listed as a dependency (prevents re-creation loop).
+  const dismissedPassiveIdsRef = useRef<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
@@ -280,30 +283,44 @@ export default function ConnectTopbar({
     return () => window.removeEventListener('kylrix:local-notifications', onLocal as EventListener);
   }, [user?.$id, notificationsOpen, secondarySidebar]);
 
-  // Watch for new intelligence pulses (suggestions)
+  // Watch for new intelligence pulses (suggestions).
+  // We intentionally do NOT include passiveNotification in the dep array here —
+  // adding it would cause the effect to re-run whenever the notification is
+  // dismissed (set to null) and immediately recreate it, making Cancel/View
+  // appear to do nothing. Instead we use dismissedPassiveIdsRef (a ref) to
+  // check whether the user already dismissed this particular suggestion.
   useEffect(() => {
     if (suggestions.length > 0) {
       const latest = suggestions[0];
-      if (latest.id !== dismissedHintId && (!passiveNotification || passiveNotification.id !== latest.id)) {
-        setPassiveNotification({
-          id: latest.id,
-          category: 'system',
-          title: latest.title,
-          message: latest.description,
-          time: 'Just now',
-          timestamp: Date.now(),
-          read: false,
-          accent: latest.niche === 'intelligence' ? '#6366F1' : '#10B981',
-          source: 'system',
+      if (latest.id !== dismissedHintId && !dismissedPassiveIdsRef.current.has(latest.id)) {
+        setPassiveNotification((prev) => {
+          // Don't recreate if the same notification is already shown.
+          if (prev && prev.id === latest.id) return prev;
+          return {
+            id: latest.id,
+            category: 'system',
+            title: latest.title,
+            message: latest.description,
+            time: 'Just now',
+            timestamp: Date.now(),
+            read: false,
+            accent: latest.niche === 'intelligence' ? '#6366F1' : '#10B981',
+            source: 'system',
+          };
         });
       }
     }
-  }, [suggestions, passiveNotification, dismissedHintId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestions, dismissedHintId]);
 
   // Auto-dismiss passive notifications on mobile after 6 seconds
   useEffect(() => {
     if (passiveNotification && !isDesktop) {
       const timer = setTimeout(() => {
+        if (passiveNotification?.source === 'system') {
+          dismissedPassiveIdsRef.current.add(passiveNotification.id);
+          setDismissedHintId(passiveNotification.id);
+        }
         setPassiveNotification(null);
       }, 6000);
       return () => clearTimeout(timer);
@@ -410,6 +427,12 @@ export default function ConnectTopbar({
   }, [closeAgenticDrawer, secondarySidebar, closeSecondarySidebar]);
 
   const handleNotificationClick = useCallback((notif: KylrixNotification) => {
+    // Record dismissed ID before clearing, so the suggestions effect
+    // does not immediately recreate the pill after dismiss.
+    if (notif?.source === 'system') {
+      dismissedPassiveIdsRef.current.add(notif.id);
+      setDismissedHintId(notif.id);
+    }
     setPassiveNotification(null);
     handleCloseAll();
     executeNotificationAction(notif, {
@@ -442,6 +465,7 @@ export default function ConnectTopbar({
     openUnified,
     router,
     handleCloseAll,
+    setDismissedHintId,
   ]);
 
   const openAgenticFromTopbar = useCallback(() => {
@@ -2474,11 +2498,21 @@ export default function ConnectTopbar({
                   <CompactNotificationPill
                     notification={passiveNotification}
                     onExpand={() => {
+                      if (passiveNotification?.source === 'system') {
+                        dismissedPassiveIdsRef.current.add(passiveNotification.id);
+                        setDismissedHintId(passiveNotification.id);
+                      }
                       setPassiveNotification(null);
                       handleCloseAll();
                       openSecondarySidebar('notification', 'notifications');
                     }}
-                    onDismiss={() => setPassiveNotification(null)}
+                    onDismiss={() => {
+                      if (passiveNotification?.source === 'system') {
+                        dismissedPassiveIdsRef.current.add(passiveNotification.id);
+                        setDismissedHintId(passiveNotification.id);
+                      }
+                      setPassiveNotification(null);
+                    }}
                     onApply={() => handleNotificationClick(passiveNotification)}
                     appAccent={appAccent}
                     isDesktop={true}
@@ -2702,6 +2736,10 @@ export default function ConnectTopbar({
                       size="small"
                       onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
+                        if (passiveNotification?.source === 'system') {
+                          dismissedPassiveIdsRef.current.add(passiveNotification.id);
+                          setDismissedHintId(passiveNotification.id);
+                        }
                         setPassiveNotification(null);
                       }}
                       sx={{
