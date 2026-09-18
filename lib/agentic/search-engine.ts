@@ -72,17 +72,28 @@ function planSearchQuery(query: string): SearchPlan {
     temporal};
 }
 
+const STOP_WORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'do', 'we', 'have', 'any', 'that', 'can', 'be',
+  'is', 'are', 'was', 'were', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+  'from', 'about', 'what', 'which', 'who', 'how', 'my', 'our', 'your', 'me', 'us'
+]);
+
 function scoreMatch(hay: string, needle: string): number {
   const h = hay.toLowerCase();
   const n = needle.toLowerCase().trim();
   if (!n) return 0;
   if (h === n) return 1;
   if (h.startsWith(n)) return 0.85;
-  if (h.includes(n)) return 0.6;
-  const tokens = n.split(/\s+/).filter(Boolean);
-  const hit = tokens.filter((t) => h.includes(t)).length;
-  return hit / Math.max(tokens.length, 1) * 0.5;
+  if (h.includes(n)) return 0.65;
+
+  const rawTokens = n.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+  const meaningfulTokens = rawTokens.filter((t) => !STOP_WORDS.has(t) && t.length > 1);
+  const tokensToUse = meaningfulTokens.length > 0 ? meaningfulTokens : rawTokens;
+
+  const hit = tokensToUse.filter((t) => h.includes(t) || (t.length > 3 && h.includes(t.slice(0, 4)))).length;
+  return (hit / Math.max(tokensToUse.length, 1)) * 0.7;
 }
+
 
 function isToday(iso?: string | null): boolean {
   if (!iso) return false;

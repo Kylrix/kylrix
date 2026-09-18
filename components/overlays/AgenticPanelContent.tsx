@@ -82,12 +82,10 @@ import {
   type QuickWorkflowAction,
   userMayUsePaidAi,
   AI_UPGRADE_LABEL} from '@/lib/agentic';
-import { getAgenticUserMessage } from '@/lib/agentic/errors';
-import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { account } from '@/lib/appwrite/client';
 import { WalletService } from '@/lib/services/wallets';
-import { KeeperHubWalletSelector } from '@/components/agentic/KeeperHubWalletSelector';
+import { KeeperHubWalletSelector, KeeperHubWalletDrawer } from '@/components/agentic/KeeperHubWalletSelector';
 import { toast } from 'react-hot-toast';
 import { ContextMenu } from '@/components/ui/ContextMenu';
 import { useHintEngine } from '@/hooks/useHintEngine';
@@ -290,6 +288,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [signing, setSigning] = useState(false);
   const [pendingToolAuth, setPendingToolAuth] = useState<{ toolKey: string; name: string; specifier?: string; args?: any; assistantId?: string } | null>(null);
   const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
+  const [showWalletDrawer, setShowWalletDrawer] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const { filteredItems: workspaceFilteredSessions } = useWorkspaceFilteredItems(sessions, 'agent_session');
 
@@ -1636,7 +1635,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               {agentCount > 0 ? ` · ${agentCount} helper${agentCount === 1 ? '' : 's'}` : ''}
             </p>
           </div>
-          <KeeperHubWalletSelector compact />
+          <KeeperHubWalletSelector compact onOpenDrawer={() => setShowWalletDrawer(true)} />
           <button
             type="button"
             onClick={handleOpenSessions}
@@ -2032,6 +2031,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           onCloseAction={() => setMessageMenuTarget(null)}
           items={messageMenuItems}
         />
+      )}
+
+      {/* KeeperHub Enclave Accounts Bottom Drawer (Contained inside Kylie) */}
+      {showWalletDrawer && (
+        <KeeperHubWalletDrawer onClose={() => setShowWalletDrawer(false)} />
       )}
 
       {/* Sessions Bottom Drawer (Capped at 60% height permanently) */}

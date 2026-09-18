@@ -38,37 +38,41 @@ Examples:
 function buildSearchGuide(): string {
   return `
 [SEARCH — MULTI-STEP REASONING]
-For vague queries ("what's for today", "find my backend tasks", "look through my notes", "summarize my personality from goals/ideas", "pull up my experience with tanstack", "latest idea", "web CAD idea", "what I've been working on"):
-1. IMMEDIATELY emit search_ecosystem with args.query = user phrase (IDs only returned to engine). Do NOT ask the user to clarify or to confirm.
-2. The client renders rich local-copy cards automatically — do NOT paste raw search hit lists in response text.
-3. After search, pick one hit by id and explain it (use get_note with args.id for ideas) OR chain ui.navigate. If the user asked for personality summary, search goals+ideas then synthesize from the returned titles/snippets.
+For queries about items, recent activity, fundable goals, or summaries ("what's for today", "do we have any goals or tasks that can be funded?", "find my tasks", "look through my notes", "what have I been working on lately?"):
+1. IMMEDIATELY emit toolCall "search_ecosystem" with args.query = user query (e.g. "goals" or specific topic). NEVER ask the user to clarify, confirm, or specify projects before searching.
+2. The client renders rich local-copy cards automatically.
+3. After search, pick one hit by id and explain it (use get_note with args.id for ideas, get_goal with args.id for goals) OR chain ui.navigate.
 Domains: ideas, goals, events, forms, projects, UI destinations.
 Temporal hints: today → goals/events due today; overdue → late goals.
 When user asks to "explain an interesting note" or "pick this idea (ID)" or "what do you think about idea", ALWAYS call get_note with args.id in the SAME turn — never say "I need to access it first" without calling the tool.
-When user literally types tool syntax like "search_ecosystem { query: \\"...\\" }" or "create_note { ... }", treat it as an instruction to execute that tool — emit the corresponding toolCall immediately.
-If search_ecosystem returns an empty array, inform the user directly and do NOT call get_note with a blank or guessed ID.
 `;
 }
 
 function buildWalletGuide(): string {
   return `
-[WALLET, TOKENS & USER DIRECTORY]
+[WALLET, TOKENS & KEEPERHUB ONCHAIN EXECUTION]
 1. BALANCE QUERIES:
-   - When user asks to check or fetch balances (e.g. "fetch my balance", "get my SOL balance", "what tokens do I have", "check my Kylrix balance"):
-   - ALWAYS emit toolCall "wallet_get_balance" with args.token (e.g. "SOL", "KYLRIX", "ALL").
-   - Kylie's agentic wallet authorization and preview will dynamically handle permission review and show their verified balances & addresses.
+   - When user asks to check or fetch balances (e.g. "fetch my balance", "get my SOL balance", "what tokens do I have", "check my Kylrix balance", "fetch arbitrum"):
+   - ALWAYS emit toolCall "wallet_get_balance" with args.token (e.g. "SOL", "KYLRIX", "ARBITRUM", "ALL").
+   - NEVER output text claiming you are retrieving balances without emitting the "wallet_get_balance" toolCall in the SAME turn.
 2. USER SEARCH / RECIPIENTS:
-   - When user asks to find users, tip someone, or look up a username/avatar (e.g. "find user Alice", "search for Bob", "who can I send tokens to?"):
-   - Emit toolCall "search_users" with args.query.
-   - The UI automatically renders user directory cards with avatars and direct tip actions in chat.
-3. SENDING TOKENS & KEEPERHUB ONCHAIN EXECUTION:
-   - When user requests a KeeperHub execution or onchain transfer (e.g. "Fund bounty: Send 0.001 Sepolia ETH to 0x... via KeeperHub", "Send 0.001 ETH via KeeperHub", "Execute transfer on Sepolia"):
-   - IMMEDIATELY emit toolCall "keeperhub_execute_transaction" (or "execute_transfer") with args: recipient, amount, symbol ("ETH" or "Sepolia ETH"), network ("Ethereum Sepolia"), chainId (11155111), intent ("Fund bounty: Send 0.001 Sepolia ETH").
-   - When user requests a standard tip or transfer (e.g. "send 50 KYLRIX to @nath"):
-   - Emit toolCall "wallet_send_tokens" with args: token, amount, recipientUsername (or recipientUserId).
-   - If recipient is not yet determined, first emit "search_users" or ask to select recipient from directory cards.
+   - When user asks to find users, tip someone, or look up a username/avatar: emit toolCall "search_users" with args.query.
+3. KEEPERHUB ONCHAIN BOUNTY & FUNDING EXECUTION:
+   - When user asks to fund a goal, release a bounty, send onchain ETH, or use KeeperHub (e.g. "fund the '...' goal", "release 0.005 sepolia ETH bounty for the goal", "fund the goal with keeperhub", "execute transfer on sepolia"):
+   - MANDATORY: IMMEDIATELY emit toolCall "keeperhub_execute_transaction" (or "execute_transfer") with args:
+     {
+       recipient: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+       amount: extracted amount (e.g. "0.005"),
+       symbol: "Sepolia ETH",
+       network: "Ethereum Sepolia",
+       chainId: 11155111,
+       intent: "Fund bounty: Send <amount> Sepolia ETH for goal"
+     }
+   - NEVER ask for the recipient's address or token confirmation in text. Emitting "keeperhub_execute_transaction" automatically launches the interactive KeeperHub execution drawer for user authorization.
+   - For standard Kylrix transfers: emit toolCall "wallet_send_tokens" with args: token, amount, recipientUsername.
 `;
 }
+
 
 function buildMultiTurnGuide(): string {
   return `
