@@ -34,6 +34,14 @@ import { account } from '@/lib/appwrite/client';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { useNotes } from '@/context/NotesContext';
+import { useTask } from '@/context/TaskContext';
+import { useLocalContext } from '@/lib/context-engine';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useSection } from '@/context/SectionContext';
+import { executeNotificationAction } from '@/lib/notifications/resolve-notification-action';
 
 export type NotificationCategory = 'all' | 'replies' | 'likes' | 'zaps' | 'follows' | 'system';
 
@@ -84,6 +92,15 @@ export function NotificationContent({
 }: NotificationContentProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { workspaces, setActiveWorkspaceId } = useWorkspace();
+  const { notes = [] } = useNotes();
+  const { tasks = [], selectTask } = useTask();
+  const { events = [] } = useLocalContext();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
+  const { setActiveDetail } = useSection();
+  const { open: openUnifiedDrawer } = useUnifiedDrawer();
+
   const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
   const [notifications, setNotifications] = useState<KylrixNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
@@ -336,8 +353,6 @@ export function NotificationContent({
     }
   };
 
-  const { open: openUnifiedDrawer } = useUnifiedDrawer();
-
   const isFollowingActor = useCallback(
     (actor?: KylrixNotification['actor']) => {
       if (!actor) return false;
@@ -409,23 +424,21 @@ export function NotificationContent({
     markNotificationRead(notif.id);
     onClose();
 
-    if (notif.category === 'follows' && notif.actor) {
-      openUnifiedDrawer('profile-preview', {
-        userId: notif.actor.userId,
-        username: notif.actor.username || notif.actor.name,
-        name: notif.actor.name,
-        avatar: notif.actor.avatar,
-        npub: notif.actor.npub,
-        pubkey: notif.actor.pubkey,
-        source: 'ecosystem',
-      });
-      return;
-    }
-
-    const href = notif.actionHref ? sanitizeInAppHref(notif.actionHref) : '';
-    if (href) {
-      router.push(href);
-    }
+    executeNotificationAction(notif, {
+      workspaces,
+      setActiveWorkspaceId,
+      notes,
+      tasks,
+      selectTask,
+      events,
+      openSidebar,
+      closeSidebar,
+      openOverlay,
+      closeOverlay,
+      setActiveDetail,
+      openUnified: openUnifiedDrawer,
+      router,
+    });
   };
 
   const visibleNotifications = useMemo(() => {
@@ -1029,6 +1042,14 @@ export function CompactNotificationPill({
   appAccent = '#6366F1',
 }: CompactNotificationPillProps) {
   const router = useRouter();
+  const { workspaces, setActiveWorkspaceId } = useWorkspace();
+  const { notes = [] } = useNotes();
+  const { tasks = [], selectTask } = useTask();
+  const { events = [] } = useLocalContext();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
+  const { setActiveDetail } = useSection();
+  const { open: openUnifiedDrawer } = useUnifiedDrawer();
 
   const handlePillClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1039,12 +1060,23 @@ export function CompactNotificationPill({
     e.stopPropagation();
     if (onApply) {
       onApply();
-    } else if (notification.actionHref) {
-      const href = sanitizeInAppHref(notification.actionHref);
-      if (href) router.push(href);
-      onDismiss();
     } else {
-      onExpand();
+      executeNotificationAction(notification, {
+        workspaces,
+        setActiveWorkspaceId,
+        notes,
+        tasks,
+        selectTask,
+        events,
+        openSidebar,
+        closeSidebar,
+        openOverlay,
+        closeOverlay,
+        setActiveDetail,
+        openUnified: openUnifiedDrawer,
+        router,
+      });
+      onDismiss();
     }
   };
 
