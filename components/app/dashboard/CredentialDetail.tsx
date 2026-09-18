@@ -29,7 +29,7 @@ import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { looksEncrypted } from '@/lib/masterpass-crypto';
-import { normalizeCustomFields, formatEnvText } from '@/lib/vault/parse-env';
+import { normalizeCustomFields, formatEnvText, extractRecoveryCodes } from '@/lib/vault/parse-env';
 import toast from 'react-hot-toast';
 
 const labelClass =
@@ -663,20 +663,75 @@ export default function CredentialDetail({
                 )}
               </div>
               <div className="flex flex-col gap-2.5">
-                {customFields.map((field, index) => (
-                  <div key={field.id || index} className="flex flex-col gap-1">
-                    <span className="text-[0.72rem] font-medium text-white tracking-wide font-mono">
-                      {field.label || `Field ${index + 1}`}
-                    </span>
-                    <FieldValue
-                      fieldId={`custom-${index}`}
-                      onClick={() => handleCopy(field.value || '', `custom-${index}`)}
-                      className="text-xs"
-                    >
-                      {field.value || 'Empty'}
-                    </FieldValue>
-                  </div>
-                ))}
+                {customFields.map((field, index) => {
+                  const recoveryCodes = extractRecoveryCodes(field.value);
+                  const isRecovery = recoveryCodes.length > 0;
+
+                  return (
+                    <div key={field.id || index} className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[0.72rem] font-medium text-white tracking-wide font-mono flex items-center gap-1.5">
+                          {field.label || `Field ${index + 1}`}
+                          {isRecovery && (
+                            <span className="text-[0.62rem] px-1.5 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 font-sans font-semibold">
+                              Recovery Codes ({recoveryCodes.length})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      {isRecovery ? (
+                        <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-black border border-white/20 font-mono text-xs">
+                          {recoveryCodes.map((code, codeIdx) => {
+                            const fieldId = `custom-${index}-code-${codeIdx}`;
+                            const isFieldCopied = copied === fieldId;
+                            return (
+                              <div
+                                key={codeIdx}
+                                onClick={() => handleCopy(code, fieldId, 'Recovery code copied')}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    handleCopy(code, fieldId, 'Recovery code copied');
+                                  }
+                                }}
+                                className={`flex items-center justify-between p-2 rounded-lg bg-[#161412] border transition-colors cursor-pointer hover:border-white/40 ${
+                                  isFieldCopied ? 'border-[#10B981] text-[#10B981]' : 'border-white/10 text-white'
+                                }`}
+                              >
+                                <span className="tracking-wider text-xs select-all">{code}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(code, fieldId, 'Recovery code copied');
+                                  }}
+                                  className="p-1 rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                  title="Copy recovery code"
+                                >
+                                  {isFieldCopied ? (
+                                    <Check className="w-3.5 h-3.5 text-[#10B981]" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <FieldValue
+                          fieldId={`custom-${index}`}
+                          onClick={() => handleCopy(field.value || '', `custom-${index}`)}
+                          className="text-xs"
+                        >
+                          {field.value || 'Empty'}
+                        </FieldValue>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
