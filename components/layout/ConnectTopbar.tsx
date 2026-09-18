@@ -88,6 +88,7 @@ import {
 import { SyncIndicator } from './SyncIndicator';
 import { NotificationDrawer, CompactNotificationPill, type KylrixNotification } from './NotificationDrawer';
 import { useLayout } from '@/context/LayoutContext';
+import { executeNotificationAction } from '@/lib/notifications/resolve-notification-action';
 
 
 
@@ -299,6 +300,16 @@ export default function ConnectTopbar({
     }
   }, [suggestions, passiveNotification, dismissedHintId]);
 
+  // Auto-dismiss passive notifications on mobile after 6 seconds
+  useEffect(() => {
+    if (passiveNotification && !isDesktop) {
+      const timer = setTimeout(() => {
+        setPassiveNotification(null);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [passiveNotification, isDesktop]);
+
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
   const appAccent = getAppColor(activeApp);
   const { profile: myProfile } = useProfile();
@@ -397,6 +408,41 @@ export default function ConnectTopbar({
       closeSecondarySidebar();
     }
   }, [closeAgenticDrawer, secondarySidebar, closeSecondarySidebar]);
+
+  const handleNotificationClick = useCallback((notif: KylrixNotification) => {
+    setPassiveNotification(null);
+    handleCloseAll();
+    executeNotificationAction(notif, {
+      workspaces,
+      setActiveWorkspaceId,
+      notes,
+      tasks,
+      selectTask,
+      events: localEvents,
+      openSidebar,
+      closeSidebar,
+      openOverlay,
+      closeOverlay,
+      setActiveDetail,
+      openUnified,
+      router,
+    });
+  }, [
+    workspaces,
+    setActiveWorkspaceId,
+    notes,
+    tasks,
+    selectTask,
+    localEvents,
+    openSidebar,
+    closeSidebar,
+    openOverlay,
+    closeOverlay,
+    setActiveDetail,
+    openUnified,
+    router,
+    handleCloseAll,
+  ]);
 
   const openAgenticFromTopbar = useCallback(() => {
     setProfileMenuAnchorEl(null);
@@ -2347,27 +2393,6 @@ export default function ConnectTopbar({
                         <IconButton size="small" onClick={() => { setSearchOpen(false); setSearchQuery(''); }} sx={{ color: '#FFFFFF', opacity: 0.6, '&:hover': { opacity: 1 } }}><CloseIcon size={16} /></IconButton>
                       </Paper>
                     </motion.div>
-                  ) : passiveNotification && !isDesktop ? (
-                    <motion.div
-                      key="passive-pill-mobile"
-                      initial={{ scale: 0.9, opacity: 0, y: -6 }}
-                      animate={{ scale: 1, opacity: 1, y: 0 }}
-                      exit={{ scale: 0.9, opacity: 0, y: -6 }}
-                      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                      style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 'calc(100vw - 120px)' }}
-                    >
-                      <CompactNotificationPill
-                        notification={passiveNotification}
-                        onExpand={() => {
-                          setPassiveNotification(null);
-                          handleCloseAll();
-                          setNotificationsOpen(true);
-                        }}
-                        onDismiss={() => setPassiveNotification(null)}
-                        appAccent={appAccent}
-                        isDesktop={false}
-                      />
-                    </motion.div>
                   ) : isMounted ? (
                     <motion.div 
                       key="island-rest"
@@ -2454,6 +2479,7 @@ export default function ConnectTopbar({
                       openSecondarySidebar('notification', 'notifications');
                     }}
                     onDismiss={() => setPassiveNotification(null)}
+                    onApply={() => handleNotificationClick(passiveNotification)}
                     appAccent={appAccent}
                     isDesktop={true}
                   />
@@ -2548,6 +2574,151 @@ export default function ConnectTopbar({
       </AppBar>
       {!isDrawerExpanded && (
         <>
+          {/* Mobile Topbar Takeover Top Drawer for Passive Notifications */}
+          <AnimatePresence>
+            {passiveNotification && !isDesktop && (
+              <motion.div
+                key="mobile-passive-topdrawer"
+                initial={{ y: '-100%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '-100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  zIndex: 1300,
+                  width: '100%',
+                  height: '88px',
+                  pointerEvents: 'auto',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    bgcolor: '#000000',
+                    borderBottom: '2px solid rgba(255,255,255,0.25)',
+                    borderRadius: '0 0 28px 28px',
+                    boxShadow: '0 16px 42px rgba(0,0,0,0.7)',
+                    px: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1.5,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '12px',
+                      bgcolor: alpha(passiveNotification.accent || appAccent, 0.16),
+                      color: passiveNotification.accent || appAccent,
+                      border: `1px solid ${alpha(passiveNotification.accent || appAccent, 0.3)}`,
+                      display: 'grid',
+                      placeItems: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Sparkles size={18} strokeWidth={2.4} />
+                  </Box>
+
+                  <Box
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      handleNotificationClick(passiveNotification);
+                    }}
+                    sx={{
+                      minWidth: 0,
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 0.25,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontFamily: 'var(--font-clash)',
+                        fontWeight: 800,
+                        fontSize: '0.88rem',
+                        color: '#FFFFFF',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {passiveNotification.title}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontFamily: 'var(--font-satoshi)',
+                        fontWeight: 500,
+                        fontSize: '0.76rem',
+                        color: 'rgba(255,255,255,0.75)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {passiveNotification.message}
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                    <Button
+                      size="small"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleNotificationClick(passiveNotification);
+                      }}
+                      sx={{
+                        minWidth: 0,
+                        px: 1.5,
+                        py: 0.5,
+                        height: 32,
+                        borderRadius: '999px',
+                        bgcolor: alpha(appAccent, 0.22),
+                        color: appAccent,
+                        border: `1px solid ${alpha(appAccent, 0.4)}`,
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        textTransform: 'none',
+                        lineHeight: 1,
+                        '&:hover': {
+                          bgcolor: alpha(appAccent, 0.35),
+                        },
+                      }}
+                    >
+                      {passiveNotification.actionHref ? 'Open' : 'View'}
+                    </Button>
+
+                    <IconButton
+                      size="small"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        setPassiveNotification(null);
+                      }}
+                      sx={{
+                        width: 30,
+                        height: 30,
+                        color: 'rgba(255,255,255,0.6)',
+                        '&:hover': { color: '#FF4D4D', bgcolor: 'rgba(255,77,77,0.15)' },
+                      }}
+                    >
+                      <CloseIcon size={15} />
+                    </IconButton>
+                  </Box>
+                </Box>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {renderSearchPanel()}
           {renderNotificationDrawer()}
           {renderAppPanel()}
