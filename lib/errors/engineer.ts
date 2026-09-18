@@ -89,3 +89,17 @@ export async function formatErrorForActor(err: unknown, actorOrEmail?: any): Pro
   // For non-engineers in production, do not leak internal system details
   return 'An error occurred while processing your request. Please try again or contact support.';
 }
+
+/**
+ * Server check to verify whether the caller session belongs to an engineer.
+ */
+export async function isCurrentActorEngineer(jwt?: string): Promise<boolean> {
+  try {
+    const actor = await getActor(jwt).catch(() => null);
+    const email = actor?.email || null;
+    return isEmailInEngineerList(email);
+  } catch {
+    return false;
+  }
+}
+

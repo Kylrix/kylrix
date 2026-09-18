@@ -11,6 +11,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { account } from '@/lib/appwrite/client';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { hasPaidKylrixPlan } from '@/lib/utils';
+import { sanitizeClientErrorMessage } from '@/lib/errors/sanitize';
 import toast from 'react-hot-toast';
 
 // Unified config builder for dynamic resource terminology & branding
@@ -283,7 +284,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
             toast.error(`Some ${config.labelPlural.toLowerCase()} could not be added.`);
         }
     } catch (err: any) {
-        toast.error(err.message || `Failed to add ${config.labelSingular.toLowerCase()}`);
+        toast.error(sanitizeClientErrorMessage(err?.message, `Failed to add ${config.labelSingular.toLowerCase()}`));
     } finally {
         setLoading(false);
     }
@@ -309,7 +310,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
           fetchExistingCollaborators();
           setEditingCollaborator(null);
       } catch (err: any) {
-          toast.error(err.message || 'Failed to update access');
+          toast.error(sanitizeClientErrorMessage(err?.message, 'Failed to update access'));
       } finally {
           setLoading(false);
       }
@@ -338,7 +339,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
                   fetchExistingCollaborators();
                   setEditingCollaborator(null);
               } catch (err: any) {
-                  toast.error(err.message || `Failed to remove ${config.labelSingular.toLowerCase()}`);
+                  toast.error(sanitizeClientErrorMessage(err?.message, `Failed to remove ${config.labelSingular.toLowerCase()}`));
               } finally {
                   setLoading(false);
               }

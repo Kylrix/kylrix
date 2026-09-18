@@ -20,6 +20,7 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { account } from '@/lib/appwrite/client';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { exportToMarkdown, exportToICS } from '@/lib/utils/export';
+import { sanitizeClientErrorMessage } from '@/lib/errors/sanitize';
 import toast from 'react-hot-toast';
 
 export interface ShareContextData {
@@ -267,11 +268,11 @@ export function ShareContextDrawer() {
                 if (settled.url) setResolvedUrl(settled.url);
               } else {
                 setShareLive(false);
-                toast.error(settled.error || 'Sharing did not save. Link may not work yet.');
+                toast.error(sanitizeClientErrorMessage(settled.error, 'Sharing did not save. Link may not work yet.'));
               }
             } else if (!settled.published || !settled.success) {
               // Notify even if drawer has closed
-              toast.error(settled.error || 'Sharing did not save. Link may not work yet.');
+              toast.error(sanitizeClientErrorMessage(settled.error, 'Sharing did not save. Link may not work yet.'));
             }
           },
         });
@@ -313,7 +314,7 @@ export function ShareContextDrawer() {
         if (detail.url) setResolvedUrl(String(detail.url));
       } else {
         setShareLive(false);
-        toast.error(detail.error || 'Sharing did not save. Link may not work yet.');
+        toast.error(sanitizeClientErrorMessage(detail.error, 'Sharing did not save. Link may not work yet.'));
       }
     };
     window.addEventListener('kylrix:share-published', onSettled);

@@ -195,7 +195,12 @@ export async function ensureSharePublished(
         isGuest: true,
       };
     } catch (syncErr) {
-      const message = syncErr instanceof Error ? syncErr.message : 'Share sync failed';
+      const rawMessage = syncErr instanceof Error ? syncErr.message : 'Share sync failed';
+      const isMasked =
+        rawMessage.includes('Server Components render') ||
+        rawMessage.includes('omitted in production') ||
+        rawMessage.includes('digest');
+      const message = isMasked ? 'Could not confirm public sharing on the server' : rawMessage;
       console.error('[InstantShare] Share publish error:', syncErr);
       return {
         success: false,

@@ -167,6 +167,22 @@ function buildPayload(schema: FormSchemaField[], input: RuntimeErrorFeedbackInpu
 export async function submitRuntimeErrorFeedback(input: RuntimeErrorFeedbackInput): Promise<void> {
   if (typeof window === 'undefined') return;
 
+  // Verify that the current session belongs to an engineer before auto-dispatching
+  let isEngineer = false;
+  try {
+    const { account } = await import('@/lib/appwrite/client');
+    const res = await account.createJWT().catch(() => null);
+    const { isCurrentActorEngineer } = await import('@/lib/errors/engineer');
+    isEngineer = await isCurrentActorEngineer(res?.jwt);
+  } catch {
+    isEngineer = false;
+  }
+
+  // Prevent random users from automatically creating error submissions
+  if (!isEngineer) {
+    return;
+  }
+
   const fingerprintBase = `${input.boundary}|${input.error.digest ?? ''}|${input.error.message ?? ''}|${window.location.pathname}`;
   const dedupeKey = `${SESSION_DEDUPE_PREFIX}${fingerprintBase}`;
 
