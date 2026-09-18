@@ -300,7 +300,7 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
                 })
               );
             }}
-            className="p-1.5 rounded-lg bg-black/40 border border-white/10 transition-all duration-200 text-white/40 hover:text-[#22C55E]"
+            className="p-1.5 rounded-lg bg-black/40 border border-white/10 transition-all duration-200 text-white hover:text-[#22C55E]"
             title="Sidekick Assist"
             aria-label="Sidekick Assist"
           >

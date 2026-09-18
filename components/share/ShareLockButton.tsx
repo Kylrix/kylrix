@@ -179,7 +179,7 @@ export function ShareLockButton({
           ? accentColor 
           : isPublic 
             ? `color-mix(in srgb, ${accentColor} 50%, transparent)` 
-            : 'rgba(255, 255, 255, 0.15)',
+            : '#FFFFFF',
         transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         opacity: busy ? 0.5 : 1,
         '&:hover': {
