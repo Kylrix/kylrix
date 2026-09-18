@@ -6,54 +6,25 @@
 
 ---
 
-## 2. Required Appwrite Console Indexes & Composite Queries
+## 2. Required Appwrite Console Indexes & Composite Queries (Completed)
 
-To ensure strict server-side Appwrite `Query` execution without full table scans, create the following indexes in the Appwrite Console for database `passwordManagerDb`:
+Created via Appwrite CLI (`tablesdb create-index`):
 
 ### A. Goals Table (`tasks`)
-- **Single Index on Due Date:**
-  - Index Key: `idx_tasks_dueDate`
-  - Type: `key`
-  - Attributes: `dueDate` (ASC or DESC)
-- **Composite Index for Status Filtering:**
-  - Index Key: `idx_tasks_dueDate_status`
-  - Type: `key`
-  - Attributes: `dueDate`, `status`
-- **Composite Index for Deletion & Trash Flags:**
-  - Index Key: `idx_tasks_dueDate_status_flags`
-  - Type: `key`
-  - Attributes: `dueDate`, `status`, `isDeleted`, `isTrash`
+- [x] **Single Index on Due Date:** `idx_tasks_dueDate` (`dueDate` ASC)
+- [x] **Composite Index for Status Filtering:** `idx_tasks_dueDate_status` (`dueDate` ASC, `status` ASC)
+- [x] **Composite Index for Deletion & Trash Flags:** `idx_tasks_dueDate_status_flags` (`dueDate` ASC, `status` ASC, `isDeleted` ASC, `isTrash` ASC)
 
 ### B. Events Table (`events`)
-- **Single Index on Start Time:**
-  - Index Key: `idx_events_startTime`
-  - Type: `key`
-  - Attributes: `startTime` (ASC or DESC)
-- **Composite Index for Status Filtering:**
-  - Index Key: `idx_events_startTime_status`
-  - Type: `key`
-  - Attributes: `startTime`, `status`
-- **Composite Index for Deletion & Trash Flags:**
-  - Index Key: `idx_events_startTime_status_flags`
-  - Type: `key`
-  - Attributes: `startTime`, `status`, `isDeleted`, `isTrash`
+- [x] **Single Index on Start Time:** `idx_events_startTime` (`startTime` ASC)
+- [x] **Composite Index for Status Filtering:** `idx_events_startTime_status` (`startTime` ASC, `status` ASC)
+- [x] **Composite Index for Deletion & Trash Flags:** `idx_events_startTime_status_flags` (`startTime` ASC, `status` ASC, `isDeleted` ASC, `isTrash` ASC)
 
 ### C. Subscriptions Table (`subscriptions`)
-- **Single Index on Expiration Date:**
-  - Index Key: `idx_subscriptions_currentPeriodEnd`
-  - Type: `key`
-  - Attributes: `currentPeriodEnd` (ASC or DESC)
-- **Composite Index for Active Subscriptions:**
-  - Index Key: `idx_subscriptions_currentPeriodEnd_status`
-  - Type: `key`
-  - Attributes: `currentPeriodEnd`, `status`
+- [x] **Single Index on Expiration Date:** `idx_subscriptions_currentPeriodEnd` (`currentPeriodEnd` ASC)
+- [x] **Composite Index for Active Subscriptions:** `idx_sub_currPeriodEnd_status` (`currentPeriodEnd` ASC, `status` ASC)
 
 ### D. Unorganic Emails Table (`unorganic_emails`)
-- **Composite Index for Deduplication Check:**
-  - Index Key: `idx_unorganic_emails_recipient_dedupe`
-  - Type: `key`
-  - Attributes: `recipientId`, `dedupeKey`
-- **Composite Index for Monthly Quota Tracking:**
-  - Index Key: `idx_unorganic_emails_recipient_status_processedAt`
-  - Type: `key`
-  - Attributes: `recipientId`, `status`, `processedAt`
+- [x] **Composite Index for Deduplication Check:** `idx_unorg_recipient_dedupe` (`recipientId` ASC, `dedupeKey` ASC)
+- [x] **Composite Index for Monthly Quota Tracking:** `idx_unorg_recip_status_procAt` (`recipientId` ASC, `status` ASC, `processedAt` ASC)
+

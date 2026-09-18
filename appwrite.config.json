@@ -3006,6 +3006,30 @@
                         "ASC",
                         "ASC"
                     ]
+                },
+                {
+                    "key": "idx_subscriptions_currentPeriodEnd",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "currentPeriodEnd"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_sub_currPeriodEnd_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "currentPeriodEnd",
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
                 }
             ]
         },
@@ -5833,6 +5857,34 @@
                         "ASC",
                         "DESC"
                     ]
+                },
+                {
+                    "key": "idx_unorg_recipient_dedupe",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "recipientId",
+                        "dedupeKey"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_unorg_recip_status_procAt",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "recipientId",
+                        "status",
+                        "processedAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
                 }
             ]
         },
@@ -8154,6 +8206,47 @@
                     "orders": [
                         "ASC"
                     ]
+                },
+                {
+                    "key": "idx_events_startTime",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "startTime"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_events_startTime_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "startTime",
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_events_startTime_status_flags",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "startTime",
+                        "status",
+                        "isDeleted",
+                        "isTrash"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
                 }
             ]
         },
@@ -8595,6 +8688,47 @@
                         "primaryThreadId"
                     ],
                     "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tasks_dueDate",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "dueDate"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tasks_dueDate_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "dueDate",
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tasks_dueDate_status_flags",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "dueDate",
+                        "status",
+                        "isDeleted",
+                        "isTrash"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC",
                         "ASC"
                     ]
                 }
