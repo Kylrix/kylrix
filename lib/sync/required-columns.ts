@@ -56,7 +56,14 @@ export function getMissingRequiredColumns(
     // Columns with a non-null default are not blocking — Appwrite will fill them
     const rawSpec: any = col as any;
     if (rawSpec.default != null) continue;
-    const val = (row as any)[col.key];
+    let val = (row as any)[col.key];
+    // Known field aliases and client-side fallbacks
+    if (isEmptyValue(val) && col.key === 'userId') {
+      val = (row as any).userId || (row as any).creatorId || (row as any).ownerId;
+    }
+    if (isEmptyValue(val) && col.key === 'calendarId') {
+      val = (row as any).calendarId || (row as any).userId || (row as any).creatorId || (row as any).ownerId || 'default';
+    }
     if (isEmptyValue(val)) missing.push(col.key);
   }
   return missing;

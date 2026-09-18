@@ -187,6 +187,8 @@ export interface Event {
   isGuest?: boolean;
   isWorkspace?: boolean;
   creatorId: string;
+  userId?: string;
+  calendarId?: string;
   createdAt: Date;
   updatedAt: Date;
   tags?: string[] | null;

@@ -22,6 +22,8 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 function mapRemoteEvent(doc: any): Event {
   const start = doc.startTime ? new Date(doc.startTime) : new Date();
   const end = doc.endTime ? new Date(doc.endTime) : start;
+  const userId = doc.userId || doc.creatorId || '';
+  const calendarId = doc.calendarId || doc.userId || doc.creatorId || 'default';
   return {
     id: doc.$id || doc.id,
     $id: doc.$id || doc.id,
@@ -35,7 +37,9 @@ function mapRemoteEvent(doc: any): Event {
     attendees: [],
     isPublic: doc.visibility === 'public' || Boolean(doc.isPublic),
     isPinned: Boolean(doc.isPinned),
-    creatorId: doc.userId || doc.creatorId || '',
+    creatorId: userId,
+    userId,
+    calendarId,
     createdAt: new Date(doc.$createdAt || doc.createdAt || Date.now()),
     updatedAt: new Date(doc.$updatedAt || doc.updatedAt || Date.now()),
     $createdAt: typeof doc.$createdAt === 'string' ? doc.$createdAt : new Date(doc.createdAt || Date.now()).toISOString(),

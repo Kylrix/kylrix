@@ -187,6 +187,8 @@ export function CreateEventComposer({
         isGuest: true,
         isPinned: false,
         creatorId: ownerId,
+        userId: ownerId,
+        calendarId: ownerId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

@@ -22,6 +22,8 @@ function safeIsoString(val: any): string {
 function mapRemoteEvent(doc: any): Event {
   const start = safeDate(doc.startTime);
   const end = safeDate(doc.endTime);
+  const userId = doc.userId || doc.creatorId || '';
+  const calendarId = doc.calendarId || doc.userId || doc.creatorId || 'default';
   return {
     id: doc.$id || doc.id,
     $id: doc.$id || doc.id,
@@ -35,7 +37,9 @@ function mapRemoteEvent(doc: any): Event {
     attendees: [],
     isPublic: doc.visibility === 'public' || Boolean(doc.isPublic),
     isPinned: Boolean(doc.isPinned),
-    creatorId: doc.userId || doc.creatorId || '',
+    creatorId: userId,
+    userId,
+    calendarId,
     createdAt: safeDate(doc.$createdAt || doc.createdAt),
     updatedAt: safeDate(doc.$updatedAt || doc.updatedAt),
     $createdAt: safeIsoString(doc.$createdAt || doc.createdAt),
