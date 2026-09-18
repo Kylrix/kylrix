@@ -38,34 +38,22 @@ export default function IdeasPage() {
   const { openSidebar } = useDynamicSidebar();
   const { open: openUnified } = useUnifiedDrawer();
   const { setConfiguration, resetConfiguration } = useFAB();
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsDesktop(window.innerWidth >= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
 
   const openCreateNote = useCallback(() => {
     openUnified('note', { isPublic: false, isGuest: false });
   }, [openUnified]);
 
   useEffect(() => {
-    if (isDesktop) {
-      resetConfiguration();
-      return;
-    }
     setConfiguration({
       isVisible: true,
       mainColor: '#EC4899',
-      mainIcon: <Plus size={32} strokeWidth={3} />,
+      mainIcon: <Plus size={26} strokeWidth={3} />,
       onMainClick: openCreateNote,
       suppressWorkflow: true,
       actions: [],
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, openCreateNote, isDesktop]);
+  }, [setConfiguration, resetConfiguration, openCreateNote]);
 
   const activeNotes = useMemo(() => (notes || []).filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true), [notes]);
   const { filteredItems: workspaceScopedNotes } = useWorkspaceFilteredItems(activeNotes, 'note');

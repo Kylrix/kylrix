@@ -24,7 +24,6 @@ import { useRightRailOptional } from '@/context/RightRailContext';
 import { NativeSidebarBridge } from '@/components/layout/NativeSidebarBridge';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { FABProvider } from '@/context/FABContext';
-import UniversalFAB from '@/components/layout/UniversalFAB';
 
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
@@ -313,8 +312,6 @@ const isSpecificPostPage = useMemo(
         <UnifiedBottomBar />
       )}
       
-      {!isSharedPage && !isLandingPage && <UniversalFAB />}
-
       </FABProvider>
 
       <NativeSidebarBridge />
