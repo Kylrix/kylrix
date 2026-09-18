@@ -473,7 +473,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     setConfiguration({
       isVisible: true,
       mainColor: '#10B981',
-      mainIcon: <Plus size={32} strokeWidth={3} />,
+      mainIcon: <Plus size={26} strokeWidth={3} />,
       onMainClick: () => requireUnlock(() => setShowNew(true)),
       actions: [
         { id: 'add-totp', label: 'ADD CODE', icon: <Plus size={20} />, onClick: () => requireUnlock(() => setShowNew(true)) }]

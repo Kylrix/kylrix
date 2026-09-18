@@ -75,14 +75,14 @@ export default function FormsDashboard() {
         setConfiguration({
             isVisible: true,
             mainColor: '#6366F1',
-            mainIcon: <Plus size={32} strokeWidth={3} />,
+            mainIcon: <Plus size={26} strokeWidth={3} />,
             onMainClick: handleCreate,
             actions: [
                 { id: 'create-form', label: 'CREATE FORM', icon: <Plus size={20} />, onClick: handleCreate }
             ]
         });
         return () => resetConfiguration();
-    }, [setConfiguration, resetConfiguration]);
+    }, [setConfiguration, resetConfiguration, handleCreate]);
 
     const formsRef = useRef<Forms[]>([]);
     useEffect(() => {

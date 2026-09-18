@@ -49,29 +49,17 @@ export default function TaskList() {
     setCreateOpen(true);
   }, [isAuthenticated, openIDMWindow]);
 
-  const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
-    const check = () => setIsDesktop(window.innerWidth >= 1024);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
-  useEffect(() => {
-    if (isDesktop) {
-      resetConfiguration();
-      return;
-    }
     setConfiguration({
       isVisible: true,
       mainColor: '#A855F7',
-      mainIcon: <Plus size={32} strokeWidth={3} />,
+      mainIcon: <Plus size={26} strokeWidth={3} />,
       onMainClick: openCreateGoal,
       suppressWorkflow: true,
       actions: [],
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, openCreateGoal, isDesktop]);
+  }, [setConfiguration, resetConfiguration, openCreateGoal]);
 
   const { isPinned: isResourcePinned } = useResourcePins();
 

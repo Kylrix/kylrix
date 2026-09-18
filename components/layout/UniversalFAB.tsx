@@ -33,6 +33,10 @@ const FAB_BOTTOM = {
   app: { xs: 'calc(104px + env(safe-area-inset-bottom))', md: 32 }} as const;
 
 export default function UniversalFAB() {
+  return null;
+}
+
+export function UniversalFABDeprecated() {
   const { config } = useFAB();
   const selection = useSelection();
   const { removeNote, pinNote, unpinNote, isPinned: checkNotePinned } = useNotes();
