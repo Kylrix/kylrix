@@ -58,6 +58,8 @@ export async function getLiveErrorDetailsAction(
         message = latestError.message;
         stack = latestError.stack;
         timestamp = latestError.timestamp;
+      } else {
+        message = `Server Error Digest: ${inputDigest}`;
       }
     }
   }
@@ -65,10 +67,10 @@ export async function getLiveErrorDetailsAction(
   return {
     isEngineer: isEng,
     canSeeLiveErrors: canSee,
-    message,
+    message: message || 'An unexpected server error occurred.',
     stack,
     digest: inputDigest || undefined,
-    timestamp,
+    timestamp: timestamp || new Date().toISOString(),
   };
 }
 

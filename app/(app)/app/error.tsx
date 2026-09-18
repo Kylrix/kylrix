@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { getLiveErrorDetailsAction, type EngineerErrorDetails } from '@/lib/errors/engineer';
+import { downloadBugReportMarkdown } from '@/lib/errors/download-bug-report';
+import { FileDown } from 'lucide-react';
 
 export default function AppRouteError({
   error,
@@ -14,13 +16,46 @@ export default function AppRouteError({
 
   useEffect(() => {
     console.error('[AppRouteError]', error);
-    void getLiveErrorDetailsAction(error?.digest || null)
-      .then((details) => {
-        if (details.canSeeLiveErrors) {
-          setEngDetails(details);
+    async function loadEngineerDetails() {
+      let jwt: string | undefined;
+      try {
+        const { account } = await import('@/lib/appwrite/client');
+        const res = await account.createJWT().catch(() => null);
+        jwt = res?.jwt;
+      } catch {}
+
+      const details = await getLiveErrorDetailsAction(error?.digest || null, jwt).catch(() => null);
+      if (details?.canSeeLiveErrors) {
+        setEngDetails(details);
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:local-notifications', {
+              detail: {
+                notification: {
+                  id: `err_${error?.digest || Date.now()}`,
+                  category: 'system',
+                  title: `Live Bug: ${(details.message || error.message || 'Runtime Error').slice(0, 40)}...`,
+                  message: details.message || error.message || 'Runtime error encountered.',
+                  time: 'Just now',
+                  timestamp: Date.now(),
+                  read: false,
+                  accent: '#EF4444',
+                  source: 'system',
+                  errorDetails: {
+                    message: details.message || error.message,
+                    stack: details.stack,
+                    digest: error?.digest || details.digest,
+                    timestamp: details.timestamp || new Date().toISOString(),
+                  },
+                },
+              },
+            })
+          );
         }
-      })
-      .catch(() => {});
+      }
+    }
+    void loadEngineerDetails();
   }, [error]);
 
   const rawMessage = error?.message || 'An unexpected error occurred.';
@@ -39,9 +74,29 @@ export default function AppRouteError({
           !
         </div>
         <div className="flex flex-col gap-1 text-center w-full">
-          <h2 className="text-base font-bold text-white font-clash">
-            {engDetails?.canSeeLiveErrors ? 'Something went wrong (Engineer View)' : 'Something went wrong'}
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-base font-bold text-white font-clash">
+              {engDetails?.canSeeLiveErrors ? 'Something went wrong (Engineer View)' : 'Something went wrong'}
+            </h2>
+            {engDetails?.canSeeLiveErrors && (
+              <button
+                type="button"
+                onClick={() =>
+                  downloadBugReportMarkdown({
+                    message: displayMessage,
+                    stack: engDetails.stack,
+                    digest: error?.digest || engDetails.digest,
+                    timestamp: engDetails.timestamp,
+                  })
+                }
+                title="Download Bug Markdown (.md)"
+                className="flex items-center gap-1 text-[11px] font-mono text-rose-400 bg-rose-950/60 hover:bg-rose-900/80 px-2 py-1 rounded border border-rose-800/80 transition-colors cursor-pointer shrink-0"
+              >
+                <FileDown size={13} />
+                <span>Download Bug (.md)</span>
+              </button>
+            )}
+          </div>
           <p className="text-xs text-rose-400 font-mono break-all leading-relaxed bg-black/40 p-2 rounded-lg border border-white/5 mt-1">
             {displayMessage}
           </p>

@@ -35,6 +35,7 @@ describe('engineer-guard', () => {
     expect(isEngineerUser({ email: 'engineer@kylrix.space' })).toBe(true);
     expect(isEngineerUser({ email: 'user@kylrix.space' })).toBe(false);
     expect(isEngineerUser(null)).toBe(false);
+    expect(canExposeLiveErrorsForUser({ email: 'engineer@kylrix.space' })).toBe(true);
   });
 
   it('allows live errors in dev mode regardless of ENGINEERS', () => {

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { getLiveErrorDetailsAction, type EngineerErrorDetails } from '@/lib/errors/engineer';
+import { downloadBugReportMarkdown } from '@/lib/errors/download-bug-report';
+import { FileDown } from 'lucide-react';
 
 interface RuntimeErrorDrawerProps {
   error: Error & { digest?: string };
@@ -19,13 +21,46 @@ export default function RuntimeErrorDrawer({
 
   useEffect(() => {
     console.error('Application crash:', error);
-    void getLiveErrorDetailsAction(error?.digest || null)
-      .then((details) => {
-        if (details.canSeeLiveErrors) {
-          setEngDetails(details);
+    async function loadEngineerDetails() {
+      let jwt: string | undefined;
+      try {
+        const { account } = await import('@/lib/appwrite/client');
+        const res = await account.createJWT().catch(() => null);
+        jwt = res?.jwt;
+      } catch {}
+
+      const details = await getLiveErrorDetailsAction(error?.digest || null, jwt).catch(() => null);
+      if (details?.canSeeLiveErrors) {
+        setEngDetails(details);
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:local-notifications', {
+              detail: {
+                notification: {
+                  id: `err_${error?.digest || Date.now()}`,
+                  category: 'system',
+                  title: `Live Bug: ${(details.message || error.message || 'Runtime Error').slice(0, 40)}...`,
+                  message: details.message || error.message || 'Runtime error encountered.',
+                  time: 'Just now',
+                  timestamp: Date.now(),
+                  read: false,
+                  accent: '#EF4444',
+                  source: 'system',
+                  errorDetails: {
+                    message: details.message || error.message,
+                    stack: details.stack,
+                    digest: error?.digest || details.digest,
+                    timestamp: details.timestamp || new Date().toISOString(),
+                  },
+                },
+              },
+            })
+          );
         }
-      })
-      .catch(() => {});
+      }
+    }
+    void loadEngineerDetails();
   }, [error]);
 
   const rawMessage = (() => {
@@ -57,11 +92,31 @@ export default function RuntimeErrorDrawer({
                 {engDetails?.canSeeLiveErrors ? 'App Error (Engineer Live View)' : 'App Error'}
               </h2>
             </div>
-            {error.digest ? (
-              <span className="font-mono text-[10px] text-neutral-500 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800/60">
-                id: {error.digest}
-              </span>
-            ) : null}
+            <div className="flex items-center gap-2">
+              {engDetails?.canSeeLiveErrors && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    downloadBugReportMarkdown({
+                      message: displayMessage,
+                      stack: engDetails.stack,
+                      digest: error?.digest || engDetails.digest,
+                      timestamp: engDetails.timestamp,
+                    })
+                  }
+                  title="Download Bug Markdown (.md)"
+                  className="flex items-center gap-1 text-[11px] font-mono text-red-400 bg-red-950/60 hover:bg-red-900/80 px-2 py-1 rounded border border-red-800/80 transition-colors cursor-pointer"
+                >
+                  <FileDown size={13} />
+                  <span>Download Bug (.md)</span>
+                </button>
+              )}
+              {error.digest ? (
+                <span className="font-mono text-[10px] text-neutral-500 bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800/60">
+                  id: {error.digest}
+                </span>
+              ) : null}
+            </div>
           </div>
 
           <div className="space-y-2">
