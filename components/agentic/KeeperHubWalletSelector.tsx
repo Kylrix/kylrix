@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, ChevronDown, Check, Zap, Activity, Server } from 'lucide-react';
+import { ShieldCheck, ChevronDown, Check, Zap } from 'lucide-react';
 import { getKeeperHubStatusAction } from '@/lib/actions/keeperhub';
 
 export interface WalletAccount {

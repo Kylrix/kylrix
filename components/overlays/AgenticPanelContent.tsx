@@ -368,40 +368,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     return () => window.removeEventListener('kylrix:request-payment' as any, handlePaymentRequest);
   }, []);
 
-  // ── KeeperHub execution confirmation → auto-append receipt block into session ──
-  useEffect(() => {
-    const handleKeeperHubConfirmed = (e: CustomEvent) => {
-      const { receipt, intent, amount, symbol, recipient } = e.detail || {};
-      if (!receipt) return;
-
-      const receiptBlock: AgenticMessageBlock = {
-        type: 'keeperhub_receipt',
-        txHash: receipt.txHash,
-        recipient: receipt.recipient || recipient || '',
-        amount: receipt.amount || amount || '',
-        symbol: receipt.symbol || symbol || 'ETH',
-        network: receipt.targetChain || 'Ethereum Sepolia',
-        chainId: receipt.chainId || 11155111,
-        status: receipt.status || 'Confirmed',
-        explorerUrl: receipt.explorerUrl || '',
-        auditLog: receipt.auditLog || '',
-        gasSavedUsd: receipt.gasSavedUsd || '0.00',
-        blockNumber: receipt.blockNumber || 0,
-        intent: intent || `Transfer ${amount || receipt.amount} ${symbol || receipt.symbol}`,
-        timestamp: receipt.timestamp || new Date().toISOString(),
-      };
-
-      appendMessage('assistant',
-        `✅ KeeperHub execution confirmed. **${receiptBlock.amount} ${receiptBlock.symbol}** sent to \`${receiptBlock.recipient.slice(0, 8)}…${receiptBlock.recipient.slice(-6)}\` on ${receiptBlock.network}. Transaction broadcast via Turnkey TEE enclave — hash \`${receiptBlock.txHash.slice(0, 14)}…\``,
-        { blocks: [receiptBlock] }
-      );
-    };
-
-    window.addEventListener('kylrix:keeperhub-execution-confirmed' as any, handleKeeperHubConfirmed);
-    return () => window.removeEventListener('kylrix:keeperhub-execution-confirmed' as any, handleKeeperHubConfirmed);
-  // appendMessage is stable (useCallback with no deps that change)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appendMessage]);
 
   const handleApprovePayment = async () => {
     if (!pendingPayment || !user?.$id) return;
@@ -889,9 +855,45 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         blocks: opts?.blocks,
         syncStatus: opts?.syncStatus,
         isPublic: opts?.isPublic,
-        isGuest: opts?.isGuest},
+        isGuest: opts?.isGuest,
+      },
     ]);
   }, []);
+
+
+  // ── KeeperHub execution confirmation → auto-append receipt block into session ──
+  useEffect(() => {
+    const handleKeeperHubConfirmed = (e: CustomEvent) => {
+      const { receipt, intent, amount, symbol, recipient } = e.detail || {};
+      if (!receipt) return;
+
+      const receiptBlock: AgenticMessageBlock = {
+        type: 'keeperhub_receipt',
+        txHash: receipt.txHash,
+        recipient: receipt.recipient || recipient || '',
+        amount: receipt.amount || amount || '',
+        symbol: receipt.symbol || symbol || 'ETH',
+        network: receipt.targetChain || 'Ethereum Sepolia',
+        chainId: receipt.chainId || 11155111,
+        status: receipt.status || 'Confirmed',
+        explorerUrl: receipt.explorerUrl || '',
+        auditLog: receipt.auditLog || '',
+        gasSavedUsd: receipt.gasSavedUsd || '0.00',
+        blockNumber: receipt.blockNumber || 0,
+        intent: intent || `Transfer ${amount || receipt.amount} ${symbol || receipt.symbol}`,
+        timestamp: receipt.timestamp || new Date().toISOString(),
+      };
+
+      appendMessage('assistant',
+        `✅ KeeperHub execution confirmed. **${receiptBlock.amount} ${receiptBlock.symbol}** sent to \`${receiptBlock.recipient.slice(0, 8)}…${receiptBlock.recipient.slice(-6)}\` on ${receiptBlock.network}. Transaction broadcast via Turnkey TEE enclave — hash \`${receiptBlock.txHash.slice(0, 14)}…\``,
+        { blocks: [receiptBlock] }
+      );
+    };
+
+    window.addEventListener('kylrix:keeperhub-execution-confirmed' as any, handleKeeperHubConfirmed);
+    return () => window.removeEventListener('kylrix:keeperhub-execution-confirmed' as any, handleKeeperHubConfirmed);
+  }, [appendMessage]);
+
 
   const runPrompt = useCallback(
     async (rawPrompt: string) => {
