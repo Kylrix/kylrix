@@ -30,6 +30,7 @@ import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { useServiceWorker } from '@/hooks/useServiceWorker';
 import { isFlowPath, isGoalsSurfacePath, isSharedResourcePath } from '@/lib/routing/app-paths';
+import { submitRuntimeErrorFeedback } from '@/lib/errors/runtime-feedback';
 
 import { UnifiedLeftSidebar } from '@/components/UnifiedLeftSidebar';
 
@@ -178,6 +179,30 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         void autonomicSyncEngine.runCycle();
       });
     }
+  }, []);
+
+  // Application-wide unhandled error and rejection auto-reporting for engineers
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleGlobalError = (event: ErrorEvent) => {
+      const err = event.error instanceof Error ? event.error : new Error(event.message || 'Unknown client exception');
+      void submitRuntimeErrorFeedback({ boundary: 'global', error: err });
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      const err = reason instanceof Error ? reason : new Error(typeof reason === 'string' ? reason : 'Unhandled Promise rejection');
+      void submitRuntimeErrorFeedback({ boundary: 'global', error: err });
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
   }, []);
 
   const lastPathnameRef = useRef(pathname);
