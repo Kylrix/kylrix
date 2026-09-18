@@ -93,71 +93,107 @@ export function KeeperHubWalletSelector({ compact = false }: { compact?: boolean
       </button>
 
       {/* Account Selector Pill */}
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#161412] hover:bg-[#1C1917] border border-white/10 hover:border-white/20 transition-all cursor-pointer text-xs font-satoshi"
-        >
-          <div className="w-4 h-4 rounded-full bg-purple-500/20 border border-purple-400/40 flex items-center justify-center shrink-0">
-            <Zap size={10} className="text-purple-300" />
-          </div>
-          {!compact && (
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-bold text-white truncate max-w-[110px]">{activeWallet.name}</span>
-              <span className="text-[10px] font-mono text-purple-300 bg-purple-500/10 px-1.5 py-0.2 rounded border border-purple-500/20">
-                {activeWallet.balance} {activeWallet.symbol}
-              </span>
-            </div>
-          )}
-          <ChevronDown size={13} className={`text-white/40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
-
-        {/* Dropdown Menu */}
-        {isOpen && (
-          <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-[#161412] border border-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.9)] p-2 z-[99999] flex flex-col gap-1 backdrop-blur-xl">
-            <div className="px-3 py-1.5 border-b border-white/5 flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold text-white/40 uppercase tracking-wider">
-                KeeperHub Turnkey Accounts
-              </span>
-              <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                Testnet Active
-              </span>
-            </div>
-
-            {DEMO_TESTNET_WALLETS.map((w) => {
-              const isSelected = w.id === activeWallet.id;
-              return (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => handleSelectWallet(w)}
-                  className={`w-full p-2.5 rounded-xl text-left transition-all flex items-center justify-between cursor-pointer ${
-                    isSelected
-                      ? 'bg-purple-500/15 border border-purple-500/30 text-white'
-                      : 'hover:bg-white/5 border border-transparent text-white/70 hover:text-white'
-                  }`}
-                >
-                  <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-xs font-satoshi truncate">{w.name}</span>
-                      <ShieldCheck size={12} className="text-purple-400 shrink-0" />
-                    </div>
-                    <span className="text-[10px] font-mono text-white/40 truncate">
-                      {w.address.slice(0, 8)}...{w.address.slice(-6)}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-end shrink-0 ml-2">
-                    <span className="text-xs font-mono font-bold text-purple-300">{w.balance}</span>
-                    <span className="text-[9px] text-white/40">{w.symbol}</span>
-                  </div>
-                  {isSelected && <Check size={14} className="text-purple-400 ml-1 shrink-0" />}
-                </button>
-              );
-            })}
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#161412] hover:bg-[#1C1917] border border-white/10 hover:border-white/20 transition-all cursor-pointer text-xs font-satoshi"
+      >
+        <div className="w-4 h-4 rounded-full bg-purple-500/20 border border-purple-400/40 flex items-center justify-center shrink-0">
+          <Zap size={10} className="text-purple-300" />
+        </div>
+        {!compact && (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-bold text-white truncate max-w-[110px]">{activeWallet.name}</span>
+            <span className="text-[10px] font-mono text-purple-300 bg-purple-500/10 px-1.5 rounded border border-purple-500/20">
+              {activeWallet.balance} {activeWallet.symbol}
+            </span>
           </div>
         )}
-      </div>
+        <ChevronDown size={13} className="text-white/40" />
+      </button>
+
+      {/* Bottom Drawer — fixed, layered above agentic panel (z-[200]) */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-[200] flex flex-col justify-end"
+          onClick={() => setIsOpen(false)}
+        >
+          <div
+            className="bg-[#0B0A09] border-t border-white/10 rounded-t-[24px] w-full max-h-[60dvh] flex flex-col overflow-hidden animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle */}
+            <div className="flex-shrink-0 pt-3 pb-1 flex justify-center">
+              <div className="w-10 h-1 rounded-full bg-white/15" />
+            </div>
+
+            {/* Header */}
+            <div className="flex-shrink-0 px-5 py-3 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                  <Zap size={15} />
+                </div>
+                <div>
+                  <h3 className="text-white font-extrabold text-[13px] font-clash tracking-tight">KeeperHub Accounts</h3>
+                  <p className="text-[10px] font-mono text-white/40 mt-0.5">Turnkey TEE Enclave</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                  testnetMode
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                    : 'bg-white/5 border-white/10 text-white/50'
+                }`}>
+                  {testnetMode ? 'Sepolia Testnet' : 'Mainnet'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/45 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 cursor-pointer"
+                >
+                  <ChevronDown size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Wallet list */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2.5">
+              {DEMO_TESTNET_WALLETS.map((w) => {
+                const isSelected = w.id === activeWallet.id;
+                return (
+                  <button
+                    key={w.id}
+                    type="button"
+                    onClick={() => handleSelectWallet(w)}
+                    className={`w-full p-3.5 rounded-2xl text-left transition-all flex items-center justify-between cursor-pointer ${
+                      isSelected
+                        ? 'bg-purple-500/15 border border-purple-500/30 text-white'
+                        : 'bg-[#161412] hover:bg-white/[0.04] border border-white/10 text-white/70 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex flex-col min-w-0 gap-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-sm font-satoshi truncate">{w.name}</span>
+                        <ShieldCheck size={12} className="text-purple-400 shrink-0" />
+                      </div>
+                      <span className="text-[11px] font-mono text-white/40 truncate">
+                        {w.address.slice(0, 8)}...{w.address.slice(-6)}
+                      </span>
+                      <span className="text-[10px] font-mono text-white/30">{w.enclave}</span>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0 ml-3 gap-1">
+                      <span className="text-sm font-mono font-bold text-purple-300">{w.balance}</span>
+                      <span className="text-[10px] text-white/40">{w.symbol}</span>
+                      {isSelected && <Check size={13} className="text-purple-400" />}
+                    </div>
+                  </button>
+                );
+              })}
+              <div className="pb-4" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
