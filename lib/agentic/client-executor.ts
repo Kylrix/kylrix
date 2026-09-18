@@ -627,6 +627,29 @@ async function executeAgenticToolCall(
     // ── Search Users / Directory ────────────────────────────────
     if (key === 'search_users') {
       const q = String(args.query || call.specifier || '').trim();
+
+      // If the query is keeperhub or mentions bounty/sepolia, route to KeeperHub execution drawer
+      if (
+        q.toLowerCase() === 'keeperhub' ||
+        q.toLowerCase().includes('sepolia') ||
+        q.toLowerCase().includes('bounty')
+      ) {
+        if (ctx.openDrawer) {
+          ctx.openDrawer('keeperhub-execution', {
+            recipient: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+            amount: '0.005',
+            symbol: 'Sepolia ETH',
+            network: 'Ethereum Sepolia',
+            chainId: 11155111,
+            intent: 'Fund goal bounty via KeeperHub Turnkey Enclave',
+          });
+          return {
+            success: true,
+            summary: 'Opened KeeperHub Turnkey execution drawer for Sepolia ETH bounty.',
+          };
+        }
+      }
+
       const limit = Number(args.limit) || 6;
       const { UsersService } = await import('@/lib/services/users');
       
@@ -650,6 +673,7 @@ async function executeAgenticToolCall(
         messageBlocks: [block]
       };
     }
+
 
     return { success: false, summary: '', error: `Unhandled tool: ${key}` };
   } catch (err: unknown) {

@@ -88,6 +88,7 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { account } from '@/lib/appwrite/client';
 import { WalletService } from '@/lib/services/wallets';
 import { KeeperHubWalletSelector, KeeperHubWalletDrawer } from '@/components/agentic/KeeperHubWalletSelector';
+import { KeeperHubExecutionDrawer } from '@/components/overlays/KeeperHubExecutionDrawer';
 import { toast } from 'react-hot-toast';
 import { ContextMenu } from '@/components/ui/ContextMenu';
 import { useHintEngine } from '@/hooks/useHintEngine';
@@ -291,6 +292,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [pendingToolAuth, setPendingToolAuth] = useState<{ toolKey: string; name: string; specifier?: string; args?: any; assistantId?: string } | null>(null);
   const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
   const [showWalletDrawer, setShowWalletDrawer] = useState(false);
+  const [keeperHubExecutionData, setKeeperHubExecutionData] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const { filteredItems: workspaceFilteredSessions } = useWorkspaceFilteredItems(sessions, 'agent_session');
 
@@ -1157,6 +1159,10 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       },
                       appendMessage,
                       openDrawer: (type: string, payload?: Record<string, unknown>) => {
+                        if (type === 'keeperhub-execution') {
+                          setKeeperHubExecutionData(payload || {});
+                          return;
+                        }
                         openUnified(type as any, payload);
                       },
                       openWalletWithIntent,
@@ -2040,6 +2046,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         <KeeperHubWalletDrawer onClose={() => setShowWalletDrawer(false)} />
       )}
 
+      {/* KeeperHub Onchain Execution Bottom Drawer (Contained inside Kylie) */}
+      {keeperHubExecutionData && (
+        <div className="absolute inset-0 bg-black/80 z-[80] flex flex-col justify-end">
+          <div className="bg-[#000000] border-t border-white/10 rounded-t-[28px] w-full max-h-[85%] flex flex-col overflow-y-auto animate-slide-up">
+            <KeeperHubExecutionDrawer
+              drawerData={keeperHubExecutionData}
+              onClose={() => setKeeperHubExecutionData(null)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Sessions Bottom Drawer (Capped at 60% height permanently) */}
       {showSessionsDrawer && (
         <div className="absolute inset-0 bg-black/60 z-50 flex flex-col justify-end transition-opacity duration-300">
@@ -2361,7 +2379,13 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                           updateTask: async (id: string, patch: any) => { updateTask(id, patch); },
                           deleteTask: async (id: string) => { deleteTask(id); },
                           appendMessage,
-                          openDrawer: (type: string, payload?: Record<string, unknown>) => { openUnified(type as any, payload); },
+                          openDrawer: (type: string, payload?: Record<string, unknown>) => {
+                            if (type === 'keeperhub-execution') {
+                              setKeeperHubExecutionData(payload || {});
+                              return;
+                            }
+                            openUnified(type as any, payload);
+                          },
                           openWalletWithIntent,
                         },
                         auth.name
@@ -2429,7 +2453,13 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                           updateTask: async (id: string, patch: any) => { updateTask(id, patch); },
                           deleteTask: async (id: string) => { deleteTask(id); },
                           appendMessage,
-                          openDrawer: (type: string, payload?: Record<string, unknown>) => { openUnified(type as any, payload); },
+                          openDrawer: (type: string, payload?: Record<string, unknown>) => {
+                            if (type === 'keeperhub-execution') {
+                              setKeeperHubExecutionData(payload || {});
+                              return;
+                            }
+                            openUnified(type as any, payload);
+                          },
                           openWalletWithIntent,
                         },
                         auth.name

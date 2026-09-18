@@ -55,23 +55,25 @@ function buildWalletGuide(): string {
    - When user asks to check or fetch balances (e.g. "fetch my balance", "get my SOL balance", "what tokens do I have", "check my Kylrix balance", "fetch arbitrum"):
    - ALWAYS emit toolCall "wallet_get_balance" with args.token (e.g. "SOL", "KYLRIX", "ARBITRUM", "ALL").
    - NEVER output text claiming you are retrieving balances without emitting the "wallet_get_balance" toolCall in the SAME turn.
-2. USER SEARCH / RECIPIENTS:
-   - When user asks to find users, tip someone, or look up a username/avatar: emit toolCall "search_users" with args.query.
+2. USER SEARCH / DIRECTORY:
+   - Only use "search_users" when user explicitly asks to find a human person or username (e.g. "find user Alice", "who is Bob").
+   - STRICT: "KeeperHub" is NOT a human or username! NEVER call "search_users" with query "keeperhub".
 3. KEEPERHUB ONCHAIN BOUNTY & FUNDING EXECUTION:
-   - When user asks to fund a goal, release a bounty, send onchain ETH, or use KeeperHub (e.g. "fund the '...' goal", "release 0.005 sepolia ETH bounty for the goal", "fund the goal with keeperhub", "execute transfer on sepolia"):
+   - When user asks to fund a goal, release a bounty, send onchain ETH, use KeeperHub, or says "fund with 0.005", "fund the goal", "yes please go ahead with sepolia ETH", "fund with sepolia eth":
    - MANDATORY: IMMEDIATELY emit toolCall "keeperhub_execute_transaction" (or "execute_transfer") with args:
      {
        recipient: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-       amount: extracted amount (e.g. "0.005"),
+       amount: extracted amount (default "0.005"),
        symbol: "Sepolia ETH",
        network: "Ethereum Sepolia",
        chainId: 11155111,
        intent: "Fund bounty: Send <amount> Sepolia ETH for goal"
      }
-   - NEVER ask for the recipient's address or token confirmation in text. Emitting "keeperhub_execute_transaction" automatically launches the interactive KeeperHub execution drawer for user authorization.
-   - For standard Kylrix transfers: emit toolCall "wallet_send_tokens" with args: token, amount, recipientUsername.
+   - NEVER ask for the recipient's address, goal title, or token confirmation in text prose. Emitting "keeperhub_execute_transaction" automatically launches the interactive KeeperHub execution drawer for user authorization.
+   - For standard Kylrix token tips: emit toolCall "wallet_send_tokens" with args: token, amount, recipientUsername.
 `;
 }
+
 
 
 function buildMultiTurnGuide(): string {
