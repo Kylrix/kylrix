@@ -54,6 +54,22 @@ export type AgenticMessageBlock =
       title?: string;
       selectedChain?: string;
       chains: Array<{ symbol: string; name: string; color: string; supported: boolean }>;
+    }
+  | {
+      type: 'keeperhub_receipt';
+      txHash: string;
+      recipient: string;
+      amount: string;
+      symbol: string;
+      network: string;
+      chainId: number;
+      status: string;
+      explorerUrl: string;
+      auditLog: string;
+      gasSavedUsd: string;
+      blockNumber: number;
+      intent: string;
+      timestamp: string;
     };
 
 const KYLIX_BLOCKS_PREFIX = '__KYLIX_BLOCKS__:';

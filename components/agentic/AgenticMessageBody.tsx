@@ -7,6 +7,52 @@ import { AgenticChainSelector } from './AgenticChainSelector';
 import type { AgenticMessageBlock } from '@/lib/agentic/message-blocks';
 import type { HydratedEcosystemHit } from '@/lib/agentic/hydrate-ecosystem-hits';
 
+// ── KeeperHub Receipt Card ──────────────────────────────────────────────────
+function KeeperHubReceiptCard({ block }: { block: Extract<AgenticMessageBlock, { type: 'keeperhub_receipt' }> }) {
+  return (
+    <div className="flex flex-col gap-2.5 p-4 rounded-2xl bg-[#0a0a0a] border border-emerald-500/30 my-1 select-none">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-[10px]">✓</div>
+          <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">KeeperHub Execution Confirmed</span>
+        </div>
+        <span className="text-[10px] font-mono text-white/40">{block.network}</span>
+      </div>
+
+      {/* Amount & Recipient */}
+      <div className="flex items-center justify-between bg-black/40 px-3 py-2 rounded-xl border border-white/5">
+        <span className="text-base font-black font-clash text-white">{block.amount} {block.symbol}</span>
+        <span className="text-xs font-mono text-white/60">→ {block.recipient.slice(0, 8)}…{block.recipient.slice(-6)}</span>
+      </div>
+
+      {/* Tx Hash */}
+      <div className="flex items-center justify-between text-[11px] font-mono bg-black/30 px-3 py-2 rounded-xl border border-white/5">
+        <span className="text-white/40">Tx Hash</span>
+        <span className="text-white font-bold truncate max-w-[180px]">{block.txHash}</span>
+      </div>
+
+      {/* Meta row */}
+      <div className="flex items-center justify-between text-[10px] font-mono text-white/40">
+        <span>Block #{block.blockNumber}</span>
+        <span>Gas saved ${block.gasSavedUsd}</span>
+        <span className="text-emerald-400 font-bold">{block.status}</span>
+      </div>
+
+      {/* Etherscan link */}
+      <a
+        href={block.explorerUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-satoshi font-bold text-xs transition-all"
+      >
+        View on Etherscan ↗
+      </a>
+    </div>
+  );
+}
+// ───────────────────────────────────────────────────────────────────────────
+
 interface AgenticMessageBodyProps {
   content: string;
   blocks?: AgenticMessageBlock[];
@@ -77,6 +123,9 @@ export function AgenticMessageBody({ content, blocks, onPickHit, onSelectChain }
               onSelectChain={onSelectChain}
             />
           );
+        }
+        if (block.type === 'keeperhub_receipt') {
+          return <KeeperHubReceiptCard key={`kh-receipt-${idx}`} block={block} />;
         }
         if (block.type === 'pending_auth') {
           return (
