@@ -687,7 +687,7 @@ function FormCard({
                                     })
                                 );
                             }}
-                            className="p-1.5 rounded-lg transition-all duration-200 text-white/40 hover:text-[#6366F1] hover:bg-[#6366F1]/10"
+                            className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#6366F1] hover:bg-[#6366F1]/10"
                             title="Sidekick Assist"
                             aria-label="Sidekick Assist"
                         >

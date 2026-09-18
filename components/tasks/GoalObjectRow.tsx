@@ -413,7 +413,7 @@ export default function GoalObjectRow({ task }: Props) {
                 })
               );
             }}
-            className="p-1.5 rounded-lg transition-all duration-200 text-white/25 hover:text-[#A855F7] hover:bg-[#A855F7]/10"
+            className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#A855F7] hover:bg-[#A855F7]/10"
             title="Sidekick Assist"
             aria-label="Sidekick Assist"
           >

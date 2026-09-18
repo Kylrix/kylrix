@@ -414,7 +414,7 @@ export default function CredentialItem({
               })
             );
           }}
-          className="p-1.5 rounded-lg transition-all duration-200 text-white/20 hover:text-[#10B981] hover:bg-[#10B981]/5"
+          className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#10B981] hover:bg-[#10B981]/5"
           title="Sidekick Assist"
           aria-label="Sidekick Assist"
         >
