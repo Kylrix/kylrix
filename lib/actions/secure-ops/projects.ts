@@ -1060,22 +1060,41 @@ export async function createFormSecure(data: any, jwt?: string) {
     isPublic: Boolean(isPublic),
   });
 
+  const targetProjectId = data.projectId;
+  const isWs = data.isWorkspace || Boolean(targetProjectId);
+
   const formData: Record<string, any> = {
     ...data,
     userId: actor.$id,
     status,
-    isPublic,
-    isGuest,
+    isPublic: Boolean(isPublic),
+    isGuest: Boolean(isGuest),
+    isTrash: false,
+    isDeleted: false,
+    isWorkspace: isWs,
   };
-  if (data.isWorkspace !== undefined) formData.isWorkspace = Boolean(data.isWorkspace);
-  if (data.projectId !== undefined) formData.projectId = data.projectId;
+  delete formData.projectId;
+  delete formData.$id;
+  delete formData.id;
 
   const form = await tables.createRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-      rowId: ID.unique(),
-      data: formData,
-      permissions: permissions});
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+    rowId: ID.unique(),
+    data: formData,
+    permissions: permissions,
+  });
+
+  if (targetProjectId) {
+    try {
+      const { attachObjectToProject } = await import('@/lib/projects/object-attachment');
+      await attachObjectToProject({
+        projectId: targetProjectId,
+        entityKind: 'form',
+        entityId: (form as any).$id,
+      });
+    } catch {}
+  }
 
   return JSON.parse(JSON.stringify(form));
 }

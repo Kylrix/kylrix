@@ -1936,7 +1936,7 @@ export const ApiResources = {
         isPinned: false,
         isDeleted: false,
         isTrash: false,
-        ...(wsId ? { isWorkspace: true, projectId: wsId } : {}),
+        ...(wsId ? { isWorkspace: true } : {}),
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
@@ -2001,6 +2001,24 @@ export const ApiResources = {
       throw new WorkspaceJailError('Creating personal forms is forbidden for jailed workspace actors');
     }
     const tables = systemTables();
+
+    let schemaStr = '[]';
+    if (body.schema != null) {
+      schemaStr = typeof body.schema === 'string' ? body.schema : JSON.stringify(body.schema);
+    } else if (body.fields != null) {
+      schemaStr = typeof body.fields === 'string' ? body.fields : JSON.stringify(body.fields);
+    }
+
+    let settingsStr: string | null = null;
+    if (body.settings != null) {
+      settingsStr = typeof body.settings === 'string' ? body.settings : JSON.stringify(body.settings);
+    } else if (body.ghostFields != null) {
+      settingsStr = JSON.stringify({ ghostFields: body.ghostFields });
+    }
+
+    const isPublic = body.isPublic !== undefined ? Boolean(body.isPublic) : true;
+    const isGuest = body.isGuest !== undefined ? Boolean(body.isGuest) : true;
+
     const row = await tables.createRow({
       databaseId: FLOW_DB,
       tableId: 'forms',
@@ -2008,18 +2026,22 @@ export const ApiResources = {
       data: {
         title: title.slice(0, 255),
         description: body.description != null ? String(body.description) : '',
-        schema: body.schema != null ? (typeof body.schema === 'string' ? body.schema : JSON.stringify(body.schema)) : '[]',
+        schema: schemaStr,
+        settings: settingsStr,
         userId: actor.userId,
         status: String(body.status || 'published'),
-        visibility: String(body.visibility || 'private'),
-        isPublic: body.isPublic !== undefined ? !!body.isPublic : false,
-        isGuest: false,
-        isPinned: false,
+        visibility: String(body.visibility || (isPublic ? 'public' : 'private')),
+        isPublic,
+        isGuest,
+        isPinned: !!body.isPinned,
         isTrash: false,
-        ...(wsId ? { isWorkspace: true, projectId: wsId } : {}),
+        ...(wsId ? { isWorkspace: true } : {}),
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+        ...(isPublic ? [Permission.read(Role.any())] : []),
       ],
     });
 
@@ -2039,9 +2061,19 @@ export const ApiResources = {
     if (body.description !== undefined) patch.description = String(body.description);
     if (body.schema !== undefined) {
       patch.schema = typeof body.schema === 'string' ? body.schema : JSON.stringify(body.schema);
+    } else if (body.fields !== undefined) {
+      patch.schema = typeof body.fields === 'string' ? body.fields : JSON.stringify(body.fields);
+    }
+    if (body.settings !== undefined) {
+      patch.settings = typeof body.settings === 'string' ? body.settings : JSON.stringify(body.settings);
+    } else if (body.ghostFields !== undefined) {
+      patch.settings = JSON.stringify({ ghostFields: body.ghostFields });
     }
     if (body.status !== undefined) patch.status = String(body.status);
+    if (body.visibility !== undefined) patch.visibility = String(body.visibility);
     if (body.isPublic !== undefined) patch.isPublic = !!body.isPublic;
+    if (body.isGuest !== undefined) patch.isGuest = !!body.isGuest;
+    if (body.isPinned !== undefined) patch.isPinned = !!body.isPinned;
     await tables.updateRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id, data: patch as any });
     return this.getForm(actor, id);
   },

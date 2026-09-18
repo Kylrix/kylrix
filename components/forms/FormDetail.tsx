@@ -76,7 +76,7 @@ export function FormDetail({
   }, [form?.schema]);
 
   const shareUrl = typeof window !== 'undefined' && form?.$id
-    ? `${window.location.origin}/forms/${form.$id}`
+    ? `${window.location.origin}/form/${form.$id}`
     : '';
 
   const handleCopyLink = () => {

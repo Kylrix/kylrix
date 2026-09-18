@@ -7,19 +7,30 @@ export function shapeFormListItem(row: Record<string, unknown>) {
     title: r.title || r.name || 'Untitled',
     description: r.description || null,
     updatedAt: r.$updatedAt || r.updatedAt || null,
-    isPublic: !!r.isPublic,
+    isPublic: r.isPublic !== undefined ? !!r.isPublic : true,
+    isGuest: r.isGuest !== undefined ? !!r.isGuest : true,
   };
 }
 
 export function shapeFormDetail(row: Record<string, unknown>) {
   const r = row as any;
+  let parsedSettings: any = null;
+  try {
+    parsedSettings = typeof r.settings === 'string' ? JSON.parse(r.settings) : r.settings;
+  } catch {}
+
+  const ghostFields = Array.isArray(parsedSettings?.ghostFields) ? parsedSettings.ghostFields : [];
+
   return {
     id: String(r.$id || r.id),
     title: r.title || 'Untitled',
     description: r.description || null,
     schema: r.schema || null,
+    settings: r.settings || null,
     status: r.status || null,
-    isPublic: !!r.isPublic,
+    isPublic: r.isPublic !== undefined ? !!r.isPublic : true,
+    isGuest: r.isGuest !== undefined ? !!r.isGuest : true,
+    ghostFields,
     fields: Array.isArray(r.schema)
       ? r.schema
       : typeof r.schema === 'string'
