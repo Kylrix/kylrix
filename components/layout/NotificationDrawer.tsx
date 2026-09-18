@@ -25,8 +25,10 @@ import {
   X as CloseIcon,
   RotateCw,
   Sparkles,
+  Download,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { downloadBugReportMarkdown } from '@/lib/errors/download-bug-report';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 import { sanitizeInAppHref } from '@/lib/routing/app-paths';
@@ -66,6 +68,12 @@ export interface KylrixNotification {
     pubkey?: string;
   };
   source?: 'kylrix' | 'system';
+  errorDetails?: {
+    message?: string;
+    stack?: string;
+    digest?: string;
+    timestamp?: string;
+  };
 }
 
 function formatTimeAgo(ts: number): string {
@@ -894,6 +902,25 @@ export function NotificationContent({
 
             {/* Dismiss & Action */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, mt: 0.4 }}>
+              {notif.errorDetails && (
+                <IconButton
+                  size="small"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    downloadBugReportMarkdown(notif.errorDetails!);
+                  }}
+                  title="Download Bug Markdown (.md)"
+                  sx={{
+                    width: 26,
+                    height: 26,
+                    color: '#EF4444',
+                    bgcolor: 'rgba(239,68,68,0.15)',
+                    '&:hover': { bgcolor: 'rgba(239,68,68,0.3)', color: '#FFFFFF' },
+                  }}
+                >
+                  <Download size={13} />
+                </IconButton>
+              )}
               <IconButton
                 size="small"
                 onClick={(e: React.MouseEvent) => dismissNotification(notif.id, e)}
@@ -1166,29 +1193,60 @@ export function CompactNotificationPill({
 
       {/* Quick Action Controls: Open/Apply + Dismiss */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-        <Button
-          size="small"
-          onClick={handleApplyClick}
-          sx={{
-            minWidth: 0,
-            px: 1.25,
-            py: 0.4,
-            height: 26,
-            borderRadius: '999px',
-            bgcolor: alpha(appAccent, 0.2),
-            color: appAccent,
-            border: `1px solid ${alpha(appAccent, 0.35)}`,
-            fontSize: '0.7rem',
-            fontWeight: 800,
-            textTransform: 'none',
-            lineHeight: 1,
-            '&:hover': {
-              bgcolor: alpha(appAccent, 0.35),
-            },
-          }}
-        >
-          {notification.actionHref ? 'Open' : 'View'}
-        </Button>
+        {notification.errorDetails ? (
+          <Button
+            size="small"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              downloadBugReportMarkdown(notification.errorDetails!);
+            }}
+            startIcon={<Download size={13} />}
+            sx={{
+              minWidth: 0,
+              px: 1.25,
+              py: 0.4,
+              height: 26,
+              borderRadius: '999px',
+              bgcolor: 'rgba(239, 68, 68, 0.2)',
+              color: '#EF4444',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              fontSize: '0.7rem',
+              fontWeight: 800,
+              textTransform: 'none',
+              lineHeight: 1,
+              '&:hover': {
+                bgcolor: 'rgba(239, 68, 68, 0.35)',
+                color: '#FFFFFF',
+              },
+            }}
+          >
+            Download Bug
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            onClick={handleApplyClick}
+            sx={{
+              minWidth: 0,
+              px: 1.25,
+              py: 0.4,
+              height: 26,
+              borderRadius: '999px',
+              bgcolor: alpha(appAccent, 0.2),
+              color: appAccent,
+              border: `1px solid ${alpha(appAccent, 0.35)}`,
+              fontSize: '0.7rem',
+              fontWeight: 800,
+              textTransform: 'none',
+              lineHeight: 1,
+              '&:hover': {
+                bgcolor: alpha(appAccent, 0.35),
+              },
+            }}
+          >
+            {notification.actionHref ? 'Open' : 'View'}
+          </Button>
+        )}
 
         <IconButton
           size="small"

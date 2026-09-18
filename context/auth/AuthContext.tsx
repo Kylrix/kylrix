@@ -357,16 +357,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const getJWT = useCallback(async () => {
     try {
-      // 0-Touch Free Plan Protection: Check local user preferences/tier synchronously
-      const { effectiveTierHasPaidAccess } = await import('@/lib/entitlements');
-      const { getUserSubscriptionTier } = await import('@/lib/utils');
-      const currentTier = getUserSubscriptionTier(user);
-
-      if (!effectiveTierHasPaidAccess(currentTier)) {
-        // Free plan users never touch Appwrite JWT generation or server actions
-        return null;
-      }
-
+      if (!user?.$id) return null;
       const { jwt } = await account.createJWT();
       return jwt;
     } catch {
