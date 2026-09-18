@@ -100,7 +100,9 @@ export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }:
               <Clock className="w-5 h-5 text-[#9B9691] shrink-0" />
               <div>
                 <span className="block text-[9px] text-[#9B9691] font-black font-mono">SUBMITTED AT</span>
-                <span className="text-xs font-bold text-white">{new Date(submission.$createdAt).toLocaleString()}</span>
+                <span className="text-xs font-bold text-white">
+                  {submission.$createdAt || submission.createdAt ? new Date(submission.$createdAt || submission.createdAt).toLocaleString() : 'Recently'}
+                </span>
               </div>
             </div>
             <div className="p-3.5 rounded-xl bg-[#161412] border border-white/5 flex items-center gap-3">

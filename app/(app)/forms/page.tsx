@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
     Plus, 
@@ -13,7 +13,8 @@ import {
     Settings, 
     Pin, 
     FolderKanban,
-    ChevronRight
+    ChevronRight,
+    FileSpreadsheet
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
@@ -25,7 +26,6 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
-import { MultiSectionContainer } from '@/context/SectionContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -34,13 +34,47 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
-
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
 import { FormResponsesWorkflowDrawer } from '@/components/forms/FormResponsesWorkflowDrawer';
+import Link from 'next/link';
 
+function formatDateSafe(val: unknown, fallback = 'Recently'): string {
+    if (!val) return fallback;
+    try {
+        const d = new Date(val as any);
+        if (isNaN(d.getTime())) return fallback;
+        return d.toLocaleDateString();
+    } catch {
+        return fallback;
+    }
+}
 
+function formatTimeSafe(val: unknown, fallback = 'Recently'): string {
+    if (!val) return fallback;
+    try {
+        const d = new Date(val as any);
+        if (isNaN(d.getTime())) return fallback;
+        return d.toLocaleTimeString();
+    } catch {
+        return fallback;
+    }
+}
+
+function parseSchemaSafe(schema: unknown): any[] {
+    if (!schema) return [];
+    if (Array.isArray(schema)) return schema;
+    if (typeof schema === 'string') {
+        try {
+            const parsed = JSON.parse(schema);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+}
 
 export default function FormsDashboard() {
     const router = useRouter();
@@ -100,9 +134,12 @@ export default function FormsDashboard() {
             const bPinned = bId ? isResourcePinned('form', bId, b.userId, b.isPinned) : false;
             if (aPinned && !bPinned) return -1;
             if (!aPinned && bPinned) return 1;
-            const timeA = new Date(a.$createdAt || a.createdAt || Date.now()).getTime();
-            const timeB = new Date(b.$createdAt || b.createdAt || Date.now()).getTime();
-            return timeB - timeA;
+
+            const timeA = a.$createdAt || a.createdAt ? new Date(a.$createdAt || a.createdAt).getTime() : 0;
+            const timeB = b.$createdAt || b.createdAt ? new Date(b.$createdAt || b.createdAt).getTime() : 0;
+            const validA = isNaN(timeA) ? 0 : timeA;
+            const validB = isNaN(timeB) ? 0 : timeB;
+            return validB - validA;
         });
     }, [isResourcePinned]);
 
@@ -116,7 +153,9 @@ export default function FormsDashboard() {
             try {
                 const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
                 const db = await getRxDB();
-                items = (await db.forms.find().exec()).map((d: any) => d.toJSON());
+                if (db?.forms) {
+                    items = (await db.forms.find().exec()).map((d: any) => d.toJSON());
+                }
             } catch {
                 items = [];
             }
@@ -130,14 +169,18 @@ export default function FormsDashboard() {
             }
 
             if (items.length > 0) {
-                const activeLocal = items.filter((f: any) => !f.isTrash);
+                const activeLocal = items.filter((f: any) => f && !f.isTrash && !f.isDeleted);
                 setForms(sortForms(activeLocal as unknown as Forms[]));
                 setLoading(false);
             }
 
-            // Sync drafts
-            const drafts = await DraftsService.listDrafts();
-            setOfflineDrafts(drafts);
+            // Sync drafts safely
+            try {
+                const drafts = await DraftsService.listDrafts();
+                setOfflineDrafts(Array.isArray(drafts) ? drafts : []);
+            } catch {
+                setOfflineDrafts([]);
+            }
 
             if (userId === 'guest') return;
 
@@ -146,8 +189,8 @@ export default function FormsDashboard() {
 
             if (Array.isArray(remoteRows)) {
                 const byId = new Map<string, Forms>();
-                items.filter((item: any) => !item.isTrash).forEach((item: any) => item?.$id && byId.set(item.$id, item));
-                remoteRows.filter((row: any) => !row.isTrash).forEach((row: any) => row?.$id && byId.set(row.$id, row));
+                items.filter((item: any) => item && !item.isTrash && !item.isDeleted).forEach((item: any) => item?.$id && byId.set(item.$id, item));
+                remoteRows.filter((row: any) => row && !row.isTrash && !row.isDeleted).forEach((row: any) => row?.$id && byId.set(row.$id, row));
                 const merged = Array.from(byId.values());
 
                 setForms(sortForms(merged as unknown as Forms[]));
@@ -165,7 +208,7 @@ export default function FormsDashboard() {
     useEffect(() => {
         void fetchForms(false);
 
-        // Realtime subscription: live sync for forms mutations without manual polling
+        // Realtime subscription: live sync for forms mutations
         let unsubscribe: (() => void) | undefined;
         void (async () => {
             try {
@@ -175,7 +218,7 @@ export default function FormsDashboard() {
                 const tableId = APPWRITE_CONFIG.TABLES.FLOW.FORMS;
                 const channel = `databases.${dbId}.collections.${tableId}.documents`;
                 unsubscribe = client.subscribe(channel, (response: any) => {
-                    if (response.events.some((event: string) => event.includes('.create') || event.includes('.update') || event.includes('.delete'))) {
+                    if (response?.events?.some((event: string) => event.includes('.create') || event.includes('.update') || event.includes('.delete'))) {
                         void fetchForms(false);
                     }
                 });
@@ -300,7 +343,7 @@ export default function FormsDashboard() {
                 />
             );
         }
-    }, [openSidebar, closeSidebar, openOverlay, closeOverlay]);
+    }, [openSidebar, closeSidebar, openOverlay, closeOverlay, handleEdit, handleDelete]);
 
     const handleTogglePin = useCallback(async (form: Forms) => {
         if (!user?.$id || !form?.$id) return;
@@ -323,6 +366,8 @@ export default function FormsDashboard() {
         } catch {}
     }, [user?.$id, togglePin, sortForms]);
 
+    const activeFormsCount = useMemo(() => workspaceScopedForms.length, [workspaceScopedForms]);
+
     return (
         <div className="flex-1 min-h-screen pointer-events-auto">
             <div className="w-full max-w-[1440px] mx-auto p-4 md:p-8">
@@ -330,26 +375,24 @@ export default function FormsDashboard() {
                     {/* Top Nav Switcher */}
                     <div className="flex items-center justify-between gap-3 w-full">
                         <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border-2 border-white/20 rounded-2xl w-fit select-none shadow-md">
-                            <button
-                                type="button"
-                                onClick={() => router.push('/app')}
+                            <Link
+                                href="/app"
                                 className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all text-white border border-white/10 hover:border-white/30 hover:bg-white/[0.06]"
                                 title="Ideas"
                                 aria-label="Ideas"
                             >
                                 <FileText size={15} />
                                 <span className="hidden sm:inline">Ideas</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => router.push('/forms')}
+                            </Link>
+                            <Link
+                                href="/forms"
                                 className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#6366F1] text-white border border-[#6366F1] shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
                                 title="Forms"
                                 aria-label="Forms"
                             >
-                                <FolderKanban size={15} />
+                                <FileSpreadsheet size={15} />
                                 <span className="hidden sm:inline">Forms</span>
-                            </button>
+                            </Link>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -358,7 +401,7 @@ export default function FormsDashboard() {
                             <button 
                                 type="button"
                                 onClick={handleCreate}
-                                className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white hover:bg-[#5254D8] active:scale-95 transition-all shadow-[0_4px_14px_rgba(99,102,241,0.3)] select-none shrink-0"
+                                className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white hover:bg-[#5254D8] active:scale-95 transition-all shadow-[0_4px_14px_rgba(99,102,241,0.3)] select-none shrink-0 cursor-pointer"
                             >
                                 <Plus size={16} strokeWidth={2.5} />
                                 <span>Create Form</span>
@@ -369,7 +412,19 @@ export default function FormsDashboard() {
                     {/* Filter Tabs Bar */}
                     <div className="overflow-x-auto scrollbar-none p-1.5 bg-[#000000] border-2 border-white/20 rounded-[24px] flex items-center gap-2 select-none w-fit shadow-md">
                         {[
-                            { label: 'Active Forms', icon: FileText },
+                            { 
+                                label: (
+                                    <div className="flex items-center gap-1.5">
+                                        <span>Active Forms</span>
+                                        {activeFormsCount > 0 && (
+                                            <span className="bg-[#6366F1]/20 border border-[#6366F1]/40 text-[#6366F1] rounded-full px-1.5 py-0.2 text-[10px] flex items-center justify-center font-bold font-mono">
+                                                {activeFormsCount}
+                                            </span>
+                                        )}
+                                    </div>
+                                ), 
+                                icon: FileSpreadsheet 
+                            },
                             { label: 'Templates', icon: Sparkles },
                             { 
                                 label: (
@@ -405,175 +460,177 @@ export default function FormsDashboard() {
                         })}
                     </div>
 
-                    <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
-
-                {loading && forms.length === 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="bg-[#000000] border border-white/[0.08] rounded-2xl p-5 animate-pulse space-y-4">
-                                <div className="flex justify-between">
-                                    <div className="h-5 w-24 bg-white/5 rounded-lg" />
-                                    <div className="h-5 w-12 bg-white/5 rounded-lg" />
+                    {/* Main Content Area */}
+                    {loading && forms.length === 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="bg-[#000000] border-2 border-white/10 rounded-2xl p-5 animate-pulse space-y-4">
+                                    <div className="flex justify-between">
+                                        <div className="h-5 w-24 bg-white/5 rounded-lg" />
+                                        <div className="h-5 w-12 bg-white/5 rounded-lg" />
+                                    </div>
+                                    <div className="h-4 w-3/4 bg-white/5 rounded-lg" />
+                                    <div className="h-3 w-full bg-white/5 rounded-lg" />
                                 </div>
-                                <div className="h-4 w-3/4 bg-white/5 rounded-lg" />
-                                <div className="h-3 w-full bg-white/5 rounded-lg" />
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div>
-                        {tabValue === 0 && (
-                            <>
-                                {workspaceScopedForms.length === 0 ? (
-                                    <div className="py-24 text-center bg-[#000000] border border-dashed border-white/10 rounded-3xl">
-                                        <FileText className="h-14 w-14 mx-auto text-white/20 mb-3" />
-                                        <h3 className="text-lg font-clash font-bold text-white mb-4">No active forms</h3>
-                                        <button 
-                                            type="button" 
-                                            onClick={handleCreate} 
-                                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#161412] border border-white/10 hover:border-[#6366F1] text-white font-bold rounded-xl text-xs font-satoshi transition-all cursor-pointer"
-                                        >
-                                            <Plus size={14} />
-                                            <span>Build First Form</span>
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                        {workspaceScopedForms.map((form) => (
-                                             <FormCard
-                                                key={form.$id}
-                                                form={form}
-                                                onSelect={() => handleOpenDetail(form)}
-                                                onTogglePin={handleTogglePin}
-                                                onEdit={handleEdit}
-                                                onOpenSettings={handleOpenSettings}
-                                                onDelete={handleDelete}
-                                                onUpdate={() => fetchForms(false)}
-                                                onOpenWorkflows={(f) => {
-                                                    setWorkflowTargetForm(f);
-                                                    setShowWorkflows(true);
-                                                }}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                            </>
-                        )}
-                        {workflowTargetForm && (
-                            <>
-                                <ObjectWorkflowsDrawer
-                                    isOpen={showWorkflows}
-                                    onClose={() => setShowWorkflows(false)}
-                                    objectType="form"
-                                    targetObject={{
-                                        id: workflowTargetForm.$id,
-                                        title: workflowTargetForm.title || 'Form',
-                                        description: workflowTargetForm.description || '',
-                                        raw: workflowTargetForm,
-                                    }}
-                                    onOpenFormResponsesWorkflow={() => setShowResponsesWorkflow(true)}
-                                />
-                                <FormResponsesWorkflowDrawer
-                                    isOpen={showResponsesWorkflow}
-                                    onClose={() => setShowResponsesWorkflow(false)}
-                                    formId={workflowTargetForm.$id}
-                                    formTitle={workflowTargetForm.title || 'Form'}
-                                    submissions={(workflowTargetForm as any).submissions || (workflowTargetForm as any).responses || []}
-                                    liveFields={workflowTargetForm.schema ? (() => {
-                                        try {
-                                            const parsed = typeof workflowTargetForm.schema === 'string' ? JSON.parse(workflowTargetForm.schema) : workflowTargetForm.schema;
-                                            return Array.isArray(parsed) ? parsed : [];
-                                        } catch {
-                                            return [];
-                                        }
-                                    })() : []}
-                                    activeWorkspaceId={activeWorkspace?.id || null}
-                                />
-                            </>
-                        )}
-
-                        {tabValue === 1 && (
-                            <div className="py-24 text-center bg-[#000000] border border-dashed border-white/10 rounded-3xl">
-                                <Sparkles className="h-14 w-14 mx-auto text-white/20 mb-3" />
-                                <h3 className="text-lg font-bold font-clash text-white tracking-tight">Form Templates Catalog Coming Soon</h3>
-                            </div>
-                        )}
-
-                        {tabValue === 2 && (
-                            <>
-                                {offlineDrafts.length === 0 ? (
-                                    <div className="py-24 text-center bg-[#000000] border border-dashed border-white/10 rounded-3xl">
-                                        <History className="h-14 w-14 mx-auto text-white/20 mb-3" />
-                                        <h3 className="text-lg font-bold font-clash text-white tracking-tight">No offline form drafts</h3>
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                        {offlineDrafts.map((draft) => (
-                                            <div 
-                                                key={draft.id}
-                                                onClick={() => handleEditDraft(draft)}
-                                                className="bg-[#000000] border-2 border-white/20 hover:border-white/40 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer group"
+                            ))}
+                        </div>
+                    ) : (
+                        <div>
+                            {tabValue === 0 && (
+                                <>
+                                    {workspaceScopedForms.length === 0 ? (
+                                        <div className="py-24 text-center bg-[#000000] border-2 border-dashed border-white/15 rounded-3xl">
+                                            <FileSpreadsheet className="h-14 w-14 mx-auto text-white/20 mb-3" />
+                                            <h3 className="text-lg font-clash font-bold text-white mb-2">No active forms</h3>
+                                            <p className="text-xs text-white/50 font-satoshi max-w-sm mx-auto mb-5">
+                                                Create customized intake forms to collect data, feedback, and structured responses.
+                                            </p>
+                                            <button 
+                                                type="button" 
+                                                onClick={handleCreate} 
+                                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6366F1] hover:bg-[#5254D8] text-white font-bold rounded-xl text-xs font-satoshi transition-all cursor-pointer shadow-[0_4px_14px_rgba(99,102,241,0.25)]"
                                             >
-                                                <div>
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border border-[#FFB020]/40 text-[#FFB020] bg-[#FFB020]/10 tracking-wider">
-                                                            LOCAL DRAFT
-                                                        </span>
-                                                        <span className="text-xs text-white opacity-70 font-mono">
-                                                            {new Date(draft.updatedAt).toLocaleTimeString()}
-                                                        </span>
+                                                <Plus size={14} />
+                                                <span>Build First Form</span>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                            {workspaceScopedForms.map((form) => (
+                                                <FormCard
+                                                    key={form.$id}
+                                                    form={form}
+                                                    onSelect={() => handleOpenDetail(form)}
+                                                    onTogglePin={handleTogglePin}
+                                                    onEdit={handleEdit}
+                                                    onOpenSettings={handleOpenSettings}
+                                                    onDelete={handleDelete}
+                                                    onUpdate={() => fetchForms(false)}
+                                                    onOpenWorkflows={(f) => {
+                                                        setWorkflowTargetForm(f);
+                                                        setShowWorkflows(true);
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {tabValue === 1 && (
+                                <div className="py-24 text-center bg-[#000000] border-2 border-dashed border-white/15 rounded-3xl">
+                                    <Sparkles className="h-14 w-14 mx-auto text-[#6366F1] mb-3" />
+                                    <h3 className="text-lg font-bold font-clash text-white tracking-tight">Form Templates Catalog Coming Soon</h3>
+                                    <p className="text-xs text-white/50 font-satoshi max-w-sm mx-auto mt-2">
+                                        Pre-configured intake workflows, bug triage forms, and registration templates will appear here.
+                                    </p>
+                                </div>
+                            )}
+
+                            {tabValue === 2 && (
+                                <>
+                                    {offlineDrafts.length === 0 ? (
+                                        <div className="py-24 text-center bg-[#000000] border-2 border-dashed border-white/15 rounded-3xl">
+                                            <History className="h-14 w-14 mx-auto text-white/20 mb-3" />
+                                            <h3 className="text-lg font-bold font-clash text-white tracking-tight">No offline form drafts</h3>
+                                            <p className="text-xs text-white/50 font-satoshi max-w-sm mx-auto mt-2">
+                                                Uncommitted edits and offline changes stored on this device will appear here.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                            {offlineDrafts.map((draft) => (
+                                                <div 
+                                                    key={draft.id}
+                                                    onClick={() => handleEditDraft(draft)}
+                                                    className="bg-[#000000] border-2 border-white/20 hover:border-white/40 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer group"
+                                                >
+                                                    <div>
+                                                        <div className="flex justify-between items-center mb-3">
+                                                            <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border border-[#FFB020]/40 text-[#FFB020] bg-[#FFB020]/10 tracking-wider">
+                                                                LOCAL DRAFT
+                                                            </span>
+                                                            <span className="text-xs text-white opacity-70 font-mono">
+                                                                {formatTimeSafe(draft.updatedAt)}
+                                                            </span>
+                                                        </div>
+                                                        <h2 className="text-base font-bold text-white font-clash tracking-tight truncate group-hover:text-[#FFB020] transition-colors">
+                                                            {draft.title || 'Untitled Draft'}
+                                                        </h2>
+                                                        <p className="text-white opacity-70 text-xs font-satoshi line-clamp-2 mt-1">
+                                                            Unsynced changes stored in device engine.
+                                                        </p>
                                                     </div>
-                                                    <h2 className="text-base font-bold text-white font-clash tracking-tight truncate group-hover:text-[#FFB020] transition-colors">
-                                                        {draft.title || 'Untitled Draft'}
-                                                    </h2>
-                                                    <p className="text-white opacity-70 text-xs font-satoshi line-clamp-2 mt-1">
-                                                        Unsynced changes stored in device engine.
-                                                    </p>
+
+                                                    <div className="pt-4 mt-4 border-t-2 border-white/20 flex items-center justify-between">
+                                                        <span className="text-xs font-bold text-[#FFB020] font-satoshi">
+                                                            Resume Draft
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteDraft(draft);
+                                                            }}
+                                                            className="text-white hover:text-red-400 p-1 transition-colors cursor-pointer"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
                                                 </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
 
-                                                <div className="pt-4 mt-4 border-t-2 border-white/20 flex items-center justify-between">
-                                                    <span className="text-xs font-bold text-[#FFB020] font-satoshi">
-                                                        Resume Draft
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteDraft(draft);
-                                                        }}
-                                                        className="text-white hover:text-red-400 p-1 transition-colors"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                )}
+                    {/* Dialogs & Workflow Drawers */}
+                    {dialogOpen && (
+                        <FormDialog 
+                            open={dialogOpen} 
+                            onClose={() => setDialogOpen(false)} 
+                            form={selectedForm}
+                            initialDraft={selectedDraft || undefined}
+                            onSaved={() => fetchForms(false)} 
+                        />
+                    )}
 
-                {dialogOpen && (
-                    <FormDialog 
-                        open={dialogOpen} 
-                        onClose={() => setDialogOpen(false)} 
-                        form={selectedForm}
-                        initialDraft={selectedDraft || undefined}
-                        onSaved={() => fetchForms(false)} 
-                    />
-                )}
+                    {settingsOpen && (
+                        <FormSettingsDialog
+                            open={settingsOpen}
+                            onClose={() => setSettingsOpen(false)}
+                            form={selectedForm}
+                            onSaved={() => fetchForms(false)}
+                        />
+                    )}
 
-                {settingsOpen && (
-                    <FormSettingsDialog
-                        open={settingsOpen}
-                        onClose={() => setSettingsOpen(false)}
-                        form={selectedForm}
-                        onSaved={() => fetchForms(false)}
-                    />
-                )}
-                    </MultiSectionContainer>
+                    {workflowTargetForm && (
+                        <>
+                            <ObjectWorkflowsDrawer
+                                isOpen={showWorkflows}
+                                onClose={() => setShowWorkflows(false)}
+                                objectType="form"
+                                targetObject={{
+                                    id: workflowTargetForm.$id,
+                                    title: workflowTargetForm.title || 'Form',
+                                    description: workflowTargetForm.description || '',
+                                    raw: workflowTargetForm,
+                                }}
+                                onOpenFormResponsesWorkflow={() => setShowResponsesWorkflow(true)}
+                            />
+                            <FormResponsesWorkflowDrawer
+                                isOpen={showResponsesWorkflow}
+                                onClose={() => setShowResponsesWorkflow(false)}
+                                formId={workflowTargetForm.$id}
+                                formTitle={workflowTargetForm.title || 'Form'}
+                                submissions={(workflowTargetForm as any).submissions || (workflowTargetForm as any).responses || []}
+                                liveFields={parseSchemaSafe(workflowTargetForm.schema)}
+                                activeWorkspaceId={activeWorkspace?.id || null}
+                            />
+                        </>
+                    )}
                 </div>
             </div>
         </div>
@@ -664,6 +721,7 @@ function FormCard({
     };
 
     const isPublished = form.status === 'published';
+    const fields = parseSchemaSafe(form.schema);
 
     return (
         <div 
@@ -675,7 +733,7 @@ function FormCard({
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-xl bg-[#161412] border-2 border-white/20 flex items-center justify-center text-[#6366F1] shrink-0 group-hover:border-[#6366F1]/60 transition-colors">
-                            <FileText size={15} />
+                            <FileSpreadsheet size={15} />
                         </div>
                         <h3 className="font-clash font-extrabold text-white text-base tracking-tight group-hover:text-[#6366F1] transition-colors truncate">
                             {form.title || 'Untitled Form'}
@@ -698,7 +756,7 @@ function FormCard({
                                     })
                                 );
                             }}
-                            className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#6366F1] hover:bg-[#6366F1]/10"
+                            className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#6366F1] hover:bg-[#6366F1]/10 cursor-pointer"
                             title="Sidekick Assist"
                             aria-label="Sidekick Assist"
                         >
@@ -729,8 +787,10 @@ function FormCard({
             </div>
 
             <div className="pt-4 mt-4 border-t-2 border-white/20 flex items-center justify-between">
-                <div className="text-[11px] text-white opacity-70 font-mono">
-                    {new Date(form.updatedAt || form.$createdAt).toLocaleDateString()}
+                <div className="flex items-center gap-2 text-[11px] text-white opacity-70 font-mono">
+                    <span>{formatDateSafe(form.updatedAt || form.$createdAt)}</span>
+                    <span>•</span>
+                    <span>{fields.length} {fields.length === 1 ? 'field' : 'fields'}</span>
                 </div>
 
                 <div className="flex items-center gap-2">

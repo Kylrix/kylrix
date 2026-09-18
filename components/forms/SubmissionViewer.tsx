@@ -70,7 +70,7 @@ const SubmissionViewerTable = ({
                 )}
               </td>
               <td className="px-4 py-3 text-[#9B9691] font-mono text-[11px] whitespace-nowrap">
-                {new Date(sub.$createdAt).toLocaleString()}
+                {sub.$createdAt || sub.createdAt ? new Date(sub.$createdAt || sub.createdAt).toLocaleString() : 'Recently'}
               </td>
               <td className="px-4 py-3">
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
