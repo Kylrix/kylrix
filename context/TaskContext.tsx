@@ -158,9 +158,11 @@ async function persistGoalsLocalCopy(userId: string | null | undefined, tasks: T
 export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
   const raw = doc as any;
   // Extract project ID from tags if present (format: "project:ID")
-  const projectTag = raw.tags?.find((t: string) => t.startsWith('project:'));
-  const projectId = projectTag ? projectTag.split(':')[1] : 'inbox';
-  const userLabels = raw.tags?.filter((t: string) => !t.startsWith('project:') && !t.startsWith('source:')) || [];
+  const projectTag = raw.tags?.find((t: string) => String(t).startsWith('project:'));
+  const projectId = projectTag ? projectTag.split(':')[1] : (raw.projectId || raw.project_id || raw.workspaceId || 'inbox');
+  const userLabels = raw.tags
+    ? raw.tags.filter((t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'))
+    : (Array.isArray(raw.labels) ? raw.labels : []);
   const linkedNotes = parseSourceNoteIdsFromTags(raw.tags || []);
   const comments = Array.isArray(raw.comments)
     ? raw.comments.map((entry: any) => parseCommentEntry(entry))
@@ -168,26 +170,26 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
 
   return {
     id: doc.$id || raw.id,
-    title: doc.title,
-    description: doc.description,
-    status: (doc.status as TaskStatus) || 'todo',
-    priority: (doc.priority as Priority) || 'medium',
+    title: doc.title || raw.title || '',
+    description: doc.description || raw.description || '',
+    status: (doc.status as TaskStatus) || (raw.status as TaskStatus) || 'todo',
+    priority: (doc.priority as Priority) || (raw.priority as Priority) || 'medium',
     projectId: projectId,
     labels: userLabels,
-    linkedNotes: linkedNotes,
-    subtasks: [],
+    linkedNotes: linkedNotes.length ? linkedNotes : (Array.isArray(raw.linkedNotes) ? raw.linkedNotes : []),
+    subtasks: Array.isArray(raw.subtasks) ? raw.subtasks : [],
     comments,
-    attachments: [],
-    reminders: [],
-    timeEntries: [],
+    attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
+    reminders: Array.isArray(raw.reminders) ? raw.reminders : [],
+    timeEntries: Array.isArray(raw.timeEntries) ? raw.timeEntries : [],
     assigneeIds: raw.assigneeIds || [],
-    creatorId: raw.userId,
-    userId: raw.userId || 'guest',
-    parentTaskId: raw.parentId || null,
-    dueDate: parseSafeOptionalDate(raw.dueDate),
+    creatorId: raw.userId || raw.creatorId || 'guest',
+    userId: raw.userId || raw.creatorId || 'guest',
+    parentTaskId: raw.parentId || raw.parentTaskId || null,
+    dueDate: parseSafeOptionalDate(doc.dueDate || raw.dueDate),
     createdAt: parseSafeDate(doc.$createdAt || raw.createdAt),
     updatedAt: parseSafeDate(doc.$updatedAt || raw.updatedAt),
-    position: 0,
+    position: typeof raw.position === 'number' ? raw.position : 0,
     isArchived: raw.isArchived === true || String(raw.isArchived) === 'true',
     isPinned: raw.isPinned === true || String(raw.isPinned) === 'true',
     isPublic: raw.isPublic === true || String(raw.isPublic) === 'true',
@@ -936,7 +938,18 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       ) {
         byId.set(row.id, live);
       } else {
-        byId.set(row.id, row);
+        const merged = live
+          ? {
+              ...live,
+              ...row,
+              projectId: row.projectId && row.projectId !== 'inbox' ? row.projectId : (live.projectId || 'inbox'),
+              isWorkspace: row.isWorkspace || live.isWorkspace,
+              subtasks: row.subtasks?.length ? row.subtasks : (live.subtasks || []),
+              comments: row.comments?.length ? row.comments : (live.comments || []),
+              labels: row.labels?.length ? row.labels : (live.labels || []),
+            }
+          : row;
+        byId.set(row.id, merged);
       }
     }
 
@@ -1311,9 +1324,24 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const syncedGoalRaw = detail?.syncedGoal;
       if (syncedGoalRaw) {
         const mapped = mapAppwriteTaskToTask(syncedGoalRaw);
-        dispatch({ type: 'UPSERT_TASK', payload: mapped });
-        void setCachedData(`goal_${mapped.id}`, mapped);
-        const updatedList = [mapped, ...tasksRef.current.filter((t) => t.id !== mapped.id)];
+        const existingTask = tasksRef.current.find((t) => t.id === mapped.id);
+        const mergedGoal: Task = existingTask
+          ? {
+              ...existingTask,
+              ...mapped,
+              projectId: mapped.projectId && mapped.projectId !== 'inbox' ? mapped.projectId : (existingTask.projectId || 'inbox'),
+              isWorkspace: mapped.isWorkspace || existingTask.isWorkspace,
+              userId: mapped.userId && mapped.userId !== 'guest' ? mapped.userId : (existingTask.userId || state.userId || 'guest'),
+              creatorId: mapped.creatorId && mapped.creatorId !== 'guest' ? mapped.creatorId : (existingTask.creatorId || state.userId || 'guest'),
+              subtasks: mapped.subtasks?.length ? mapped.subtasks : (existingTask.subtasks || []),
+              comments: mapped.comments?.length ? mapped.comments : (existingTask.comments || []),
+              labels: mapped.labels?.length ? mapped.labels : (existingTask.labels || []),
+            }
+          : mapped;
+
+        dispatch({ type: 'UPSERT_TASK', payload: mergedGoal });
+        void setCachedData(`goal_${mergedGoal.id}`, mergedGoal);
+        const updatedList = [mergedGoal, ...tasksRef.current.filter((t) => t.id !== mergedGoal.id)];
         if (state.userId) {
           const tasksKey = `f_tasks_${state.userId}`;
           void setCachedData(tasksKey, { rows: updatedList, total: updatedList.length });
@@ -1867,18 +1895,19 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       );
     }
     if (!activeWorkspace || activeWorkspace.isPersonal) {
-      if (state.userId && state.userId !== 'guest') {
-        const activeId = state.userId;
-        sourceTasks = sourceTasks.filter((t) =>
-          !t.userId || t.userId === 'guest' || t.userId === activeId ||
-          !t.creatorId || t.creatorId === 'guest' || t.creatorId === activeId ||
-          (Boolean(activeId) && Array.isArray(t.assigneeIds) && t.assigneeIds.includes(activeId!))
+      const activeId = state.userId;
+      sourceTasks = sourceTasks.filter((t) => {
+        if (!activeId || activeId === 'guest') return true;
+        return (
+          !t.userId ||
+          t.userId === 'guest' ||
+          t.userId === activeId ||
+          !t.creatorId ||
+          t.creatorId === 'guest' ||
+          t.creatorId === activeId ||
+          (Array.isArray(t.assigneeIds) && t.assigneeIds.includes(activeId))
         );
-      } else {
-        sourceTasks = sourceTasks.filter((t) =>
-          !t.userId || t.userId === 'guest' || !t.creatorId || t.creatorId === 'guest'
-        );
-      }
+      });
     }
     let filtered = buildTaskHierarchy(sourceTasks);
 
