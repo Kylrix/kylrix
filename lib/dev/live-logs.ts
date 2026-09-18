@@ -33,7 +33,6 @@ class DevLogStreamer {
   private initHooks() {
     if (this.hooked) return;
     if (typeof window !== 'undefined') return; // Server-side only
-    if (process.env.NODE_ENV === 'production') return; // Guard against production
 
     this.hooked = true;
 
