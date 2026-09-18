@@ -82,6 +82,8 @@ import {
   type QuickWorkflowAction,
   userMayUsePaidAi,
   AI_UPGRADE_LABEL} from '@/lib/agentic';
+import { getAgenticUserMessage } from '@/lib/agentic/errors';
+import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { account } from '@/lib/appwrite/client';
 import { WalletService } from '@/lib/services/wallets';
