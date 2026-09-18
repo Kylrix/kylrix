@@ -575,6 +575,16 @@ async function flushGoalPending(
     } catch {
       payload = null;
     }
+    if (!payload && (db as any)?.tasks) {
+      try {
+        const taskDoc = await (db as any).tasks.findOne(goalId).exec();
+        if (taskDoc) {
+          payload = (taskDoc.toJSON ? taskDoc.toJSON() : taskDoc) as Task;
+        }
+      } catch {
+        payload = null;
+      }
+    }
   }
 
   if (!payload) {
@@ -683,11 +693,11 @@ async function flushGoalPending(
       .catch(() => {});
   }
 
-  // Ack against the *queue* revision, not live updatedAt.
-  // Goal realtime / UPDATE_TASK used to stamp `new Date()` and permanently
-  // re-queue successful flushes (ideas guard live edits; goals did not).
+  // Ack against the queue revision.
+  // Re-queue only if a new revision was enqueued while this flush was in flight.
   const queuedAfter = pendingById.get(pendingKey) || pendingById.get(goalId) || '';
-  if (queuedAfter && flushRevision && queuedAfter !== flushRevision) {
+  const hasConcurrentEdit = Boolean(queuedAfter && queuedRevision && queuedAfter !== queuedRevision);
+  if (hasConcurrentEdit) {
     writePersistedQueue();
     notifyStatusListeners();
     console.log(`[SyncEngine] Re-queued goal after concurrent edit: ${goalId}`);
@@ -697,8 +707,8 @@ async function flushGoalPending(
   } else {
     failedSyncAttempts.delete(pendingKey);
     failedSyncAttempts.delete(goalId);
-    autonomicSyncEngine.ack(pendingKey, flushRevision);
-    autonomicSyncEngine.ack(goalId, flushRevision);
+    autonomicSyncEngine.ack(pendingKey, queuedAfter || flushRevision);
+    autonomicSyncEngine.ack(goalId, queuedAfter || flushRevision);
     window.dispatchEvent(
       new CustomEvent('kylrix:sync-complete', {
         detail: { noteId: pendingKey, goalId, syncedGoal: synced, revision: flushRevision, kind: 'goal' },
@@ -1126,25 +1136,11 @@ export const autonomicSyncEngine = {
     const activeUserId = activeUser?.$id || null;
 
     if (!hasSession && !activeUserId) {
-      // No account — unpaid work stays local.
+      // No account — guest work stays local in RxDB.
       return;
     }
 
-    const { hasPaidKylrixPlan } = await import('@/lib/utils');
-    if (!hasPaidKylrixPlan(activeUser)) {
-      // Free plan users operate 100% locally via RxDB/Dexie.
-      // Never trigger network requests, JWT calls, or DB operations for free users.
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('kylrix:sync-status', {
-            detail: { status: 'local-only' },
-          })
-        );
-      }
-      return;
-    }
-
-    // Pre-warm JWT once for Pro batch flush — avoids N * 100ms createJWT
+    // Pre-warm JWT once for batch flush — avoids N * 100ms createJWT
     await getPrewarmedJwt().catch(() => {});
 
     isSyncing = true;

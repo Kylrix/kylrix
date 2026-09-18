@@ -1035,11 +1035,6 @@ export async function createFormSecure(data: any, jwt?: string) {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
-  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
-  }
-
   // Mathematically tie the create operation to the current user
   if (!data) {
     data = {};
@@ -1056,14 +1051,14 @@ export async function createFormSecure(data: any, jwt?: string) {
   }
 
   const tables = createSystemTablesDB();
-  const permissions = [
-    Permission.read(Role.user(actor.$id)),
-    Permission.read(Role.any()), // Allow public discovery via listRows filter
-    ];
-
   const status = data.status || 'draft';
   const isPublic = data.isPublic !== undefined ? data.isPublic : status === 'published';
   const isGuest = data.isGuest !== undefined ? data.isGuest : status === 'published';
+
+  const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
+  const permissions = ownerRowPermissions(actor.$id, {
+    isPublic: Boolean(isPublic),
+  });
 
   const formData: Record<string, any> = {
     ...data,
@@ -1104,23 +1099,23 @@ export async function listUserFormsSecure(userId?: string, jwt?: string) {
     tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
     queries: [
       Query.equal('userId', targetUserId),
-      Query.notEqual('isTrash', true),
-      Query.orderDesc('$createdAt'),
       Query.limit(100),
     ]});
 
-  return JSON.parse(JSON.stringify(result));
+  const activeRows = (result.rows || []).filter((r: any) => !r.isTrash && !r.isDeleted);
+  activeRows.sort((a: any, b: any) => {
+    const tA = new Date(a.$createdAt || a.createdAt || 0).getTime();
+    const tB = new Date(b.$createdAt || b.createdAt || 0).getTime();
+    return tB - tA;
+  });
+
+  return JSON.parse(JSON.stringify({ ...result, rows: activeRows, total: activeRows.length }));
 }
 
 export async function updateFormSecure(formId: string, data: any, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
-  }
-
-  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
   }
 
   const isAllowed = await verifyFormPermission(formId, actor.$id, 'editor');
@@ -1179,11 +1174,6 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
-  }
-
-  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
   }
 
   // Clear memory row cache to prevent stale ownership/permission state from blocking the delete
@@ -1248,12 +1238,16 @@ export async function createEventSecure(data: any, jwt?: string) {
   }
 
   const tables = createSystemTablesDB();
-  const permissions = [
-    Permission.read(Role.user(actor.$id))];
+  const isPublic = data.isPublic !== undefined ? Boolean(data.isPublic) : true;
+
+  const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
+  const permissions = ownerRowPermissions(actor.$id, {
+    isPublic,
+  });
 
   const sanitizedData = sanitizeEventData({
     ...data,
-    isPublic: data.isPublic !== undefined ? Boolean(data.isPublic) : true,
+    isPublic,
     isGuest: data.isGuest !== undefined ? Boolean(data.isGuest) : true,
     userId: actor.$id,
   });

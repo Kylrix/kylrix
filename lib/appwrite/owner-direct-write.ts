@@ -50,7 +50,6 @@ function isAclMiss(err: any): boolean {
 function canOwnerDirect(data: any): string | null {
   const user = getCurrentUserSnapshot();
   if (!user || !user.$id || user.$id === 'guest') return null;
-  if (!hasPaidKylrixPlan(user)) return null;
   if (claimedOtherOwner(data, user.$id)) return null;
   return user.$id;
 }
