@@ -71,16 +71,12 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
       tags: target.tags,
     });
 
-    // Call Gemini via agentic runtime — uses same GOOGLE_API_KEY + agentic context as topbar Kylie (no direct GEMINI_API_KEY)
-    const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
-    if (!apiKey) {
-      return { success: false, error: 'Gemini is not configured on this deployment.' };
-    }
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash', systemInstruction });
-    const result = await model.generateContent(userPrompt);
-    const text = result.response.text().trim();
+    const { generateLLMCompletion } = await import('@/lib/agentic/llm-provider');
+    const text = await generateLLMCompletion({
+      prompt: userPrompt,
+      systemInstruction,
+      responseMimeType: 'application/json',
+    });
 
     // Extract JSON
     let parsed: any = null;
@@ -190,14 +186,11 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
     }
     if (!session) return { success: false, error: 'Could not resolve sidekick session' };
     const history: any[] = (() => { try { return JSON.parse((session as any).chatHistory || '[]'); } catch { return []; } })();
-    const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
-    if (!apiKey) return { success: false, error: 'Gemini is not configured on this deployment.' };
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
+
     // Use sidekick system instruction focused on object itself + chat history
     const { buildSidekickSystemInstruction } = await import('@/lib/agentic/prompts/sidekick');
     const systemInstruction = buildSidekickSystemInstruction({ id: opts.target.id, type: opts.target.type as any, title: opts.target.title, content: opts.target.content });
-    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash', systemInstruction });
+
     const transcript = history
       .map((m: any) => {
         let contentStr = '';
@@ -228,8 +221,12 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
       .join('\n');
 
     const prompt = `${transcript}\n\nuser: ${opts.message}\n\nContinue as Sidekick for ${opts.target.type} "${opts.target.title || opts.target.id}". Answer the user's questions directly in formatted markdown. Keep focus on this object. Do not return JSON.`;
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+
+    const { generateLLMCompletion } = await import('@/lib/agentic/llm-provider');
+    const text = await generateLLMCompletion({
+      prompt,
+      systemInstruction,
+    });
     const newHistory = [...history, { role: 'user', content: opts.message, at: new Date().toISOString() }, { role: 'assistant', content: text, at: new Date().toISOString() }].slice(-200);
     try {
       await databases.updateRow('passwordManagerDb', 'agentic_sessions', (session as any).$id, { chatHistory: JSON.stringify(newHistory), seen: false });
