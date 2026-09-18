@@ -56,6 +56,9 @@ function mapGuardErrorToMcp(err: unknown, id: unknown) {
   if (status === 401) {
     return { httpStatus: 401, body: mcpJsonRpcError(id, -32001, (err as Error).message || 'Unauthorized') };
   }
+  if (status === 403) {
+    return { httpStatus: 403, body: mcpJsonRpcError(id, -32003, (err as Error).message || 'Forbidden') };
+  }
   if (status === 413) {
     return { httpStatus: 413, body: mcpJsonRpcError(id, -32602, (err as Error).message || 'Payload too large') };
   }

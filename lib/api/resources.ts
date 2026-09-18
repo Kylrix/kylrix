@@ -21,6 +21,13 @@ import {
   VAULT_ENCRYPTED_FIELDS,
 } from '@/lib/api/vault-crypto';
 import {
+  enforceWorkspaceJailing,
+  getJailedWorkspaceId,
+  isWorkspaceJailed,
+  assertObjectInWorkspace,
+  WorkspaceJailError,
+} from '@/lib/workspaces/jailing';
+import {
   shapeGoal,
   buildGoalCreateRow,
   buildGoalUpdatePatch,
@@ -92,6 +99,7 @@ async function assertOwnedNote(tables: SystemTablesPort, actor: ApiActor, id: st
     .getRow({ databaseId: DB, tableId: NOTES, rowId: id })
     .catch(() => null)) as any;
   if (!row || row.userId !== actor.userId) notFound('Note not found');
+  await assertObjectInWorkspace(tables, actor, 'note', id, row);
   return row;
 }
 
@@ -100,6 +108,7 @@ async function assertOwnedGoal(tables: SystemTablesPort, actor: ApiActor, id: st
     .getRow({ databaseId: FLOW_DB, tableId: TASKS, rowId: id })
     .catch(() => null)) as any;
   if (!row || row.userId !== actor.userId) notFound('Goal not found');
+  await assertObjectInWorkspace(tables, actor, 'goal', id, row);
   return row;
 }
 
@@ -422,11 +431,14 @@ export const ApiResources = {
 
   async listNotes(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
     requireScope(actor, 'notes:read');
+    const wsId = enforceWorkspaceJailing(actor, opts?.workspaceId);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
+    }
     const tables = systemTables();
     const { isExcludedNote, ideaListExclusionQueries } = await import('@/lib/appwrite/note');
 
-    if (opts?.workspaceId) {
-      const wsId = opts.workspaceId;
+    if (wsId) {
       const noteIds = await getWorkspaceObjectIds(tables, wsId, 'note');
 
       const seen = new Set<string>();
@@ -474,7 +486,11 @@ export const ApiResources = {
     requireScope(actor, 'notes:write');
     const title = clampNoteTitle(String(body?.title || '').trim() || 'Untitled', 'Untitled');
     const content = body?.content != null ? String(body.content) : '';
-    const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
+    const requestedWs = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
+    const wsId = enforceWorkspaceJailing(actor, requestedWs);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Creating personal notes is forbidden for jailed workspace actors');
+    }
     const tables = systemTables();
     const now = new Date().toISOString();
     const noteId = ID.unique();
@@ -531,6 +547,8 @@ export const ApiResources = {
 
   async updateNote(actor: ApiActor, id: string, body: Record<string, unknown>) {
     requireScope(actor, 'notes:write');
+    const requestedWs = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
+    enforceWorkspaceJailing(actor, requestedWs);
     const tables = systemTables();
     await assertOwnedNote(tables, actor, id);
 
@@ -581,6 +599,10 @@ export const ApiResources = {
     opts?: { workspaceId?: string | null; status?: string | null },
   ) {
     requireScope(actor, 'goals:read');
+    const wsId = enforceWorkspaceJailing(actor, opts?.workspaceId);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
+    }
     const tables = systemTables();
     const cap = Math.min(100, Math.max(1, limit));
     const statusFilter = opts?.status ? String(opts.status) : null;
@@ -590,8 +612,7 @@ export const ApiResources = {
       return filtered.slice(0, cap);
     };
 
-    if (opts?.workspaceId) {
-      const wsId = opts.workspaceId;
+    if (wsId) {
       const goalIds = await getWorkspaceObjectIds(tables, wsId, 'goal');
 
       const seen = new Set<string>();
@@ -643,7 +664,11 @@ export const ApiResources = {
     requireScope(actor, 'goals:write');
     const title = String(body?.title || '').trim();
     if (!title) badRequest('title required');
-    const wsId = resolveWorkspaceId(body);
+    const requestedWs = resolveWorkspaceId(body);
+    const wsId = enforceWorkspaceJailing(actor, requestedWs);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Creating personal goals is forbidden for jailed workspace actors');
+    }
     const tables = systemTables();
     const goalId = ID.unique();
 
@@ -673,6 +698,8 @@ export const ApiResources = {
 
   async updateGoal(actor: ApiActor, id: string, body: Record<string, unknown>) {
     requireScope(actor, 'goals:write');
+    const requestedWs = resolveWorkspaceId(body);
+    enforceWorkspaceJailing(actor, requestedWs);
     const tables = systemTables();
     await assertOwnedGoal(tables, actor, id);
     const patch = buildGoalUpdatePatch(body);
@@ -1128,6 +1155,11 @@ export const ApiResources = {
 
   async listWorkspaces(actor: ApiActor, limit = 25) {
     requireScope(actor, 'workspaces:read');
+    const jailedWs = getJailedWorkspaceId(actor);
+    if (jailedWs) {
+      const ws = await this.getWorkspace(actor, jailedWs);
+      return [ws];
+    }
     const tables = systemTables();
     
     // 1. Owned workspaces
@@ -1175,6 +1207,12 @@ export const ApiResources = {
 
   async getWorkspace(actor: ApiActor, id: string) {
     requireScope(actor, 'workspaces:read');
+    const jailedWs = getJailedWorkspaceId(actor);
+    if (jailedWs && id !== jailedWs) {
+      throw new WorkspaceJailError(
+        `Actor is strictly jailed to workspace '${jailedWs}'. Access to workspace '${id}' is forbidden.`
+      );
+    }
     const tables = systemTables();
     const row = (await tables
       .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: id })
@@ -1296,10 +1334,13 @@ export const ApiResources = {
 
   async listEvents(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
     requireScope(actor, 'events:read');
+    const wsId = enforceWorkspaceJailing(actor, opts?.workspaceId);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
+    }
     const tables = systemTables();
 
-    if (opts?.workspaceId) {
-      const wsId = opts.workspaceId;
+    if (wsId) {
       const eventIds = await getWorkspaceObjectIds(tables, wsId, 'event');
       const seen = new Set<string>();
       const rows: any[] = [];
@@ -1334,10 +1375,13 @@ export const ApiResources = {
 
   async listForms(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
     requireScope(actor, 'forms:read');
+    const wsId = enforceWorkspaceJailing(actor, opts?.workspaceId);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
+    }
     const tables = systemTables();
 
-    if (opts?.workspaceId) {
-      const wsId = opts.workspaceId;
+    if (wsId) {
       const formIds = await getWorkspaceObjectIds(tables, wsId, 'form');
       const seen = new Set<string>();
       const rows: any[] = [];
@@ -1372,10 +1416,13 @@ export const ApiResources = {
 
   async listAgentSessions(actor: ApiActor, limit = 25, opts?: { harness?: string | null; workspaceId?: string | null }) {
     requireScope(actor, 'agents:read');
+    const wsId = enforceWorkspaceJailing(actor, opts?.workspaceId);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
+    }
     const tables = systemTables();
 
-    if (opts?.workspaceId) {
-      const wsId = opts.workspaceId;
+    if (wsId) {
       const sessionIds = await getWorkspaceObjectIds(tables, wsId, 'agent_session');
       const seen = new Set<string>();
       const rows: any[] = [];
@@ -1693,6 +1740,9 @@ export const ApiResources = {
 
   async createWorkspace(actor: ApiActor, body: Record<string, unknown>) {
     requireScope(actor, 'workspaces:write');
+    if (isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Jailed workspace actors cannot create new workspaces');
+    }
     const title = String(body.title || '').trim();
     if (!title) badRequest('title required');
     const now = new Date().toISOString();
@@ -1745,6 +1795,9 @@ export const ApiResources = {
 
   async deleteWorkspace(actor: ApiActor, id: string) {
     requireScope(actor, 'workspaces:write');
+    if (isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Jailed workspace actors cannot delete workspaces');
+    }
     await this.getWorkspace(actor, id);
     const tables = systemTables();
     await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: id });
@@ -1808,6 +1861,7 @@ export const ApiResources = {
       .getRow({ databaseId: FLOW_DB, tableId: 'events', rowId: id })
       .catch(() => null)) as any;
     if (!row || row.userId !== actor.userId) notFound('Event not found');
+    await assertObjectInWorkspace(tables, actor, 'event', id, row);
     return shapeEventDetail(row);
   },
 
@@ -1815,6 +1869,11 @@ export const ApiResources = {
     requireScope(actor, 'events:write');
     const title = String(body.title || '').trim();
     if (!title) badRequest('title required');
+    const requestedWs = (body.workspaceId || body.projectId || (body as any).wsId) as string | undefined;
+    const wsId = enforceWorkspaceJailing(actor, requestedWs);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Creating personal events is forbidden for jailed workspace actors');
+    }
     const startTime =
       body.startTime != null
         ? String(body.startTime)
@@ -1877,11 +1936,17 @@ export const ApiResources = {
         isPinned: false,
         isDeleted: false,
         isTrash: false,
+        ...(wsId ? { isWorkspace: true, projectId: wsId } : {}),
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
       ],
     });
+
+    if (wsId) {
+      await linkObjectToWorkspace(tables, wsId, 'event', (row as any).$id, actor.userId, { title });
+    }
+
     return this.getEvent(actor, (row as any).$id);
   },
 
@@ -1922,6 +1987,7 @@ export const ApiResources = {
       .getRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id })
       .catch(() => null)) as any;
     if (!row || row.userId !== actor.userId) notFound('Form not found');
+    await assertObjectInWorkspace(tables, actor, 'form', id, row);
     return shapeFormDetail(row);
   },
 
@@ -1929,6 +1995,11 @@ export const ApiResources = {
     requireScope(actor, 'forms:write');
     const title = String(body.title || '').trim();
     if (!title) badRequest('title required');
+    const requestedWs = (body.workspaceId || body.projectId || (body as any).wsId) as string | undefined;
+    const wsId = enforceWorkspaceJailing(actor, requestedWs);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Creating personal forms is forbidden for jailed workspace actors');
+    }
     const tables = systemTables();
     const row = await tables.createRow({
       databaseId: FLOW_DB,
@@ -1945,11 +2016,17 @@ export const ApiResources = {
         isGuest: false,
         isPinned: false,
         isTrash: false,
+        ...(wsId ? { isWorkspace: true, projectId: wsId } : {}),
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
       ],
     });
+
+    if (wsId) {
+      await linkObjectToWorkspace(tables, wsId, 'form', (row as any).$id, actor.userId, { title });
+    }
+
     return this.getForm(actor, (row as any).$id);
   },
 
@@ -2019,14 +2096,17 @@ export const ApiResources = {
     opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
   ) {
     requireScope(actor, 'vault:read');
+    const wsId = enforceWorkspaceJailing(actor, opts?.workspaceId);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Personal vault access is forbidden for jailed workspace actors');
+    }
     const tables = systemTables();
-    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
+    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, { ...opts, workspaceId: wsId });
     const lim = Math.min(100, Math.max(1, limit));
 
     let rows: any[] = [];
 
-    if (opts?.workspaceId) {
-      const wsId = opts.workspaceId;
+    if (wsId) {
       const credIds = await getWorkspaceObjectIds(tables, wsId, 'credential');
       const seen = new Set<string>();
 
@@ -2093,6 +2173,7 @@ export const ApiResources = {
       .catch(() => null)) as any;
 
     if (!r || r.userId !== actor.userId || r.isDeleted) notFound('Vault item not found');
+    await assertObjectInWorkspace(tables, actor, 'credential', id, r);
 
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
     const unsealed = mekBytes
@@ -2116,7 +2197,11 @@ export const ApiResources = {
     if (!name) badRequest('name required');
 
     const tables = systemTables();
-    const wsId = (body.workspaceId || body.projectId || opts?.workspaceId) as string | undefined;
+    const requestedWs = (body.workspaceId || body.projectId || opts?.workspaceId) as string | undefined;
+    const wsId = enforceWorkspaceJailing(actor, requestedWs);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Creating personal credentials is forbidden for jailed workspace actors');
+    }
     const agId = (body.agentId || opts?.agentId) as string | undefined;
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, {
       workspaceId: wsId,
@@ -2363,10 +2448,13 @@ export const ApiResources = {
     opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
   ) {
     requireScope(actor, 'vault:read');
+    const wsId = enforceWorkspaceJailing(actor, opts?.workspaceId);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Personal TOTP access is forbidden for jailed workspace actors');
+    }
     const tables = systemTables();
     const lim = Math.min(100, Math.max(1, limit));
-    const wsId = opts?.workspaceId;
-    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
+    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, { ...opts, workspaceId: wsId });
 
     let rows: any[] = [];
     if (wsId) {
@@ -2436,6 +2524,7 @@ export const ApiResources = {
       .catch(() => null)) as any;
 
     if (!r || r.userId !== actor.userId || r.isDeleted) notFound('TOTP secret not found');
+    await assertObjectInWorkspace(tables, actor, 'totp', id, r);
 
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
     const unsealed = mekBytes
@@ -2459,7 +2548,11 @@ export const ApiResources = {
     if (!secretKey) badRequest('secretKey required');
 
     const tables = systemTables();
-    const wsId = (body.workspaceId || body.projectId || opts?.workspaceId) as string | undefined;
+    const requestedWs = (body.workspaceId || body.projectId || opts?.workspaceId) as string | undefined;
+    const wsId = enforceWorkspaceJailing(actor, requestedWs);
+    if (!wsId && isWorkspaceJailed(actor)) {
+      throw new WorkspaceJailError('Creating personal TOTP secrets is forbidden for jailed workspace actors');
+    }
     const agId = (body.agentId || opts?.agentId) as string | undefined;
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, {
       workspaceId: wsId,
@@ -2751,6 +2844,17 @@ export const ApiResources = {
     }
 
     items.sort((a, b) => new Date(b.deletedAt || 0).getTime() - new Date(a.deletedAt || 0).getTime());
+    const jailedWs = getJailedWorkspaceId(actor);
+    if (jailedWs) {
+      const filteredItems: any[] = [];
+      for (const item of items) {
+        try {
+          await assertObjectInWorkspace(tables, actor, item.kind || 'note', item.id);
+          filteredItems.push(item);
+        } catch {}
+      }
+      return filteredItems.slice(0, lim);
+    }
     return items.slice(0, lim);
   },
 
@@ -2762,6 +2866,7 @@ export const ApiResources = {
     if (!id) badRequest('id required');
     const kind = String(body.kind || body.type || 'note').toLowerCase();
     const tables = systemTables();
+    await assertObjectInWorkspace(tables, actor, kind, id);
     const now = new Date().toISOString();
 
     if (kind === 'vault' || kind === 'secret' || kind === 'credential') {
@@ -2823,6 +2928,7 @@ export const ApiResources = {
     if (!id) badRequest('id required');
     const kind = String(body.kind || body.type || 'note').toLowerCase();
     const tables = systemTables();
+    await assertObjectInWorkspace(tables, actor, kind, id);
 
     if (kind === 'vault' || kind === 'secret' || kind === 'credential') {
       await tables.deleteRow({
@@ -3224,6 +3330,7 @@ export const ApiResources = {
       .getRow({ databaseId: FLOW_DB, tableId: 'agentic_sessions', rowId: id })
       .catch(() => null)) as any;
     if (!row || row.userId !== actor.userId) notFound('Session not found');
+    await assertObjectInWorkspace(tables, actor, 'agent_session', id, row);
     if (row.harness) requireScope(actor, 'agents:harness');
     return shapeAgentSessionDetail(row);
   },
