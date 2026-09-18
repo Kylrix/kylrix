@@ -1,25 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { devLogStreamer, DevLogEntry } from '@/lib/dev/live-logs';
+import { canExposeLiveErrorsForEmail } from '@/lib/services/internal/engineer-guard';
+import { getActor } from '@/lib/actions/secure-ops/shared';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function isAllowed(req: NextRequest): boolean {
-  if (process.env.NODE_ENV === 'production') return false;
-  const host = req.headers.get('host') || '';
-  const ip = req.headers.get('x-forwarded-for') || '';
-  return (
-    host.startsWith('localhost') ||
-    host.startsWith('127.0.0.1') ||
-    ip === '127.0.0.1' ||
-    ip === '::1' ||
-    process.env.NODE_ENV === 'development'
-  );
+async function isAllowed(req: NextRequest): Promise<boolean> {
+  if (process.env.NODE_ENV !== 'production') {
+    const host = req.headers.get('host') || '';
+    const ip = req.headers.get('x-forwarded-for') || '';
+    if (
+      host.startsWith('localhost') ||
+      host.startsWith('127.0.0.1') ||
+      ip === '127.0.0.1' ||
+      ip === '::1' ||
+      process.env.NODE_ENV === 'development'
+    ) {
+      return true;
+    }
+  }
+
+  try {
+    const authHeader = req.headers.get('authorization') || '';
+    const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+    const actor = await getActor(jwt).catch(() => null);
+    if (actor?.email && canExposeLiveErrorsForEmail(actor.email)) {
+      return true;
+    }
+  } catch {}
+
+  return false;
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAllowed(req)) {
-    return NextResponse.json({ error: 'Dev logs are only available in development mode on localhost' }, { status: 403 });
+  if (!(await isAllowed(req))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const isStream = req.nextUrl.searchParams.get('stream') === 'true' || req.headers.get('accept') === 'text/event-stream';
@@ -67,7 +83,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAllowed(req)) {
+  if (!(await isAllowed(req))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -91,7 +107,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!isAllowed(req)) {
+  if (!(await isAllowed(req))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
