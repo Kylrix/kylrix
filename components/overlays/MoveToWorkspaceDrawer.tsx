@@ -121,6 +121,31 @@ export function MoveToWorkspaceDrawer() {
           );
           await LocalEngine.cacheSet(ideaCacheKey, { ...cachedIdeas, rows: updatedRows });
         }
+      } else if (entityKind === 'form') {
+        if (db?.forms) {
+          const doc = await db.forms.findOne(entityId).exec().catch(() => null);
+          if (doc) {
+            await doc.patch({
+              projectId: isPersonalTarget ? null : targetWorkspaceId,
+              isWorkspace: !isPersonalTarget,
+              updatedAt: new Date().toISOString(),
+            }).catch(() => {});
+          }
+        }
+
+        // Update LocalEngine caches for forms
+        const formCacheKeys = [`f_forms_list_${uid}`, `f_forms_${uid}`, 'f_forms_list'];
+        for (const key of formCacheKeys) {
+          const cachedForms = await LocalEngine.cacheGet<any[]>(key).catch(() => null);
+          if (Array.isArray(cachedForms)) {
+            const updated = cachedForms.map((f) =>
+              (f.$id === entityId || f.id === entityId)
+                ? { ...f, projectId: isPersonalTarget ? undefined : targetWorkspaceId, isWorkspace: !isPersonalTarget }
+                : f
+            );
+            await LocalEngine.cacheSet(key, updated);
+          }
+        }
       }
 
       // 2. Perform background attachment or personal state update

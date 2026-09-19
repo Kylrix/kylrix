@@ -16,17 +16,36 @@ export const FormsService = {
      * Create a new form definition
      */
     async createForm(userId: string, data: Omit<Forms, '$id' | '$createdAt' | '$updatedAt' | '$permissions' | '$databaseId' | '$tableId' | 'userId' | '$sequence' | '$tableId'>) {
+        let createdForm: Forms | null = null;
         try {
             const { unifiedCreate } = await import('@/lib/services/unified-object-service');
             const row = await unifiedCreate('form', data as Record<string, any>, { ownerId: userId });
-            if ((row as any)?.$id) return row as unknown as Forms;
+            if ((row as any)?.$id) createdForm = row as unknown as Forms;
         } catch {}
-        if (typeof window !== 'undefined') {
-            const { createForm } = await import('@/lib/actions/client-ops');
-            return await createForm(data);
+
+        if (!createdForm) {
+            if (typeof window !== 'undefined') {
+                const { createForm } = await import('@/lib/actions/client-ops');
+                createdForm = await createForm(data);
+            } else {
+                const { createFormSecure } = await import('@/lib/actions/secure-ops');
+                createdForm = await createFormSecure(data);
+            }
         }
-        const { createFormSecure } = await import('@/lib/actions/secure-ops');
-        return await createFormSecure(data);
+
+        if (typeof window !== 'undefined' && createdForm?.$id) {
+            try {
+                const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                const cacheKeys = [`f_forms_list_${userId}`, `f_forms_${userId}`, 'f_forms_list'];
+                for (const key of cacheKeys) {
+                    const existing = (await LocalEngine.cacheGet<any[]>(key)) || [];
+                    const updated = [createdForm, ...existing.filter((f: any) => (f.$id || f.id) !== createdForm!.$id)];
+                    await LocalEngine.cacheSet(key, updated);
+                }
+            } catch {}
+        }
+
+        return createdForm;
     },
 
     /**
@@ -103,16 +122,61 @@ export const FormsService = {
     },
 
     async updateForm(formId: string, data: Partial<Forms>) {
+        let updatedForm: Forms | null = null;
         if (typeof window !== 'undefined') {
             const { updateForm } = await import('@/lib/actions/client-ops');
-            return await updateForm(formId, data);
+            updatedForm = await updateForm(formId, data);
+        } else {
+            const { updateFormSecure } = await import('@/lib/actions/secure-ops');
+            updatedForm = await updateFormSecure(formId, data);
         }
-        const { updateFormSecure } = await import('@/lib/actions/secure-ops');
-        return await updateFormSecure(formId, data);
+
+        if (typeof window !== 'undefined' && updatedForm?.$id) {
+            try {
+                const { getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
+                const uid = getCurrentUserSnapshot()?.$id || 'guest';
+                const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                const cacheKeys = [`f_forms_list_${uid}`, `f_forms_${uid}`, 'f_forms_list'];
+                for (const key of cacheKeys) {
+                    const existing = (await LocalEngine.cacheGet<any[]>(key)) || [];
+                    if (existing.length > 0) {
+                        const updated = existing.map((f: any) => (f.$id === formId || f.id === formId ? { ...f, ...updatedForm } : f));
+                        await LocalEngine.cacheSet(key, updated);
+                    }
+                }
+            } catch {}
+        }
+
+        return updatedForm;
     },
 
     async deleteForm(formId: string) {
         if (typeof window !== 'undefined') {
+            const { getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
+            const uid = getCurrentUserSnapshot()?.$id || 'guest';
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            void LocalEngine.markDeleted(formId, uid);
+
+            try {
+                const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+                const db = await getRxDB();
+                if (db?.forms) {
+                    const doc = await db.forms.findOne(formId).exec().catch(() => null);
+                    if (doc) await doc.remove().catch(() => {});
+                }
+            } catch {}
+
+            try {
+                const cacheKeys = [`f_forms_list_${uid}`, `f_forms_${uid}`, 'f_forms_list'];
+                for (const key of cacheKeys) {
+                    const existing = (await LocalEngine.cacheGet<any[]>(key)) || [];
+                    if (existing.length > 0) {
+                        const updated = existing.filter((f: any) => (f.$id || f.id) !== formId);
+                        await LocalEngine.cacheSet(key, updated);
+                    }
+                }
+            } catch {}
+
             const { deleteForm } = await import('@/lib/actions/client-ops');
             return await deleteForm(formId);
         }

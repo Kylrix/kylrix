@@ -40,7 +40,7 @@ export interface BillingCouponRecord {
   ok: boolean;
   claimed: boolean;
   requiresPayment?: boolean;
-  couponId: string;
+  couponId?: string | null;
   subscriptionId?: string | null;
   currentPeriodEnd?: string | null;
   discountPercent?: number;
@@ -127,7 +127,7 @@ export function shapeBillingCouponResult(data: {
     ok: data.ok,
     claimed: data.claimed,
     requiresPayment: data.requiresPayment ?? false,
-    couponId: data.couponId,
+    couponId: data.couponId || '',
     subscriptionId: data.subscriptionId || null,
     currentPeriodEnd: data.currentPeriodEnd || null,
     discountPercent: data.discountPercent,

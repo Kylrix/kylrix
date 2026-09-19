@@ -51,7 +51,7 @@ export async function assertActorFeatureAccess(
   (err as any).featureId = featureId;
   (err as any).minTier = requiredPlan?.ledgerKey || planName;
   (err as any).planId = requiredPlan?.ledgerKey === 'TEAMS' ? 'TEAMS_MONTH' : 'PRO_MONTH';
-  (err as any).priceUsd = requiredPlan?.monthlyUsd || 10.0;
+  (err as any).priceUsd = (requiredPlan as any)?.monthlyUsd || 10.0;
   (err as any).checkoutUrl = 'https://www.kylrix.space/pricing';
   throw err;
 }
