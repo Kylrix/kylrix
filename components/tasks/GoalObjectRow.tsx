@@ -14,6 +14,7 @@ import {
   Wand2,
   FileText,
   CheckSquare,
+  FolderInput,
 } from 'lucide-react';
 import { useSelection } from '@/context/SelectionContext';
 import { Task } from '@/types';
@@ -261,6 +262,18 @@ export default function GoalObjectRow({ task }: Props) {
         icon: reminded ? <BellOff size={16} /> : <Bell size={16} />,
         onClick: () => {
           void handleRemindToggle();
+        },
+      },
+      {
+        label: 'Move to Workspace',
+        icon: <FolderInput size={16} className="text-[#6366F1]" />,
+        onClick: () => {
+          openUnified('move-to-workspace', {
+            entityKind: 'goal',
+            entityId: task.id,
+            entityTitle: task.title || 'Untitled Goal',
+            currentWorkspaceId: task.projectId || undefined,
+          });
         },
       },
       {

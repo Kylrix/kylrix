@@ -13,6 +13,7 @@ import {
   CheckSquare,
   KeyRound,
   Shield,
+  FolderInput,
 } from 'lucide-react';
 
 import { useContextMenu } from './ContextMenuContext';
@@ -373,6 +374,18 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     ...accessControlItems,
     { label: isLocked ? 'Unlock' : 'Lock', icon: isLocked ? <Unlock size={16} /> : <PrivateIcon size={16} />, onClick: () => { handleLockToggle(); } },
     
+    {
+      label: 'Move to Workspace',
+      icon: <FolderInput size={16} className="text-[#6366F1]" />,
+      onClick: () => {
+        unifiedDrawer.open('move-to-workspace', {
+          entityKind: 'note',
+          entityId: note.$id,
+          entityTitle: note.title || 'Untitled Idea',
+          currentWorkspaceId: (note as any).projectId || undefined,
+        });
+      },
+    },
     {
       label: 'Workflows',
       icon: <TodoIcon size={16} className="text-[#A855F7]" />,

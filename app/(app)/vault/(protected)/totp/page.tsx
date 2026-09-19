@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Shield, Copy, Pencil, Trash2, Search, Pin, Wand2, Link as LinkIcon, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Plus, Shield, Copy, Pencil, Trash2, Search, Pin, Wand2, Link as LinkIcon, CheckSquare, FolderInput } from 'lucide-react';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSelection } from '@/context/SelectionContext';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
@@ -57,6 +58,7 @@ function TOTPCardStable({
 }) {
   const { user, isVaultBlurEnabled } = useAppwriteVault();
   const { activeWorkspace } = useWorkspace();
+  const { open: openUnified } = useUnifiedDrawer();
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
   const [showWorkflows, setShowWorkflows] = useState(false);
@@ -269,6 +271,18 @@ function TOTPCardStable({
 
   const contextMenuItems = useMemo(() => [
       { label: pinned ? 'Unpin Code' : 'Pin Code', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: handlePinToggle },
+      {
+        label: 'Move to Workspace',
+        icon: <FolderInput size={16} className="text-[#6366F1]" />,
+        onClick: () => {
+          openUnified('move-to-workspace', {
+            entityKind: 'totp',
+            entityId: totp.$id,
+            entityTitle: (displayTotp as any).issuer || 'TOTP Code',
+            currentWorkspaceId: (totp as any).projectId || undefined,
+          });
+        },
+      },
       { label: 'Workflows', icon: <Shield size={16} className="text-[#A855F7]" />, onClick: () => setShowWorkflows(true) },
       { label: 'Select', icon: <CheckSquare size={16} className="text-[#10B981]" />, onClick: () => selection.enterSelectMode('totp', totp.$id) },
       { label: 'Share Options', icon: <LinkIcon size={16} className="text-emerald-500" />, submenu: [
