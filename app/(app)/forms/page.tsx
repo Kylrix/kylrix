@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { 
     Plus, 
     Edit, 
@@ -77,7 +76,6 @@ function parseSchemaSafe(schema: unknown): any[] {
 }
 
 export default function FormsDashboard() {
-    const router = useRouter();
     const { user } = useAuth();
     const { isPinned: isResourcePinned, togglePin } = useResourcePins();
     const { open: openDrawer } = useUnifiedDrawer();
