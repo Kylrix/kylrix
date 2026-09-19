@@ -78,12 +78,10 @@ describe('Create Ecosystem Intake Form Unit Test', () => {
       listRows: vi.fn().mockResolvedValue({ total: 0, rows: [] }),
     };
 
-    const spy = vi.spyOn(ApiResources as any, 'getForm').mockImplementation(async (_act: any, id: string) => {
+    const spy = vi.spyOn(ApiResources as any, 'getForm').mockImplementation(async (_act: any, _id: string) => {
       const { shapeFormDetail } = await import('@/sdk/contracts/forms');
       return shapeFormDetail(createdRowData);
     });
-
-    const origTables = (ApiResources as any).tables;
 
     // Direct invocation with verified mock port
     const createdForm = await (async () => {
