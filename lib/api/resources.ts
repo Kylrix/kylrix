@@ -154,7 +154,7 @@ async function linkObjectToWorkspace(
         createdAt: now,
         updatedAt: now,
       },
-      permissions: [Permission.read(Role.any()), Permission.update(Role.user(userId))],
+      permissions: [Permission.read(Role.user(userId))],
     });
   } catch (err) {
     console.warn(`[ApiResources] Failed to link ${entityKind} ${entityId} to workspace ${projectId}:`, err);
@@ -2078,8 +2078,6 @@ export const ApiResources = {
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
         ...(isPublic ? [Permission.read(Role.any())] : []),
       ],
     });

@@ -340,7 +340,7 @@ function SettingsPageInner() {
         }
     }, [user]);
 
-    const FEATURE_FORM_ID = '6a2a653f002b0f296958';
+    const FEATURE_FORM_ID = '6aae3c660036d542bffd';
 
     const handleManualMint = async () => {
         setMinting(true);
