@@ -57,7 +57,7 @@ export default function EventList() {
   const { userId } = useTask();
   const { openSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
-  const { isAuthenticated, openIDMWindow } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { setConfiguration, resetConfiguration } = useFAB();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const [isDesktop, _setIsDesktop] = useState(true);
@@ -69,17 +69,13 @@ export default function EventList() {
       mainColor: '#6366F1',
       mainIcon: <Plus size={26} strokeWidth={3} />,
       onMainClick: () => {
-        if (!isAuthenticated) {
-          openIDMWindow();
-          return;
-        }
         setIsDialogOpen(true);
       },
       suppressWorkflow: true,
       actions: [],
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, isAuthenticated, openIDMWindow]);
+  }, [setConfiguration, resetConfiguration]);
 
   const upsertLocal = useCallback((event: Event) => {
     pushLiveEvent(event);
@@ -236,15 +232,11 @@ export default function EventList() {
             type="button"
             className="flex items-center gap-2 px-5 py-3 font-bold rounded-[14px] bg-[#6366F1] hover:bg-[#4F46E5] text-white font-satoshi transition-all hover:-translate-y-0.5 cursor-pointer text-sm"
             onClick={() => {
-              if (!isAuthenticated) {
-                openIDMWindow();
-                return;
-              }
               setIsDialogOpen(true);
             }}
           >
             <Plus className="h-5 w-5" />
-            <span>{isAuthenticated ? 'Create Event' : 'Sign in to Create'}</span>
+            <span>Create Event</span>
           </button>
         </div>
 

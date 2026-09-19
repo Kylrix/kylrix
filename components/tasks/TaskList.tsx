@@ -7,7 +7,6 @@ import { useTask } from '@/context/TaskContext';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
-import { useAuth } from '@/context/auth/AuthContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { toast } from 'react-hot-toast';
 
@@ -30,8 +29,6 @@ export default function TaskList() {
     refreshTasks} = useTask();
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open } = useUnifiedDrawer();
-  const { isAuthenticated, openIDMWindow } = useAuth();
-
   useEffect(() => {
     if (!ecosystemTags || ecosystemTags.length === 0) {
       void refreshEcosystemTags();
@@ -42,12 +39,8 @@ export default function TaskList() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const openCreateGoal = useCallback(() => {
-    if (!isAuthenticated) {
-      openIDMWindow?.();
-      return;
-    }
     setCreateOpen(true);
-  }, [isAuthenticated, openIDMWindow]);
+  }, []);
 
   useEffect(() => {
     setConfiguration({

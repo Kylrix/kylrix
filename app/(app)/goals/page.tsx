@@ -6,23 +6,17 @@ import { Plus, Target, Calendar } from 'lucide-react';
 import TaskList from '@/components/tasks/TaskList';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
-import { useAuth } from '@/context/auth/AuthContext';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 
 export default function GoalsPage() {
   const router = useRouter();
-  const { isAuthenticated, openIDMWindow } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
 
   const handleOpenCreate = useCallback(() => {
-    if (!isAuthenticated) {
-      openIDMWindow?.();
-      return;
-    }
     setCreateOpen(true);
-  }, [isAuthenticated, openIDMWindow]);
+  }, []);
 
   return (
     <div className="flex-1 min-h-screen pointer-events-auto">
