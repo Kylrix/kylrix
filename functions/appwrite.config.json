@@ -430,7 +430,7 @@
             "deploymentRetention": 0
         },
         {
-            "$id": "goal-reminder-dispatch-placeholder-id",
+            "$id": "goal-reminder-dispatch",
             "name": "goal-reminder-dispatch",
             "runtime": "node-25",
             "path": "functions/goal-reminder-dispatch",

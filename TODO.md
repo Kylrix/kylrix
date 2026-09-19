@@ -1,8 +1,8 @@
 # Post-Deployment & Database Index Tasks
 
 ## 1. Post-Deployment Configuration
-- [ ] Replace placeholder Function ID `goal-reminder-dispatch-placeholder-id` in `functions/appwrite.config.json` with the production Appwrite Cloud Function ID generated post-deployment.
-- [ ] Ensure environment variables `DATABASE_ID`, `TASKS_TABLE_ID`, `EVENTS_TABLE_ID`, `SUBSCRIPTIONS_TABLE_ID`, `UNORGANIC_EMAILS_TABLE_ID`, and `TELEGRAM_BOT_TOKEN` are set in the Appwrite Function environment settings.
+- [x] Replace placeholder Function ID `goal-reminder-dispatch-placeholder-id` in `functions/appwrite.config.json` with the production Appwrite Cloud Function ID generated post-deployment (`goal-reminder-dispatch`).
+- [x] Ensure environment variables `DATABASE_ID`, `TASKS_TABLE_ID`, `EVENTS_TABLE_ID`, `SUBSCRIPTIONS_TABLE_ID`, `UNORGANIC_EMAILS_TABLE_ID`, and `TELEGRAM_BOT_TOKEN` are set in the Appwrite Function environment settings.
 
 ---
 
