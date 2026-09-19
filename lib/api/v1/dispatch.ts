@@ -414,6 +414,22 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     return jsonOk(await ApiResources.listObjects(actor, limit()));
   }
 
+  // Billing & x402 Ecosystem Parity
+  if (a === S.billing) {
+    if ((b === SUB.checkout || b === 'pay') && method === 'POST') {
+      return jsonOk(await ApiResources.createBillingCheckout(actor, await readBody()));
+    }
+    if ((b === SUB.status || !b) && method === 'GET') {
+      return jsonOk(await ApiResources.getBillingStatus(actor));
+    }
+    if (b === SUB.coins && method === 'GET') {
+      return jsonOk(await ApiResources.listSupportedBillingCoins(actor));
+    }
+    if ((b === SUB.coupon || b === 'claim' || b === 'redeem') && method === 'POST') {
+      return jsonOk(await ApiResources.claimBillingCoupon(actor, await readBody()));
+    }
+  }
+
   if (a === 'tools') {
     const err = new Error(
       'Use REST resource routes (e.g. POST /api/v1/notes). Tool execution is not a public API.',

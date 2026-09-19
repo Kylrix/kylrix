@@ -41,6 +41,8 @@ export const PAT_SCOPES = [
   'tags:write',
   'trash:read',
   'trash:write',
+  'billing:read',
+  'billing:write',
 ] as const;
 
 export type PatScope = (typeof PAT_SCOPES)[number];
@@ -82,6 +84,8 @@ export const PAT_SCOPE_META: Record<
   'tags:write': { label: 'Write tags' },
   'trash:read': { label: 'Read trashed items' },
   'trash:write': { label: 'Restore or purge trashed items', danger: true },
+  'billing:read': { label: 'Read subscription, tier, and billing ledger' },
+  'billing:write': { label: 'Create checkouts, redeem coupons, and upgrade plans', danger: true },
 };
 
 export function normalizeScopes(input: unknown): PatScope[] {

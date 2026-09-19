@@ -45,10 +45,14 @@ export async function assertActorFeatureAccess(
   const requiredPlan = getLowestPlanWithFeature(featureId);
   const planName = requiredPlan?.name || 'a paid plan';
   const err = new Error(`${label} requires ${planName}. Upgrade to continue.`);
-  (err as Error & { code?: string; featureId?: string; minTier?: string }).code =
-    FEATURE_REQUIRES_UPGRADE_CODE;
-  (err as Error & { featureId?: string }).featureId = featureId;
-  (err as Error & { minTier?: string }).minTier = requiredPlan?.ledgerKey || planName;
+  (err as any).status = 402;
+  (err as any).code = 'payment_required';
+  (err as any).featureCode = FEATURE_REQUIRES_UPGRADE_CODE;
+  (err as any).featureId = featureId;
+  (err as any).minTier = requiredPlan?.ledgerKey || planName;
+  (err as any).planId = requiredPlan?.ledgerKey === 'TEAMS' ? 'TEAMS_MONTH' : 'PRO_MONTH';
+  (err as any).priceUsd = requiredPlan?.monthlyUsd || 10.0;
+  (err as any).checkoutUrl = 'https://www.kylrix.space/pricing';
   throw err;
 }
 

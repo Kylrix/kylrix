@@ -36,6 +36,8 @@ MCP and REST share `ApiResources` — prefer MCP for IDE agents, REST for script
 | Public Vault Bootstrap | `GET /vault/public/:id` (No auth) | ✅ Zero-auth .env/secret bootstrapping via share URL key |
 | Agents + harness mirror | List/get/delete + mirror append | ✅ |
 | Calls / WebRTC | — | Client realtime only |
+| CLI Auth | `POST /auth/signup`, `POST /auth/signin` | ✅ Sign up or log in via CLI with email/password; returns user + minted PAT |
+| Billing & x402 | `POST /billing/checkout`, `GET /billing/status`, `GET /billing/coins`, `POST /billing/coupon` | ✅ Plan upgrades via BlockBee hosted URL or direct on-chain crypto address (`ticker`) |
 | Token self-scope refresh | ✅ | Rescue hatch — no remint |
 
 ## Rescue hatch
@@ -43,11 +45,13 @@ MCP and REST share `ApiResources` — prefer MCP for IDE agents, REST for script
 ```bash
 curl -sS -X POST "$BASE/token/scopes" \
   -H "Authorization: Bearer $KYLRIX_PAT" -H "Content-Type: application/json" \
-  -d '{"mode":"grant","scopes":["moments:read","moments:write","chats:read","chats:write","workspaces:read"]}'
+  -d '{"mode":"grant","scopes":["moments:read","moments:write","chats:read","chats:write","workspaces:read","billing:read","billing:write"]}'
 ```
 
 ## Routes (summary)
 
+`/auth/signup` · `/auth/signin` · `/auth/status`  
+`/billing/checkout` · `/billing/status` · `/billing/coins` · `/billing/coupon`  
 `/me` · `/token` · `/token/scopes` · `/pats`  
 `/notes` · `/goals` · `/workspaces` · `/projects` · `/workspaces/:id/projects` · `/events` · `/forms`  
 `/flows` · `/flows/installations` · `/flows/:id/installations`  
@@ -56,6 +60,33 @@ curl -sS -X POST "$BASE/token/scopes" \
 `/chats` · `/chats/:id` · `/chats/:id/messages`  
 `/vault` · `/vault/:id` · `/vault/public/:id` · `/vault/mek` · `/tags` · `/objects`  
 `/agents/sessions` · `/agents/harness` · `/agents/sessions/:id/mirror`
+
+## x402 Protocol & Autonomous Upgrade Flow
+
+When an agent or client reaches account/plan limits or attempts a Pro-gated action:
+- **HTTP 402 Payment Required** is returned.
+- **Headers**:
+  - `X-Payment-Required: true`
+  - `X-402-Plan: PRO_MONTH`
+  - `X-402-Price-USD: 10.00`
+  - `X-402-Checkout-Url: https://www.kylrix.space/pricing`
+  - `X-402-Api-Endpoint: /api/v1/billing/checkout`
+- **Payload**:
+  ```json
+  {
+    "ok": false,
+    "error": {
+      "code": "payment_required",
+      "message": "Payment required to access this feature.",
+      "plan": "PRO_MONTH",
+      "priceUsd": 10.0,
+      "checkoutUrl": "https://www.kylrix.space/pricing",
+      "apiCheckoutEndpoint": "/api/v1/billing/checkout",
+      "hint": "Call POST /api/v1/billing/checkout with your desired plan to generate a payment session or direct crypto address."
+    }
+  }
+  ```
+- **Fulfillment**: The caller queries `GET /api/v1/billing/coins` for available tickers, calls `POST /api/v1/billing/checkout` (with `planId` and optional `ticker` e.g. `polygon/usdt`), broadcasts the transaction, and the BlockBee webhook automatically upgrades the account upon on-chain confirmation.
 
 ## Vault & Secrets Dual-Mode Architecture
 

@@ -15,4 +15,5 @@ export * from './agents';
 export * from './trash';
 export * from './vault';
 export * from './pairing';
+export * from './billing';
 

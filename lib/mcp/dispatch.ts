@@ -174,6 +174,12 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
       workspaceId: args.workspaceId,
       mek: args.mek,
     }),
+
+  // Billing & Subscriptions
+  create_billing_checkout: (actor, args) => ApiResources.createBillingCheckout(actor, args),
+  get_billing_status: (actor) => ApiResources.getBillingStatus(actor),
+  claim_billing_coupon: (actor, args) => ApiResources.claimBillingCoupon(actor, args),
+  list_supported_payment_coins: (actor) => ApiResources.listSupportedBillingCoins(actor),
 };
 
 export async function executeMcpTool(

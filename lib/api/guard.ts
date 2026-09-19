@@ -159,6 +159,29 @@ export function jsonOk(data: unknown, init?: ResponseInit, actor?: ApiActor) {
   return NextResponse.json({ ok: true, data }, { status: 200, ...init, headers });
 }
 
+export class PaymentRequiredError extends Error {
+  status = 402;
+  code = 'payment_required';
+  planId: string;
+  priceUsd: number;
+  checkoutUrl?: string;
+  apiEndpoint: string;
+
+  constructor(params?: {
+    message?: string;
+    planId?: string;
+    priceUsd?: number;
+    checkoutUrl?: string;
+  }) {
+    super(params?.message || 'Payment required to access this resource or feature.');
+    this.planId = params?.planId || 'PRO_MONTH';
+    this.priceUsd = params?.priceUsd || 10.0;
+    this.checkoutUrl = params?.checkoutUrl || 'https://www.kylrix.space/pricing';
+    this.apiEndpoint = '/api/v1/billing/checkout';
+    Object.setPrototypeOf(this, PaymentRequiredError.prototype);
+  }
+}
+
 export function jsonErr(err: unknown) {
   const e = err as any;
   const status = typeof e?.status === 'number' ? e.status : 500;
@@ -188,6 +211,34 @@ export function jsonErr(err: unknown) {
         tier: e?.tier || 'edge',
       },
       { status: 429, headers },
+    );
+  }
+  if (
+    e instanceof PaymentRequiredError ||
+    status === 402 ||
+    e?.code === 'payment_required' ||
+    e?.code === 'x402'
+  ) {
+    headers['X-Payment-Required'] = 'true';
+    headers['X-402-Plan'] = String(e?.planId || 'PRO_MONTH');
+    headers['X-402-Price-USD'] = String(e?.priceUsd || '10.00');
+    if (e?.checkoutUrl) headers['X-402-Checkout-Url'] = String(e.checkoutUrl);
+    headers['X-402-Api-Endpoint'] = '/api/v1/billing/checkout';
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: 'payment_required',
+          message: e?.message || 'Payment required to access this feature.',
+          plan: e?.planId || 'PRO_MONTH',
+          priceUsd: e?.priceUsd ?? 10.0,
+          checkoutUrl: e?.checkoutUrl || 'https://www.kylrix.space/pricing',
+          apiCheckoutEndpoint: '/api/v1/billing/checkout',
+          hint: 'Call POST /api/v1/billing/checkout with your desired plan to generate a payment session or direct crypto address.',
+        },
+      },
+      { status: 402, headers }
     );
   }
   return NextResponse.json(

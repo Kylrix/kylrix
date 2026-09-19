@@ -78,6 +78,7 @@ Mint PAT: **Settings → Developers** on [kylrix.space](https://www.kylrix.space
 | **Threads** | `list_thread_messages`, `create_thread_message` |
 | **Agent Sessions** | `list_agent_sessions`, `get_agent_session`, `create_agent_session` |
 | **Vault & Secrets** | `list_vault_items`, `get_vault_item`, `resolve_public_vault_secret`, `unlock_vault_mek`, `create_vault_item` |
+| **Billing & Subscriptions** | `create_billing_checkout`, `get_billing_status`, `claim_billing_coupon`, `list_supported_payment_coins` |
 | **Trash** | `list_trash`, `restore_trash`, `purge_trash` |
 
 ## Architecture & Invariants

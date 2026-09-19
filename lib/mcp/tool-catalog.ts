@@ -88,6 +88,14 @@ import {
   TOKEN_INFO_JSON_SCHEMA,
   TOKEN_REFRESH_JSON_SCHEMA,
   WORKSPACE_RECORD_JSON_SCHEMA,
+  MCP_BILLING_CHECKOUT_INPUT,
+  MCP_BILLING_STATUS_INPUT,
+  MCP_BILLING_COUPON_INPUT,
+  MCP_BILLING_COINS_INPUT,
+  BILLING_CHECKOUT_JSON_SCHEMA,
+  BILLING_STATUS_JSON_SCHEMA,
+  BILLING_COUPON_JSON_SCHEMA,
+  SUPPORTED_COINS_JSON_SCHEMA,
 } from '@/sdk/contracts';
 import { defineMcpTool, type McpTool } from '@/lib/mcp/types';
 
@@ -511,6 +519,36 @@ export const MCP_TOOL_ENTRIES: McpTool[] = [
     inputSchema: MCP_VAULT_CREATE_INPUT,
     outputSchema: VAULT_ITEM_JSON_SCHEMA,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.8 },
+  },
+
+  // ── 15. Billing & x402 Subscriptions ──
+  {
+    name: 'create_billing_checkout',
+    description: 'Create a checkout session or direct on-chain crypto payment deposit address to upgrade the account plan (e.g. Pro or Teams) via BlockBee.',
+    inputSchema: MCP_BILLING_CHECKOUT_INPUT,
+    outputSchema: BILLING_CHECKOUT_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.85 },
+  },
+  {
+    name: 'get_billing_status',
+    description: 'Get current account subscription entitlement, tier (FREE/PRO/TEAMS), active expiry date, Kylrix token balance, and transaction history.',
+    inputSchema: MCP_BILLING_STATUS_INPUT,
+    outputSchema: BILLING_STATUS_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.8 },
+  },
+  {
+    name: 'claim_billing_coupon',
+    description: 'Redeem or apply a promotional discount or gift coupon code to activate/extend Pro subscription.',
+    inputSchema: MCP_BILLING_COUPON_INPUT,
+    outputSchema: BILLING_COUPON_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.8 },
+  },
+  {
+    name: 'list_supported_payment_coins',
+    description: 'List supported cryptocurrency tickers (e.g. polygon/usdt, solana/usdt, tron/usdt, btc, eth) available for autonomous direct crypto payments.',
+    inputSchema: MCP_BILLING_COINS_INPUT,
+    outputSchema: SUPPORTED_COINS_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.7 },
   },
 ];
 

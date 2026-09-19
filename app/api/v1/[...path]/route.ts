@@ -8,6 +8,13 @@ export const dynamic = 'force-dynamic';
 async function handle(req: NextRequest, ctx: { params: Promise<{ path?: string[] }> }) {
   const { path = [] } = await ctx.params;
   
+  // CLI / REST Unauthenticated Auth (Sign up & Sign in with email/password -> PAT)
+  // POST /api/v1/auth/signup, POST /api/v1/auth/signin, GET /api/v1/auth/status
+  if (path[0] === 'auth' && (path[1] === 'signup' || path[1] === 'register' || path[1] === 'signin' || path[1] === 'login' || path[1] === 'status' || !path[1])) {
+    const { handleAuthUnauthenticated } = await import('@/lib/api/v1/auth-handler');
+    return handleAuthUnauthenticated(req, path);
+  }
+
   // RFC 8628 Device Authorization / Punch Grant:
   // /api/v1/pairing/request and /api/v1/pairing/exchange are unauthenticated initiation & poll endpoints.
   if (path[0] === 'pairing' && (path[1] === 'request' || path[1] === 'exchange')) {

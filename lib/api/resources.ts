@@ -62,6 +62,9 @@ import {
   shapeTotpSecret,
   shapeWorkspace,
   shapeWorkspaceCollaborator,
+  shapeBillingCheckoutSession,
+  shapeBillingStatus,
+  shapeBillingCouponResult,
 } from '@/sdk/contracts';
 import {
   filterRootWorkspaceProjects,
@@ -3799,5 +3802,172 @@ export const ApiResources = {
         isSelfHosted: isSelfHostedDeployment(),
       },
     };
+  },
+
+  async createBillingCheckout(
+    actor: ApiActor,
+    input: {
+      planId?: string;
+      months?: number;
+      ticker?: string;
+      coin?: string;
+      couponId?: string;
+    },
+  ) {
+    requireScope(actor, 'billing:write');
+    const planId = String(input.planId || 'PRO_MONTH').trim();
+    const months = Number.isInteger(input.months) && (input.months as number) > 0 ? (input.months as number) : 1;
+    const ticker = input.ticker || input.coin;
+    const couponId = input.couponId ? String(input.couponId).trim() : undefined;
+
+    const { createSystemClient } = await import('@/lib/appwrite-admin');
+    const { calculateSubscriptionPrice } = await import('@/lib/subscription/ppp');
+    const { BlockBeeBillingAdapter } = await import('@/lib/billing/providers/blockbee');
+    const { resolveBillingNotifyUrl, resolveBillingSuccessUrl } = await import('@/lib/billing/callback-urls');
+    const { registerPendingCheckoutWithAdapter } = await import('@/lib/billing/pending-checkout');
+
+    const expectedAmountUsd = calculateSubscriptionPrice(planId, 'US', 'CRYPTO', months);
+    const blockbee = new BlockBeeBillingAdapter();
+
+    if (ticker) {
+      // Direct Crypto Address Generation for CLI / autonomous agent payments
+      const notifyUrl = `${resolveBillingNotifyUrl()}?plan_id=${encodeURIComponent(planId)}&months=${months}&order_id=direct_${actor.userId}_${Date.now()}`;
+      const direct = await blockbee.createDirectCryptoAddress(ticker, {
+        amountUsd: expectedAmountUsd,
+        notifyUrl,
+        redirectUrl: resolveBillingSuccessUrl(),
+      });
+
+      // Register pending checkout
+      await registerPendingCheckoutWithAdapter({
+        paymentId: direct.paymentId,
+        providerAdapterId: 'blockbee',
+        payerUserId: actor.userId,
+        planId,
+        months,
+        countryCode: 'US',
+        expectedAmountUsd,
+        couponId,
+      }).catch((err) => console.warn('[createBillingCheckout] Registry warn:', err));
+
+      // Record in billing_transactions
+      const { databases } = createSystemClient();
+      await databases.createRow(
+        APPWRITE_CONFIG.DATABASES.NOTE,
+        'billing_transactions',
+        ID.unique(),
+        {
+          paymentId: direct.paymentId,
+          userId: actor.userId,
+          plan: planId,
+          months,
+          amountCents: Math.round(expectedAmountUsd * 100),
+          amountUsd: `$${expectedAmountUsd.toFixed(2)}`,
+          status: 'pending',
+          provider: 'blockbee',
+          couponId: couponId || null,
+          metadata: JSON.stringify({
+            coin: direct.coin,
+            addressIn: direct.addressIn,
+            qrCode: direct.qrCode,
+            paymentUri: direct.paymentUri,
+            createdAt: new Date().toISOString(),
+          }),
+        },
+        [Permission.read(Role.user(actor.userId))]
+      ).catch((err) => console.warn('[createBillingCheckout] Transaction log warn:', err));
+
+      return shapeBillingCheckoutSession({
+        id: direct.paymentId,
+        url: resolveBillingSuccessUrl(),
+        planId,
+        amountUsd: expectedAmountUsd,
+        status: 'pending',
+        addressIn: direct.addressIn,
+        qrCode: direct.qrCode,
+        paymentUri: direct.paymentUri,
+        minimumTransactionCoin: direct.minimumTransactionCoin,
+        coin: direct.coin,
+      });
+    }
+
+    // Hosted Checkout URL Flow
+    const { createBillingCheckoutSessionAction } = await import('@/lib/actions/billing/billing');
+    const session = await createBillingCheckoutSessionAction({
+      planId,
+      method: 'CRYPTO',
+      months,
+      couponId,
+      jwt: undefined,
+    });
+
+    return shapeBillingCheckoutSession({
+      id: session.id,
+      url: session.url,
+      planId,
+      amountUsd: expectedAmountUsd,
+      status: 'pending',
+    });
+  },
+
+  async getBillingStatus(actor: ApiActor) {
+    requireScope(actor, 'billing:read');
+    const { getVerifiedProEntitlementForUser } = await import('@/lib/services/internal/subscription-entitlement');
+    const { InternalKylrixTokenService } = await import('@/lib/services/internal/kylrix-token');
+    const { createSystemClient } = await import('@/lib/appwrite-admin');
+
+    const [entitlement, balance, txList] = await Promise.all([
+      getVerifiedProEntitlementForUser(actor.userId).catch(() => ({
+        active: false,
+        expiresAt: null,
+        source: 'none' as const,
+        uiTier: 'FREE' as const,
+      })),
+      InternalKylrixTokenService.getUserBalance(actor.userId).catch(() => ({
+        amount: 0,
+        symbol: 'KYL',
+      })),
+      (async () => {
+        try {
+          const { databases } = createSystemClient();
+          const list = await databases.listRows(APPWRITE_CONFIG.DATABASES.NOTE, 'billing_transactions', [
+            Query.equal('userId', actor.userId),
+            Query.orderDesc('$createdAt'),
+            Query.limit(20),
+          ]);
+          return list.rows;
+        } catch {
+          return [];
+        }
+      })(),
+    ]);
+
+    return shapeBillingStatus({
+      userId: actor.userId,
+      active: entitlement.active,
+      tier: entitlement.uiTier,
+      expiresAt: entitlement.expiresAt,
+      source: entitlement.source,
+      balance,
+      transactions: txList,
+    });
+  },
+
+  async listSupportedBillingCoins(_actor: ApiActor) {
+    const { BlockBeeBillingAdapter } = await import('@/lib/billing/providers/blockbee');
+    const blockbee = new BlockBeeBillingAdapter();
+    return {
+      coins: blockbee.getSupportedCoins(),
+    };
+  },
+
+  async claimBillingCoupon(actor: ApiActor, input: { couponId: string }) {
+    requireScope(actor, 'billing:write');
+    const couponId = String(input.couponId || '').trim();
+    if (!couponId) badRequest('couponId is required');
+
+    const { claimCouponAction } = await import('@/lib/actions/billing/billing');
+    const res = await claimCouponAction(couponId);
+    return shapeBillingCouponResult(res);
   },
 };
