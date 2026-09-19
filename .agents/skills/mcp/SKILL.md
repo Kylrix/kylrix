@@ -79,10 +79,12 @@ Mint PAT: **Settings → Developers** on [kylrix.space](https://www.kylrix.space
 | **Agent Sessions** | `list_agent_sessions`, `get_agent_session`, `create_agent_session` |
 | **Trash** | `list_trash`, `restore_trash`, `purge_trash` |
 
-## Architecture
+## Architecture & Invariants
 
 - **Streamable HTTP & SSE**: Next.js (`/api/v1/mcp`).
 - **Unified with REST**: MCP → `ApiResources` (same as `/api/v1/*`).
 - **Auth**: `kyl_pat_…` PATs and OAuth 2.1 tokens.
+- **Account Sovereignty (STRICT)**: All entities created via MCP belong to the authenticated account's `userId`. Any caller-specified `userId` is strictly overwritten.
+- **Automated Workspace Stamping**: Supplying `workspaceId` in any creation tool automatically stamps `isWorkspace: true`, sets `projectId`, and writes the `project_objects` join record.
 
 Full docs: [docs/mcp.md](../../docs/mcp.md)

@@ -2,13 +2,28 @@ import { MCP_ID_INPUT, MCP_WORKSPACE_LIMIT_INPUT, mcpItemsOutput } from './commo
 
 export function shapeFormListItem(row: Record<string, unknown>) {
   const r = row as any;
+  let fieldCount = 0;
+  if (Array.isArray(r.schema)) {
+    fieldCount = r.schema.length;
+  } else if (typeof r.schema === 'string') {
+    try {
+      const parsed = JSON.parse(r.schema);
+      if (Array.isArray(parsed)) fieldCount = parsed.length;
+    } catch {}
+  }
+
   return {
     id: String(r.$id || r.id),
+    userId: r.userId || null,
     title: r.title || r.name || 'Untitled',
     description: r.description || null,
+    status: r.status || null,
+    fieldCount,
     updatedAt: r.$updatedAt || r.updatedAt || null,
     isPublic: r.isPublic !== undefined ? !!r.isPublic : true,
     isGuest: r.isGuest !== undefined ? !!r.isGuest : true,
+    isWorkspace: Boolean(r.isWorkspace),
+    projectId: r.projectId || null,
   };
 }
 
@@ -23,6 +38,7 @@ export function shapeFormDetail(row: Record<string, unknown>) {
 
   return {
     id: String(r.$id || r.id),
+    userId: r.userId || null,
     title: r.title || 'Untitled',
     description: r.description || null,
     schema: r.schema || null,
@@ -30,6 +46,8 @@ export function shapeFormDetail(row: Record<string, unknown>) {
     status: r.status || null,
     isPublic: r.isPublic !== undefined ? !!r.isPublic : true,
     isGuest: r.isGuest !== undefined ? !!r.isGuest : true,
+    isWorkspace: Boolean(r.isWorkspace),
+    projectId: r.projectId || null,
     ghostFields,
     fields: Array.isArray(r.schema)
       ? r.schema
