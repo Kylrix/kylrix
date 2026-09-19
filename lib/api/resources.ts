@@ -576,6 +576,13 @@ export const ApiResources = {
       rowId: id,
       data: filtered as any,
     });
+
+    if (requestedWs) {
+      await linkObjectToWorkspace(tables, requestedWs, 'note', id, actor.userId, {
+        title: (patch.title as string) || (row as any).title,
+      });
+    }
+
     return shapeNote(row);
   },
 
@@ -712,6 +719,10 @@ export const ApiResources = {
     const tables = systemTables();
     await assertOwnedGoal(tables, actor, id);
     const patch = buildGoalUpdatePatch(body);
+    if (requestedWs) {
+      patch.isWorkspace = true;
+      patch.projectId = requestedWs;
+    }
     if (body.tags !== undefined) {
       patch.tags = await ensureTagsExist(tables, actor.userId, body.tags as any[]);
     }
@@ -721,6 +732,13 @@ export const ApiResources = {
       rowId: id,
       data: patch as any,
     });
+
+    if (requestedWs) {
+      await linkObjectToWorkspace(tables, requestedWs, 'goal', id, actor.userId, {
+        title: (patch.title as string) || (row as any).title,
+      });
+    }
+
     return shapeGoal(row);
   },
 
@@ -1968,7 +1986,17 @@ export const ApiResources = {
       if (body[k] !== undefined) patch[k] = body[k] == null ? null : String(body[k]);
     }
     if (body.isPublic !== undefined) patch.isPublic = !!body.isPublic;
+    const targetWs = (body.workspaceId || body.projectId) as string | undefined;
+    if (targetWs) {
+      patch.isWorkspace = true;
+      patch.projectId = targetWs;
+    }
     await tables.updateRow({ databaseId: FLOW_DB, tableId: 'events', rowId: id, data: patch as any });
+    if (targetWs) {
+      await linkObjectToWorkspace(tables, targetWs, 'event', id, actor.userId, {
+        title: (patch.title as string) || 'Event',
+      });
+    }
     return this.getEvent(actor, id);
   },
 
@@ -1995,7 +2023,9 @@ export const ApiResources = {
     const row = (await tables
       .getRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id })
       .catch(() => null)) as any;
-    if (!row || row.userId !== actor.userId) notFound('Form not found');
+    if (!row || row.isDeleted) notFound('Form not found');
+    const isPublic = row.isPublic === true || row.isGuest === true || row.status === 'published';
+    if (row.userId !== actor.userId && !isPublic) notFound('Form not found');
     await assertObjectInWorkspace(tables, actor, 'form', id, row);
     return shapeFormDetail(row);
   },
@@ -2083,7 +2113,16 @@ export const ApiResources = {
     if (body.isPublic !== undefined) patch.isPublic = !!body.isPublic;
     if (body.isGuest !== undefined) patch.isGuest = !!body.isGuest;
     if (body.isPinned !== undefined) patch.isPinned = !!body.isPinned;
+    const targetWs = (body.workspaceId || body.projectId) as string | undefined;
+    if (targetWs) {
+      patch.isWorkspace = true;
+    }
     await tables.updateRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id, data: patch as any });
+    if (targetWs) {
+      await linkObjectToWorkspace(tables, targetWs, 'form', id, actor.userId, {
+        title: (patch.title as string) || 'Form',
+      });
+    }
     return this.getForm(actor, id);
   },
 
@@ -2632,12 +2671,26 @@ export const ApiResources = {
       patch.dek = wrappedDek;
     }
 
+    const targetWs = (body.workspaceId || body.projectId || opts?.workspaceId) as string | undefined;
+    if (targetWs) {
+      patch.isWorkspace = true;
+    }
+
     await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
       tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
       rowId: id,
       data: patch as any,
     });
+
+    if (targetWs) {
+      await linkObjectToWorkspace(tables, targetWs, 'credential', id, actor.userId, {
+        title: (body.name as string) || (existing.name as string),
+      });
+      await linkObjectToWorkspace(tables, targetWs, 'secret', id, actor.userId, {
+        title: (body.name as string) || (existing.name as string),
+      });
+    }
 
     return this.getVaultItem(actor, id, opts);
   },
@@ -2941,12 +2994,24 @@ export const ApiResources = {
       patch.dek = wrappedDek;
     }
 
+    const targetWs = (body.workspaceId || body.projectId || opts?.workspaceId) as string | undefined;
+    if (targetWs) {
+      patch.isWorkspace = true;
+      patch.projectId = targetWs;
+    }
+
     await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
       tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets',
       rowId: id,
       data: patch as any,
     });
+
+    if (targetWs) {
+      await linkObjectToWorkspace(tables, targetWs, 'totp', id, actor.userId, {
+        title: (body.issuer || existing.issuer) as string,
+      });
+    }
 
     return this.getTotpSecret(actor, id, opts);
   },
