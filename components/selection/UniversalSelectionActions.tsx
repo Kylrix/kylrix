@@ -77,6 +77,11 @@ export function UniversalSelectionActions() {
               const { events } = await import('@/lib/kylrixflow');
               await events.delete(id).catch(() => null);
             } catch {}
+          } else if (activeKind === 'form') {
+            try {
+              const { FormsService } = await import('@/lib/services/forms');
+              await FormsService.deleteForm(id).catch(() => null);
+            } catch {}
           } else if (activeKind === 'credential') {
             try {
               const { deleteCredential } = await import('@/lib/appwrite');
@@ -155,9 +160,9 @@ export function UniversalSelectionActions() {
           else await pinNote(id).catch(() => {});
         } else if (activeKind === 'goal' || activeKind === 'task') {
           await togglePinTask(id).catch(() => {});
-        } else if (activeKind === 'event') {
+        } else if (activeKind === 'event' || activeKind === 'form') {
           await togglePin({
-            resourceType: 'event',
+            resourceType: activeKind,
             resourceId: id,
             ownerId: user?.$id || 'guest',
             rowIsPinned: false,

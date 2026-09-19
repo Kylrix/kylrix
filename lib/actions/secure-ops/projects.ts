@@ -1216,23 +1216,30 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
     throw new Error('Forbidden: Insufficient permissions to delete this form');
   }
 
+  // 1. Mark form as trashed immediately on server
+  let result = null;
+  try {
+    result = await systemTables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+      rowId: formId,
+      data: { isTrash: true, isDeleted: true }
+    });
+  } catch (e) {
+    console.warn('[deleteFormSecure] Failed to mark form isTrash on server:', e);
+  }
+
+  // 2. Execute cascade delete on connected responses, forks, and object links
   try {
     await executeCascadeDeleteSecure(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, formId);
   } catch (err: any) {
     console.error('deleteFormSecure cascade cleanup failed:', err);
   }
 
-  const result = await systemTables.updateRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-      rowId: formId,
-      data: { isTrash: true }
-    });
-
   // Also remove the cache entry post-delete
   rowCache.delete(cacheKey);
 
-  return JSON.parse(JSON.stringify(result));
+  return JSON.parse(JSON.stringify(result || { $id: formId, isTrash: true, isDeleted: true }));
 }
 
 export async function createEventSecure(data: any, jwt?: string) {

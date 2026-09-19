@@ -525,22 +525,99 @@ export async function executeCascadeDeleteSecure(
   else if (databaseId === FLOW_DB && tableId === FORMS_TABLE) {
     console.log(`[Cascade Delete] Triggered form cascade cleanup for: ${rowId}`);
 
+    // A. Trash and delete Form Submissions (responses)
     try {
       const submissionsRes = await tables.listRows({
         databaseId,
         tableId: 'formSubmissions',
         queries: [Query.equal('formId', rowId), Query.limit(1000)] as any});
 
-      await Promise.all(
-        submissionsRes.rows.map((sub: any) =>
-          tables.deleteRow({
-            databaseId,
-            tableId: 'formSubmissions',
-            rowId: sub.$id})
-        )
-      );
+      if (submissionsRes.rows.length > 0) {
+        // Trash responses first
+        await Promise.all(
+          submissionsRes.rows.map((sub: any) =>
+            tables.updateRow({
+              databaseId,
+              tableId: 'formSubmissions',
+              rowId: sub.$id,
+              data: { isTrash: true }
+            }).catch(() => null)
+          )
+        );
+
+        // Delete responses
+        await Promise.all(
+          submissionsRes.rows.map((sub: any) =>
+            tables.deleteRow({
+              databaseId,
+              tableId: 'formSubmissions',
+              rowId: sub.$id})
+          )
+        );
+      }
     } catch (err) {
       console.error('[Cascade Delete] Form submissions cleanup failed:', err);
+    }
+
+    // B. Find, trash, and cascade delete Form Forks
+    try {
+      const [forksRes, childObjectsRes] = await Promise.all([
+        tables.listRows({
+          databaseId,
+          tableId: FORMS_TABLE,
+          queries: [Query.equal('source', `fork:${rowId}`), Query.limit(500)] as any
+        }).catch(() => ({ rows: [] })),
+        tables.listRows({
+          databaseId: FLOW_DB,
+          tableId: APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects',
+          queries: [
+            Query.equal('parentId', rowId),
+            Query.equal('childKind', 'form'),
+            Query.limit(500)
+          ] as any
+        }).catch(() => ({ rows: [] }))
+      ]);
+
+      const forkFormIds = new Set<string>();
+      (forksRes.rows || []).forEach((f: any) => f.$id && forkFormIds.add(f.$id));
+      (childObjectsRes.rows || []).forEach((o: any) => o.childId && forkFormIds.add(o.childId));
+
+      try {
+        const containsForks = await tables.listRows({
+          databaseId,
+          tableId: FORMS_TABLE,
+          queries: [Query.contains('source', rowId), Query.limit(500)] as any
+        }).catch(() => ({ rows: [] }));
+        (containsForks.rows || []).forEach((f: any) => {
+          if (f.$id && f.$id !== rowId) forkFormIds.add(f.$id);
+        });
+      } catch {}
+
+      const forkIds = Array.from(forkFormIds);
+      if (forkIds.length > 0) {
+        console.log(`[Cascade Delete] Trashing and cascade deleting ${forkIds.length} form forks for form ${rowId}`);
+        for (const forkId of forkIds) {
+          // Trash fork first
+          await tables.updateRow({
+            databaseId,
+            tableId: FORMS_TABLE,
+            rowId: forkId,
+            data: { isTrash: true }
+          }).catch(() => null);
+
+          // Recurse cascade delete on fork
+          await executeCascadeDeleteSecure(databaseId, tableId, forkId, projectDeleteMode, jwt);
+
+          // Delete fork row
+          await tables.deleteRow({
+            databaseId,
+            tableId: FORMS_TABLE,
+            rowId: forkId
+          }).catch(() => null);
+        }
+      }
+    } catch (err) {
+      console.error('[Cascade Delete] Form forks cleanup failed:', err);
     }
 
     // Wipe collaborators and key mappings for the form itself
