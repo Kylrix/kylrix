@@ -167,8 +167,10 @@ export default function FormsDashboard() {
                 items = userScopedList || userScopedForms || legacyList || [];
             }
 
+            const isFormActive = (f: any) => f && !f.isTrash && !f.isDeleted && !LocalEngine.isDeleted(f.$id || f.id || '', userId);
+
             if (items.length > 0) {
-                const activeLocal = items.filter((f: any) => f && !f.isTrash && !f.isDeleted);
+                const activeLocal = items.filter(isFormActive);
                 setForms(sortForms(activeLocal as unknown as Forms[]));
                 setLoading(false);
             }
@@ -188,8 +190,8 @@ export default function FormsDashboard() {
 
             if (Array.isArray(remoteRows)) {
                 const byId = new Map<string, Forms>();
-                items.filter((item: any) => item && !item.isTrash && !item.isDeleted).forEach((item: any) => item?.$id && byId.set(item.$id, item));
-                remoteRows.filter((row: any) => row && !row.isTrash && !row.isDeleted).forEach((row: any) => row?.$id && byId.set(row.$id, row));
+                items.filter(isFormActive).forEach((item: any) => item?.$id && byId.set(item.$id, item));
+                remoteRows.filter(isFormActive).forEach((row: any) => row?.$id && byId.set(row.$id, row));
                 const merged = Array.from(byId.values());
 
                 setForms(sortForms(merged as unknown as Forms[]));
@@ -277,24 +279,24 @@ export default function FormsDashboard() {
             resourceName: 'this form',
             confirmLabel: 'Confirm Purge',
             onConfirm: async () => {
-                if (!user?.$id) return;
+                const formId = form.$id || (form as any).id;
+                const userId = user?.$id || 'guest';
+
+                closeSidebar();
+                closeOverlay();
+
+                // Instantly mark as deleted in LocalEngine tombstones and update UI state
+                void LocalEngine.markDeleted(formId, userId);
+                setForms((prev) => prev.filter((f) => (f.$id || (f as any).id) !== formId));
+
                 try {
-                    await FormsService.deleteForm(form.$id);
-                    setForms((prev) => prev.filter((f) => f.$id !== form.$id));
-                    try {
-                        const cached = (await LocalEngine.cacheGet<any[]>('f_forms_list')) || [];
-                        await LocalEngine.cacheSet(
-                            'f_forms_list',
-                            cached.filter((f: any) => f.$id !== form.$id),
-                        );
-                    } catch {}
-                    void fetchForms(false);
+                    await FormsService.deleteForm(formId);
                 } catch (err) {
                     console.error("Failed to delete form", err);
                 }
             }
         });
-    }, [openDrawer, user?.$id, fetchForms]);
+    }, [openDrawer, user?.$id, closeSidebar, closeOverlay]);
 
     const handleDeleteDraft = useCallback((draft: FormDraft) => {
         openDrawer('delete-confirm', {

@@ -80,6 +80,7 @@ export const LocalEngine = {
       const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
       autonomicSyncEngine.cancelPending(id);
       autonomicSyncEngine.cancelPending(`goal:${id}`);
+      autonomicSyncEngine.cancelPending(`form:${id}`);
     } catch {}
 
     // Synchronously purge from caches
@@ -87,8 +88,10 @@ export const LocalEngine = {
       this.cacheDelete(`local:note:${id}`),
       this.cacheDelete(`local:goal:${id}`),
       this.cacheDelete(`local:task:${id}`),
+      this.cacheDelete(`local:form:${id}`),
       this.cacheDelete(`note_${id}`),
       this.cacheDelete(`goal_${id}`),
+      this.cacheDelete(`form_${id}`),
       this.cacheDelete(id),
     ]);
 
@@ -99,6 +102,9 @@ export const LocalEngine = {
       `f_tasks_${uid}`,
       `f_goals_list_${uid}`,
       `f_goals_list`,
+      `f_forms_list_${uid}`,
+      `f_forms_${uid}`,
+      `f_forms_list`,
       `initial_notes_${uid}`,
     ];
 
@@ -122,8 +128,10 @@ export const LocalEngine = {
       if (db) {
         if (db.notes) await db.notes.findOne(id).remove().catch(() => {});
         if (db.tasks) await db.tasks.findOne(id).remove().catch(() => {});
+        if ((db as any).forms) await (db as any).forms.findOne(id).remove().catch(() => {});
         await db.cache.findOne(`note_${id}`).remove().catch(() => {});
         await db.cache.findOne(`goal_${id}`).remove().catch(() => {});
+        await db.cache.findOne(`form_${id}`).remove().catch(() => {});
         await db.cache.findOne(id).remove().catch(() => {});
         await db.cache.upsert({ id: `f_deleted_ids_${uid}`, data: Array.from(inMemoryDeletedIds), timestamp: Date.now() }).catch(() => {});
       }
