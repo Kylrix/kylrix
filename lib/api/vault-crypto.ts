@@ -330,3 +330,281 @@ export async function unsealVaultSecret(
   // Direct MEK decryption fallback
   return await decryptFieldWithKey(ciphertextBase64, mekKey);
 }
+
+/**
+ * Parse any key (hex, url-safe base64, standard base64, raw) into 32-byte or raw Uint8Array
+ */
+export function parseKeyToBytes(keyInput: string): Uint8Array {
+  const trimmed = keyInput.trim();
+  if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return new Uint8Array(Buffer.from(trimmed, 'hex'));
+  }
+  const base64 = trimmed.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  try {
+    const buf = Buffer.from(padded, 'base64');
+    if (buf.length > 0) return new Uint8Array(buf);
+  } catch {}
+  return parseMekToBytes(trimmed);
+}
+
+/**
+ * Derive user MEK from master password and keychain entry (Argon2id or PBKDF2)
+ */
+export async function deriveMekFromMasterPassword(params: {
+  password: string;
+  salt: string;
+  wrappedKey: string;
+  params?: any;
+  isArgon?: boolean;
+}): Promise<Uint8Array | null> {
+  if (!params.password || !params.salt || !params.wrappedKey) return null;
+
+  let saltBytes: Uint8Array;
+  const rawSalt = params.salt.trim();
+  if (/^[0-9a-fA-F]{32,64}$/.test(rawSalt)) {
+    saltBytes = new Uint8Array(Buffer.from(rawSalt, 'hex'));
+  } else {
+    try {
+      const base64Salt = rawSalt.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64Salt + '='.repeat((4 - (base64Salt.length % 4)) % 4);
+      saltBytes = new Uint8Array(Buffer.from(padded, 'base64'));
+    } catch {
+      saltBytes = new TextEncoder().encode(rawSalt);
+    }
+  }
+
+  const isArgonBySalt = saltBytes.length === 32;
+  const isArgonByParam = typeof params.params === 'string'
+    ? params.params.includes('Argon2id')
+    : (params.params?.algo === 'Argon2id' || !!params.params?.memory);
+  const isArgon = Boolean(params.isArgon || isArgonBySalt || isArgonByParam);
+
+  const wrappedKeyBytes = parseKeyToBytes(params.wrappedKey);
+  if (wrappedKeyBytes.length <= 16) return null;
+
+  const iv = wrappedKeyBytes.slice(0, 16);
+  const ciphertext = wrappedKeyBytes.slice(16);
+
+  // 1. Try Argon2id derivation
+  if (isArgon) {
+    try {
+      const { argon2id } = await import('hash-wasm');
+      const hash = await argon2id({
+        password: params.password,
+        salt: saltBytes,
+        parallelism: 4,
+        iterations: 3,
+        memorySize: 65536,
+        hashLength: 32,
+        outputType: 'binary',
+      });
+
+      const authKey = await globalThis.crypto.subtle.importKey(
+        'raw',
+        hash as any,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['decrypt']
+      );
+
+      const decrypted = await globalThis.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        authKey,
+        ciphertext
+      );
+      return new Uint8Array(decrypted);
+    } catch (_argonErr) {
+      // Fall through to PBKDF2 attempt
+    }
+  }
+
+  // 2. PBKDF2 fallback
+  try {
+    const enc = new TextEncoder();
+    const baseKey = await globalThis.crypto.subtle.importKey(
+      'raw',
+      enc.encode(params.password),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveBits']
+    );
+    const derivedBits = await globalThis.crypto.subtle.deriveBits(
+      {
+        name: 'PBKDF2',
+        salt: saltBytes as any,
+        iterations: 100000,
+        hash: 'SHA-256',
+      },
+      baseKey,
+      256
+    );
+
+    const authKey = await globalThis.crypto.subtle.importKey(
+      'raw',
+      derivedBits,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
+
+    const decrypted = await globalThis.crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      authKey,
+      ciphertext
+    );
+    return new Uint8Array(decrypted);
+  } catch (_pbkdf2Err) {
+    return null;
+  }
+}
+
+/**
+ * Flexible unsealing helper for Public or Authenticated secrets.
+ * Handles direct DEK (share links), MEK, or Master Password.
+ */
+export async function unsealRowWithAnyKey(
+  row: Record<string, any>,
+  fieldsToDecrypt: readonly string[],
+  opts: {
+    shareKey?: string | null;
+    mek?: string | null;
+    mekBytes?: Uint8Array | null;
+  }
+): Promise<{ unsealed: Record<string, any>; keyUsed: 'dek' | 'mek' | null }> {
+  const result: Record<string, any> = {};
+
+  // 1. Direct MEK Bytes provided
+  if (opts.mekBytes) {
+    const unsealed = await unsealRowFields(row, fieldsToDecrypt, opts.mekBytes);
+    return { unsealed, keyUsed: 'mek' };
+  }
+
+  // 2. Share Key or MEK string provided
+  const candidateKeyStr = opts.shareKey || opts.mek;
+  if (!candidateKeyStr || !candidateKeyStr.trim()) {
+    return { unsealed: {}, keyUsed: null };
+  }
+
+  const keyBytes = parseKeyToBytes(candidateKeyStr);
+
+  // Attempt A: Treat candidate key as direct DEK (e.g. from /vault/:id/:dek share link)
+  try {
+    const directDekKey = await globalThis.crypto.subtle.importKey(
+      'raw',
+      keyBytes as any,
+      { name: 'AES-GCM', length: 256 },
+      true,
+      ['decrypt']
+    );
+
+    let successCount = 0;
+    for (const field of fieldsToDecrypt) {
+      const val = row[field];
+      if (val && typeof val === 'string' && val.trim().length > 0) {
+        try {
+          result[field] = await decryptFieldWithKey(val, directDekKey);
+          successCount++;
+        } catch {
+          result[field] = val;
+        }
+      } else {
+        result[field] = val ?? null;
+      }
+    }
+
+    if (successCount > 0) {
+      return { unsealed: result, keyUsed: 'dek' };
+    }
+  } catch {}
+
+  // Attempt B: Treat candidate key as MEK (unwrap row.dek with MEK, then decrypt)
+  try {
+    const unsealed = await unsealRowFields(row, fieldsToDecrypt, keyBytes);
+    const hasDecrypted = Object.values(unsealed).some(
+      (v) => typeof v === 'string' && !looksEncrypted(v)
+    );
+    if (hasDecrypted) {
+      return { unsealed, keyUsed: 'mek' };
+    }
+  } catch {}
+
+  return { unsealed: {}, keyUsed: null };
+}
+
+/**
+ * Formats custom fields or secret fields into standardized .env format string
+ */
+export function formatVaultSecretToEnv(
+  unsealed: Record<string, any>,
+  opts?: { pure?: boolean; fallbackTitle?: string }
+): string {
+  const lines: string[] = [];
+
+  // 1. Check customFields (JSON array or object)
+  if (unsealed.customFields) {
+    try {
+      const raw = typeof unsealed.customFields === 'string'
+        ? JSON.parse(unsealed.customFields)
+        : unsealed.customFields;
+
+      if (Array.isArray(raw)) {
+        for (const f of raw) {
+          const key = String(f.label || f.key || f.name || '').trim();
+          const val = String(f.value ?? '');
+          if (key) {
+            lines.push(formatEnvLine(key, val));
+          }
+        }
+      } else if (raw && typeof raw === 'object') {
+        for (const [key, val] of Object.entries(raw)) {
+          if (key.trim()) {
+            lines.push(formatEnvLine(key.trim(), String(val ?? '')));
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Check notes for embedded KEY=VALUE pairs
+  if (unsealed.notes && typeof unsealed.notes === 'string') {
+    const noteLines = unsealed.notes.split(/\r?\n/);
+    for (const line of noteLines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(trimmed);
+      if (m) {
+        const key = m[1];
+        let val = m[2];
+        if (
+          (val.startsWith('"') && val.endsWith('"')) ||
+          (val.startsWith("'") && val.endsWith("'"))
+        ) {
+          val = val.slice(1, -1);
+        }
+        lines.push(formatEnvLine(key, val));
+      }
+    }
+  }
+
+  // 3. Fallback: single password/secret value
+  if (lines.length === 0 && unsealed.password) {
+    const rawTitle = unsealed.name || opts?.fallbackTitle || 'SECRET';
+    const key = rawTitle.toUpperCase().replace(/[^A-Z0-9_]/g, '_').replace(/^_+|_+$/g, '') || 'SECRET';
+    lines.push(formatEnvLine(key, String(unsealed.password)));
+  }
+
+  return lines.join('\n');
+}
+
+function formatEnvLine(key: string, val: string): string {
+  let cleanVal = val;
+  if (
+    (cleanVal.includes(' ') || cleanVal.includes('\n') || cleanVal.includes('#') || cleanVal.includes('=')) &&
+    !((cleanVal.startsWith('"') && cleanVal.endsWith('"')) || (cleanVal.startsWith("'") && cleanVal.endsWith("'")))
+  ) {
+    cleanVal = `"${cleanVal.replace(/"/g, '\\"')}"`;
+  }
+  return `${key}=${cleanVal}`;
+}
+

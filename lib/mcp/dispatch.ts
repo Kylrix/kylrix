@@ -148,6 +148,32 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
     ApiResources.restoreTrash(actor, { id: args.id, kind: args.kind }),
   purge_trash: (actor, args) =>
     ApiResources.purgeTrash(actor, { id: args.id, kind: args.kind }),
+
+  // Vault
+  list_vault_items: async (actor, args) =>
+    mcpListResult(await ApiResources.listVaultItems(actor, args.limit || 25, { workspaceId: args.workspaceId, mek: args.mek })),
+  get_vault_item: (actor, args) =>
+    ApiResources.getVaultItem(actor, String(args.id), {
+      shareKey: args.shareKey,
+      masterPassword: args.masterPassword,
+      mek: args.mek,
+      workspaceId: args.workspaceId,
+      format: args.format,
+      pure: args.pure,
+    }),
+  resolve_public_vault_secret: (_actor, args) =>
+    ApiResources.getPublicVaultItem(String(args.idOrShareUrl), {
+      shareKey: args.shareKey,
+      format: args.format,
+      pure: args.pure,
+    }),
+  unlock_vault_mek: (actor, args) =>
+    ApiResources.unlockUserMek(actor, { masterPassword: args.masterPassword }),
+  create_vault_item: (actor, args) =>
+    ApiResources.createVaultItem(actor, args, {
+      workspaceId: args.workspaceId,
+      mek: args.mek,
+    }),
 };
 
 export async function executeMcpTool(

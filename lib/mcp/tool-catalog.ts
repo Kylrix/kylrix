@@ -72,6 +72,13 @@ import {
   MCP_WORKSPACE_LIST_INPUT,
   MCP_WORKSPACE_LIST_OUTPUT,
   MCP_WORKSPACE_UPDATE_INPUT,
+  MCP_VAULT_LIST_INPUT,
+  MCP_VAULT_LIST_OUTPUT,
+  MCP_VAULT_GET_INPUT,
+  MCP_VAULT_RESOLVE_PUBLIC_INPUT,
+  MCP_VAULT_CREATE_INPUT,
+  MCP_VAULT_MEK_UNLOCK_INPUT,
+  VAULT_ITEM_JSON_SCHEMA,
   NOTE_RECORD_JSON_SCHEMA,
   PROFILE_RECORD_JSON_SCHEMA,
   SCOPE_CATALOG_JSON_SCHEMA,
@@ -468,7 +475,45 @@ export const MCP_TOOL_ENTRIES: McpTool[] = [
     outputSchema: MCP_SUCCESS_OUTPUT,
     annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: true, priority: 0.5 },
   },
+
+  // ── 14. Vault & Secrets (Dual-Mode: Zero-Trust & Heavy Lifting) ──
+  {
+    name: 'list_vault_items',
+    description: 'List credentials and secrets in the active workspace or personal vault.',
+    inputSchema: MCP_VAULT_LIST_INPUT,
+    outputSchema: MCP_VAULT_LIST_OUTPUT,
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.75 },
+  },
+  {
+    name: 'get_vault_item',
+    description: 'Get a specific vault credential. Supports on-the-fly decryption via shareKey, masterPassword, or MEK (or returns raw sealed blob for client-side zero-trust decryption).',
+    inputSchema: MCP_VAULT_GET_INPUT,
+    outputSchema: VAULT_ITEM_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.8 },
+  },
+  {
+    name: 'resolve_public_vault_secret',
+    description: 'Resolve and decrypt a publicly shared vault credential or environment variables without authentication using its ID or full share URL with key.',
+    inputSchema: MCP_VAULT_RESOLVE_PUBLIC_INPUT,
+    outputSchema: VAULT_ITEM_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.9 },
+  },
+  {
+    name: 'unlock_vault_mek',
+    description: 'Unlock and return the user MEK using their Master Password (or return raw encrypted keychain blob if masterPassword is omitted).',
+    inputSchema: MCP_VAULT_MEK_UNLOCK_INPUT,
+    outputSchema: { type: 'object' },
+    annotations: { audience: ['user', 'assistant'], readOnly: true, idempotent: true, priority: 0.7 },
+  },
+  {
+    name: 'create_vault_item',
+    description: 'Create a new encrypted secret, API key, or project environment variables set.',
+    inputSchema: MCP_VAULT_CREATE_INPUT,
+    outputSchema: VAULT_ITEM_JSON_SCHEMA,
+    annotations: { audience: ['user', 'assistant'], readOnly: false, destructive: false, priority: 0.8 },
+  },
 ];
 
 /** Materialized MCP tool list (schemas resolved from sdk/contracts). */
 export const MCP_TOOLS: McpTool[] = MCP_TOOL_ENTRIES.map(defineMcpTool);
+

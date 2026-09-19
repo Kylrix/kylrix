@@ -17,6 +17,10 @@ export interface V1DispatchContext {
   d: string | undefined;
   limit: () => number;
   mekHeader: string | null;
+  shareKeyHeader: string | null;
+  masterPassHeader: string | null;
+  formatParam: string | null;
+  pureParam: boolean;
   readBody: () => Promise<Record<string, unknown>>;
   params: URLSearchParams;
 }
@@ -41,6 +45,18 @@ export function createV1DispatchContext(
       req.headers.get('x-kylrix-mek') ||
       req.headers.get('X-Kylrix-MEK') ||
       req.nextUrl.searchParams.get('mek'),
+    shareKeyHeader:
+      req.headers.get('x-share-key') ||
+      req.headers.get('X-Share-Key') ||
+      req.nextUrl.searchParams.get('shareKey') ||
+      req.nextUrl.searchParams.get('key'),
+    masterPassHeader:
+      req.headers.get('x-master-password') ||
+      req.headers.get('X-Master-Password') ||
+      req.headers.get('x-masterpass') ||
+      req.nextUrl.searchParams.get('masterPassword'),
+    formatParam: req.nextUrl.searchParams.get('format'),
+    pureParam: req.nextUrl.searchParams.get('pure') === 'true',
     readBody: () => readV1Body(req),
     params: req.nextUrl.searchParams,
   };

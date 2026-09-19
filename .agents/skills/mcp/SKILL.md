@@ -77,6 +77,7 @@ Mint PAT: **Settings → Developers** on [kylrix.space](https://www.kylrix.space
 | **Moments** | `list_moments`, `get_moment`, `create_moment`, `list_moment_comments`, `create_moment_comment` |
 | **Threads** | `list_thread_messages`, `create_thread_message` |
 | **Agent Sessions** | `list_agent_sessions`, `get_agent_session`, `create_agent_session` |
+| **Vault & Secrets** | `list_vault_items`, `get_vault_item`, `resolve_public_vault_secret`, `unlock_vault_mek`, `create_vault_item` |
 | **Trash** | `list_trash`, `restore_trash`, `purge_trash` |
 
 ## Architecture & Invariants
@@ -86,5 +87,10 @@ Mint PAT: **Settings → Developers** on [kylrix.space](https://www.kylrix.space
 - **Auth**: `kyl_pat_…` PATs and OAuth 2.1 tokens.
 - **Account Sovereignty (STRICT)**: All entities created via MCP belong to the authenticated account's `userId`. Any caller-specified `userId` is strictly overwritten.
 - **Automated Workspace Stamping**: Supplying `workspaceId` in any creation tool automatically stamps `isWorkspace: true`, sets `projectId`, and writes the `project_objects` join record.
+- **Vault Dual-Mode**:
+  - *Light Lifting / Zero-Trust (Default)*: MCP returns sealed payloads (`dek`, encrypted fields) for client-side decryption.
+  - *Heavy Lifting*: Passing `shareKey`, `masterPassword`, or `mek` enables on-the-fly server-side decryption into unsealed fields and formatted `.env` strings.
+  - *Public Secret Resolution*: `resolve_public_vault_secret` enables unauthenticated tools to bootstrap environment variables directly from public share URLs.
 
 Full docs: [docs/mcp.md](../../docs/mcp.md)
+

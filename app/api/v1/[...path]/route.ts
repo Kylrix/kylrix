@@ -15,6 +15,42 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ path?: string[]
     return handlePairingUnauthenticated(req, path);
   }
 
+  // Public / Shared Vault Secrets (Unauthenticated Zero-Auth Bootstrap)
+  // GET /api/v1/vault/public/:id or GET /api/v1/public/vault/:id
+  if (
+    (path[0] === 'vault' && path[1] === 'public' && path[2]) ||
+    (path[0] === 'public' && path[1] === 'vault' && path[2])
+  ) {
+    const secretId = path[2];
+    const shareKey =
+      req.headers.get('x-share-key') ||
+      req.headers.get('X-Share-Key') ||
+      req.nextUrl.searchParams.get('shareKey') ||
+      req.nextUrl.searchParams.get('key') ||
+      (path[3] ? path[3] : null);
+    const format = req.nextUrl.searchParams.get('format');
+    const pure = req.nextUrl.searchParams.get('pure') === 'true';
+
+    try {
+      const { ApiResources } = await import('@/lib/api/resources');
+      const result = await ApiResources.getPublicVaultItem(secretId, {
+        shareKey,
+        format,
+        pure,
+      });
+      if (format === 'env' && req.headers.get('accept') === 'text/plain') {
+        return new Response((result as any).envText || '', {
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+      }
+      const { jsonOk } = await import('@/lib/api/guard');
+      return jsonOk(result);
+    } catch (err: any) {
+      const status = err?.status || (err?.message?.includes('not found') ? 404 : 400);
+      return Response.json({ error: err?.message || 'Failed to resolve public secret' }, { status });
+    }
+  }
+
   return withApiGuard(req, (actor) => dispatchV1(req, path, actor));
 }
 

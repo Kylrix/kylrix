@@ -15,8 +15,12 @@ import { WorkflowDbService } from '@/lib/services/workflows';
 import {
   generateRandomVaultSecret,
   parseMekToBytes,
+  parseKeyToBytes,
   sealRowFields,
   unsealRowFields,
+  unsealRowWithAnyKey,
+  deriveMekFromMasterPassword,
+  formatVaultSecretToEnv,
   looksEncrypted,
   VAULT_ENCRYPTED_FIELDS,
 } from '@/lib/api/vault-crypto';
@@ -2197,7 +2201,15 @@ export const ApiResources = {
   async getVaultItem(
     actor: ApiActor,
     id: string,
-    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+    opts?: {
+      mek?: string | null;
+      shareKey?: string | null;
+      masterPassword?: string | null;
+      workspaceId?: string | null;
+      agentId?: string | null;
+      format?: string | null;
+      pure?: boolean;
+    }
   ) {
     requireScope(actor, 'vault:read');
     const tables = systemTables();
@@ -2209,19 +2221,197 @@ export const ApiResources = {
       })
       .catch(() => null)) as any;
 
-    if (!r || r.userId !== actor.userId || r.isDeleted) notFound('Vault item not found');
-    await assertObjectInWorkspace(tables, actor, 'credential', id, r);
+    if (!r || (r.userId !== actor.userId && !r.isPublic && !r.isGuest) || r.isDeleted) {
+      notFound('Vault item not found');
+    }
+    if (r.userId === actor.userId) {
+      await assertObjectInWorkspace(tables, actor, 'credential', id, r);
+    }
 
-    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
-    const unsealed = mekBytes
-      ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes)
-      : {};
+    let mekBytes: Uint8Array | null = null;
+    if (opts?.masterPassword) {
+      try {
+        const kcRes = await tables.listRows({
+          databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+          tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN || 'keychain',
+          queries: [Query.equal('userId', actor.userId), Query.limit(1)],
+        });
+        const kc = kcRes.rows?.[0];
+        if (kc) {
+          mekBytes = await deriveMekFromMasterPassword({
+            password: opts.masterPassword,
+            salt: kc.salt,
+            wrappedKey: kc.wrappedKey,
+            params: kc.params,
+            isArgon: kc.isArgon,
+          });
+        }
+      } catch {}
+    }
 
-    return shapeVaultItem(r, {
+    if (!mekBytes) {
+      mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
+    }
+
+    const { unsealed, keyUsed } = await unsealRowWithAnyKey(
+      r,
+      VAULT_ENCRYPTED_FIELDS.credentials,
+      {
+        shareKey: opts?.shareKey,
+        mek: opts?.mek,
+        mekBytes,
+      }
+    );
+
+    const shaped = shapeVaultItem(r, {
       unsealed,
-      hasMek: !!mekBytes,
+      hasMek: !!keyUsed || !!mekBytes,
       looksEncrypted,
     });
+
+    const envText = formatVaultSecretToEnv(unsealed, { pure: opts?.pure, fallbackTitle: r.name });
+
+    if (opts?.format === 'env' || opts?.format === 'dotenv') {
+      return {
+        ...shaped,
+        format: 'env',
+        envText,
+        keyUsed,
+      };
+    }
+
+    return {
+      ...shaped,
+      envText: envText || null,
+      keyUsed,
+    };
+  },
+
+  async getPublicVaultItem(
+    idOrShareUrl: string,
+    opts?: {
+      shareKey?: string | null;
+      format?: string | null;
+      pure?: boolean;
+    }
+  ) {
+    const tables = systemTables();
+    let cleanId = idOrShareUrl.trim();
+    let extractedKey = opts?.shareKey || null;
+
+    // Parse full share URL or id#key / id/key formats
+    if (cleanId.includes('/vault/')) {
+      const parts = cleanId.split('/vault/')[1].split(/[#\/?]/);
+      cleanId = parts[0];
+      if (parts[1] && !extractedKey) {
+        extractedKey = parts[1];
+      }
+    } else if (cleanId.includes('#')) {
+      const [id, key] = cleanId.split('#');
+      cleanId = id;
+      if (key && !extractedKey) extractedKey = key;
+    } else if (cleanId.includes('/') && !cleanId.startsWith('http')) {
+      const [id, key] = cleanId.split('/');
+      cleanId = id;
+      if (key && !extractedKey) extractedKey = key;
+    }
+
+    const r = (await tables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+        rowId: cleanId,
+      })
+      .catch(() => null)) as any;
+
+    if (!r || r.isDeleted || (!r.isPublic && !r.isGuest)) {
+      notFound('Public secret not found or is not shared publicly');
+    }
+
+    const { unsealed, keyUsed } = await unsealRowWithAnyKey(
+      r,
+      VAULT_ENCRYPTED_FIELDS.credentials,
+      { shareKey: extractedKey }
+    );
+
+    const shaped = shapeVaultItem(r, {
+      unsealed,
+      hasMek: !!keyUsed,
+      looksEncrypted,
+    });
+
+    const envText = formatVaultSecretToEnv(unsealed, { pure: opts?.pure, fallbackTitle: r.name });
+
+    if (opts?.format === 'env' || opts?.format === 'dotenv') {
+      return {
+        ...shaped,
+        format: 'env',
+        envText,
+        keyUsed,
+      };
+    }
+
+    return {
+      ...shaped,
+      envText: envText || null,
+      keyUsed,
+      isPublic: true,
+    };
+  },
+
+  async unlockUserMek(
+    actor: ApiActor,
+    opts?: { masterPassword?: string | null }
+  ) {
+    requireScope(actor, 'vault:read');
+    const tables = systemTables();
+    const kcRes = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN || 'keychain',
+      queries: [Query.equal('userId', actor.userId), Query.limit(1)],
+    });
+    const kc = kcRes.rows?.[0];
+    if (!kc) {
+      notFound('Keychain entry not found for user');
+    }
+
+    if (!opts?.masterPassword) {
+      // Light lifting default: return raw encrypted keychain blob
+      return {
+        success: true,
+        unlocked: false,
+        keychain: {
+          wrappedKey: kc.wrappedKey,
+          salt: kc.salt,
+          params: kc.params,
+          isArgon: !!kc.isArgon,
+        },
+      };
+    }
+
+    // Heavy lifting: derive and decrypt MEK on server
+    const mekBytes = await deriveMekFromMasterPassword({
+      password: opts.masterPassword,
+      salt: kc.salt,
+      wrappedKey: kc.wrappedKey,
+      params: kc.params,
+      isArgon: kc.isArgon,
+    });
+
+    if (!mekBytes) {
+      const err = new Error('Invalid master password');
+      (err as any).status = 401;
+      (err as any).code = 'invalid_master_password';
+      throw err;
+    }
+
+    return {
+      success: true,
+      unlocked: true,
+      mekHex: Buffer.from(mekBytes).toString('hex'),
+      mekBase64: Buffer.from(mekBytes).toString('base64'),
+      isArgon: !!kc.isArgon,
+    };
   },
 
   async createVaultItem(

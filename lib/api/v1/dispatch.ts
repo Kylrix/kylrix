@@ -257,6 +257,30 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
   }
 
   // Vault
+  const { shareKeyHeader, masterPassHeader, formatParam, pureParam } = ctx;
+
+  // Vault - MEK Unlock (Zero-trust / Heavy lifting MEK endpoint)
+  if (a === S.vault && (b === 'mek' || b === 'unlock') && !c) {
+    if (method === 'GET' || method === 'POST') {
+      const body = method === 'POST' ? await readBody() : {};
+      const masterPass = masterPassHeader || (body.masterPassword as string) || (body.password as string);
+      return jsonOk(await ApiResources.unlockUserMek(actor, { masterPassword: masterPass }));
+    }
+  }
+
+  // Vault - Public Secret Resolution
+  if (a === S.vault && b === 'public' && c && !d) {
+    if (method === 'GET') {
+      return jsonOk(
+        await ApiResources.getPublicVaultItem(c, {
+          shareKey: shareKeyHeader,
+          format: formatParam,
+          pure: pureParam,
+        })
+      );
+    }
+  }
+
   if (a === S.vault && (!b || b === SUB.items) && !c) {
     const wsId = workspaceIdParam(params) || undefined;
     const agId = params.get('agentId') || undefined;
@@ -274,11 +298,21 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
       );
     }
   }
-  if (a === S.vault && b && b !== SUB.items && !c) {
+  if (a === S.vault && b && b !== SUB.items && b !== 'mek' && b !== 'unlock' && b !== 'public' && !c) {
     const wsId = workspaceIdParam(params) || undefined;
     const agId = params.get('agentId') || undefined;
     if (method === 'GET') {
-      return jsonOk(await ApiResources.getVaultItem(actor, b, { mek: mekHeader, workspaceId: wsId, agentId: agId }));
+      return jsonOk(
+        await ApiResources.getVaultItem(actor, b, {
+          mek: mekHeader,
+          shareKey: shareKeyHeader,
+          masterPassword: masterPassHeader,
+          workspaceId: wsId,
+          agentId: agId,
+          format: formatParam,
+          pure: pureParam,
+        })
+      );
     }
     if (method === 'PATCH' || method === 'PUT') {
       const body = await readBody();
