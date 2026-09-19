@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { Layers, FolderKanban, Check, Sparkles, User, ArrowRightLeft, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { FolderKanban, Check, Sparkles, User, ArrowRightLeft, X } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useWorkspace, type WorkspaceItem } from '@/context/WorkspaceContext';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -31,7 +31,7 @@ export function MoveToWorkspaceDrawer() {
   const { workspaces, activeWorkspace, setEntityPersonalWorkspaceState } = useWorkspace();
   const { user } = useAuth();
   const { showSuccess, showError } = useToast();
-  const { updateTask, tasks } = useTask();
+  const { updateTask } = useTask();
   const { upsertNote, notes } = useNotes();
   const [movingId, setMovingId] = useState<string | null>(null);
 

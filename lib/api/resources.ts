@@ -15,7 +15,6 @@ import { WorkflowDbService } from '@/lib/services/workflows';
 import {
   generateRandomVaultSecret,
   parseMekToBytes,
-  parseKeyToBytes,
   sealRowFields,
   unsealRowFields,
   unsealRowWithAnyKey,
