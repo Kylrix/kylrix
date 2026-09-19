@@ -1508,11 +1508,20 @@ export async function toggleResourcePublicGuestSecure(params: {
     updateData.status = 'published';
   }
 
+  const { Permission, Role } = await import('node-appwrite');
+  const existingPerms: string[] = Array.isArray(row.$permissions) ? row.$permissions : [];
+  const updatedPermissions = isPublic || isGuest
+    ? [
+        ...existingPerms.filter((p: string) => !p.includes('any') && !p.includes('guests')),
+        Permission.read(Role.any()),
+      ]
+    : existingPerms.filter((p: string) => !p.includes('any') && !p.includes('guests'));
+
   // Transactional for encrypted vault objects (credential/totp) where share toggle implies key/collab fan-out; single-row but kept atomic with RLS bypass
   try {
     try {
       await withSystemTransaction(async (txId) => {
-        await (createSystemTablesDB() as any).updateRow({ databaseId: config.databaseId, tableId: config.tableId, rowId: resourceId, data: updateData, permissions: row.$permissions || [], transactionId: txId });
+        await (createSystemTablesDB() as any).updateRow({ databaseId: config.databaseId, tableId: config.tableId, rowId: resourceId, data: updateData, permissions: updatedPermissions, transactionId: txId });
       }, { ttl: 30 });
     } catch {
       await tables.updateRow({
@@ -1520,7 +1529,7 @@ export async function toggleResourcePublicGuestSecure(params: {
         tableId: config.tableId,
         rowId: resourceId,
         data: updateData,
-        permissions: row.$permissions || []
+        permissions: updatedPermissions
       });
     }
   } catch (error: unknown) {
