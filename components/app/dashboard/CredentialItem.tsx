@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Credentials } from '@/lib/appwrite/types';
-import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Wand2, Share2, ShieldCheck, FileCode2 } from 'lucide-react';
+import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Wand2, Share2, ShieldCheck, FileCode2, FolderInput } from 'lucide-react';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { useSelection } from '@/context/SelectionContext';
@@ -37,6 +38,7 @@ export default function CredentialItem({
   onToggleSelect?: () => void;
   onShared?: (id: string) => void;
 }) {
+  const { open: openUnified } = useUnifiedDrawer();
   const selection = useSelection();
   const isSelectMode = propSelectMode ?? (selection.isSelectMode && selection.activeKind === 'credential');
   const isSelected = propSelected ?? selection.isSelected(credential.$id, 'credential');
@@ -265,6 +267,18 @@ export default function CredentialItem({
 
   const contextMenuItems = [
     { label: pinned ? "Unpin Secret" : "Pin Secret", icon: <Pin size={16} className={pinned ? "text-[#F59E0B]" : ""} />, onClick: () => onTogglePin?.() },
+    {
+      label: "Move to Workspace",
+      icon: <FolderInput size={16} className="text-[#6366F1]" />,
+      onClick: () => {
+        openUnified('move-to-workspace', {
+          entityKind: 'credential',
+          entityId: credential.$id,
+          entityTitle: credential.name || 'Secret Record',
+          currentWorkspaceId: (credential as any).projectId || undefined,
+        });
+      },
+    },
     { label: "Workflows", icon: <Lock size={16} className="text-[#A855F7]" />, onClick: () => setShowWorkflows(true) },
     { label: "Select", icon: <CheckSquare size={16} className="text-[#10B981]" />, onClick: () => selection.enterSelectMode('credential', credential.$id) },
     { label: "Copy Public Link (DEK)", icon: <Share2 size={16} className="text-emerald-500" />, onClick: handleShareLink },

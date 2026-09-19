@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell, CheckSquare, Sparkles, Wand2 } from 'lucide-react';
+import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell, CheckSquare, Sparkles, Wand2, FolderInput } from 'lucide-react';
 import { useSelection } from '@/context/SelectionContext';
 import type { Event } from '@/types';
 import { formatTime } from '@/lib/time-util';
@@ -101,6 +101,18 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
         label: pinned ? 'Unpin' : 'Pin',
         icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />,
         onClick: () => void handlePinToggle(),
+      },
+      {
+        label: 'Move to Workspace',
+        icon: <FolderInput size={16} className="text-[#6366F1]" />,
+        onClick: () => {
+          openUnified('move-to-workspace', {
+            entityKind: 'event',
+            entityId: event.id,
+            entityTitle: event.title || 'Untitled Event',
+            currentWorkspaceId: (event as any).projectId || undefined,
+          });
+        },
       },
       {
         label: 'Workflows',

@@ -58,6 +58,10 @@ const AddToProjectDrawerHost = dynamic(
   () => import('./AddToProjectDrawer').then((m) => m.AddToProjectDrawerHost),
   { ssr: false },
 );
+const MoveToWorkspaceDrawer = dynamic(
+  () => import('./MoveToWorkspaceDrawer').then((m) => m.MoveToWorkspaceDrawer),
+  { ssr: false },
+);
 const ResponseDetailDrawer = dynamic(
   () => import('../forms/ResponseDetailDrawer').then((m) => m.ResponseDetailDrawer),
   { ssr: false },
@@ -215,6 +219,8 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
     case 'task-add-to-project':
     case 'add-to-project':
       return <AddToProjectDrawerHost />;
+    case 'move-to-workspace':
+      return <MoveToWorkspaceDrawer />;
     case 'delete-confirm':
       return (
         <div className="px-6 pb-6 pt-3 bg-[#161412] flex flex-col justify-between gap-5 select-none">

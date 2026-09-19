@@ -13,7 +13,8 @@ import {
     Pin, 
     FolderKanban,
     ChevronRight,
-    FileSpreadsheet
+    FileSpreadsheet,
+    FolderInput
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
@@ -671,6 +672,16 @@ function FormCard({
 
     const contextMenuItems = [
         { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: () => onTogglePin(form) },
+        {
+            label: 'Move to Workspace',
+            icon: <FolderInput size={16} className="text-[#6366F1]" />,
+            onClick: () => openDrawer('move-to-workspace', {
+                entityKind: 'form',
+                entityId: form.$id,
+                entityTitle: form.title || 'Untitled Form',
+                currentWorkspaceId: form.projectId || undefined,
+            })
+        },
         { label: 'Workflows', icon: <Sparkles size={16} className="text-[#A855F7]" />, onClick: () => onOpenWorkflows(form) },
         { label: 'View Details', icon: <FileText size={16} />, onClick: onSelect },
         { 
