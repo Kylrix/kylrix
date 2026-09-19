@@ -1,16 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   parseKeyToBytes,
-  parseMekToBytes,
   sealRowFields,
-  unsealRowFields,
   unsealRowWithAnyKey,
   deriveMekFromMasterPassword,
   formatVaultSecretToEnv,
   VAULT_ENCRYPTED_FIELDS,
 } from '@/lib/api/vault-crypto';
-import { ApiResources } from '@/lib/api/resources';
-import type { ApiActor } from '@/lib/api/guard';
 
 describe('Vault Dual-Mode Decryption & Public Secret Resolution', () => {
   const dummyMekBytes = new Uint8Array(32).fill(7);
