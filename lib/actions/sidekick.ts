@@ -110,6 +110,13 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
           seen: false,
         });
       } else {
+        const pid = (target as any).projectId;
+        const isCustomWs = Boolean(
+          (target as any).isWorkspace ||
+            (pid && pid !== 'inbox' && pid !== 'personal' && pid !== 'default')
+        );
+        const effectivePid = isCustomWs && pid ? String(pid) : undefined;
+
         await databases.createRow('passwordManagerDb', 'agentic_sessions', sessionId, {
           userId: actor.$id,
           context: `Summary: ${target.title || target.id}`.slice(0, 200),
@@ -121,7 +128,19 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
           isPinned: false,
           targetType: target.type,
           targetId: target.id,
+          ...(isCustomWs ? { isWorkspace: true } : {}),
+          ...(effectivePid ? { projectId: effectivePid } : {}),
         });
+        if (effectivePid) {
+          try {
+            const { attachObjectToProject } = await import('@/lib/projects/object-attachment');
+            await attachObjectToProject({
+              projectId: effectivePid,
+              entityKind: 'agent_session',
+              entityId: sessionId,
+            });
+          } catch {}
+        }
       }
     } catch (e) {
       console.error('summarize persist failed', e);
@@ -165,6 +184,13 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
     }
     if (!session) {
       const sid = opts.sessionId || (opts.target.id.startsWith('search-') || opts.target.id.startsWith('wallet-') ? opts.target.id : ID.unique());
+      const pid = (opts.target as any).projectId;
+      const isCustomWs = Boolean(
+        (opts.target as any).isWorkspace ||
+          (pid && pid !== 'inbox' && pid !== 'personal' && pid !== 'default')
+      );
+      const effectivePid = isCustomWs && pid ? String(pid) : undefined;
+
       try {
         session = await databases.createRow('passwordManagerDb', 'agentic_sessions', sid, {
           userId: actor.$id,
@@ -177,7 +203,19 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
           isPinned: false,
           targetType: opts.target.type,
           targetId: opts.target.id,
+          ...(isCustomWs ? { isWorkspace: true } : {}),
+          ...(effectivePid ? { projectId: effectivePid } : {}),
         });
+        if (effectivePid) {
+          try {
+            const { attachObjectToProject } = await import('@/lib/projects/object-attachment');
+            await attachObjectToProject({
+              projectId: effectivePid,
+              entityKind: 'agent_session',
+              entityId: sid,
+            });
+          } catch {}
+        }
       } catch {
         try {
           session = await databases.getRow('passwordManagerDb', 'agentic_sessions', sid);

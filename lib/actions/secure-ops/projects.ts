@@ -1074,26 +1074,30 @@ export async function createFormSecure(data: any, jwt?: string) {
     isWorkspace: isWs,
   };
   delete formData.projectId;
+  delete formData.workspaceId;
   delete formData.$id;
   delete formData.id;
 
+  const formId = ID.unique();
   const form = await tables.createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
     tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-    rowId: ID.unique(),
+    rowId: formId,
     data: formData,
     permissions: permissions,
   });
 
-  if (targetProjectId) {
+  if (targetProjectId && isWs) {
     try {
       const { attachObjectToProject } = await import('@/lib/projects/object-attachment');
       await attachObjectToProject({
         projectId: targetProjectId,
         entityKind: 'form',
-        entityId: (form as any).$id,
+        entityId: (form as any).$id || formId,
       });
-    } catch {}
+    } catch (attachErr) {
+      console.warn('[createFormSecure] Failed auto-attachment to project:', attachErr);
+    }
   }
 
   return JSON.parse(JSON.stringify(form));
