@@ -203,15 +203,24 @@ export default async ({ req, res, log, error }) => {
       let channelSent = 'none';
 
       // 1. Try Telegram Broadcast first (Zero SMTP overhead)
+      const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_API;
       if (botToken) {
         try {
-          const tgDocs = await databases.listDocuments(DB_ID, TELEGRAM_TABLE_ID, [
-            Query.equal('userId', targetUserId),
-            Query.limit(1)
-          ]).catch(() => ({ documents: [] }));
+          let tgDoc = null;
+          try {
+            tgDoc = await databases.getDocument(DB_ID, TELEGRAM_TABLE_ID, targetUserId);
+          } catch (_e) {
+            const tgDocs = await databases.listDocuments(DB_ID, TELEGRAM_TABLE_ID, [
+              Query.equal('userId', targetUserId),
+              Query.limit(1)
+            ]).catch(() => ({ documents: [] }));
+            if (tgDocs.documents && tgDocs.documents.length > 0) {
+              tgDoc = tgDocs.documents[0];
+            }
+          }
 
-          if (tgDocs.documents && tgDocs.documents.length > 0 && tgDocs.documents[0].chatId) {
-            const chatId = tgDocs.documents[0].chatId;
+          const chatId = tgDoc?.tg_chat_id || tgDoc?.chatId;
+          if (chatId) {
             let tgText = `⏰ <b>Kylrix Scheduled Reminder Digest</b>\n\n`;
 
             if (goals.length > 0) {
@@ -396,15 +405,24 @@ async function handleSingleGoalReminder({ databases, users, messaging, DB_ID, TA
     const ctaUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space'}/goal/${task.$id}`;
     let sentChannel = 'none';
 
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_API;
     if (botToken) {
       try {
-        const tgDocs = await databases.listDocuments(DB_ID, TELEGRAM_TABLE_ID, [
-          Query.equal('userId', targetUserId)
-        ]).catch(() => ({ documents: [] }));
+        let tgDoc = null;
+        try {
+          tgDoc = await databases.getDocument(DB_ID, TELEGRAM_TABLE_ID, targetUserId);
+        } catch (_e) {
+          const tgDocs = await databases.listDocuments(DB_ID, TELEGRAM_TABLE_ID, [
+            Query.equal('userId', targetUserId),
+            Query.limit(1)
+          ]).catch(() => ({ documents: [] }));
+          if (tgDocs.documents && tgDocs.documents.length > 0) {
+            tgDoc = tgDocs.documents[0];
+          }
+        }
 
-        if (tgDocs.documents && tgDocs.documents.length > 0 && tgDocs.documents[0].chatId) {
-          const chatId = tgDocs.documents[0].chatId;
+        const chatId = tgDoc?.tg_chat_id || tgDoc?.chatId;
+        if (chatId) {
           const tgText = `⏰ <b>Goal Reminder</b>\n\n<b>${escapeHtml(task.title)}</b>\nDeadline: <i>${deadline}</i>\n\n👉 <a href="${ctaUrl}">Open Goal</a>`;
           
           const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -413,7 +431,8 @@ async function handleSingleGoalReminder({ databases, users, messaging, DB_ID, TA
             body: JSON.stringify({
               chat_id: chatId,
               text: tgText,
-              parse_mode: 'HTML'
+              parse_mode: 'HTML',
+              disable_web_page_preview: true
             })
           });
 

@@ -53,27 +53,39 @@ export async function dispatchTelegramNotification(
       return false;
     }
 
-    // 1. Blind Lookup matching Target_UserID
-    let doc = null;
+    // 1. Blind Lookup matching Target_UserID (by row ID or userId field)
+    let doc: any = null;
     try {
       doc = await databases.getRow(
-        APPWRITE_CONFIG.DATABASES.CONNECT,
-        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+        APPWRITE_CONFIG.DATABASES.CONNECT || 'passwordManagerDb',
+        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS || 'telegram_connections',
         targetUserId
       );
     } catch (_e) {
-      // Silently fail/ignore if document doesn't exist to comply with privacy rules
-      return false;
+      // Try list query fallback if rowId != targetUserId
+      try {
+        const { Query } = await import('node-appwrite');
+        const list = await databases.listRows(
+          APPWRITE_CONFIG.DATABASES.CONNECT || 'passwordManagerDb',
+          APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS || 'telegram_connections',
+          [Query.equal('userId', targetUserId), Query.limit(1)]
+        );
+        if (list.total > 0) doc = list.rows[0];
+      } catch (_listErr) {
+        return false;
+      }
     }
 
     // 2. Assertion check: must exist, be verified, and have a valid chat ID
-    if (!doc || !doc.is_verified || !doc.tg_chat_id) {
+    if (!doc || !doc.is_verified || (!doc.tg_chat_id && !doc.chatId)) {
       return false;
     }
 
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = doc.tg_chat_id || doc.chatId;
+
+    const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_API;
     if (!botToken) {
-      console.warn('[telegram-dispatch] TELEGRAM_BOT_TOKEN is missing. Dispatch aborted.');
+      console.warn('[telegram-dispatch] TELEGRAM_BOT_TOKEN / TELEGRAM_BOT_API is missing. Dispatch aborted.');
       return false;
     }
 
@@ -82,9 +94,12 @@ export async function dispatchTelegramNotification(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: doc.tg_chat_id,
+        chat_id: chatId,
         text: message,
-        parse_mode: 'HTML'})});
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      }),
+    });
 
     if (!res.ok) {
       console.error('[telegram-dispatch] Telegram Bot API returned error:', await res.text());

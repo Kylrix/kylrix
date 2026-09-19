@@ -872,7 +872,72 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
           priority,
           priorityScore,
           quotaRemaining: 5, // Default safe fallback
-          blockedReason: `Deduplicated by in-app memory cache (cached status: ${cachedStatus}).`});
+      // 1. PREFER TELEGRAM: Check if recipient has Telegram connected and deliver instantly
+      let tgDelivered = false;
+      try {
+        const { dispatchTelegramNotification } = await import('@/lib/services/internal/telegram-dispatch');
+        let tgText = `🔔 <b>${copy.title || copy.subject}</b>\n\n${copy.body}`;
+        if (copy.ctaUrl) {
+          tgText += `\n\n👉 <a href="${copy.ctaUrl}">${copy.ctaText || 'Open in Kylrix'}</a>`;
+        }
+        tgDelivered = await dispatchTelegramNotification(recipient.userId, tgText, {
+          notificationType: eventType.includes('invite') ? 'invite' : 'standard',
+          title: copy.title,
+          resourceType: input.resourceType || undefined,
+          resourceId: input.resourceId || undefined,
+        });
+      } catch (tgErr) {
+        console.warn('[dispatchUnorganicEmails] Telegram dispatch error:', tgErr);
+      }
+
+      if (tgDelivered) {
+        const sentAt = new Date().toISOString();
+        const expiresAt = new Date(now.getTime() + UNORGANIC_EMAIL_WINDOW_MS).toISOString();
+        const baseRow = {
+          eventType,
+          sourceApp,
+          actorId: pickText(input.actorId) || null,
+          recipientId: recipient.userId,
+          recipientEmail: recipient.email,
+          resourceType: pickText(input.resourceType) || null,
+          resourceId: pickText(input.resourceId) || null,
+          templateKey,
+          priority: priorityScore,
+          status: 'sent' as QueueStatus,
+          dedupeKey,
+          attempts: 1,
+          sentAt,
+          expiresAt,
+          processedAt: sentAt,
+          blockedReason: null,
+          metadata: buildQueueMetadata({
+            input: { ...input, eventType, sourceApp },
+            recipient,
+            copy,
+            templateKey,
+            priority,
+            priorityScore,
+            quotaRemaining: 5,
+            queueRowId,
+            status: 'sent',
+            messageId: `telegram_${recipient.userId}_${Date.now()}`,
+          }),
+        };
+
+        await createOrLoadQueueRow(tablesDB, queueRowId, baseRow).catch(() => {});
+        emailQueueCache.set(queueRowId, 'sent');
+        queueResults.push({
+          recipientId: recipient.userId,
+          email: recipient.email,
+          queueRowId,
+          queueStatus: 'sent',
+          messageId: `telegram_${recipient.userId}`,
+          sentAt,
+          templateKey,
+          priority,
+          priorityScore,
+          quotaRemaining: 5,
+        });
         continue;
       }
 
