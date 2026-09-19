@@ -56,6 +56,11 @@
 - **Agent Local API Base URI**: When dogfooding via the Kylrix HTTP API (`/api/v1`), autonomous agents MUST target the local instance at `http://localhost:3005/api/v1` (NOT the public production URI `https://www.kylrix.space`).
 - **Kylrix HTTP API vs Appwrite (STRICT SEPARATION)**: Agents are special dogfooding users of the product. All agent task planning, object CRUD, notes, goals, and communication MUST go through the **Kylrix HTTP API (`/api/v1`)** using PATs/Agent tokens. NEVER confuse or replace Kylrix HTTP API calls with raw Appwrite admin APIs, internal SDKs, or CLI data mutations.
 - **Autonomous API Extension on Gaps**: As agents dogfood and discover missing endpoints (e.g. workspace linking, DMs/chats, goal tracking), agents are empowered and expected to build, fix, and flesh out the corresponding `/api/v1` routes and methods to achieve full ecosystem parity.
+- **Account Sovereignty & User ID Invariant (STRICT)**: All objects created by agents, REST API, or MCP belong to the human user's account (`userId`). Agents are purely behavioral abstractions operating inside workspaces, NOT separate Appwrite user accounts. The API/MCP layer strictly inspects, overrides, and stamps the human user's `userId` on every entity row. Any client-supplied `userId` is strictly overwritten with the authenticated human account `userId` to mathematically prevent orphaned/ghost items.
+- **Workspace Stamping & Join Linking Invariant (STRICT)**: When an entity (note, goal, form, event, credential, totp, agent_session) is created within a workspace or by a workspace-jailed actor, the API/MCP layer MUST:
+  1. Stamp `isWorkspace: true` and `projectId: <workspaceId>` directly on the entity row.
+  2. Create/ensure the `project_objects` join record under the human `userId` linking `(projectId, entityKind, entityId)`.
+  This guarantees that `useWorkspaceFilteredItems` displays the item in the active workspace and prevents unintended fallback into the Virtual Personal Workspace.
 
 ### 🌐 Backend Modularity & Cloud Equivalence (STRICT)
 - **Cloud is Just a Specialized Self-Host**: The public Cloud environment is architecturally just a specially configured self-hosted instance targeting remote database/API clusters. It is not proprietary or locked to internal infrastructure; any open-source fork or organization can host a full Cloud fork of this product.

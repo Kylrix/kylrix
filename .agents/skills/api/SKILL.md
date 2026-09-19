@@ -56,4 +56,9 @@ curl -sS -X POST "$BASE/token/scopes" \
 `/vault` · `/tags` · `/objects`  
 `/agents/sessions` · `/agents/harness` · `/agents/sessions/:id/mirror`
 
+## Account Sovereignty & Workspace Scoping (STRICT)
+
+- **User ID Invariant**: All objects created by agents, REST API, or MCP belong to the authenticated human user's account (`userId`). The API server inspects and overrides `userId` on every entity row with the account owner's ID to prevent orphaned ghost objects.
+- **Workspace Stamping**: When creating objects in a workspace, `/api/v1` and MCP automatically stamp `isWorkspace: true` and `projectId: <wsId>` on the entity row AND create the `project_objects` join record so items are correctly scoped and isolated.
+
 Full table: `api/references/http-api.md`. Internal: `system.pat-http-api`.

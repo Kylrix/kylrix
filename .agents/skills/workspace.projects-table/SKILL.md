@@ -69,3 +69,14 @@ To ensure 0ms rendering and zero layout flash during workspace switching:
 - **Autosave & Persistence**:
   - `pickNoteAutosavePayload` in `lib/appwrite/note.ts` must explicitly preserve `isWorkspace` and `projectId` during background sync flushes to prevent workspace metadata stripping.
 
+---
+
+## 5. API & Agent Creation Invariants (STRICT)
+
+1. **User ID Ownership**: All objects created by agents, REST API, or MCP belong to the authenticated human user's account (`userId`). The server strictly stamps `userId: actor.userId` on all entity rows to guarantee zero orphaned/ghost items.
+2. **Dual Workspace Stamping**: When creating an entity in a workspace context:
+   - The entity row itself must have `isWorkspace: true` and `projectId: <workspaceId>` stamped.
+   - A `project_objects` join record must be created linking `(projectId, entityKind, entityId)` under the human `userId`.
+   - This ensures `useWorkspaceFilteredItems` immediately surfaces the object in the workspace view and excludes it from the Virtual Personal Workspace.
+
+

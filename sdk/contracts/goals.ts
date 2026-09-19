@@ -97,6 +97,7 @@ export function buildGoalCreateRow(
   const isPublic = parsed.isPublic !== undefined ? parsed.isPublic : true;
   const isGuest =
     parsed.isGuest !== undefined ? parsed.isGuest : parsed.isPublic !== undefined ? parsed.isPublic : true;
+  const wsId = resolveWorkspaceId(body);
 
   return {
     title,
@@ -110,6 +111,7 @@ export function buildGoalCreateRow(
     userId,
     isPublic,
     isGuest,
+    ...(wsId ? { isWorkspace: true, projectId: wsId } : {}),
   };
 }
 

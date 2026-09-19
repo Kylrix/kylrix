@@ -673,10 +673,15 @@ export const ApiResources = {
     const goalId = ID.unique();
 
     const rowData = buildGoalCreateRow(actor.userId, body);
+    if (wsId) {
+      rowData.isWorkspace = true;
+      rowData.projectId = wsId;
+    }
     if (body?.tags !== undefined) {
       const cleanTags = await ensureTagsExist(tables, actor.userId, body.tags as any[]);
       if (cleanTags.length > 0) rowData.tags = cleanTags;
     }
+    rowData.userId = actor.userId;
 
     const row = await tables.createRow({
       databaseId: FLOW_DB,
@@ -2308,6 +2313,7 @@ export const ApiResources = {
         isDeleted: false,
         isEnv: body.isEnv === true,
         tags,
+        ...(wsId ? { isWorkspace: true } : {}),
         createdAt: now,
         updatedAt: now,
       },
@@ -2638,6 +2644,7 @@ export const ApiResources = {
         isFavorite: body.isFavorite === true,
         isDeleted: false,
         tags,
+        ...(wsId ? { isWorkspace: true } : {}),
         createdAt: now,
         updatedAt: now,
       },
