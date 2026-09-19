@@ -3833,6 +3833,10 @@ export const ApiResources = {
       // Direct Crypto Address Generation for CLI / autonomous agent payments
       const notifyUrl = `${resolveBillingNotifyUrl()}?plan_id=${encodeURIComponent(planId)}&months=${months}&order_id=direct_${actor.userId}_${Date.now()}`;
       const direct = await blockbee.createDirectCryptoAddress(ticker, {
+        planId,
+        userId: actor.userId,
+        countryCode: 'US',
+        months,
         amountUsd: expectedAmountUsd,
         notifyUrl,
         redirectUrl: resolveBillingSuccessUrl(),
@@ -3875,7 +3879,7 @@ export const ApiResources = {
           }),
         },
         [Permission.read(Role.user(actor.userId))]
-      ).catch((err) => console.warn('[createBillingCheckout] Transaction log warn:', err));
+      ).catch((err: any) => console.warn('[createBillingCheckout] Transaction log warn:', err));
 
       return shapeBillingCheckoutSession({
         id: direct.paymentId,
@@ -3923,7 +3927,10 @@ export const ApiResources = {
         source: 'none' as const,
         uiTier: 'FREE' as const,
       })),
-      InternalKylrixTokenService.getUserBalance(actor.userId).catch(() => ({
+      InternalKylrixTokenService.getUserBalance(actor.userId).then((b: any) => ({
+        amount: typeof b?.amount === 'number' ? b.amount : parseFloat(b?.amount || '0') || 0,
+        symbol: String(b?.symbol || 'KYL'),
+      })).catch(() => ({
         amount: 0,
         symbol: 'KYL',
       })),
@@ -3968,6 +3975,6 @@ export const ApiResources = {
 
     const { claimCouponAction } = await import('@/lib/actions/billing/billing');
     const res = await claimCouponAction(couponId);
-    return shapeBillingCouponResult(res);
+    return shapeBillingCouponResult(res as any);
   },
 };

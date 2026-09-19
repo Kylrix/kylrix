@@ -527,7 +527,27 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         if (isCustomWorkspace && newForm?.$id) {
           void attachEntityToActiveWorkspace('form', newForm.$id);
         }
-        autonomicSyncEngine.ack(newForm.$id);
+        if (newForm?.$id) {
+          try {
+            const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+            const db = await getRxDB();
+            if (db?.forms) {
+              await db.forms.upsert({
+                id: newForm.$id,
+                title: newForm.title || title || 'Untitled Form',
+                description: newForm.description || description || '',
+                schema: newForm.schema || JSON.stringify(fields),
+                settings: newForm.settings || JSON.stringify(mergedSettings),
+                status: newForm.status || status,
+                userId: user.$id,
+                projectId: isCustomWorkspace ? activeWorkspace!.id : null,
+                isWorkspace: isCustomWorkspace,
+                updatedAt: new Date().toISOString(),
+              }).catch(() => {});
+            }
+          } catch {}
+        }
+        autonomicSyncEngine.ack(newForm?.$id || 'new');
         if (user) invalidate(`f_user_forms_${user.$id}`);
       }
 

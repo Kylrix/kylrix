@@ -189,11 +189,42 @@ export default function FormsDashboard() {
             const remoteRows = Array.isArray(res) ? res : (res?.rows || []);
 
             if (Array.isArray(remoteRows)) {
-                const byId = new Map<string, Forms>();
-                items.filter(isFormActive).forEach((item: any) => item?.$id && byId.set(item.$id, item));
-                remoteRows.filter(isFormActive).forEach((row: any) => row?.$id && byId.set(row.$id, row));
-                const merged = Array.from(byId.values());
+                const activeRemote = remoteRows.filter(isFormActive);
+                const currentFormsMap = new Map(formsRef.current.map((f) => [f.$id || (f as any).id, f]));
+                const activeLocal = items.filter(isFormActive);
+                const localItemsMap = new Map(activeLocal.map((f) => [f.$id || (f as any).id, f]));
 
+                const mergedMap = new Map<string, Forms>();
+
+                // 1. Add active remote rows, preserving workspace properties if set locally
+                activeRemote.forEach((remoteRow: any) => {
+                    const id = remoteRow.$id || remoteRow.id;
+                    if (!id) return;
+                    const existingCurrent = currentFormsMap.get(id) as any;
+                    const existingLocal = localItemsMap.get(id) as any;
+                    const mergedForm = {
+                        ...existingLocal,
+                        ...existingCurrent,
+                        ...remoteRow,
+                        $id: id,
+                        projectId: remoteRow.projectId || existingCurrent?.projectId || existingLocal?.projectId,
+                        isWorkspace: remoteRow.isWorkspace ?? existingCurrent?.isWorkspace ?? existingLocal?.isWorkspace ?? Boolean(remoteRow.projectId || existingCurrent?.projectId || existingLocal?.projectId),
+                    };
+                    mergedMap.set(id, mergedForm);
+                });
+
+                // 2. Preserve active local items that belong to custom workspaces or are pending sync
+                activeLocal.forEach((localItem: any) => {
+                    const id = localItem.$id || localItem.id;
+                    if (!id) return;
+                    if (!mergedMap.has(id)) {
+                        if (localItem.projectId || localItem.isWorkspace) {
+                            mergedMap.set(id, localItem);
+                        }
+                    }
+                });
+
+                const merged = Array.from(mergedMap.values());
                 setForms(sortForms(merged as unknown as Forms[]));
                 await LocalEngine.cacheSet(`f_forms_list_${userId}`, merged);
                 await LocalEngine.cacheSet(`f_forms_${userId}`, merged);

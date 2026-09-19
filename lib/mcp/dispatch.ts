@@ -178,7 +178,7 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
   // Billing & Subscriptions
   create_billing_checkout: (actor, args) => ApiResources.createBillingCheckout(actor, args),
   get_billing_status: (actor) => ApiResources.getBillingStatus(actor),
-  claim_billing_coupon: (actor, args) => ApiResources.claimBillingCoupon(actor, args),
+  claim_billing_coupon: (actor, args) => ApiResources.claimBillingCoupon(actor, args as any),
   list_supported_payment_coins: (actor) => ApiResources.listSupportedBillingCoins(actor),
 };
 

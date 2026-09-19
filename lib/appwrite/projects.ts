@@ -427,7 +427,11 @@ export const ProjectsService = {
             ? Promise.all(
                 Array.from(resourceIdsByType['form']).map(async (id) => {
                   try {
-                    return await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, id);
+                    const row = await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, id);
+                    if (row) {
+                      return { ...row, projectId, isWorkspace: true };
+                    }
+                    return null;
                   } catch {
                     return null;
                   }

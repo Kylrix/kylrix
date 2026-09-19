@@ -872,6 +872,10 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
           priority,
           priorityScore,
           quotaRemaining: 5, // Default safe fallback
+        });
+        continue;
+      }
+
       // 1. PREFER TELEGRAM: Check if recipient has Telegram connected and deliver instantly
       let tgDelivered = false;
       try {

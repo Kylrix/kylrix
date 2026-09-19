@@ -426,7 +426,7 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
       return jsonOk(await ApiResources.listSupportedBillingCoins(actor));
     }
     if ((b === SUB.coupon || b === 'claim' || b === 'redeem') && method === 'POST') {
-      return jsonOk(await ApiResources.claimBillingCoupon(actor, await readBody()));
+      return jsonOk(await ApiResources.claimBillingCoupon(actor, (await readBody()) as any));
     }
   }
 

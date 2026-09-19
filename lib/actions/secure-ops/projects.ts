@@ -1100,7 +1100,13 @@ export async function createFormSecure(data: any, jwt?: string) {
     }
   }
 
-  return JSON.parse(JSON.stringify(form));
+  const resultForm = {
+    ...form,
+    projectId: targetProjectId || undefined,
+    isWorkspace: isWs,
+  };
+
+  return JSON.parse(JSON.stringify(resultForm));
 }
 
 export async function listUserFormsSecure(userId?: string, jwt?: string) {
