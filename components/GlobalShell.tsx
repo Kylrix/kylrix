@@ -10,7 +10,6 @@ import ConnectTopbar from '@/components/layout/ConnectTopbar';
 import { UnifiedBottomBar } from '@/components/UnifiedBottomBar';
 
 // Context Hooks
-import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useTask } from '@/context/TaskContext';
@@ -75,7 +74,6 @@ function useIsDesktopShell() {
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { user, isLoading } = useAuth();
   const isDesktopShell = useIsDesktopShell();
   
   // 0. Aggressive Optimization Hooks
@@ -107,7 +105,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const isLandingPage = pathname === '/';
 
   // 2. UI State
-  const { activeContent: unifiedDrawerActive, open: openUnified, close: closeUnified } = useUnifiedDrawer();
+  const { activeContent: unifiedDrawerActive, close: closeUnified } = useUnifiedDrawer();
   const { showProUpgrade, closeProUpgrade } = useProUpgrade();
   const { taskDialogOpen } = useTask();
   const { secondarySidebar, closeSecondarySidebar } = useLayout();
@@ -153,13 +151,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     if (isNoteFullPageDetail) parts.push('note-detail');
     return parts.join(' ');
   }, [showLeftSidebar, isProjectDetailPage, isNoteFullPageDetail]);
-
-  // 3. Automated Logic
-  useEffect(() => {
-    if (!isLoading && !user && isAppRoute && !isSharedPage) {
-      openUnified('login');
-    }
-  }, [isLoading, user, isAppRoute, isSharedPage, openUnified]);
 
   // Wire up programmatically opening the agentic drawer via custom event listeners
   const { openAgenticDrawer } = useAgenticDrawer();
