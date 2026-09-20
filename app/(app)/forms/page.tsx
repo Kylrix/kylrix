@@ -235,6 +235,7 @@ export default function FormsDashboard() {
         } finally {
             setLoading(false);
         }
+    }, [user?.$id, sortForms]);
     const fetchFormsRef = useRef(fetchForms);
     useEffect(() => {
         fetchFormsRef.current = fetchForms;
