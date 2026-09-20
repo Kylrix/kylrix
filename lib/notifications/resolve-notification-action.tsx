@@ -146,6 +146,7 @@ export function executeNotificationAction(
   if (knownEvent || routePrefix === 'event' || routePrefix === 'events') {
     const eventId = knownEvent?.id || knownEvent?.$id || targetId;
     if (eventId) {
+      let overlayOpened = false;
       try {
         const EventDetailsComp = require('@/components/events/EventDetails').default;
         if (isWide && ctx.openSidebar && ctx.closeSidebar) {
@@ -154,12 +155,18 @@ export function executeNotificationAction(
             eventId,
             { hideHeader: true }
           );
+          overlayOpened = true;
         } else if (ctx.openOverlay && ctx.closeOverlay) {
           ctx.openOverlay(
             <EventDetailsComp eventId={eventId} initialData={knownEvent} onClose={ctx.closeOverlay} onBack={ctx.closeOverlay} />
           );
+          overlayOpened = true;
         }
       } catch {}
+
+      if (!overlayOpened && ctx.router) {
+        ctx.router.push(`/events/${eventId}`);
+      }
       return { handled: true, type: 'event' };
     }
   }

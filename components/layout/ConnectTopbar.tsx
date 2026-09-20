@@ -945,7 +945,6 @@ export default function ConnectTopbar({
                     { name: 'note', label: 'Ideas', color: '#EC4899', href: '/app', Icon: FileText },
                     { name: 'goals', label: 'Goals', color: '#A855F7', href: '/goals', Icon: Target },
                     { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault', Icon: Lock },
-                    { name: 'connect', label: 'Connect', color: '#F59E0B', href: '/connect', Icon: MessageCircle },
                     { name: 'tags', label: 'Tags', color: '#F87171', action: () => openUnified('tags'), Icon: TagIcon },
                     { name: 'trash', label: 'Trash', color: '#EF4444', action: () => openUnified('trash'), Icon: TrashIcon },
                   ].map((app) => {
