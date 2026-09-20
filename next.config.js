@@ -33,6 +33,7 @@ const nextConfig = {
         ? 'true'
         : 'false',
     NEXT_PUBLIC_PRICING_PLANS_JSON: buildPublicPricingPlansJson(),
+    NEXT_PUBLIC_FEEDBACK_FORM_ID: process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID || '',
   },
   // Standalone output produces a self-contained server in .next/standalone
   // Required for efficient Docker deployments (no node_modules in final image)

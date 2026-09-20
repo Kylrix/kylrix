@@ -2,7 +2,7 @@
 
 import { FormsService } from '@/lib/services/forms';
 
-const FEATURE_REQUEST_FORM_ID = '6a2a653f002b0f296958';
+const FEATURE_REQUEST_FORM_ID = process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID || '6a2a653f002b0f296958';
 const SESSION_DEDUPE_PREFIX = 'kylrix:auto-error-feedback:';
 
 type RuntimeErrorBoundary = 'route' | 'global';

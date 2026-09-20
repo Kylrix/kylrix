@@ -340,7 +340,7 @@ function SettingsPageInner() {
         }
     }, [user]);
 
-    const FEATURE_FORM_ID = '6aae3dab003a7247b90a';
+    const FEATURE_FORM_ID = process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID || '6aae3dab003a7247b90a';
 
     const handleManualMint = async () => {
         setMinting(true);
