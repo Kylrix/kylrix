@@ -268,20 +268,6 @@ export const FormsService = {
         );
     },
 
-export function deriveSubmissionRowId(formId: string, submitterId: string, attempt: number = 1): string {
-    const cleanForm = String(formId || '').replace(/[^a-zA-Z0-9]/g, '');
-    const cleanSub = String(submitterId || '').replace(/[^a-zA-Z0-9]/g, '');
-    if (attempt <= 1) {
-        const fPart = cleanForm.slice(0, 17);
-        const sPart = cleanSub.slice(0, 17);
-        return `${fPart}_${sPart}`.slice(0, 36);
-    }
-    const suffix = `_${attempt}`;
-    const maxLen = 36 - suffix.length;
-    const half = Math.floor((maxLen - 1) / 2);
-    return `${cleanForm.slice(0, half)}_${cleanSub.slice(0, half)}${suffix}`;
-}
-
     /**
      * Submit form data
      */
@@ -664,3 +650,17 @@ export function deriveSubmissionRowId(formId: string, submitterId: string, attem
         return await batchTrashFormSubmissionsSecure(formId, submissionIds);
     }
 };
+
+export function deriveSubmissionRowId(formId: string, submitterId: string, attempt: number = 1): string {
+    const cleanForm = String(formId || '').replace(/[^a-zA-Z0-9]/g, '');
+    const cleanSub = String(submitterId || '').replace(/[^a-zA-Z0-9]/g, '');
+    if (attempt <= 1) {
+        const fPart = cleanForm.slice(0, 17);
+        const sPart = cleanSub.slice(0, 17);
+        return `${fPart}_${sPart}`.slice(0, 36);
+    }
+    const suffix = `_${attempt}`;
+    const maxLen = 36 - suffix.length;
+    const half = Math.floor((maxLen - 1) / 2);
+    return `${cleanForm.slice(0, half)}_${cleanSub.slice(0, half)}${suffix}`;
+}
