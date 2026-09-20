@@ -6,7 +6,13 @@ import {
   LAST_ROUTE_COOKIE,
 } from '@/lib/ecosystem/resume-route';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
-import { enforceApiIpShield, enforceCrawlerShield, isCrawlerOrBot } from '@/lib/api/edge-shield';
+import {
+  enforceApiIpShield,
+  enforceCrawlerShield,
+  isCrawlerOrBot,
+  isKnownScannerProbe,
+  isDisallowedScraper,
+} from '@/lib/api/edge-shield';
 import { KYLRIX_API_V1_BASE } from '@/sdk/api';
 
 /**
@@ -16,6 +22,7 @@ import { KYLRIX_API_V1_BASE } from '@/sdk/api';
  * 1. Rapid reload storms (accidental double-clicks, broken code causing infinite reloads)
  * 2. Redirect loops (poorly-written auth guards bouncing between pages endlessly)
  * 3. API burst floods (client bugs firing the same request in a tight loop)
+ * 4. Scanner/bot probe resource drainage on Edge / Serverless
  * 
  * Uses a lightweight cookie-based counter that requires zero database reads.
  */
@@ -47,7 +54,81 @@ function readResumePathFromCookie(request: NextRequest): string | null {
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // ── Universal Attribution & Referral Processing (?ref=...) ──
+  // ── 0. Instant Scanner Probe & Exploit Rejection (Drops probe compute at Edge) ──
+  if (isKnownScannerProbe(pathname)) {
+    return new NextResponse('Not Found', {
+      status: 404,
+      headers: {
+        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+        'X-Robots-Tag': 'noindex, nofollow, noarchive',
+      },
+    });
+  }
+
+  // ── 1. Static Assets & RSC Flight Instant Pass-Through (Zero allocation) ──
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next();
+  }
+
+  const isRscFlight =
+    request.headers.get('RSC') === '1' ||
+    request.headers.has('next-router-prefetch') ||
+    request.headers.has('next-router-state-tree') ||
+    request.headers.has('Next-Action') ||
+    searchParams.has('_rsc') ||
+    request.headers.get('accept')?.includes('text/x-component');
+
+  if (isRscFlight) {
+    return NextResponse.next();
+  }
+
+  // ── 2. Disallowed Scraper Bot Defense ──
+  const userAgent = request.headers.get('user-agent');
+  if (isDisallowedScraper(userAgent) && pathname !== '/' && pathname !== '/pricing') {
+    return new NextResponse('Access Denied', {
+      status: 403,
+      headers: {
+        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+        'X-Robots-Tag': 'noindex, nofollow, noarchive',
+      },
+    });
+  }
+
+  // ── 3. API Surface Shielding ──
+  if (
+    pathname.startsWith(KYLRIX_API_V1_BASE) ||
+    pathname.startsWith('/api/mcp') ||
+    pathname.startsWith('/api/dev')
+  ) {
+    const shield = enforceApiIpShield(request);
+    if (!shield.allowed) {
+      return NextResponse.json(
+        {
+          error: 'edge_rate_limited',
+          message: 'Too many API requests from this network. Retry shortly.',
+          retry_after: shield.retryAfterSec,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(shield.retryAfterSec),
+            'Cache-Control': 'no-store',
+          },
+        },
+      );
+    }
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith('/api')) {
+    return NextResponse.next();
+  }
+
+  // ── 4. Universal Attribution & Referral Processing (?ref=...) ──
   const ref = searchParams.get('ref');
   let attributionCookieValue: string | null = null;
 
@@ -115,55 +196,6 @@ export function middleware(request: NextRequest) {
     return attachAttribution(NextResponse.redirect(cleanUrl));
   }
 
-  // Skip static assets — but protect API and MCP surfaces from IP pounding.
-  if (
-    pathname.startsWith(KYLRIX_API_V1_BASE) ||
-    pathname.startsWith('/api/mcp') ||
-    pathname.startsWith('/api/dev')
-  ) {
-    const shield = enforceApiIpShield(request);
-    if (!shield.allowed) {
-      return NextResponse.json(
-        {
-          error: 'edge_rate_limited',
-          message: 'Too many API requests from this network. Retry shortly.',
-          retry_after: shield.retryAfterSec,
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(shield.retryAfterSec),
-            'Cache-Control': 'no-store',
-          },
-        },
-      );
-    }
-    return NextResponse.next();
-  }
-
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/favicon') ||
-    pathname.includes('.') // static files like .css, .js, .png
-  ) {
-    return NextResponse.next();
-  }
-
-  // Next.js RSC flight + Server Actions (GET or POST) — never throttle; throttling these
-  // breaks rendering and can trigger 429 → auto-reload loops during client churn.
-  const isRscFlight =
-    request.headers.get('RSC') === '1' ||
-    request.headers.has('next-router-prefetch') ||
-    request.headers.has('next-router-state-tree') ||
-    request.headers.has('Next-Action') ||
-    searchParams.has('_rsc') ||
-    request.headers.get('accept')?.includes('text/x-component');
-
-  if (isRscFlight) {
-    return NextResponse.next();
-  }
-
   // ─── CRAWLER & SCRAPER DEFENSE ON SHARED / PUBLIC PATHS ───
   const isSharedOrPublicRoute =
     pathname.startsWith('/idea/') ||
@@ -174,7 +206,6 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/u/') ||
     pathname.startsWith('/moment/');
 
-  const userAgent = request.headers.get('user-agent');
   if (isSharedOrPublicRoute && isCrawlerOrBot(userAgent)) {
     const shield = enforceCrawlerShield(request);
     if (!shield.allowed) {
@@ -185,7 +216,7 @@ export function middleware(request: NextRequest) {
           headers: {
             'Content-Type': 'text/html; charset=utf-8',
             'Retry-After': String(shield.retryAfterSec),
-            'Cache-Control': 'no-store, no-cache',
+            'Cache-Control': 'public, max-age=300, s-maxage=300',
             'X-Robots-Tag': 'noindex, nofollow, noarchive',
           },
         },

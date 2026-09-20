@@ -159,6 +159,18 @@ export function enforceMcpSseOpenShield(req: NextRequest | Request): ShieldVerdi
 }
 
 const BOT_USER_AGENTS = /bot|spider|crawl|scraper|curl|wget|python|postman|node-fetch|axios|httpclient/i;
+const SCANNER_PROBE_REGEX = /^\/(\.env|\.git|\.aws|\.docker|\.vscode|wp-admin|wp-login|wp-content|wp-includes|phpmyadmin|pma|admin(\/|$|\.php)|xmlrpc\.php|autoload\.php|eval-stdin|actuator|cgi-bin|solr|telescope|swagger|api-docs|boaform|setup\.cgi|shell|debug|phpinfo)/i;
+const DISALLOWED_SCRAPERS = /Bytespider|PetalBot|Scrapy|CCBot|ClaudeBot|GPTBot|ChatGPT-User|cohere-ai|AnthropicAI|Claude-Web|SemrushBot|AhrefsBot|DotBot|MJ12bot|MegaIndex/i;
+
+export function isKnownScannerProbe(pathname: string): boolean {
+  if (!pathname) return false;
+  return SCANNER_PROBE_REGEX.test(pathname);
+}
+
+export function isDisallowedScraper(userAgent: string | null): boolean {
+  if (!userAgent) return false;
+  return DISALLOWED_SCRAPERS.test(userAgent);
+}
 
 export function isCrawlerOrBot(userAgent: string | null): boolean {
   if (!userAgent) return false;

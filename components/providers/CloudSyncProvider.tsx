@@ -25,6 +25,7 @@ export function CloudSyncProvider({ children }: { children: React.ReactNode }) {
     const checkAndTriggerSync = async (reason = 'timer') => {
       if (isSyncingRef.current) return;
       if (!window.navigator.onLine) return;
+      if (reason === 'timer' && typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
 
       try {
         const config: CloudSyncConfig = await getCloudSyncConfig();

@@ -5,6 +5,7 @@ import { resolveOwnerForOg } from '@/lib/og/resolve-avatar';
 import { getProductName } from '@/lib/config/product';
 
 export const runtime = 'nodejs';
+export const revalidate = 86400;
 export const size = {
   width: 1200,
   height: 630,

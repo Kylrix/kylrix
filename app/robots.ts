@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next';
 import { getProductSiteUrl } from '@/lib/config/product';
 
+export const revalidate = 86400;
+
 export default function robots(): MetadataRoute.Robots {
   const siteUrl = getProductSiteUrl();
 
