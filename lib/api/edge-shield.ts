@@ -158,23 +158,31 @@ export function enforceMcpSseOpenShield(req: NextRequest | Request): ShieldVerdi
   return checkShield(`mcp_sse:${ip}`, SHIELD_PRESETS.mcpSseOpen);
 }
 
-const BOT_USER_AGENTS = /bot|spider|crawl|scraper|curl|wget|python|postman|node-fetch|axios|httpclient/i;
+const BOT_USER_AGENTS = /bot|spider|crawl|scraper/i;
 const SCANNER_PROBE_REGEX = /^\/(\.env|\.git|\.aws|\.docker|\.vscode|wp-admin|wp-login|wp-content|wp-includes|phpmyadmin|pma|admin(\/|$|\.php)|xmlrpc\.php|autoload\.php|eval-stdin|actuator|cgi-bin|solr|telescope|swagger|api-docs|boaform|setup\.cgi|shell|debug|phpinfo)/i;
-const DISALLOWED_SCRAPERS = /Bytespider|PetalBot|Scrapy|CCBot|ClaudeBot|GPTBot|ChatGPT-User|cohere-ai|AnthropicAI|Claude-Web|SemrushBot|AhrefsBot|DotBot|MJ12bot|MegaIndex/i;
+// Only block aggressive bulk harvesters & SEO scrapers; legitimate AI engines (GPTBot, ClaudeBot, PerplexityBot, AnthropicAI) are explicitly allowed
+const DISALLOWED_SCRAPERS = /Bytespider|PetalBot|Scrapy|CCBot|SemrushBot|AhrefsBot|DotBot|MJ12bot|MegaIndex/i;
+const AI_DISCOVERY_BOTS = /GPTBot|ChatGPT-User|ClaudeBot|Claude-Web|AnthropicAI|PerplexityBot|cohere-ai|Google-Extended|Applebot-Extended/i;
 
 export function isKnownScannerProbe(pathname: string): boolean {
   if (!pathname) return false;
   return SCANNER_PROBE_REGEX.test(pathname);
 }
 
+export function isAiBot(userAgent: string | null): boolean {
+  if (!userAgent) return false;
+  return AI_DISCOVERY_BOTS.test(userAgent);
+}
+
 export function isDisallowedScraper(userAgent: string | null): boolean {
   if (!userAgent) return false;
+  if (isAiBot(userAgent)) return false;
   return DISALLOWED_SCRAPERS.test(userAgent);
 }
 
 export function isCrawlerOrBot(userAgent: string | null): boolean {
   if (!userAgent) return false;
-  return BOT_USER_AGENTS.test(userAgent);
+  return BOT_USER_AGENTS.test(userAgent) || isAiBot(userAgent);
 }
 
 export function enforceCrawlerShield(req: NextRequest | Request): ShieldVerdict {

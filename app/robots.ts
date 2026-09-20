@@ -10,7 +10,14 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/pricing'],
+        allow: [
+          '/',
+          '/pricing',
+          '/docs',
+          '/docs/*',
+          '/terms-of-service',
+          '/privacy-policy',
+        ],
         disallow: [
           '/app/',
           '/idea/',
@@ -34,13 +41,36 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: [
           'GPTBot',
           'ChatGPT-User',
-          'CCBot',
-          'AnthropicAI',
+          'ClaudeBot',
           'Claude-Web',
+          'AnthropicAI',
+          'PerplexityBot',
           'cohere-ai',
+          'Google-Extended',
+          'Applebot-Extended',
+        ],
+        allow: [
+          '/',
+          '/pricing',
+          '/docs',
+          '/docs/*',
+          '/terms-of-service',
+          '/privacy-policy',
+        ],
+        disallow: [
+          '/app/',
+          '/vault/',
+          '/settings/',
+          '/billing/',
+          '/*?*ref=*',
+        ],
+      },
+      {
+        userAgent: [
           'Bytespider',
           'PetalBot',
           'Scrapy',
+          'CCBot',
         ],
         disallow: ['/'],
       },

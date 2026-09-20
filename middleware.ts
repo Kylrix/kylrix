@@ -86,23 +86,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── 2. Disallowed Scraper Bot Defense ──
-  const userAgent = request.headers.get('user-agent');
-  if (isDisallowedScraper(userAgent) && pathname !== '/' && pathname !== '/pricing') {
-    return new NextResponse('Access Denied', {
-      status: 403,
-      headers: {
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
-        'X-Robots-Tag': 'noindex, nofollow, noarchive',
-      },
-    });
-  }
-
-  // ── 3. API Surface Shielding ──
+  // ── 2. API & MCP Surface Shielding (Programmatic Agents, Tools, and External Integrations) ──
   if (
     pathname.startsWith(KYLRIX_API_V1_BASE) ||
     pathname.startsWith('/api/mcp') ||
-    pathname.startsWith('/api/dev')
+    pathname.startsWith('/api/dev') ||
+    pathname.startsWith('/mcp')
   ) {
     const shield = enforceApiIpShield(request);
     if (!shield.allowed) {
@@ -126,6 +115,27 @@ export function middleware(request: NextRequest) {
 
   if (pathname.startsWith('/api')) {
     return NextResponse.next();
+  }
+
+  // ── 3. Disallowed Scraper Bot Defense (Bulk Harvesters / Aggressive SEO Spiders) ──
+  const userAgent = request.headers.get('user-agent');
+  const isPublicDocOrInfoRoute =
+    pathname === '/' ||
+    pathname === '/pricing' ||
+    pathname.startsWith('/docs') ||
+    pathname.startsWith('/terms-of-service') ||
+    pathname.startsWith('/privacy-policy') ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml';
+
+  if (isDisallowedScraper(userAgent) && !isPublicDocOrInfoRoute) {
+    return new NextResponse('Access Denied', {
+      status: 403,
+      headers: {
+        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+        'X-Robots-Tag': 'noindex, nofollow, noarchive',
+      },
+    });
   }
 
   // ── 4. Universal Attribution & Referral Processing (?ref=...) ──
