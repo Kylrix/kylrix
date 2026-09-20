@@ -95,7 +95,7 @@ function coerceCachedTask(row: any): Task | null {
       discussionId: row.discussionId || null,
       scheduled: row.scheduled === true || String(row.scheduled) === 'true',
       isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true',
-      isWorkspace: row.isWorkspace === true || String(row.isWorkspace) === 'true' || (Boolean(row.projectId) && row.projectId !== 'inbox'),
+      isWorkspace: row.isWorkspace === true || String(row.isWorkspace) === 'true' || (Boolean(row.projectId) && row.projectId !== 'inbox' && row.projectId !== 'default' && row.projectId !== 'personal'),
       dek: row.dek || null,
     } as Task;
   }
@@ -197,7 +197,7 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
     discussionId: raw.discussionId || null,
     scheduled: raw.scheduled === true || String(raw.scheduled) === 'true',
     isAgentic: raw.isAgentic === true || String(raw.isAgentic) === 'true',
-    isWorkspace: raw.isWorkspace === true || String(raw.isWorkspace) === 'true' || (Boolean(projectId) && projectId !== 'inbox'),
+    isWorkspace: raw.isWorkspace === true || String(raw.isWorkspace) === 'true' || (Boolean(projectId) && projectId !== 'inbox' && projectId !== 'default' && projectId !== 'personal'),
     dek: raw.dek || null,
   };
 };
@@ -1284,16 +1284,41 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const pushLiveGoal = useCallback(
     (task: Task, options?: { pending?: boolean }) => {
       if (!task?.id) return;
-      const ownerId = task.userId || task.creatorId || state.userId || 'guest';
+      const existingTask = tasksRef.current.find((t) => t.id === task.id);
+      const ownerId = task.userId || task.creatorId || existingTask?.userId || existingTask?.creatorId || state.userId || 'guest';
       const isPending = options?.pending !== false;
-      const stamped: Task = {
-        ...task,
-        userId: ownerId,
-        creatorId: task.creatorId || ownerId,
-        updatedAt: task.updatedAt || new Date()};
-      dispatch({ type: 'UPSERT_TASK', payload: stamped });
-      void setCachedData(`goal_${stamped.id}`, stamped);
-      const updatedList = [stamped, ...tasksRef.current.filter((t) => t.id !== stamped.id)];
+
+      const isExplicitWorkspace = typeof task.isWorkspace === 'boolean';
+      const targetIsWorkspace = isExplicitWorkspace
+        ? task.isWorkspace
+        : (existingTask?.isWorkspace ?? (Boolean(task.projectId) && task.projectId !== 'inbox' && task.projectId !== 'default' && task.projectId !== 'personal'));
+      const targetProjectId = task.projectId !== undefined && task.projectId !== null
+        ? (task.projectId && task.projectId !== 'inbox' ? task.projectId : (existingTask?.projectId || 'inbox'))
+        : (existingTask?.projectId || 'inbox');
+
+      const mergedGoal: Task = existingTask
+        ? {
+            ...existingTask,
+            ...task,
+            projectId: targetProjectId,
+            isWorkspace: Boolean(targetIsWorkspace),
+            userId: ownerId,
+            creatorId: task.creatorId || existingTask.creatorId || ownerId,
+            subtasks: task.subtasks?.length ? task.subtasks : (existingTask.subtasks || []),
+            comments: task.comments?.length ? task.comments : (existingTask.comments || []),
+            labels: task.labels?.length ? task.labels : (existingTask.labels || []),
+            updatedAt: task.updatedAt || existingTask.updatedAt || new Date(),
+          }
+        : {
+            ...task,
+            userId: ownerId,
+            creatorId: task.creatorId || ownerId,
+            updatedAt: task.updatedAt || new Date(),
+          };
+
+      dispatch({ type: 'UPSERT_TASK', payload: mergedGoal });
+      void setCachedData(`goal_${mergedGoal.id}`, mergedGoal);
+      const updatedList = [mergedGoal, ...tasksRef.current.filter((t) => t.id !== mergedGoal.id)];
       if (state.userId) {
         const tasksKey = `f_tasks_${state.userId}`;
         void setCachedData(tasksKey, { rows: updatedList, total: updatedList.length });
@@ -1301,11 +1326,11 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       void persistGoalsLocalCopy(state.userId, updatedList);
       if (isPending) {
         // markPending schedules demand flush; nudge(true) forces microtask discrete flush
-        autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString(), stamped);
+        autonomicSyncEngine.markPending(goalPendingKey(mergedGoal.id), mergedGoal.updatedAt.toISOString(), mergedGoal);
         autonomicSyncEngine.nudge(true);
       } else {
-        autonomicSyncEngine.markConfirmed(goalPendingKey(stamped.id));
-        autonomicSyncEngine.markConfirmed(stamped.id);
+        autonomicSyncEngine.markConfirmed(goalPendingKey(mergedGoal.id));
+        autonomicSyncEngine.markConfirmed(mergedGoal.id);
       }
     },
     [setCachedData, state.userId],
