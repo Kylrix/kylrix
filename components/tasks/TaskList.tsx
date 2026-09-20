@@ -24,8 +24,7 @@ export default function TaskList() {
     labels,
     ecosystemTags,
     refreshEcosystemTags,
-    isLoading,
-    refreshTasks} = useTask();
+  } = useTask();
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open } = useUnifiedDrawer();
   useEffect(() => {
@@ -160,7 +159,8 @@ export default function TaskList() {
 
 
   return (
-    <div className="animate-fadeIn pointer-events-auto w-full">
+    <>
+      <div className="animate-fadeIn pointer-events-auto w-full">
 
         {tagFilterOptions.length > 0 && (
           <div className="overflow-x-auto scrollbar-none mb-6 p-2 bg-[#000000] border-2 border-white/20 rounded-[24px] flex items-center gap-2 select-none shadow-md">
