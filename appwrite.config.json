@@ -8879,6 +8879,13 @@
                     "size": 2048,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isMultiple",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
                 }
             ],
             "indexes": [

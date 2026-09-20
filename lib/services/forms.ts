@@ -268,6 +268,20 @@ export const FormsService = {
         );
     },
 
+export function deriveSubmissionRowId(formId: string, submitterId: string, attempt: number = 1): string {
+    const cleanForm = String(formId || '').replace(/[^a-zA-Z0-9]/g, '');
+    const cleanSub = String(submitterId || '').replace(/[^a-zA-Z0-9]/g, '');
+    if (attempt <= 1) {
+        const fPart = cleanForm.slice(0, 17);
+        const sPart = cleanSub.slice(0, 17);
+        return `${fPart}_${sPart}`.slice(0, 36);
+    }
+    const suffix = `_${attempt}`;
+    const maxLen = 36 - suffix.length;
+    const half = Math.floor((maxLen - 1) / 2);
+    return `${cleanForm.slice(0, half)}_${cleanSub.slice(0, half)}${suffix}`;
+}
+
     /**
      * Submit form data
      */
@@ -279,7 +293,7 @@ export const FormsService = {
             queries: [
                 Query.equal('$id', formId),
                 Query.limit(1),
-                Query.select(['$id', 'userId', 'status', 'settings', 'title', 'description', 'schema', 'isPublic', 'isGuest', '$createdAt'])
+                Query.select(['$id', 'userId', 'status', 'settings', 'title', 'description', 'schema', 'isPublic', 'isGuest', 'isMultiple', '$createdAt'])
             ]
         });
 
@@ -335,6 +349,8 @@ export const FormsService = {
             submissionPermissions.push(Permission.read(Role.user(submitterId)));
         }
 
+        const isMultiple = (form as any).isMultiple !== false;
+
         // CHECK FOR EXISTING DRAFT TO CONVERT
         let submission;
         if (submitterId) {
@@ -374,20 +390,108 @@ export const FormsService = {
         }
 
         if (!submission) {
-            submission = await tablesDB.createRow<FormSubmissions>(
-                DATABASE_ID,
-                SUBMISSIONS_TABLE,
-                ID.unique(),
-                {
-                    formId,
-                    submitterId: submitterId || null,
-                    payload,
-                    status: FormSubmissionsStatus.UNREAD,
-                    metadata: JSON.stringify({
-                        submittedAt: new Date().toISOString()})
-                },
-                submissionPermissions
-            );
+            if (submitterId) {
+                if (!isMultiple) {
+                    // Single submission per user: exact formId_submitterId key
+                    const rowId = deriveSubmissionRowId(formId, submitterId, 1);
+                    try {
+                        submission = await tablesDB.createRow<FormSubmissions>(
+                            DATABASE_ID,
+                            SUBMISSIONS_TABLE,
+                            rowId,
+                            {
+                                formId,
+                                submitterId: submitterId || null,
+                                payload,
+                                status: FormSubmissionsStatus.UNREAD,
+                                metadata: JSON.stringify({
+                                    submittedAt: new Date().toISOString()
+                                })
+                            },
+                            submissionPermissions
+                        );
+                    } catch (err: any) {
+                        const isConflict =
+                            err?.code === 409 ||
+                            String(err?.message || '').includes('already exists') ||
+                            err?.type === 'document_already_exists' ||
+                            err?.type === 'row_already_exists';
+                        if (isConflict) {
+                            throw new Error('You have already submitted a response to this form.');
+                        }
+                        throw err;
+                    }
+                } else {
+                    // Multiple submissions enabled: retry {formId}_{submitterId}, {formId}_{submitterId}_2, etc.
+                    let created = null;
+                    for (let attempt = 1; attempt <= 20; attempt++) {
+                        const rowId = deriveSubmissionRowId(formId, submitterId, attempt);
+                        try {
+                            created = await tablesDB.createRow<FormSubmissions>(
+                                DATABASE_ID,
+                                SUBMISSIONS_TABLE,
+                                rowId,
+                                {
+                                    formId,
+                                    submitterId: submitterId || null,
+                                    payload,
+                                    status: FormSubmissionsStatus.UNREAD,
+                                    metadata: JSON.stringify({
+                                        submittedAt: new Date().toISOString(),
+                                        submissionIndex: attempt,
+                                    })
+                                },
+                                submissionPermissions
+                            );
+                            break;
+                        } catch (err: any) {
+                            const isConflict =
+                                err?.code === 409 ||
+                                String(err?.message || '').includes('already exists') ||
+                                err?.type === 'document_already_exists' ||
+                                err?.type === 'row_already_exists';
+                            if (!isConflict) {
+                                throw err;
+                            }
+                        }
+                    }
+                    if (!created) {
+                        created = await tablesDB.createRow<FormSubmissions>(
+                            DATABASE_ID,
+                            SUBMISSIONS_TABLE,
+                            ID.unique(),
+                            {
+                                formId,
+                                submitterId: submitterId || null,
+                                payload,
+                                status: FormSubmissionsStatus.UNREAD,
+                                metadata: JSON.stringify({
+                                    submittedAt: new Date().toISOString()
+                                })
+                            },
+                            submissionPermissions
+                        );
+                    }
+                    submission = created;
+                }
+            } else {
+                // Anonymous guest submission
+                submission = await tablesDB.createRow<FormSubmissions>(
+                    DATABASE_ID,
+                    SUBMISSIONS_TABLE,
+                    ID.unique(),
+                    {
+                        formId,
+                        submitterId: null,
+                        payload,
+                        status: FormSubmissionsStatus.UNREAD,
+                        metadata: JSON.stringify({
+                            submittedAt: new Date().toISOString()
+                        })
+                    },
+                    submissionPermissions
+                );
+            }
         }
         // Notify form owner via ActivityLog
         try {

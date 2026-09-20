@@ -2059,6 +2059,7 @@ export const ApiResources = {
 
     const isPublic = body.isPublic !== undefined ? Boolean(body.isPublic) : true;
     const isGuest = body.isGuest !== undefined ? Boolean(body.isGuest) : true;
+    const isMultiple = body.isMultiple !== undefined ? Boolean(body.isMultiple) : true;
 
     const row = await tables.createRow({
       databaseId: FLOW_DB,
@@ -2074,6 +2075,7 @@ export const ApiResources = {
         visibility: String(body.visibility || (isPublic ? 'public' : 'private')),
         isPublic,
         isGuest,
+        isMultiple,
         isPinned: !!body.isPinned,
         isTrash: false,
         ...(wsId ? { isWorkspace: true } : {}),
@@ -2112,6 +2114,7 @@ export const ApiResources = {
     if (body.visibility !== undefined) patch.visibility = String(body.visibility);
     if (body.isPublic !== undefined) patch.isPublic = !!body.isPublic;
     if (body.isGuest !== undefined) patch.isGuest = !!body.isGuest;
+    if (body.isMultiple !== undefined) patch.isMultiple = !!body.isMultiple;
     if (body.isPinned !== undefined) patch.isPinned = !!body.isPinned;
     const targetWs = (body.workspaceId || body.projectId) as string | undefined;
     if (targetWs) {

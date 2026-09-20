@@ -22,6 +22,7 @@ export function shapeFormListItem(row: Record<string, unknown>) {
     updatedAt: r.$updatedAt || r.updatedAt || null,
     isPublic: r.isPublic !== undefined ? !!r.isPublic : true,
     isGuest: r.isGuest !== undefined ? !!r.isGuest : true,
+    isMultiple: r.isMultiple !== undefined ? !!r.isMultiple : true,
     isWorkspace: Boolean(r.isWorkspace),
     projectId: r.projectId || null,
   };
@@ -46,6 +47,7 @@ export function shapeFormDetail(row: Record<string, unknown>) {
     status: r.status || null,
     isPublic: r.isPublic !== undefined ? !!r.isPublic : true,
     isGuest: r.isGuest !== undefined ? !!r.isGuest : true,
+    isMultiple: r.isMultiple !== undefined ? !!r.isMultiple : true,
     isWorkspace: Boolean(r.isWorkspace),
     projectId: r.projectId || null,
     ghostFields,

@@ -242,6 +242,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const [status, setStatus] = useState<'draft' | 'published' | 'archived'>('draft');
   const [fields, setFields] = useState<any[]>([]);
   const [enabledGhostFields, setEnabledGhostFields] = useState<string[]>([]);
+  const [isMultiple, setIsMultiple] = useState<boolean>(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isRestored, setIsRestored] = useState(false);
 
@@ -358,6 +359,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         setIsRestored(true);
         setHasUnsavedChanges(true);
       } else if (form) {
+        setIsMultiple(form.isMultiple !== false);
         const savedDraft = await DraftsService.getDraft(form.$id);
         if (savedDraft) {
           setTitle(savedDraft.title || '');
@@ -386,6 +388,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         setTitle('');
         setDescription('');
         setStatus('draft');
+        setIsMultiple(true);
         setFields([{ id: 'field_1', label: 'Full Name', type: 'text', required: true }]);
         setEnabledGhostFields([]);
         setIsRestored(false);
@@ -508,6 +511,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         status: status as FormsStatus,
         schema: JSON.stringify(fields),
         settings: JSON.stringify(mergedSettings),
+        isMultiple,
       };
 
       const formId = form?.$id || (initialDraft ? initialDraft.id : 'new');
@@ -539,6 +543,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                 schema: newForm.schema || JSON.stringify(fields),
                 settings: newForm.settings || JSON.stringify(mergedSettings),
                 status: newForm.status || status,
+                isMultiple,
                 userId: user.$id,
                 projectId: isCustomWorkspace ? activeWorkspace!.id : null,
                 isWorkspace: isCustomWorkspace,
@@ -721,6 +726,19 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
               </div>
 
               <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsMultiple(!isMultiple)}
+                  className={`px-3 py-1 rounded-xl border text-xs font-satoshi font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    !isMultiple
+                      ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
+                      : 'bg-white/5 border-white/10 text-white/50 hover:text-white'
+                  }`}
+                  title={isMultiple ? "Multiple submissions allowed per user" : "Single active submission enforced per user"}
+                >
+                  <span>{isMultiple ? 'Multi-submission' : 'Single response limit'}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setGhostDrawerOpen(true)}
