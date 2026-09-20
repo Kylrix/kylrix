@@ -127,15 +127,6 @@ const ECOSYSTEM_DESTINATIONS: Array<{
     keywords: ['event', 'events', 'calendar', 'schedule', 'reminder', 'reminders'],
   },
   {
-    kind: 'moment',
-    id: 'app-connect',
-    title: 'Connect & Feed',
-    subtitle: 'Public moments, channels and chat',
-    href: '/connect',
-    accent: '#F59E0B',
-    keywords: ['connect', 'feed', 'moment', 'moments', 'social', 'channels'],
-  },
-  {
     kind: 'tag',
     id: 'app-tags',
     title: 'Tags & Taxonomy',

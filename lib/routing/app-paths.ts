@@ -120,6 +120,14 @@ export function sanitizeInAppHref(href: string | null | undefined): string {
     const id = path.split('/')[2];
     return id ? `/flow/${id}${search}` : `/flows${search}`;
   }
+  if (path === '/event') {
+    return `/events${search}`;
+  }
+  if (path.startsWith('/event/')) {
+    const id = path.split('/')[2];
+    return id ? `/events/${id}${search}` : `/events${search}`;
+  }
+
   // Plural list OK; singular share for detail rows
   const formsDetail = path.match(/^\/forms\/([^/]+)\/?$/);
   if (formsDetail) return `/form/${formsDetail[1]}${search}`;
