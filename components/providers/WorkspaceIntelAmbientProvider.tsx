@@ -12,6 +12,11 @@ export function WorkspaceIntelAmbientProvider({ children }: { children: React.Re
   const { user } = useAuth();
   const ranRef = useRef(false);
 
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   useEffect(() => {
     if (!user?.$id) return;
     if (typeof window === 'undefined') return;
@@ -23,14 +28,16 @@ export function WorkspaceIntelAmbientProvider({ children }: { children: React.Re
     const tick = async (force = false) => {
       if (cancelled) return;
       if (document.visibilityState === 'hidden') return;
+      const currentUser = userRef.current;
+      if (!currentUser?.$id) return;
       try {
         const { maybeEmitWorkspaceIntelNudge } = await import(
           '@/lib/agentic/workspace-intel-ambient'
         );
         const res = await maybeEmitWorkspaceIntelNudge({
-          userId: user.$id,
-          displayName: user.name || user.email || undefined,
-          isPro: hasPaidKylrixPlan(user),
+          userId: currentUser.$id,
+          displayName: currentUser.name || currentUser.email || undefined,
+          isPro: hasPaidKylrixPlan(currentUser),
           force,
         });
         if (cancelled || !res.emitted) return;
@@ -55,7 +62,7 @@ export function WorkspaceIntelAmbientProvider({ children }: { children: React.Re
       if (bootTimer) clearTimeout(bootTimer);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [user]);
+  }, [user?.$id]);
 
   return <>{children}</>;
 }

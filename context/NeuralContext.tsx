@@ -62,13 +62,15 @@ export function EmptyStateAnomalyDetector({
   children}: EmptyStateAnomalyDetectorProps) {
   const pathname = usePathname();
   const { reportAnomaly } = useNeural();
+  const healAttemptedRef = React.useRef(false);
 
   useEffect(() => {
-    if (isLoading || itemCount > 0) return;
+    if (isLoading || itemCount > 0 || healAttemptedRef.current) return;
 
-    // Grace period before flagging as unusual empty render anomaly
+    // Grace period before flagging as unusual empty render anomaly (max once per mount)
     const timer = setTimeout(() => {
-      if (itemCount === 0 && !isLoading) {
+      if (itemCount === 0 && !isLoading && !healAttemptedRef.current) {
+        healAttemptedRef.current = true;
         reportAnomaly({
           route: pathname || '/',
           componentName,
@@ -76,7 +78,7 @@ export function EmptyStateAnomalyDetector({
           itemCount: 0,
           timestamp: Date.now()});
       }
-    }, 2500);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, [itemCount, isLoading, componentName, expectedItemKind, pathname, reportAnomaly]);

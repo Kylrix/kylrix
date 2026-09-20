@@ -286,15 +286,15 @@ export function middleware(request: NextRequest) {
   }
 
   if (reloadData.count > MAX_RAPID_RELOADS) {
-    // Throttle: return a 429 with a brief cooldown message
+    // Throttle: return a 429 with a brief cooldown message (no automatic client-side reload loops)
     return new NextResponse(
-      `<html>
+      `<!DOCTYPE html>
+      <html>
         <head><meta charset="utf-8"><title>Slow Down</title></head>
         <body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0a0a0a;color:#fff;font-family:system-ui">
           <div style="text-align:center">
             <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:0.5rem">Too many requests</h1>
-            <p style="opacity:0.5;font-size:0.9rem">Please wait a moment before refreshing.</p>
-            <script>setTimeout(()=>location.reload(),3000)</script>
+            <p style="opacity:0.5;font-size:0.9rem">Please wait a moment before navigating.</p>
           </div>
         </body>
       </html>`,
@@ -302,7 +302,8 @@ export function middleware(request: NextRequest) {
         status: 429,
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
-          'Retry-After': '3',
+          'Retry-After': '5',
+          'Cache-Control': 'no-store, max-age=0',
         },
       }
     );

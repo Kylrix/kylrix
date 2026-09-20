@@ -328,9 +328,20 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener('kylrix:auth:logout', handleLogout);
     return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
+  }, [personalWorkspace.id]);
+
+  const refreshWorkspacesRef = useRef(refreshWorkspaces);
+  useEffect(() => {
+    refreshWorkspacesRef.current = refreshWorkspaces;
+  }, [refreshWorkspaces]);
+
+  const personalWorkspaceRef = useRef(personalWorkspace);
+  useEffect(() => {
+    personalWorkspaceRef.current = personalWorkspace;
   }, [personalWorkspace]);
 
   useEffect(() => {
+    const pw = personalWorkspaceRef.current;
     if (lastUserIdRef.current !== userId) {
       hydratedRef.current = false;
       lastSetIdRef.current = userId;
@@ -340,14 +351,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const cached = getSynchronousOfflineWorkspaces(userId);
       setWorkspaces((prev) => {
         const byId = new Map<string, WorkspaceItem>();
-        byId.set(personalWorkspace.id, personalWorkspace);
+        byId.set(pw.id, pw);
         for (const w of cached) byId.set(w.id, w);
         for (const w of prev) {
-          if (w.id && w.id !== personalWorkspace.id && !byId.has(w.id)) {
+          if (w.id && w.id !== pw.id && !byId.has(w.id)) {
             byId.set(w.id, w);
           }
         }
-        return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+        return [pw, ...Array.from(byId.values()).filter((w) => w.id !== pw.id)];
       });
       try {
         const { clearSessionProjectsList } = require('@/lib/projects/projects-cache');
@@ -356,8 +367,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     } else {
       setActiveWorkspaceIdState((prev) => (prev === 'guest' && userId !== 'guest' ? userId : prev));
     }
-    void refreshWorkspaces();
-  }, [userId, personalWorkspace, refreshWorkspaces, getSynchronousOfflineWorkspaces]);
+    void refreshWorkspacesRef.current();
+  }, [userId, getSynchronousOfflineWorkspaces]);
 
   useEffect(() => {
     void (async () => {

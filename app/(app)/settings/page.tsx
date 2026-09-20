@@ -239,16 +239,17 @@ function SettingsPageInner() {
     const [profile, setProfile] = useState<any>(null);
     const openPorter = useOpenEcosystemPorter({ surface: 'settings' });
 
+    const effUsername = getEffectiveUsername(user);
+
     const fetchProfile = useCallback(async () => {
-        const username = getEffectiveUsername(user);
-        if (!username) return;
+        if (!effUsername) return;
         try {
-            const data = await UsersService.getProfile(username);
+            const data = await UsersService.getProfile(effUsername);
             if (data) setProfile(data);
         } catch (e) {
             console.error("Failed to load profile", e);
         }
-    }, [user]);
+    }, [effUsername]);
 
     useEffect(() => {
         fetchProfile();
@@ -381,18 +382,16 @@ function SettingsPageInner() {
     const [copiedReferral, setCopiedReferral] = useState(false);
 
     useEffect(() => {
-        if (user?.$id) {
-            const username = getEffectiveUsername(user);
+        if (user?.$id && effUsername) {
             getJWT()
-                .then(jwt => import('@/lib/actions/referrals').then(m => m.getReferralStatsAction(username, jwt || undefined)))
+                .then(jwt => import('@/lib/actions/referrals').then(m => m.getReferralStatsAction(effUsername, jwt || undefined)))
                 .then(stats => setReferralStats(stats))
                 .catch(() => null);
         }
-    }, [user, getJWT]);
+    }, [user?.$id, effUsername, getJWT]);
 
     const handleCopyReferral = async () => {
         if (!user?.$id) return;
-        const effUsername = getEffectiveUsername(user);
         const refParam = effUsername ? `u_${effUsername}` : `id_${user.$id}`;
         const baseUri = typeof window !== 'undefined' ? window.location.origin : 'https://www.kylrix.space';
         const link = `${baseUri}/?ref=${refParam}`;
@@ -409,6 +408,7 @@ function SettingsPageInner() {
     useEffect(() => {
         let active = true;
         async function checkAdmin() {
+            if (!user?.$id) return;
             try {
                 const { isUserAdmin } = await import('@/lib/actions/admin/check-admin');
                 const jwt = await getJWT();
@@ -420,11 +420,7 @@ function SettingsPageInner() {
         }
         checkAdmin();
         return () => { active = false; };
-    }, [getJWT]);
-
-    useEffect(() => {
-        void refreshMfaFactors();
-    }, [refreshMfaFactors]);
+    }, [user?.$id, getJWT]);
 
     const loadPasskeys = useCallback(async () => {
         if (!user?.$id) return;

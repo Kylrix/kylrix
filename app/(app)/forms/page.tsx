@@ -235,12 +235,15 @@ export default function FormsDashboard() {
         } finally {
             setLoading(false);
         }
-    }, [user?.$id, sortForms]);
+    const fetchFormsRef = useRef(fetchForms);
+    useEffect(() => {
+        fetchFormsRef.current = fetchForms;
+    }, [fetchForms]);
 
     useEffect(() => {
         void fetchForms(false);
 
-        // Realtime subscription: live sync for forms mutations
+        // Realtime subscription: live sync for forms mutations (initialized once per user)
         let unsubscribe: (() => void) | undefined;
         void (async () => {
             try {
@@ -251,7 +254,7 @@ export default function FormsDashboard() {
                 const channel = `databases.${dbId}.collections.${tableId}.documents`;
                 unsubscribe = client.subscribe(channel, (response: any) => {
                     if (response?.events?.some((event: string) => event.includes('.create') || event.includes('.update') || event.includes('.delete'))) {
-                        void fetchForms(false);
+                        void fetchFormsRef.current(false);
                     }
                 });
             } catch {}
@@ -260,7 +263,7 @@ export default function FormsDashboard() {
         return () => {
             if (unsubscribe) unsubscribe();
         };
-    }, [fetchForms]);
+    }, [user?.$id]);
 
     // Eagerly pull custom workspace forms into local state when switching workspaces
     useEffect(() => {

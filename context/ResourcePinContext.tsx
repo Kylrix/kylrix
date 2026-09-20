@@ -175,6 +175,9 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
     });
   }, [user?.$id]);
 
+  const pinSetsRef = useRef(pinSets);
+  pinSetsRef.current = pinSets;
+
   const isPinned = useCallback(
     (
       resourceType: PinnableResourceType,
@@ -187,10 +190,10 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
         ownerId,
         resourceId,
         rowIsPinned,
-        pinSets[resourceType] ?? EMPTY_SET,
+        pinSetsRef.current[resourceType] ?? EMPTY_SET,
         resourceType,
       ),
-    [user?.$id, pinSets],
+    [user?.$id],
   );
 
   const togglePin = useCallback(

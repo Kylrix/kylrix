@@ -185,9 +185,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [user?.$id, user?.isPulse]);
 
-  // 4. Centralized User Profile & Username Bootstrapping
+  // 4. Centralized User Profile & Username Bootstrapping (triggered once per authenticated user)
+  const userProfileBootstrappedRef = useRef<string | null>(null);
   useEffect(() => {
     if (user?.$id && !user.isPulse) {
+      if (userProfileBootstrappedRef.current === user.$id) return;
+      userProfileBootstrappedRef.current = user.$id;
+
       const initProfile = async () => {
         try {
           const { UsersService } = await import('@/lib/services/users');
@@ -214,7 +218,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       void claimAttribution();
     }
-  }, [user?.$id, user?.isPulse, user]);
+  }, [user?.$id, user?.isPulse]);
 
   useEffect(() => {
     if (initAuthStarted.current) return;
@@ -363,7 +367,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch {
       return null;
     }
-  }, [user]);
+  }, [user?.$id]);
 
   const updatePreferences = useCallback(async (prefs: Record<string, any>) => {
     try {
@@ -378,7 +382,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Failed to update user preferences:', e);
       throw e;
     }
-  }, [user]);
+  }, [user?.prefs]);
 
   const value = useMemo(() => ({
     user,

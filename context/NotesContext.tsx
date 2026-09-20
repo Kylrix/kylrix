@@ -521,7 +521,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     };
   }, [isAuthenticated, user?.$id, fetchBatch]);
 
-  // Initial fetch logic - reset flag on user change or when empty
+  // Initial fetch logic - fetch once on user change or login
   const hasInitiallyFetchedForUserRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -529,18 +529,13 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       if (hasInitiallyFetchedForUserRef.current !== user.$id) {
         hasInitiallyFetchedForUserRef.current = user.$id;
         fetchBatch(true);
-        return;
-      }
-
-      if (notes.length === 0 && !isFetchingRef.current) {
-        fetchBatch(true);
       }
     } else if (!isAuthLoading && !isAuthenticated) {
       setIsLoading(false);
       setHasMore(false);
       hasInitiallyFetchedForUserRef.current = null;
     }
-  }, [isAuthenticated, isAuthLoading, user?.$id, fetchBatch, isCacheLoaded, notes.length]);
+  }, [isAuthenticated, isAuthLoading, user?.$id, fetchBatch, isCacheLoaded]);
 
   const transferComposeSession = useCallback((ephemeralId: string, savedId: string) => {
     const guard = liveEditGuardsRef.current.get(ephemeralId);

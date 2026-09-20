@@ -11,7 +11,6 @@ import { useResourcePins } from '@/context/ResourcePinContext';
 import { toast } from 'react-hot-toast';
 
 import { sortByDeadlineThenUpdatedAt } from '@/lib/sync/local-copy-sync';
-import { EmptyStateAnomalyDetector } from '@/context/NeuralContext';
 
 export default function TaskList() {
   const {
@@ -161,14 +160,7 @@ export default function TaskList() {
 
 
   return (
-    <EmptyStateAnomalyDetector
-      componentName="TaskList"
-      expectedItemKind="goal"
-      itemCount={tasks.length}
-      isLoading={isLoading}
-      onHeal={refreshTasks}
-    >
-      <div className="animate-fadeIn pointer-events-auto w-full">
+    <div className="animate-fadeIn pointer-events-auto w-full">
 
         {tagFilterOptions.length > 0 && (
           <div className="overflow-x-auto scrollbar-none mb-6 p-2 bg-[#000000] border-2 border-white/20 rounded-[24px] flex items-center gap-2 select-none shadow-md">
@@ -332,6 +324,6 @@ export default function TaskList() {
           toast.success('Goal saved locally');
         }}
       />
-    </EmptyStateAnomalyDetector>
+    </>
   );
 }
