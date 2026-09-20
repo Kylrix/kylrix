@@ -88,7 +88,8 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
 
   const startPolling = React.useCallback(() => {
     stopPolling();
-    // Low-frequency polling fallback (every 10 seconds) to protect database load
+    // Realtime WebSocket subscription (realtime.subscribe) handles updates with 0 database reads.
+    // Low-frequency fallback check (every 120s) executes only if WebSocket connection fails.
     pollingRef.current = setInterval(async () => {
       const jwt = await getOrUpdateJWT();
       const res = await checkTelegramConnection(jwt);
@@ -101,7 +102,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
           onCloseRef.current();
         }, 2000);
       }
-    }, 10000);
+    }, 120000);
   }, [getOrUpdateJWT, stopPolling]);
 
   const handleInitialize = React.useCallback(async (force = false) => {

@@ -52,10 +52,10 @@ export function WorkspaceIntelAmbientProvider({ children }: { children: React.Re
       void tick(false);
     }, bootDelay);
 
-    // Recheck every ~25m; internal throttle enforces ≥3h between emissions
+    // Recheck every ~2 hours; internal throttle enforces ≥3h between emissions
     intervalId = setInterval(() => {
       void tick(false);
-    }, 25 * 60 * 1000);
+    }, 120 * 60 * 1000);
 
     return () => {
       cancelled = true;
