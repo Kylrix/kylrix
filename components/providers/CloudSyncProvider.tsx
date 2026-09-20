@@ -54,10 +54,10 @@ export function CloudSyncProvider({ children }: { children: React.ReactNode }) {
     // Initial check on mount
     void checkAndTriggerSync('mount');
 
-    // Interval checker: every 2 minutes, check if overdue
+    // Interval checker: check every 15 minutes when idle
     syncTimerRef.current = setInterval(() => {
       void checkAndTriggerSync('timer');
-    }, 2 * 60 * 1000);
+    }, 15 * 60 * 1000);
 
     // Online & focus reconnect handlers
     const handleOnline = () => void checkAndTriggerSync('online');

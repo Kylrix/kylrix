@@ -52,6 +52,9 @@ const queryCache = new Map<string, { data: unknown; expires: number }>();
 
 async function listRows<T extends Models.Row>(tableId: string, queries: string[] = []): Promise<Models.RowList<T>> {
     const finalQueries = [...queries];
+    if (!finalQueries.some(q => q.includes('limit('))) {
+        finalQueries.push(Query.limit(100));
+    }
     const key = `list:${tableId}:${JSON.stringify(finalQueries)}`;
     return await fetchOptimized(key, async () => {
         try {
