@@ -14,9 +14,6 @@ import {
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
-import { useDrawerState } from '@/components/ui/DrawerStateContext';
-import { useOverlay } from '@/components/ui/OverlayContext';
-import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useFAB } from '@/context/FABContext';
 
 /**
@@ -27,8 +24,6 @@ export function UnifiedBottomBar() {
   const pathname = usePathname();
   const { activeContent, open: openUnified } = useUnifiedDrawer();
   const { mode } = useAppChrome();
-  const { isDrawerOpen } = useDrawerState();
-  const { isOpen: isOverlayOpen } = useOverlay();
   const { config } = useFAB();
 
   const [isScrolling, setIsScrolling] = useState(false);
@@ -133,13 +128,13 @@ export function UnifiedBottomBar() {
 
 
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/app\/notes\/[^/]+$/));
-  const isSpecificPostPage = Boolean(pathname?.match(/^\/connect\/post\/[^/]+$/));
+  const isSpecificPostPage = Boolean(
+    pathname?.match(/^\/connect\/post\/[^/]+$/) || pathname?.startsWith('/moment/')
+  );
   const isSpecificProjectPage = Boolean(pathname?.match(/^\/workspace\/[^/]+$/));
   const isPublicFormPage = Boolean(pathname?.match(/^\/form\/[^/]+$/));
   // Public shared idea pages only (/idea/:id) — do not match app routes
   const isPublicIdeaPage = Boolean(pathname?.match(/^\/idea\/[^/]+$/));
-
-  const contextMenu = useContextMenu();
 
   if (pathname?.startsWith('/accounts')) return null;
 
@@ -148,13 +143,9 @@ export function UnifiedBottomBar() {
     isPublicFormPage ||
     isSpecificPostPage ||
     isPublicIdeaPage ||
-    pathname?.includes('/settings') ||
     activeContent !== 'navbar' ||
     mode === 'compact' ||
-    isDrawerOpen ||
-    isNoteFullPageDetail ||
-    isOverlayOpen ||
-    contextMenu?.isOpen
+    isNoteFullPageDetail
   ) {
     return null;
   }
