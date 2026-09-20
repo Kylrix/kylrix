@@ -73,4 +73,27 @@ describe('mapAppwriteTaskToTask', () => {
     expect(task.labels).toEqual(['feature']);
     expect(task.subtasks).toEqual([{ id: 'sub_1', title: 'Subtask 1', completed: false }]);
   });
+
+  it('maps tasks with default or personal projectId to isWorkspace false', () => {
+    const defaultDoc: any = {
+      $id: 'goal_def',
+      title: 'Default Workspace Goal',
+      userId: 'user_456',
+      projectId: 'default',
+    };
+    const personalDoc: any = {
+      $id: 'goal_pers',
+      title: 'Personal Workspace Goal',
+      userId: 'user_456',
+      projectId: 'personal',
+    };
+
+    const defaultTask = mapAppwriteTaskToTask(defaultDoc as AppwriteTask);
+    const personalTask = mapAppwriteTaskToTask(personalDoc as AppwriteTask);
+
+    expect(defaultTask.projectId).toBe('default');
+    expect(defaultTask.isWorkspace).toBe(false);
+    expect(personalTask.projectId).toBe('personal');
+    expect(personalTask.isWorkspace).toBe(false);
+  });
 });
