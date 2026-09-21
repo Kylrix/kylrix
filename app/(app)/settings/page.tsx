@@ -613,38 +613,49 @@ function SettingsPageInner() {
             </header>
 
             {/* Desktop: fluid canvas — vertical nav + content; Mobile: horizontal pills */}
-            <div className={`grid grid-cols-1 gap-6 items-start ${isRightRailPushing ? 'xl:grid-cols-[220px_1fr] xl:gap-6' : 'lg:grid-cols-[240px_1fr] lg:gap-8'} min-w-0 w-full`}>
+            <div className={`grid grid-cols-1 gap-6 md:gap-8 items-start ${isRightRailPushing ? 'xl:grid-cols-[240px_minmax(0,1fr)]' : 'lg:grid-cols-[260px_minmax(0,1fr)]'} min-w-0 w-full`}>
                 {/* Desktop vertical nav — hidden on mobile, sticky, aware of right rail */}
-                <aside className={`${isRightRailPushing ? 'hidden xl:block' : 'hidden lg:block'} sticky top-[96px] self-start z-10 min-w-0`}>
-                    <nav className="flex flex-col gap-1.5 p-2 bg-[#000000] border-2 border-white/20 rounded-2xl shadow-xl">
-                        {tabsList.map((t) => {
-                            const Icon = t.icon;
-                            const isActive = activeTab === t.id;
-                            return (
-                                <button
-                                    key={t.id}
-                                    type="button"
-                                    onClick={() => setActiveTab(t.id as any)}
-                                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-left w-full cursor-pointer ${
-                                        isActive
-                                            ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]'
-                                            : 'text-white/70 hover:text-white hover:bg-white/[0.06] border-2 border-transparent hover:border-white/20'
-                                    }`}
-                                >
-                                    <Icon size={16} className={isActive ? 'text-white' : 'text-white/60'} />
-                                    <span className="truncate">{t.label}</span>
-                                </button>
-                            );
-                        })}
-                    </nav>
-                    <div className="mt-4 p-3 bg-[#000000] border-2 border-white/20 rounded-xl shadow-md">
-                        <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Tip</p>
-                        <p className="text-xs text-white/70 leading-relaxed mt-1">Right sidebar pushes this layout — no overlay. Resize to see fluid reflow.</p>
+                <aside className={`${isRightRailPushing ? 'hidden xl:block' : 'hidden lg:block'} sticky top-[96px] self-start z-10 min-w-0 w-full`}>
+                    <div className="flex flex-col gap-3 p-3 bg-[#161412] border-2 border-white/15 rounded-2xl shadow-2xl">
+                        <div className="px-2 pt-1 pb-0.5 border-b border-white/10 flex items-center justify-between">
+                            <span className="text-[10px] font-mono font-bold text-white/40 uppercase tracking-widest">
+                                Navigation
+                            </span>
+                            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#6366F1]/10 text-[#818CF8] font-bold border border-[#6366F1]/20">
+                                OpenBricks 4
+                            </span>
+                        </div>
+                        <nav className="flex flex-col gap-1.5">
+                            {tabsList.map((t) => {
+                                const Icon = t.icon;
+                                const isActive = activeTab === t.id;
+                                return (
+                                    <button
+                                        key={t.id}
+                                        type="button"
+                                        onClick={() => setActiveTab(t.id as any)}
+                                        className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-left w-full cursor-pointer ${
+                                            isActive
+                                                ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_16px_rgba(99,102,241,0.4)] font-extrabold'
+                                                : 'text-white/70 hover:text-white hover:bg-white/[0.06] border-2 border-transparent hover:border-white/15'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <Icon size={16} className={isActive ? 'text-white shrink-0' : 'text-white/60 shrink-0'} />
+                                            <span className="truncate">{t.label}</span>
+                                        </div>
+                                        {isActive && (
+                                            <ChevronRight size={14} className="text-white shrink-0" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </nav>
                     </div>
                 </aside>
 
                 {/* Mobile horizontal tabs — visible below aside breakpoint */}
-                <div className={`${isRightRailPushing ? 'xl:hidden' : 'lg:hidden'} col-span-1 -mx-3 md:-mx-4 px-3 md:px-4 flex gap-2 overflow-x-auto pb-3 border-b-2 border-white/20 scrollbar-none select-none snap-x snap-mandatory`}>
+                <div className={`${isRightRailPushing ? 'xl:hidden' : 'lg:hidden'} col-span-1 -mx-3 md:-mx-4 px-3 md:px-4 flex gap-2 overflow-x-auto pb-3 border-b-2 border-white/15 scrollbar-none select-none snap-x snap-mandatory min-w-0 w-full`}>
                     {tabsList.map((t) => {
                         const Icon = t.icon;
                         const isActive = activeTab === t.id;
@@ -656,7 +667,7 @@ function SettingsPageInner() {
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 cursor-pointer snap-start ${
                                     isActive 
                                         ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]' 
-                                        : 'bg-[#000000] hover:bg-[#161412] text-white/70 border-2 border-white/20 hover:border-white/40'
+                                        : 'bg-[#161412] hover:bg-[#201d1a] text-white/70 border-2 border-white/15 hover:border-white/30'
                                 }`}
                             >
                                 <Icon size={14} />
@@ -667,7 +678,7 @@ function SettingsPageInner() {
                 </div>
 
                 {/* Content — fluid, right-rail aware */}
-                <div className="w-full relative min-h-[400px] min-w-0 overflow-x-hidden col-span-1 lg:col-span-1">
+                <div className="w-full relative min-h-[400px] min-w-0 overflow-x-hidden col-span-1">
                 {activeTab === 'teams' && (
                     <TeamsTab />
                 )}
