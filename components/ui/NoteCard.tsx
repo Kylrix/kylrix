@@ -14,6 +14,7 @@ import {
   KeyRound,
   Shield,
   FolderInput,
+  Copy,
 } from 'lucide-react';
 
 import { useContextMenu } from './ContextMenuContext';
@@ -339,6 +340,21 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   const useMemo = React.useMemo; const contextMenuItems = useMemo(() => [
     { label: pinned ? 'Unpin' : 'Pin', icon: <PinIcon size={16} className={pinned ? 'rotate-45 text-[#EC4899]' : ''} />, onClick: () => { handlePinToggle(); } },
+    {
+      label: 'Copy Content',
+      icon: <Copy size={16} className="text-[#3B82F6]" />,
+      onClick: async () => {
+        try {
+          const titleText = liveNote.title || 'Untitled Idea';
+          const bodyText = liveNote.content || '';
+          const fullContent = bodyText ? `${titleText}\n\n${bodyText}` : titleText;
+          await navigator.clipboard.writeText(fullContent);
+          showSuccess('Idea content copied to clipboard');
+        } catch (err: any) {
+          showError(err?.message || 'Failed to copy idea content');
+        }
+      },
+    },
     {
       label: 'Select',
       icon: <CheckSquare size={16} className="text-[#10B981]" />,

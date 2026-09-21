@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell, CheckSquare, Sparkles, Wand2, FolderInput } from 'lucide-react';
+import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell, CheckSquare, Sparkles, Wand2, FolderInput, Copy } from 'lucide-react';
 import { useSelection } from '@/context/SelectionContext';
 import type { Event } from '@/types';
 import { formatTime } from '@/lib/time-util';
@@ -101,6 +101,25 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
         label: pinned ? 'Unpin' : 'Pin',
         icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />,
         onClick: () => void handlePinToggle(),
+      },
+      {
+        label: 'Copy Content',
+        icon: <Copy size={16} className="text-[#3B82F6]" />,
+        onClick: async () => {
+          try {
+            const eventStart = new Date(event.startTime);
+            const eventEnd = new Date(event.endTime);
+            const titleText = event.title || 'Untitled Event';
+            const timeText = `${formatTime(eventStart, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })} - ${formatTime(eventEnd, { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+            const locText = event.location ? `Location: ${event.location}` : '';
+            const descText = event.description || '';
+            const fullContent = [titleText, timeText, locText, descText].filter(Boolean).join('\n\n');
+            await navigator.clipboard.writeText(fullContent);
+            toast.success('Event details copied to clipboard');
+          } catch (err: any) {
+            toast.error(err?.message || 'Failed to copy event details');
+          }
+        },
       },
       {
         label: 'Move to Workspace',
