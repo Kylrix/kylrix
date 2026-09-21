@@ -142,6 +142,35 @@ export function executeNotificationAction(
     }
   }
 
+  // C2) Form activation (if path starts with form/forms)
+  if (routePrefix === 'form' || routePrefix === 'forms') {
+    const formId = targetId;
+    if (formId) {
+      let overlayOpened = false;
+      try {
+        const FormDetailComp = require('@/components/forms/FormDetail').FormDetail;
+        if (isWide && ctx.openSidebar && ctx.closeSidebar) {
+          ctx.openSidebar(
+            <FormDetailComp formId={formId} embedded onClose={ctx.closeSidebar} />,
+            `form_${formId}`,
+            { hideHeader: true }
+          );
+          overlayOpened = true;
+        } else if (ctx.openOverlay && ctx.closeOverlay) {
+          ctx.openOverlay(
+            <FormDetailComp formId={formId} embedded onClose={ctx.closeOverlay} />
+          );
+          overlayOpened = true;
+        }
+      } catch {}
+
+      if (!overlayOpened && ctx.router) {
+        ctx.router.push(`/form/${formId}`);
+      }
+      return { handled: true, type: 'form' };
+    }
+  }
+
   // D) Event activation (if path starts with event/events OR if ID is a known event)
   if (knownEvent || routePrefix === 'event' || routePrefix === 'events') {
     const eventId = knownEvent?.id || knownEvent?.$id || targetId;
