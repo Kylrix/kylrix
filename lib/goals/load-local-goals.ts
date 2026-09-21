@@ -70,7 +70,7 @@ function normalizeGoalRow(row: any, userId?: string): Task | null {
     discussionId: row.discussionId || null,
     scheduled: row.scheduled === true || String(row.scheduled) === 'true',
     isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true',
-    isWorkspace: row.isWorkspace === true || String(row.isWorkspace) === 'true' || (Boolean(projectId) && projectId !== 'inbox' && projectId !== 'default' && projectId !== 'personal'),
+    isWorkspace: row.isWorkspace === true || String(row.isWorkspace) === 'true' || row.is_workspace === true || String(row.is_workspace) === 'true' || (Boolean(projectId) && projectId !== 'inbox' && projectId !== 'default' && projectId !== 'personal'),
     dek: row.dek || null,
   } as Task;
 }

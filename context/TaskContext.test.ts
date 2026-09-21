@@ -96,4 +96,20 @@ describe('mapAppwriteTaskToTask', () => {
     expect(personalTask.projectId).toBe('personal');
     expect(personalTask.isWorkspace).toBe(false);
   });
+
+  it('recognizes is_workspace attribute when present on raw doc', () => {
+    const rawDoc: any = {
+      $id: 'goal_is_ws',
+      title: 'Snake Case Workspace Flag Goal',
+      userId: 'user_456',
+      projectId: 'ws_snake',
+      is_workspace: true,
+    };
+
+    const task = mapAppwriteTaskToTask(rawDoc as AppwriteTask);
+
+    expect(task.id).toBe('goal_is_ws');
+    expect(task.projectId).toBe('ws_snake');
+    expect(task.isWorkspace).toBe(true);
+  });
 });

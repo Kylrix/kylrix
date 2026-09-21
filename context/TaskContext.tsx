@@ -95,7 +95,7 @@ function coerceCachedTask(row: any): Task | null {
       discussionId: row.discussionId || null,
       scheduled: row.scheduled === true || String(row.scheduled) === 'true',
       isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true',
-      isWorkspace: row.isWorkspace === true || String(row.isWorkspace) === 'true' || (Boolean(row.projectId) && row.projectId !== 'inbox' && row.projectId !== 'default' && row.projectId !== 'personal'),
+      isWorkspace: row.isWorkspace === true || String(row.isWorkspace) === 'true' || row.is_workspace === true || String(row.is_workspace) === 'true' || (Boolean(row.projectId) && row.projectId !== 'inbox' && row.projectId !== 'default' && row.projectId !== 'personal'),
       dek: row.dek || null,
     } as Task;
   }
@@ -197,7 +197,7 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
     discussionId: raw.discussionId || null,
     scheduled: raw.scheduled === true || String(raw.scheduled) === 'true',
     isAgentic: raw.isAgentic === true || String(raw.isAgentic) === 'true',
-    isWorkspace: raw.isWorkspace === true || String(raw.isWorkspace) === 'true' || (Boolean(projectId) && projectId !== 'inbox' && projectId !== 'default' && projectId !== 'personal'),
+    isWorkspace: raw.isWorkspace === true || String(raw.isWorkspace) === 'true' || raw.is_workspace === true || String(raw.is_workspace) === 'true' || (Boolean(projectId) && projectId !== 'inbox' && projectId !== 'default' && projectId !== 'personal'),
     dek: raw.dek || null,
   };
 };
@@ -1285,25 +1285,32 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     (task: Task, options?: { pending?: boolean }) => {
       if (!task?.id) return;
       const existingTask = tasksRef.current.find((t) => t.id === task.id);
-      const ownerId = task.userId || task.creatorId || existingTask?.userId || existingTask?.creatorId || state.userId || 'guest';
       const isPending = options?.pending !== false;
 
-      const isExplicitWorkspace = typeof task.isWorkspace === 'boolean';
-      const targetIsWorkspace = isExplicitWorkspace
-        ? task.isWorkspace
-        : (existingTask?.isWorkspace ?? (Boolean(task.projectId) && task.projectId !== 'inbox' && task.projectId !== 'default' && task.projectId !== 'personal'));
-      const targetProjectId = task.projectId !== undefined && task.projectId !== null
-        ? (task.projectId && task.projectId !== 'inbox' ? task.projectId : (existingTask?.projectId || 'inbox'))
+      const targetProjectId = task.projectId && task.projectId !== 'inbox'
+        ? task.projectId
         : (existingTask?.projectId || 'inbox');
+      const targetIsWorkspace = Boolean(
+        task.isWorkspace ||
+        existingTask?.isWorkspace ||
+        (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal')
+      );
+
+      const ownerId = (task.userId && task.userId !== 'guest')
+        ? task.userId
+        : (existingTask?.userId || state.userId || 'guest');
+      const creatorId = (task.creatorId && task.creatorId !== 'guest')
+        ? task.creatorId
+        : (existingTask?.creatorId || ownerId);
 
       const mergedGoal: Task = existingTask
         ? {
             ...existingTask,
             ...task,
             projectId: targetProjectId,
-            isWorkspace: Boolean(targetIsWorkspace),
+            isWorkspace: targetIsWorkspace,
             userId: ownerId,
-            creatorId: task.creatorId || existingTask.creatorId || ownerId,
+            creatorId: creatorId,
             subtasks: task.subtasks?.length ? task.subtasks : (existingTask.subtasks || []),
             comments: task.comments?.length ? task.comments : (existingTask.comments || []),
             labels: task.labels?.length ? task.labels : (existingTask.labels || []),
@@ -1311,8 +1318,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           }
         : {
             ...task,
+            projectId: targetProjectId,
+            isWorkspace: targetIsWorkspace,
             userId: ownerId,
-            creatorId: task.creatorId || ownerId,
+            creatorId: creatorId,
             updatedAt: task.updatedAt || new Date(),
           };
 
@@ -1350,12 +1359,21 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       if (syncedGoalRaw) {
         const mapped = mapAppwriteTaskToTask(syncedGoalRaw);
         const existingTask = tasksRef.current.find((t) => t.id === mapped.id);
+        const targetProjectId = mapped.projectId && mapped.projectId !== 'inbox'
+          ? mapped.projectId
+          : (existingTask?.projectId || 'inbox');
+        const targetIsWorkspace = Boolean(
+          mapped.isWorkspace ||
+          existingTask?.isWorkspace ||
+          (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal')
+        );
+
         const mergedGoal: Task = existingTask
           ? {
               ...existingTask,
               ...mapped,
-              projectId: mapped.projectId && mapped.projectId !== 'inbox' ? mapped.projectId : (existingTask.projectId || 'inbox'),
-              isWorkspace: mapped.isWorkspace || existingTask.isWorkspace,
+              projectId: targetProjectId,
+              isWorkspace: targetIsWorkspace,
               userId: mapped.userId && mapped.userId !== 'guest' ? mapped.userId : (existingTask.userId || state.userId || 'guest'),
               creatorId: mapped.creatorId && mapped.creatorId !== 'guest' ? mapped.creatorId : (existingTask.creatorId || state.userId || 'guest'),
               subtasks: mapped.subtasks?.length ? mapped.subtasks : (existingTask.subtasks || []),
