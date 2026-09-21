@@ -217,7 +217,9 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
               backgroundColor: '#161412',
               border: '2px solid rgba(255, 255, 255, 0.15)',
               borderRadius: '16px',
-              overflow: 'hidden'}}
+              overflowX: 'auto',
+              width: '100%',
+              minWidth: 0}}
           >
             <Table size="small">
               <TableHead>
