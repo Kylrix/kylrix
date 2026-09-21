@@ -15,6 +15,7 @@ import {
   FileText,
   CheckSquare,
   FolderInput,
+  Copy,
 } from 'lucide-react';
 import { useSelection } from '@/context/SelectionContext';
 import { Task } from '@/types';
@@ -233,6 +234,24 @@ export default function GoalObjectRow({ task }: Props) {
         icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#A855F7]' : ''} />,
         onClick: () => {
           void handlePinToggle();
+        },
+      },
+      {
+        label: 'Copy Content',
+        icon: <Copy size={16} className="text-[#3B82F6]" />,
+        onClick: async () => {
+          try {
+            const titleText = task.title || 'Untitled Goal';
+            const descText = task.description || (task as any).content || '';
+            const priorityText = task.priority ? `Priority: ${task.priority}` : '';
+            const dueText = due ? `Due: ${due}` : '';
+            const metaLine = [priorityText, dueText].filter(Boolean).join(' | ');
+            const fullContent = [titleText, metaLine, descText].filter(Boolean).join('\n\n');
+            await navigator.clipboard.writeText(fullContent);
+            toast.success('Goal content copied to clipboard');
+          } catch (err: any) {
+            toast.error(err?.message || 'Failed to copy goal content');
+          }
         },
       },
       {

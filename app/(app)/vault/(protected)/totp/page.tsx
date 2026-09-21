@@ -285,6 +285,34 @@ function TOTPCardStable({
       },
       { label: 'Workflows', icon: <Shield size={16} className="text-[#A855F7]" />, onClick: () => setShowWorkflows(true) },
       { label: 'Select', icon: <CheckSquare size={16} className="text-[#10B981]" />, onClick: () => selection.enterSelectMode('totp', totp.$id) },
+      { label: 'Copy Code', icon: <Copy size={16} className="text-[#3B82F6]" />, submenu: [
+          {
+            label: 'Copy Current Code',
+            icon: <Copy size={14} className="text-emerald-500" />,
+            onClick: () => {
+              if (isLockedEncrypted || !displayTotp.secretKey) {
+                toast.error('Unlock vault to copy code');
+                return;
+              }
+              const currentCode = generateTOTP(displayTotp.secretKey, { step: displayTotp.period || 30, digits: displayTotp.digits || 6 });
+              copyToClipboard(currentCode);
+            }
+          },
+          {
+            label: 'Copy Next Code',
+            icon: <Copy size={14} className="text-[#A855F7]" />,
+            onClick: () => {
+              if (isLockedEncrypted || !displayTotp.secretKey) {
+                toast.error('Unlock vault to copy code');
+                return;
+              }
+              const step = displayTotp.period || 30;
+              const nextTime = Date.now() + step * 1000;
+              const nextCode = generateTOTP(displayTotp.secretKey, { step, digits: displayTotp.digits || 6, timestamp: nextTime });
+              copyToClipboard(nextCode);
+            }
+          }
+        ]},
       { label: 'Share Options', icon: <LinkIcon size={16} className="text-emerald-500" />, submenu: [
           { label: 'Share Seed (DEK)', icon: <LinkIcon size={14} />, onClick: handleShareDecryptedKey },
           { label: 'Share Sixty Seconds Only', icon: <LinkIcon size={14} className="text-[#F59E0B]" />, onClick: handleShareSixtySeconds }

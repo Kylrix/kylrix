@@ -14,7 +14,9 @@ import {
     FolderKanban,
     ChevronRight,
     FileSpreadsheet,
-    FolderInput
+    FolderInput,
+    Copy,
+    Code
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
@@ -709,6 +711,65 @@ function FormCard({
 
     const contextMenuItems = [
         { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: () => onTogglePin(form) },
+        {
+            label: 'Copy Form',
+            icon: <Copy size={16} className="text-[#3B82F6]" />,
+            submenu: [
+                {
+                    label: 'Copy as Markdown',
+                    icon: <FileText size={16} />,
+                    onClick: async () => {
+                        try {
+                            const parsedFields = parseSchemaSafe(form.schema);
+                            let md = `# ${form.title || 'Untitled Form'}\n`;
+                            if (form.description) md += `\n${form.description}\n`;
+                            md += `\n## Form Fields\n\n`;
+                            if (Array.isArray(parsedFields) && parsedFields.length > 0) {
+                                parsedFields.forEach((f: any, idx: number) => {
+                                    const fieldLabel = f.label || f.name || `Field ${idx + 1}`;
+                                    const fieldType = f.type || 'text';
+                                    const req = f.required ? ' (Required)' : '';
+                                    md += `- **${fieldLabel}** [${fieldType}]${req}\n`;
+                                    if (f.description) md += `  *${f.description}*\n`;
+                                    if (Array.isArray(f.options) && f.options.length > 0) {
+                                        f.options.forEach((opt: any) => {
+                                            const optLabel = typeof opt === 'string' ? opt : opt.label || opt.value;
+                                            md += `  - ${optLabel}\n`;
+                                        });
+                                    }
+                                });
+                            } else {
+                                md += `*No fields defined.*\n`;
+                            }
+                            await navigator.clipboard.writeText(md);
+                            toast.success('Form copied as Markdown');
+                        } catch (err: any) {
+                            toast.error(err?.message || 'Failed to copy form as Markdown');
+                        }
+                    }
+                },
+                {
+                    label: 'Copy as JSON',
+                    icon: <Code size={16} className="text-[#10B981]" />,
+                    onClick: async () => {
+                        try {
+                            const parsedFields = parseSchemaSafe(form.schema);
+                            const jsonPayload = {
+                                id: form.$id,
+                                title: form.title || 'Untitled Form',
+                                description: form.description || '',
+                                status: form.status,
+                                fields: parsedFields,
+                            };
+                            await navigator.clipboard.writeText(JSON.stringify(jsonPayload, null, 2));
+                            toast.success('Form copied as JSON');
+                        } catch (err: any) {
+                            toast.error(err?.message || 'Failed to copy form as JSON');
+                        }
+                    }
+                }
+            ]
+        },
         {
             label: 'Move to Workspace',
             icon: <FolderInput size={16} className="text-[#6366F1]" />,

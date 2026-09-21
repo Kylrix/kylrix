@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Credentials } from '@/lib/appwrite/types';
-import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Wand2, Share2, ShieldCheck, FileCode2, FolderInput } from 'lucide-react';
+import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Wand2, Share2, ShieldCheck, FileCode2, FolderInput, Copy } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
@@ -284,13 +284,60 @@ export default function CredentialItem({
     { label: "Copy Public Link (DEK)", icon: <Share2 size={16} className="text-emerald-500" />, onClick: handleShareLink },
     ...accessControlItems,
     { 
-        label: "Identity", 
-        icon: <User size={16} />, 
-        submenu: [
-            { label: "Copy Username", icon: <User size={16} />, onClick: () => handleCopy(credential.username || "") },
-            { label: "Copy Secret", icon: <Lock size={16} className="text-[#10B981]" />, onClick: () => handleCopy(credential.password || "") },
-            { label: "Copy URL", icon: <ExternalLink size={16} />, onClick: () => handleCopy(credential.url || "") },
-        ]
+        label: "Copy Content",
+        icon: <Copy size={16} className="text-[#3B82F6]" />,
+        submenu: (() => {
+          const sub: any[] = [];
+          const dName = (displayCredential as any).name || credential.name;
+          const dUser = (displayCredential as any).username || credential.username;
+          const dPass = (displayCredential as any).password || credential.password;
+          const dUrl = (displayCredential as any).url || credential.url;
+          const dNotes = (displayCredential as any).notes || credential.notes;
+
+          if (dName && !looksEncrypted(dName)) {
+            sub.push({ label: `Name (${dName.length > 18 ? dName.slice(0, 15) + '...' : dName})`, icon: <User size={16} />, onClick: () => handleCopy(dName) });
+          }
+          if (dUser && !looksEncrypted(dUser)) {
+            sub.push({ label: `Username (${dUser.length > 18 ? dUser.slice(0, 15) + '...' : dUser})`, icon: <User size={16} />, onClick: () => handleCopy(dUser) });
+          }
+          if (dPass && !looksEncrypted(dPass)) {
+            sub.push({ label: "Password / Secret Key", icon: <Lock size={16} className="text-[#10B981]" />, onClick: () => handleCopy(dPass) });
+          }
+          if (dUrl && !looksEncrypted(dUrl)) {
+            sub.push({ label: `URL (${dUrl.length > 18 ? dUrl.slice(0, 15) + '...' : dUrl})`, icon: <ExternalLink size={16} />, onClick: () => handleCopy(dUrl) });
+          }
+          if (dNotes && !looksEncrypted(dNotes)) {
+            sub.push({ label: "Notes", icon: <Copy size={16} />, onClick: () => handleCopy(dNotes) });
+          }
+
+          // Custom / Env fields
+          try {
+            const cfRaw = (displayCredential as any).customFields || credential.customFields;
+            if (cfRaw && !looksEncrypted(String(cfRaw))) {
+              const parsed = typeof cfRaw === 'string' ? JSON.parse(cfRaw) : cfRaw;
+              if (Array.isArray(parsed)) {
+                parsed.forEach((f: any, idx: number) => {
+                  const key = f.key || f.label || `Field ${idx + 1}`;
+                  const val = f.value || f.val || '';
+                  if (val) {
+                    sub.push({ label: `${key}`, icon: <FileCode2 size={16} className="text-[#10B981]" />, onClick: () => handleCopy(val) });
+                  }
+                });
+              } else if (parsed && typeof parsed === 'object') {
+                Object.entries(parsed).forEach(([k, v]) => {
+                  if (v !== undefined && v !== null && String(v)) {
+                    sub.push({ label: `${k}`, icon: <FileCode2 size={16} className="text-[#10B981]" />, onClick: () => handleCopy(String(v)) });
+                  }
+                });
+              }
+            }
+          } catch {}
+
+          if (sub.length === 0) {
+            sub.push({ label: "Copy Full Record", icon: <Copy size={16} />, onClick: () => handleCopy(JSON.stringify(displayCredential, null, 2)) });
+          }
+          return sub;
+        })()
     },
     { 
         label: "Protection", 
