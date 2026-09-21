@@ -41,6 +41,7 @@ import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
 import { FormResponsesWorkflowDrawer } from '@/components/forms/FormResponsesWorkflowDrawer';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 function formatDateSafe(val: unknown, fallback = 'Recently'): string {
     if (!val) return fallback;
