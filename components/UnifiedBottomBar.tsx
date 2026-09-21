@@ -136,9 +136,30 @@ export function UnifiedBottomBar() {
   // Public shared idea pages only (/idea/:id) — do not match app routes
   const isPublicIdeaPage = Boolean(pathname?.match(/^\/idea\/[^/]+$/));
 
-  if (pathname?.startsWith('/accounts')) return null;
+  // The bottom navigation bar only belongs on: idea (/app), goals (/goals), and secrets (/vault).
+  // Other pages (e.g. settings, forms, totp, events) rely on top tabs or back buttons.
+  const isIdeaRoute = Boolean(
+    (pathname === '/app' || pathname?.startsWith('/app/') || pathname === '/idea') &&
+    !isNoteFullPageDetail &&
+    !isPublicIdeaPage
+  );
+
+  const isGoalsRoute = Boolean(
+    pathname === '/goals' ||
+    pathname?.startsWith('/goals/') ||
+    pathname?.startsWith('/goal/')
+  );
+
+  const isSecretsRoute = Boolean(
+    (pathname === '/vault' || pathname?.startsWith('/vault/')) &&
+    !pathname?.startsWith('/vault/totp') &&
+    !pathname?.startsWith('/vault/reset')
+  );
+
+  const isAllowedSurface = isIdeaRoute || isGoalsRoute || isSecretsRoute;
 
   if (
+    !isAllowedSurface ||
     isSpecificProjectPage ||
     isPublicFormPage ||
     isSpecificPostPage ||
