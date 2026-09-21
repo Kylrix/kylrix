@@ -2059,7 +2059,7 @@ export const ApiResources = {
 
     const isPublic = body.isPublic !== undefined ? Boolean(body.isPublic) : true;
     const isGuest = body.isGuest !== undefined ? Boolean(body.isGuest) : true;
-    const isMultiple = body.isMultiple !== undefined ? Boolean(body.isMultiple) : true;
+    const isMultiple = Boolean(body.isMultiple);
 
     const row = await tables.createRow({
       databaseId: FLOW_DB,

@@ -8,7 +8,6 @@ import { getEnabledGhostFields, resolveGhostFields } from '@/lib/forms/ghost-fie
 import { GhostFieldsNotice } from '@/components/forms/GhostFieldsNotice';
 import { secureUploadFile, createthreadNoteChat } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import UserSearch from '@/components/UserSearch';
 import { UsersService } from '@/lib/services/users';
@@ -502,8 +501,6 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     {visibleFields.length > 0 && !submitted ? `${currentStep + 1} OF ${visibleFields.length}` : ''}
                 </span>
             </div>
-
-            <SharedWorkspaceBar objectType="form" />
 
             {/* Main Content card */}
             <div className="max-w-2xl w-full mx-auto px-6 py-8 flex-1 flex flex-col justify-center relative z-10">
