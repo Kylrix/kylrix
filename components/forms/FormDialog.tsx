@@ -242,7 +242,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const [status, setStatus] = useState<'draft' | 'published' | 'archived'>('draft');
   const [fields, setFields] = useState<any[]>([]);
   const [enabledGhostFields, setEnabledGhostFields] = useState<string[]>([]);
-  const [isMultiple, setIsMultiple] = useState<boolean>(true);
+  const [isMultiple, setIsMultiple] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isRestored, setIsRestored] = useState(false);
 
@@ -359,7 +359,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         setIsRestored(true);
         setHasUnsavedChanges(true);
       } else if (form) {
-        setIsMultiple(form.isMultiple !== false);
+        setIsMultiple(Boolean(form.isMultiple));
         const savedDraft = await DraftsService.getDraft(form.$id);
         if (savedDraft) {
           setTitle(savedDraft.title || '');
@@ -388,7 +388,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         setTitle('');
         setDescription('');
         setStatus('draft');
-        setIsMultiple(true);
+        setIsMultiple(false);
         setFields([{ id: 'field_1', label: 'Full Name', type: 'text', required: true }]);
         setEnabledGhostFields([]);
         setIsRestored(false);

@@ -335,7 +335,7 @@ export const FormsService = {
             submissionPermissions.push(Permission.read(Role.user(submitterId)));
         }
 
-        const isMultiple = (form as any).isMultiple !== false;
+        const isMultiple = Boolean((form as any).isMultiple);
 
         // CHECK FOR EXISTING DRAFT TO CONVERT
         let submission;
