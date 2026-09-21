@@ -938,11 +938,34 @@ export const autonomicSyncEngine = {
         } else if (kind === 'goal') {
           const { tasks: taskApi } = await import('@/lib/kylrixflow');
           const { mapAppwriteTaskToTask } = await import('@/context/TaskContext');
+          const { getLiveGoalForSync } = await import('@/lib/sync/pending-sync-bridge');
           const remoteDoc = await taskApi.get(targetId).catch(() => null);
           if (remoteDoc && !this.isPending(targetId)) {
             const mapped = mapAppwriteTaskToTask(remoteDoc);
-            LocalEngine.snapshotBaseline(targetId, mapped);
-            if (onRefreshed) onRefreshed(mapped);
+            const liveGoal = getLiveGoalForSync(targetId);
+            const targetProjectId = mapped.projectId && mapped.projectId !== 'inbox'
+              ? mapped.projectId
+              : (liveGoal?.projectId || 'inbox');
+            const targetIsWorkspace = Boolean(
+              mapped.isWorkspace ||
+              liveGoal?.isWorkspace ||
+              (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal')
+            );
+            const mergedGoal = liveGoal
+              ? {
+                  ...liveGoal,
+                  ...mapped,
+                  projectId: targetProjectId,
+                  isWorkspace: targetIsWorkspace,
+                  userId: mapped.userId && mapped.userId !== 'guest' ? mapped.userId : (liveGoal.userId || 'guest'),
+                  creatorId: mapped.creatorId && mapped.creatorId !== 'guest' ? mapped.creatorId : (liveGoal.creatorId || 'guest'),
+                  subtasks: mapped.subtasks?.length ? mapped.subtasks : (liveGoal.subtasks || []),
+                  comments: mapped.comments?.length ? mapped.comments : (liveGoal.comments || []),
+                  labels: mapped.labels?.length ? mapped.labels : (liveGoal.labels || []),
+                }
+              : mapped;
+            LocalEngine.snapshotBaseline(targetId, mergedGoal);
+            if (onRefreshed) onRefreshed(mergedGoal);
           }
         }
       } catch {
