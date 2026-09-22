@@ -26,7 +26,7 @@
 ## TL;DR
 
 - **Kylrix** — open-source, local-first workspace for notes, goals, workspaces, chat, vault, and agents.
-- **CLI & MCP Bridge** — `npx @kylrix/cli login` · [CLI Docs](docs/cli.md)
+- **CLI & MCP Bridge** — `npm i -g @kylrix/cli` · [CLI Docs](docs/cli.md)
 - **Use the cloud** — [kylrix.space](https://www.kylrix.space)
 - **Self-host** — `curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash` → app on `:5003`
 - **Wire an agent** — mint a [PAT](https://www.kylrix.space/settings?tab=developers) (your workspace) or [agent key](https://www.kylrix.space/settings?tab=agents) (the agent's own workspace), then `npx skills add kylrix/kylrix --skill mcp --skill api --skill agents`
@@ -35,19 +35,29 @@
 
 ## ⚡ CLI & Agent Bridge (`@kylrix/cli`)
 
-Run Kylrix directly from your terminal with local-first SQLite storage or connect your cloud workspace:
+Install once for sovereign offline local-first execution (powered by embedded SQLite):
+
+```bash
+# Install globally
+npm install -g @kylrix/cli
+# or: pnpm add -g @kylrix/cli
+```
+
+Then run commands directly:
 
 ```bash
 # 1-Click web login (or use offline without an account)
-npx @kylrix/cli login
+kylrix login
 
 # Manage sovereign ideas, goals, encrypted vault & 2FA TOTP
-npx @kylrix/cli ideas list
-npx @kylrix/cli vault unlock
+kylrix ideas list
+kylrix vault unlock
 
 # Start Model Context Protocol (MCP) server for Cursor, Windsurf, Claude Code
-npx @kylrix/cli mcp
+kylrix mcp
 ```
+
+*(You can also run without installation via `npx @kylrix/cli`)*
 
 > 📖 See [**`docs/cli.md`**](docs/cli.md) for the complete command reference and SDK documentation.
 

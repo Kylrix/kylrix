@@ -6,28 +6,26 @@ The official command-line interface, local-first SQLite engine, Model Context Pr
 
 ## ⚡ 30-Second Quickstart
 
-### 1. Run directly with `npx` (zero install)
-```bash
-# 1-Click Web Authorization
-npx @kylrix/cli login
-
-# Start using ideas & goals
-npx @kylrix/cli ideas create "Launch Kylrix v1"
-npx @kylrix/cli ideas list
-
-# Start stdio MCP Server for AI coding agents (Cursor / Claude / Windsurf)
-npx @kylrix/cli mcp
-```
-
-### 2. Install globally (optional)
+### 1. Install Globally (Offline Local-First)
 ```bash
 npm install -g @kylrix/cli
-# or
-pnpm add -g @kylrix/cli
-
-# Use directly
-kylrix --help
+# or: pnpm add -g @kylrix/cli
 ```
+
+### 2. Run Directly from Terminal
+```bash
+# 1-Click Web Authorization (or use offline without an account)
+kylrix login
+
+# Start using ideas & goals
+kylrix ideas create "Launch Kylrix v1"
+kylrix ideas list
+
+# Start stdio MCP Server for AI coding agents (Cursor / Claude / Windsurf)
+kylrix mcp
+```
+
+*(Zero-install alternative: run with `npx @kylrix/cli <command>`)*
 
 ---
 

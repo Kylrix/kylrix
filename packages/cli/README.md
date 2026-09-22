@@ -5,52 +5,53 @@ Official Command-Line Interface (CLI), embedded SQLite local-first engine, Model
 ---
 
 ## ⚡ Quick Start
+ 
+### 1. Install Globally (Offline Local-First)
+```bash
+npm install -g @kylrix/cli
+# or: pnpm add -g @kylrix/cli
+```
 
-### 1-Click Web Login
+### 2. 1-Click Web Login
 Authenticate instantly without copying or pasting tokens (or run offline without an account):
 ```bash
-npx @kylrix/cli login
+kylrix login
 ```
 The CLI displays your instant code, automatically opens `https://www.kylrix.space/login/KYL-XXXX` in your browser, and logs in immediately when approved.
 
-### Run with `npx`
+### 3. Direct Offline & Cloud Commands
 ```bash
 # Manage Workspaces
-npx kylrix workspaces list
-npx kylrix workspaces switch <workspace-id>
+kylrix workspaces list
+kylrix workspaces switch <workspace-id>
 
 # Manage Sovereign Ideas & Articles
-npx kylrix ideas list
-npx kylrix ideas create "Q4 System Architecture" --content "New modular flow..."
-npx kylrix ideas articles
+kylrix ideas list
+kylrix ideas create "Q4 System Architecture" --content "New modular flow..."
+kylrix ideas articles
 
 # Manage Goals & Habits
-npx kylrix goals list
-npx kylrix goals update <goal-id> --progress 75
+kylrix goals list
+kylrix goals update <goal-id> --progress 75
 
 # Bitwarden-Style Encrypted Vault & Project .env
-npx kylrix vault unlock
-npx kylrix vault list --decrypt
-npx kylrix vault get <secret-id> --format env --pure > .env
-npx kylrix vault lock
+kylrix vault unlock
+kylrix vault list --decrypt
+kylrix vault get <secret-id> --format env --pure > .env
+kylrix vault lock
 
 # Sovereign 2FA TOTP Authenticator
-npx kylrix totp list
-npx kylrix totp code <account-id>
+kylrix totp list
+kylrix totp code <account-id>
 
 # Global Search
-npx kylrix search "database migration"
+kylrix search "database migration"
 
 # Model Context Protocol (MCP) Stdio Server for Cursor / Claude Code / Windsurf
-npx kylrix mcp
+kylrix mcp
 ```
 
-### Install globally
-```bash
-npm install -g kylrix
-# or
-pnpm add -g kylrix
-```
+*(Zero-install alternative: replace `kylrix` with `npx @kylrix/cli`)*
 
 ---
 
