@@ -1,5 +1,28 @@
 import { MCP_ID_INPUT, MCP_LIMIT_INPUT, mcpItemsOutput } from './common';
 
+export interface ChatRecord {
+  id: string;
+  type: string | null;
+  name: string | null;
+  participants?: string[];
+  participantCount?: number | null;
+  lastMessageAt?: string | null;
+  isEncrypted: boolean;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+
+export interface ChatMessageRecord {
+  id: string;
+  conversationId: string | null;
+  senderId: string | null;
+  createdAt: string | null;
+  isEncrypted: boolean;
+  hasCiphertext: boolean;
+  content: string | null;
+  contentPreview: string | null;
+}
+
 export function shapeChatListItem(row: Record<string, unknown>) {
   const r = row as any;
   return {
@@ -9,6 +32,8 @@ export function shapeChatListItem(row: Record<string, unknown>) {
     participantCount: r.participantCount ?? (Array.isArray(r.participants) ? r.participants.length : null),
     lastMessageAt: r.lastMessageAt || null,
     isEncrypted: !!r.isEncrypted,
+    updatedAt: r.$updatedAt || r.updatedAt || r.lastMessageAt || null,
+    createdAt: r.$createdAt || r.createdAt || null,
   };
 }
 

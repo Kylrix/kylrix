@@ -1,5 +1,37 @@
 import { MCP_ID_INPUT, MCP_WORKSPACE_LIMIT_INPUT, mcpItemsOutput } from './common';
 
+export interface FormRecord {
+  id: string;
+  userId?: string | null;
+  title: string;
+  description?: string | null;
+  status?: string | null;
+  fieldCount?: number;
+  schema?: any;
+  settings?: any;
+  fields?: any[];
+  ghostFields?: any[];
+  isPublic?: boolean;
+  isGuest?: boolean;
+  isMultiple?: boolean;
+  isWorkspace?: boolean;
+  projectId?: string | null;
+  workspaceId?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+
+export interface FormCreateInput {
+  title: string;
+  description?: string;
+  schema?: any;
+  settings?: any;
+  workspaceId?: string;
+  projectId?: string;
+  isPublic?: boolean;
+  isGuest?: boolean;
+}
+
 export function shapeFormListItem(row: Record<string, unknown>) {
   const r = row as any;
   let fieldCount = 0;

@@ -1,5 +1,18 @@
 import { MCP_ID_INPUT, MCP_LIMIT_INPUT, mcpItemsOutput } from './common';
 
+export interface TagRecord {
+  id: string;
+  name: string;
+  color: string | null;
+  description?: string;
+  usageCount?: number;
+}
+
+export interface TagCreateInput {
+  name: string;
+  color?: string;
+}
+
 const TAG_LIST_ITEM_SCHEMA = {
   type: 'object',
   properties: {

@@ -1,7 +1,7 @@
 import { exec } from 'node:child_process';
 import pc from 'picocolors';
 import { getClient } from '../client';
-import { loadConfig, saveConfig, clearConfig, resolveEnvironment } from '../config';
+import { saveConfig, clearConfig, resolveEnvironment } from '../config';
 import { printError, printInfo, printJson, printSuccess } from '../formatter';
 
 function tryOpenBrowser(url: string) {

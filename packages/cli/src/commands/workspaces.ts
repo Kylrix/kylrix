@@ -60,8 +60,8 @@ export async function createWorkspaceCommand(
   try {
     const client = requireAuthClient(opts);
     const item = await client.workspaces.create({
-      name,
-      description: opts.description,
+      title: name,
+      summary: opts.description,
       isAgentic: opts.agentic,
     });
 
@@ -70,7 +70,7 @@ export async function createWorkspaceCommand(
       return;
     }
 
-    printSuccess(`Created workspace "${pc.bold(item.name)}" (ID: ${item.id})`);
+    printSuccess(`Created workspace "${pc.bold(item.title || item.name || item.id)}" (ID: ${item.id})`);
   } catch (err: any) {
     printError('Failed to create workspace', err);
     process.exit(1);

@@ -73,13 +73,15 @@ export async function createNoteCommand(
 ) {
   try {
     const client = requireAuthClient(opts);
-    const tags = opts.tags ? opts.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined;
+    const tags = opts.tags ? opts.tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
+    if (opts.category) {
+      tags.push(`category:${opts.category}`);
+    }
     const item = await client.notes.create({
       title,
       content: opts.content || '',
-      category: opts.category,
       workspaceId: opts.workspace,
-      tags,
+      tags: tags.length > 0 ? tags : undefined,
     });
 
     if (opts.json) {
@@ -110,7 +112,6 @@ export async function updateNoteCommand(
     const item = await client.notes.update(id, {
       title: opts.title,
       content: opts.content,
-      category: opts.category,
     });
 
     if (opts.json) {

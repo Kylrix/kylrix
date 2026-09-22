@@ -1,7 +1,7 @@
 import pc from 'picocolors';
 import { requireAuthClient } from '../client';
 import { resolveEnvironment } from '../config';
-import { printError, printJson, printSuccess } from '../formatter';
+import { printError, printJson } from '../formatter';
 
 export async function shareCommand(
   kind: string,

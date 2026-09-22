@@ -3,6 +3,19 @@ import { mcpItemsOutput } from './common';
 export const TRASH_KINDS = ['note', 'goal', 'form', 'event'] as const;
 export type TrashKind = (typeof TRASH_KINDS)[number];
 
+export interface TrashRecord {
+  id: string;
+  kind: string;
+  title: string;
+  updatedAt?: string | null;
+  deletedAt?: string | null;
+  summary?: string;
+  status?: string;
+  itemType?: string;
+  username?: string | null;
+  url?: string | null;
+}
+
 function trashTimestamps(row: Record<string, unknown>) {
   const r = row as any;
   const ts = r.$updatedAt || r.updatedAt || null;

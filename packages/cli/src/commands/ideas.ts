@@ -81,20 +81,22 @@ export async function createIdeaCommand(
 ) {
   try {
     const isAuthed = hasAuth(opts);
-    const tags = opts.tags ? opts.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined;
+    const tags = opts.tags ? opts.tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
+    if (opts.category) {
+      tags.push(`category:${opts.category}`);
+    }
     const item = isAuthed
       ? await getClient(opts).ideas.create({
           title,
           content: opts.content || '',
-          category: opts.category,
           workspaceId: opts.workspace,
-          tags,
+          tags: tags.length > 0 ? tags : undefined,
         })
       : LocalStore.createIdea({
           title,
           content: opts.content,
           category: opts.category,
-          tags,
+          tags: tags.length > 0 ? tags : undefined,
         });
 
     if (opts.json) {
@@ -126,7 +128,6 @@ export async function updateIdeaCommand(
       ? await getClient(opts).ideas.update(id, {
           title: opts.title,
           content: opts.content,
-          category: opts.category,
         })
       : LocalStore.updateIdea(id, {
           title: opts.title,

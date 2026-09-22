@@ -7,7 +7,7 @@ import {
   executeUpgrade,
   fetchLatestVersion,
 } from '../updater';
-import { printError, printJson, printSuccess } from '../formatter';
+import { printError, printJson } from '../formatter';
 
 export async function updateCommand(opts: { json?: boolean; force?: boolean }) {
   if (opts.json) {

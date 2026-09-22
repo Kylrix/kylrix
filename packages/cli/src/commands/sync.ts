@@ -27,11 +27,14 @@ export async function syncCommand(opts: { url?: string; token?: string; workspac
     // Sync local ideas
     for (const idea of localIdeas) {
       if (idea.isLocal) {
+        const tags = [...(idea.tags || [])];
+        if (idea.category) {
+          tags.push(`category:${idea.category}`);
+        }
         await client.ideas.create({
           title: idea.title,
           content: idea.content,
-          category: idea.category,
-          tags: idea.tags,
+          tags: tags.length > 0 ? tags : undefined,
           workspaceId: opts.workspace,
         });
         syncedIdeas++;
@@ -44,9 +47,7 @@ export async function syncCommand(opts: { url?: string; token?: string; workspac
         await client.goals.create({
           title: goal.title,
           description: goal.description,
-          targetValue: goal.targetValue,
-          unit: goal.unit,
-          status: goal.status,
+          status: (goal.status as any) || 'todo',
           workspaceId: opts.workspace,
         });
         syncedGoals++;

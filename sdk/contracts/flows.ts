@@ -11,6 +11,23 @@ export const flowCreateInputZod = z.object({
   id: z.string().optional(),
 });
 
+export type FlowCreateInput = z.infer<typeof flowCreateInputZod>;
+
+export interface FlowRecord {
+  id: string;
+  name: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  isPublic: boolean;
+  steps: any[];
+  installCount: number;
+  reviewStatus: string | null;
+  version: number;
+  contentHash: string | null;
+  createdAt?: string | null;
+}
+
 export function resolveFlowCreateFields(body: Record<string, unknown>) {
   const name = String(body.name || body.title || '').trim();
   if (!name) {

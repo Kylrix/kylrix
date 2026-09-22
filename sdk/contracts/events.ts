@@ -12,13 +12,16 @@ export const eventCreateInputZod = z.object({
 });
 
 export const eventUpdateInputZod = z.object({
-  id: z.string().min(1),
+  id: z.string().min(1).optional(),
   title: z.string().min(1).optional(),
   description: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
   location: z.string().optional(),
 });
+
+export type EventCreateInput = z.infer<typeof eventCreateInputZod>;
+export type EventUpdateInput = z.infer<typeof eventUpdateInputZod>;
 
 export interface EventRecord {
   id: string;

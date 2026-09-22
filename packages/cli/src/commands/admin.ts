@@ -1,6 +1,6 @@
 import pc from 'picocolors';
 import { requireAuthClient } from '../client';
-import { printError, printJson, printSuccess } from '../formatter';
+import { printError, printJson } from '../formatter';
 
 export async function adminStatusCommand(opts: { url?: string; token?: string; json?: boolean }) {
   try {

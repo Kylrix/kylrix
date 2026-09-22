@@ -90,9 +90,7 @@ export async function createGoalCommand(
       ? await getClient(opts).goals.create({
           title,
           description: opts.description,
-          targetValue,
-          unit: opts.unit || '%',
-          status: opts.status || 'not_started',
+          status: (opts.status as any) || 'todo',
           workspaceId: opts.workspace,
         })
       : LocalStore.createGoal({
@@ -132,8 +130,7 @@ export async function updateGoalCommand(
     const item = isAuthed
       ? await getClient(opts).goals.update(id, {
           title: opts.title,
-          status: opts.status,
-          currentValue,
+          status: opts.status as any,
         })
       : LocalStore.updateGoal(id, {
           title: opts.title,

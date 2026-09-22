@@ -1,11 +1,9 @@
 import * as readline from 'node:readline';
 import { getClient } from '../client';
-import { resolveEnvironment } from '../config';
 import { MCP_TOOL_ENTRIES } from '@/lib/mcp/tool-catalog';
 
 export async function runStdioMcpServer(opts: { url?: string; token?: string; workspace?: string }) {
   const client = getClient(opts);
-  const env = resolveEnvironment(opts);
 
   // Stdio transport: read from stdin, write to stdout
   const rl = readline.createInterface({

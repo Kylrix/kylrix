@@ -51,7 +51,9 @@ export type WorkspaceUpdateInput = z.infer<typeof workspaceUpdateInputZod>;
 export interface WorkspaceRecord {
   id: string;
   title: string;
+  name?: string;
   summary: string | null;
+  description?: string | null;
   visibility: string | null;
   isAgentic: boolean;
   isShared?: boolean;
@@ -65,10 +67,14 @@ export function shapeWorkspace(
   extras?: Pick<WorkspaceRecord, 'isShared' | 'role'>,
 ): WorkspaceRecord {
   const r = row as any;
+  const title = r.title || r.name || 'Untitled';
+  const summary = r.summary ?? r.description ?? null;
   return {
     id: String(r.$id || r.id),
-    title: r.title || r.name || 'Untitled',
-    summary: r.summary ?? r.description ?? null,
+    title,
+    name: title,
+    summary,
+    description: summary,
     visibility: r.visibility ?? null,
     isAgentic: Boolean(r.isAgentic),
     ...(extras?.isShared !== undefined ? { isShared: extras.isShared } : {}),

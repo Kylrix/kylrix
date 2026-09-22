@@ -841,15 +841,15 @@ async function createWorkspaceCommand(name, opts) {
   try {
     const client = requireAuthClient(opts);
     const item = await client.workspaces.create({
-      name,
-      description: opts.description,
+      title: name,
+      summary: opts.description,
       isAgentic: opts.agentic
     });
     if (opts.json) {
       printJson(item);
       return;
     }
-    printSuccess(`Created workspace "${pc3.bold(item.name)}" (ID: ${item.id})`);
+    printSuccess(`Created workspace "${pc3.bold(item.title || item.name || item.id)}" (ID: ${item.id})`);
   } catch (err) {
     printError("Failed to create workspace", err);
     process.exit(1);
@@ -1840,18 +1840,20 @@ async function getIdeaCommand(id, opts) {
 async function createIdeaCommand(title, opts) {
   try {
     const isAuthed = hasAuth(opts);
-    const tags2 = opts.tags ? opts.tags.split(",").map((t) => t.trim()).filter(Boolean) : void 0;
+    const tags2 = opts.tags ? opts.tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
+    if (opts.category) {
+      tags2.push(`category:${opts.category}`);
+    }
     const item = isAuthed ? await getClient(opts).ideas.create({
       title,
       content: opts.content || "",
-      category: opts.category,
       workspaceId: opts.workspace,
-      tags: tags2
+      tags: tags2.length > 0 ? tags2 : void 0
     }) : LocalStore.createIdea({
       title,
       content: opts.content,
       category: opts.category,
-      tags: tags2
+      tags: tags2.length > 0 ? tags2 : void 0
     });
     if (opts.json) {
       printJson(item);
@@ -1868,8 +1870,7 @@ async function updateIdeaCommand(id, opts) {
     const isAuthed = hasAuth(opts);
     const item = isAuthed ? await getClient(opts).ideas.update(id, {
       title: opts.title,
-      content: opts.content,
-      category: opts.category
+      content: opts.content
     }) : LocalStore.updateIdea(id, {
       title: opts.title,
       content: opts.content,
@@ -1986,9 +1987,7 @@ async function createGoalCommand(title, opts) {
     const item = isAuthed ? await getClient(opts).goals.create({
       title,
       description: opts.description,
-      targetValue,
-      unit: opts.unit || "%",
-      status: opts.status || "not_started",
+      status: opts.status || "todo",
       workspaceId: opts.workspace
     }) : LocalStore.createGoal({
       title,
@@ -2013,8 +2012,7 @@ async function updateGoalCommand(id, opts) {
     const currentValue = opts.currentValue !== void 0 ? parseFloat(opts.currentValue) : void 0;
     const item = isAuthed ? await getClient(opts).goals.update(id, {
       title: opts.title,
-      status: opts.status,
-      currentValue
+      status: opts.status
     }) : LocalStore.updateGoal(id, {
       title: opts.title,
       status: opts.status,
@@ -3878,11 +3876,14 @@ async function syncCommand(opts) {
   try {
     for (const idea of localIdeas) {
       if (idea.isLocal) {
+        const tags2 = [...idea.tags || []];
+        if (idea.category) {
+          tags2.push(`category:${idea.category}`);
+        }
         await client.ideas.create({
           title: idea.title,
           content: idea.content,
-          category: idea.category,
-          tags: idea.tags,
+          tags: tags2.length > 0 ? tags2 : void 0,
           workspaceId: opts.workspace
         });
         syncedIdeas++;
@@ -3893,9 +3894,7 @@ async function syncCommand(opts) {
         await client.goals.create({
           title: goal.title,
           description: goal.description,
-          targetValue: goal.targetValue,
-          unit: goal.unit,
-          status: goal.status,
+          status: goal.status || "todo",
           workspaceId: opts.workspace
         });
         syncedGoals++;
@@ -18637,7 +18636,7 @@ var noteCreateInputZod = external_exports.object({
   tags: external_exports.array(external_exports.string()).optional()
 });
 var noteUpdateInputZod = external_exports.object({
-  id: external_exports.string().min(1),
+  id: external_exports.string().min(1).optional(),
   title: external_exports.string().min(1).optional(),
   content: external_exports.string().optional(),
   isPublic: external_exports.boolean().optional(),
@@ -18956,7 +18955,7 @@ var eventCreateInputZod = external_exports.object({
   calendarId: external_exports.string().optional()
 });
 var eventUpdateInputZod = external_exports.object({
-  id: external_exports.string().min(1),
+  id: external_exports.string().min(1).optional(),
   title: external_exports.string().min(1).optional(),
   description: external_exports.string().optional(),
   startTime: external_exports.string().optional(),
@@ -19997,7 +19996,6 @@ var MCP_TOOLS = MCP_TOOL_ENTRIES.map(defineMcpTool);
 // src/mcp/stdio.ts
 async function runStdioMcpServer(opts) {
   const client = getClient(opts);
-  const env = resolveEnvironment(opts);
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,

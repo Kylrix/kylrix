@@ -6,6 +6,7 @@ export interface ProfileRecord {
   scopes: string[];
   patId: string | null;
   tier?: string;
+  email?: string;
   quotas?: {
     isPro: boolean;
     maxCollaboratorsPerResource?: number;
@@ -14,12 +15,29 @@ export interface ProfileRecord {
   };
 }
 
+export interface TokenInfoRecord {
+  auth: string;
+  userId: string;
+  patId: string | null;
+  scopes: string[];
+  catalog?: any[];
+  note?: string | null;
+  pat?: any | null;
+  kind?: string;
+  rateLimits?: any;
+}
+
+export interface ScopeCatalogRecord {
+  scopes: any[];
+}
+
 export function shapeProfile(actor: {
   userId: string;
   kind: string;
   scopes: string[];
   patId?: string | null;
   tier?: string;
+  email?: string;
   quotas?: ProfileRecord['quotas'];
 }): ProfileRecord {
   return {
@@ -28,6 +46,7 @@ export function shapeProfile(actor: {
     scopes: actor.scopes,
     patId: actor.patId || null,
     ...(actor.tier ? { tier: actor.tier } : {}),
+    ...(actor.email ? { email: actor.email } : {}),
     ...(actor.quotas ? { quotas: actor.quotas } : {}),
   };
 }

@@ -14,7 +14,7 @@ export const noteCreateInputZod = z.object({
 });
 
 export const noteUpdateInputZod = z.object({
-  id: z.string().min(1),
+  id: z.string().min(1).optional(),
   title: z.string().min(1).optional(),
   content: z.string().optional(),
   isPublic: z.boolean().optional(),
@@ -40,6 +40,10 @@ export interface NoteRecord {
   createdAt: string | null;
   isPublic: boolean;
   isGuest: boolean;
+  workspaceId?: string;
+  projectId?: string;
+  tags?: string[];
+  category?: string;
 }
 
 export function shapeNote(row: Record<string, unknown>): NoteRecord {
@@ -52,6 +56,9 @@ export function shapeNote(row: Record<string, unknown>): NoteRecord {
     createdAt: r.$createdAt || r.createdAt || null,
     isPublic: r.isPublic !== undefined ? Boolean(r.isPublic) : true,
     isGuest: r.isGuest !== undefined ? Boolean(r.isGuest) : true,
+    ...(r.workspaceId || r.projectId ? { workspaceId: r.workspaceId || r.projectId, projectId: r.projectId || r.workspaceId } : {}),
+    ...(r.tags ? { tags: Array.isArray(r.tags) ? r.tags : [] } : {}),
+    ...(r.category ? { category: r.category } : {}),
   };
 }
 
