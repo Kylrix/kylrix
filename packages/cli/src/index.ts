@@ -61,14 +61,19 @@ import {
 import { adminStatusCommand } from './commands/admin';
 import { listTagsCommand, createTagCommand, deleteTagCommand } from './commands/tags';
 import { listTrashCommand, restoreTrashCommand, purgeTrashCommand } from './commands/trash';
+import { updateCommand } from './commands/update';
 import { runStdioMcpServer } from './mcp/stdio';
+import { CURRENT_VERSION, scheduleBackgroundUpdateCheck } from './updater';
+
+// Run non-blocking background update check
+scheduleBackgroundUpdateCheck();
 
 const program = new Command();
 
 program
   .name('kylrix')
   .description('Official CLI, Model Context Protocol (MCP) bridge, and sovereign client for Kylrix')
-  .version('1.0.0');
+  .version(CURRENT_VERSION);
 
 // Global flags
 program
@@ -538,7 +543,15 @@ trash
   .description('Permanently purge a deleted item')
   .action((kind, id, cmdOpts) => purgeTrashCommand(kind, id, { ...program.opts(), ...cmdOpts }));
 
-// ── 18. MCP Stdio Server Bridge ──
+// ── 18. Self-Update / Upgrade ──
+program
+  .command('update')
+  .alias('upgrade')
+  .description('Check for updates and automatically upgrade the CLI to the latest version')
+  .option('--force', 'Force re-installation even if already on latest version')
+  .action((cmdOpts) => updateCommand({ ...program.opts(), ...cmdOpts }));
+
+// ── 19. MCP Stdio Server Bridge ──
 program
   .command('mcp')
   .description('Start the Model Context Protocol (MCP) server over stdio for AI clients (Claude, Cursor, Windsurf)')

@@ -672,8 +672,8 @@ var KylrixClient = class {
   getBaseUrl() {
     return this.baseUrl;
   }
-  async request(method, path3, options = {}) {
-    const cleanPath = path3.startsWith("/") ? path3 : `/${path3}`;
+  async request(method, path4, options = {}) {
+    const cleanPath = path4.startsWith("/") ? path4 : `/${path4}`;
     const url2 = new URL(`${this.baseUrl}${cleanPath}`);
     if (options.query) {
       for (const [key, val] of Object.entries(options.query)) {
@@ -2703,6 +2703,186 @@ async function purgeTrashCommand(kind, id, opts) {
   }
 }
 
+// src/commands/update.ts
+import pc20 from "picocolors";
+
+// src/updater/index.ts
+import * as fs4 from "fs";
+import * as path3 from "path";
+import * as os3 from "os";
+import { spawn } from "child_process";
+import pc19 from "picocolors";
+var PACKAGE_NAME = "@kylrix/cli";
+var CURRENT_VERSION = "1.0.0";
+var CACHE_DIR = path3.join(os3.homedir(), ".kylrix");
+var CACHE_FILE = path3.join(CACHE_DIR, "update-cache.json");
+var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
+function compareSemver(v1, v2) {
+  const clean1 = v1.replace(/^v/, "").split("-")[0];
+  const clean2 = v2.replace(/^v/, "").split("-")[0];
+  const p1 = clean1.split(".").map((n) => parseInt(n, 10) || 0);
+  const p2 = clean2.split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    const num1 = p1[i] || 0;
+    const num2 = p2[i] || 0;
+    if (num1 > num2) return 1;
+    if (num1 < num2) return -1;
+  }
+  return 0;
+}
+async function fetchLatestVersion(timeoutMs = 2500) {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(PACKAGE_NAME)}/latest`, {
+      signal: controller.signal,
+      headers: { Accept: "application/json" }
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    return data?.version || null;
+  } catch {
+    return null;
+  }
+}
+function readCachedUpdate() {
+  try {
+    if (!fs4.existsSync(CACHE_FILE)) return null;
+    const raw = fs4.readFileSync(CACHE_FILE, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+function writeCachedUpdate(latestVersion) {
+  try {
+    if (!fs4.existsSync(CACHE_DIR)) {
+      fs4.mkdirSync(CACHE_DIR, { recursive: true });
+    }
+    const cache = {
+      latestVersion,
+      lastChecked: Date.now()
+    };
+    fs4.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), { encoding: "utf-8", mode: 384 });
+  } catch {
+  }
+}
+function detectPackageManager() {
+  const execPath = process.argv[1] || "";
+  if (execPath.includes("pnpm")) return "pnpm";
+  if (execPath.includes("yarn")) return "yarn";
+  if (execPath.includes("bun")) return "bun";
+  return "npm";
+}
+async function executeUpgrade(targetVersion = "latest") {
+  const pm = detectPackageManager();
+  const spinner = L2();
+  spinner.start(`Upgrading ${PACKAGE_NAME} to ${targetVersion} via ${pm}...`);
+  const installArgs = {
+    npm: ["install", "-g", `${PACKAGE_NAME}@${targetVersion}`],
+    pnpm: ["add", "-g", `${PACKAGE_NAME}@${targetVersion}`],
+    yarn: ["global", "add", `${PACKAGE_NAME}@${targetVersion}`],
+    bun: ["add", "-g", `${PACKAGE_NAME}@${targetVersion}`]
+  };
+  const args = installArgs[pm] || installArgs.npm;
+  return new Promise((resolve, reject) => {
+    const child = spawn(pm, args, { stdio: "pipe" });
+    let stderr = "";
+    child.stderr.on("data", (d2) => {
+      stderr += d2.toString();
+    });
+    child.on("close", (code) => {
+      if (code === 0) {
+        spinner.stop(pc19.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
+        writeCachedUpdate(CURRENT_VERSION);
+        resolve();
+      } else {
+        spinner.stop(pc19.red(`Upgrade failed (exit code ${code})`));
+        reject(new Error(stderr || `Failed to run ${pm} ${args.join(" ")}`));
+      }
+    });
+    child.on("error", (err) => {
+      spinner.stop(pc19.red("Failed to launch package manager process"));
+      reject(err);
+    });
+  });
+}
+function printUpdateBanner(latest) {
+  const boxWidth = 58;
+  const title = `Update available! ${pc19.dim(CURRENT_VERSION)} \u2192 ${pc19.green(pc19.bold(latest))}`;
+  const pm = detectPackageManager();
+  const cmd = pm === "pnpm" ? `pnpm add -g ${PACKAGE_NAME}` : `npm i -g ${PACKAGE_NAME}`;
+  const hint = `Run ${pc19.cyan("kylrix update")} or ${pc19.cyan(cmd)}`;
+  console.error("\n" + pc19.yellow("\u250C" + "\u2500".repeat(boxWidth) + "\u2510"));
+  console.error(pc19.yellow("\u2502") + "  " + title.padEnd(boxWidth + 12) + pc19.yellow("\u2502"));
+  console.error(pc19.yellow("\u2502") + "  " + hint.padEnd(boxWidth + 10) + pc19.yellow("\u2502"));
+  console.error(pc19.yellow("\u2514" + "\u2500".repeat(boxWidth) + "\u2518") + "\n");
+}
+function scheduleBackgroundUpdateCheck() {
+  const isMcp = process.argv.includes("mcp");
+  const isJson = process.argv.includes("--json");
+  if (isMcp || isJson) return;
+  const cached2 = readCachedUpdate();
+  const now = Date.now();
+  if (cached2 && compareSemver(cached2.latestVersion, CURRENT_VERSION) > 0) {
+    process.on("exit", () => {
+      printUpdateBanner(cached2.latestVersion);
+    });
+    return;
+  }
+  if (!cached2 || now - cached2.lastChecked > CHECK_INTERVAL_MS) {
+    fetchLatestVersion().then((latest) => {
+      if (latest) {
+        writeCachedUpdate(latest);
+        if (compareSemver(latest, CURRENT_VERSION) > 0) {
+          printUpdateBanner(latest);
+        }
+      }
+    }).catch(() => {
+    });
+  }
+}
+
+// src/commands/update.ts
+async function updateCommand(opts) {
+  if (opts.json) {
+    const latest2 = await fetchLatestVersion();
+    const updateAvailable = latest2 ? compareSemver(latest2, CURRENT_VERSION) > 0 : false;
+    printJson({
+      packageName: PACKAGE_NAME,
+      currentVersion: CURRENT_VERSION,
+      latestVersion: latest2 || CURRENT_VERSION,
+      updateAvailable
+    });
+    return;
+  }
+  we(pc20.bgCyan(pc20.black(" Kylrix CLI Updater ")));
+  const spinner = L2();
+  spinner.start("Checking for updates on npm registry...");
+  const latest = await fetchLatestVersion(5e3);
+  if (!latest) {
+    spinner.stop(pc20.yellow("Could not reach npm registry or version not published yet."));
+    return;
+  }
+  const hasUpdate = compareSemver(latest, CURRENT_VERSION) > 0;
+  if (!hasUpdate && !opts.force) {
+    spinner.stop(pc20.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
+    fe(pc20.dim("No update required."));
+    return;
+  }
+  spinner.stop(
+    hasUpdate ? pc20.yellow(`New version available: ${pc20.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc20.green(pc20.bold(`v${latest}`))}`) : `Re-installing v${CURRENT_VERSION}...`
+  );
+  try {
+    await executeUpgrade(latest);
+    fe(pc20.green(`\u2714 ${PACKAGE_NAME} is now up to date (v${latest})!`));
+  } catch (err) {
+    printError("Update failed", err);
+    process.exit(1);
+  }
+}
+
 // src/mcp/stdio.ts
 import * as readline from "readline";
 
@@ -3569,10 +3749,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path3) {
-  if (!path3)
+function getElementAtPath(obj, path4) {
+  if (!path4)
     return obj;
-  return path3.reduce((acc, key) => acc?.[key], obj);
+  return path4.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -3981,11 +4161,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path3, issues) {
+function prefixIssues(path4, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path3);
+    iss.path.unshift(path4);
     return iss;
   });
 }
@@ -4132,16 +4312,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path3 = []) => {
+  const processError = (error52, path4 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path4, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -4168,17 +4348,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path3 = []) => {
+  const processError = (error52, path4 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path4, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -4210,8 +4390,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path3) {
+  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path4) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -16903,13 +17083,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path3 = ref.slice(1).split("/").filter(Boolean);
-  if (path3.length === 0) {
+  const path4 = ref.slice(1).split("/").filter(Boolean);
+  if (path4.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path3[0] === defsKey) {
-    const key = path3[1];
+  if (path4[0] === defsKey) {
+    const key = path4[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -18916,8 +19096,9 @@ async function runStdioMcpServer(opts) {
 }
 
 // src/index.ts
+scheduleBackgroundUpdateCheck();
 var program = new Command();
-program.name("kylrix").description("Official CLI, Model Context Protocol (MCP) bridge, and sovereign client for Kylrix").version("1.0.0");
+program.name("kylrix").description("Official CLI, Model Context Protocol (MCP) bridge, and sovereign client for Kylrix").version(CURRENT_VERSION);
 program.option("-u, --url <url>", "Kylrix API base URL (default: https://www.kylrix.space)").option("-t, --token <token>", "Personal Access Token (PAT) or Agent Key").option("-w, --workspace <id>", "Active workspace ID filter").option("--json", "Output raw JSON for machine parsing");
 program.command("login").description("1-Click Web Login / Device Pairing (opens browser and pairs automatically)").action((cmdOpts) => loginCommand({ ...program.opts(), ...cmdOpts }));
 program.command("pair").description("Authenticate using RFC 8628 browser device pairing code").action((cmdOpts) => pairCommand({ ...program.opts(), ...cmdOpts }));
@@ -19021,5 +19202,6 @@ var trash = program.command("trash").description("Inspect and restore soft-delet
 trash.command("list").description("List deleted items in trash").action((cmdOpts) => listTrashCommand({ ...program.opts(), ...cmdOpts }));
 trash.command("restore <kind> <id>").description("Restore a soft-deleted item").action((kind, id, cmdOpts) => restoreTrashCommand(kind, id, { ...program.opts(), ...cmdOpts }));
 trash.command("purge <kind> <id>").description("Permanently purge a deleted item").action((kind, id, cmdOpts) => purgeTrashCommand(kind, id, { ...program.opts(), ...cmdOpts }));
+program.command("update").alias("upgrade").description("Check for updates and automatically upgrade the CLI to the latest version").option("--force", "Force re-installation even if already on latest version").action((cmdOpts) => updateCommand({ ...program.opts(), ...cmdOpts }));
 program.command("mcp").description("Start the Model Context Protocol (MCP) server over stdio for AI clients (Claude, Cursor, Windsurf)").action((cmdOpts) => runStdioMcpServer({ ...program.opts(), ...cmdOpts }));
 program.parse(process.argv);
