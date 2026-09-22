@@ -1,6 +1,7 @@
 import pc from 'picocolors';
-import { requireAuthClient } from '../client';
+import { getClient, hasAuth } from '../client';
 import { printError, printJson, printSuccess, printTable } from '../formatter';
+import { LocalStore } from '../local/store';
 
 export async function listGoalsCommand(opts: {
   url?: string;
@@ -11,24 +12,29 @@ export async function listGoalsCommand(opts: {
   limit?: string;
 }) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = await client.goals.list({ limit, workspaceId: opts.workspace, status: opts.status });
+    const res = isAuthed
+      ? await getClient(opts).goals.list({ limit, workspaceId: opts.workspace, status: opts.status })
+      : LocalStore.listGoals();
 
     if (opts.json) {
       printJson(res);
       return;
     }
 
-    const rows = (res.items || []).map((g) => ({
+    const rows = (res.items || []).map((g: any) => ({
       id: g.id,
       title: g.title || '(Untitled Goal)',
       status: g.status || 'not_started',
       progress: `${g.currentValue ?? 0}/${g.targetValue ?? 100} ${g.unit || ''}`.trim(),
-      workspace: g.workspaceId || 'personal',
+      mode: isAuthed ? (g.workspaceId || 'cloud') : pc.dim('local'),
     }));
 
-    printTable(rows, ['id', 'title', 'status', 'progress', 'workspace']);
+    printTable(rows, ['id', 'title', 'status', 'progress', 'mode']);
+    if (!isAuthed) {
+      console.log(pc.dim('💡 Local-first mode. Run `kylrix login` to sync goals with cloud.'));
+    }
   } catch (err: any) {
     printError('Failed to list goals', err);
     process.exit(1);
@@ -37,8 +43,10 @@ export async function listGoalsCommand(opts: {
 
 export async function getGoalCommand(id: string, opts: { url?: string; token?: string; json?: boolean }) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.goals.get(id);
+    const isAuthed = hasAuth(opts);
+    const item = isAuthed
+      ? await getClient(opts).goals.get(id)
+      : LocalStore.getGoal(id);
 
     if (opts.json) {
       printJson(item);
@@ -50,8 +58,7 @@ export async function getGoalCommand(id: string, opts: { url?: string; token?: s
     console.log(`ID:        ${item.id}`);
     console.log(`Status:    ${item.status || 'not_started'}`);
     console.log(`Progress:  ${item.currentValue ?? 0}/${item.targetValue ?? 100} ${item.unit || ''}`);
-    console.log(`Workspace: ${item.workspaceId || 'personal'}`);
-    console.log(`Target:    ${item.targetDate || 'No deadline'}`);
+    console.log(`Mode:      ${isAuthed ? 'Cloud' : 'Local-First'}`);
     if (item.description) {
       console.log(pc.dim('─'.repeat(40)));
       console.log(item.description);
@@ -77,23 +84,31 @@ export async function createGoalCommand(
   }
 ) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const targetValue = opts.targetValue ? parseFloat(opts.targetValue) : 100;
-    const item = await client.goals.create({
-      title,
-      description: opts.description,
-      targetValue,
-      unit: opts.unit || '%',
-      status: opts.status || 'not_started',
-      workspaceId: opts.workspace,
-    });
+    const item = isAuthed
+      ? await getClient(opts).goals.create({
+          title,
+          description: opts.description,
+          targetValue,
+          unit: opts.unit || '%',
+          status: opts.status || 'not_started',
+          workspaceId: opts.workspace,
+        })
+      : LocalStore.createGoal({
+          title,
+          description: opts.description,
+          targetValue,
+          unit: opts.unit,
+          status: opts.status,
+        });
 
     if (opts.json) {
       printJson(item);
       return;
     }
 
-    printSuccess(`Created goal "${pc.bold(item.title || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created goal "${pc.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? 'Cloud' : 'Local'}]`);
   } catch (err: any) {
     printError('Failed to create goal', err);
     process.exit(1);
@@ -112,13 +127,19 @@ export async function updateGoalCommand(
   }
 ) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const currentValue = opts.currentValue !== undefined ? parseFloat(opts.currentValue) : undefined;
-    const item = await client.goals.update(id, {
-      title: opts.title,
-      status: opts.status,
-      currentValue,
-    });
+    const item = isAuthed
+      ? await getClient(opts).goals.update(id, {
+          title: opts.title,
+          status: opts.status,
+          currentValue,
+        })
+      : LocalStore.updateGoal(id, {
+          title: opts.title,
+          status: opts.status,
+          currentValue,
+        });
 
     if (opts.json) {
       printJson(item);
@@ -134,8 +155,12 @@ export async function updateGoalCommand(
 
 export async function deleteGoalCommand(id: string, opts: { url?: string; token?: string; json?: boolean }) {
   try {
-    const client = requireAuthClient(opts);
-    await client.goals.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).goals.delete(id);
+    } else {
+      LocalStore.deleteGoal(id);
+    }
 
     if (opts.json) {
       printJson({ success: true, id });

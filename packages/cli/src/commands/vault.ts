@@ -1,9 +1,10 @@
 import * as clack from '@clack/prompts';
 import * as fs from 'node:fs';
 import pc from 'picocolors';
-import { requireAuthClient } from '../client';
+import { getClient, hasAuth } from '../client';
 import { printError, printJson, printSuccess, printTable, printWarning } from '../formatter';
-import { getVaultSession, setVaultSession, clearVaultSession, isVaultUnlocked } from '../crypto/session';
+import { getVaultSession, setVaultSession, clearVaultSession } from '../crypto/session';
+import { LocalStore } from '../local/store';
 
 export async function unlockVaultCommand(opts: {
   url?: string;
@@ -13,7 +14,7 @@ export async function unlockVaultCommand(opts: {
   json?: boolean;
 }) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     let masterPassword = opts.password;
 
     if (!masterPassword) {
@@ -32,14 +33,18 @@ export async function unlockVaultCommand(opts: {
     const spinner = clack.spinner();
     spinner.start('Deriving and unlocking Master Encryption Key (MEK)...');
 
-    const res = await client.vault.unlockUserMek(masterPassword);
-    if (!res.mek) {
-      spinner.stop(pc.red('Unlock failed.'));
-      throw new Error('Could not unwrap Master Encryption Key. Verify your Master Password.');
+    let mek = 'local_mek_active';
+    if (isAuthed) {
+      const res = await getClient(opts).vault.unlockUserMek(masterPassword);
+      if (!res.mek) {
+        spinner.stop(pc.red('Unlock failed.'));
+        throw new Error('Could not unwrap Master Encryption Key. Verify your Master Password.');
+      }
+      mek = res.mek;
     }
 
     const expiry = opts.expiryMinutes ? parseInt(opts.expiryMinutes, 10) : 60;
-    const session = setVaultSession(res.mek, expiry);
+    const session = setVaultSession(mek, expiry);
     spinner.stop(pc.green('Vault unlocked successfully!'));
 
     if (opts.json) {
@@ -98,19 +103,21 @@ export async function listVaultCommand(opts: {
   limit?: string;
 }) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 50;
     const session = opts.decrypt ? getVaultSession() : null;
 
-    if (opts.decrypt && !session) {
+    if (opts.decrypt && !session && isAuthed) {
       printWarning('Vault is locked. Run `kylrix vault unlock` first or run without `--decrypt`.');
     }
 
-    const items = await client.vault.list({
-      limit,
-      workspaceId: opts.workspace,
-      mek: session?.mekHex,
-    });
+    const items = isAuthed
+      ? await getClient(opts).vault.list({
+          limit,
+          workspaceId: opts.workspace,
+          mek: session?.mekHex,
+        })
+      : LocalStore.listVault();
 
     if (opts.json) {
       printJson(items);
@@ -122,11 +129,14 @@ export async function listVaultCommand(opts: {
       name: v.name,
       type: v.itemType || (v.isEnv ? 'env' : 'login'),
       username: v.username || v.identity || (v.isEnv ? '(env-vars)' : ''),
-      workspace: v.workspaceId || 'personal',
+      mode: isAuthed ? (v.workspaceId || 'cloud') : pc.dim('local'),
       updatedAt: v.updatedAt?.substring(0, 10) || '',
     }));
 
-    printTable(rows, ['id', 'name', 'type', 'username', 'workspace', 'updatedAt']);
+    printTable(rows, ['id', 'name', 'type', 'username', 'mode', 'updatedAt']);
+    if (!isAuthed) {
+      console.log(pc.dim('💡 Local-first mode. Run `kylrix login` to sync secrets with cloud.'));
+    }
   } catch (err: any) {
     printError('Failed to list vault items', err);
     process.exit(1);
@@ -145,14 +155,16 @@ export async function getVaultCommand(
   }
 ) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const session = opts.decrypt ? getVaultSession() : null;
 
-    const item = await client.vault.get(id, {
-      mek: session?.mekHex,
-      format: opts.format,
-      pure: opts.pure,
-    });
+    const item = isAuthed
+      ? await getClient(opts).vault.get(id, {
+          mek: session?.mekHex,
+          format: opts.format,
+          pure: opts.pure,
+        })
+      : LocalStore.getVault(id);
 
     if (opts.json) {
       printJson(item);
@@ -168,7 +180,7 @@ export async function getVaultCommand(
     console.log(pc.dim('─'.repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Type:      ${item.itemType || (item.isEnv ? 'env' : 'login')}`);
-    console.log(`Workspace: ${item.workspaceId || 'personal'}`);
+    console.log(`Mode:      ${isAuthed ? 'Cloud' : 'Local-First'}`);
     if (item.username) console.log(`Username:  ${item.username}`);
     if (item.password) console.log(`Password:  ${item.password}`);
     if (item.url) console.log(`URL:       ${item.url}`);
@@ -205,7 +217,7 @@ export async function createVaultCommand(
   }
 ) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const session = getVaultSession();
 
     let customFields: any = undefined;
@@ -216,29 +228,30 @@ export async function createVaultCommand(
       customFields = fs.readFileSync(opts.envFile, 'utf-8');
     }
 
-    const item = await client.vault.create(
-      {
-        name,
-        username: opts.username,
-        password: opts.password,
-        url: opts.serviceUrl,
-        notes: opts.notes,
-        isEnv: opts.isEnv || Boolean(opts.envFile),
-        itemType: opts.itemType || (opts.isEnv || opts.envFile ? 'env' : 'login'),
-        customFields,
-      },
-      {
-        mek: session?.mekHex,
-        workspaceId: opts.workspace,
-      }
-    );
+    const payload = {
+      name,
+      username: opts.username,
+      password: opts.password,
+      url: opts.serviceUrl,
+      notes: opts.notes,
+      isEnv: opts.isEnv || Boolean(opts.envFile),
+      itemType: opts.itemType || (opts.isEnv || opts.envFile ? 'env' : 'login'),
+      customFields,
+    };
+
+    const item = isAuthed
+      ? await getClient(opts).vault.create(payload, {
+          mek: session?.mekHex,
+          workspaceId: opts.workspace,
+        })
+      : LocalStore.createVault(payload);
 
     if (opts.json) {
       printJson(item);
       return;
     }
 
-    printSuccess(`Created secret "${pc.bold(item.name || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created secret "${pc.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? 'Cloud' : 'Local'}]`);
   } catch (err: any) {
     printError('Failed to create vault secret', err);
     process.exit(1);
@@ -247,8 +260,12 @@ export async function createVaultCommand(
 
 export async function deleteVaultCommand(id: string, opts: { url?: string; token?: string; json?: boolean }) {
   try {
-    const client = requireAuthClient(opts);
-    await client.vault.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).vault.delete(id);
+    } else {
+      LocalStore.deleteVault(id);
+    }
 
     if (opts.json) {
       printJson({ success: true, id });

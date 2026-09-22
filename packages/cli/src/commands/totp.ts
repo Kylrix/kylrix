@@ -1,8 +1,9 @@
 import pc from 'picocolors';
-import { requireAuthClient } from '../client';
-import { printError, printJson, printSuccess, printTable, printWarning } from '../formatter';
+import { getClient, hasAuth } from '../client';
+import { printError, printJson, printSuccess, printTable } from '../formatter';
 import { getVaultSession } from '../crypto/session';
 import { generateTotp } from '../crypto/totp';
+import { LocalStore } from '../local/store';
 
 export async function listTotpCommand(opts: {
   url?: string;
@@ -12,15 +13,17 @@ export async function listTotpCommand(opts: {
   limit?: string;
 }) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 50;
     const session = getVaultSession();
 
-    const items = await client.totp.list({
-      limit,
-      workspaceId: opts.workspace,
-      mek: session?.mekHex,
-    });
+    const items = isAuthed
+      ? await getClient(opts).totp.list({
+          limit,
+          workspaceId: opts.workspace,
+          mek: session?.mekHex,
+        })
+      : LocalStore.listTotp();
 
     if (opts.json) {
       printJson(items);
@@ -43,12 +46,12 @@ export async function listTotpCommand(opts: {
         issuer: t.issuer || '',
         account: t.account || '',
         code: codeDisplay,
-        workspace: t.workspaceId || 'personal',
+        mode: isAuthed ? (t.workspaceId || 'cloud') : pc.dim('local'),
       };
     });
 
-    printTable(rows, ['id', 'name', 'issuer', 'account', 'code', 'workspace']);
-    if (!session) {
+    printTable(rows, ['id', 'name', 'issuer', 'account', 'code', 'mode']);
+    if (isAuthed && !session) {
       console.log(pc.dim('\nTip: Run `kylrix vault unlock` to show live 2FA verification codes.'));
     }
   } catch (err: any) {
@@ -59,12 +62,12 @@ export async function listTotpCommand(opts: {
 
 export async function getTotpCodeCommand(id: string, opts: { url?: string; token?: string; pure?: boolean }) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const session = getVaultSession();
 
-    const item = await client.totp.get(id, {
-      mek: session?.mekHex,
-    });
+    const item = isAuthed
+      ? await getClient(opts).totp.get(id, { mek: session?.mekHex })
+      : LocalStore.getTotp(id);
 
     if (!item.secret) {
       throw new Error('Could not decrypt TOTP secret. Please run `kylrix vault unlock` first.');
@@ -97,28 +100,29 @@ export async function createTotpCommand(
   }
 ) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const session = getVaultSession();
 
-    const item = await client.totp.create(
-      {
-        name,
-        secret: opts.secret,
-        issuer: opts.issuer,
-        account: opts.account,
-      },
-      {
-        mek: session?.mekHex,
-        workspaceId: opts.workspace,
-      }
-    );
+    const payload = {
+      name,
+      secret: opts.secret,
+      issuer: opts.issuer,
+      account: opts.account,
+    };
+
+    const item = isAuthed
+      ? await getClient(opts).totp.create(payload, {
+          mek: session?.mekHex,
+          workspaceId: opts.workspace,
+        })
+      : LocalStore.createTotp(payload);
 
     if (opts.json) {
       printJson(item);
       return;
     }
 
-    printSuccess(`Created TOTP seed "${pc.bold(item.name || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created TOTP seed "${pc.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? 'Cloud' : 'Local'}]`);
   } catch (err: any) {
     printError('Failed to create TOTP entry', err);
     process.exit(1);
@@ -127,8 +131,12 @@ export async function createTotpCommand(
 
 export async function deleteTotpCommand(id: string, opts: { url?: string; token?: string; json?: boolean }) {
   try {
-    const client = requireAuthClient(opts);
-    await client.totp.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).totp.delete(id);
+    } else {
+      LocalStore.deleteTotp(id);
+    }
 
     if (opts.json) {
       printJson({ success: true, id });

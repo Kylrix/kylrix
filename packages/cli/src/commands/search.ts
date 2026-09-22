@@ -1,18 +1,21 @@
 import pc from 'picocolors';
-import { requireAuthClient } from '../client';
+import { getClient, hasAuth } from '../client';
 import { printError, printJson, printTable } from '../formatter';
+import { LocalStore } from '../local/store';
 
 export async function searchCommand(
   query: string,
   opts: { url?: string; token?: string; workspace?: string; json?: boolean; limit?: string }
 ) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const results = await client.search.query(query, {
-      workspaceId: opts.workspace,
-      limit,
-    });
+    const results = isAuthed
+      ? await getClient(opts).search.query(query, {
+          workspaceId: opts.workspace,
+          limit,
+        })
+      : LocalStore.search(query);
 
     if (opts.json) {
       printJson(results);
@@ -25,14 +28,15 @@ export async function searchCommand(
     }
 
     console.log(`\nSearch results for "${pc.bold(query)}":\n`);
-    const rows = results.map((r) => ({
+    const rows = results.map((r: any) => ({
       kind: r.kind.toUpperCase(),
       id: r.id,
       title: r.title,
       snippet: r.snippet || '',
+      mode: isAuthed ? (r.isLocal ? pc.dim('local') : 'cloud') : pc.dim('local'),
     }));
 
-    printTable(rows, ['kind', 'id', 'title', 'snippet']);
+    printTable(rows, ['kind', 'id', 'title', 'snippet', 'mode']);
   } catch (err: any) {
     printError('Search query failed', err);
     process.exit(1);

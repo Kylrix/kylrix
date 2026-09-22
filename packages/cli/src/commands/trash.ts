@@ -1,18 +1,21 @@
-import { requireAuthClient } from '../client';
+import { getClient, hasAuth } from '../client';
 import { printError, printJson, printSuccess, printTable } from '../formatter';
+import { LocalStore } from '../local/store';
 
 export async function listTrashCommand(opts: { url?: string; token?: string; json?: boolean; limit?: string }) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = await client.trash.list(limit);
+    const res = isAuthed
+      ? await getClient(opts).trash.list(limit)
+      : LocalStore.listTrash();
 
     if (opts.json) {
       printJson(res);
       return;
     }
 
-    const rows = (res.items || []).map((t) => ({
+    const rows = (res.items || []).map((t: any) => ({
       id: t.id,
       kind: t.kind,
       title: t.title || '(Untitled)',
@@ -32,8 +35,10 @@ export async function restoreTrashCommand(
   opts: { url?: string; token?: string; json?: boolean }
 ) {
   try {
-    const client = requireAuthClient(opts);
-    const res = await client.trash.restore(kind, id);
+    const isAuthed = hasAuth(opts);
+    const res = isAuthed
+      ? await getClient(opts).trash.restore(kind, id)
+      : LocalStore.restoreTrash(kind, id);
 
     if (opts.json) {
       printJson(res);
@@ -53,8 +58,10 @@ export async function purgeTrashCommand(
   opts: { url?: string; token?: string; json?: boolean }
 ) {
   try {
-    const client = requireAuthClient(opts);
-    const res = await client.trash.purge(kind, id);
+    const isAuthed = hasAuth(opts);
+    const res = isAuthed
+      ? await getClient(opts).trash.purge(kind, id)
+      : LocalStore.purgeTrash(kind, id);
 
     if (opts.json) {
       printJson(res);

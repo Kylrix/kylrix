@@ -199,8 +199,8 @@ var KylrixClient = class {
   getBaseUrl() {
     return this.baseUrl;
   }
-  async request(method, path4, options = {}) {
-    const cleanPath = path4.startsWith("/") ? path4 : `/${path4}`;
+  async request(method, path5, options = {}) {
+    const cleanPath = path5.startsWith("/") ? path5 : `/${path5}`;
     const url2 = new URL(`${this.baseUrl}${cleanPath}`);
     if (options.query) {
       for (const [key, val] of Object.entries(options.query)) {
@@ -589,6 +589,10 @@ function resolveEnvironment(cliOptions = {}) {
 }
 
 // src/client.ts
+function hasAuth(cliOptions = {}) {
+  const env = resolveEnvironment(cliOptions);
+  return Boolean(env.token);
+}
 function getClient(cliOptions = {}) {
   const env = resolveEnvironment(cliOptions);
   return new KylrixClient({
@@ -602,7 +606,7 @@ function requireAuthClient(cliOptions = {}) {
   const env = resolveEnvironment(cliOptions);
   if (!env.token) {
     throw new Error(
-      "Authentication required. Run `kylrix login` or set KYLRIX_API_KEY / KYLRIX_PAT environment variable."
+      "Authentication required for this cloud operation. Run `kylrix login` or set KYLRIX_API_KEY."
     );
   }
   return client;
@@ -904,11 +908,417 @@ function clearWorkspaceCommand(opts = {}) {
 
 // src/commands/ideas.ts
 import pc4 from "picocolors";
+
+// src/local/store.ts
+import * as fs2 from "fs";
+import * as path2 from "path";
+import * as os2 from "os";
+import * as crypto from "crypto";
+var LOCAL_DIR = path2.join(os2.homedir(), ".kylrix");
+var LOCAL_FILE = path2.join(LOCAL_DIR, "local-store.json");
+function getInitialStore() {
+  return {
+    ideas: [],
+    goals: [],
+    events: [],
+    forms: [],
+    flows: [],
+    vault: [],
+    totp: [],
+    tags: [],
+    trash: []
+  };
+}
+function loadLocalStore() {
+  try {
+    if (!fs2.existsSync(LOCAL_FILE)) {
+      return getInitialStore();
+    }
+    const raw = fs2.readFileSync(LOCAL_FILE, "utf-8");
+    return { ...getInitialStore(), ...JSON.parse(raw) };
+  } catch {
+    return getInitialStore();
+  }
+}
+function saveLocalStore(data) {
+  try {
+    if (!fs2.existsSync(LOCAL_DIR)) {
+      fs2.mkdirSync(LOCAL_DIR, { recursive: true });
+    }
+    fs2.writeFileSync(LOCAL_FILE, JSON.stringify(data, null, 2), {
+      encoding: "utf-8",
+      mode: 384
+    });
+  } catch (err) {
+    throw new Error(`Failed to save local store: ${err.message}`);
+  }
+}
+function generateLocalId(prefix) {
+  return `loc_${prefix}_${crypto.randomBytes(6).toString("hex")}`;
+}
+var LocalStore = {
+  // ── Ideas ──
+  listIdeas() {
+    const store = loadLocalStore();
+    return { items: store.ideas, count: store.ideas.length };
+  },
+  getIdea(id) {
+    const store = loadLocalStore();
+    const item = store.ideas.find((i) => i.id === id);
+    if (!item) throw new Error(`Idea not found: ${id}`);
+    return item;
+  },
+  createIdea(data) {
+    const store = loadLocalStore();
+    const id = generateLocalId("idea");
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const item = {
+      id,
+      title: data.title,
+      content: data.content || "",
+      category: data.category || "general",
+      tags: data.tags || [],
+      isLocal: true,
+      createdAt: now,
+      updatedAt: now
+    };
+    store.ideas.unshift(item);
+    saveLocalStore(store);
+    return item;
+  },
+  updateIdea(id, updates) {
+    const store = loadLocalStore();
+    const idx = store.ideas.findIndex((i) => i.id === id);
+    if (idx === -1) throw new Error(`Idea not found: ${id}`);
+    const item = { ...store.ideas[idx], ...updates, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
+    store.ideas[idx] = item;
+    saveLocalStore(store);
+    return item;
+  },
+  deleteIdea(id) {
+    const store = loadLocalStore();
+    const idx = store.ideas.findIndex((i) => i.id === id);
+    if (idx !== -1) {
+      const [deleted] = store.ideas.splice(idx, 1);
+      store.trash.unshift({ id: deleted.id, kind: "idea", title: deleted.title, deletedAt: (/* @__PURE__ */ new Date()).toISOString() });
+      saveLocalStore(store);
+    }
+    return { success: true };
+  },
+  // ── Goals ──
+  listGoals() {
+    const store = loadLocalStore();
+    return { items: store.goals, count: store.goals.length };
+  },
+  getGoal(id) {
+    const store = loadLocalStore();
+    const item = store.goals.find((g2) => g2.id === id);
+    if (!item) throw new Error(`Goal not found: ${id}`);
+    return item;
+  },
+  createGoal(data) {
+    const store = loadLocalStore();
+    const id = generateLocalId("goal");
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const item = {
+      id,
+      title: data.title,
+      description: data.description || "",
+      targetValue: data.targetValue ?? 100,
+      currentValue: data.currentValue ?? 0,
+      unit: data.unit || "%",
+      status: data.status || "not_started",
+      isLocal: true,
+      createdAt: now,
+      updatedAt: now
+    };
+    store.goals.unshift(item);
+    saveLocalStore(store);
+    return item;
+  },
+  updateGoal(id, updates) {
+    const store = loadLocalStore();
+    const idx = store.goals.findIndex((g2) => g2.id === id);
+    if (idx === -1) throw new Error(`Goal not found: ${id}`);
+    const item = { ...store.goals[idx], ...updates, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
+    store.goals[idx] = item;
+    saveLocalStore(store);
+    return item;
+  },
+  deleteGoal(id) {
+    const store = loadLocalStore();
+    const idx = store.goals.findIndex((g2) => g2.id === id);
+    if (idx !== -1) {
+      const [deleted] = store.goals.splice(idx, 1);
+      store.trash.unshift({ id: deleted.id, kind: "goal", title: deleted.title, deletedAt: (/* @__PURE__ */ new Date()).toISOString() });
+      saveLocalStore(store);
+    }
+    return { success: true };
+  },
+  // ── Vault ──
+  listVault() {
+    const store = loadLocalStore();
+    return store.vault;
+  },
+  getVault(id) {
+    const store = loadLocalStore();
+    const item = store.vault.find((v2) => v2.id === id);
+    if (!item) throw new Error(`Secret not found: ${id}`);
+    return item;
+  },
+  createVault(data) {
+    const store = loadLocalStore();
+    const id = generateLocalId("sec");
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const item = {
+      id,
+      name: data.name,
+      username: data.username,
+      password: data.password,
+      url: data.url,
+      notes: data.notes,
+      isEnv: Boolean(data.isEnv),
+      customFields: data.customFields,
+      itemType: data.itemType || (data.isEnv ? "env" : "login"),
+      isLocal: true,
+      createdAt: now,
+      updatedAt: now
+    };
+    store.vault.unshift(item);
+    saveLocalStore(store);
+    return item;
+  },
+  deleteVault(id) {
+    const store = loadLocalStore();
+    const idx = store.vault.findIndex((v2) => v2.id === id);
+    if (idx !== -1) {
+      const [deleted] = store.vault.splice(idx, 1);
+      store.trash.unshift({ id: deleted.id, kind: "vault", title: deleted.name, deletedAt: (/* @__PURE__ */ new Date()).toISOString() });
+      saveLocalStore(store);
+    }
+    return { success: true };
+  },
+  // ── TOTP ──
+  listTotp() {
+    const store = loadLocalStore();
+    return store.totp;
+  },
+  getTotp(id) {
+    const store = loadLocalStore();
+    const item = store.totp.find((t) => t.id === id);
+    if (!item) throw new Error(`TOTP entry not found: ${id}`);
+    return item;
+  },
+  createTotp(data) {
+    const store = loadLocalStore();
+    const id = generateLocalId("totp");
+    const item = {
+      id,
+      name: data.name,
+      secret: data.secret,
+      issuer: data.issuer || "",
+      account: data.account || "",
+      isLocal: true,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    store.totp.unshift(item);
+    saveLocalStore(store);
+    return item;
+  },
+  deleteTotp(id) {
+    const store = loadLocalStore();
+    const idx = store.totp.findIndex((t) => t.id === id);
+    if (idx !== -1) {
+      store.totp.splice(idx, 1);
+      saveLocalStore(store);
+    }
+    return { success: true };
+  },
+  // ── Events ──
+  listEvents() {
+    const store = loadLocalStore();
+    return { items: store.events, count: store.events.length };
+  },
+  createEvent(data) {
+    const store = loadLocalStore();
+    const id = generateLocalId("evt");
+    const item = {
+      id,
+      title: data.title,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      description: data.description || "",
+      isLocal: true,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    store.events.unshift(item);
+    saveLocalStore(store);
+    return item;
+  },
+  deleteEvent(id) {
+    const store = loadLocalStore();
+    const idx = store.events.findIndex((e2) => e2.id === id);
+    if (idx !== -1) {
+      store.events.splice(idx, 1);
+      saveLocalStore(store);
+    }
+    return { success: true };
+  },
+  // ── Forms ──
+  listForms() {
+    const store = loadLocalStore();
+    return { items: store.forms, count: store.forms.length };
+  },
+  getForm(id) {
+    const store = loadLocalStore();
+    const item = store.forms.find((f2) => f2.id === id);
+    if (!item) throw new Error(`Form not found: ${id}`);
+    return item;
+  },
+  createForm(data) {
+    const store = loadLocalStore();
+    const id = generateLocalId("form");
+    const item = {
+      id,
+      title: data.title,
+      description: data.description || "",
+      schema: data.schema || [],
+      isLocal: true,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    store.forms.unshift(item);
+    saveLocalStore(store);
+    return item;
+  },
+  deleteForm(id) {
+    const store = loadLocalStore();
+    const idx = store.forms.findIndex((f2) => f2.id === id);
+    if (idx !== -1) {
+      store.forms.splice(idx, 1);
+      saveLocalStore(store);
+    }
+    return { success: true };
+  },
+  // ── Flows ──
+  listFlows() {
+    const store = loadLocalStore();
+    return { items: store.flows, count: store.flows.length };
+  },
+  getFlow(id) {
+    const store = loadLocalStore();
+    const item = store.flows.find((f2) => f2.id === id);
+    if (!item) throw new Error(`Flow not found: ${id}`);
+    return item;
+  },
+  createFlow(data) {
+    const store = loadLocalStore();
+    const id = generateLocalId("flow");
+    const item = {
+      id,
+      title: data.title,
+      description: data.description || "",
+      status: "draft",
+      isLocal: true,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    store.flows.unshift(item);
+    saveLocalStore(store);
+    return item;
+  },
+  deleteFlow(id) {
+    const store = loadLocalStore();
+    const idx = store.flows.findIndex((f2) => f2.id === id);
+    if (idx !== -1) {
+      store.flows.splice(idx, 1);
+      saveLocalStore(store);
+    }
+    return { success: true };
+  },
+  // ── Tags ──
+  listTags() {
+    const store = loadLocalStore();
+    return { items: store.tags, count: store.tags.length };
+  },
+  createTag(data) {
+    const store = loadLocalStore();
+    const id = generateLocalId("tag");
+    const item = {
+      id,
+      name: data.name,
+      color: data.color || "#6366F1",
+      isLocal: true
+    };
+    store.tags.unshift(item);
+    saveLocalStore(store);
+    return item;
+  },
+  deleteTag(id) {
+    const store = loadLocalStore();
+    const idx = store.tags.findIndex((t) => t.id === id);
+    if (idx !== -1) {
+      store.tags.splice(idx, 1);
+      saveLocalStore(store);
+    }
+    return { success: true };
+  },
+  // ── Trash ──
+  listTrash() {
+    const store = loadLocalStore();
+    return { items: store.trash, count: store.trash.length };
+  },
+  restoreTrash(kind, id) {
+    const store = loadLocalStore();
+    const idx = store.trash.findIndex((t) => t.id === id && t.kind === kind);
+    if (idx !== -1) {
+      store.trash.splice(idx, 1);
+      saveLocalStore(store);
+    }
+    return { restored: true };
+  },
+  purgeTrash(kind, id) {
+    const store = loadLocalStore();
+    const idx = store.trash.findIndex((t) => t.id === id && t.kind === kind);
+    if (idx !== -1) {
+      store.trash.splice(idx, 1);
+      saveLocalStore(store);
+    }
+    return { purged: true };
+  },
+  // ── Search ──
+  search(query) {
+    const q = query.toLowerCase().trim();
+    const store = loadLocalStore();
+    const results = [];
+    for (const i of store.ideas) {
+      if (i.title?.toLowerCase().includes(q) || i.content?.toLowerCase().includes(q)) {
+        results.push({ kind: "idea", id: i.id, title: i.title, snippet: i.content?.substring(0, 100), isLocal: true });
+      }
+    }
+    for (const g2 of store.goals) {
+      if (g2.title?.toLowerCase().includes(q) || g2.description?.toLowerCase().includes(q)) {
+        results.push({ kind: "goal", id: g2.id, title: g2.title, snippet: g2.description?.substring(0, 100), isLocal: true });
+      }
+    }
+    for (const v2 of store.vault) {
+      if (v2.name?.toLowerCase().includes(q) || v2.username?.toLowerCase().includes(q)) {
+        results.push({ kind: "vault", id: v2.id, title: v2.name, isLocal: true });
+      }
+    }
+    for (const e2 of store.events) {
+      if (e2.title?.toLowerCase().includes(q)) {
+        results.push({ kind: "event", id: e2.id, title: e2.title, isLocal: true });
+      }
+    }
+    return results;
+  }
+};
+
+// src/commands/ideas.ts
 async function listIdeasCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = await client.ideas.list({ limit, workspaceId: opts.workspace });
+    const res = isAuthed ? await getClient(opts).ideas.list({ limit, workspaceId: opts.workspace }) : LocalStore.listIdeas();
     if (opts.json) {
       printJson(res);
       return;
@@ -917,10 +1327,13 @@ async function listIdeasCommand(opts) {
       id: n.id,
       title: n.title || "(Untitled Idea)",
       category: n.category || "general",
-      workspace: n.workspaceId || "personal",
+      mode: isAuthed ? n.workspaceId || "cloud" : pc4.dim("local"),
       createdAt: n.createdAt?.substring(0, 10) || ""
     }));
-    printTable(rows, ["id", "title", "category", "workspace", "createdAt"]);
+    printTable(rows, ["id", "title", "category", "mode", "createdAt"]);
+    if (!isAuthed) {
+      console.log(pc4.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync ideas with cloud."));
+    }
   } catch (err) {
     printError("Failed to list ideas", err);
     process.exit(1);
@@ -928,8 +1341,8 @@ async function listIdeasCommand(opts) {
 }
 async function getIdeaCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.ideas.get(id);
+    const isAuthed = hasAuth(opts);
+    const item = isAuthed ? await getClient(opts).ideas.get(id) : LocalStore.getIdea(id);
     if (opts.json) {
       printJson(item);
       return;
@@ -937,7 +1350,7 @@ async function getIdeaCommand(id, opts) {
     console.log("\n" + pc4.bold(item.title || "(Untitled Idea)"));
     console.log(pc4.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
-    console.log(`Workspace: ${item.workspaceId || "personal"}`);
+    console.log(`Mode:      ${isAuthed ? "Cloud / " + (item.workspaceId || "personal") : "Local-First"}`);
     console.log(`Category:  ${item.category || "general"}`);
     console.log(`Updated:   ${item.updatedAt || item.createdAt || "N/A"}`);
     console.log(pc4.dim("\u2500".repeat(40)));
@@ -950,20 +1363,25 @@ async function getIdeaCommand(id, opts) {
 }
 async function createIdeaCommand(title, opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const tags2 = opts.tags ? opts.tags.split(",").map((t) => t.trim()).filter(Boolean) : void 0;
-    const item = await client.ideas.create({
+    const item = isAuthed ? await getClient(opts).ideas.create({
       title,
       content: opts.content || "",
       category: opts.category,
       workspaceId: opts.workspace,
+      tags: tags2
+    }) : LocalStore.createIdea({
+      title,
+      content: opts.content,
+      category: opts.category,
       tags: tags2
     });
     if (opts.json) {
       printJson(item);
       return;
     }
-    printSuccess(`Created idea "${pc4.bold(item.title || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created idea "${pc4.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create idea", err);
     process.exit(1);
@@ -971,8 +1389,12 @@ async function createIdeaCommand(title, opts) {
 }
 async function updateIdeaCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.ideas.update(id, {
+    const isAuthed = hasAuth(opts);
+    const item = isAuthed ? await getClient(opts).ideas.update(id, {
+      title: opts.title,
+      content: opts.content,
+      category: opts.category
+    }) : LocalStore.updateIdea(id, {
       title: opts.title,
       content: opts.content,
       category: opts.category
@@ -989,8 +1411,12 @@ async function updateIdeaCommand(id, opts) {
 }
 async function deleteIdeaCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    await client.ideas.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).ideas.delete(id);
+    } else {
+      LocalStore.deleteIdea(id);
+    }
     if (opts.json) {
       printJson({ success: true, id });
       return;
@@ -1003,9 +1429,12 @@ async function deleteIdeaCommand(id, opts) {
 }
 async function listArticlesCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = await client.ideas.articles({ limit, workspaceId: opts.workspace });
+    const res = isAuthed ? await getClient(opts).ideas.articles({ limit, workspaceId: opts.workspace }) : {
+      items: LocalStore.listIdeas().items.filter((i) => i.category === "article"),
+      count: 0
+    };
     if (opts.json) {
       printJson(res);
       return;
@@ -1013,10 +1442,10 @@ async function listArticlesCommand(opts) {
     const rows = (res.items || []).map((n) => ({
       id: n.id,
       title: n.title || "(Untitled Article)",
-      workspace: n.workspaceId || "personal",
+      mode: isAuthed ? n.workspaceId || "cloud" : pc4.dim("local"),
       createdAt: n.createdAt?.substring(0, 10) || ""
     }));
-    printTable(rows, ["id", "title", "workspace", "createdAt"]);
+    printTable(rows, ["id", "title", "mode", "createdAt"]);
   } catch (err) {
     printError("Failed to list articles", err);
     process.exit(1);
@@ -1027,9 +1456,9 @@ async function listArticlesCommand(opts) {
 import pc5 from "picocolors";
 async function listGoalsCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = await client.goals.list({ limit, workspaceId: opts.workspace, status: opts.status });
+    const res = isAuthed ? await getClient(opts).goals.list({ limit, workspaceId: opts.workspace, status: opts.status }) : LocalStore.listGoals();
     if (opts.json) {
       printJson(res);
       return;
@@ -1039,9 +1468,12 @@ async function listGoalsCommand(opts) {
       title: g2.title || "(Untitled Goal)",
       status: g2.status || "not_started",
       progress: `${g2.currentValue ?? 0}/${g2.targetValue ?? 100} ${g2.unit || ""}`.trim(),
-      workspace: g2.workspaceId || "personal"
+      mode: isAuthed ? g2.workspaceId || "cloud" : pc5.dim("local")
     }));
-    printTable(rows, ["id", "title", "status", "progress", "workspace"]);
+    printTable(rows, ["id", "title", "status", "progress", "mode"]);
+    if (!isAuthed) {
+      console.log(pc5.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync goals with cloud."));
+    }
   } catch (err) {
     printError("Failed to list goals", err);
     process.exit(1);
@@ -1049,8 +1481,8 @@ async function listGoalsCommand(opts) {
 }
 async function getGoalCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.goals.get(id);
+    const isAuthed = hasAuth(opts);
+    const item = isAuthed ? await getClient(opts).goals.get(id) : LocalStore.getGoal(id);
     if (opts.json) {
       printJson(item);
       return;
@@ -1060,8 +1492,7 @@ async function getGoalCommand(id, opts) {
     console.log(`ID:        ${item.id}`);
     console.log(`Status:    ${item.status || "not_started"}`);
     console.log(`Progress:  ${item.currentValue ?? 0}/${item.targetValue ?? 100} ${item.unit || ""}`);
-    console.log(`Workspace: ${item.workspaceId || "personal"}`);
-    console.log(`Target:    ${item.targetDate || "No deadline"}`);
+    console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
     if (item.description) {
       console.log(pc5.dim("\u2500".repeat(40)));
       console.log(item.description);
@@ -1074,21 +1505,27 @@ async function getGoalCommand(id, opts) {
 }
 async function createGoalCommand(title, opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const targetValue = opts.targetValue ? parseFloat(opts.targetValue) : 100;
-    const item = await client.goals.create({
+    const item = isAuthed ? await getClient(opts).goals.create({
       title,
       description: opts.description,
       targetValue,
       unit: opts.unit || "%",
       status: opts.status || "not_started",
       workspaceId: opts.workspace
+    }) : LocalStore.createGoal({
+      title,
+      description: opts.description,
+      targetValue,
+      unit: opts.unit,
+      status: opts.status
     });
     if (opts.json) {
       printJson(item);
       return;
     }
-    printSuccess(`Created goal "${pc5.bold(item.title || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created goal "${pc5.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create goal", err);
     process.exit(1);
@@ -1096,9 +1533,13 @@ async function createGoalCommand(title, opts) {
 }
 async function updateGoalCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const currentValue = opts.currentValue !== void 0 ? parseFloat(opts.currentValue) : void 0;
-    const item = await client.goals.update(id, {
+    const item = isAuthed ? await getClient(opts).goals.update(id, {
+      title: opts.title,
+      status: opts.status,
+      currentValue
+    }) : LocalStore.updateGoal(id, {
       title: opts.title,
       status: opts.status,
       currentValue
@@ -1115,8 +1556,12 @@ async function updateGoalCommand(id, opts) {
 }
 async function deleteGoalCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    await client.goals.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).goals.delete(id);
+    } else {
+      LocalStore.deleteGoal(id);
+    }
     if (opts.json) {
       printJson({ success: true, id });
       return;
@@ -1132,9 +1577,9 @@ async function deleteGoalCommand(id, opts) {
 import pc6 from "picocolors";
 async function listEventsCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = await client.events.list({ limit, workspaceId: opts.workspace });
+    const res = isAuthed ? await getClient(opts).events.list({ limit, workspaceId: opts.workspace }) : LocalStore.listEvents();
     if (opts.json) {
       printJson(res);
       return;
@@ -1144,9 +1589,12 @@ async function listEventsCommand(opts) {
       title: e2.title,
       startTime: e2.startTime || "",
       endTime: e2.endTime || "",
-      workspace: e2.workspaceId || "personal"
+      mode: isAuthed ? e2.workspaceId || "cloud" : pc6.dim("local")
     }));
-    printTable(rows, ["id", "title", "startTime", "endTime", "workspace"]);
+    printTable(rows, ["id", "title", "startTime", "endTime", "mode"]);
+    if (!isAuthed) {
+      console.log(pc6.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync calendar events with cloud."));
+    }
   } catch (err) {
     printError("Failed to list events", err);
     process.exit(1);
@@ -1154,19 +1602,20 @@ async function listEventsCommand(opts) {
 }
 async function createEventCommand(title, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.events.create({
+    const isAuthed = hasAuth(opts);
+    const payload = {
       title,
       startTime: opts.startTime,
       endTime: opts.endTime,
       description: opts.description,
       workspaceId: opts.workspace
-    });
+    };
+    const item = isAuthed ? await getClient(opts).events.create(payload) : LocalStore.createEvent(payload);
     if (opts.json) {
       printJson(item);
       return;
     }
-    printSuccess(`Created event "${pc6.bold(item.title)}" (ID: ${item.id})`);
+    printSuccess(`Created event "${pc6.bold(item.title)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create event", err);
     process.exit(1);
@@ -1174,8 +1623,12 @@ async function createEventCommand(title, opts) {
 }
 async function deleteEventCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    await client.events.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).events.delete(id);
+    } else {
+      LocalStore.deleteEvent(id);
+    }
     if (opts.json) {
       printJson({ success: true, id });
       return;
@@ -1191,9 +1644,9 @@ async function deleteEventCommand(id, opts) {
 import pc7 from "picocolors";
 async function listFormsCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = await client.forms.list({ limit, workspaceId: opts.workspace });
+    const res = isAuthed ? await getClient(opts).forms.list({ limit, workspaceId: opts.workspace }) : LocalStore.listForms();
     if (opts.json) {
       printJson(res);
       return;
@@ -1203,9 +1656,9 @@ async function listFormsCommand(opts) {
       title: f2.title || "(Untitled Form)",
       status: f2.status || "active",
       fields: Array.isArray(f2.schema) ? f2.schema.length : 0,
-      workspace: f2.workspaceId || "personal"
+      mode: isAuthed ? f2.workspaceId || "cloud" : pc7.dim("local")
     }));
-    printTable(rows, ["id", "title", "status", "fields", "workspace"]);
+    printTable(rows, ["id", "title", "status", "fields", "mode"]);
   } catch (err) {
     printError("Failed to list forms", err);
     process.exit(1);
@@ -1213,8 +1666,8 @@ async function listFormsCommand(opts) {
 }
 async function getFormCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.forms.get(id);
+    const isAuthed = hasAuth(opts);
+    const item = isAuthed ? await getClient(opts).forms.get(id) : LocalStore.getForm(id);
     if (opts.json) {
       printJson(item);
       return;
@@ -1223,7 +1676,7 @@ async function getFormCommand(id, opts) {
     console.log(pc7.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Status:    ${item.status || "active"}`);
-    console.log(`Workspace: ${item.workspaceId || "personal"}`);
+    console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
     console.log(`Fields:    ${Array.isArray(item.schema) ? item.schema.length : 0}`);
     console.log();
   } catch (err) {
@@ -1233,18 +1686,19 @@ async function getFormCommand(id, opts) {
 }
 async function createFormCommand(title, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.forms.create({
+    const isAuthed = hasAuth(opts);
+    const payload = {
       title,
       description: opts.description,
       workspaceId: opts.workspace,
       schema: []
-    });
+    };
+    const item = isAuthed ? await getClient(opts).forms.create(payload) : LocalStore.createForm(payload);
     if (opts.json) {
       printJson(item);
       return;
     }
-    printSuccess(`Created form "${pc7.bold(item.title || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created form "${pc7.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create form", err);
     process.exit(1);
@@ -1252,8 +1706,12 @@ async function createFormCommand(title, opts) {
 }
 async function deleteFormCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    await client.forms.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).forms.delete(id);
+    } else {
+      LocalStore.deleteForm(id);
+    }
     if (opts.json) {
       printJson({ success: true, id });
       return;
@@ -1269,9 +1727,9 @@ async function deleteFormCommand(id, opts) {
 import pc8 from "picocolors";
 async function listFlowsCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = await client.flows.list(limit);
+    const res = isAuthed ? await getClient(opts).flows.list(limit) : LocalStore.listFlows();
     if (opts.json) {
       printJson(res);
       return;
@@ -1280,9 +1738,10 @@ async function listFlowsCommand(opts) {
       id: f2.id,
       title: f2.title || "(Untitled Flow)",
       status: f2.status || "draft",
-      description: f2.description || ""
+      description: f2.description || "",
+      mode: isAuthed ? "cloud" : pc8.dim("local")
     }));
-    printTable(rows, ["id", "title", "status", "description"]);
+    printTable(rows, ["id", "title", "status", "description", "mode"]);
   } catch (err) {
     printError("Failed to list flows", err);
     process.exit(1);
@@ -1290,8 +1749,8 @@ async function listFlowsCommand(opts) {
 }
 async function getFlowCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.flows.get(id);
+    const isAuthed = hasAuth(opts);
+    const item = isAuthed ? await getClient(opts).flows.get(id) : LocalStore.getFlow(id);
     if (opts.json) {
       printJson(item);
       return;
@@ -1300,6 +1759,7 @@ async function getFlowCommand(id, opts) {
     console.log(pc8.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Status:    ${item.status || "draft"}`);
+    console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
     console.log(`Summary:   ${item.description || "N/A"}`);
     console.log();
   } catch (err) {
@@ -1309,17 +1769,18 @@ async function getFlowCommand(id, opts) {
 }
 async function createFlowCommand(title, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.flows.create({
+    const isAuthed = hasAuth(opts);
+    const payload = {
       title,
       description: opts.description,
       status: "draft"
-    });
+    };
+    const item = isAuthed ? await getClient(opts).flows.create(payload) : LocalStore.createFlow(payload);
     if (opts.json) {
       printJson(item);
       return;
     }
-    printSuccess(`Created flow "${pc8.bold(item.title || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created flow "${pc8.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create flow", err);
     process.exit(1);
@@ -1327,8 +1788,12 @@ async function createFlowCommand(title, opts) {
 }
 async function deleteFlowCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    await client.flows.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).flows.delete(id);
+    } else {
+      LocalStore.deleteFlow(id);
+    }
     if (opts.json) {
       printJson({ success: true, id });
       return;
@@ -1937,15 +2402,15 @@ var L2 = () => {
 };
 
 // src/commands/vault.ts
-import * as fs3 from "fs";
+import * as fs4 from "fs";
 import pc11 from "picocolors";
 
 // src/crypto/session.ts
-import * as fs2 from "fs";
-import * as path2 from "path";
-import * as os2 from "os";
-var SESSION_DIR = path2.join(os2.homedir(), ".kylrix");
-var SESSION_FILE = path2.join(SESSION_DIR, "session.json");
+import * as fs3 from "fs";
+import * as path3 from "path";
+import * as os3 from "os";
+var SESSION_DIR = path3.join(os3.homedir(), ".kylrix");
+var SESSION_FILE = path3.join(SESSION_DIR, "session.json");
 function getVaultSession() {
   const envMek = process.env.KYLRIX_MEK_SESSION || process.env.KYLRIX_MEK;
   if (envMek) {
@@ -1956,10 +2421,10 @@ function getVaultSession() {
     };
   }
   try {
-    if (!fs2.existsSync(SESSION_FILE)) {
+    if (!fs3.existsSync(SESSION_FILE)) {
       return null;
     }
-    const raw = fs2.readFileSync(SESSION_FILE, "utf-8");
+    const raw = fs3.readFileSync(SESSION_FILE, "utf-8");
     const session = JSON.parse(raw);
     if (Date.now() > session.expiresAt) {
       clearVaultSession();
@@ -1972,8 +2437,8 @@ function getVaultSession() {
 }
 function setVaultSession(mekHex, expiresInMinutes = 60) {
   try {
-    if (!fs2.existsSync(SESSION_DIR)) {
-      fs2.mkdirSync(SESSION_DIR, { recursive: true });
+    if (!fs3.existsSync(SESSION_DIR)) {
+      fs3.mkdirSync(SESSION_DIR, { recursive: true });
     }
     const now = Date.now();
     const session = {
@@ -1981,7 +2446,7 @@ function setVaultSession(mekHex, expiresInMinutes = 60) {
       unlockedAt: now,
       expiresAt: now + expiresInMinutes * 60 * 1e3
     };
-    fs2.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2), {
+    fs3.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2), {
       encoding: "utf-8",
       mode: 384
     });
@@ -1992,8 +2457,8 @@ function setVaultSession(mekHex, expiresInMinutes = 60) {
 }
 function clearVaultSession() {
   try {
-    if (fs2.existsSync(SESSION_FILE)) {
-      fs2.unlinkSync(SESSION_FILE);
+    if (fs3.existsSync(SESSION_FILE)) {
+      fs3.unlinkSync(SESSION_FILE);
     }
   } catch {
   }
@@ -2002,7 +2467,7 @@ function clearVaultSession() {
 // src/commands/vault.ts
 async function unlockVaultCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     let masterPassword = opts.password;
     if (!masterPassword) {
       const passAnswer = await $e({
@@ -2017,13 +2482,17 @@ async function unlockVaultCommand(opts) {
     }
     const spinner = L2();
     spinner.start("Deriving and unlocking Master Encryption Key (MEK)...");
-    const res = await client.vault.unlockUserMek(masterPassword);
-    if (!res.mek) {
-      spinner.stop(pc11.red("Unlock failed."));
-      throw new Error("Could not unwrap Master Encryption Key. Verify your Master Password.");
+    let mek = "local_mek_active";
+    if (isAuthed) {
+      const res = await getClient(opts).vault.unlockUserMek(masterPassword);
+      if (!res.mek) {
+        spinner.stop(pc11.red("Unlock failed."));
+        throw new Error("Could not unwrap Master Encryption Key. Verify your Master Password.");
+      }
+      mek = res.mek;
     }
     const expiry = opts.expiryMinutes ? parseInt(opts.expiryMinutes, 10) : 60;
-    const session = setVaultSession(res.mek, expiry);
+    const session = setVaultSession(mek, expiry);
     spinner.stop(pc11.green("Vault unlocked successfully!"));
     if (opts.json) {
       printJson(session);
@@ -2068,17 +2537,17 @@ function statusVaultCommand(opts = {}) {
 }
 async function listVaultCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 50;
     const session = opts.decrypt ? getVaultSession() : null;
-    if (opts.decrypt && !session) {
+    if (opts.decrypt && !session && isAuthed) {
       printWarning("Vault is locked. Run `kylrix vault unlock` first or run without `--decrypt`.");
     }
-    const items = await client.vault.list({
+    const items = isAuthed ? await getClient(opts).vault.list({
       limit,
       workspaceId: opts.workspace,
       mek: session?.mekHex
-    });
+    }) : LocalStore.listVault();
     if (opts.json) {
       printJson(items);
       return;
@@ -2088,10 +2557,13 @@ async function listVaultCommand(opts) {
       name: v2.name,
       type: v2.itemType || (v2.isEnv ? "env" : "login"),
       username: v2.username || v2.identity || (v2.isEnv ? "(env-vars)" : ""),
-      workspace: v2.workspaceId || "personal",
+      mode: isAuthed ? v2.workspaceId || "cloud" : pc11.dim("local"),
       updatedAt: v2.updatedAt?.substring(0, 10) || ""
     }));
-    printTable(rows, ["id", "name", "type", "username", "workspace", "updatedAt"]);
+    printTable(rows, ["id", "name", "type", "username", "mode", "updatedAt"]);
+    if (!isAuthed) {
+      console.log(pc11.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync secrets with cloud."));
+    }
   } catch (err) {
     printError("Failed to list vault items", err);
     process.exit(1);
@@ -2099,13 +2571,13 @@ async function listVaultCommand(opts) {
 }
 async function getVaultCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const session = opts.decrypt ? getVaultSession() : null;
-    const item = await client.vault.get(id, {
+    const item = isAuthed ? await getClient(opts).vault.get(id, {
       mek: session?.mekHex,
       format: opts.format,
       pure: opts.pure
-    });
+    }) : LocalStore.getVault(id);
     if (opts.json) {
       printJson(item);
       return;
@@ -2118,7 +2590,7 @@ async function getVaultCommand(id, opts) {
     console.log(pc11.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Type:      ${item.itemType || (item.isEnv ? "env" : "login")}`);
-    console.log(`Workspace: ${item.workspaceId || "personal"}`);
+    console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
     if (item.username) console.log(`Username:  ${item.username}`);
     if (item.password) console.log(`Password:  ${item.password}`);
     if (item.url) console.log(`URL:       ${item.url}`);
@@ -2139,36 +2611,34 @@ async function getVaultCommand(id, opts) {
 }
 async function createVaultCommand(name, opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const session = getVaultSession();
     let customFields = void 0;
     if (opts.envFile) {
-      if (!fs3.existsSync(opts.envFile)) {
+      if (!fs4.existsSync(opts.envFile)) {
         throw new Error(`File not found: ${opts.envFile}`);
       }
-      customFields = fs3.readFileSync(opts.envFile, "utf-8");
+      customFields = fs4.readFileSync(opts.envFile, "utf-8");
     }
-    const item = await client.vault.create(
-      {
-        name,
-        username: opts.username,
-        password: opts.password,
-        url: opts.serviceUrl,
-        notes: opts.notes,
-        isEnv: opts.isEnv || Boolean(opts.envFile),
-        itemType: opts.itemType || (opts.isEnv || opts.envFile ? "env" : "login"),
-        customFields
-      },
-      {
-        mek: session?.mekHex,
-        workspaceId: opts.workspace
-      }
-    );
+    const payload = {
+      name,
+      username: opts.username,
+      password: opts.password,
+      url: opts.serviceUrl,
+      notes: opts.notes,
+      isEnv: opts.isEnv || Boolean(opts.envFile),
+      itemType: opts.itemType || (opts.isEnv || opts.envFile ? "env" : "login"),
+      customFields
+    };
+    const item = isAuthed ? await getClient(opts).vault.create(payload, {
+      mek: session?.mekHex,
+      workspaceId: opts.workspace
+    }) : LocalStore.createVault(payload);
     if (opts.json) {
       printJson(item);
       return;
     }
-    printSuccess(`Created secret "${pc11.bold(item.name || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created secret "${pc11.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create vault secret", err);
     process.exit(1);
@@ -2176,8 +2646,12 @@ async function createVaultCommand(name, opts) {
 }
 async function deleteVaultCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    await client.vault.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).vault.delete(id);
+    } else {
+      LocalStore.deleteVault(id);
+    }
     if (opts.json) {
       printJson({ success: true, id });
       return;
@@ -2193,7 +2667,7 @@ async function deleteVaultCommand(id, opts) {
 import pc12 from "picocolors";
 
 // src/crypto/totp.ts
-import * as crypto from "crypto";
+import * as crypto2 from "crypto";
 function base32Decode(secret) {
   const clean = secret.toUpperCase().replace(/[\s=-]/g, "");
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -2219,7 +2693,7 @@ function generateTotp(secret, periodSeconds = 30, digits = 6) {
   const remainingSeconds = periodSeconds - nowSeconds % periodSeconds;
   const counterBuf = Buffer.alloc(8);
   counterBuf.writeBigInt64BE(BigInt(counter));
-  const hmac = crypto.createHmac("sha1", key).update(counterBuf).digest();
+  const hmac = crypto2.createHmac("sha1", key).update(counterBuf).digest();
   const offset = hmac[hmac.length - 1] & 15;
   const binary = (hmac[offset] & 127) << 24 | (hmac[offset + 1] & 255) << 16 | (hmac[offset + 2] & 255) << 8 | hmac[offset + 3] & 255;
   const otp = binary % 10 ** digits;
@@ -2230,14 +2704,14 @@ function generateTotp(secret, periodSeconds = 30, digits = 6) {
 // src/commands/totp.ts
 async function listTotpCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 50;
     const session = getVaultSession();
-    const items = await client.totp.list({
+    const items = isAuthed ? await getClient(opts).totp.list({
       limit,
       workspaceId: opts.workspace,
       mek: session?.mekHex
-    });
+    }) : LocalStore.listTotp();
     if (opts.json) {
       printJson(items);
       return;
@@ -2258,11 +2732,11 @@ async function listTotpCommand(opts) {
         issuer: t.issuer || "",
         account: t.account || "",
         code: codeDisplay,
-        workspace: t.workspaceId || "personal"
+        mode: isAuthed ? t.workspaceId || "cloud" : pc12.dim("local")
       };
     });
-    printTable(rows, ["id", "name", "issuer", "account", "code", "workspace"]);
-    if (!session) {
+    printTable(rows, ["id", "name", "issuer", "account", "code", "mode"]);
+    if (isAuthed && !session) {
       console.log(pc12.dim("\nTip: Run `kylrix vault unlock` to show live 2FA verification codes."));
     }
   } catch (err) {
@@ -2272,11 +2746,9 @@ async function listTotpCommand(opts) {
 }
 async function getTotpCodeCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const session = getVaultSession();
-    const item = await client.totp.get(id, {
-      mek: session?.mekHex
-    });
+    const item = isAuthed ? await getClient(opts).totp.get(id, { mek: session?.mekHex }) : LocalStore.getTotp(id);
     if (!item.secret) {
       throw new Error("Could not decrypt TOTP secret. Please run `kylrix vault unlock` first.");
     }
@@ -2295,25 +2767,23 @@ async function getTotpCodeCommand(id, opts) {
 }
 async function createTotpCommand(name, opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const session = getVaultSession();
-    const item = await client.totp.create(
-      {
-        name,
-        secret: opts.secret,
-        issuer: opts.issuer,
-        account: opts.account
-      },
-      {
-        mek: session?.mekHex,
-        workspaceId: opts.workspace
-      }
-    );
+    const payload = {
+      name,
+      secret: opts.secret,
+      issuer: opts.issuer,
+      account: opts.account
+    };
+    const item = isAuthed ? await getClient(opts).totp.create(payload, {
+      mek: session?.mekHex,
+      workspaceId: opts.workspace
+    }) : LocalStore.createTotp(payload);
     if (opts.json) {
       printJson(item);
       return;
     }
-    printSuccess(`Created TOTP seed "${pc12.bold(item.name || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created TOTP seed "${pc12.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create TOTP entry", err);
     process.exit(1);
@@ -2321,8 +2791,12 @@ async function createTotpCommand(name, opts) {
 }
 async function deleteTotpCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    await client.totp.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).totp.delete(id);
+    } else {
+      LocalStore.deleteTotp(id);
+    }
     if (opts.json) {
       printJson({ success: true, id });
       return;
@@ -2432,12 +2906,12 @@ async function deleteAgentSessionCommand(id, opts) {
 import pc14 from "picocolors";
 async function searchCommand(query, opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const results = await client.search.query(query, {
+    const results = isAuthed ? await getClient(opts).search.query(query, {
       workspaceId: opts.workspace,
       limit
-    });
+    }) : LocalStore.search(query);
     if (opts.json) {
       printJson(results);
       return;
@@ -2454,9 +2928,10 @@ Search results for "${pc14.bold(query)}":
       kind: r2.kind.toUpperCase(),
       id: r2.id,
       title: r2.title,
-      snippet: r2.snippet || ""
+      snippet: r2.snippet || "",
+      mode: isAuthed ? r2.isLocal ? pc14.dim("local") : "cloud" : pc14.dim("local")
     }));
-    printTable(rows, ["kind", "id", "title", "snippet"]);
+    printTable(rows, ["kind", "id", "title", "snippet", "mode"]);
   } catch (err) {
     printError("Search query failed", err);
     process.exit(1);
@@ -2620,8 +3095,8 @@ async function adminStatusCommand(opts) {
 import pc18 from "picocolors";
 async function listTagsCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
-    const res = await client.tags.list();
+    const isAuthed = hasAuth(opts);
+    const res = isAuthed ? await getClient(opts).tags.list() : LocalStore.listTags();
     if (opts.json) {
       printJson(res);
       return;
@@ -2629,9 +3104,10 @@ async function listTagsCommand(opts) {
     const rows = (res.items || []).map((t) => ({
       id: t.id,
       name: t.name,
-      color: t.color || ""
+      color: t.color || "",
+      mode: isAuthed ? "cloud" : pc18.dim("local")
     }));
-    printTable(rows, ["id", "name", "color"]);
+    printTable(rows, ["id", "name", "color", "mode"]);
   } catch (err) {
     printError("Failed to list tags", err);
     process.exit(1);
@@ -2639,16 +3115,17 @@ async function listTagsCommand(opts) {
 }
 async function createTagCommand(name, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.tags.create({
+    const isAuthed = hasAuth(opts);
+    const payload = {
       name,
       color: opts.color
-    });
+    };
+    const item = isAuthed ? await getClient(opts).tags.create(payload) : LocalStore.createTag(payload);
     if (opts.json) {
       printJson(item);
       return;
     }
-    printSuccess(`Created tag "${pc18.bold(item.name)}" (ID: ${item.id})`);
+    printSuccess(`Created tag "${pc18.bold(item.name)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create tag", err);
     process.exit(1);
@@ -2656,8 +3133,12 @@ async function createTagCommand(name, opts) {
 }
 async function deleteTagCommand(id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    await client.tags.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).tags.delete(id);
+    } else {
+      LocalStore.deleteTag(id);
+    }
     if (opts.json) {
       printJson({ success: true, id });
       return;
@@ -2672,9 +3153,9 @@ async function deleteTagCommand(id, opts) {
 // src/commands/trash.ts
 async function listTrashCommand(opts) {
   try {
-    const client = requireAuthClient(opts);
+    const isAuthed = hasAuth(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = await client.trash.list(limit);
+    const res = isAuthed ? await getClient(opts).trash.list(limit) : LocalStore.listTrash();
     if (opts.json) {
       printJson(res);
       return;
@@ -2693,8 +3174,8 @@ async function listTrashCommand(opts) {
 }
 async function restoreTrashCommand(kind, id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const res = await client.trash.restore(kind, id);
+    const isAuthed = hasAuth(opts);
+    const res = isAuthed ? await getClient(opts).trash.restore(kind, id) : LocalStore.restoreTrash(kind, id);
     if (opts.json) {
       printJson(res);
       return;
@@ -2707,8 +3188,8 @@ async function restoreTrashCommand(kind, id, opts) {
 }
 async function purgeTrashCommand(kind, id, opts) {
   try {
-    const client = requireAuthClient(opts);
-    const res = await client.trash.purge(kind, id);
+    const isAuthed = hasAuth(opts);
+    const res = isAuthed ? await getClient(opts).trash.purge(kind, id) : LocalStore.purgeTrash(kind, id);
     if (opts.json) {
       printJson(res);
       return;
@@ -2724,15 +3205,15 @@ async function purgeTrashCommand(kind, id, opts) {
 import pc20 from "picocolors";
 
 // src/updater/index.ts
-import * as fs4 from "fs";
-import * as path3 from "path";
-import * as os3 from "os";
+import * as fs5 from "fs";
+import * as path4 from "path";
+import * as os4 from "os";
 import { spawn } from "child_process";
 import pc19 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
 var CURRENT_VERSION = "1.0.1";
-var CACHE_DIR = path3.join(os3.homedir(), ".kylrix");
-var CACHE_FILE = path3.join(CACHE_DIR, "update-cache.json");
+var CACHE_DIR = path4.join(os4.homedir(), ".kylrix");
+var CACHE_FILE = path4.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
 function compareSemver(v1, v2) {
   const clean1 = v1.replace(/^v/, "").split("-")[0];
@@ -2765,8 +3246,8 @@ async function fetchLatestVersion(timeoutMs = 2500) {
 }
 function readCachedUpdate() {
   try {
-    if (!fs4.existsSync(CACHE_FILE)) return null;
-    const raw = fs4.readFileSync(CACHE_FILE, "utf-8");
+    if (!fs5.existsSync(CACHE_FILE)) return null;
+    const raw = fs5.readFileSync(CACHE_FILE, "utf-8");
     return JSON.parse(raw);
   } catch {
     return null;
@@ -2774,14 +3255,14 @@ function readCachedUpdate() {
 }
 function writeCachedUpdate(latestVersion) {
   try {
-    if (!fs4.existsSync(CACHE_DIR)) {
-      fs4.mkdirSync(CACHE_DIR, { recursive: true });
+    if (!fs5.existsSync(CACHE_DIR)) {
+      fs5.mkdirSync(CACHE_DIR, { recursive: true });
     }
     const cache = {
       latestVersion,
       lastChecked: Date.now()
     };
-    fs4.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), { encoding: "utf-8", mode: 384 });
+    fs5.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), { encoding: "utf-8", mode: 384 });
   } catch {
   }
 }
@@ -2896,6 +3377,62 @@ async function updateCommand(opts) {
     fe(pc20.green(`\u2714 ${PACKAGE_NAME} is now up to date (v${latest})!`));
   } catch (err) {
     printError("Update failed", err);
+    process.exit(1);
+  }
+}
+
+// src/commands/sync.ts
+import pc21 from "picocolors";
+async function syncCommand(opts) {
+  if (!hasAuth(opts)) {
+    if (opts.json) {
+      printJson({ synced: false, error: "Authentication required to sync local items to cloud" });
+    } else {
+      console.log(pc21.yellow("\u26A0 Not logged in. Run `kylrix login` first to sync your local data to cloud."));
+    }
+    return;
+  }
+  const client = getClient(opts);
+  const store = loadLocalStore();
+  const spinner = L2();
+  spinner.start("Syncing local-first data with Kylrix Cloud...");
+  let syncedIdeas = 0;
+  let syncedGoals = 0;
+  try {
+    for (const idea of [...store.ideas]) {
+      if (idea.isLocal) {
+        await client.ideas.create({
+          title: idea.title,
+          content: idea.content,
+          category: idea.category,
+          tags: idea.tags,
+          workspaceId: opts.workspace
+        });
+        syncedIdeas++;
+      }
+    }
+    for (const goal of [...store.goals]) {
+      if (goal.isLocal) {
+        await client.goals.create({
+          title: goal.title,
+          description: goal.description,
+          targetValue: goal.targetValue,
+          unit: goal.unit,
+          status: goal.status,
+          workspaceId: opts.workspace
+        });
+        syncedGoals++;
+      }
+    }
+    spinner.stop(pc21.green("Sync complete!"));
+    if (opts.json) {
+      printJson({ synced: true, syncedIdeas, syncedGoals });
+      return;
+    }
+    printSuccess(`Successfully synced ${syncedIdeas} ideas and ${syncedGoals} goals to your cloud workspace.`);
+  } catch (err) {
+    spinner.stop(pc21.red("Sync interrupted"));
+    printError("Sync failed", err);
     process.exit(1);
   }
 }
@@ -3766,10 +4303,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path4) {
-  if (!path4)
+function getElementAtPath(obj, path5) {
+  if (!path5)
     return obj;
-  return path4.reduce((acc, key) => acc?.[key], obj);
+  return path5.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -4178,11 +4715,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path4, issues) {
+function prefixIssues(path5, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path4);
+    iss.path.unshift(path5);
     return iss;
   });
 }
@@ -4329,16 +4866,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path5 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -4365,17 +4902,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path5 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -4407,8 +4944,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path4) {
+  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path5) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -17100,13 +17637,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path4 = ref.slice(1).split("/").filter(Boolean);
-  if (path4.length === 0) {
+  const path5 = ref.slice(1).split("/").filter(Boolean);
+  if (path5.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path4[0] === defsKey) {
-    const key = path4[1];
+  if (path5[0] === defsKey) {
+    const key = path5[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -19219,6 +19756,7 @@ var trash = program.command("trash").description("Inspect and restore soft-delet
 trash.command("list").description("List deleted items in trash").action((cmdOpts) => listTrashCommand({ ...program.opts(), ...cmdOpts }));
 trash.command("restore <kind> <id>").description("Restore a soft-deleted item").action((kind, id, cmdOpts) => restoreTrashCommand(kind, id, { ...program.opts(), ...cmdOpts }));
 trash.command("purge <kind> <id>").description("Permanently purge a deleted item").action((kind, id, cmdOpts) => purgeTrashCommand(kind, id, { ...program.opts(), ...cmdOpts }));
+program.command("sync").description("Synchronize sovereign local-first ideas and goals to your Kylrix cloud workspace").action((cmdOpts) => syncCommand({ ...program.opts(), ...cmdOpts }));
 program.command("update").alias("upgrade").description("Check for updates and automatically upgrade the CLI to the latest version").option("--force", "Force re-installation even if already on latest version").action((cmdOpts) => updateCommand({ ...program.opts(), ...cmdOpts }));
 program.command("mcp").description("Start the Model Context Protocol (MCP) server over stdio for AI clients (Claude, Cursor, Windsurf)").action((cmdOpts) => runStdioMcpServer({ ...program.opts(), ...cmdOpts }));
 program.parse(process.argv);

@@ -62,6 +62,7 @@ import { adminStatusCommand } from './commands/admin';
 import { listTagsCommand, createTagCommand, deleteTagCommand } from './commands/tags';
 import { listTrashCommand, restoreTrashCommand, purgeTrashCommand } from './commands/trash';
 import { updateCommand } from './commands/update';
+import { syncCommand } from './commands/sync';
 import { runStdioMcpServer } from './mcp/stdio';
 import { CURRENT_VERSION, scheduleBackgroundUpdateCheck } from './updater';
 
@@ -543,7 +544,13 @@ trash
   .description('Permanently purge a deleted item')
   .action((kind, id, cmdOpts) => purgeTrashCommand(kind, id, { ...program.opts(), ...cmdOpts }));
 
-// ── 18. Self-Update / Upgrade ──
+// ── 18. Sync Local to Cloud ──
+program
+  .command('sync')
+  .description('Synchronize sovereign local-first ideas and goals to your Kylrix cloud workspace')
+  .action((cmdOpts) => syncCommand({ ...program.opts(), ...cmdOpts }));
+
+// ── 19. Self-Update / Upgrade ──
 program
   .command('update')
   .alias('upgrade')
@@ -551,7 +558,7 @@ program
   .option('--force', 'Force re-installation even if already on latest version')
   .action((cmdOpts) => updateCommand({ ...program.opts(), ...cmdOpts }));
 
-// ── 19. MCP Stdio Server Bridge ──
+// ── 20. MCP Stdio Server Bridge ──
 program
   .command('mcp')
   .description('Start the Model Context Protocol (MCP) server over stdio for AI clients (Claude, Cursor, Windsurf)')

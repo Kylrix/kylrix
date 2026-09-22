@@ -1,24 +1,28 @@
 import pc from 'picocolors';
-import { requireAuthClient } from '../client';
+import { getClient, hasAuth } from '../client';
 import { printError, printJson, printSuccess, printTable } from '../formatter';
+import { LocalStore } from '../local/store';
 
 export async function listTagsCommand(opts: { url?: string; token?: string; json?: boolean }) {
   try {
-    const client = requireAuthClient(opts);
-    const res = await client.tags.list();
+    const isAuthed = hasAuth(opts);
+    const res = isAuthed
+      ? await getClient(opts).tags.list()
+      : LocalStore.listTags();
 
     if (opts.json) {
       printJson(res);
       return;
     }
 
-    const rows = (res.items || []).map((t) => ({
+    const rows = (res.items || []).map((t: any) => ({
       id: t.id,
       name: t.name,
       color: t.color || '',
+      mode: isAuthed ? 'cloud' : pc.dim('local'),
     }));
 
-    printTable(rows, ['id', 'name', 'color']);
+    printTable(rows, ['id', 'name', 'color', 'mode']);
   } catch (err: any) {
     printError('Failed to list tags', err);
     process.exit(1);
@@ -30,18 +34,22 @@ export async function createTagCommand(
   opts: { url?: string; token?: string; json?: boolean; color?: string }
 ) {
   try {
-    const client = requireAuthClient(opts);
-    const item = await client.tags.create({
+    const isAuthed = hasAuth(opts);
+    const payload = {
       name,
       color: opts.color,
-    });
+    };
+
+    const item = isAuthed
+      ? await getClient(opts).tags.create(payload)
+      : LocalStore.createTag(payload);
 
     if (opts.json) {
       printJson(item);
       return;
     }
 
-    printSuccess(`Created tag "${pc.bold(item.name)}" (ID: ${item.id})`);
+    printSuccess(`Created tag "${pc.bold(item.name)}" (ID: ${item.id}) [${isAuthed ? 'Cloud' : 'Local'}]`);
   } catch (err: any) {
     printError('Failed to create tag', err);
     process.exit(1);
@@ -50,8 +58,12 @@ export async function createTagCommand(
 
 export async function deleteTagCommand(id: string, opts: { url?: string; token?: string; json?: boolean }) {
   try {
-    const client = requireAuthClient(opts);
-    await client.tags.delete(id);
+    const isAuthed = hasAuth(opts);
+    if (isAuthed) {
+      await getClient(opts).tags.delete(id);
+    } else {
+      LocalStore.deleteTag(id);
+    }
 
     if (opts.json) {
       printJson({ success: true, id });
