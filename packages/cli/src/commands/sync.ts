@@ -1,7 +1,7 @@
 import pc from 'picocolors';
 import * as clack from '@clack/prompts';
 import { getClient, hasAuth } from '../client';
-import { LocalStore, loadLocalStore, saveLocalStore } from '../local/store';
+import { LocalStore } from '../local/store';
 import { printError, printJson, printSuccess } from '../formatter';
 
 export async function syncCommand(opts: { url?: string; token?: string; workspace?: string; json?: boolean }) {
@@ -15,7 +15,8 @@ export async function syncCommand(opts: { url?: string; token?: string; workspac
   }
 
   const client = getClient(opts);
-  const store = loadLocalStore();
+  const localIdeas = LocalStore.listIdeas().items;
+  const localGoals = LocalStore.listGoals().items;
   const spinner = clack.spinner();
   spinner.start('Syncing local-first data with Kylrix Cloud...');
 
@@ -24,7 +25,7 @@ export async function syncCommand(opts: { url?: string; token?: string; workspac
 
   try {
     // Sync local ideas
-    for (const idea of [...store.ideas]) {
+    for (const idea of localIdeas) {
       if (idea.isLocal) {
         await client.ideas.create({
           title: idea.title,
@@ -38,7 +39,7 @@ export async function syncCommand(opts: { url?: string; token?: string; workspac
     }
 
     // Sync local goals
-    for (const goal of [...store.goals]) {
+    for (const goal of localGoals) {
       if (goal.isLocal) {
         await client.goals.create({
           title: goal.title,

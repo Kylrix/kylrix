@@ -199,8 +199,8 @@ var KylrixClient = class {
   getBaseUrl() {
     return this.baseUrl;
   }
-  async request(method, path5, options = {}) {
-    const cleanPath = path5.startsWith("/") ? path5 : `/${path5}`;
+  async request(method, path6, options = {}) {
+    const cleanPath = path6.startsWith("/") ? path6 : `/${path6}`;
     const url2 = new URL(`${this.baseUrl}${cleanPath}`);
     if (options.query) {
       for (const [key, val] of Object.entries(options.query)) {
@@ -910,403 +910,879 @@ function clearWorkspaceCommand(opts = {}) {
 import pc4 from "picocolors";
 
 // src/local/store.ts
+import * as fs3 from "fs";
+import * as path3 from "path";
+import * as os3 from "os";
+
+// src/local/sqlite.ts
 import * as fs2 from "fs";
 import * as path2 from "path";
 import * as os2 from "os";
 import * as crypto from "crypto";
+import { createRequire } from "module";
 var LOCAL_DIR = path2.join(os2.homedir(), ".kylrix");
-var LOCAL_FILE = path2.join(LOCAL_DIR, "local-store.json");
-function getInitialStore() {
-  return {
-    ideas: [],
-    goals: [],
-    events: [],
-    forms: [],
-    flows: [],
-    vault: [],
-    totp: [],
-    tags: [],
-    trash: []
-  };
-}
-function loadLocalStore() {
-  try {
-    if (!fs2.existsSync(LOCAL_FILE)) {
-      return getInitialStore();
-    }
-    const raw = fs2.readFileSync(LOCAL_FILE, "utf-8");
-    return { ...getInitialStore(), ...JSON.parse(raw) };
-  } catch {
-    return getInitialStore();
-  }
-}
-function saveLocalStore(data) {
-  try {
-    if (!fs2.existsSync(LOCAL_DIR)) {
-      fs2.mkdirSync(LOCAL_DIR, { recursive: true });
-    }
-    fs2.writeFileSync(LOCAL_FILE, JSON.stringify(data, null, 2), {
-      encoding: "utf-8",
-      mode: 384
-    });
-  } catch (err) {
-    throw new Error(`Failed to save local store: ${err.message}`);
-  }
-}
+var DB_FILE = path2.join(LOCAL_DIR, "local.db");
 function generateLocalId(prefix) {
   return `loc_${prefix}_${crypto.randomBytes(6).toString("hex")}`;
+}
+var dbInstance = null;
+function getNativeSqlite() {
+  try {
+    const require2 = createRequire(import.meta.url);
+    const sqlite = require2("node:sqlite");
+    return sqlite.DatabaseSync || sqlite.default?.DatabaseSync;
+  } catch {
+    return null;
+  }
+}
+function getDatabase() {
+  if (dbInstance) return dbInstance;
+  if (!fs2.existsSync(LOCAL_DIR)) {
+    fs2.mkdirSync(LOCAL_DIR, { recursive: true });
+  }
+  const DatabaseSync = getNativeSqlite();
+  if (DatabaseSync) {
+    dbInstance = new DatabaseSync(DB_FILE);
+    initSqliteSchema(dbInstance);
+    return dbInstance;
+  }
+  return null;
+}
+function initSqliteSchema(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ideas (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT,
+      category TEXT DEFAULT 'general',
+      tags TEXT,
+      is_local INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS goals (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      target_value REAL DEFAULT 100,
+      current_value REAL DEFAULT 0,
+      unit TEXT DEFAULT '%',
+      status TEXT DEFAULT 'not_started',
+      is_local INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS vault (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      username TEXT,
+      password TEXT,
+      url TEXT,
+      notes TEXT,
+      is_env INTEGER DEFAULT 0,
+      custom_fields TEXT,
+      item_type TEXT DEFAULT 'login',
+      is_local INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS totp (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      secret TEXT NOT NULL,
+      issuer TEXT,
+      account TEXT,
+      is_local INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS events (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      description TEXT,
+      is_local INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS forms (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      schema TEXT,
+      is_local INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS flows (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      status TEXT DEFAULT 'draft',
+      is_local INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS tags (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      color TEXT DEFAULT '#6366F1',
+      is_local INTEGER DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS trash (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      title TEXT NOT NULL,
+      deleted_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ideas_updated ON ideas(updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(status);
+  `);
+}
+
+// src/local/store.ts
+var LOCAL_DIR2 = path3.join(os3.homedir(), ".kylrix");
+var FALLBACK_JSON_FILE = path3.join(LOCAL_DIR2, "local-store.json");
+function loadFallback() {
+  try {
+    if (!fs3.existsSync(FALLBACK_JSON_FILE)) {
+      return { ideas: [], goals: [], events: [], forms: [], flows: [], vault: [], totp: [], tags: [], trash: [] };
+    }
+    return JSON.parse(fs3.readFileSync(FALLBACK_JSON_FILE, "utf-8"));
+  } catch {
+    return { ideas: [], goals: [], events: [], forms: [], flows: [], vault: [], totp: [], tags: [], trash: [] };
+  }
+}
+function saveFallback(data) {
+  try {
+    if (!fs3.existsSync(LOCAL_DIR2)) {
+      fs3.mkdirSync(LOCAL_DIR2, { recursive: true });
+    }
+    fs3.writeFileSync(FALLBACK_JSON_FILE, JSON.stringify(data, null, 2), { encoding: "utf-8", mode: 384 });
+  } catch {
+  }
 }
 var LocalStore = {
   // ── Ideas ──
   listIdeas() {
-    const store = loadLocalStore();
-    return { items: store.ideas, count: store.ideas.length };
+    const db = getDatabase();
+    if (db) {
+      const stmt = db.prepare("SELECT * FROM ideas ORDER BY updated_at DESC");
+      const rows = stmt.all().map((r2) => ({
+        id: r2.id,
+        title: r2.title,
+        content: r2.content,
+        category: r2.category,
+        tags: r2.tags ? JSON.parse(r2.tags) : [],
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at,
+        updatedAt: r2.updated_at
+      }));
+      return { items: rows, count: rows.length };
+    }
+    const store = loadFallback();
+    return { items: store.ideas || [], count: store.ideas?.length || 0 };
   },
   getIdea(id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      const stmt = db.prepare("SELECT * FROM ideas WHERE id = ?");
+      const r2 = stmt.get(id);
+      if (!r2) throw new Error(`Idea not found: ${id}`);
+      return {
+        id: r2.id,
+        title: r2.title,
+        content: r2.content,
+        category: r2.category,
+        tags: r2.tags ? JSON.parse(r2.tags) : [],
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at,
+        updatedAt: r2.updated_at
+      };
+    }
+    const store = loadFallback();
     const item = store.ideas.find((i) => i.id === id);
     if (!item) throw new Error(`Idea not found: ${id}`);
     return item;
   },
   createIdea(data) {
-    const store = loadLocalStore();
     const id = generateLocalId("idea");
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const item = {
-      id,
-      title: data.title,
-      content: data.content || "",
-      category: data.category || "general",
-      tags: data.tags || [],
-      isLocal: true,
-      createdAt: now,
-      updatedAt: now
-    };
+    const db = getDatabase();
+    if (db) {
+      const stmt = db.prepare(`
+        INSERT INTO ideas (id, title, content, category, tags, is_local, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+      `);
+      stmt.run(id, data.title, data.content || "", data.category || "general", JSON.stringify(data.tags || []), now, now);
+      return {
+        id,
+        title: data.title,
+        content: data.content || "",
+        category: data.category || "general",
+        tags: data.tags || [],
+        isLocal: true,
+        createdAt: now,
+        updatedAt: now
+      };
+    }
+    const store = loadFallback();
+    const item = { id, title: data.title, content: data.content || "", category: data.category || "general", tags: data.tags || [], isLocal: true, createdAt: now, updatedAt: now };
     store.ideas.unshift(item);
-    saveLocalStore(store);
+    saveFallback(store);
     return item;
   },
   updateIdea(id, updates) {
-    const store = loadLocalStore();
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const existing = this.getIdea(id);
+    const updated = { ...existing, ...updates, updatedAt: now };
+    const db = getDatabase();
+    if (db) {
+      const stmt = db.prepare(`
+        UPDATE ideas SET title = ?, content = ?, category = ?, tags = ?, updated_at = ? WHERE id = ?
+      `);
+      stmt.run(updated.title, updated.content || "", updated.category || "general", JSON.stringify(updated.tags || []), now, id);
+      return updated;
+    }
+    const store = loadFallback();
     const idx = store.ideas.findIndex((i) => i.id === id);
-    if (idx === -1) throw new Error(`Idea not found: ${id}`);
-    const item = { ...store.ideas[idx], ...updates, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
-    store.ideas[idx] = item;
-    saveLocalStore(store);
-    return item;
+    if (idx !== -1) {
+      store.ideas[idx] = updated;
+      saveFallback(store);
+    }
+    return updated;
   },
   deleteIdea(id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      const existing = db.prepare("SELECT * FROM ideas WHERE id = ?").get(id);
+      if (existing) {
+        db.prepare("DELETE FROM ideas WHERE id = ?").run(id);
+        db.prepare("INSERT INTO trash (id, kind, title, deleted_at) VALUES (?, ?, ?, ?)").run(
+          existing.id,
+          "idea",
+          existing.title,
+          (/* @__PURE__ */ new Date()).toISOString()
+        );
+      }
+      return { success: true };
+    }
+    const store = loadFallback();
     const idx = store.ideas.findIndex((i) => i.id === id);
     if (idx !== -1) {
       const [deleted] = store.ideas.splice(idx, 1);
       store.trash.unshift({ id: deleted.id, kind: "idea", title: deleted.title, deletedAt: (/* @__PURE__ */ new Date()).toISOString() });
-      saveLocalStore(store);
+      saveFallback(store);
     }
     return { success: true };
   },
   // ── Goals ──
   listGoals() {
-    const store = loadLocalStore();
-    return { items: store.goals, count: store.goals.length };
+    const db = getDatabase();
+    if (db) {
+      const stmt = db.prepare("SELECT * FROM goals ORDER BY updated_at DESC");
+      const rows = stmt.all().map((r2) => ({
+        id: r2.id,
+        title: r2.title,
+        description: r2.description,
+        targetValue: r2.target_value,
+        currentValue: r2.current_value,
+        unit: r2.unit,
+        status: r2.status,
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at,
+        updatedAt: r2.updated_at
+      }));
+      return { items: rows, count: rows.length };
+    }
+    const store = loadFallback();
+    return { items: store.goals || [], count: store.goals?.length || 0 };
   },
   getGoal(id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      const r2 = db.prepare("SELECT * FROM goals WHERE id = ?").get(id);
+      if (!r2) throw new Error(`Goal not found: ${id}`);
+      return {
+        id: r2.id,
+        title: r2.title,
+        description: r2.description,
+        targetValue: r2.target_value,
+        currentValue: r2.current_value,
+        unit: r2.unit,
+        status: r2.status,
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at,
+        updatedAt: r2.updated_at
+      };
+    }
+    const store = loadFallback();
     const item = store.goals.find((g2) => g2.id === id);
     if (!item) throw new Error(`Goal not found: ${id}`);
     return item;
   },
   createGoal(data) {
-    const store = loadLocalStore();
     const id = generateLocalId("goal");
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const item = {
-      id,
-      title: data.title,
-      description: data.description || "",
-      targetValue: data.targetValue ?? 100,
-      currentValue: data.currentValue ?? 0,
-      unit: data.unit || "%",
-      status: data.status || "not_started",
-      isLocal: true,
-      createdAt: now,
-      updatedAt: now
-    };
+    const db = getDatabase();
+    if (db) {
+      const stmt = db.prepare(`
+        INSERT INTO goals (id, title, description, target_value, current_value, unit, status, is_local, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+      `);
+      stmt.run(
+        id,
+        data.title,
+        data.description || "",
+        data.targetValue ?? 100,
+        data.currentValue ?? 0,
+        data.unit || "%",
+        data.status || "not_started",
+        now,
+        now
+      );
+      return {
+        id,
+        title: data.title,
+        description: data.description || "",
+        targetValue: data.targetValue ?? 100,
+        currentValue: data.currentValue ?? 0,
+        unit: data.unit || "%",
+        status: data.status || "not_started",
+        isLocal: true,
+        createdAt: now,
+        updatedAt: now
+      };
+    }
+    const store = loadFallback();
+    const item = { id, title: data.title, description: data.description || "", targetValue: data.targetValue ?? 100, currentValue: data.currentValue ?? 0, unit: data.unit || "%", status: data.status || "not_started", isLocal: true, createdAt: now, updatedAt: now };
     store.goals.unshift(item);
-    saveLocalStore(store);
+    saveFallback(store);
     return item;
   },
   updateGoal(id, updates) {
-    const store = loadLocalStore();
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const existing = this.getGoal(id);
+    const updated = { ...existing, ...updates, updatedAt: now };
+    const db = getDatabase();
+    if (db) {
+      db.prepare(`
+        UPDATE goals SET title = ?, description = ?, target_value = ?, current_value = ?, unit = ?, status = ?, updated_at = ?
+        WHERE id = ?
+      `).run(
+        updated.title,
+        updated.description || "",
+        updated.targetValue ?? 100,
+        updated.currentValue ?? 0,
+        updated.unit || "%",
+        updated.status || "not_started",
+        now,
+        id
+      );
+      return updated;
+    }
+    const store = loadFallback();
     const idx = store.goals.findIndex((g2) => g2.id === id);
-    if (idx === -1) throw new Error(`Goal not found: ${id}`);
-    const item = { ...store.goals[idx], ...updates, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
-    store.goals[idx] = item;
-    saveLocalStore(store);
-    return item;
+    if (idx !== -1) {
+      store.goals[idx] = updated;
+      saveFallback(store);
+    }
+    return updated;
   },
   deleteGoal(id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      const existing = db.prepare("SELECT * FROM goals WHERE id = ?").get(id);
+      if (existing) {
+        db.prepare("DELETE FROM goals WHERE id = ?").run(id);
+        db.prepare("INSERT INTO trash (id, kind, title, deleted_at) VALUES (?, ?, ?, ?)").run(
+          existing.id,
+          "goal",
+          existing.title,
+          (/* @__PURE__ */ new Date()).toISOString()
+        );
+      }
+      return { success: true };
+    }
+    const store = loadFallback();
     const idx = store.goals.findIndex((g2) => g2.id === id);
     if (idx !== -1) {
       const [deleted] = store.goals.splice(idx, 1);
       store.trash.unshift({ id: deleted.id, kind: "goal", title: deleted.title, deletedAt: (/* @__PURE__ */ new Date()).toISOString() });
-      saveLocalStore(store);
+      saveFallback(store);
     }
     return { success: true };
   },
   // ── Vault ──
   listVault() {
-    const store = loadLocalStore();
-    return store.vault;
+    const db = getDatabase();
+    if (db) {
+      return db.prepare("SELECT * FROM vault ORDER BY updated_at DESC").all().map((r2) => ({
+        id: r2.id,
+        name: r2.name,
+        username: r2.username,
+        password: r2.password,
+        url: r2.url,
+        notes: r2.notes,
+        isEnv: Boolean(r2.is_env),
+        customFields: r2.custom_fields ? r2.custom_fields.startsWith("{") || r2.custom_fields.startsWith("[") ? JSON.parse(r2.custom_fields) : r2.custom_fields : void 0,
+        itemType: r2.item_type,
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at,
+        updatedAt: r2.updated_at
+      }));
+    }
+    return loadFallback().vault || [];
   },
   getVault(id) {
-    const store = loadLocalStore();
-    const item = store.vault.find((v2) => v2.id === id);
+    const db = getDatabase();
+    if (db) {
+      const r2 = db.prepare("SELECT * FROM vault WHERE id = ?").get(id);
+      if (!r2) throw new Error(`Secret not found: ${id}`);
+      return {
+        id: r2.id,
+        name: r2.name,
+        username: r2.username,
+        password: r2.password,
+        url: r2.url,
+        notes: r2.notes,
+        isEnv: Boolean(r2.is_env),
+        customFields: r2.custom_fields ? r2.custom_fields.startsWith("{") || r2.custom_fields.startsWith("[") ? JSON.parse(r2.custom_fields) : r2.custom_fields : void 0,
+        itemType: r2.item_type,
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at,
+        updatedAt: r2.updated_at
+      };
+    }
+    const item = (loadFallback().vault || []).find((v2) => v2.id === id);
     if (!item) throw new Error(`Secret not found: ${id}`);
     return item;
   },
   createVault(data) {
-    const store = loadLocalStore();
     const id = generateLocalId("sec");
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const item = {
-      id,
-      name: data.name,
-      username: data.username,
-      password: data.password,
-      url: data.url,
-      notes: data.notes,
-      isEnv: Boolean(data.isEnv),
-      customFields: data.customFields,
-      itemType: data.itemType || (data.isEnv ? "env" : "login"),
-      isLocal: true,
-      createdAt: now,
-      updatedAt: now
-    };
+    const customFieldsStr = typeof data.customFields === "object" ? JSON.stringify(data.customFields) : data.customFields || "";
+    const db = getDatabase();
+    if (db) {
+      db.prepare(`
+        INSERT INTO vault (id, name, username, password, url, notes, is_env, custom_fields, item_type, is_local, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+      `).run(
+        id,
+        data.name,
+        data.username || "",
+        data.password || "",
+        data.url || "",
+        data.notes || "",
+        data.isEnv ? 1 : 0,
+        customFieldsStr,
+        data.itemType || (data.isEnv ? "env" : "login"),
+        now,
+        now
+      );
+      return { id, ...data, isLocal: true, createdAt: now, updatedAt: now };
+    }
+    const store = loadFallback();
+    const item = { id, ...data, isLocal: true, createdAt: now, updatedAt: now };
     store.vault.unshift(item);
-    saveLocalStore(store);
+    saveFallback(store);
     return item;
   },
   deleteVault(id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      const existing = db.prepare("SELECT * FROM vault WHERE id = ?").get(id);
+      if (existing) {
+        db.prepare("DELETE FROM vault WHERE id = ?").run(id);
+        db.prepare("INSERT INTO trash (id, kind, title, deleted_at) VALUES (?, ?, ?, ?)").run(
+          existing.id,
+          "vault",
+          existing.name,
+          (/* @__PURE__ */ new Date()).toISOString()
+        );
+      }
+      return { success: true };
+    }
+    const store = loadFallback();
     const idx = store.vault.findIndex((v2) => v2.id === id);
     if (idx !== -1) {
       const [deleted] = store.vault.splice(idx, 1);
       store.trash.unshift({ id: deleted.id, kind: "vault", title: deleted.name, deletedAt: (/* @__PURE__ */ new Date()).toISOString() });
-      saveLocalStore(store);
+      saveFallback(store);
     }
     return { success: true };
   },
   // ── TOTP ──
   listTotp() {
-    const store = loadLocalStore();
-    return store.totp;
+    const db = getDatabase();
+    if (db) {
+      return db.prepare("SELECT * FROM totp ORDER BY created_at DESC").all().map((r2) => ({
+        id: r2.id,
+        name: r2.name,
+        secret: r2.secret,
+        issuer: r2.issuer,
+        account: r2.account,
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at
+      }));
+    }
+    return loadFallback().totp || [];
   },
   getTotp(id) {
-    const store = loadLocalStore();
-    const item = store.totp.find((t) => t.id === id);
+    const db = getDatabase();
+    if (db) {
+      const r2 = db.prepare("SELECT * FROM totp WHERE id = ?").get(id);
+      if (!r2) throw new Error(`TOTP entry not found: ${id}`);
+      return {
+        id: r2.id,
+        name: r2.name,
+        secret: r2.secret,
+        issuer: r2.issuer,
+        account: r2.account,
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at
+      };
+    }
+    const item = (loadFallback().totp || []).find((t) => t.id === id);
     if (!item) throw new Error(`TOTP entry not found: ${id}`);
     return item;
   },
   createTotp(data) {
-    const store = loadLocalStore();
     const id = generateLocalId("totp");
-    const item = {
-      id,
-      name: data.name,
-      secret: data.secret,
-      issuer: data.issuer || "",
-      account: data.account || "",
-      isLocal: true,
-      createdAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const db = getDatabase();
+    if (db) {
+      db.prepare(`
+        INSERT INTO totp (id, name, secret, issuer, account, is_local, created_at)
+        VALUES (?, ?, ?, ?, ?, 1, ?)
+      `).run(id, data.name, data.secret, data.issuer || "", data.account || "", now);
+      return { id, ...data, isLocal: true, createdAt: now };
+    }
+    const store = loadFallback();
+    const item = { id, ...data, isLocal: true, createdAt: now };
     store.totp.unshift(item);
-    saveLocalStore(store);
+    saveFallback(store);
     return item;
   },
   deleteTotp(id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      db.prepare("DELETE FROM totp WHERE id = ?").run(id);
+      return { success: true };
+    }
+    const store = loadFallback();
     const idx = store.totp.findIndex((t) => t.id === id);
     if (idx !== -1) {
       store.totp.splice(idx, 1);
-      saveLocalStore(store);
+      saveFallback(store);
     }
     return { success: true };
   },
   // ── Events ──
   listEvents() {
-    const store = loadLocalStore();
-    return { items: store.events, count: store.events.length };
+    const db = getDatabase();
+    if (db) {
+      const rows = db.prepare("SELECT * FROM events ORDER BY start_time ASC").all().map((r2) => ({
+        id: r2.id,
+        title: r2.title,
+        startTime: r2.start_time,
+        endTime: r2.end_time,
+        description: r2.description,
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at
+      }));
+      return { items: rows, count: rows.length };
+    }
+    const store = loadFallback();
+    return { items: store.events || [], count: store.events?.length || 0 };
   },
   createEvent(data) {
-    const store = loadLocalStore();
     const id = generateLocalId("evt");
-    const item = {
-      id,
-      title: data.title,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      description: data.description || "",
-      isLocal: true,
-      createdAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const db = getDatabase();
+    if (db) {
+      db.prepare(`
+        INSERT INTO events (id, title, start_time, end_time, description, is_local, created_at)
+        VALUES (?, ?, ?, ?, ?, 1, ?)
+      `).run(id, data.title, data.startTime, data.endTime, data.description || "", now);
+      return { id, ...data, isLocal: true, createdAt: now };
+    }
+    const store = loadFallback();
+    const item = { id, ...data, isLocal: true, createdAt: now };
     store.events.unshift(item);
-    saveLocalStore(store);
+    saveFallback(store);
     return item;
   },
   deleteEvent(id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      db.prepare("DELETE FROM events WHERE id = ?").run(id);
+      return { success: true };
+    }
+    const store = loadFallback();
     const idx = store.events.findIndex((e2) => e2.id === id);
     if (idx !== -1) {
       store.events.splice(idx, 1);
-      saveLocalStore(store);
+      saveFallback(store);
     }
     return { success: true };
   },
   // ── Forms ──
   listForms() {
-    const store = loadLocalStore();
-    return { items: store.forms, count: store.forms.length };
+    const db = getDatabase();
+    if (db) {
+      const rows = db.prepare("SELECT * FROM forms ORDER BY created_at DESC").all().map((r2) => ({
+        id: r2.id,
+        title: r2.title,
+        description: r2.description,
+        schema: r2.schema ? JSON.parse(r2.schema) : [],
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at
+      }));
+      return { items: rows, count: rows.length };
+    }
+    const store = loadFallback();
+    return { items: store.forms || [], count: store.forms?.length || 0 };
   },
   getForm(id) {
-    const store = loadLocalStore();
-    const item = store.forms.find((f2) => f2.id === id);
+    const db = getDatabase();
+    if (db) {
+      const r2 = db.prepare("SELECT * FROM forms WHERE id = ?").get(id);
+      if (!r2) throw new Error(`Form not found: ${id}`);
+      return {
+        id: r2.id,
+        title: r2.title,
+        description: r2.description,
+        schema: r2.schema ? JSON.parse(r2.schema) : [],
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at
+      };
+    }
+    const item = (loadFallback().forms || []).find((f2) => f2.id === id);
     if (!item) throw new Error(`Form not found: ${id}`);
     return item;
   },
   createForm(data) {
-    const store = loadLocalStore();
     const id = generateLocalId("form");
-    const item = {
-      id,
-      title: data.title,
-      description: data.description || "",
-      schema: data.schema || [],
-      isLocal: true,
-      createdAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const db = getDatabase();
+    if (db) {
+      db.prepare(`
+        INSERT INTO forms (id, title, description, schema, is_local, created_at)
+        VALUES (?, ?, ?, ?, 1, ?)
+      `).run(id, data.title, data.description || "", JSON.stringify(data.schema || []), now);
+      return { id, ...data, isLocal: true, createdAt: now };
+    }
+    const store = loadFallback();
+    const item = { id, ...data, isLocal: true, createdAt: now };
     store.forms.unshift(item);
-    saveLocalStore(store);
+    saveFallback(store);
     return item;
   },
   deleteForm(id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      db.prepare("DELETE FROM forms WHERE id = ?").run(id);
+      return { success: true };
+    }
+    const store = loadFallback();
     const idx = store.forms.findIndex((f2) => f2.id === id);
     if (idx !== -1) {
       store.forms.splice(idx, 1);
-      saveLocalStore(store);
+      saveFallback(store);
     }
     return { success: true };
   },
   // ── Flows ──
   listFlows() {
-    const store = loadLocalStore();
-    return { items: store.flows, count: store.flows.length };
+    const db = getDatabase();
+    if (db) {
+      const rows = db.prepare("SELECT * FROM flows ORDER BY created_at DESC").all().map((r2) => ({
+        id: r2.id,
+        title: r2.title,
+        description: r2.description,
+        status: r2.status,
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at
+      }));
+      return { items: rows, count: rows.length };
+    }
+    const store = loadFallback();
+    return { items: store.flows || [], count: store.flows?.length || 0 };
   },
   getFlow(id) {
-    const store = loadLocalStore();
-    const item = store.flows.find((f2) => f2.id === id);
+    const db = getDatabase();
+    if (db) {
+      const r2 = db.prepare("SELECT * FROM flows WHERE id = ?").get(id);
+      if (!r2) throw new Error(`Flow not found: ${id}`);
+      return {
+        id: r2.id,
+        title: r2.title,
+        description: r2.description,
+        status: r2.status,
+        isLocal: Boolean(r2.is_local),
+        createdAt: r2.created_at
+      };
+    }
+    const item = (loadFallback().flows || []).find((f2) => f2.id === id);
     if (!item) throw new Error(`Flow not found: ${id}`);
     return item;
   },
   createFlow(data) {
-    const store = loadLocalStore();
     const id = generateLocalId("flow");
-    const item = {
-      id,
-      title: data.title,
-      description: data.description || "",
-      status: "draft",
-      isLocal: true,
-      createdAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const db = getDatabase();
+    if (db) {
+      db.prepare(`
+        INSERT INTO flows (id, title, description, status, is_local, created_at)
+        VALUES (?, ?, ?, ?, 1, ?)
+      `).run(id, data.title, data.description || "", data.status || "draft", now);
+      return { id, ...data, isLocal: true, createdAt: now };
+    }
+    const store = loadFallback();
+    const item = { id, ...data, isLocal: true, createdAt: now };
     store.flows.unshift(item);
-    saveLocalStore(store);
+    saveFallback(store);
     return item;
   },
   deleteFlow(id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      db.prepare("DELETE FROM flows WHERE id = ?").run(id);
+      return { success: true };
+    }
+    const store = loadFallback();
     const idx = store.flows.findIndex((f2) => f2.id === id);
     if (idx !== -1) {
       store.flows.splice(idx, 1);
-      saveLocalStore(store);
+      saveFallback(store);
     }
     return { success: true };
   },
   // ── Tags ──
   listTags() {
-    const store = loadLocalStore();
-    return { items: store.tags, count: store.tags.length };
+    const db = getDatabase();
+    if (db) {
+      const rows = db.prepare("SELECT * FROM tags").all().map((r2) => ({
+        id: r2.id,
+        name: r2.name,
+        color: r2.color,
+        isLocal: Boolean(r2.is_local)
+      }));
+      return { items: rows, count: rows.length };
+    }
+    const store = loadFallback();
+    return { items: store.tags || [], count: store.tags?.length || 0 };
   },
   createTag(data) {
-    const store = loadLocalStore();
     const id = generateLocalId("tag");
-    const item = {
-      id,
-      name: data.name,
-      color: data.color || "#6366F1",
-      isLocal: true
-    };
+    const db = getDatabase();
+    if (db) {
+      db.prepare(`
+        INSERT INTO tags (id, name, color, is_local)
+        VALUES (?, ?, ?, 1)
+      `).run(id, data.name, data.color || "#6366F1");
+      return { id, ...data, isLocal: true };
+    }
+    const store = loadFallback();
+    const item = { id, ...data, isLocal: true };
     store.tags.unshift(item);
-    saveLocalStore(store);
+    saveFallback(store);
     return item;
   },
   deleteTag(id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      db.prepare("DELETE FROM tags WHERE id = ?").run(id);
+      return { success: true };
+    }
+    const store = loadFallback();
     const idx = store.tags.findIndex((t) => t.id === id);
     if (idx !== -1) {
       store.tags.splice(idx, 1);
-      saveLocalStore(store);
+      saveFallback(store);
     }
     return { success: true };
   },
   // ── Trash ──
   listTrash() {
-    const store = loadLocalStore();
-    return { items: store.trash, count: store.trash.length };
+    const db = getDatabase();
+    if (db) {
+      const rows = db.prepare("SELECT * FROM trash ORDER BY deleted_at DESC").all().map((r2) => ({
+        id: r2.id,
+        kind: r2.kind,
+        title: r2.title,
+        deletedAt: r2.deleted_at
+      }));
+      return { items: rows, count: rows.length };
+    }
+    const store = loadFallback();
+    return { items: store.trash || [], count: store.trash?.length || 0 };
   },
   restoreTrash(kind, id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      db.prepare("DELETE FROM trash WHERE id = ? AND kind = ?").run(id, kind);
+      return { restored: true };
+    }
+    const store = loadFallback();
     const idx = store.trash.findIndex((t) => t.id === id && t.kind === kind);
     if (idx !== -1) {
       store.trash.splice(idx, 1);
-      saveLocalStore(store);
+      saveFallback(store);
     }
     return { restored: true };
   },
   purgeTrash(kind, id) {
-    const store = loadLocalStore();
+    const db = getDatabase();
+    if (db) {
+      db.prepare("DELETE FROM trash WHERE id = ? AND kind = ?").run(id, kind);
+      return { purged: true };
+    }
+    const store = loadFallback();
     const idx = store.trash.findIndex((t) => t.id === id && t.kind === kind);
     if (idx !== -1) {
       store.trash.splice(idx, 1);
-      saveLocalStore(store);
+      saveFallback(store);
     }
     return { purged: true };
   },
-  // ── Search ──
+  // ── High Performance SQLite Full-Text / LIKE Search ──
   search(query) {
-    const q = query.toLowerCase().trim();
-    const store = loadLocalStore();
+    const q = `%${query.toLowerCase().trim()}%`;
+    const db = getDatabase();
+    if (db) {
+      const results2 = [];
+      const ideas2 = db.prepare("SELECT id, title, content FROM ideas WHERE LOWER(title) LIKE ? OR LOWER(content) LIKE ?").all(q, q);
+      for (const i of ideas2) {
+        results2.push({ kind: "idea", id: i.id, title: i.title, snippet: i.content?.substring(0, 100), isLocal: true });
+      }
+      const goals2 = db.prepare("SELECT id, title, description FROM goals WHERE LOWER(title) LIKE ? OR LOWER(description) LIKE ?").all(q, q);
+      for (const g2 of goals2) {
+        results2.push({ kind: "goal", id: g2.id, title: g2.title, snippet: g2.description?.substring(0, 100), isLocal: true });
+      }
+      const secrets = db.prepare("SELECT id, name FROM vault WHERE LOWER(name) LIKE ? OR LOWER(username) LIKE ?").all(q, q);
+      for (const s of secrets) {
+        results2.push({ kind: "vault", id: s.id, title: s.name, isLocal: true });
+      }
+      const events2 = db.prepare("SELECT id, title FROM events WHERE LOWER(title) LIKE ?").all(q);
+      for (const e2 of events2) {
+        results2.push({ kind: "event", id: e2.id, title: e2.title, isLocal: true });
+      }
+      return results2;
+    }
+    const store = loadFallback();
     const results = [];
-    for (const i of store.ideas) {
-      if (i.title?.toLowerCase().includes(q) || i.content?.toLowerCase().includes(q)) {
+    const plainQ = query.toLowerCase().trim();
+    for (const i of store.ideas || []) {
+      if (i.title?.toLowerCase().includes(plainQ) || i.content?.toLowerCase().includes(plainQ)) {
         results.push({ kind: "idea", id: i.id, title: i.title, snippet: i.content?.substring(0, 100), isLocal: true });
-      }
-    }
-    for (const g2 of store.goals) {
-      if (g2.title?.toLowerCase().includes(q) || g2.description?.toLowerCase().includes(q)) {
-        results.push({ kind: "goal", id: g2.id, title: g2.title, snippet: g2.description?.substring(0, 100), isLocal: true });
-      }
-    }
-    for (const v2 of store.vault) {
-      if (v2.name?.toLowerCase().includes(q) || v2.username?.toLowerCase().includes(q)) {
-        results.push({ kind: "vault", id: v2.id, title: v2.name, isLocal: true });
-      }
-    }
-    for (const e2 of store.events) {
-      if (e2.title?.toLowerCase().includes(q)) {
-        results.push({ kind: "event", id: e2.id, title: e2.title, isLocal: true });
       }
     }
     return results;
@@ -2402,15 +2878,15 @@ var L2 = () => {
 };
 
 // src/commands/vault.ts
-import * as fs4 from "fs";
+import * as fs5 from "fs";
 import pc11 from "picocolors";
 
 // src/crypto/session.ts
-import * as fs3 from "fs";
-import * as path3 from "path";
-import * as os3 from "os";
-var SESSION_DIR = path3.join(os3.homedir(), ".kylrix");
-var SESSION_FILE = path3.join(SESSION_DIR, "session.json");
+import * as fs4 from "fs";
+import * as path4 from "path";
+import * as os4 from "os";
+var SESSION_DIR = path4.join(os4.homedir(), ".kylrix");
+var SESSION_FILE = path4.join(SESSION_DIR, "session.json");
 function getVaultSession() {
   const envMek = process.env.KYLRIX_MEK_SESSION || process.env.KYLRIX_MEK;
   if (envMek) {
@@ -2421,10 +2897,10 @@ function getVaultSession() {
     };
   }
   try {
-    if (!fs3.existsSync(SESSION_FILE)) {
+    if (!fs4.existsSync(SESSION_FILE)) {
       return null;
     }
-    const raw = fs3.readFileSync(SESSION_FILE, "utf-8");
+    const raw = fs4.readFileSync(SESSION_FILE, "utf-8");
     const session = JSON.parse(raw);
     if (Date.now() > session.expiresAt) {
       clearVaultSession();
@@ -2437,8 +2913,8 @@ function getVaultSession() {
 }
 function setVaultSession(mekHex, expiresInMinutes = 60) {
   try {
-    if (!fs3.existsSync(SESSION_DIR)) {
-      fs3.mkdirSync(SESSION_DIR, { recursive: true });
+    if (!fs4.existsSync(SESSION_DIR)) {
+      fs4.mkdirSync(SESSION_DIR, { recursive: true });
     }
     const now = Date.now();
     const session = {
@@ -2446,7 +2922,7 @@ function setVaultSession(mekHex, expiresInMinutes = 60) {
       unlockedAt: now,
       expiresAt: now + expiresInMinutes * 60 * 1e3
     };
-    fs3.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2), {
+    fs4.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2), {
       encoding: "utf-8",
       mode: 384
     });
@@ -2457,8 +2933,8 @@ function setVaultSession(mekHex, expiresInMinutes = 60) {
 }
 function clearVaultSession() {
   try {
-    if (fs3.existsSync(SESSION_FILE)) {
-      fs3.unlinkSync(SESSION_FILE);
+    if (fs4.existsSync(SESSION_FILE)) {
+      fs4.unlinkSync(SESSION_FILE);
     }
   } catch {
   }
@@ -2615,10 +3091,10 @@ async function createVaultCommand(name, opts) {
     const session = getVaultSession();
     let customFields = void 0;
     if (opts.envFile) {
-      if (!fs4.existsSync(opts.envFile)) {
+      if (!fs5.existsSync(opts.envFile)) {
         throw new Error(`File not found: ${opts.envFile}`);
       }
-      customFields = fs4.readFileSync(opts.envFile, "utf-8");
+      customFields = fs5.readFileSync(opts.envFile, "utf-8");
     }
     const payload = {
       name,
@@ -3205,15 +3681,15 @@ async function purgeTrashCommand(kind, id, opts) {
 import pc20 from "picocolors";
 
 // src/updater/index.ts
-import * as fs5 from "fs";
-import * as path4 from "path";
-import * as os4 from "os";
+import * as fs6 from "fs";
+import * as path5 from "path";
+import * as os5 from "os";
 import { spawn } from "child_process";
 import pc19 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
 var CURRENT_VERSION = "1.0.1";
-var CACHE_DIR = path4.join(os4.homedir(), ".kylrix");
-var CACHE_FILE = path4.join(CACHE_DIR, "update-cache.json");
+var CACHE_DIR = path5.join(os5.homedir(), ".kylrix");
+var CACHE_FILE = path5.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
 function compareSemver(v1, v2) {
   const clean1 = v1.replace(/^v/, "").split("-")[0];
@@ -3246,8 +3722,8 @@ async function fetchLatestVersion(timeoutMs = 2500) {
 }
 function readCachedUpdate() {
   try {
-    if (!fs5.existsSync(CACHE_FILE)) return null;
-    const raw = fs5.readFileSync(CACHE_FILE, "utf-8");
+    if (!fs6.existsSync(CACHE_FILE)) return null;
+    const raw = fs6.readFileSync(CACHE_FILE, "utf-8");
     return JSON.parse(raw);
   } catch {
     return null;
@@ -3255,14 +3731,14 @@ function readCachedUpdate() {
 }
 function writeCachedUpdate(latestVersion) {
   try {
-    if (!fs5.existsSync(CACHE_DIR)) {
-      fs5.mkdirSync(CACHE_DIR, { recursive: true });
+    if (!fs6.existsSync(CACHE_DIR)) {
+      fs6.mkdirSync(CACHE_DIR, { recursive: true });
     }
     const cache = {
       latestVersion,
       lastChecked: Date.now()
     };
-    fs5.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), { encoding: "utf-8", mode: 384 });
+    fs6.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), { encoding: "utf-8", mode: 384 });
   } catch {
   }
 }
@@ -3393,13 +3869,14 @@ async function syncCommand(opts) {
     return;
   }
   const client = getClient(opts);
-  const store = loadLocalStore();
+  const localIdeas = LocalStore.listIdeas().items;
+  const localGoals = LocalStore.listGoals().items;
   const spinner = L2();
   spinner.start("Syncing local-first data with Kylrix Cloud...");
   let syncedIdeas = 0;
   let syncedGoals = 0;
   try {
-    for (const idea of [...store.ideas]) {
+    for (const idea of localIdeas) {
       if (idea.isLocal) {
         await client.ideas.create({
           title: idea.title,
@@ -3411,7 +3888,7 @@ async function syncCommand(opts) {
         syncedIdeas++;
       }
     }
-    for (const goal of [...store.goals]) {
+    for (const goal of localGoals) {
       if (goal.isLocal) {
         await client.goals.create({
           title: goal.title,
@@ -4303,10 +4780,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path5) {
-  if (!path5)
+function getElementAtPath(obj, path6) {
+  if (!path6)
     return obj;
-  return path5.reduce((acc, key) => acc?.[key], obj);
+  return path6.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -4715,11 +5192,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path5, issues) {
+function prefixIssues(path6, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path5);
+    iss.path.unshift(path6);
     return iss;
   });
 }
@@ -4866,16 +5343,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path5 = []) => {
+  const processError = (error52, path6 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else {
-        const fullpath = [...path5, ...issue2.path];
+        const fullpath = [...path6, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -4902,17 +5379,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path5 = []) => {
+  const processError = (error52, path6 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
       } else {
-        const fullpath = [...path5, ...issue2.path];
+        const fullpath = [...path6, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -4944,8 +5421,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path5) {
+  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path6) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -17637,13 +18114,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path5 = ref.slice(1).split("/").filter(Boolean);
-  if (path5.length === 0) {
+  const path6 = ref.slice(1).split("/").filter(Boolean);
+  if (path6.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path5[0] === defsKey) {
-    const key = path5[1];
+  if (path6[0] === defsKey) {
+    const key = path6[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
