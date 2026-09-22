@@ -947,9 +947,9 @@ export const autonomicSyncEngine = {
               ? mapped.projectId
               : (liveGoal?.projectId || 'inbox');
             const targetIsWorkspace = Boolean(
-              mapped.isWorkspace ||
-              liveGoal?.isWorkspace ||
-              (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal')
+              (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal') ||
+              mapped.isWorkspace === true ||
+              (mapped.isWorkspace === undefined && liveGoal?.isWorkspace === true)
             );
             const mergedGoal = liveGoal
               ? {

@@ -168,8 +168,27 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
     ? raw.comments.map((entry: any) => parseCommentEntry(entry))
     : [];
 
+  const rawParent = raw.parentId || raw.parentTaskId || null;
+  const docId = doc.$id || raw.id;
+  const parentTaskId =
+    rawParent &&
+    rawParent !== docId &&
+    rawParent !== 'null' &&
+    rawParent !== 'undefined' &&
+    String(rawParent).trim() !== ''
+      ? String(rawParent).trim()
+      : null;
+
+  const isWs = Boolean(
+    (projectId && projectId !== 'inbox' && projectId !== 'default' && projectId !== 'personal') ||
+    raw.isWorkspace === true ||
+    String(raw.isWorkspace) === 'true' ||
+    raw.is_workspace === true ||
+    String(raw.is_workspace) === 'true'
+  );
+
   return {
-    id: doc.$id || raw.id,
+    id: docId,
     title: doc.title || raw.title || '',
     description: doc.description || raw.description || '',
     status: (doc.status as TaskStatus) || (raw.status as TaskStatus) || 'todo',
@@ -185,7 +204,7 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
     assigneeIds: raw.assigneeIds || [],
     creatorId: raw.userId || raw.creatorId || 'guest',
     userId: raw.userId || raw.creatorId || 'guest',
-    parentTaskId: raw.parentId || raw.parentTaskId || null,
+    parentTaskId,
     dueDate: parseSafeOptionalDate(doc.dueDate || raw.dueDate),
     createdAt: parseSafeDate(doc.$createdAt || raw.createdAt),
     updatedAt: parseSafeDate(doc.$updatedAt || raw.updatedAt),
@@ -197,7 +216,7 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
     discussionId: raw.discussionId || null,
     scheduled: raw.scheduled === true || String(raw.scheduled) === 'true',
     isAgentic: raw.isAgentic === true || String(raw.isAgentic) === 'true',
-    isWorkspace: raw.isWorkspace === true || String(raw.isWorkspace) === 'true' || raw.is_workspace === true || String(raw.is_workspace) === 'true' || (Boolean(projectId) && projectId !== 'inbox' && projectId !== 'default' && projectId !== 'personal'),
+    isWorkspace: isWs,
     dek: raw.dek || null,
   };
 };
@@ -262,9 +281,9 @@ const buildTaskHierarchy = (tasks: Task[]) => {
   const taskMap = new Map(cloned.map((task) => [task.id, task]));
 
   cloned.forEach((task) => {
-    if (!task.parentTaskId) return;
+    if (!task.parentTaskId || task.parentTaskId === task.id || task.parentTaskId === 'null' || task.parentTaskId === 'undefined') return;
     const parent = taskMap.get(task.parentTaskId);
-    if (!parent) return;
+    if (!parent || parent.id === task.id) return;
 
     parent.subtasks = [
       ...parent.subtasks.filter((subtask) => subtask.id !== task.id),
@@ -276,7 +295,7 @@ const buildTaskHierarchy = (tasks: Task[]) => {
         completedAt: task.status === 'done' ? task.completedAt : undefined}];
   });
 
-  return cloned.filter((task) => !task.parentTaskId);
+  return cloned.filter((task) => !task.parentTaskId || task.parentTaskId === task.id || task.parentTaskId === 'null' || task.parentTaskId === 'undefined');
 };
 
 const mapAppwriteCalendarToProject = (doc: AppwriteCalendar): Project => ({
@@ -938,12 +957,22 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       ) {
         byId.set(row.id, live);
       } else {
+        const targetProjectId = row.projectId && row.projectId !== 'inbox'
+          ? row.projectId
+          : (live?.projectId || 'inbox');
+        const targetIsWorkspace = Boolean(
+          (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal') ||
+          row.isWorkspace === true ||
+          (row.isWorkspace === undefined && live?.isWorkspace === true)
+        );
         const merged = live
           ? {
               ...live,
               ...row,
-              projectId: row.projectId && row.projectId !== 'inbox' ? row.projectId : (live.projectId || 'inbox'),
-              isWorkspace: row.isWorkspace || live.isWorkspace,
+              projectId: targetProjectId,
+              isWorkspace: targetIsWorkspace,
+              userId: (row.userId && row.userId !== 'guest') ? row.userId : (live.userId || state.userId || 'guest'),
+              creatorId: (row.creatorId && row.creatorId !== 'guest') ? row.creatorId : (live.creatorId || state.userId || 'guest'),
               subtasks: row.subtasks?.length ? row.subtasks : (live.subtasks || []),
               comments: row.comments?.length ? row.comments : (live.comments || []),
               labels: row.labels?.length ? row.labels : (live.labels || []),
@@ -1291,9 +1320,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         ? task.projectId
         : (existingTask?.projectId || 'inbox');
       const targetIsWorkspace = Boolean(
-        task.isWorkspace ||
-        existingTask?.isWorkspace ||
-        (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal')
+        (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal') ||
+        task.isWorkspace === true ||
+        (task.isWorkspace === undefined && existingTask?.isWorkspace === true)
       );
 
       const ownerId = (task.userId && task.userId !== 'guest')
@@ -1363,9 +1392,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           ? mapped.projectId
           : (existingTask?.projectId || 'inbox');
         const targetIsWorkspace = Boolean(
-          mapped.isWorkspace ||
-          existingTask?.isWorkspace ||
-          (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal')
+          (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal') ||
+          mapped.isWorkspace === true ||
+          (mapped.isWorkspace === undefined && existingTask?.isWorkspace === true)
         );
 
         const mergedGoal: Task = existingTask
