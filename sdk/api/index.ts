@@ -1,5 +1,6 @@
 /** Canonical HTTP API base for external integrators (REST + MCP). */
 export * from './routes';
+export * from './client';
 export const KYLRIX_API_V1_BASE = '/api/v1';
 
 export interface ApiModulePaths {
