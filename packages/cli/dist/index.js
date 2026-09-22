@@ -2713,7 +2713,7 @@ import * as os3 from "os";
 import { spawn } from "child_process";
 import pc19 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.0";
+var CURRENT_VERSION = "1.0.1";
 var CACHE_DIR = path3.join(os3.homedir(), ".kylrix");
 var CACHE_FILE = path3.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;

@@ -1,6 +1,6 @@
 {
   "name": "@kylrix/cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official CLI & MCP bridge for Kylrix sovereign agentic workspaces",
   "homepage": "https://www.kylrix.space",
   "repository": {
