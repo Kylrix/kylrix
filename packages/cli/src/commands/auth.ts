@@ -1,4 +1,3 @@
-import * as clack from '@clack/prompts';
 import { exec } from 'node:child_process';
 import pc from 'picocolors';
 import { getClient } from '../client';
@@ -57,28 +56,44 @@ export async function pairCommand(opts: { url?: string; json?: boolean }) {
 
     const baseWebUrl = env.apiUrl.replace(/\/api\/v1$/, '');
     const directLoginUrl = `${baseWebUrl}/login/${session.userCode}`;
-    const pairUrl = session.verificationUri || `${baseWebUrl}/pair?code=${encodeURIComponent(session.userCode)}`;
 
-    clack.intro(pc.bgCyan(pc.black(' Kylrix 1-Click Web Login ')));
-
-    console.log(`\n  ${pc.bold('1. Visit authorization URL:')}`);
-    console.log(`     ${pc.underline(pc.bold(pc.cyan(directLoginUrl)))}`);
-    console.log(`     ${pc.dim(`(Or: ${pairUrl})`)}`);
-    console.log(`\n  ${pc.bold('2. Instant Code:')}`);
-    console.log(`     ${pc.bgYellow(pc.black(pc.bold(` ${session.userCode} `)))}\n`);
+    console.log();
+    console.log(pc.cyan('╭────────────────────────────────────────────────────────╮'));
+    console.log(pc.cyan('│') + pc.bold('  Kylrix 1-Click Web Authorization                      ') + pc.cyan('│'));
+    console.log(pc.cyan('├────────────────────────────────────────────────────────┤'));
+    console.log(pc.cyan('│') + '  1. Open browser URL:                                  ' + pc.cyan('│'));
+    console.log(pc.cyan('│') + '     ' + pc.underline(pc.cyan(directLoginUrl.padEnd(51))) + pc.cyan('│'));
+    console.log(pc.cyan('│') + '                                                         ' + pc.cyan('│'));
+    console.log(pc.cyan('│') + '  2. Authorization Code:                                 ' + pc.cyan('│'));
+    console.log(pc.cyan('│') + '     ' + pc.bgYellow(pc.black(pc.bold(` ${session.userCode} `))) + '                                            ' + pc.cyan('│'));
+    console.log(pc.cyan('╰────────────────────────────────────────────────────────╯'));
+    console.log();
 
     // Auto-open browser
     tryOpenBrowser(directLoginUrl);
 
-    const spinner = clack.spinner();
-    spinner.start('Waiting for web authorization (click Approve in your browser)...');
+    if (process.stdout.isTTY) {
+      process.stdout.write(pc.dim('⏳ Waiting for approval in browser...'));
+    } else {
+      console.log(pc.dim('Waiting for approval in browser...'));
+    }
 
+    let pollCount = 0;
     const result = await client.pairing.pollExchange(session.deviceCode, {
       intervalSeconds: session.interval || 3,
       timeoutSeconds: session.expiresIn || 600,
+      onPoll: () => {
+        if (process.stdout.isTTY) {
+          pollCount++;
+          const dots = '.'.repeat((pollCount % 3) + 1);
+          process.stdout.write(`\r${pc.dim(`⏳ Waiting for approval in browser${dots.padEnd(3)}`)}`);
+        }
+      },
     });
 
-    spinner.stop(pc.green('Authorization approved!'));
+    if (process.stdout.isTTY) {
+      process.stdout.write('\r' + ' '.repeat(50) + '\r');
+    }
 
     saveConfig({
       apiUrl: env.apiUrl,
@@ -86,8 +101,11 @@ export async function pairCommand(opts: { url?: string; json?: boolean }) {
       userId: result.userId,
     });
 
-    clack.outro(pc.green(`✔ Logged in successfully as user ${pc.bold(result.userId)}`));
+    printSuccess(`Logged in successfully as user ${pc.bold(result.userId)}`);
   } catch (err: any) {
+    if (process.stdout.isTTY) {
+      process.stdout.write('\r' + ' '.repeat(50) + '\r');
+    }
     printError('Authentication failed', err);
     process.exit(1);
   }
