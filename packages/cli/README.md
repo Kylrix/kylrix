@@ -1,4 +1,4 @@
-# `@kylrix/cli` (or `kylrix`)
+# `kylrix` (CLI & Isomorphic SDK)
 
 Official Command-Line Interface (CLI), Model Context Protocol (MCP) Bridge, and Isomorphic SDK for **Kylrix** sovereign agentic workspaces.
 
@@ -6,18 +6,42 @@ Official Command-Line Interface (CLI), Model Context Protocol (MCP) Bridge, and 
 
 ## ⚡ Quick Start
 
-### Run directly with `npx`
+### 1-Click Web Login
+Authenticate instantly without copying or pasting tokens:
 ```bash
-# Authenticate (Device QR / Browser Pairing, PAT, or Password)
 npx kylrix login
+```
+The CLI displays your instant code, automatically opens `https://www.kylrix.space/login/KYL-XXXX` in your browser, and logs in immediately when approved.
 
-# List accessible workspaces
+### Run with `npx`
+```bash
+# Manage Workspaces
 npx kylrix workspaces list
+npx kylrix workspaces switch <workspace-id>
 
-# List notes & ideas
-npx kylrix notes list
+# Manage Sovereign Ideas & Articles
+npx kylrix ideas list
+npx kylrix ideas create "Q4 System Architecture" --content "New modular flow..."
+npx kylrix ideas articles
 
-# Start stdio MCP Server for AI coding tools (Cursor, Claude Code, Windsurf)
+# Manage Goals & Habits
+npx kylrix goals list
+npx kylrix goals update <goal-id> --progress 75
+
+# Bitwarden-Style Encrypted Vault & Project .env
+npx kylrix vault unlock
+npx kylrix vault list --decrypt
+npx kylrix vault get <secret-id> --format env --pure > .env
+npx kylrix vault lock
+
+# Sovereign 2FA TOTP Authenticator
+npx kylrix totp list
+npx kylrix totp code <account-id>
+
+# Global Search
+npx kylrix search "database migration"
+
+# Model Context Protocol (MCP) Stdio Server for Cursor / Claude Code / Windsurf
 npx kylrix mcp
 ```
 
@@ -30,9 +54,20 @@ pnpm add -g kylrix
 
 ---
 
+## 🔐 Bitwarden-Style Vault Security Model
+
+Kylrix CLI implements client-side Master Encryption Key (MEK) derivation and transient session caching:
+
+1. **`kylrix vault unlock`**: Prompts for your Master Password (or accepts `--password`), derives/unwraps your MEK, and initiates a temporary session (default 60 mins).
+2. **Seamless Decryption**: Commands like `kylrix vault list --decrypt`, `kylrix vault get <id>`, and `kylrix totp code <id>` use the active session key automatically.
+3. **`kylrix vault lock`**: Immediately wipes all in-memory keys and session tokens.
+4. **`kylrix vault status`**: Shows whether the vault is locked/unlocked and remaining minutes.
+
+---
+
 ## 🤖 Model Context Protocol (MCP) Integration
 
-You can plug Kylrix into any AI tool (Claude Desktop, Cursor, Windsurf, Claude Code, Antigravity) via stdio:
+Plug your sovereign Kylrix workspace into Cursor, Windsurf, Claude Code, or Antigravity via stdio:
 
 ### Cursor (`.cursor/mcp.json`)
 ```json
@@ -49,91 +84,31 @@ You can plug Kylrix into any AI tool (Claude Desktop, Cursor, Windsurf, Claude C
 }
 ```
 
-### Claude Desktop (`claude_desktop_config.json`)
-```json
-{
-  "mcpServers": {
-    "kylrix": {
-      "command": "npx",
-      "args": ["-y", "kylrix", "mcp"],
-      "env": {
-        "KYLRIX_API_KEY": "pat_..."
-      }
-    }
-  }
-}
-```
-
 ---
 
-## 📋 CLI Commands Overview
+## 📋 Complete CLI Commands Reference
 
-### Authentication
-* `kylrix login` - Interactive login (Device Pairing, PAT, or Email/Password)
-* `kylrix pair` - Initiate RFC 8628 browser device pairing code
-* `kylrix whoami` - Display currently authenticated user, email, and scopes
-* `kylrix logout` - Remove stored local credentials
-
-### Workspaces
-* `kylrix workspaces list` - List workspaces
-* `kylrix workspaces get <id>` - Get workspace details
-* `kylrix workspaces create <name>` - Create a new workspace
-* `kylrix workspaces delete <id>` - Delete a workspace
-
-### Notes & Ideas
-* `kylrix notes list [--workspace <id>]` - List notes
-* `kylrix notes get <id>` - Display full note content
-* `kylrix notes create <title> [--content <text>] [--workspace <id>]` - Create a note
-* `kylrix notes update <id> [--title <title>] [--content <text>]` - Update a note
-* `kylrix notes delete <id>` - Delete a note
-
-### Goals & Habits
-* `kylrix goals list [--status <status>]` - List goals
-* `kylrix goals get <id>` - Get goal details
-* `kylrix goals create <title> [--target <val>] [--unit <unit>]` - Create a goal
-* `kylrix goals update <id> [--progress <val>] [--status <status>]` - Update goal progress
-* `kylrix goals delete <id>` - Delete a goal
-
-### Calendar Events
-* `kylrix events list` - List events
-* `kylrix events create <title> --start <ISO> --end <ISO>` - Create an event
-* `kylrix events delete <id>` - Delete an event
-
-### Forms & Flows
-* `kylrix forms list` - List forms
-* `kylrix forms get <id>` - Get form schema
-* `kylrix flows list` - List workflow automations
-* `kylrix flows create <title>` - Create a workflow
-
-### Chats & Threads
-* `kylrix chats list` - List direct conversations
-* `kylrix chats messages <conversationId>` - View chat messages
-* `kylrix chats send <message> [--conversation <id>]` - Send a message
-* `kylrix threads list` - List object comment threads
-* `kylrix threads send <threadId> <message>` - Post comment to thread
-
-### Tags & Trash
-* `kylrix tags list` - List tags
-* `kylrix tags create <name> [--color <hex>]` - Create a tag
-* `kylrix trash list` - List soft-deleted items
-* `kylrix trash restore <kind> <id>` - Restore deleted item
-* `kylrix trash purge <kind> <id>` - Permanently purge item
-
----
-
-## 🌐 Environment Variables
-
-| Variable | Description |
-|---|---|
-| `KYLRIX_API_URL` | Kylrix instance URL (defaults to `https://www.kylrix.space`) |
-| `KYLRIX_API_KEY` or `KYLRIX_PAT` | Personal Access Token (PAT) or Agent Key |
-| `KYLRIX_WORKSPACE_ID` | Default workspace ID for scoped operations |
+| Category | Commands | Description |
+|---|---|---|
+| **Auth** | `login`, `pair`, `whoami`, `logout` | 1-Click web pairing, token check, logout |
+| **Workspaces** | `workspaces list`, `get`, `create`, `delete`, `switch`, `current`, `clear` | Multi-workspace management & active scope switching |
+| **Ideas & Articles** | `ideas list`, `get`, `create`, `update`, `delete`, `articles` | Sovereign notes, brainstorms, and long-form articles |
+| **Goals** | `goals list`, `get`, `create`, `update`, `delete` | Objective and habit milestone tracking |
+| **Vault & Secrets** | `vault unlock`, `lock`, `status`, `list`, `get`, `create`, `delete` | End-to-end encrypted credentials and project `.env` files |
+| **2FA TOTP** | `totp list`, `code`, `create`, `delete` | Real-time 6-digit TOTP verification code generation |
+| **AI Agents** | `agents list`, `get`, `start`, `delete` | Autonomous agent execution sessions and logs |
+| **Search** | `search <query>` | Global search across ideas, goals, events, forms, flows, secrets |
+| **Share** | `share <kind> <id>` | Generate shareable link respecting account subscription tier |
+| **Calendar** | `events list`, `create`, `delete` | Calendar events and scheduled tasks |
+| **Forms & Flows** | `forms list/get/create`, `flows list/get/create` | Interactive forms and automated workflow pipelines |
+| **Hangouts** | `hangouts list`, `messages`, `send` | Direct discussions, group hangouts, and messaging |
+| **Billing** | `billing status`, `coins`, `checkout`, `coupon` | Pro upgrades, on-chain crypto checkout, promo coupons |
+| **Admin** | `admin` | Server status and admin privilege verification |
+| **Trash** | `trash list`, `restore`, `purge` | Soft-deleted item inspection, recovery, and purge |
 
 ---
 
 ## 💻 Isomorphic SDK Usage
-
-You can also use the typed SDK in Node.js, Bun, Deno, browser, or edge workers:
 
 ```typescript
 import { createKylrixClient } from 'kylrix';
@@ -143,15 +118,13 @@ const client = createKylrixClient({
   token: 'pat_...',
 });
 
-// Fetch notes
-const { items } = await client.notes.list();
-console.log(items);
+// Search across workspace
+const results = await client.search.query('infrastructure');
 
-// Create a goal
+// Create goal
 const goal = await client.goals.create({
-  title: 'Launch v1 CLI to npm',
+  title: 'Achieve 100% test coverage',
   targetValue: 100,
-  unit: '%',
 });
 ```
 

@@ -443,48 +443,6 @@ var kD = class extends x {
     return this.value.replaceAll(/./g, this._mask);
   }
 };
-var SD = Object.defineProperty;
-var $D = (t, u2, F) => u2 in t ? SD(t, u2, { enumerable: true, configurable: true, writable: true, value: F }) : t[u2] = F;
-var q = (t, u2, F) => ($D(t, typeof u2 != "symbol" ? u2 + "" : u2, F), F);
-var jD = class extends x {
-  constructor(u2) {
-    super(u2, false), q(this, "options"), q(this, "cursor", 0), this.options = u2.options, this.cursor = this.options.findIndex(({ value: F }) => F === u2.initialValue), this.cursor === -1 && (this.cursor = 0), this.changeValue(), this.on("cursor", (F) => {
-      switch (F) {
-        case "left":
-        case "up":
-          this.cursor = this.cursor === 0 ? this.options.length - 1 : this.cursor - 1;
-          break;
-        case "down":
-        case "right":
-          this.cursor = this.cursor === this.options.length - 1 ? 0 : this.cursor + 1;
-          break;
-      }
-      this.changeValue();
-    });
-  }
-  get _value() {
-    return this.options[this.cursor];
-  }
-  changeValue() {
-    this.value = this._value.value;
-  }
-};
-var PD = class extends x {
-  get valueWithCursor() {
-    if (this.state === "submit") return this.value;
-    if (this.cursor >= this.value.length) return `${this.value}\u2588`;
-    const u2 = this.value.slice(0, this.cursor), [F, ...e2] = this.value.slice(this.cursor);
-    return `${u2}${g.inverse(F)}${e2.join("")}`;
-  }
-  get cursor() {
-    return this._cursor;
-  }
-  constructor(u2) {
-    super(u2), this.on("finalize", () => {
-      this.value || (this.value = u2.defaultValue);
-    });
-  }
-};
 
 // ../../node_modules/.pnpm/@clack+prompts@0.9.1/node_modules/@clack/prompts/dist/index.mjs
 var import_sisteransi2 = __toESM(require_src(), 1);
@@ -529,37 +487,6 @@ var y2 = (s) => {
       return e.green(S2);
   }
 };
-var k2 = (s) => {
-  const { cursor: n, options: t, style: i } = s, r2 = s.maxItems ?? Number.POSITIVE_INFINITY, c2 = Math.max(process.stdout.rows - 4, 0), o = Math.min(c2, Math.max(r2, 5));
-  let l2 = 0;
-  n >= l2 + o - 3 ? l2 = Math.max(Math.min(n - o + 3, t.length - o), 0) : n < l2 + 2 && (l2 = Math.max(n - 2, 0));
-  const $2 = o < t.length && l2 > 0, d2 = o < t.length && l2 + o < t.length;
-  return t.slice(l2, l2 + o).map((w2, b2, C) => {
-    const I2 = b2 === 0 && $2, x2 = b2 === C.length - 1 && d2;
-    return I2 || x2 ? e.dim("...") : i(w2, b2 + l2 === n);
-  });
-};
-var ue = (s) => new PD({ validate: s.validate, placeholder: s.placeholder, defaultValue: s.defaultValue, initialValue: s.initialValue, render() {
-  const n = `${e.gray(a)}
-${y2(this.state)}  ${s.message}
-`, t = s.placeholder ? e.inverse(s.placeholder[0]) + e.dim(s.placeholder.slice(1)) : e.inverse(e.hidden("_")), i = this.value ? this.valueWithCursor : t;
-  switch (this.state) {
-    case "error":
-      return `${n.trim()}
-${e.yellow(a)}  ${i}
-${e.yellow(m2)}  ${e.yellow(this.error)}
-`;
-    case "submit":
-      return `${n}${e.gray(a)}  ${e.dim(this.value || s.placeholder)}`;
-    case "cancel":
-      return `${n}${e.gray(a)}  ${e.strikethrough(e.dim(this.value ?? ""))}${this.value?.trim() ? `
-${e.gray(a)}` : ""}`;
-    default:
-      return `${n}${e.cyan(a)}  ${i}
-${e.cyan(m2)}
-`;
-  }
-} }).prompt();
 var $e = (s) => new kD({ validate: s.validate, mask: s.mask ?? se, render() {
   const n = `${e.gray(a)}
 ${y2(this.state)}  ${s.message}
@@ -581,53 +508,6 @@ ${e.cyan(m2)}
 `;
   }
 } }).prompt();
-var de = (s) => {
-  const n = (t, i) => {
-    const r2 = t.label ?? String(t.value);
-    switch (i) {
-      case "selected":
-        return `${e.dim(r2)}`;
-      case "active":
-        return `${e.green(j2)} ${r2} ${t.hint ? e.dim(`(${t.hint})`) : ""}`;
-      case "cancelled":
-        return `${e.strikethrough(e.dim(r2))}`;
-      default:
-        return `${e.dim(R2)} ${e.dim(r2)}`;
-    }
-  };
-  return new jD({ options: s.options, initialValue: s.initialValue, render() {
-    const t = `${e.gray(a)}
-${y2(this.state)}  ${s.message}
-`;
-    switch (this.state) {
-      case "submit":
-        return `${t}${e.gray(a)}  ${n(this.options[this.cursor], "selected")}`;
-      case "cancel":
-        return `${t}${e.gray(a)}  ${n(this.options[this.cursor], "cancelled")}
-${e.gray(a)}`;
-      default:
-        return `${t}${e.cyan(a)}  ${k2({ cursor: this.cursor, options: this.options, maxItems: s.maxItems, style: (i, r2) => n(i, r2 ? "active" : "inactive") }).join(`
-${e.cyan(a)}  `)}
-${e.cyan(m2)}
-`;
-    }
-  } }).prompt();
-};
-var ye = (s = "", n = "") => {
-  const t = `
-${s}
-`.split(`
-`), i = T2(n).length, r2 = Math.max(t.reduce((o, l2) => {
-    const $2 = T2(l2);
-    return $2.length > o ? $2.length : o;
-  }, 0), i) + 2, c2 = t.map((o) => `${e.gray(a)}  ${e.dim(o)}${" ".repeat(r2 - T2(o).length)}${e.gray(a)}`).join(`
-`);
-  process.stdout.write(`${e.gray(a)}
-${e.green(S2)}  ${e.reset(n)} ${e.gray(N2.repeat(Math.max(r2 - i - 1, 1)) + re)}
-${c2}
-${e.gray(ie + N2.repeat(r2 + 2) + ne)}
-`);
-};
 var ve = (s = "") => {
   process.stdout.write(`${e.gray(m2)}  ${e.red(s)}
 
@@ -682,6 +562,7 @@ var L2 = () => {
 };
 
 // src/commands/auth.ts
+import { exec } from "child_process";
 import pc2 from "picocolors";
 
 // ../../sdk/pairing-client.ts
@@ -791,8 +672,8 @@ var KylrixClient = class {
   getBaseUrl() {
     return this.baseUrl;
   }
-  async request(method, path2, options = {}) {
-    const cleanPath = path2.startsWith("/") ? path2 : `/${path2}`;
+  async request(method, path3, options = {}) {
+    const cleanPath = path3.startsWith("/") ? path3 : `/${path3}`;
     const url2 = new URL(`${this.baseUrl}${cleanPath}`);
     if (options.query) {
       for (const [key, val] of Object.entries(options.query)) {
@@ -854,8 +735,8 @@ var KylrixClient = class {
     listCollaborators: (workspaceId) => this.request("GET", `/workspaces/${workspaceId}/collaborators`),
     addCollaborator: (workspaceId, data) => this.request("POST", `/workspaces/${workspaceId}/collaborators`, { body: data })
   };
-  // ── 3. Notes ──
-  notes = {
+  // ── 3. Ideas (aliased to notes) ──
+  ideas = {
     list: (opts = {}) => this.request("GET", "/notes", {
       query: {
         limit: opts.limit ?? 25,
@@ -870,8 +751,14 @@ var KylrixClient = class {
       }
     }),
     update: (id, data) => this.request("PATCH", `/notes/${id}`, { body: data }),
-    delete: (id) => this.request("DELETE", `/notes/${id}`)
+    delete: (id) => this.request("DELETE", `/notes/${id}`),
+    articles: async (opts = {}) => {
+      const res = await this.ideas.list(opts);
+      const articles = (res.items || []).filter((item) => item.category === "article");
+      return { items: articles, count: articles.length };
+    }
   };
+  notes = this.ideas;
   // ── 4. Goals ──
   goals = {
     list: (opts = {}) => this.request("GET", "/goals", {
@@ -933,13 +820,14 @@ var KylrixClient = class {
     create: (data) => this.request("POST", "/flows", { body: data }),
     delete: (id) => this.request("DELETE", `/flows/${id}`)
   };
-  // ── 8. Chats ──
+  // ── 8. Chats & Hangouts ──
   chats = {
     list: (limit = 25) => this.request("GET", "/chats", { query: { limit } }),
     get: (id) => this.request("GET", `/chats/${id}`),
     messages: (conversationId, limit = 50) => this.request("GET", `/chats/${conversationId}/messages`, { query: { limit } }),
     sendMessage: (data) => this.request("POST", "/chats", { body: data })
   };
+  hangouts = this.chats;
   // ── 9. Threads ──
   threads = {
     list: (opts = {}) => this.request("GET", "/threads", { query: opts }),
@@ -959,14 +847,158 @@ var KylrixClient = class {
     restore: (kind, id) => this.request("POST", "/trash/restore", { body: { kind, id } }),
     purge: (kind, id) => this.request("POST", "/trash/purge", { body: { kind, id } })
   };
-  // ── 12. Vault ──
+  // ── 12. Vault & Secrets ──
   vault = {
-    list: (opts = {}) => this.request("GET", "/vault", { query: opts }),
-    get: (id) => this.request("GET", `/vault/${id}`),
-    create: (data) => this.request("POST", "/vault", { body: data }),
-    resolvePublic: (id, shareKey) => this.request("GET", `/vault/public/${id}`, { query: { shareKey } })
+    list: (opts = {}) => this.request("GET", "/vault", {
+      query: {
+        limit: opts.limit ?? 50,
+        workspaceId: opts.workspaceId || this.activeWorkspaceId
+      },
+      headers: opts.mek ? { "x-mek": opts.mek } : void 0
+    }),
+    get: (id, opts = {}) => this.request("GET", `/vault/${id}`, {
+      query: {
+        format: opts.format,
+        pure: opts.pure
+      },
+      headers: {
+        ...opts.mek ? { "x-mek": opts.mek } : {},
+        ...opts.masterPassword ? { "x-master-password": opts.masterPassword } : {},
+        ...opts.shareKey ? { "x-share-key": opts.shareKey } : {}
+      }
+    }),
+    create: (data, opts = {}) => this.request("POST", "/vault", {
+      body: {
+        ...data,
+        workspaceId: data.workspaceId || opts.workspaceId || this.activeWorkspaceId
+      },
+      headers: opts.mek ? { "x-mek": opts.mek } : void 0
+    }),
+    update: (id, data, opts = {}) => this.request("PATCH", `/vault/${id}`, {
+      body: data,
+      headers: opts.mek ? { "x-mek": opts.mek } : void 0
+    }),
+    delete: (id) => this.request("DELETE", `/vault/${id}`),
+    unlockUserMek: (masterPassword) => this.request("POST", "/vault/unlock", {
+      body: { masterPassword }
+    }),
+    resolvePublic: (id, opts = {}) => this.request("GET", `/vault/public/${id}`, {
+      query: {
+        shareKey: opts.shareKey,
+        format: opts.format,
+        pure: opts.pure
+      }
+    })
   };
-  // ── 13. Model Context Protocol (MCP) Dispatch ──
+  // ── 13. TOTP 2FA Secrets ──
+  totp = {
+    list: (opts = {}) => this.request("GET", "/totp", {
+      query: {
+        limit: opts.limit ?? 50,
+        workspaceId: opts.workspaceId || this.activeWorkspaceId
+      },
+      headers: opts.mek ? { "x-mek": opts.mek } : void 0
+    }),
+    get: (id, opts = {}) => this.request("GET", `/totp/${id}`, {
+      headers: {
+        ...opts.mek ? { "x-mek": opts.mek } : {},
+        ...opts.masterPassword ? { "x-master-password": opts.masterPassword } : {}
+      }
+    }),
+    create: (data, opts = {}) => this.request("POST", "/totp", {
+      body: {
+        ...data,
+        workspaceId: data.workspaceId || opts.workspaceId || this.activeWorkspaceId
+      },
+      headers: opts.mek ? { "x-mek": opts.mek } : void 0
+    }),
+    update: (id, data, opts = {}) => this.request("PATCH", `/totp/${id}`, {
+      body: data,
+      headers: opts.mek ? { "x-mek": opts.mek } : void 0
+    }),
+    delete: (id) => this.request("DELETE", `/totp/${id}`)
+  };
+  // ── 14. Autonomous Agents & Sessions ──
+  agents = {
+    listSessions: (opts = {}) => this.request("GET", "/agents/sessions", {
+      query: {
+        limit: opts.limit ?? 25,
+        harness: opts.harness,
+        workspaceId: opts.workspaceId || this.activeWorkspaceId
+      }
+    }),
+    getSession: (id) => this.request("GET", `/agents/sessions/${id}`),
+    createHarnessSession: (data) => this.request("POST", "/agents/harness", {
+      body: {
+        ...data,
+        workspaceId: data.workspaceId || this.activeWorkspaceId
+      }
+    }),
+    appendHarnessMirror: (sessionId, data) => this.request("POST", `/agents/sessions/${sessionId}/mirror`, { body: data }),
+    deleteSession: (id) => this.request("DELETE", `/agents/sessions/${id}`),
+    createKey: (data) => this.request("POST", "/agents/keys", { body: data }),
+    provision: (data) => this.request("POST", "/agents/provision", { body: data })
+  };
+  // ── 15. Billing & Subscription ──
+  billing = {
+    status: () => this.request("GET", "/billing/status"),
+    checkout: (data) => this.request("POST", "/billing/checkout", { body: data }),
+    coins: () => this.request("GET", "/billing/coins"),
+    claimCoupon: (couponId) => this.request("POST", "/billing/coupon", { body: { couponId } })
+  };
+  // ── 16. Global Search ──
+  search = {
+    query: async (searchTerm, opts = {}) => {
+      const q = searchTerm.toLowerCase().trim();
+      const wsId = opts.workspaceId || this.activeWorkspaceId;
+      const limit = opts.limit || 20;
+      const [ideasRes, goalsRes, eventsRes, formsRes, flowsRes] = await Promise.allSettled([
+        this.ideas.list({ workspaceId: wsId, limit }),
+        this.goals.list({ workspaceId: wsId, limit }),
+        this.events.list({ workspaceId: wsId, limit }),
+        this.forms.list({ workspaceId: wsId, limit }),
+        this.flows.list(limit)
+      ]);
+      const results = [];
+      if (ideasRes.status === "fulfilled" && ideasRes.value?.items) {
+        for (const i of ideasRes.value.items) {
+          if (i.title?.toLowerCase().includes(q) || i.content?.toLowerCase().includes(q)) {
+            results.push({ kind: "idea", id: i.id, title: i.title || "(Untitled Idea)", snippet: i.content?.substring(0, 100) });
+          }
+        }
+      }
+      if (goalsRes.status === "fulfilled" && goalsRes.value?.items) {
+        for (const g2 of goalsRes.value.items) {
+          if (g2.title?.toLowerCase().includes(q) || g2.description?.toLowerCase().includes(q)) {
+            results.push({ kind: "goal", id: g2.id, title: g2.title || "(Untitled Goal)", snippet: g2.description?.substring(0, 100) });
+          }
+        }
+      }
+      if (eventsRes.status === "fulfilled" && eventsRes.value?.items) {
+        for (const e2 of eventsRes.value.items) {
+          if (e2.title?.toLowerCase().includes(q) || e2.description?.toLowerCase().includes(q)) {
+            results.push({ kind: "event", id: e2.id, title: e2.title, snippet: e2.description?.substring(0, 100) });
+          }
+        }
+      }
+      if (formsRes.status === "fulfilled" && formsRes.value?.items) {
+        for (const f2 of formsRes.value.items) {
+          if (f2.title?.toLowerCase().includes(q)) {
+            results.push({ kind: "form", id: f2.id, title: f2.title || "(Untitled Form)" });
+          }
+        }
+      }
+      if (flowsRes.status === "fulfilled" && flowsRes.value?.items) {
+        for (const fl of flowsRes.value.items) {
+          if (fl.title?.toLowerCase().includes(q) || fl.description?.toLowerCase().includes(q)) {
+            results.push({ kind: "flow", id: fl.id, title: fl.title || "(Untitled Flow)", snippet: fl.description?.substring(0, 100) });
+          }
+        }
+      }
+      return results;
+    }
+  };
+  // ── 17. Model Context Protocol (MCP) Dispatch ──
   mcp = {
     callTool: (name, args = {}) => this.request("POST", "/mcp/messages", {
       body: {
@@ -1063,6 +1095,9 @@ function printError(message, error51) {
     console.error(pc.dim(`  ${error51.message}`));
   }
 }
+function printWarning(message) {
+  console.log(pc.yellow("\u26A0") + " " + message);
+}
 function printInfo(message) {
   console.log(pc.cyan("\u2139") + " " + message);
 }
@@ -1101,118 +1136,31 @@ Total: ${rows.length}`));
 }
 
 // src/commands/auth.ts
+function tryOpenBrowser(url2) {
+  const start = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+  exec(`${start} "${url2}"`, () => {
+  });
+}
 async function loginCommand(opts) {
-  we(pc2.bgCyan(pc2.black(" Kylrix Authentication ")));
-  const currentConfig = loadConfig();
-  const defaultUrl = opts.url || currentConfig.apiUrl || "https://www.kylrix.space";
-  const method = await de({
-    message: "How would you like to authenticate?",
-    options: [
-      { value: "pair", label: "Device Pairing (Recommended - Open in Browser / Scan Code)" },
-      { value: "pat", label: "Personal Access Token (PAT)" },
-      { value: "credentials", label: "Email & Password" }
-    ]
-  });
-  if (BD(method)) {
-    ve("Authentication cancelled.");
-    process.exit(0);
-  }
-  const urlAnswer = await ue({
-    message: "Kylrix Instance URL:",
-    initialValue: defaultUrl,
-    validate: (val) => {
-      if (!val) return "URL is required";
-      try {
-        new URL(val);
-      } catch {
-        return "Invalid URL format";
-      }
-    }
-  });
-  if (BD(urlAnswer)) {
-    ve("Cancelled.");
-    process.exit(0);
-  }
-  const apiUrl = String(urlAnswer).replace(/\/+$/, "");
-  if (method === "pair") {
-    await pairCommand({ url: apiUrl });
-    return;
-  }
-  if (method === "pat") {
-    const patAnswer = await ue({
-      message: "Enter your Personal Access Token (PAT):",
-      placeholder: "pat_...",
-      validate: (val) => !val ? "Token cannot be empty" : void 0
-    });
-    if (BD(patAnswer)) {
-      ve("Cancelled.");
-      process.exit(0);
-    }
-    const token = String(patAnswer).trim();
-    const spinner = L2();
-    spinner.start("Verifying token with Kylrix...");
+  if (opts.token) {
+    const env = resolveEnvironment(opts);
+    const client = getClient({ url: env.apiUrl, token: opts.token });
     try {
-      const client = getClient({ url: apiUrl, token });
       const profile = await client.auth.me();
-      spinner.stop(pc2.green("Authenticated successfully!"));
       saveConfig({
-        apiUrl,
-        token,
+        apiUrl: env.apiUrl,
+        token: opts.token,
         userId: profile.id,
         email: profile.email
       });
-      ye(
-        `User ID: ${profile.id}
-Email: ${profile.email || "N/A"}
-Scopes: ${profile.scopes?.join(", ") || "all"}`,
-        "Active Session"
-      );
-      fe(pc2.green("CLI configured and ready!"));
+      printSuccess(`Logged in as ${pc2.bold(profile.email || profile.id)}`);
+      return;
     } catch (err) {
-      spinner.stop(pc2.red("Authentication failed."));
-      printError(err.message || "Invalid PAT or unreachable server.");
+      printError("Invalid token provided", err);
       process.exit(1);
     }
   }
-  if (method === "credentials") {
-    const emailAnswer = await ue({
-      message: "Email:",
-      validate: (val) => !val ? "Email cannot be empty" : void 0
-    });
-    if (BD(emailAnswer)) {
-      ve("Cancelled.");
-      process.exit(0);
-    }
-    const passwordAnswer = await $e({
-      message: "Password:",
-      validate: (val) => !val ? "Password cannot be empty" : void 0
-    });
-    if (BD(passwordAnswer)) {
-      ve("Cancelled.");
-      process.exit(0);
-    }
-    const spinner = L2();
-    spinner.start("Signing in to Kylrix...");
-    try {
-      const client = getClient({ url: apiUrl });
-      const res = await client.auth.signin({
-        email: String(emailAnswer).trim(),
-        password: String(passwordAnswer)
-      });
-      spinner.stop(pc2.green("Signed in successfully!"));
-      saveConfig({
-        apiUrl,
-        token: res.token,
-        userId: res.user?.id || res.user?.$id,
-        email: String(emailAnswer).trim()
-      });
-      fe(pc2.green("CLI configured and ready!"));
-    } catch (err) {
-      spinner.stop(pc2.red("Sign-in failed."));
-      printError(err.message || "Invalid credentials or login endpoint unavailable.");
-      process.exit(1);
-    }
-  }
+  await pairCommand(opts);
 }
 async function pairCommand(opts) {
   const env = resolveEnvironment({ url: opts.url });
@@ -1227,27 +1175,34 @@ async function pairCommand(opts) {
       printJson(session);
       return;
     }
-    console.log("\n" + pc2.bold(pc2.cyan("Pairing Authorization Required:")));
-    console.log(
-      `1. Open: ${pc2.underline(pc2.bold(session.verificationUri || `${env.apiUrl.replace(/\/api\/v1$/, "")}/connect/pair`))}`
-    );
-    console.log(`2. Enter Code: ${pc2.bgYellow(pc2.black(` ${session.userCode} `))}
+    const baseWebUrl = env.apiUrl.replace(/\/api\/v1$/, "");
+    const directLoginUrl = `${baseWebUrl}/login/${session.userCode}`;
+    const pairUrl = session.verificationUri || `${baseWebUrl}/pair?code=${encodeURIComponent(session.userCode)}`;
+    we(pc2.bgCyan(pc2.black(" Kylrix 1-Click Web Login ")));
+    console.log(`
+  ${pc2.bold("1. Visit authorization URL:")}`);
+    console.log(`     ${pc2.underline(pc2.bold(pc2.cyan(directLoginUrl)))}`);
+    console.log(`     ${pc2.dim(`(Or: ${pairUrl})`)}`);
+    console.log(`
+  ${pc2.bold("2. Instant Code:")}`);
+    console.log(`     ${pc2.bgYellow(pc2.black(pc2.bold(` ${session.userCode} `)))}
 `);
+    tryOpenBrowser(directLoginUrl);
     const spinner = L2();
-    spinner.start("Waiting for browser approval...");
+    spinner.start("Waiting for web authorization (click Approve in your browser)...");
     const result = await client.pairing.pollExchange(session.deviceCode, {
       intervalSeconds: session.interval || 3,
       timeoutSeconds: session.expiresIn || 600
     });
-    spinner.stop(pc2.green("Pairing approved!"));
+    spinner.stop(pc2.green("Authorization approved!"));
     saveConfig({
       apiUrl: env.apiUrl,
       token: result.token,
       userId: result.userId
     });
-    printSuccess(`Logged in as user: ${pc2.bold(result.userId)}`);
+    fe(pc2.green(`\u2714 Logged in successfully as user ${pc2.bold(result.userId)}`));
   } catch (err) {
-    printError("Device pairing failed", err);
+    printError("Authentication failed", err);
     process.exit(1);
   }
 }
@@ -1271,10 +1226,11 @@ async function whoamiCommand(opts) {
     console.log("\n" + pc2.bold("Kylrix Session Info:"));
     console.log(`  ${pc2.dim("User ID:")}      ${pc2.bold(profile.id)}`);
     console.log(`  ${pc2.dim("Email:")}        ${profile.email || "N/A"}`);
+    console.log(`  ${pc2.dim("Tier:")}         ${pc2.cyan(profile.tier || "FREE")}`);
     console.log(`  ${pc2.dim("API URL:")}      ${env.apiUrl}`);
     console.log(`  ${pc2.dim("Scopes:")}       ${profile.scopes?.join(", ") || "all"}`);
-    if (profile.workspaceId) {
-      console.log(`  ${pc2.dim("Workspace:")}    ${profile.workspaceId}`);
+    if (env.workspaceId) {
+      console.log(`  ${pc2.dim("Workspace:")}    ${pc2.green(env.workspaceId)}`);
     }
     console.log();
   } catch (err) {
@@ -1284,7 +1240,7 @@ async function whoamiCommand(opts) {
 }
 function logoutCommand() {
   clearConfig();
-  printSuccess("Logged out successfully. Removed saved credentials.");
+  printSuccess("Logged out successfully. Removed stored local session.");
 }
 
 // src/commands/workspaces.ts
@@ -1294,18 +1250,20 @@ async function listWorkspacesCommand(opts) {
     const client = requireAuthClient(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
     const res = await client.workspaces.list(limit);
+    const activeWs = loadConfig().workspaceId;
     if (opts.json) {
       printJson(res);
       return;
     }
     const rows = (res.items || []).map((w2) => ({
+      active: w2.id === activeWs ? pc3.green("\u2714") : "",
       id: w2.id,
       name: w2.name,
       description: w2.description || "",
       isAgentic: w2.isAgentic ? "yes" : "no",
       createdAt: w2.createdAt?.substring(0, 10) || ""
     }));
-    printTable(rows, ["id", "name", "isAgentic", "description", "createdAt"]);
+    printTable(rows, ["active", "id", "name", "isAgentic", "description", "createdAt"]);
   } catch (err) {
     printError("Failed to list workspaces", err);
     process.exit(1);
@@ -1363,58 +1321,94 @@ async function deleteWorkspaceCommand(id, opts) {
     process.exit(1);
   }
 }
+async function switchWorkspaceCommand(id, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const ws = await client.workspaces.get(id);
+    saveConfig({ workspaceId: ws.id });
+    if (opts.json) {
+      printJson({ activeWorkspaceId: ws.id, name: ws.name });
+      return;
+    }
+    printSuccess(`Switched active workspace to "${pc3.bold(ws.name)}" (${ws.id})`);
+  } catch (err) {
+    printError(`Failed to switch to workspace "${id}"`, err);
+    process.exit(1);
+  }
+}
+function currentWorkspaceCommand(opts = {}) {
+  const config2 = loadConfig();
+  const wsId = config2.workspaceId;
+  if (opts.json) {
+    printJson({ workspaceId: wsId || null, mode: wsId ? "workspace" : "personal" });
+    return;
+  }
+  if (wsId) {
+    console.log(`Active Workspace: ${pc3.bold(pc3.cyan(wsId))}`);
+  } else {
+    console.log(`Active Workspace: ${pc3.bold("Personal Virtual Workspace")} (no project filter)`);
+  }
+}
+function clearWorkspaceCommand(opts = {}) {
+  saveConfig({ workspaceId: void 0 });
+  if (opts.json) {
+    printJson({ workspaceId: null });
+    return;
+  }
+  printSuccess("Reset active workspace to Personal Virtual Workspace.");
+}
 
-// src/commands/notes.ts
+// src/commands/ideas.ts
 import pc4 from "picocolors";
-async function listNotesCommand(opts) {
+async function listIdeasCommand(opts) {
   try {
     const client = requireAuthClient(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = await client.notes.list({ limit, workspaceId: opts.workspace });
+    const res = await client.ideas.list({ limit, workspaceId: opts.workspace });
     if (opts.json) {
       printJson(res);
       return;
     }
     const rows = (res.items || []).map((n) => ({
       id: n.id,
-      title: n.title || "(Untitled)",
+      title: n.title || "(Untitled Idea)",
       category: n.category || "general",
       workspace: n.workspaceId || "personal",
       createdAt: n.createdAt?.substring(0, 10) || ""
     }));
     printTable(rows, ["id", "title", "category", "workspace", "createdAt"]);
   } catch (err) {
-    printError("Failed to list notes", err);
+    printError("Failed to list ideas", err);
     process.exit(1);
   }
 }
-async function getNoteCommand(id, opts) {
+async function getIdeaCommand(id, opts) {
   try {
     const client = requireAuthClient(opts);
-    const item = await client.notes.get(id);
+    const item = await client.ideas.get(id);
     if (opts.json) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc4.bold(item.title || "(Untitled Note)"));
+    console.log("\n" + pc4.bold(item.title || "(Untitled Idea)"));
     console.log(pc4.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Workspace: ${item.workspaceId || "personal"}`);
     console.log(`Category:  ${item.category || "general"}`);
     console.log(`Updated:   ${item.updatedAt || item.createdAt || "N/A"}`);
     console.log(pc4.dim("\u2500".repeat(40)));
-    console.log(item.content || pc4.dim("(Empty note content)"));
+    console.log(item.content || pc4.dim("(Empty idea content)"));
     console.log();
   } catch (err) {
-    printError(`Failed to get note "${id}"`, err);
+    printError(`Failed to get idea "${id}"`, err);
     process.exit(1);
   }
 }
-async function createNoteCommand(title, opts) {
+async function createIdeaCommand(title, opts) {
   try {
     const client = requireAuthClient(opts);
     const tags2 = opts.tags ? opts.tags.split(",").map((t) => t.trim()).filter(Boolean) : void 0;
-    const item = await client.notes.create({
+    const item = await client.ideas.create({
       title,
       content: opts.content || "",
       category: opts.category,
@@ -1425,16 +1419,16 @@ async function createNoteCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created note "${pc4.bold(item.title || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created idea "${pc4.bold(item.title || item.id)}" (ID: ${item.id})`);
   } catch (err) {
-    printError("Failed to create note", err);
+    printError("Failed to create idea", err);
     process.exit(1);
   }
 }
-async function updateNoteCommand(id, opts) {
+async function updateIdeaCommand(id, opts) {
   try {
     const client = requireAuthClient(opts);
-    const item = await client.notes.update(id, {
+    const item = await client.ideas.update(id, {
       title: opts.title,
       content: opts.content,
       category: opts.category
@@ -1443,23 +1437,44 @@ async function updateNoteCommand(id, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Updated note "${pc4.bold(item.title || item.id)}"`);
+    printSuccess(`Updated idea "${pc4.bold(item.title || item.id)}"`);
   } catch (err) {
-    printError(`Failed to update note "${id}"`, err);
+    printError(`Failed to update idea "${id}"`, err);
     process.exit(1);
   }
 }
-async function deleteNoteCommand(id, opts) {
+async function deleteIdeaCommand(id, opts) {
   try {
     const client = requireAuthClient(opts);
-    await client.notes.delete(id);
+    await client.ideas.delete(id);
     if (opts.json) {
       printJson({ success: true, id });
       return;
     }
-    printSuccess(`Deleted note "${id}"`);
+    printSuccess(`Deleted idea "${id}"`);
   } catch (err) {
-    printError(`Failed to delete note "${id}"`, err);
+    printError(`Failed to delete idea "${id}"`, err);
+    process.exit(1);
+  }
+}
+async function listArticlesCommand(opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
+    const res = await client.ideas.articles({ limit, workspaceId: opts.workspace });
+    if (opts.json) {
+      printJson(res);
+      return;
+    }
+    const rows = (res.items || []).map((n) => ({
+      id: n.id,
+      title: n.title || "(Untitled Article)",
+      workspace: n.workspaceId || "personal",
+      createdAt: n.createdAt?.substring(0, 10) || ""
+    }));
+    printTable(rows, ["id", "title", "workspace", "createdAt"]);
+  } catch (err) {
+    printError("Failed to list articles", err);
     process.exit(1);
   }
 }
@@ -1904,8 +1919,688 @@ async function sendThreadMessageCommand(threadId, content, opts) {
   }
 }
 
-// src/commands/tags.ts
+// src/commands/vault.ts
+import * as fs3 from "fs";
 import pc11 from "picocolors";
+
+// src/crypto/session.ts
+import * as fs2 from "fs";
+import * as path2 from "path";
+import * as os2 from "os";
+var SESSION_DIR = path2.join(os2.homedir(), ".kylrix");
+var SESSION_FILE = path2.join(SESSION_DIR, "session.json");
+function getVaultSession() {
+  const envMek = process.env.KYLRIX_MEK_SESSION || process.env.KYLRIX_MEK;
+  if (envMek) {
+    return {
+      mekHex: envMek,
+      unlockedAt: Date.now(),
+      expiresAt: Date.now() + 864e5
+    };
+  }
+  try {
+    if (!fs2.existsSync(SESSION_FILE)) {
+      return null;
+    }
+    const raw = fs2.readFileSync(SESSION_FILE, "utf-8");
+    const session = JSON.parse(raw);
+    if (Date.now() > session.expiresAt) {
+      clearVaultSession();
+      return null;
+    }
+    return session;
+  } catch {
+    return null;
+  }
+}
+function setVaultSession(mekHex, expiresInMinutes = 60) {
+  try {
+    if (!fs2.existsSync(SESSION_DIR)) {
+      fs2.mkdirSync(SESSION_DIR, { recursive: true });
+    }
+    const now = Date.now();
+    const session = {
+      mekHex,
+      unlockedAt: now,
+      expiresAt: now + expiresInMinutes * 60 * 1e3
+    };
+    fs2.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2), {
+      encoding: "utf-8",
+      mode: 384
+    });
+    return session;
+  } catch (err) {
+    throw new Error(`Failed to save vault session: ${err.message}`);
+  }
+}
+function clearVaultSession() {
+  try {
+    if (fs2.existsSync(SESSION_FILE)) {
+      fs2.unlinkSync(SESSION_FILE);
+    }
+  } catch {
+  }
+}
+
+// src/commands/vault.ts
+async function unlockVaultCommand(opts) {
+  try {
+    const client = requireAuthClient(opts);
+    let masterPassword = opts.password;
+    if (!masterPassword) {
+      const passAnswer = await $e({
+        message: "Enter your Master Password:",
+        validate: (val) => !val ? "Master Password cannot be empty" : void 0
+      });
+      if (BD(passAnswer)) {
+        ve("Unlock cancelled.");
+        process.exit(0);
+      }
+      masterPassword = String(passAnswer);
+    }
+    const spinner = L2();
+    spinner.start("Deriving and unlocking Master Encryption Key (MEK)...");
+    const res = await client.vault.unlockUserMek(masterPassword);
+    if (!res.mek) {
+      spinner.stop(pc11.red("Unlock failed."));
+      throw new Error("Could not unwrap Master Encryption Key. Verify your Master Password.");
+    }
+    const expiry = opts.expiryMinutes ? parseInt(opts.expiryMinutes, 10) : 60;
+    const session = setVaultSession(res.mek, expiry);
+    spinner.stop(pc11.green("Vault unlocked successfully!"));
+    if (opts.json) {
+      printJson(session);
+      return;
+    }
+    printSuccess(`Vault unlocked for the next ${expiry} minutes.`);
+    console.log(pc11.dim("Tip: Use `kylrix vault lock` anytime to immediately seal your secrets."));
+  } catch (err) {
+    printError("Failed to unlock vault", err);
+    process.exit(1);
+  }
+}
+function lockVaultCommand(opts = {}) {
+  clearVaultSession();
+  if (opts.json) {
+    printJson({ locked: true });
+    return;
+  }
+  printSuccess("Vault locked. Unlocked session key wiped from memory.");
+}
+function statusVaultCommand(opts = {}) {
+  const session = getVaultSession();
+  const unlocked = session !== null;
+  if (opts.json) {
+    printJson({
+      unlocked,
+      expiresAt: session?.expiresAt ? new Date(session.expiresAt).toISOString() : null,
+      remainingMinutes: session ? Math.max(0, Math.round((session.expiresAt - Date.now()) / 6e4)) : 0
+    });
+    return;
+  }
+  console.log("\n" + pc11.bold("Vault Security Status:"));
+  if (unlocked && session) {
+    const remaining = Math.max(0, Math.round((session.expiresAt - Date.now()) / 6e4));
+    console.log(`  Status:    ${pc11.green(pc11.bold("UNLOCKED"))}`);
+    console.log(`  Expires:   In ${remaining} minute(s)`);
+  } else {
+    console.log(`  Status:    ${pc11.yellow(pc11.bold("LOCKED"))}`);
+    console.log(pc11.dim("  Run `kylrix vault unlock` to decrypt credentials and environment variables."));
+  }
+  console.log();
+}
+async function listVaultCommand(opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const limit = opts.limit ? parseInt(opts.limit, 10) : 50;
+    const session = opts.decrypt ? getVaultSession() : null;
+    if (opts.decrypt && !session) {
+      printWarning("Vault is locked. Run `kylrix vault unlock` first or run without `--decrypt`.");
+    }
+    const items = await client.vault.list({
+      limit,
+      workspaceId: opts.workspace,
+      mek: session?.mekHex
+    });
+    if (opts.json) {
+      printJson(items);
+      return;
+    }
+    const rows = (items || []).map((v2) => ({
+      id: v2.id,
+      name: v2.name,
+      type: v2.itemType || (v2.isEnv ? "env" : "login"),
+      username: v2.username || v2.identity || (v2.isEnv ? "(env-vars)" : ""),
+      workspace: v2.workspaceId || "personal",
+      updatedAt: v2.updatedAt?.substring(0, 10) || ""
+    }));
+    printTable(rows, ["id", "name", "type", "username", "workspace", "updatedAt"]);
+  } catch (err) {
+    printError("Failed to list vault items", err);
+    process.exit(1);
+  }
+}
+async function getVaultCommand(id, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const session = opts.decrypt ? getVaultSession() : null;
+    const item = await client.vault.get(id, {
+      mek: session?.mekHex,
+      format: opts.format,
+      pure: opts.pure
+    });
+    if (opts.json) {
+      printJson(item);
+      return;
+    }
+    if (opts.format === "env" && item.envText) {
+      console.log(item.envText);
+      return;
+    }
+    console.log("\n" + pc11.bold(item.name || "(Untitled Secret)"));
+    console.log(pc11.dim("\u2500".repeat(40)));
+    console.log(`ID:        ${item.id}`);
+    console.log(`Type:      ${item.itemType || (item.isEnv ? "env" : "login")}`);
+    console.log(`Workspace: ${item.workspaceId || "personal"}`);
+    if (item.username) console.log(`Username:  ${item.username}`);
+    if (item.password) console.log(`Password:  ${item.password}`);
+    if (item.url) console.log(`URL:       ${item.url}`);
+    if (item.notes) {
+      console.log(pc11.dim("\u2500".repeat(40)));
+      console.log(item.notes);
+    }
+    if (item.customFields) {
+      console.log(pc11.dim("\u2500".repeat(40)));
+      console.log(pc11.bold("Custom Fields / Environment Variables:"));
+      console.log(typeof item.customFields === "string" ? item.customFields : JSON.stringify(item.customFields, null, 2));
+    }
+    console.log();
+  } catch (err) {
+    printError(`Failed to get secret "${id}"`, err);
+    process.exit(1);
+  }
+}
+async function createVaultCommand(name, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const session = getVaultSession();
+    let customFields = void 0;
+    if (opts.envFile) {
+      if (!fs3.existsSync(opts.envFile)) {
+        throw new Error(`File not found: ${opts.envFile}`);
+      }
+      customFields = fs3.readFileSync(opts.envFile, "utf-8");
+    }
+    const item = await client.vault.create(
+      {
+        name,
+        username: opts.username,
+        password: opts.password,
+        url: opts.serviceUrl,
+        notes: opts.notes,
+        isEnv: opts.isEnv || Boolean(opts.envFile),
+        itemType: opts.itemType || (opts.isEnv || opts.envFile ? "env" : "login"),
+        customFields
+      },
+      {
+        mek: session?.mekHex,
+        workspaceId: opts.workspace
+      }
+    );
+    if (opts.json) {
+      printJson(item);
+      return;
+    }
+    printSuccess(`Created secret "${pc11.bold(item.name || item.id)}" (ID: ${item.id})`);
+  } catch (err) {
+    printError("Failed to create vault secret", err);
+    process.exit(1);
+  }
+}
+async function deleteVaultCommand(id, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    await client.vault.delete(id);
+    if (opts.json) {
+      printJson({ success: true, id });
+      return;
+    }
+    printSuccess(`Deleted vault secret "${id}"`);
+  } catch (err) {
+    printError(`Failed to delete secret "${id}"`, err);
+    process.exit(1);
+  }
+}
+
+// src/commands/totp.ts
+import pc12 from "picocolors";
+
+// src/crypto/totp.ts
+import * as crypto from "crypto";
+function base32Decode(secret) {
+  const clean = secret.toUpperCase().replace(/[\s=-]/g, "");
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = 0;
+  let value = 0;
+  const bytes = [];
+  for (let i = 0; i < clean.length; i++) {
+    const idx = alphabet.indexOf(clean[i]);
+    if (idx === -1) continue;
+    value = value << 5 | idx;
+    bits += 5;
+    if (bits >= 8) {
+      bytes.push(value >>> bits - 8 & 255);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(bytes);
+}
+function generateTotp(secret, periodSeconds = 30, digits = 6) {
+  const key = base32Decode(secret);
+  const nowSeconds = Math.floor(Date.now() / 1e3);
+  const counter = Math.floor(nowSeconds / periodSeconds);
+  const remainingSeconds = periodSeconds - nowSeconds % periodSeconds;
+  const counterBuf = Buffer.alloc(8);
+  counterBuf.writeBigInt64BE(BigInt(counter));
+  const hmac = crypto.createHmac("sha1", key).update(counterBuf).digest();
+  const offset = hmac[hmac.length - 1] & 15;
+  const binary = (hmac[offset] & 127) << 24 | (hmac[offset + 1] & 255) << 16 | (hmac[offset + 2] & 255) << 8 | hmac[offset + 3] & 255;
+  const otp = binary % 10 ** digits;
+  const code = String(otp).padStart(digits, "0");
+  return { code, remainingSeconds };
+}
+
+// src/commands/totp.ts
+async function listTotpCommand(opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const limit = opts.limit ? parseInt(opts.limit, 10) : 50;
+    const session = getVaultSession();
+    const items = await client.totp.list({
+      limit,
+      workspaceId: opts.workspace,
+      mek: session?.mekHex
+    });
+    if (opts.json) {
+      printJson(items);
+      return;
+    }
+    const rows = (items || []).map((t) => {
+      let codeDisplay = pc12.dim("locked");
+      if (t.secret) {
+        try {
+          const { code, remainingSeconds } = generateTotp(t.secret);
+          codeDisplay = `${pc12.bold(pc12.green(code))} (${remainingSeconds}s)`;
+        } catch {
+          codeDisplay = pc12.red("invalid secret");
+        }
+      }
+      return {
+        id: t.id,
+        name: t.name || t.label || "(Untitled TOTP)",
+        issuer: t.issuer || "",
+        account: t.account || "",
+        code: codeDisplay,
+        workspace: t.workspaceId || "personal"
+      };
+    });
+    printTable(rows, ["id", "name", "issuer", "account", "code", "workspace"]);
+    if (!session) {
+      console.log(pc12.dim("\nTip: Run `kylrix vault unlock` to show live 2FA verification codes."));
+    }
+  } catch (err) {
+    printError("Failed to list TOTP entries", err);
+    process.exit(1);
+  }
+}
+async function getTotpCodeCommand(id, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const session = getVaultSession();
+    const item = await client.totp.get(id, {
+      mek: session?.mekHex
+    });
+    if (!item.secret) {
+      throw new Error("Could not decrypt TOTP secret. Please run `kylrix vault unlock` first.");
+    }
+    const { code, remainingSeconds } = generateTotp(item.secret);
+    if (opts.pure) {
+      process.stdout.write(code + "\n");
+      return;
+    }
+    console.log(`
+  ${pc12.bold(item.name || item.issuer || "2FA Code")}: ${pc12.bold(pc12.green(code))} (${remainingSeconds}s remaining)
+`);
+  } catch (err) {
+    printError(`Failed to generate TOTP code for "${id}"`, err);
+    process.exit(1);
+  }
+}
+async function createTotpCommand(name, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const session = getVaultSession();
+    const item = await client.totp.create(
+      {
+        name,
+        secret: opts.secret,
+        issuer: opts.issuer,
+        account: opts.account
+      },
+      {
+        mek: session?.mekHex,
+        workspaceId: opts.workspace
+      }
+    );
+    if (opts.json) {
+      printJson(item);
+      return;
+    }
+    printSuccess(`Created TOTP seed "${pc12.bold(item.name || item.id)}" (ID: ${item.id})`);
+  } catch (err) {
+    printError("Failed to create TOTP entry", err);
+    process.exit(1);
+  }
+}
+async function deleteTotpCommand(id, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    await client.totp.delete(id);
+    if (opts.json) {
+      printJson({ success: true, id });
+      return;
+    }
+    printSuccess(`Deleted TOTP entry "${id}"`);
+  } catch (err) {
+    printError(`Failed to delete TOTP "${id}"`, err);
+    process.exit(1);
+  }
+}
+
+// src/commands/agents.ts
+import pc13 from "picocolors";
+async function listAgentSessionsCommand(opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
+    const items = await client.agents.listSessions({
+      limit,
+      harness: opts.harness,
+      workspaceId: opts.workspace
+    });
+    if (opts.json) {
+      printJson(items);
+      return;
+    }
+    const rows = (items || []).map((s) => ({
+      id: s.id,
+      title: s.title || "(Untitled Session)",
+      harness: s.harness || "gemini",
+      status: s.status || "idle",
+      workspace: s.workspaceId || "personal",
+      createdAt: s.createdAt?.substring(0, 10) || ""
+    }));
+    printTable(rows, ["id", "title", "harness", "status", "workspace", "createdAt"]);
+  } catch (err) {
+    printError("Failed to list agent sessions", err);
+    process.exit(1);
+  }
+}
+async function getAgentSessionCommand(id, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const item = await client.agents.getSession(id);
+    if (opts.json) {
+      printJson(item);
+      return;
+    }
+    console.log("\n" + pc13.bold(item.title || "(Untitled Agent Session)"));
+    console.log(pc13.dim("\u2500".repeat(40)));
+    console.log(`ID:        ${item.id}`);
+    console.log(`Harness:   ${item.harness || "gemini"}`);
+    console.log(`Status:    ${item.status || "idle"}`);
+    console.log(`Workspace: ${item.workspaceId || "personal"}`);
+    console.log(`Updated:   ${item.updatedAt || item.createdAt || "N/A"}`);
+    if (item.prompt) {
+      console.log(pc13.dim("\u2500".repeat(40)));
+      console.log(pc13.bold("Prompt:"));
+      console.log(item.prompt);
+    }
+    if (item.transcript) {
+      console.log(pc13.dim("\u2500".repeat(40)));
+      console.log(pc13.bold("Transcript:"));
+      console.log(typeof item.transcript === "string" ? item.transcript : JSON.stringify(item.transcript, null, 2));
+    }
+    console.log();
+  } catch (err) {
+    printError(`Failed to get agent session "${id}"`, err);
+    process.exit(1);
+  }
+}
+async function startAgentSessionCommand(title, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const item = await client.agents.createHarnessSession({
+      title,
+      prompt: opts.prompt,
+      harness: opts.harness || "gemini",
+      workspaceId: opts.workspace
+    });
+    if (opts.json) {
+      printJson(item);
+      return;
+    }
+    printSuccess(`Started agent session "${pc13.bold(item.title || item.id)}" (ID: ${item.id})`);
+  } catch (err) {
+    printError("Failed to start agent session", err);
+    process.exit(1);
+  }
+}
+async function deleteAgentSessionCommand(id, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    await client.agents.deleteSession(id);
+    if (opts.json) {
+      printJson({ success: true, id });
+      return;
+    }
+    printSuccess(`Deleted agent session "${id}"`);
+  } catch (err) {
+    printError(`Failed to delete agent session "${id}"`, err);
+    process.exit(1);
+  }
+}
+
+// src/commands/search.ts
+import pc14 from "picocolors";
+async function searchCommand(query, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
+    const results = await client.search.query(query, {
+      workspaceId: opts.workspace,
+      limit
+    });
+    if (opts.json) {
+      printJson(results);
+      return;
+    }
+    if (!results || results.length === 0) {
+      console.log(`
+No items matching "${pc14.bold(query)}" found.`);
+      return;
+    }
+    console.log(`
+Search results for "${pc14.bold(query)}":
+`);
+    const rows = results.map((r2) => ({
+      kind: r2.kind.toUpperCase(),
+      id: r2.id,
+      title: r2.title,
+      snippet: r2.snippet || ""
+    }));
+    printTable(rows, ["kind", "id", "title", "snippet"]);
+  } catch (err) {
+    printError("Search query failed", err);
+    process.exit(1);
+  }
+}
+
+// src/commands/share.ts
+import pc15 from "picocolors";
+async function shareCommand(kind, id, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const env = resolveEnvironment(opts);
+    const profile = await client.auth.me();
+    const baseUrl = env.apiUrl.replace(/\/api\/v1$/, "");
+    let shareUrl = `${baseUrl}/${kind}/${id}`;
+    if (kind === "vault" || kind === "secret") {
+      shareUrl = `${baseUrl}/vault/${id}`;
+    }
+    if (opts.json) {
+      printJson({
+        kind,
+        id,
+        shareUrl,
+        isPro: profile.quotas?.isPro ?? false,
+        maxCollaborators: profile.quotas?.maxCollaboratorsPerResource ?? 8
+      });
+      return;
+    }
+    console.log("\n" + pc15.bold("Resource Share Link:"));
+    console.log(`  Kind: ${kind}`);
+    console.log(`  ID:   ${id}`);
+    console.log(`  URL:  ${pc15.underline(pc15.cyan(shareUrl))}`);
+    console.log(`  Collaborator Cap: ${profile.quotas?.maxCollaboratorsPerResource || 8} users`);
+    console.log();
+  } catch (err) {
+    printError(`Failed to generate share link for ${kind} "${id}"`, err);
+    process.exit(1);
+  }
+}
+
+// src/commands/billing.ts
+import pc16 from "picocolors";
+async function billingStatusCommand(opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const status = await client.billing.status();
+    if (opts.json) {
+      printJson(status);
+      return;
+    }
+    console.log("\n" + pc16.bold("Subscription & Billing:"));
+    console.log(`  Tier:             ${pc16.bold(pc16.cyan(status.tier || "FREE"))}`);
+    console.log(`  Pro Active:       ${status.isPro ? pc16.green("Yes") : "No"}`);
+    if (status.expiresAt) {
+      console.log(`  Expires At:       ${status.expiresAt}`);
+    }
+    console.log(`  Token Balance:    ${status.tokenBalance ?? 0} tokens`);
+    console.log();
+  } catch (err) {
+    printError("Failed to fetch billing status", err);
+    process.exit(1);
+  }
+}
+async function listBillingCoinsCommand(opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const coins = await client.billing.coins();
+    if (opts.json) {
+      printJson(coins);
+      return;
+    }
+    const rows = (coins || []).map((c2) => ({
+      ticker: c2.ticker,
+      network: c2.network || "",
+      coin: c2.name || ""
+    }));
+    printTable(rows, ["ticker", "coin", "network"]);
+  } catch (err) {
+    printError("Failed to list payment coins", err);
+    process.exit(1);
+  }
+}
+async function checkoutBillingCommand(planId, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const months = opts.months ? parseInt(opts.months, 10) : 1;
+    const res = await client.billing.checkout({
+      planId,
+      months,
+      ticker: opts.ticker,
+      couponId: opts.coupon
+    });
+    if (opts.json) {
+      printJson(res);
+      return;
+    }
+    if (res.depositAddress) {
+      console.log("\n" + pc16.bold(pc16.green("Direct On-Chain Crypto Deposit Address Generated:")));
+      console.log(`  Address: ${pc16.bold(res.depositAddress)}`);
+      console.log(`  Amount:  ${res.cryptoAmount || ""} ${res.ticker || ""}`);
+      console.log(`  QR Code: ${res.qrCodeUrl || "N/A"}`);
+    } else if (res.checkoutUrl) {
+      console.log("\n" + pc16.bold("Hosted Checkout Session:"));
+      console.log(`  Open: ${pc16.underline(pc16.cyan(res.checkoutUrl))}`);
+    }
+    console.log();
+  } catch (err) {
+    printError("Failed to create checkout session", err);
+    process.exit(1);
+  }
+}
+async function claimCouponCommand(couponId, opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const res = await client.billing.claimCoupon(couponId);
+    if (opts.json) {
+      printJson(res);
+      return;
+    }
+    printSuccess(`Redeemed coupon "${pc16.bold(couponId)}" successfully!`);
+  } catch (err) {
+    printError(`Failed to redeem coupon "${couponId}"`, err);
+    process.exit(1);
+  }
+}
+
+// src/commands/admin.ts
+import pc17 from "picocolors";
+async function adminStatusCommand(opts) {
+  try {
+    const client = requireAuthClient(opts);
+    const profile = await client.auth.me();
+    const tokenInfo = await client.auth.tokenInfo();
+    const isAdmin = profile.scopes?.includes("admin") || profile.scopes?.includes("*") || profile.tier === "ADMIN";
+    if (opts.json) {
+      printJson({
+        isAdmin,
+        userId: profile.id,
+        email: profile.email,
+        scopes: profile.scopes,
+        tokenKind: tokenInfo?.kind,
+        rateLimits: tokenInfo?.rateLimits
+      });
+      return;
+    }
+    console.log("\n" + pc17.bold("Kylrix Instance & Admin Verification:"));
+    console.log(`  Admin Status:     ${isAdmin ? pc17.green(pc17.bold("AUTHORIZED ADMIN")) : pc17.yellow("Standard User")}`);
+    console.log(`  Actor User ID:    ${profile.id}`);
+    console.log(`  Identity Email:   ${profile.email || "N/A"}`);
+    console.log(`  Account Tier:     ${profile.tier}`);
+    console.log(`  Token Scopes:     ${profile.scopes?.join(", ") || "*"}`);
+    console.log(`  Edge Shield:      ${pc17.green("Active (Bot & Burst Protected)")}`);
+    console.log();
+  } catch (err) {
+    printError("Failed to verify admin status", err);
+    process.exit(1);
+  }
+}
+
+// src/commands/tags.ts
+import pc18 from "picocolors";
 async function listTagsCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -1936,7 +2631,7 @@ async function createTagCommand(name, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created tag "${pc11.bold(item.name)}" (ID: ${item.id})`);
+    printSuccess(`Created tag "${pc18.bold(item.name)}" (ID: ${item.id})`);
   } catch (err) {
     printError("Failed to create tag", err);
     process.exit(1);
@@ -2656,9 +3351,9 @@ function $constructor(name, initializer3, params) {
     const proto = _2.prototype;
     const keys = Object.keys(proto);
     for (let i = 0; i < keys.length; i++) {
-      const k3 = keys[i];
-      if (!(k3 in inst)) {
-        inst[k3] = proto[k3].bind(inst);
+      const k2 = keys[i];
+      if (!(k2 in inst)) {
+        inst[k2] = proto[k2].bind(inst);
       }
     }
   }
@@ -2789,7 +3484,7 @@ function assert(_2) {
 }
 function getEnumValues(entries) {
   const numericValues = Object.values(entries).filter((v2) => typeof v2 === "number");
-  const values = Object.entries(entries).filter(([k3, _2]) => numericValues.indexOf(+k3) === -1).map(([_2, v2]) => v2);
+  const values = Object.entries(entries).filter(([k2, _2]) => numericValues.indexOf(+k2) === -1).map(([_2, v2]) => v2);
   return values;
 }
 function joinValues(array2, separator = "|") {
@@ -2874,10 +3569,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path2) {
-  if (!path2)
+function getElementAtPath(obj, path3) {
+  if (!path3)
     return obj;
-  return path2.reduce((acc, key) => acc?.[key], obj);
+  return path3.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -3079,8 +3774,8 @@ function stringifyPrimitive(value) {
   return `${value}`;
 }
 function optionalKeys(shape) {
-  return Object.keys(shape).filter((k3) => {
-    return shape[k3]._zod.optin === "optional" && shape[k3]._zod.optout === "optional";
+  return Object.keys(shape).filter((k2) => {
+    return shape[k2]._zod.optin === "optional" && shape[k2]._zod.optout === "optional";
   });
 }
 var NUMBER_FORMAT_RANGES = {
@@ -3286,11 +3981,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path2, issues) {
+function prefixIssues(path3, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path2);
+    iss.path.unshift(path3);
     return iss;
   });
 }
@@ -3357,8 +4052,8 @@ function issue(...args) {
   return { ...iss };
 }
 function cleanEnum(obj) {
-  return Object.entries(obj).filter(([k3, _2]) => {
-    return Number.isNaN(Number.parseInt(k3, 10));
+  return Object.entries(obj).filter(([k2, _2]) => {
+    return Number.isNaN(Number.parseInt(k2, 10));
   }).map((el) => el[1]);
 }
 function base64ToUint8Array(base643) {
@@ -3437,16 +4132,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path2 = []) => {
+  const processError = (error52, path3 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path2, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path2, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path2, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
       } else {
-        const fullpath = [...path2, ...issue2.path];
+        const fullpath = [...path3, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -3473,17 +4168,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path2 = []) => {
+  const processError = (error52, path3 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path2, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path2, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path2, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
       } else {
-        const fullpath = [...path2, ...issue2.path];
+        const fullpath = [...path3, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -3515,8 +4210,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path2 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path2) {
+  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path3) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -5066,9 +5761,9 @@ function handlePropertyResult(result, final, key, input, isOptionalIn, isOptiona
 }
 function normalizeDef(def) {
   const keys = Object.keys(def.shape);
-  for (const k3 of keys) {
-    if (!def.shape?.[k3]?._zod?.traits?.has("$ZodType")) {
-      throw new Error(`Invalid element at key "${k3}": expected a Zod schema`);
+  for (const k2 of keys) {
+    if (!def.shape?.[k2]?._zod?.traits?.has("$ZodType")) {
+      throw new Error(`Invalid element at key "${k2}": expected a Zod schema`);
     }
   }
   const okeys = optionalKeys(def.shape);
@@ -5189,8 +5884,8 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
     const doc = new Doc(["shape", "payload", "ctx"]);
     const normalized = _normalized.value;
     const parseStr = (key) => {
-      const k3 = esc(key);
-      return `shape[${k3}]._zod.run({ value: input[${k3}], issues: [] }, ctx)`;
+      const k2 = esc(key);
+      return `shape[${k2}]._zod.run({ value: input[${k2}], issues: [] }, ctx)`;
     };
     doc.write(`const input = payload.value;`);
     const ids = /* @__PURE__ */ Object.create(null);
@@ -5201,7 +5896,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
     doc.write(`const newResult = {};`);
     for (const key of normalized.keys) {
       const id = ids[key];
-      const k3 = esc(key);
+      const k2 = esc(key);
       const schema = shape[key];
       const isOptionalIn = schema?._zod?.optin === "optional";
       const isOptionalOut = schema?._zod?.optout === "optional";
@@ -5209,30 +5904,30 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
       if (isOptionalIn && isOptionalOut) {
         doc.write(`
         if (${id}.issues.length) {
-          if (${k3} in input) {
+          if (${k2} in input) {
             payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
               ...iss,
-              path: iss.path ? [${k3}, ...iss.path] : [${k3}]
+              path: iss.path ? [${k2}, ...iss.path] : [${k2}]
             })));
           }
         }
         
         if (${id}.value === undefined) {
-          if (${k3} in input) {
-            newResult[${k3}] = undefined;
+          if (${k2} in input) {
+            newResult[${k2}] = undefined;
           }
         } else {
-          newResult[${k3}] = ${id}.value;
+          newResult[${k2}] = ${id}.value;
         }
         
       `);
       } else if (!isOptionalIn) {
         doc.write(`
-        const ${id}_present = ${k3} in input;
+        const ${id}_present = ${k2} in input;
         if (${id}.issues.length) {
           payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
             ...iss,
-            path: iss.path ? [${k3}, ...iss.path] : [${k3}]
+            path: iss.path ? [${k2}, ...iss.path] : [${k2}]
           })));
         }
         if (!${id}_present && !${id}.issues.length) {
@@ -5240,15 +5935,15 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
             code: "invalid_type",
             expected: "nonoptional",
             input: undefined,
-            path: [${k3}]
+            path: [${k2}]
           });
         }
 
         if (${id}_present) {
           if (${id}.value === undefined) {
-            newResult[${k3}] = undefined;
+            newResult[${k2}] = undefined;
           } else {
-            newResult[${k3}] = ${id}.value;
+            newResult[${k2}] = ${id}.value;
           }
         }
 
@@ -5258,16 +5953,16 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
         if (${id}.issues.length) {
           payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
             ...iss,
-            path: iss.path ? [${k3}, ...iss.path] : [${k3}]
+            path: iss.path ? [${k2}, ...iss.path] : [${k2}]
           })));
         }
         
         if (${id}.value === undefined) {
-          if (${k3} in input) {
-            newResult[${k3}] = undefined;
+          if (${k2} in input) {
+            newResult[${k2}] = undefined;
           }
         } else {
-          newResult[${k3}] = ${id}.value;
+          newResult[${k2}] = ${id}.value;
         }
         
       `);
@@ -5436,11 +6131,11 @@ var $ZodDiscriminatedUnion = /* @__PURE__ */ $constructor("$ZodDiscriminatedUnio
       const pv = option._zod.propValues;
       if (!pv || Object.keys(pv).length === 0)
         throw new Error(`Invalid discriminated union option at index "${def.options.indexOf(option)}"`);
-      for (const [k3, v2] of Object.entries(pv)) {
-        if (!propValues[k3])
-          propValues[k3] = /* @__PURE__ */ new Set();
+      for (const [k2, v2] of Object.entries(pv)) {
+        if (!propValues[k2])
+          propValues[k2] = /* @__PURE__ */ new Set();
         for (const val of v2) {
-          propValues[k3].add(val);
+          propValues[k2].add(val);
         }
       }
     }
@@ -5558,10 +6253,10 @@ function handleIntersectionResults(result, left, right) {
   for (const iss of left.issues) {
     if (iss.code === "unrecognized_keys") {
       unrecIssue ?? (unrecIssue = iss);
-      for (const k3 of iss.keys) {
-        if (!unrecKeys.has(k3))
-          unrecKeys.set(k3, {});
-        unrecKeys.get(k3).l = true;
+      for (const k2 of iss.keys) {
+        if (!unrecKeys.has(k2))
+          unrecKeys.set(k2, {});
+        unrecKeys.get(k2).l = true;
       }
     } else {
       result.issues.push(iss);
@@ -5569,16 +6264,16 @@ function handleIntersectionResults(result, left, right) {
   }
   for (const iss of right.issues) {
     if (iss.code === "unrecognized_keys") {
-      for (const k3 of iss.keys) {
-        if (!unrecKeys.has(k3))
-          unrecKeys.set(k3, {});
-        unrecKeys.get(k3).r = true;
+      for (const k2 of iss.keys) {
+        if (!unrecKeys.has(k2))
+          unrecKeys.set(k2, {});
+        unrecKeys.get(k2).r = true;
       }
     } else {
       result.issues.push(iss);
     }
   }
-  const bothKeys = [...unrecKeys].filter(([, f2]) => f2.l && f2.r).map(([k3]) => k3);
+  const bothKeys = [...unrecKeys].filter(([, f2]) => f2.l && f2.r).map(([k2]) => k2);
   if (bothKeys.length && unrecIssue) {
     result.issues.push({ ...unrecIssue, keys: bothKeys });
   }
@@ -5922,7 +6617,7 @@ var $ZodEnum = /* @__PURE__ */ $constructor("$ZodEnum", (inst, def) => {
   const values = getEnumValues(def.entries);
   const valuesSet = new Set(values);
   inst._zod.values = valuesSet;
-  inst._zod.pattern = new RegExp(`^(${values.filter((k3) => propertyKeyTypes.has(typeof k3)).map((o) => typeof o === "string" ? escapeRegex(o) : o.toString()).join("|")})$`);
+  inst._zod.pattern = new RegExp(`^(${values.filter((k2) => propertyKeyTypes.has(typeof k2)).map((o) => typeof o === "string" ? escapeRegex(o) : o.toString()).join("|")})$`);
   inst._zod.parse = (payload, _ctx) => {
     const input = payload.value;
     if (valuesSet.has(input)) {
@@ -15626,11 +16321,11 @@ function record(keyType, valueType, params) {
   });
 }
 function partialRecord(keyType, valueType, params) {
-  const k3 = clone(keyType);
-  k3._zod.values = void 0;
+  const k2 = clone(keyType);
+  k2._zod.values = void 0;
   return new ZodRecord({
     type: "record",
-    keyType: k3,
+    keyType: k2,
     valueType,
     ...util_exports.normalizeParams(params)
   });
@@ -16208,13 +16903,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path2 = ref.slice(1).split("/").filter(Boolean);
-  if (path2.length === 0) {
+  const path3 = ref.slice(1).split("/").filter(Boolean);
+  if (path3.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path2[0] === defsKey) {
-    const key = path2[1];
+  if (path3[0] === defsKey) {
+    const key = path3[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -18222,9 +18917,9 @@ async function runStdioMcpServer(opts) {
 
 // src/index.ts
 var program = new Command();
-program.name("kylrix").description("Official CLI & Model Context Protocol (MCP) bridge for Kylrix sovereign agentic workspaces").version("1.0.0");
+program.name("kylrix").description("Official CLI, Model Context Protocol (MCP) bridge, and sovereign client for Kylrix").version("1.0.0");
 program.option("-u, --url <url>", "Kylrix API base URL (default: https://www.kylrix.space)").option("-t, --token <token>", "Personal Access Token (PAT) or Agent Key").option("-w, --workspace <id>", "Active workspace ID filter").option("--json", "Output raw JSON for machine parsing");
-program.command("login").description("Authenticate with a Kylrix instance (device pairing, PAT, or password)").action((cmdOpts, cmd) => loginCommand({ ...program.opts(), ...cmdOpts }));
+program.command("login").description("1-Click Web Login / Device Pairing (opens browser and pairs automatically)").action((cmdOpts) => loginCommand({ ...program.opts(), ...cmdOpts }));
 program.command("pair").description("Authenticate using RFC 8628 browser device pairing code").action((cmdOpts) => pairCommand({ ...program.opts(), ...cmdOpts }));
 program.command("whoami").alias("me").description("Display currently authenticated identity, scopes, and session status").action((cmdOpts) => whoamiCommand({ ...program.opts(), ...cmdOpts }));
 program.command("logout").description("Log out and remove stored local authentication credentials").action(() => logoutCommand());
@@ -18233,12 +18928,16 @@ workspaces.command("list").description("List all accessible workspaces").option(
 workspaces.command("get <id>").description("Get workspace details by ID").action((id, cmdOpts) => getWorkspaceCommand(id, { ...program.opts(), ...cmdOpts }));
 workspaces.command("create <name>").description("Create a new workspace").option("-d, --description <text>", "Workspace description").option("--agentic", "Flag workspace as agentic environment").action((name, cmdOpts) => createWorkspaceCommand(name, { ...program.opts(), ...cmdOpts }));
 workspaces.command("delete <id>").description("Delete a workspace by ID").action((id, cmdOpts) => deleteWorkspaceCommand(id, { ...program.opts(), ...cmdOpts }));
-var notes = program.command("notes").alias("n").description("Manage sovereign notes and ideas");
-notes.command("list").description("List notes in the active workspace or personal store").option("-l, --limit <number>", "Number of records", "25").action((cmdOpts) => listNotesCommand({ ...program.opts(), ...cmdOpts }));
-notes.command("get <id>").description("Get full note content and metadata").action((id, cmdOpts) => getNoteCommand(id, { ...program.opts(), ...cmdOpts }));
-notes.command("create <title>").description("Create a new note").option("-c, --content <text>", "Note body content").option("--category <category>", "Note category", "general").option("--tags <tags>", "Comma-separated tag list").action((title, cmdOpts) => createNoteCommand(title, { ...program.opts(), ...cmdOpts }));
-notes.command("update <id>").description("Update an existing note").option("--title <title>", "New note title").option("-c, --content <text>", "New content").option("--category <category>", "New category").action((id, cmdOpts) => updateNoteCommand(id, { ...program.opts(), ...cmdOpts }));
-notes.command("delete <id>").description("Delete a note by ID").action((id, cmdOpts) => deleteNoteCommand(id, { ...program.opts(), ...cmdOpts }));
+workspaces.command("switch <id>").alias("use").description("Set the default active workspace for all subsequent CLI commands").action((id, cmdOpts) => switchWorkspaceCommand(id, { ...program.opts(), ...cmdOpts }));
+workspaces.command("current").description("Show the currently active workspace").action((cmdOpts) => currentWorkspaceCommand(cmdOpts));
+workspaces.command("clear").alias("unuse").description("Reset active workspace back to Personal Virtual Workspace").action((cmdOpts) => clearWorkspaceCommand(cmdOpts));
+var ideas = program.command("ideas").alias("idea").alias("notes").alias("n").description("Manage sovereign ideas and notes");
+ideas.command("list").description("List ideas in active workspace or personal store").option("-l, --limit <number>", "Number of records", "25").action((cmdOpts) => listIdeasCommand({ ...program.opts(), ...cmdOpts }));
+ideas.command("get <id>").description("Get full idea content and metadata").action((id, cmdOpts) => getIdeaCommand(id, { ...program.opts(), ...cmdOpts }));
+ideas.command("create <title>").description("Create a new idea").option("-c, --content <text>", "Idea body content").option("--category <category>", "Idea category", "general").option("--tags <tags>", "Comma-separated tag list").action((title, cmdOpts) => createIdeaCommand(title, { ...program.opts(), ...cmdOpts }));
+ideas.command("update <id>").description("Update an existing idea").option("--title <title>", "New idea title").option("-c, --content <text>", "New content").option("--category <category>", "New category").action((id, cmdOpts) => updateIdeaCommand(id, { ...program.opts(), ...cmdOpts }));
+ideas.command("delete <id>").description("Delete an idea by ID").action((id, cmdOpts) => deleteIdeaCommand(id, { ...program.opts(), ...cmdOpts }));
+ideas.command("articles").description("List long-form articles").action((cmdOpts) => listArticlesCommand({ ...program.opts(), ...cmdOpts }));
 var goals = program.command("goals").alias("g").description("Track goals, objectives, and habits");
 goals.command("list").description("List goals").option("-s, --status <status>", "Filter by status (not_started, in_progress, completed, paused)").option("-l, --limit <number>", "Limit count", "25").action((cmdOpts) => listGoalsCommand({ ...program.opts(), ...cmdOpts }));
 goals.command("get <id>").description("Get goal details").action((id, cmdOpts) => getGoalCommand(id, { ...program.opts(), ...cmdOpts }));
@@ -18247,8 +18946,28 @@ goals.command("update <id>").description("Update goal status or numeric progress
   (id, cmdOpts) => updateGoalCommand(id, { ...program.opts(), ...cmdOpts, currentValue: cmdOpts.progress })
 );
 goals.command("delete <id>").description("Delete a goal").action((id, cmdOpts) => deleteGoalCommand(id, { ...program.opts(), ...cmdOpts }));
+var vault = program.command("vault").alias("secrets").description("Secure encrypted credentials and project envs");
+vault.command("unlock").description("Unlock vault Master Encryption Key (MEK) for temporary session").option("-p, --password <password>", "Master Password").option("--expiry <minutes>", "Session expiry in minutes", "60").action((cmdOpts) => unlockVaultCommand({ ...program.opts(), ...cmdOpts }));
+vault.command("lock").description("Lock vault and immediately purge in-memory / session encryption keys").action((cmdOpts) => lockVaultCommand({ ...program.opts(), ...cmdOpts }));
+vault.command("status").description("Check whether the vault is locked or unlocked").action((cmdOpts) => statusVaultCommand({ ...program.opts(), ...cmdOpts }));
+vault.command("list").description("List credentials and project environment variables").option("--decrypt", "Decrypt items using unlocked vault session").action((cmdOpts) => listVaultCommand({ ...program.opts(), ...cmdOpts }));
+vault.command("get <id>").description("Get a secret or environment variable set").option("--decrypt", "Decrypt payload").option("--format <format>", "Output format (json, env)").option("--pure", "Output pure dotenv plaintext without headers").action((id, cmdOpts) => getVaultCommand(id, { ...program.opts(), ...cmdOpts }));
+vault.command("create <name>").description("Create an encrypted secret or project .env").option("-u, --username <username>", "Username / login identifier").option("-p, --password <password>", "Password or secret token").option("--service-url <url>", "Service URL").option("--env-file <filepath>", "Import environment variables directly from a file").option("--is-env", "Mark as project environment variables set").option("--notes <notes>", "Secret notes").action((name, cmdOpts) => createVaultCommand(name, { ...program.opts(), ...cmdOpts }));
+vault.command("delete <id>").description("Delete a secret by ID").action((id, cmdOpts) => deleteVaultCommand(id, { ...program.opts(), ...cmdOpts }));
+var totp = program.command("totp").alias("2fa").description("Sovereign 2FA TOTP Authenticator");
+totp.command("list").description("List 2FA TOTP accounts and live verification codes").action((cmdOpts) => listTotpCommand({ ...program.opts(), ...cmdOpts }));
+totp.command("code <id>").description("Generate the current 6-digit 2FA code for an account").option("--pure", "Output raw 6-digit number only (for pipes/scripts)").action((id, cmdOpts) => getTotpCodeCommand(id, { ...program.opts(), ...cmdOpts }));
+totp.command("create <name>").description("Add a new TOTP 2FA secret key").requiredOption("-s, --secret <secret>", "Base32 TOTP secret seed").option("--issuer <issuer>", "Service issuer (e.g. GitHub, Google)").option("--account <account>", "Account email or username").action((name, cmdOpts) => createTotpCommand(name, { ...program.opts(), ...cmdOpts }));
+totp.command("delete <id>").description("Delete a TOTP seed").action((id, cmdOpts) => deleteTotpCommand(id, { ...program.opts(), ...cmdOpts }));
+var agents = program.command("agents").alias("agent").description("Autonomous AI agents and execution sessions");
+agents.command("list").alias("sessions").description("List agent execution sessions").option("--harness <runner>", "Filter by harness type").action((cmdOpts) => listAgentSessionsCommand({ ...program.opts(), ...cmdOpts }));
+agents.command("get <id>").description("Get agent session execution logs and status").action((id, cmdOpts) => getAgentSessionCommand(id, { ...program.opts(), ...cmdOpts }));
+agents.command("start <title>").description("Start a new autonomous agent session").option("-p, --prompt <prompt>", "Initial task prompt").option("--harness <harness>", "Harness runner", "gemini").action((title, cmdOpts) => startAgentSessionCommand(title, { ...program.opts(), ...cmdOpts }));
+agents.command("delete <id>").description("Delete an agent session").action((id, cmdOpts) => deleteAgentSessionCommand(id, { ...program.opts(), ...cmdOpts }));
+program.command("search <query>").alias("s").description("Unified search across ideas, goals, events, forms, flows, and secrets").action((query, cmdOpts) => searchCommand(query, { ...program.opts(), ...cmdOpts }));
+program.command("share <kind> <id>").description("Generate a share link for a resource (idea, goal, vault, form, flow)").action((kind, id, cmdOpts) => shareCommand(kind, id, { ...program.opts(), ...cmdOpts }));
 var events = program.command("events").description("Manage calendar events and schedules");
-events.command("list").description("List calendar events").option("-l, --limit <number>", "Limit count", "25").action((cmdOpts) => listEventsCommand({ ...program.opts(), ...cmdOpts }));
+events.command("list").description("List calendar events").action((cmdOpts) => listEventsCommand({ ...program.opts(), ...cmdOpts }));
 events.command("create <title>").description("Create a calendar event").requiredOption("--start <time>", "ISO start time (e.g. 2026-09-25T14:00:00Z)").requiredOption("--end <time>", "ISO end time").option("-d, --description <text>", "Event description").action(
   (title, cmdOpts) => createEventCommand(title, {
     ...program.opts(),
@@ -18268,12 +18987,12 @@ flows.command("list").description("List workflow automations").action((cmdOpts) 
 flows.command("get <id>").description("Get flow specification").action((id, cmdOpts) => getFlowCommand(id, { ...program.opts(), ...cmdOpts }));
 flows.command("create <title>").description("Create a workflow automation").option("-d, --description <text>", "Workflow description").action((title, cmdOpts) => createFlowCommand(title, { ...program.opts(), ...cmdOpts }));
 flows.command("delete <id>").description("Delete a workflow").action((id, cmdOpts) => deleteFlowCommand(id, { ...program.opts(), ...cmdOpts }));
-var chats = program.command("chats").description("Connect discussions and messages");
+var chats = program.command("hangouts").alias("chats").description("Discussions and real-time hangouts");
 chats.command("list").description("List chat conversations").action((cmdOpts) => listChatsCommand({ ...program.opts(), ...cmdOpts }));
 chats.command("messages <conversationId>").description("Read recent messages from a conversation").action(
   (conversationId, cmdOpts) => listChatMessagesCommand(conversationId, { ...program.opts(), ...cmdOpts })
 );
-chats.command("send <message>").description("Send a chat message").option("-c, --conversation <id>", "Target conversation ID").option("-p, --participant <userId>", "Target participant user ID (for direct chat)").action(
+chats.command("send <message>").description("Send a message").option("-c, --conversation <id>", "Target conversation ID").option("-p, --participant <userId>", "Target participant user ID (for direct chat)").action(
   (message, cmdOpts) => sendChatMessageCommand(message, {
     ...program.opts(),
     ...cmdOpts,
@@ -18282,11 +19001,18 @@ chats.command("send <message>").description("Send a chat message").option("-c, -
   })
 );
 var threads = program.command("threads").description("Unified comment and discussion threads");
-threads.command("list").description("List threads").option("--parent-kind <kind>", "Filter by parent resource kind (note, goal, workspace, etc.)").option("--parent-id <id>", "Filter by parent resource ID").action((cmdOpts) => listThreadsCommand({ ...program.opts(), ...cmdOpts }));
+threads.command("list").description("List threads").option("--parent-kind <kind>", "Filter by parent resource kind (idea, goal, workspace, etc.)").option("--parent-id <id>", "Filter by parent resource ID").action((cmdOpts) => listThreadsCommand({ ...program.opts(), ...cmdOpts }));
 threads.command("messages <threadId>").description("Read messages in a thread").action((threadId, cmdOpts) => listThreadMessagesCommand(threadId, { ...program.opts(), ...cmdOpts }));
 threads.command("send <threadId> <message>").description("Post a message into a thread").action(
   (threadId, message, cmdOpts) => sendThreadMessageCommand(threadId, message, { ...program.opts(), ...cmdOpts })
 );
+var billing = program.command("billing").description("Manage subscription, Pro upgrades, and crypto checkout");
+billing.command("status").description("View account subscription status, tier, and token balance").action((cmdOpts) => billingStatusCommand({ ...program.opts(), ...cmdOpts }));
+billing.command("coins").description("List supported cryptocurrency payment tickers").action((cmdOpts) => listBillingCoinsCommand({ ...program.opts(), ...cmdOpts }));
+billing.command("checkout <planId>").description("Create an upgrade checkout session or direct on-chain crypto payment address").option("-m, --months <count>", "Number of months to purchase", "1").option("--ticker <coin>", "Direct crypto coin ticker (e.g. polygon/usdt, btc, solana/usdt)").option("--coupon <couponId>", "Discount coupon code").action((planId, cmdOpts) => checkoutBillingCommand(planId, { ...program.opts(), ...cmdOpts }));
+billing.command("coupon <couponId>").description("Redeem a gift or promotional discount coupon").action((couponId, cmdOpts) => claimCouponCommand(couponId, { ...program.opts(), ...cmdOpts }));
+program.command("settings").description("Inspect account settings and configuration").action((cmdOpts) => whoamiCommand({ ...program.opts(), ...cmdOpts }));
+program.command("admin").description("Verify server status, admin entitlements, and Edge Shield health").action((cmdOpts) => adminStatusCommand({ ...program.opts(), ...cmdOpts }));
 var tags = program.command("tags").description("Organize resources with sovereign tags");
 tags.command("list").description("List tags").action((cmdOpts) => listTagsCommand({ ...program.opts(), ...cmdOpts }));
 tags.command("create <name>").description("Create a tag").option("--color <color>", "Tag color hex or theme name").action((name, cmdOpts) => createTagCommand(name, { ...program.opts(), ...cmdOpts }));

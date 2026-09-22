@@ -195,8 +195,8 @@ export class KylrixClient {
       this.request('POST', `/workspaces/${workspaceId}/collaborators`, { body: data }),
   };
 
-  // ── 3. Notes ──
-  public notes = {
+  // ── 3. Ideas (aliased to notes) ──
+  public ideas = {
     list: (opts: { limit?: number; workspaceId?: string | null } = {}): Promise<{ items: NoteRecord[]; count: number }> =>
       this.request('GET', '/notes', {
         query: {
@@ -216,7 +216,13 @@ export class KylrixClient {
       this.request('PATCH', `/notes/${id}`, { body: data }),
     delete: (id: string): Promise<{ success: boolean }> =>
       this.request('DELETE', `/notes/${id}`),
+    articles: async (opts: { limit?: number; workspaceId?: string | null } = {}): Promise<{ items: NoteRecord[]; count: number }> => {
+      const res = await this.ideas.list(opts);
+      const articles = (res.items || []).filter((item: any) => item.category === 'article');
+      return { items: articles, count: articles.length };
+    },
   };
+  public notes = this.ideas;
 
   // ── 4. Goals ──
   public goals = {
@@ -297,7 +303,7 @@ export class KylrixClient {
       this.request('DELETE', `/flows/${id}`),
   };
 
-  // ── 8. Chats ──
+  // ── 8. Chats & Hangouts ──
   public chats = {
     list: (limit = 25): Promise<{ items: ChatRecord[]; count: number }> =>
       this.request('GET', '/chats', { query: { limit } }),
@@ -307,6 +313,7 @@ export class KylrixClient {
     sendMessage: (data: { conversationId?: string; participantId?: string; content: string }) =>
       this.request('POST', '/chats', { body: data }),
   };
+  public hangouts = this.chats;
 
   // ── 9. Threads ──
   public threads = {
@@ -339,17 +346,187 @@ export class KylrixClient {
       this.request('POST', '/trash/purge', { body: { kind, id } }),
   };
 
-  // ── 12. Vault ──
+  // ── 12. Vault & Secrets ──
   public vault = {
-    list: (opts: { limit?: number; kind?: string } = {}) =>
-      this.request('GET', '/vault', { query: opts as any }),
-    get: (id: string) => this.request('GET', `/vault/${id}`),
-    create: (data: any) => this.request('POST', '/vault', { body: data }),
-    resolvePublic: (id: string, shareKey?: string) =>
-      this.request('GET', `/vault/public/${id}`, { query: { shareKey } }),
+    list: (opts: { limit?: number; workspaceId?: string; mek?: string } = {}) =>
+      this.request<any[]>('GET', '/vault', {
+        query: {
+          limit: opts.limit ?? 50,
+          workspaceId: opts.workspaceId || this.activeWorkspaceId,
+        },
+        headers: opts.mek ? { 'x-mek': opts.mek } : undefined,
+      }),
+    get: (id: string, opts: { mek?: string; masterPassword?: string; shareKey?: string; format?: string; pure?: boolean } = {}) =>
+      this.request<any>('GET', `/vault/${id}`, {
+        query: {
+          format: opts.format,
+          pure: opts.pure,
+        },
+        headers: {
+          ...(opts.mek ? { 'x-mek': opts.mek } : {}),
+          ...(opts.masterPassword ? { 'x-master-password': opts.masterPassword } : {}),
+          ...(opts.shareKey ? { 'x-share-key': opts.shareKey } : {}),
+        },
+      }),
+    create: (data: any, opts: { mek?: string; workspaceId?: string } = {}) =>
+      this.request<any>('POST', '/vault', {
+        body: {
+          ...data,
+          workspaceId: data.workspaceId || opts.workspaceId || this.activeWorkspaceId,
+        },
+        headers: opts.mek ? { 'x-mek': opts.mek } : undefined,
+      }),
+    update: (id: string, data: any, opts: { mek?: string } = {}) =>
+      this.request<any>('PATCH', `/vault/${id}`, {
+        body: data,
+        headers: opts.mek ? { 'x-mek': opts.mek } : undefined,
+      }),
+    delete: (id: string) => this.request('DELETE', `/vault/${id}`),
+    unlockUserMek: (masterPassword?: string) =>
+      this.request<{ mek: string; rawBlob?: string }>('POST', '/vault/unlock', {
+        body: { masterPassword },
+      }),
+    resolvePublic: (id: string, opts: { shareKey?: string; format?: string; pure?: boolean } = {}) =>
+      this.request<any>('GET', `/vault/public/${id}`, {
+        query: {
+          shareKey: opts.shareKey,
+          format: opts.format,
+          pure: opts.pure,
+        },
+      }),
   };
 
-  // ── 13. Model Context Protocol (MCP) Dispatch ──
+  // ── 13. TOTP 2FA Secrets ──
+  public totp = {
+    list: (opts: { limit?: number; workspaceId?: string; mek?: string } = {}) =>
+      this.request<any[]>('GET', '/totp', {
+        query: {
+          limit: opts.limit ?? 50,
+          workspaceId: opts.workspaceId || this.activeWorkspaceId,
+        },
+        headers: opts.mek ? { 'x-mek': opts.mek } : undefined,
+      }),
+    get: (id: string, opts: { mek?: string; masterPassword?: string } = {}) =>
+      this.request<any>('GET', `/totp/${id}`, {
+        headers: {
+          ...(opts.mek ? { 'x-mek': opts.mek } : {}),
+          ...(opts.masterPassword ? { 'x-master-password': opts.masterPassword } : {}),
+        },
+      }),
+    create: (data: any, opts: { mek?: string; workspaceId?: string } = {}) =>
+      this.request<any>('POST', '/totp', {
+        body: {
+          ...data,
+          workspaceId: data.workspaceId || opts.workspaceId || this.activeWorkspaceId,
+        },
+        headers: opts.mek ? { 'x-mek': opts.mek } : undefined,
+      }),
+    update: (id: string, data: any, opts: { mek?: string } = {}) =>
+      this.request<any>('PATCH', `/totp/${id}`, {
+        body: data,
+        headers: opts.mek ? { 'x-mek': opts.mek } : undefined,
+      }),
+    delete: (id: string) => this.request('DELETE', `/totp/${id}`),
+  };
+
+  // ── 14. Autonomous Agents & Sessions ──
+  public agents = {
+    listSessions: (opts: { limit?: number; harness?: string; workspaceId?: string } = {}) =>
+      this.request<any[]>('GET', '/agents/sessions', {
+        query: {
+          limit: opts.limit ?? 25,
+          harness: opts.harness,
+          workspaceId: opts.workspaceId || this.activeWorkspaceId,
+        },
+      }),
+    getSession: (id: string) => this.request<any>('GET', `/agents/sessions/${id}`),
+    createHarnessSession: (data: { title: string; prompt?: string; harness?: string; workspaceId?: string }) =>
+      this.request<any>('POST', '/agents/harness', {
+        body: {
+          ...data,
+          workspaceId: data.workspaceId || this.activeWorkspaceId,
+        },
+      }),
+    appendHarnessMirror: (sessionId: string, data: { transcript?: any; log?: string }) =>
+      this.request<any>('POST', `/agents/sessions/${sessionId}/mirror`, { body: data }),
+    deleteSession: (id: string) => this.request('DELETE', `/agents/sessions/${id}`),
+    createKey: (data: { agentId: string; workspaceId?: string; scopes?: string[] }) =>
+      this.request<any>('POST', '/agents/keys', { body: data }),
+    provision: (data: any) => this.request<any>('POST', '/agents/provision', { body: data }),
+  };
+
+  // ── 15. Billing & Subscription ──
+  public billing = {
+    status: () => this.request<any>('GET', '/billing/status'),
+    checkout: (data: { planId: string; months?: number; ticker?: string; couponId?: string }) =>
+      this.request<any>('POST', '/billing/checkout', { body: data }),
+    coins: () => this.request<any[]>('GET', '/billing/coins'),
+    claimCoupon: (couponId: string) =>
+      this.request<any>('POST', '/billing/coupon', { body: { couponId } }),
+  };
+
+  // ── 16. Global Search ──
+  public search = {
+    query: async (searchTerm: string, opts: { workspaceId?: string; limit?: number } = {}) => {
+      const q = searchTerm.toLowerCase().trim();
+      const wsId = opts.workspaceId || this.activeWorkspaceId;
+      const limit = opts.limit || 20;
+
+      const [ideasRes, goalsRes, eventsRes, formsRes, flowsRes] = await Promise.allSettled([
+        this.ideas.list({ workspaceId: wsId, limit }),
+        this.goals.list({ workspaceId: wsId, limit }),
+        this.events.list({ workspaceId: wsId, limit }),
+        this.forms.list({ workspaceId: wsId, limit }),
+        this.flows.list(limit),
+      ]);
+
+      const results: { kind: string; id: string; title: string; snippet?: string }[] = [];
+
+      if (ideasRes.status === 'fulfilled' && ideasRes.value?.items) {
+        for (const i of ideasRes.value.items) {
+          if (i.title?.toLowerCase().includes(q) || i.content?.toLowerCase().includes(q)) {
+            results.push({ kind: 'idea', id: i.id, title: i.title || '(Untitled Idea)', snippet: i.content?.substring(0, 100) });
+          }
+        }
+      }
+
+      if (goalsRes.status === 'fulfilled' && goalsRes.value?.items) {
+        for (const g of goalsRes.value.items) {
+          if (g.title?.toLowerCase().includes(q) || g.description?.toLowerCase().includes(q)) {
+            results.push({ kind: 'goal', id: g.id, title: g.title || '(Untitled Goal)', snippet: g.description?.substring(0, 100) });
+          }
+        }
+      }
+
+      if (eventsRes.status === 'fulfilled' && eventsRes.value?.items) {
+        for (const e of eventsRes.value.items) {
+          if (e.title?.toLowerCase().includes(q) || e.description?.toLowerCase().includes(q)) {
+            results.push({ kind: 'event', id: e.id, title: e.title, snippet: e.description?.substring(0, 100) });
+          }
+        }
+      }
+
+      if (formsRes.status === 'fulfilled' && formsRes.value?.items) {
+        for (const f of formsRes.value.items) {
+          if (f.title?.toLowerCase().includes(q)) {
+            results.push({ kind: 'form', id: f.id, title: f.title || '(Untitled Form)' });
+          }
+        }
+      }
+
+      if (flowsRes.status === 'fulfilled' && flowsRes.value?.items) {
+        for (const fl of flowsRes.value.items) {
+          if (fl.title?.toLowerCase().includes(q) || fl.description?.toLowerCase().includes(q)) {
+            results.push({ kind: 'flow', id: fl.id, title: fl.title || '(Untitled Flow)', snippet: fl.description?.substring(0, 100) });
+          }
+        }
+      }
+
+      return results;
+    },
+  };
+
+  // ── 17. Model Context Protocol (MCP) Dispatch ──
   public mcp = {
     callTool: (name: string, args: Record<string, any> = {}) =>
       this.request('POST', '/mcp/messages', {

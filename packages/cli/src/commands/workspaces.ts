@@ -1,5 +1,6 @@
 import pc from 'picocolors';
 import { requireAuthClient } from '../client';
+import { loadConfig, saveConfig } from '../config';
 import { printError, printJson, printSuccess, printTable } from '../formatter';
 
 export async function listWorkspacesCommand(opts: { url?: string; token?: string; json?: boolean; limit?: string }) {
@@ -7,6 +8,7 @@ export async function listWorkspacesCommand(opts: { url?: string; token?: string
     const client = requireAuthClient(opts);
     const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
     const res = await client.workspaces.list(limit);
+    const activeWs = loadConfig().workspaceId;
 
     if (opts.json) {
       printJson(res);
@@ -14,6 +16,7 @@ export async function listWorkspacesCommand(opts: { url?: string; token?: string
     }
 
     const rows = (res.items || []).map((w) => ({
+      active: w.id === activeWs ? pc.green('✔') : '',
       id: w.id,
       name: w.name,
       description: w.description || '',
@@ -21,7 +24,7 @@ export async function listWorkspacesCommand(opts: { url?: string; token?: string
       createdAt: w.createdAt?.substring(0, 10) || '',
     }));
 
-    printTable(rows, ['id', 'name', 'isAgentic', 'description', 'createdAt']);
+    printTable(rows, ['active', 'id', 'name', 'isAgentic', 'description', 'createdAt']);
   } catch (err: any) {
     printError('Failed to list workspaces', err);
     process.exit(1);
@@ -89,4 +92,48 @@ export async function deleteWorkspaceCommand(id: string, opts: { url?: string; t
     printError(`Failed to delete workspace "${id}"`, err);
     process.exit(1);
   }
+}
+
+export async function switchWorkspaceCommand(id: string, opts: { url?: string; token?: string; json?: boolean }) {
+  try {
+    const client = requireAuthClient(opts);
+    const ws = await client.workspaces.get(id);
+
+    saveConfig({ workspaceId: ws.id });
+
+    if (opts.json) {
+      printJson({ activeWorkspaceId: ws.id, name: ws.name });
+      return;
+    }
+
+    printSuccess(`Switched active workspace to "${pc.bold(ws.name)}" (${ws.id})`);
+  } catch (err: any) {
+    printError(`Failed to switch to workspace "${id}"`, err);
+    process.exit(1);
+  }
+}
+
+export function currentWorkspaceCommand(opts: { json?: boolean } = {}) {
+  const config = loadConfig();
+  const wsId = config.workspaceId;
+
+  if (opts.json) {
+    printJson({ workspaceId: wsId || null, mode: wsId ? 'workspace' : 'personal' });
+    return;
+  }
+
+  if (wsId) {
+    console.log(`Active Workspace: ${pc.bold(pc.cyan(wsId))}`);
+  } else {
+    console.log(`Active Workspace: ${pc.bold('Personal Virtual Workspace')} (no project filter)`);
+  }
+}
+
+export function clearWorkspaceCommand(opts: { json?: boolean } = {}) {
+  saveConfig({ workspaceId: undefined });
+  if (opts.json) {
+    printJson({ workspaceId: null });
+    return;
+  }
+  printSuccess('Reset active workspace to Personal Virtual Workspace.');
 }

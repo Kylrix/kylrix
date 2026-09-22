@@ -5,14 +5,18 @@ import {
   getWorkspaceCommand,
   createWorkspaceCommand,
   deleteWorkspaceCommand,
+  switchWorkspaceCommand,
+  currentWorkspaceCommand,
+  clearWorkspaceCommand,
 } from './commands/workspaces';
 import {
-  listNotesCommand,
-  getNoteCommand,
-  createNoteCommand,
-  updateNoteCommand,
-  deleteNoteCommand,
-} from './commands/notes';
+  listIdeasCommand,
+  getIdeaCommand,
+  createIdeaCommand,
+  updateIdeaCommand,
+  deleteIdeaCommand,
+  listArticlesCommand,
+} from './commands/ideas';
 import {
   listGoalsCommand,
   getGoalCommand,
@@ -25,6 +29,36 @@ import { listFormsCommand, getFormCommand, createFormCommand, deleteFormCommand 
 import { listFlowsCommand, getFlowCommand, createFlowCommand, deleteFlowCommand } from './commands/flows';
 import { listChatsCommand, listChatMessagesCommand, sendChatMessageCommand } from './commands/chats';
 import { listThreadsCommand, listThreadMessagesCommand, sendThreadMessageCommand } from './commands/threads';
+import {
+  unlockVaultCommand,
+  lockVaultCommand,
+  statusVaultCommand,
+  listVaultCommand,
+  getVaultCommand,
+  createVaultCommand,
+  deleteVaultCommand,
+} from './commands/vault';
+import {
+  listTotpCommand,
+  getTotpCodeCommand,
+  createTotpCommand,
+  deleteTotpCommand,
+} from './commands/totp';
+import {
+  listAgentSessionsCommand,
+  getAgentSessionCommand,
+  startAgentSessionCommand,
+  deleteAgentSessionCommand,
+} from './commands/agents';
+import { searchCommand } from './commands/search';
+import { shareCommand } from './commands/share';
+import {
+  billingStatusCommand,
+  listBillingCoinsCommand,
+  checkoutBillingCommand,
+  claimCouponCommand,
+} from './commands/billing';
+import { adminStatusCommand } from './commands/admin';
 import { listTagsCommand, createTagCommand, deleteTagCommand } from './commands/tags';
 import { listTrashCommand, restoreTrashCommand, purgeTrashCommand } from './commands/trash';
 import { runStdioMcpServer } from './mcp/stdio';
@@ -33,7 +67,7 @@ const program = new Command();
 
 program
   .name('kylrix')
-  .description('Official CLI & Model Context Protocol (MCP) bridge for Kylrix sovereign agentic workspaces')
+  .description('Official CLI, Model Context Protocol (MCP) bridge, and sovereign client for Kylrix')
   .version('1.0.0');
 
 // Global flags
@@ -43,11 +77,11 @@ program
   .option('-w, --workspace <id>', 'Active workspace ID filter')
   .option('--json', 'Output raw JSON for machine parsing');
 
-// ── Auth Commands ──
+// ── 1. Authentication ──
 program
   .command('login')
-  .description('Authenticate with a Kylrix instance (device pairing, PAT, or password)')
-  .action((cmdOpts, cmd) => loginCommand({ ...program.opts(), ...cmdOpts }));
+  .description('1-Click Web Login / Device Pairing (opens browser and pairs automatically)')
+  .action((cmdOpts) => loginCommand({ ...program.opts(), ...cmdOpts }));
 
 program
   .command('pair')
@@ -65,7 +99,7 @@ program
   .description('Log out and remove stored local authentication credentials')
   .action(() => logoutCommand());
 
-// ── Workspaces ──
+// ── 2. Workspaces ──
 const workspaces = program.command('workspaces').alias('ws').description('Manage Kylrix workspaces');
 
 workspaces
@@ -91,42 +125,64 @@ workspaces
   .description('Delete a workspace by ID')
   .action((id, cmdOpts) => deleteWorkspaceCommand(id, { ...program.opts(), ...cmdOpts }));
 
-// ── Notes ──
-const notes = program.command('notes').alias('n').description('Manage sovereign notes and ideas');
+workspaces
+  .command('switch <id>')
+  .alias('use')
+  .description('Set the default active workspace for all subsequent CLI commands')
+  .action((id, cmdOpts) => switchWorkspaceCommand(id, { ...program.opts(), ...cmdOpts }));
 
-notes
+workspaces
+  .command('current')
+  .description('Show the currently active workspace')
+  .action((cmdOpts) => currentWorkspaceCommand(cmdOpts));
+
+workspaces
+  .command('clear')
+  .alias('unuse')
+  .description('Reset active workspace back to Personal Virtual Workspace')
+  .action((cmdOpts) => clearWorkspaceCommand(cmdOpts));
+
+// ── 3. Ideas (aliased to notes) ──
+const ideas = program.command('ideas').alias('idea').alias('notes').alias('n').description('Manage sovereign ideas and notes');
+
+ideas
   .command('list')
-  .description('List notes in the active workspace or personal store')
+  .description('List ideas in active workspace or personal store')
   .option('-l, --limit <number>', 'Number of records', '25')
-  .action((cmdOpts) => listNotesCommand({ ...program.opts(), ...cmdOpts }));
+  .action((cmdOpts) => listIdeasCommand({ ...program.opts(), ...cmdOpts }));
 
-notes
+ideas
   .command('get <id>')
-  .description('Get full note content and metadata')
-  .action((id, cmdOpts) => getNoteCommand(id, { ...program.opts(), ...cmdOpts }));
+  .description('Get full idea content and metadata')
+  .action((id, cmdOpts) => getIdeaCommand(id, { ...program.opts(), ...cmdOpts }));
 
-notes
+ideas
   .command('create <title>')
-  .description('Create a new note')
-  .option('-c, --content <text>', 'Note body content')
-  .option('--category <category>', 'Note category', 'general')
+  .description('Create a new idea')
+  .option('-c, --content <text>', 'Idea body content')
+  .option('--category <category>', 'Idea category', 'general')
   .option('--tags <tags>', 'Comma-separated tag list')
-  .action((title, cmdOpts) => createNoteCommand(title, { ...program.opts(), ...cmdOpts }));
+  .action((title, cmdOpts) => createIdeaCommand(title, { ...program.opts(), ...cmdOpts }));
 
-notes
+ideas
   .command('update <id>')
-  .description('Update an existing note')
-  .option('--title <title>', 'New note title')
+  .description('Update an existing idea')
+  .option('--title <title>', 'New idea title')
   .option('-c, --content <text>', 'New content')
   .option('--category <category>', 'New category')
-  .action((id, cmdOpts) => updateNoteCommand(id, { ...program.opts(), ...cmdOpts }));
+  .action((id, cmdOpts) => updateIdeaCommand(id, { ...program.opts(), ...cmdOpts }));
 
-notes
+ideas
   .command('delete <id>')
-  .description('Delete a note by ID')
-  .action((id, cmdOpts) => deleteNoteCommand(id, { ...program.opts(), ...cmdOpts }));
+  .description('Delete an idea by ID')
+  .action((id, cmdOpts) => deleteIdeaCommand(id, { ...program.opts(), ...cmdOpts }));
 
-// ── Goals ──
+ideas
+  .command('articles')
+  .description('List long-form articles')
+  .action((cmdOpts) => listArticlesCommand({ ...program.opts(), ...cmdOpts }));
+
+// ── 4. Goals ──
 const goals = program.command('goals').alias('g').description('Track goals, objectives, and habits');
 
 goals
@@ -165,13 +221,129 @@ goals
   .description('Delete a goal')
   .action((id, cmdOpts) => deleteGoalCommand(id, { ...program.opts(), ...cmdOpts }));
 
-// ── Events ──
+// ── 5. Vault & Secrets (Bitwarden-style Security) ──
+const vault = program.command('vault').alias('secrets').description('Secure encrypted credentials and project envs');
+
+vault
+  .command('unlock')
+  .description('Unlock vault Master Encryption Key (MEK) for temporary session')
+  .option('-p, --password <password>', 'Master Password')
+  .option('--expiry <minutes>', 'Session expiry in minutes', '60')
+  .action((cmdOpts) => unlockVaultCommand({ ...program.opts(), ...cmdOpts }));
+
+vault
+  .command('lock')
+  .description('Lock vault and immediately purge in-memory / session encryption keys')
+  .action((cmdOpts) => lockVaultCommand({ ...program.opts(), ...cmdOpts }));
+
+vault
+  .command('status')
+  .description('Check whether the vault is locked or unlocked')
+  .action((cmdOpts) => statusVaultCommand({ ...program.opts(), ...cmdOpts }));
+
+vault
+  .command('list')
+  .description('List credentials and project environment variables')
+  .option('--decrypt', 'Decrypt items using unlocked vault session')
+  .action((cmdOpts) => listVaultCommand({ ...program.opts(), ...cmdOpts }));
+
+vault
+  .command('get <id>')
+  .description('Get a secret or environment variable set')
+  .option('--decrypt', 'Decrypt payload')
+  .option('--format <format>', 'Output format (json, env)')
+  .option('--pure', 'Output pure dotenv plaintext without headers')
+  .action((id, cmdOpts) => getVaultCommand(id, { ...program.opts(), ...cmdOpts }));
+
+vault
+  .command('create <name>')
+  .description('Create an encrypted secret or project .env')
+  .option('-u, --username <username>', 'Username / login identifier')
+  .option('-p, --password <password>', 'Password or secret token')
+  .option('--service-url <url>', 'Service URL')
+  .option('--env-file <filepath>', 'Import environment variables directly from a file')
+  .option('--is-env', 'Mark as project environment variables set')
+  .option('--notes <notes>', 'Secret notes')
+  .action((name, cmdOpts) => createVaultCommand(name, { ...program.opts(), ...cmdOpts }));
+
+vault
+  .command('delete <id>')
+  .description('Delete a secret by ID')
+  .action((id, cmdOpts) => deleteVaultCommand(id, { ...program.opts(), ...cmdOpts }));
+
+// ── 6. TOTP 2FA Authenticator ──
+const totp = program.command('totp').alias('2fa').description('Sovereign 2FA TOTP Authenticator');
+
+totp
+  .command('list')
+  .description('List 2FA TOTP accounts and live verification codes')
+  .action((cmdOpts) => listTotpCommand({ ...program.opts(), ...cmdOpts }));
+
+totp
+  .command('code <id>')
+  .description('Generate the current 6-digit 2FA code for an account')
+  .option('--pure', 'Output raw 6-digit number only (for pipes/scripts)')
+  .action((id, cmdOpts) => getTotpCodeCommand(id, { ...program.opts(), ...cmdOpts }));
+
+totp
+  .command('create <name>')
+  .description('Add a new TOTP 2FA secret key')
+  .requiredOption('-s, --secret <secret>', 'Base32 TOTP secret seed')
+  .option('--issuer <issuer>', 'Service issuer (e.g. GitHub, Google)')
+  .option('--account <account>', 'Account email or username')
+  .action((name, cmdOpts) => createTotpCommand(name, { ...program.opts(), ...cmdOpts }));
+
+totp
+  .command('delete <id>')
+  .description('Delete a TOTP seed')
+  .action((id, cmdOpts) => deleteTotpCommand(id, { ...program.opts(), ...cmdOpts }));
+
+// ── 7. Agentic Sessions ──
+const agents = program.command('agents').alias('agent').description('Autonomous AI agents and execution sessions');
+
+agents
+  .command('list')
+  .alias('sessions')
+  .description('List agent execution sessions')
+  .option('--harness <runner>', 'Filter by harness type')
+  .action((cmdOpts) => listAgentSessionsCommand({ ...program.opts(), ...cmdOpts }));
+
+agents
+  .command('get <id>')
+  .description('Get agent session execution logs and status')
+  .action((id, cmdOpts) => getAgentSessionCommand(id, { ...program.opts(), ...cmdOpts }));
+
+agents
+  .command('start <title>')
+  .description('Start a new autonomous agent session')
+  .option('-p, --prompt <prompt>', 'Initial task prompt')
+  .option('--harness <harness>', 'Harness runner', 'gemini')
+  .action((title, cmdOpts) => startAgentSessionCommand(title, { ...program.opts(), ...cmdOpts }));
+
+agents
+  .command('delete <id>')
+  .description('Delete an agent session')
+  .action((id, cmdOpts) => deleteAgentSessionCommand(id, { ...program.opts(), ...cmdOpts }));
+
+// ── 8. Global Search ──
+program
+  .command('search <query>')
+  .alias('s')
+  .description('Unified search across ideas, goals, events, forms, flows, and secrets')
+  .action((query, cmdOpts) => searchCommand(query, { ...program.opts(), ...cmdOpts }));
+
+// ── 9. Share Links ──
+program
+  .command('share <kind> <id>')
+  .description('Generate a share link for a resource (idea, goal, vault, form, flow)')
+  .action((kind, id, cmdOpts) => shareCommand(kind, id, { ...program.opts(), ...cmdOpts }));
+
+// ── 10. Events ──
 const events = program.command('events').description('Manage calendar events and schedules');
 
 events
   .command('list')
   .description('List calendar events')
-  .option('-l, --limit <number>', 'Limit count', '25')
   .action((cmdOpts) => listEventsCommand({ ...program.opts(), ...cmdOpts }));
 
 events
@@ -194,7 +366,7 @@ events
   .description('Delete an event')
   .action((id, cmdOpts) => deleteEventCommand(id, { ...program.opts(), ...cmdOpts }));
 
-// ── Forms ──
+// ── 11. Forms ──
 const forms = program.command('forms').description('Manage interactive forms');
 
 forms
@@ -218,7 +390,7 @@ forms
   .description('Delete a form')
   .action((id, cmdOpts) => deleteFormCommand(id, { ...program.opts(), ...cmdOpts }));
 
-// ── Flows ──
+// ── 12. Flows ──
 const flows = program.command('flows').description('Manage automations and workflow pipelines');
 
 flows
@@ -242,8 +414,8 @@ flows
   .description('Delete a workflow')
   .action((id, cmdOpts) => deleteFlowCommand(id, { ...program.opts(), ...cmdOpts }));
 
-// ── Chats ──
-const chats = program.command('chats').description('Connect discussions and messages');
+// ── 13. Chats & Hangouts ──
+const chats = program.command('hangouts').alias('chats').description('Discussions and real-time hangouts');
 
 chats
   .command('list')
@@ -259,7 +431,7 @@ chats
 
 chats
   .command('send <message>')
-  .description('Send a chat message')
+  .description('Send a message')
   .option('-c, --conversation <id>', 'Target conversation ID')
   .option('-p, --participant <userId>', 'Target participant user ID (for direct chat)')
   .action((message, cmdOpts) =>
@@ -271,13 +443,13 @@ chats
     })
   );
 
-// ── Threads ──
+// ── 14. Threads ──
 const threads = program.command('threads').description('Unified comment and discussion threads');
 
 threads
   .command('list')
   .description('List threads')
-  .option('--parent-kind <kind>', 'Filter by parent resource kind (note, goal, workspace, etc.)')
+  .option('--parent-kind <kind>', 'Filter by parent resource kind (idea, goal, workspace, etc.)')
   .option('--parent-id <id>', 'Filter by parent resource ID')
   .action((cmdOpts) => listThreadsCommand({ ...program.opts(), ...cmdOpts }));
 
@@ -293,7 +465,44 @@ threads
     sendThreadMessageCommand(threadId, message, { ...program.opts(), ...cmdOpts })
   );
 
-// ── Tags ──
+// ── 15. Billing & Settings ──
+const billing = program.command('billing').description('Manage subscription, Pro upgrades, and crypto checkout');
+
+billing
+  .command('status')
+  .description('View account subscription status, tier, and token balance')
+  .action((cmdOpts) => billingStatusCommand({ ...program.opts(), ...cmdOpts }));
+
+billing
+  .command('coins')
+  .description('List supported cryptocurrency payment tickers')
+  .action((cmdOpts) => listBillingCoinsCommand({ ...program.opts(), ...cmdOpts }));
+
+billing
+  .command('checkout <planId>')
+  .description('Create an upgrade checkout session or direct on-chain crypto payment address')
+  .option('-m, --months <count>', 'Number of months to purchase', '1')
+  .option('--ticker <coin>', 'Direct crypto coin ticker (e.g. polygon/usdt, btc, solana/usdt)')
+  .option('--coupon <couponId>', 'Discount coupon code')
+  .action((planId, cmdOpts) => checkoutBillingCommand(planId, { ...program.opts(), ...cmdOpts }));
+
+billing
+  .command('coupon <couponId>')
+  .description('Redeem a gift or promotional discount coupon')
+  .action((couponId, cmdOpts) => claimCouponCommand(couponId, { ...program.opts(), ...cmdOpts }));
+
+program
+  .command('settings')
+  .description('Inspect account settings and configuration')
+  .action((cmdOpts) => whoamiCommand({ ...program.opts(), ...cmdOpts }));
+
+// ── 16. Admin & Health Check ──
+program
+  .command('admin')
+  .description('Verify server status, admin entitlements, and Edge Shield health')
+  .action((cmdOpts) => adminStatusCommand({ ...program.opts(), ...cmdOpts }));
+
+// ── 17. Tags & Trash ──
 const tags = program.command('tags').description('Organize resources with sovereign tags');
 
 tags
@@ -312,7 +521,6 @@ tags
   .description('Delete a tag')
   .action((id, cmdOpts) => deleteTagCommand(id, { ...program.opts(), ...cmdOpts }));
 
-// ── Trash ──
 const trash = program.command('trash').description('Inspect and restore soft-deleted items');
 
 trash
@@ -330,7 +538,7 @@ trash
   .description('Permanently purge a deleted item')
   .action((kind, id, cmdOpts) => purgeTrashCommand(kind, id, { ...program.opts(), ...cmdOpts }));
 
-// ── MCP Stdio Server Bridge ──
+// ── 18. MCP Stdio Server Bridge ──
 program
   .command('mcp')
   .description('Start the Model Context Protocol (MCP) server over stdio for AI clients (Claude, Cursor, Windsurf)')
