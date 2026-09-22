@@ -7,9 +7,14 @@ Official Command-Line Interface (CLI), embedded SQLite local-first engine, Model
 ## ⚡ Quick Start
  
 ### 1. Install Globally (Offline Local-First)
+
 ```bash
 npm install -g @kylrix/cli
-# or: pnpm add -g @kylrix/cli
+```
+
+*(or via pnpm)*
+```bash
+pnpm add -g @kylrix/cli
 ```
 
 ### 2. 1-Click Web Login
@@ -19,35 +24,86 @@ kylrix login
 ```
 The CLI displays your instant code, automatically opens `https://www.kylrix.space/login/KYL-XXXX` in your browser, and logs in immediately when approved.
 
-### 3. Direct Offline & Cloud Commands
+### 3. Essential Commands
+
+#### Workspaces
+**List workspaces:**
 ```bash
-# Manage Workspaces
 kylrix workspaces list
+```
+
+**Switch active workspace:**
+```bash
 kylrix workspaces switch <workspace-id>
+```
 
-# Manage Sovereign Ideas & Articles
+#### Ideas & Articles
+**List sovereign ideas:**
+```bash
 kylrix ideas list
+```
+
+**Create an idea:**
+```bash
 kylrix ideas create "Q4 System Architecture" --content "New modular flow..."
+```
+
+**View published articles:**
+```bash
 kylrix ideas articles
+```
 
-# Manage Goals & Habits
+#### Goals & Habits
+**List goals:**
+```bash
 kylrix goals list
+```
+
+**Update goal progress:**
+```bash
 kylrix goals update <goal-id> --progress 75
+```
 
-# Bitwarden-Style Encrypted Vault & Project .env
+#### Encrypted Vault & Project `.env`
+**Unlock vault:**
+```bash
 kylrix vault unlock
+```
+
+**List decrypted secrets:**
+```bash
 kylrix vault list --decrypt
+```
+
+**Export secret directly to `.env`:**
+```bash
 kylrix vault get <secret-id> --format env --pure > .env
+```
+
+**Lock vault:**
+```bash
 kylrix vault lock
+```
 
-# Sovereign 2FA TOTP Authenticator
+#### Sovereign 2FA TOTP
+**List TOTP accounts:**
+```bash
 kylrix totp list
+```
+
+**Get live 6-digit TOTP code:**
+```bash
 kylrix totp code <account-id>
+```
 
-# Global Search
+#### Global Search
+```bash
 kylrix search "database migration"
+```
 
-# Model Context Protocol (MCP) Stdio Server for Cursor / Claude Code / Windsurf
+#### Model Context Protocol (MCP) Stdio Server
+Start MCP Server for Cursor, Windsurf, Claude Code:
+```bash
 kylrix mcp
 ```
 

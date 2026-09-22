@@ -38,26 +38,37 @@
 Install once for sovereign offline local-first execution (powered by embedded SQLite):
 
 ```bash
-# Install globally
 npm install -g @kylrix/cli
-# or: pnpm add -g @kylrix/cli
 ```
 
-Then run commands directly:
-
+*(or via pnpm)*
 ```bash
-# 1-Click web login (or use offline without an account)
+pnpm add -g @kylrix/cli
+```
+
+### Quick Commands
+
+**1-Click Web Login (or run offline without an account):**
+```bash
 kylrix login
+```
 
-# Manage sovereign ideas, goals, encrypted vault & 2FA TOTP
+**Manage Sovereign Ideas & Notes:**
+```bash
 kylrix ideas list
-kylrix vault unlock
+```
 
-# Start Model Context Protocol (MCP) server for Cursor, Windsurf, Claude Code
+**Unlock Encrypted Vault:**
+```bash
+kylrix vault unlock
+```
+
+**Start MCP Server for Cursor, Claude Code, Windsurf:**
+```bash
 kylrix mcp
 ```
 
-*(You can also run without installation via `npx @kylrix/cli`)*
+*(Zero-install alternative: run with `npx @kylrix/cli <command>`)*
 
 > 📖 See [**`docs/cli.md`**](docs/cli.md) for the complete command reference and SDK documentation.
 
