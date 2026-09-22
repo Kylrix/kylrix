@@ -7,8 +7,21 @@ import { createRequire } from 'node:module';
 const LOCAL_DIR = path.join(os.homedir(), '.kylrix');
 const DB_FILE = path.join(LOCAL_DIR, 'local.db');
 
-export function generateLocalId(prefix: string): string {
-  return `loc_${prefix}_${crypto.randomBytes(6).toString('hex')}`;
+/**
+ * Canonical Appwrite-compatible unique ID generator.
+ * Generates standard 20-character hexadecimal IDs matching Appwrite's ID.unique()
+ * (hex timestamp + 7-character hex random padding) for complete parity with the Web UI.
+ */
+export function generateLocalId(_prefix?: string): string {
+  const now = new Date();
+  const sec = Math.floor(now.getTime() / 1000);
+  const msec = now.getMilliseconds();
+  const hexTimestamp = sec.toString(16) + msec.toString(16).padStart(5, '0');
+  let randomPadding = '';
+  for (let i = 0; i < 7; i++) {
+    randomPadding += Math.floor(Math.random() * 16).toString(16);
+  }
+  return hexTimestamp + randomPadding;
 }
 
 let dbInstance: any = null;

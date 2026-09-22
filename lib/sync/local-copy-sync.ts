@@ -124,11 +124,38 @@ export function sortPinnedThenCreatedAt<T extends SyncableRow>(
   });
 }
 
-/** Goals list order: earliest deadline first; no deadline falls back to most recently updated. */
-export function sortByDeadlineThenUpdatedAt<T extends SyncableRow & { dueDate?: Date | string | null }>(
+const PRIORITY_RANK: Record<string, number> = {
+  urgent: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
+function getPriorityWeight(priority?: string | null): number {
+  if (!priority) return 0;
+  return PRIORITY_RANK[String(priority).toLowerCase()] ?? 0;
+}
+
+/**
+ * Goals list order:
+ * 1) Pinned first (if isPinned is set or isPinnedFn is provided)
+ * 2) Closeness of deadline (earliest deadline first; has-deadline before no-deadline)
+ * 3) Urgency / Priority (urgent > high > medium > low > none)
+ * 4) Most recently updated (fallback if unranked)
+ * 5) Stable deterministic ID tie-breaker
+ */
+export function sortByDeadlineThenUpdatedAt<T extends SyncableRow & { dueDate?: Date | string | null; priority?: string | null; isPinned?: boolean }>(
   rows: T[],
+  isPinnedFn?: (row: T) => boolean,
 ): T[] {
   return [...rows].sort((a, b) => {
+    // 1) Pinned first
+    const aPinned = isPinnedFn ? isPinnedFn(a) : Boolean(a.isPinned);
+    const bPinned = isPinnedFn ? isPinnedFn(b) : Boolean(b.isPinned);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+
+    // 2) Closeness of deadline
     const aDueMs = a.dueDate ? Date.parse(String(a.dueDate)) : NaN;
     const bDueMs = b.dueDate ? Date.parse(String(b.dueDate)) : NaN;
     const aHasDue = Number.isFinite(aDueMs);
@@ -138,7 +165,19 @@ export function sortByDeadlineThenUpdatedAt<T extends SyncableRow & { dueDate?: 
     if (aHasDue && !bHasDue) return -1;
     if (!aHasDue && bHasDue) return 1;
 
-    return getRowUpdatedAt(b) - getRowUpdatedAt(a);
+    // 3) Urgency (priority)
+    const aPri = getPriorityWeight(a.priority);
+    const bPri = getPriorityWeight(b.priority);
+    if (aPri !== bPri) return bPri - aPri;
+
+    // 4) Most recently updated
+    const updatedDiff = getRowUpdatedAt(b) - getRowUpdatedAt(a);
+    if (updatedDiff !== 0) return updatedDiff;
+
+    // 5) Deterministic ID tie-breaker
+    const aId = String(a.$id || (a as any).id || '');
+    const bId = String(b.$id || (b as any).id || '');
+    return aId.localeCompare(bId);
   });
 }
 

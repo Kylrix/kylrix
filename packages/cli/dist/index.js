@@ -918,12 +918,19 @@ import * as os3 from "os";
 import * as fs2 from "fs";
 import * as path2 from "path";
 import * as os2 from "os";
-import * as crypto from "crypto";
 import { createRequire } from "module";
 var LOCAL_DIR = path2.join(os2.homedir(), ".kylrix");
 var DB_FILE = path2.join(LOCAL_DIR, "local.db");
-function generateLocalId(prefix) {
-  return `loc_${prefix}_${crypto.randomBytes(6).toString("hex")}`;
+function generateLocalId(_prefix) {
+  const now = /* @__PURE__ */ new Date();
+  const sec = Math.floor(now.getTime() / 1e3);
+  const msec = now.getMilliseconds();
+  const hexTimestamp = sec.toString(16) + msec.toString(16).padStart(5, "0");
+  let randomPadding = "";
+  for (let i = 0; i < 7; i++) {
+    randomPadding += Math.floor(Math.random() * 16).toString(16);
+  }
+  return hexTimestamp + randomPadding;
 }
 var dbInstance = null;
 function getNativeSqlite() {
@@ -3141,7 +3148,7 @@ async function deleteVaultCommand(id, opts) {
 import pc12 from "picocolors";
 
 // src/crypto/totp.ts
-import * as crypto2 from "crypto";
+import * as crypto from "crypto";
 function base32Decode(secret) {
   const clean = secret.toUpperCase().replace(/[\s=-]/g, "");
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -3167,7 +3174,7 @@ function generateTotp(secret, periodSeconds = 30, digits = 6) {
   const remainingSeconds = periodSeconds - nowSeconds % periodSeconds;
   const counterBuf = Buffer.alloc(8);
   counterBuf.writeBigInt64BE(BigInt(counter));
-  const hmac = crypto2.createHmac("sha1", key).update(counterBuf).digest();
+  const hmac = crypto.createHmac("sha1", key).update(counterBuf).digest();
   const offset = hmac[hmac.length - 1] & 15;
   const binary = (hmac[offset] & 127) << 24 | (hmac[offset + 1] & 255) << 16 | (hmac[offset + 2] & 255) << 8 | hmac[offset + 3] & 255;
   const otp = binary % 10 ** digits;
@@ -3685,7 +3692,7 @@ import * as os5 from "os";
 import { spawn } from "child_process";
 import pc19 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.2";
+var CURRENT_VERSION = "1.0.3";
 var CACHE_DIR = path5.join(os5.homedir(), ".kylrix");
 var CACHE_FILE = path5.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;

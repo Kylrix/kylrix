@@ -63,9 +63,10 @@ export default function TaskList() {
       rows.map((t) => ({
         $id: t.id,
         dueDate: t.dueDate,
+        priority: t.priority,
         createdAt: t.createdAt instanceof Date && !isNaN(t.createdAt.getTime()) ? t.createdAt.toISOString() : String(t.createdAt ?? ''),
         updatedAt: t.updatedAt instanceof Date && !isNaN(t.updatedAt.getTime()) ? t.updatedAt.toISOString() : String(t.updatedAt ?? ''),
-        isPinned: t.isPinned,
+        isPinned: isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned),
       })),
     ).map((row) => row.$id);
     const byId = new Map(rows.map((t) => [t.id, t]));
