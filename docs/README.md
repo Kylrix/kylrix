@@ -10,6 +10,7 @@ Developer docs for **integrators** — mobile apps, agents, and custom clients o
 
 | Section | Description | Link |
 |---|---|---|
+| **CLI & Stdio MCP Bridge** | Local-first SQLite, 1-click pairing, commands | [cli.md](./cli.md) |
 | **Agent Integrations** | Copy-paste prompt, MCP + REST setup, verify checklist | [integrations.md](./integrations.md) |
 | **Model Context Protocol (MCP)** | Streamable HTTP & SSE for Cursor, Claude, agents | [mcp.md](./mcp.md) |
 | **HTTP API** | PATs, scopes, REST endpoints | [api.md](./api.md) |

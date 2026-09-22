@@ -26,9 +26,30 @@
 ## TL;DR
 
 - **Kylrix** — open-source, local-first workspace for notes, goals, workspaces, chat, vault, and agents.
+- **CLI & MCP Bridge** — `npx @kylrix/cli login` · [CLI Docs](docs/cli.md)
 - **Use the cloud** — [kylrix.space](https://www.kylrix.space)
 - **Self-host** — `curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash` → app on `:5003`
 - **Wire an agent** — mint a [PAT](https://www.kylrix.space/settings?tab=developers) (your workspace) or [agent key](https://www.kylrix.space/settings?tab=agents) (the agent's own workspace), then `npx skills add kylrix/kylrix --skill mcp --skill api --skill agents`
+
+---
+
+## ⚡ CLI & Agent Bridge (`@kylrix/cli`)
+
+Run Kylrix directly from your terminal with local-first SQLite storage or connect your cloud workspace:
+
+```bash
+# 1-Click web login (or use offline without an account)
+npx @kylrix/cli login
+
+# Manage sovereign ideas, goals, encrypted vault & 2FA TOTP
+npx @kylrix/cli ideas list
+npx @kylrix/cli vault unlock
+
+# Start Model Context Protocol (MCP) server for Cursor, Windsurf, Claude Code
+npx @kylrix/cli mcp
+```
+
+> 📖 See [**`docs/cli.md`**](docs/cli.md) for the complete command reference and SDK documentation.
 
 ---
 

@@ -1,15 +1,15 @@
-# `kylrix` (CLI & Isomorphic SDK)
+# `@kylrix/cli` (CLI & Isomorphic SDK)
 
-Official Command-Line Interface (CLI), Model Context Protocol (MCP) Bridge, and Isomorphic SDK for **Kylrix** sovereign agentic workspaces.
+Official Command-Line Interface (CLI), embedded SQLite local-first engine, Model Context Protocol (MCP) Bridge, and Isomorphic SDK for **Kylrix** sovereign agentic workspaces.
 
 ---
 
 ## ⚡ Quick Start
 
 ### 1-Click Web Login
-Authenticate instantly without copying or pasting tokens:
+Authenticate instantly without copying or pasting tokens (or run offline without an account):
 ```bash
-npx kylrix login
+npx @kylrix/cli login
 ```
 The CLI displays your instant code, automatically opens `https://www.kylrix.space/login/KYL-XXXX` in your browser, and logs in immediately when approved.
 
