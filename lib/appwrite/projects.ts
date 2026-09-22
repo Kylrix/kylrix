@@ -366,91 +366,32 @@ export const ProjectsService = {
           resourceIdsByType[normalized].add(id);
         }
 
+        const { listNotes, listFlowTasks, listKeepCredentials } = await import('./index');
+
         const [notes, tasks, credentials, totps, events, forms, moments, sessions] = await Promise.all([
-          resourceIdsByType['note']?.size 
-            ? Promise.all(
-                Array.from(resourceIdsByType['note']).map(async (id) => {
-                  try {
-                    const { getNote } = await import('./note');
-                    return await getNote(id);
-                  } catch {
-                    return null;
-                  }
-                })
-              ).then((res) => res.filter(Boolean))
+          resourceIdsByType['note']?.size
+            ? listNotes([Query.equal('$id', Array.from(resourceIdsByType['note'])), Query.limit(500)]).then((r: any) => r.rows || []).catch(() => [])
             : Promise.resolve([]),
           resourceIdsByType['task']?.size
-            ? Promise.all(
-                Array.from(resourceIdsByType['task']).map(async (id) => {
-                  try {
-                    return await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.TASKS, id);
-                  } catch {
-                    return null;
-                  }
-                })
-              ).then((res) => res.filter(Boolean))
+            ? listFlowTasks([Query.equal('$id', Array.from(resourceIdsByType['task'])), Query.limit(500)]).then((r: any) => r.rows || []).catch(() => [])
             : Promise.resolve([]),
           resourceIdsByType['credential']?.size
-            ? Promise.all(
-                Array.from(resourceIdsByType['credential']).map(async (id) => {
-                  try {
-                    return await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS, id);
-                  } catch {
-                    return null;
-                  }
-                })
-              ).then((res) => res.filter(Boolean))
+            ? listKeepCredentials([Query.equal('$id', Array.from(resourceIdsByType['credential'])), Query.limit(500)]).then((r: any) => r.rows || []).catch(() => [])
             : Promise.resolve([]),
           resourceIdsByType['totp']?.size
-            ? Promise.all(
-                Array.from(resourceIdsByType['totp']).map(async (id) => {
-                  try {
-                    return await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, id);
-                  } catch {
-                    return null;
-                  }
-                })
-              ).then((res) => res.filter(Boolean))
+            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, [Query.equal('$id', Array.from(resourceIdsByType['totp'])), Query.limit(500)]).then((r: any) => r.rows || []).catch(() => [])
             : Promise.resolve([]),
           resourceIdsByType['event']?.size
-            ? Promise.all(
-                Array.from(resourceIdsByType['event']).map(async (id) => {
-                  try {
-                    return await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.EVENTS, id);
-                  } catch {
-                    return null;
-                  }
-                })
-              ).then((res) => res.filter(Boolean))
+            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.EVENTS, [Query.equal('$id', Array.from(resourceIdsByType['event'])), Query.limit(500)]).then((r: any) => r.rows || []).catch(() => [])
             : Promise.resolve([]),
           resourceIdsByType['form']?.size
-            ? Promise.all(
-                Array.from(resourceIdsByType['form']).map(async (id) => {
-                  try {
-                    const row = await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, id);
-                    if (row) {
-                      return { ...row, projectId, isWorkspace: true };
-                    }
-                    return null;
-                  } catch {
-                    return null;
-                  }
-                })
-              ).then((res) => res.filter(Boolean))
+            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, [Query.equal('$id', Array.from(resourceIdsByType['form'])), Query.limit(500)]).then((r: any) => (r.rows || []).map((row: any) => ({ ...row, projectId, isWorkspace: true }))).catch(() => [])
             : Promise.resolve([]),
           resourceIdsByType['moment']?.size
-            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.CONNECT, APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS, [Query.equal('$id', Array.from(resourceIdsByType['moment']))], 500).then((r: any) => r.rows || []).catch(() => [])
+            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.CONNECT, APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS, [Query.equal('$id', Array.from(resourceIdsByType['moment'])), Query.limit(500)]).then((r: any) => r.rows || []).catch(() => [])
             : Promise.resolve([]),
           resourceIdsByType['agent_session']?.size
-            ? Promise.all(
-                Array.from(resourceIdsByType['agent_session']).map(async (id) => {
-                  try {
-                    return await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.FLOW, 'agentic_sessions', id);
-                  } catch {
-                    return null;
-                  }
-                })
-              ).then((res) => res.filter(Boolean))
+            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, 'agentic_sessions', [Query.equal('$id', Array.from(resourceIdsByType['agent_session'])), Query.limit(500)]).then((r: any) => r.rows || []).catch(() => [])
             : Promise.resolve([]),
         ]);
 

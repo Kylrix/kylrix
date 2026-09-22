@@ -1,7 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import * as crypto from 'node:crypto';
 import { createRequire } from 'node:module';
 
 const LOCAL_DIR = path.join(os.homedir(), '.kylrix');
