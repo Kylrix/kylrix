@@ -178,7 +178,7 @@ let firstPendingTimestamp: number | null = null;
  */
 const FLUSH_TYPING_DEBOUNCE_MS = 1500;
 const FLUSH_DISCRETE_MS = 0;
-const HARD_CEILING_MS = 1000;
+const HARD_CEILING_MS = 15000;
 const RETRY_BASE_MS = 500;
 const RETRY_MAX_MS = 15_000;
 
@@ -926,12 +926,20 @@ export const autonomicSyncEngine = {
     if (!targetId || targetId.startsWith('live-') || targetId.startsWith('thread-')) return;
     if (this.isPending(targetId)) return;
 
+    // Skip redundant network reads if local baseline already exists and is fresh (within 5 mins)
+    if (LocalEngine.hasBaseline(targetId)) {
+      const freshnessKey = `freshness_${targetId}`;
+      const lastFreshAt = Number(sessionStorage.getItem(freshnessKey) || 0);
+      if (Date.now() - lastFreshAt < 300_000) return;
+    }
+
     void (async () => {
       try {
         if (kind === 'note') {
           const { getNote } = await import('@/lib/appwrite');
           const remote = await getNote(targetId).catch(() => null);
           if (remote && !this.isPending(targetId)) {
+            sessionStorage.setItem(`freshness_${targetId}`, String(Date.now()));
             LocalEngine.snapshotBaseline(targetId, remote);
             if (onRefreshed) onRefreshed(remote);
           }
@@ -941,6 +949,7 @@ export const autonomicSyncEngine = {
           const { getLiveGoalForSync } = await import('@/lib/sync/pending-sync-bridge');
           const remoteDoc = await taskApi.get(targetId).catch(() => null);
           if (remoteDoc && !this.isPending(targetId)) {
+            sessionStorage.setItem(`freshness_${targetId}`, String(Date.now()));
             const mapped = mapAppwriteTaskToTask(remoteDoc);
             const liveGoal = getLiveGoalForSync(targetId);
             const targetProjectId = mapped.projectId && mapped.projectId !== 'inbox'

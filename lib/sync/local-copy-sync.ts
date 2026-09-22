@@ -183,9 +183,10 @@ export function sortByDeadlineThenUpdatedAt<T extends SyncableRow & { dueDate?: 
 
 /**
  * High-intent inbound delta guard.
- * Replaces periodic timer-based soft polling with a minimum 60-second guard between inbound delta requests.
+ * Appwrite Realtime subscriptions push live changes automatically.
+ * Soft-pulling acts only as a sparse fallback (5-minute guard).
  */
-const MIN_INBOUND_GAP_MS = 60_000;
+const MIN_INBOUND_GAP_MS = 300_000;
 
 export function shouldSoftPull(params: {
   lastPullAt: number;
