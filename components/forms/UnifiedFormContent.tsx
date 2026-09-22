@@ -90,21 +90,6 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                 if (localData && typeof localData === 'object' && isMounted) {
                     setFormData(localData);
                 }
-
-                if (user) {
-                    try {
-                        const draft = await FormsService.getDraft(formId, user.$id);
-                        if (draft?.payload && isMounted) {
-                            try {
-                                setFormData(JSON.parse(draft.payload));
-                            } catch (parseErr) {
-                                console.warn('[Form] Remote draft payload invalid JSON', parseErr);
-                            }
-                        }
-                    } catch (_e) {
-                        console.error('Failed to check for remote draft', _e);
-                    }
-                }
             } catch (err: any) {
                 if (isMounted) setError(err.message || 'Form not found or inaccessible.');
             } finally {
@@ -116,25 +101,17 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
         return () => { isMounted = false; };
     }, [formId, fetchOptimized]);
 
-    // Autosave draft into RxDB LocalEngine
+    // Local-only draft autosave into RxDB LocalEngine
     useEffect(() => {
         if (!form || Object.keys(formData).length === 0 || submitted) return;
 
         const timer = setTimeout(async () => {
             const localKey = `form_draft_${formId}`;
             await LocalEngine.cacheSet(localKey, formData);
-
-            if (currentUser) {
-                try {
-                    await FormsService.saveDraft(formId, JSON.stringify(formData), currentUser.$id);
-                } catch (_e) {
-                    console.error('Autosave failed', _e);
-                }
-            }
         }, 1500);
 
         return () => clearTimeout(timer);
-    }, [formData, formId, currentUser, form, submitted]);
+    }, [formData, formId, form, submitted]);
 
     const isFieldVisible = (field: any) => {
         if (!field.logic || !field.logic.enabled) return true;

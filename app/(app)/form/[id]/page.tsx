@@ -108,22 +108,6 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     setFormData(localData);
                 }
 
-                // If logged in immediately, check for DB draft
-                if (user) {
-                    try {
-                        const draft = await FormsService.getDraft(resolvedParams.id, user.$id);
-                        if (draft && draft.payload) {
-                            try {
-                                setFormData(JSON.parse(draft.payload));
-                            } catch (parseErr) {
-                                console.warn("[Form] Remote draft payload invalid JSON", parseErr);
-                            }
-                        }
-                    } catch (_e) {
-                        console.error("Failed to check for remote draft", _e);
-                    }
-                }
-
             } catch (err: any) {
                 setError(err.message || 'Form not found or inaccessible.');
             } finally {
@@ -133,7 +117,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
         fetchForm();
     }, [resolvedParams.id]);
 
-    // Autosave logic with RxDB LocalEngine
+    // Local-only draft autosave with RxDB LocalEngine
     useEffect(() => {
         if (!form || Object.keys(formData).length === 0 || submitted) return;
 
@@ -141,19 +125,10 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
             // Local save into RxDB
             const localKey = `form_draft_${resolvedParams.id}`;
             await LocalEngine.cacheSet(localKey, formData);
-
-            // Remote save if logged in
-            if (currentUser) {
-                try {
-                    await FormsService.saveDraft(resolvedParams.id, JSON.stringify(formData), currentUser.$id);
-                } catch (_e) {
-                    console.error("Autosave failed", _e);
-                }
-            }
         }, 1500);
 
         return () => clearTimeout(timer);
-    }, [formData, resolvedParams.id, currentUser, form, submitted]);
+    }, [formData, resolvedParams.id, form, submitted]);
 
     const isFieldVisible = (field: any) => {
         if (!field.logic || !field.logic.enabled) return true;

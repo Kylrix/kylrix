@@ -337,7 +337,7 @@ export const FormsService = {
 
         const isMultiple = Boolean((form as any).isMultiple);
 
-        // CHECK FOR EXISTING DRAFT TO CONVERT
+        // CHECK FOR EXISTING DRAFT OR COMPLETED SUBMISSION WHEN SINGLE SUBMISSION IS ENFORCED
         let submission;
         if (submitterId) {
             const res = await tablesDB.listRows<FormSubmissions>({
@@ -372,6 +372,17 @@ export const FormsService = {
                         })
                     }
                 );
+            } else if (!isMultiple) {
+                const completedSubmission = res.rows.find(s => {
+                    try {
+                        if (!s.metadata) return true;
+                        const meta = JSON.parse(s.metadata);
+                        return meta.isDraft !== true;
+                    } catch (_e) { return true; }
+                });
+                if (completedSubmission) {
+                    throw new Error('You have already submitted a response to this form.');
+                }
             }
         }
 
@@ -513,8 +524,8 @@ export const FormsService = {
                     resourceTitle: form.title || 'Form',
                     resourceType: 'form',
                     templateKey: 'flow:form-response-submitted',
-                    ctaUrl: `${getEcosystemUrl('flow')}/forms/${formId}`,
-                    ctaText: 'Review submission',
+                    ctaUrl: `${getEcosystemUrl('flow')}/form/${formId}?submissionId=${submission.$id}`,
+                    ctaText: 'View submission detail',
                     metadata: {
                         submissionId: submission.$id}});
             } catch (e) {

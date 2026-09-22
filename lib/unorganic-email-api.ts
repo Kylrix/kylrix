@@ -288,7 +288,7 @@ function resolveEventCopy(input: Required<Pick<UnorganicEmailDispatchInput, 'eve
         subject: `New response on ${resourceTitle}`,
         title: 'Form response',
         body: `${actorName} submitted a new response to ${resourceTitle}.`.trim(),
-        ctaText,
+        ctaText: pickText(input.ctaText, 'View submission detail'),
         ctaUrl};
     case 'event_registered':
       return {
