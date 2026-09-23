@@ -17,6 +17,9 @@ export default function robots(): MetadataRoute.Robots {
           '/docs/*',
           '/terms-of-service',
           '/privacy-policy',
+          '/.well-known/*',
+          '/.well-known/agent.json',
+          '/.well-known/ai-plugin.json',
         ],
         disallow: [
           '/app/',
@@ -56,6 +59,9 @@ export default function robots(): MetadataRoute.Robots {
           '/docs/*',
           '/terms-of-service',
           '/privacy-policy',
+          '/.well-known/*',
+          '/.well-known/agent.json',
+          '/.well-known/ai-plugin.json',
         ],
         disallow: [
           '/app/',
