@@ -22,6 +22,25 @@ function verifyDiscordSignature({ rawBody, signature, timestamp, clientPublicKey
   }
 }
 
+export function isValidDiscordWebhookUrl(urlStr) {
+  if (!urlStr || typeof urlStr !== 'string') return false;
+  try {
+    const url = new URL(urlStr);
+    if (url.protocol !== 'https:') return false;
+    const hostname = url.hostname.toLowerCase();
+    const isDiscordDomain =
+      hostname === 'discord.com' ||
+      hostname === 'discordapp.com' ||
+      hostname.endsWith('.discord.com') ||
+      hostname.endsWith('.discordapp.com');
+    if (!isDiscordDomain) return false;
+    if (!url.pathname.startsWith('/api/webhooks/')) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export default async ({ req, res, log, error }) => {
   const client = new Client()
     .setEndpoint(process.env.APPWRITE_FUNCTION_ENDPOINT || 'https://fra.cloud.appwrite.io/v1')
@@ -51,6 +70,11 @@ export default async ({ req, res, log, error }) => {
     if (!webhookUrl) {
       error('[Discord Bot] Missing Discord webhook URL');
       return res.json({ ok: false, error: 'Missing webhookUrl' }, 400);
+    }
+
+    if (!isValidDiscordWebhookUrl(webhookUrl)) {
+      error('[Discord Bot] Invalid or disallowed Discord webhook URL');
+      return res.json({ ok: false, error: 'Invalid or disallowed webhookUrl' }, 400);
     }
 
     try {
