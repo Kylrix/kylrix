@@ -402,13 +402,18 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     const loadLinkedNotes = async () => {
       if (!task) return;
       const next: Record<string, string> = {};
-      for (const noteId of task.linkedNotes || []) {
-        try {
-          const note = await noteApi.get(noteId);
-          next[noteId] = note?.title || noteId;
-        } catch (_error) {
-          next[noteId] = noteId;
-        }
+      const entries = await Promise.all(
+        (task.linkedNotes || []).map(async (noteId) => {
+          try {
+            const note = await noteApi.get(noteId);
+            return [noteId, note?.title || noteId] as [string, string];
+          } catch (_error) {
+            return [noteId, noteId] as [string, string];
+          }
+        })
+      );
+      for (const [noteId, title] of entries) {
+        next[noteId] = title;
       }
       if (active) setLinkedNoteTitles(next);
     };
