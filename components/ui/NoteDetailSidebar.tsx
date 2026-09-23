@@ -1132,19 +1132,22 @@ export function NoteDetailSidebar({
     void (async () => {
       try {
         const { detachObjectByRelation } = await import('@/lib/actions/client-ops');
-        for (const block of removedBlocks) {
-          await detachObjectByRelation({
-            parentId: liveNote.$id,
-            childId: block.payload.childId});
-          if (block.payload.childKind === 'file' || block.payload.childKind === 'image') {
-            const bucketId = block.payload.bucketId || APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE;
-            try {
-              await storage.deleteFile(bucketId, block.payload.childId);
-            } catch {
-              // Ignore delete races; relation cleanup is authoritative.
+        await Promise.all(
+          removedBlocks.map(async (block) => {
+            await detachObjectByRelation({
+              parentId: liveNote.$id,
+              childId: block.payload.childId,
+            });
+            if (block.payload.childKind === 'file' || block.payload.childKind === 'image') {
+              const bucketId = block.payload.bucketId || APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE;
+              try {
+                await storage.deleteFile(bucketId, block.payload.childId);
+              } catch {
+                // Ignore delete races; relation cleanup is authoritative.
+              }
             }
-          }
-        }
+          })
+        );
         const { getObjectsByParent } = await import('@/lib/actions/client-ops');
         setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
       } catch (err) {
