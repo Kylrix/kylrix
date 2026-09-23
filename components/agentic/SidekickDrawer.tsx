@@ -507,15 +507,17 @@ export function SidekickDrawer({
       if (activeSid && attachmentsToProcess.length > 0) {
         try {
           const { attachObject, getObjectsByParent } = await import('@/lib/actions/client-ops');
-          for (const att of attachmentsToProcess) {
-            await attachObject({
-              parentId: activeSid,
-              parentKind: 'sidekick',
-              childId: att.childId,
-              childKind: att.childKind,
-              metadata: { name: att.name, bucketId: att.bucketId },
-            }).catch(() => {});
-          }
+          await Promise.all(
+            attachmentsToProcess.map((att) =>
+              attachObject({
+                parentId: activeSid,
+                parentKind: 'sidekick',
+                childId: att.childId,
+                childKind: att.childKind,
+                metadata: { name: att.name, bucketId: att.bucketId },
+              }).catch(() => {})
+            )
+          );
           const updatedObjs = await getObjectsByParent(activeSid, 'sidekick').catch(() => []);
           setAttachedSessionObjects(updatedObjs);
           const cacheKey = `sidekick:attachments:${activeSid}`;
