@@ -21,6 +21,7 @@
 - **Data Consolidation**: When returning shaped payloads to hydrate multiple UI widgets, use Server Actions or consolidated internal service methods.
 
 ### ✅ SOURCE CONTROL PERMISSIONS
+- **Always Run `git pull` First (STRICT)**: The agent MUST always execute `git pull` at the start of every session or before beginning any work, task execution, or file modifications. This ensures the working tree is cleanly aligned with the remote upstream repository and prevents diverged branches or merge conflicts.
 - **Git Operations Permitted**: The agent is permitted and expected to perform Git operations. After implementing any fix or feature, the agent must consolidate the modifications, perform a commit with a descriptive message, and push the changes immediately. **Do not wait for the user to ask** — commit + push is part of finishing the task (see also `shipping-mode`).
 - **Pure Commit Messages (STRICT)**: When committing, NEVER add any co-author metadata (e.g., `Co-authored-by:` headers, names, or emails). Commit messages must contain only the pure commit message description. Leave author identification entirely to the automatic system git configuration.
 
