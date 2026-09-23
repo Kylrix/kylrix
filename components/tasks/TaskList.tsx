@@ -140,16 +140,24 @@ export default function TaskList() {
       confirmLabel: 'Purge Finished Goals',
       onConfirm: async () => {
         const total = completedTasks.length;
-        let count = 0;
         try {
-          for (const task of completedTasks) {
-            await deleteTask(task.id);
-            count++;
+          const results = await Promise.allSettled(
+            completedTasks.map((task) => deleteTask(task.id))
+          );
+          const fulfilledCount = results.filter((r) => r.status === 'fulfilled').length;
+          const rejectedCount = results.length - fulfilledCount;
+
+          if (rejectedCount === 0) {
+            toast.success(`Workspace cleansed: ${total} goals removed.`);
+          } else if (fulfilledCount > 0) {
+            console.warn(`[Purge] ${rejectedCount} tasks failed to delete during purge.`);
+            toast.error(`Partial purge completed (${fulfilledCount}/${total} removed). Check connection.`);
+          } else {
+            toast.error('Failed to purge completed goals. Check connection.');
           }
-          toast.success(`Workspace cleansed: ${total} goals removed.`);
         } catch (err) {
-          console.error('[Purge] Failed after', count, 'tasks:', err);
-          toast.error('Partial purge completed. Check connection.');
+          console.error('[Purge] Bulk delete error:', err);
+          toast.error('Purge failed. Check connection.');
         }
       }
     });
