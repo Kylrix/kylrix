@@ -18,7 +18,7 @@ class GithubService {
     const signature = req.headers['x-hub-signature-256'];
     const secret = process.env.GITHUB_WEBHOOK_SECRET;
 
-    if (!secret) return true; // If secret not configured, bypass
+    if (!secret) return false; // Fail secure if secret is not configured
     if (!signature) return false;
 
     try {
