@@ -83,20 +83,6 @@ function parseTablesDBDeleteArgs(args: any[]) {
     return { databaseId, tableId, rowId };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function parseTablesDBListArgs(args: any[]) {
-    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && ('databaseId' in args[0])) {
-        const obj = args[0];
-        return {
-            databaseId: obj.databaseId,
-            tableId: obj.tableId,
-            queries: obj.queries
-        };
-    }
-    const [databaseId, tableId, queries] = args;
-    return { databaseId, tableId, queries };
-}
-
 // --- PROXIES ---
 
 const databasesProxy = new Proxy(originalDatabases, {
