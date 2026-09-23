@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { logDebug, logError } from '@/lib/logger';
 
 /**
  * GitHub Webhook Ingestion Route
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     const action = payload.action || '';
 
     // Diagnostics telemetry
-    console.log(`[github-webhook] Event: ${event}${action ? `.${action}` : ''} | Repo: ${repoFullName} | Sender: ${sender} | Delivery: ${delivery}`);
+    logDebug(`[github-webhook] Event: ${event}${action ? `.${action}` : ''} | Repo: ${repoFullName} | Sender: ${sender} | Delivery: ${delivery}`);
 
     // High-level metadata for plugin systems to act upon
     // (Ping event response for initial webhook test verification)
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (err: any) {
-    console.error('[github-webhook] Ingestion error:', err);
+    logError('[github-webhook] Ingestion error:', err);
     return NextResponse.json({ error: err?.message || 'Server error' }, { status: 500 });
   }
 }
