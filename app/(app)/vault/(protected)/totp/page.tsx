@@ -25,7 +25,7 @@ import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
-import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
+import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu';
 
 
 // Stable TOTPCard - defined outside parent to prevent remount on every currentTime tick (1s).
@@ -61,7 +61,6 @@ function TOTPCardStable({
   const { open: openUnified } = useUnifiedDrawer();
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
-  const [showWorkflows, setShowWorkflows] = useState(false);
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
   const [displayTotp, setDisplayTotp] = useState<TotpItem>(totp);
   const [isVaultUnlockedState, setIsVaultUnlockedState] = useState(() => {
@@ -283,7 +282,23 @@ function TOTPCardStable({
           });
         },
       },
-      { label: 'Workflows', icon: <Shield size={16} className="text-[#A855F7]" />, onClick: () => setShowWorkflows(true) },
+      {
+        label: 'Workflows',
+        icon: <Shield size={16} className="text-[#A855F7]" />,
+        submenu: getWorkflowSubmenuItems({
+          objectType: 'totp',
+          targetObject: {
+            id: totp.$id,
+            title: (displayTotp as any).issuer || 'TOTP Code',
+            content: (displayTotp as any).accountName || '',
+            raw: totp,
+          },
+          activeWorkspaceId: activeWorkspace?.id || null,
+          showSuccess: (msg) => toast.success(msg),
+          showError: (msg) => toast.error(msg),
+          showInfo: (msg) => toast(msg),
+        }),
+      },
       { label: 'Select', icon: <CheckSquare size={16} className="text-[#10B981]" />, onClick: () => selection.enterSelectMode('totp', totp.$id) },
       { label: 'Copy Code', icon: <Copy size={16} className="text-[#3B82F6]" />, submenu: [
           {
@@ -373,18 +388,6 @@ function TOTPCardStable({
         <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}><button onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('kylrix:open-sidekick', { detail: { type: 'totp', id: totp.$id, title: (displayTotp as any).issuer || 'TOTP Code', content: (displayTotp as any).accountName || '' } })); }} className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#10B981] hover:bg-[#10B981]/5" title="Sidekick Assist" aria-label="Sidekick Assist"><Wand2 size={16} /></button><ShareLockButton resourceType="totp" resourceId={totp.$id} isPublic={!!totp.isPublic} isGuest={!!totp.isGuest} accentColor="#10B981" canPublish={true} getCustomShareUrl={async () => { let currentDek = (totp as any).dek; if (!currentDek) { const { decryptField, encryptField } = await import('@/lib/masterpass-crypto'); const { ecosystemSecurity } = await import('@/lib/ecosystem/security'); const { VaultService } = await import('@/lib/appwrite/vault'); const newDek = await ecosystemSecurity.generateRandomMEK(); const rawKey = await crypto.subtle.exportKey("raw", newDek); const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey))); const wrappedDek = await encryptField(dekBase64); let decryptedSecret = totp.secretKey; if (looksEncrypted(decryptedSecret)) decryptedSecret = await decryptField(decryptedSecret); let decryptedIssuer = totp.issuer; if (looksEncrypted(decryptedIssuer)) decryptedIssuer = await decryptField(decryptedIssuer); let decryptedAccount = totp.accountName; if (looksEncrypted(decryptedAccount)) decryptedAccount = await decryptField(decryptedAccount); await VaultService.updateTOTPSecret(totp.$id, { dek: wrappedDek, secretKey: decryptedSecret, issuer: decryptedIssuer ?? undefined, accountName: decryptedAccount ?? undefined}); totp.dek = wrappedDek; totp.secretKey = decryptedSecret; currentDek = wrappedDek; } let keyFragment = ''; if (currentDek) { const { decryptField } = await import('@/lib/masterpass-crypto'); const dekBase64 = await decryptField(currentDek); const urlSafeDek = dekBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); keyFragment = `/${urlSafeDek}`; } const { buildPublicResourceUrl } = await import('@/lib/share/public-url'); const baseUrl = buildPublicResourceUrl('totp', totp.$id); return keyFragment ? `${baseUrl}${keyFragment}` : baseUrl; }} /></div>
       </div>
     </div>
-    <ObjectWorkflowsDrawer
-      isOpen={showWorkflows}
-      onClose={() => setShowWorkflows(false)}
-      objectType="totp"
-      targetObject={{
-        id: totp.$id,
-        title: (displayTotp as any).issuer || 'TOTP Code',
-        content: (displayTotp as any).accountName || '',
-        raw: totp,
-      }}
-    />
-    </>
   );
 }
 

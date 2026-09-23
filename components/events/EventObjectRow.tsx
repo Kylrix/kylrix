@@ -14,7 +14,8 @@ import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuI
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { events as eventApi } from '@/lib/kylrixflow';
-import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
+import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { useEvents } from '@/context/EventsContext';
 import toast from 'react-hot-toast';
 
@@ -36,7 +37,7 @@ function dayLabel(date: Date): 'Today' | 'Tomorrow' | null {
 
 /** Event list tile — colorful cover pattern (or cover image) + date chrome. */
 export function EventObjectRow({ event, onClick, onDelete }: Props) {
-  const [showWorkflows, setShowWorkflows] = useState(false);
+  const { activeWorkspace } = useWorkspace();
   const pattern = useMemo(
     () => generateEventPattern(event.id + (event.title || '')),
     [event.id, event.title],
@@ -136,7 +137,19 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
       {
         label: 'Workflows',
         icon: <Sparkles size={16} className="text-[#A855F7]" />,
-        onClick: () => setShowWorkflows(true),
+        submenu: getWorkflowSubmenuItems({
+          objectType: 'event',
+          targetObject: {
+            id: event.id,
+            title: event.title || 'Untitled Event',
+            description: event.description || '',
+            raw: event,
+          },
+          activeWorkspaceId: activeWorkspace?.id || null,
+          showSuccess: (msg) => toast.success(msg),
+          showError: (msg) => toast.error(msg),
+          showInfo: (msg) => toast(msg),
+        }),
       },
       {
         label: 'Sidekick',
@@ -406,17 +419,5 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
         </div>
       </div>
     </div>
-    <ObjectWorkflowsDrawer
-      isOpen={showWorkflows}
-      onClose={() => setShowWorkflows(false)}
-      objectType="event"
-      targetObject={{
-        id: event.id,
-        title: event.title || 'Untitled Event',
-        description: event.description || '',
-        raw: event,
-      }}
-    />
-    </>
   );
 }

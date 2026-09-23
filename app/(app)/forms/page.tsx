@@ -38,7 +38,7 @@ import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
-import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
+import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu';
 import { FormResponsesWorkflowDrawer } from '@/components/forms/FormResponsesWorkflowDrawer';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -97,7 +97,6 @@ export default function FormsDashboard() {
     const [selectedForm, setSelectedForm] = useState<Forms | null>(null);
     const [selectedDraft, setSelectedDraft] = useState<FormDraft | null>(null);
 
-    const [showWorkflows, setShowWorkflows] = useState(false);
     const [showResponsesWorkflow, setShowResponsesWorkflow] = useState(false);
     const [workflowTargetForm, setWorkflowTargetForm] = useState<Forms | null>(null);
 
@@ -545,9 +544,9 @@ export default function FormsDashboard() {
                                                     onOpenSettings={handleOpenSettings}
                                                     onDelete={handleDelete}
                                                     onUpdate={() => fetchForms(false)}
-                                                    onOpenWorkflows={(f) => {
+                                                    onOpenResponsesWorkflow={(f) => {
                                                         setWorkflowTargetForm(f);
-                                                        setShowWorkflows(true);
+                                                        setShowResponsesWorkflow(true);
                                                     }}
                                                 />
                                             ))}
@@ -645,30 +644,16 @@ export default function FormsDashboard() {
                         />
                     )}
 
-                    {workflowTargetForm && (
-                        <>
-                            <ObjectWorkflowsDrawer
-                                isOpen={showWorkflows}
-                                onClose={() => setShowWorkflows(false)}
-                                objectType="form"
-                                targetObject={{
-                                    id: workflowTargetForm.$id,
-                                    title: workflowTargetForm.title || 'Form',
-                                    description: workflowTargetForm.description || '',
-                                    raw: workflowTargetForm,
-                                }}
-                                onOpenFormResponsesWorkflow={() => setShowResponsesWorkflow(true)}
-                            />
-                            <FormResponsesWorkflowDrawer
-                                isOpen={showResponsesWorkflow}
-                                onClose={() => setShowResponsesWorkflow(false)}
-                                formId={workflowTargetForm.$id}
-                                formTitle={workflowTargetForm.title || 'Form'}
-                                submissions={(workflowTargetForm as any).submissions || (workflowTargetForm as any).responses || []}
-                                liveFields={parseSchemaSafe(workflowTargetForm.schema)}
-                                activeWorkspaceId={activeWorkspace?.id || null}
-                            />
-                        </>
+                    {workflowTargetForm && showResponsesWorkflow && (
+                        <FormResponsesWorkflowDrawer
+                            isOpen={showResponsesWorkflow}
+                            onClose={() => setShowResponsesWorkflow(false)}
+                            formId={workflowTargetForm.$id}
+                            formTitle={workflowTargetForm.title || 'Form'}
+                            submissions={(workflowTargetForm as any).submissions || (workflowTargetForm as any).responses || []}
+                            liveFields={parseSchemaSafe(workflowTargetForm.schema)}
+                            activeWorkspaceId={activeWorkspace?.id || null}
+                        />
                     )}
                 </div>
             </div>
@@ -684,7 +669,7 @@ function FormCard({
     onOpenSettings,
     onDelete,
     onUpdate,
-    onOpenWorkflows
+    onOpenResponsesWorkflow
 }: {
     form: any;
     onSelect: () => void;
@@ -693,7 +678,7 @@ function FormCard({
     onOpenSettings: (form: any) => void;
     onDelete: (form: any) => void;
     onUpdate: () => void;
-    onOpenWorkflows: (form: any) => void;
+    onOpenResponsesWorkflow?: (form: any) => void;
 }) {
     const { isPinned: isResourcePinned } = useResourcePins();
     const contextMenu = useContextMenu();
@@ -781,7 +766,24 @@ function FormCard({
                 currentWorkspaceId: form.projectId || undefined,
             })
         },
-        { label: 'Workflows', icon: <Sparkles size={16} className="text-[#A855F7]" />, onClick: () => onOpenWorkflows(form) },
+        {
+            label: 'Workflows',
+            icon: <Sparkles size={16} className="text-[#A855F7]" />,
+            submenu: getWorkflowSubmenuItems({
+                objectType: 'form',
+                targetObject: {
+                    id: form.$id,
+                    title: form.title || 'Form',
+                    description: form.description || '',
+                    raw: form,
+                },
+                activeWorkspaceId: form.projectId || null,
+                onOpenFormResponsesWorkflow: () => onOpenResponsesWorkflow?.(form),
+                showSuccess: (msg) => toast.success(msg),
+                showError: (msg) => toast.error(msg),
+                showInfo: (msg) => toast(msg),
+            }),
+        },
         { label: 'View Details', icon: <FileText size={16} />, onClick: onSelect },
         { 
             label: 'Sanitize', 

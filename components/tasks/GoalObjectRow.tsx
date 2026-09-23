@@ -25,7 +25,8 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { ObjectCard } from '@/components/objects/ObjectCard';
 import { ObjectCardMeta, PRIORITY_COLORS } from '@/components/objects/ObjectCardMeta';
 import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
-import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
+import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { goalToCard } from '@/lib/objects/adapters';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useResourcePins } from '@/context/ResourcePinContext';
@@ -68,7 +69,7 @@ function formatDue(due?: Date | null) {
 
 /** Goal tile — uniform ObjectCard; footer = priority + colored tags (no status copy). */
 export default function GoalObjectRow({ task }: Props) {
-  const [showWorkflows, setShowWorkflows] = useState(false);
+  const { activeWorkspace } = useWorkspace();
   const {
     selectTask,
     completeTask,
@@ -298,7 +299,20 @@ export default function GoalObjectRow({ task }: Props) {
       {
         label: 'Workflows',
         icon: <FileText size={16} className="text-[#A855F7]" />,
-        onClick: () => setShowWorkflows(true),
+        submenu: getWorkflowSubmenuItems({
+          objectType: 'goal',
+          targetObject: {
+            id: task.id,
+            title: task.title || 'Untitled Goal',
+            description: task.description || '',
+            tags: task.labels || [],
+            raw: task,
+          },
+          activeWorkspaceId: activeWorkspace?.id || null,
+          showSuccess: (msg) => toast.success(msg),
+          showError: (msg) => toast.error(msg),
+          showInfo: (msg) => toast(msg),
+        }),
       },
       {
         label: 'Sidekick',
@@ -474,18 +488,5 @@ export default function GoalObjectRow({ task }: Props) {
         />
       }
     />
-    <ObjectWorkflowsDrawer
-      isOpen={showWorkflows}
-      onClose={() => setShowWorkflows(false)}
-      objectType="goal"
-      targetObject={{
-        id: task.id,
-        title: task.title || 'Untitled Goal',
-        description: task.description || '',
-        tags: task.labels || [],
-        raw: task,
-      }}
-    />
-    </>
   );
 }

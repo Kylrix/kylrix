@@ -11,7 +11,7 @@ import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
+import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu';
 
 export default function CredentialItem({
   credential,
@@ -90,7 +90,6 @@ export default function CredentialItem({
     };
   }, []);
 
-  const [showWorkflows, setShowWorkflows] = useState(false);
   const { activeWorkspace } = useWorkspace();
 
   useEffect(() => {
@@ -279,7 +278,24 @@ export default function CredentialItem({
         });
       },
     },
-    { label: "Workflows", icon: <Lock size={16} className="text-[#A855F7]" />, onClick: () => setShowWorkflows(true) },
+    {
+      label: "Workflows",
+      icon: <Lock size={16} className="text-[#A855F7]" />,
+      submenu: getWorkflowSubmenuItems({
+        objectType: 'secret',
+        targetObject: {
+          id: credential.$id,
+          title: (displayCredential as any).name || 'Credential',
+          content: (displayCredential as any).username || '',
+          description: (displayCredential as any).notes || '',
+          raw: credential,
+        },
+        activeWorkspaceId: activeWorkspace?.id || null,
+        showSuccess: (msg) => toast.success(msg),
+        showError: (msg) => toast.error(msg),
+        showInfo: (msg) => toast(msg),
+      }),
+    },
     { label: "Select", icon: <CheckSquare size={16} className="text-[#10B981]" />, onClick: () => selection.enterSelectMode('credential', credential.$id) },
     { label: "Copy Public Link (DEK)", icon: <Share2 size={16} className="text-emerald-500" />, onClick: handleShareLink },
     ...accessControlItems,
@@ -546,18 +562,5 @@ export default function CredentialItem({
         />
       </div>
     </div>
-    <ObjectWorkflowsDrawer
-      isOpen={showWorkflows}
-      onClose={() => setShowWorkflows(false)}
-      objectType="secret"
-      targetObject={{
-        id: credential.$id,
-        title: (displayCredential as any).name || 'Credential',
-        content: (displayCredential as any).username || '',
-        description: (displayCredential as any).notes || '',
-        raw: credential,
-      }}
-    />
-    </>
   );
 }

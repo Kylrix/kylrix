@@ -28,7 +28,8 @@ import { useSection } from '@/context/SectionContext';
 import { ShareLockButton } from '../share/ShareLockButton';
 import { useAccessControlMenuItems } from '../share/AccessControlMenuItems';
 import { SidekickDrawer } from '@/components/agentic/SidekickDrawer';
-import { ObjectWorkflowsDrawer } from '@/components/workflows/ObjectWorkflowsDrawer';
+import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu';
+import { useWorkspace } from '@/context/WorkspaceContext';
 
 import { resolveNoteCardTitle, isEncryptedCiphertext } from '@/constants/noteTitle';
 import { getNotePublicState, lockNote, unlockNote } from '@/lib/appwrite';
@@ -56,8 +57,8 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const [mounted, setMounted] = React.useState(false);
   const [isAIProcessing, setIsAIProcessing] = React.useState(false);
   const [showSidekick, setShowSidekick] = React.useState(false);
-  const [showWorkflows, setShowWorkflows] = React.useState(false);
 
+  const { activeWorkspace } = useWorkspace();
   const { enterSelectMode } = useSelection();
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
@@ -405,7 +406,20 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     {
       label: 'Workflows',
       icon: <TodoIcon size={16} className="text-[#A855F7]" />,
-      onClick: () => { setShowWorkflows(true); },
+      submenu: getWorkflowSubmenuItems({
+        objectType: 'idea',
+        targetObject: {
+          id: note.$id,
+          title: liveNote.title || cardTitle,
+          content: liveNote.content || '',
+          tags: Array.isArray(liveNote.tags) ? (liveNote.tags as string[]) : [],
+          raw: liveNote,
+        },
+        activeWorkspaceId: activeWorkspace?.id || null,
+        showSuccess,
+        showError,
+        showInfo,
+      }),
     },
     ...(isPro ? [
       { 
@@ -421,7 +435,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       variant: 'destructive' as const,
       onClick: openDelete,
     }
-  ], [pinned, enterSelectMode, accessControlItems, isPro, handlePinToggle, isLocked, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete, liveNote, note, onUpdate, resolveNoteShareUrl, showError, showSuccess, upsertNote, openSidebar, openOverlay, closeSidebar, closeOverlay]);
+  ], [pinned, enterSelectMode, accessControlItems, isPro, handlePinToggle, isLocked, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete, liveNote, note, onUpdate, resolveNoteShareUrl, showError, showSuccess, showInfo, activeWorkspace?.id, cardTitle, upsertNote, openSidebar, openOverlay, closeSidebar, closeOverlay]);
 
   const cardTitle = React.useMemo(
     () => (isLocked ? 'Locked' : isEncryptedNote ? 'Encrypted' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled'),
@@ -578,18 +592,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         open={showSidekick}
         onClose={() => setShowSidekick(false)}
         target={showSidekick ? { type: 'note', id: note.$id, title: liveNote.title || cardTitle, content: liveNote.content || '' } : null}
-      />
-      <ObjectWorkflowsDrawer
-        isOpen={showWorkflows}
-        onClose={() => setShowWorkflows(false)}
-        objectType="idea"
-        targetObject={{
-          id: note.$id,
-          title: liveNote.title || cardTitle,
-          content: liveNote.content || '',
-          tags: Array.isArray(liveNote.tags) ? (liveNote.tags as string[]) : [],
-          raw: liveNote,
-        }}
       />
     </>
   );
