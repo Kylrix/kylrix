@@ -144,7 +144,7 @@ Return ONLY a JSON array of goal objects:
         if (!Array.isArray(parsed)) parsed = [parsed];
 
         await Promise.all(
-          parsed.map(async (item) => {
+          parsed.map(async (item: any) => {
             if (item?.title) {
               await unifiedCreate('goal', {
                 title: item.title,
