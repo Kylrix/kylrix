@@ -263,13 +263,13 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
     if (!activeWorkspace?.id || selectedUsers.length === 0) return;
     setAddingMember(true);
     try {
-      let count = 0;
-      for (const targetUser of selectedUsers) {
+      const role = permissionRole === 'viewer' ? 'viewer' : (permissionRole === 'admin' ? 'admin' : 'member');
+      const addPromises = selectedUsers.map((targetUser) => {
         const targetId = targetUser.id || targetUser.userId || targetUser.$id || targetUser.email;
-        const role = permissionRole === 'viewer' ? 'viewer' : (permissionRole === 'admin' ? 'admin' : 'member');
-        await ProjectsService.addCollaborator(activeWorkspace.id, targetId, role);
-        count++;
-      }
+        return ProjectsService.addCollaborator(activeWorkspace.id, targetId, role);
+      });
+      await Promise.all(addPromises);
+      const count = selectedUsers.length;
       toast.success(count === 1 ? `Invitation sent to ${selectedUsers[0].title || selectedUsers[0].displayName || selectedUsers[0].id}` : `${count} invitations sent`);
       setSelectedUsers([]);
       void loadWorkspaceDetails();
