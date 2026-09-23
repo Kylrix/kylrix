@@ -29,15 +29,6 @@ const DRAWER_SX_MOBILE = {
   width: '100%',
   mx: 'auto'};
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _DRAWER_SX_DESKTOP = {
-  bgcolor: '#0A0908',
-  borderLeft: '1px solid rgba(255,255,255,0.05)',
-  backgroundImage: 'none',
-  width: 600,
-  maxWidth: '100%',
-  height: '100dvh'};
-
 export default function NewTotpDialog({
   open,
   onClose,
