@@ -143,17 +143,19 @@ Return ONLY a JSON array of goal objects:
         let parsed = JSON.parse(jsonText);
         if (!Array.isArray(parsed)) parsed = [parsed];
 
-        for (const item of parsed) {
-          if (item?.title) {
-            await unifiedCreate('goal', {
-              title: item.title,
-              description: `${item.description || ''}\n\n--- Synthesized from Form Responses (${formTitle}) ---`,
-              status: 'todo',
-              priority: item.priority || 'medium',
-              ...(activeWorkspaceId ? { projectId: activeWorkspaceId, isWorkspace: true } : {}),
-            });
-          }
-        }
+        await Promise.all(
+          parsed.map(async (item) => {
+            if (item?.title) {
+              await unifiedCreate('goal', {
+                title: item.title,
+                description: `${item.description || ''}\n\n--- Synthesized from Form Responses (${formTitle}) ---`,
+                status: 'todo',
+                priority: item.priority || 'medium',
+                ...(activeWorkspaceId ? { projectId: activeWorkspaceId, isWorkspace: true } : {}),
+              });
+            }
+          })
+        );
       } else {
         await unifiedCreate('goal', {
           title: `Goal from Form: ${formTitle}`,
