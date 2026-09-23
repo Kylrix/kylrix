@@ -87,8 +87,6 @@ import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { account } from '@/lib/appwrite/client';
 import { WalletService } from '@/lib/services/wallets';
-import { KeeperHubWalletSelector, KeeperHubWalletDrawer } from '@/components/agentic/KeeperHubWalletSelector';
-import { KeeperHubExecutionDrawer } from '@/components/overlays/KeeperHubExecutionDrawer';
 import { toast } from 'react-hot-toast';
 import { ContextMenu } from '@/components/ui/ContextMenu';
 import { useHintEngine } from '@/hooks/useHintEngine';
@@ -291,8 +289,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [signing, setSigning] = useState(false);
   const [pendingToolAuth, setPendingToolAuth] = useState<{ toolKey: string; name: string; specifier?: string; args?: any; assistantId?: string } | null>(null);
   const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
-  const [showWalletDrawer, setShowWalletDrawer] = useState(false);
-  const [keeperHubExecutionData, setKeeperHubExecutionData] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const { filteredItems: workspaceFilteredSessions } = useWorkspaceFilteredItems(sessions, 'agent_session');
 
@@ -863,41 +859,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     ]);
   }, []);
 
-
-  // ── KeeperHub execution confirmation → auto-append receipt block into session ──
-  useEffect(() => {
-    const handleKeeperHubConfirmed = (e: CustomEvent) => {
-      const { receipt, intent, amount, symbol, recipient } = e.detail || {};
-      if (!receipt) return;
-
-      const receiptBlock: AgenticMessageBlock = {
-        type: 'keeperhub_receipt',
-        txHash: receipt.txHash,
-        recipient: receipt.recipient || recipient || '',
-        amount: receipt.amount || amount || '',
-        symbol: receipt.symbol || symbol || 'ETH',
-        network: receipt.targetChain || 'Ethereum Sepolia',
-        chainId: receipt.chainId || 11155111,
-        status: receipt.status || 'Confirmed',
-        explorerUrl: receipt.explorerUrl || '',
-        auditLog: receipt.auditLog || '',
-        gasSavedUsd: receipt.gasSavedUsd || '0.00',
-        blockNumber: receipt.blockNumber || 0,
-        intent: intent || `Transfer ${amount || receipt.amount} ${symbol || receipt.symbol}`,
-        timestamp: receipt.timestamp || new Date().toISOString(),
-      };
-
-      appendMessage('assistant',
-        `✅ KeeperHub execution confirmed. **${receiptBlock.amount} ${receiptBlock.symbol}** sent to \`${receiptBlock.recipient.slice(0, 8)}…${receiptBlock.recipient.slice(-6)}\` on ${receiptBlock.network}. Transaction broadcast via Turnkey TEE enclave — hash \`${receiptBlock.txHash.slice(0, 14)}…\``,
-        { blocks: [receiptBlock] }
-      );
-    };
-
-    window.addEventListener('kylrix:keeperhub-execution-confirmed' as any, handleKeeperHubConfirmed);
-    return () => window.removeEventListener('kylrix:keeperhub-execution-confirmed' as any, handleKeeperHubConfirmed);
-  }, [appendMessage]);
-
-
   const runPrompt = useCallback(
     async (rawPrompt: string) => {
       const trimmed = rawPrompt.trim();
@@ -1159,10 +1120,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       },
                       appendMessage,
                       openDrawer: (type: string, payload?: Record<string, unknown>) => {
-                        if (type === 'keeperhub-execution') {
-                          setKeeperHubExecutionData(payload || {});
-                          return;
-                        }
                         openUnified(type as any, payload);
                       },
                       openWalletWithIntent,
@@ -1643,7 +1600,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               {agentCount > 0 ? ` · ${agentCount} helper${agentCount === 1 ? '' : 's'}` : ''}
             </p>
           </div>
-          <KeeperHubWalletSelector compact onOpenDrawer={() => setShowWalletDrawer(true)} />
           <button
             type="button"
             onClick={handleOpenSessions}
@@ -2041,23 +1997,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         />
       )}
 
-      {/* KeeperHub Enclave Accounts Bottom Drawer (Contained inside Kylie) */}
-      {showWalletDrawer && (
-        <KeeperHubWalletDrawer onClose={() => setShowWalletDrawer(false)} />
-      )}
-
-      {/* KeeperHub Onchain Execution Bottom Drawer (Contained inside Kylie) */}
-      {keeperHubExecutionData && (
-        <div className="absolute inset-0 bg-black/80 z-[80] flex flex-col justify-end">
-          <div className="bg-[#000000] border-t border-white/10 rounded-t-[28px] w-full max-h-[85%] flex flex-col overflow-y-auto animate-slide-up">
-            <KeeperHubExecutionDrawer
-              drawerData={keeperHubExecutionData}
-              onClose={() => setKeeperHubExecutionData(null)}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Sessions Bottom Drawer (Capped at 60% height permanently) */}
       {showSessionsDrawer && (
         <div className="absolute inset-0 bg-black/60 z-50 flex flex-col justify-end transition-opacity duration-300">
@@ -2380,10 +2319,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                           deleteTask: async (id: string) => { deleteTask(id); },
                           appendMessage,
                           openDrawer: (type: string, payload?: Record<string, unknown>) => {
-                            if (type === 'keeperhub-execution') {
-                              setKeeperHubExecutionData(payload || {});
-                              return;
-                            }
                             openUnified(type as any, payload);
                           },
                           openWalletWithIntent,
@@ -2454,10 +2389,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                           deleteTask: async (id: string) => { deleteTask(id); },
                           appendMessage,
                           openDrawer: (type: string, payload?: Record<string, unknown>) => {
-                            if (type === 'keeperhub-execution') {
-                              setKeeperHubExecutionData(payload || {});
-                              return;
-                            }
                             openUnified(type as any, payload);
                           },
                           openWalletWithIntent,

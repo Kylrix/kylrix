@@ -18932,23 +18932,7 @@ var AGENTIC_TOOL_SCHEMAS = {
   switch_workspace: switchWorkspaceInputZod,
   "ui.navigate": uiNavigateInputZod,
   search_ecosystem: searchEcosystemInputZod,
-  suggest_next_steps: suggestNextStepsInputZod,
-  keeperhub_execute_transaction: external_exports.object({
-    recipient: external_exports.string().min(1),
-    amount: external_exports.union([external_exports.string(), external_exports.number()]),
-    symbol: external_exports.string().optional(),
-    network: external_exports.string().optional(),
-    chainId: external_exports.number().optional(),
-    intent: external_exports.string().optional(),
-    note: external_exports.string().optional()
-  }),
-  execute_transfer: external_exports.object({
-    recipient: external_exports.string().min(1),
-    amount: external_exports.union([external_exports.string(), external_exports.number()]),
-    symbol: external_exports.string().optional(),
-    network: external_exports.string().optional(),
-    chainId: external_exports.number().optional()
-  })
+  suggest_next_steps: suggestNextStepsInputZod
 };
 
 // ../../sdk/contracts/events.ts

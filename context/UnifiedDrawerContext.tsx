@@ -5,7 +5,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { writeSurfaceForeground } from '@/lib/ui/surface-memory';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 
-type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'share-context' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'add-to-project' | 'move-to-workspace' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'agent-create' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'pricing' | 'tags' | 'trash' | 'project-invite' | 'form' | 'form-response-detail' | 'sanitize' | 'agentic-preview' | 'project-settings' | 'project-visibility' | 'project-auto-sweep' | 'project-join-request-confirm' | 'access-control' | 'milestone-details' | 'ecosystem-send' | 'hangouts' | 'flows' | 'profile-preview' | 'follow-list' | 'zap' | 'reaction-detail' | 'keeperhub-execution';
+type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'share-context' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'add-to-project' | 'move-to-workspace' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'agent-create' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'pricing' | 'tags' | 'trash' | 'project-invite' | 'form' | 'form-response-detail' | 'sanitize' | 'agentic-preview' | 'project-settings' | 'project-visibility' | 'project-auto-sweep' | 'project-join-request-confirm' | 'access-control' | 'milestone-details' | 'ecosystem-send' | 'hangouts' | 'flows' | 'profile-preview' | 'follow-list' | 'zap' | 'reaction-detail';
 
 export type { DrawerContent };
 

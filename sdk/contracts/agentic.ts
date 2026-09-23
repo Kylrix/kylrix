@@ -72,22 +72,6 @@ export const AGENTIC_TOOL_SCHEMAS = {
   'ui.navigate': uiNavigateInputZod,
   search_ecosystem: searchEcosystemInputZod,
   suggest_next_steps: suggestNextStepsInputZod,
-  keeperhub_execute_transaction: z.object({
-    recipient: z.string().min(1),
-    amount: z.union([z.string(), z.number()]),
-    symbol: z.string().optional(),
-    network: z.string().optional(),
-    chainId: z.number().optional(),
-    intent: z.string().optional(),
-    note: z.string().optional(),
-  }),
-  execute_transfer: z.object({
-    recipient: z.string().min(1),
-    amount: z.union([z.string(), z.number()]),
-    symbol: z.string().optional(),
-    network: z.string().optional(),
-    chainId: z.number().optional(),
-  }),
 } as const;
 
 export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
@@ -288,22 +272,6 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
       'Search users by username, display name, or handle to select a transfer target or mention. Args: query (string). Returns matched user cards with avatars and user IDs directly in chat.',
     requiresAuthorization: false,
     parameters: ['query', 'limit'],
-  },
-  {
-    key: 'keeperhub_execute_transaction',
-    name: 'KeeperHub Turnkey Onchain Execution',
-    description:
-      'Execute a deterministic onchain transaction via KeeperHub Turnkey Enclave. Args: recipient (0x address or username), amount (string/number), symbol (ETH, Sepolia ETH, USDC), network ("Ethereum Sepolia"), chainId (11155111), intent (description). Triggers execution approval drawer with dry-run verification.',
-    requiresAuthorization: true,
-    parameters: ['recipient', 'amount', 'symbol', 'network', 'chainId', 'intent'],
-  },
-  {
-    key: 'execute_transfer',
-    name: 'KeeperHub Transfer Primitive',
-    description:
-      'Alias for keeperhub_execute_transaction. Direct transfer primitive via KeeperHub remote MCP server.',
-    requiresAuthorization: true,
-    parameters: ['recipient', 'amount', 'symbol', 'network', 'chainId'],
   },
 ];
 

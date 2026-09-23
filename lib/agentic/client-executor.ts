@@ -598,57 +598,9 @@ async function executeAgenticToolCall(
       };
     }
 
-    // ── KeeperHub Turnkey Onchain Execution ─────────────────────
-    if (key === 'keeperhub_execute_transaction' || key === 'execute_transfer') {
-      const recipient = String(args.recipient || args.to || args.address || '0x742d35Cc6634C0532925a3b844Bc454e4438f44e').trim();
-      const amount = String(args.amount || args.value || '0.001').trim();
-      const symbol = String(args.symbol || args.token || 'ETH').toUpperCase();
-      const network = String(args.network || 'Ethereum Sepolia');
-      const chainId = Number(args.chainId || 11155111);
-      const intent = String(args.intent || `Fund bounty: Send ${amount} ${symbol} to ${recipient}`);
-
-      if (ctx.openDrawer) {
-        ctx.openDrawer('keeperhub-execution', {
-          recipient,
-          amount,
-          symbol,
-          network,
-          chainId,
-          intent,
-          note: String(args.note || ''),
-        });
-        return {
-          success: true,
-          summary: `Opened KeeperHub Turnkey execution drawer for ${amount} ${symbol} to ${recipient.slice(0, 8)}…`,
-        };
-      }
-    }
-
     // ── Search Users / Directory ────────────────────────────────
     if (key === 'search_users') {
       const q = String(args.query || call.specifier || '').trim();
-
-      // If the query is keeperhub or mentions bounty/sepolia, route to KeeperHub execution drawer
-      if (
-        q.toLowerCase() === 'keeperhub' ||
-        q.toLowerCase().includes('sepolia') ||
-        q.toLowerCase().includes('bounty')
-      ) {
-        if (ctx.openDrawer) {
-          ctx.openDrawer('keeperhub-execution', {
-            recipient: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-            amount: '0.005',
-            symbol: 'Sepolia ETH',
-            network: 'Ethereum Sepolia',
-            chainId: 11155111,
-            intent: 'Fund goal bounty via KeeperHub Turnkey Enclave',
-          });
-          return {
-            success: true,
-            summary: 'Opened KeeperHub Turnkey execution drawer for Sepolia ETH bounty.',
-          };
-        }
-      }
 
       const limit = Number(args.limit) || 6;
       const { UsersService } = await import('@/lib/services/users');
