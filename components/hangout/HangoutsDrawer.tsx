@@ -731,23 +731,25 @@ export function HangoutsDrawer({
       const messageText = `${object.title ? `${object.title}\n` : ''}${shareUrl}`.trim() + `\n\nShared ${object.kind}`;
 
       const targets = allTargets.filter((t) => selected.has(t.id));
-      for (const target of targets) {
-        if (target.kind === 'secure') {
-          await ChatService.sendMessage(target.id, user.$id, messageText, 'text' as any, [], undefined, {
-            type: 'objectShare',
-            objectKind: object.kind,
-            objectId: object.id,
-            title: object.title,
-            url: shareUrl,
-          } as any);
-        } else {
-          const { postThreadMessage } = await import('@/lib/actions/client-ops');
-          await postThreadMessage({
-            threadId: target.id,
-            content: messageText,
-          });
-        }
-      }
+      await Promise.all(
+        targets.map(async (target) => {
+          if (target.kind === 'secure') {
+            await ChatService.sendMessage(target.id, user.$id, messageText, 'text' as any, [], undefined, {
+              type: 'objectShare',
+              objectKind: object.kind,
+              objectId: object.id,
+              title: object.title,
+              url: shareUrl,
+            } as any);
+          } else {
+            const { postThreadMessage } = await import('@/lib/actions/client-ops');
+            await postThreadMessage({
+              threadId: target.id,
+              content: messageText,
+            });
+          }
+        })
+      );
       toast.success(`Shared to ${targets.length} hangout${targets.length > 1 ? 's' : ''}`);
       onClose?.();
     } catch (err: any) {
