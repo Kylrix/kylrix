@@ -308,27 +308,6 @@ export function AgentActionDrawer({
                 </button>
               )}
             </div>
-
-            {/* Nostr Npub Key */}
-            <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.04] flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <span className="text-[9px] font-mono uppercase text-white/40 font-bold flex items-center gap-1">
-                  <Globe size={10} className="text-[#818cf8]" /> Nostr Identity Key
-                </span>
-                <span className="text-xs font-mono text-white font-bold block truncate mt-0.5">
-                  {profile?.publicKey || 'npub1... (Provisioning)'}
-                </span>
-              </div>
-              {profile?.publicKey && (
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(profile.publicKey, 'Nostr Key', 'nostr')}
-                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
-                >
-                  {copiedKey === 'nostr' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                </button>
-              )}
-            </div>
           </div>
 
           {/* ── Active Tokens & Provisioning Keys ── */}

@@ -29,7 +29,7 @@ export type BookmarkIndexEntry = {
   userId: string;
   kind: BookmarkObjectKind;
   objectId: string;
-  source: 'ecosystem' | 'nostr' | 'other';
+  source: 'ecosystem' | 'other';
   title: string;
   url?: string;
   snippet?: string;
@@ -39,13 +39,11 @@ export type BookmarkIndexEntry = {
 
 function bookmarkSourceFor(input: BookmarkToSelfChatInput): BookmarkIndexEntry['source'] {
   if (input.kind !== 'moment') return 'other';
-  if (/^[0-9a-f]{64}$/i.test(input.objectId)) return 'nostr';
   return 'ecosystem';
 }
 
 function bookmarkSourceFromKind(kind: BookmarkObjectKind, objectId: string): BookmarkIndexEntry['source'] {
   if (kind !== 'moment') return 'other';
-  if (/^[0-9a-f]{64}$/i.test(objectId)) return 'nostr';
   return 'ecosystem';
 }
 
@@ -88,11 +86,11 @@ function parseLegacyBookmarkMessage(text: string): Pick<BookmarkIndexEntry, 'tit
 function objectIdFromUrl(url: string): { objectId: string; kind: BookmarkObjectKind; source: BookmarkIndexEntry['source'] } {
   const momentMatch = url.match(/\/connect\/post\/([^/?#]+)/i) || url.match(/\/moment\/([^/?#]+)/i);
   if (momentMatch?.[1]) {
-    const objectId = momentMatch[1].replace(/^(eco_|nostr_)/, '');
+    const objectId = momentMatch[1].replace(/^eco_/, '');
     return {
       objectId,
       kind: 'moment',
-      source: /^[0-9a-f]{64}$/i.test(objectId) ? 'nostr' : 'ecosystem',
+      source: 'ecosystem',
     };
   }
   return { objectId: url, kind: 'other', source: 'other' };

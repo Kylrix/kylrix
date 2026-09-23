@@ -467,7 +467,7 @@ export default function SponsorPage() {
               </div>
               <h3 className="text-lg font-clash font-medium text-white mb-1">Direct Lightning & On-Chain Addresses</h3>
               <p className="text-xs text-white/60 leading-relaxed">
-                Prefer direct peer-to-peer micro-tips? Send a Nostr Zap or on-chain transfer to the addresses below.
+                Prefer direct peer-to-peer micro-tips? Send an instant micro-tip or on-chain transfer to the addresses below.
               </p>
             </div>
 

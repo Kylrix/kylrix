@@ -204,7 +204,7 @@ export function HangoutsDrawer({
   const currentWorkspaceId = propWorkspaceId || (!activeWorkspace?.isPersonal ? activeWorkspace?.id : undefined);
   const currentWorkspaceTitle = propWorkspaceTitle || (!activeWorkspace?.isPersonal ? (activeWorkspace?.title || (activeWorkspace as any)?.name) : undefined);
 
-  // Eagerly hydrate chats, Nostr DMs, and threads
+  // Eagerly hydrate chats and threads
   const refreshChats = useCallback(async () => {
     try {
       const [cachedChats, cachedThreads] = await Promise.all([
@@ -809,7 +809,7 @@ export function HangoutsDrawer({
               ? 'Pick hangouts to send this to'
               : currentWorkspaceTitle
                 ? `${currentWorkspaceTitle} · Connect`
-                : 'Discussions, Nostr DMs, and private chats'}
+                : 'Discussions, channels, and private chats'}
           </p>
         </div>
 

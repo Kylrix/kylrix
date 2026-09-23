@@ -12,7 +12,7 @@ The crypto wallet ecosystem in this codebase operates on a **client-side, non-cu
 2. **Zero Plaintext Knowledge:** Plaintext mnemonics and private keys are **never** transmitted to backend servers or persisted unencrypted anywhere.
 3. **Encrypted Persistence:** Persistent wallet state is stored in an encrypted **Root Envelope** (`t4.wallet.root.v1`) encrypted using **AES-256-GCM**.
 4. **Hierarchical Key Vault:** The encryption key used for root envelopes is the **Master Encryption Key (MEK)**. The MEK itself is wrapped inside a user-specific keychain by an **AuthKey** derived via **Argon2id** (64 MB RAM, 3 iterations, parallelism 4) or legacy **PBKDF2-HMAC-SHA256** (600,000 iterations).
-5. **Multi-Chain Derivation:** A single 12-word BIP-39 mnemonic phrase acts as the sovereign seed for HD keys across EVM networks (Ethereum, Base, Arbitrum, Polygon), Solana, Bitcoin (Native SegWit), Sui, and Nostr identities.
+5. **Multi-Chain Derivation:** A single 12-word BIP-39 mnemonic phrase acts as the sovereign seed for HD keys across EVM networks (Ethereum, Base, Arbitrum, Polygon), Solana, Bitcoin (Native SegWit), and Sui.
 
 ---
 
@@ -25,7 +25,7 @@ All cryptographic operations rely on audited, pure-JavaScript / Web Crypto primi
 | **Mnemonic / BIP-39** | `@scure/bip39` | Entropy generation & Mnemonic-to-Seed transformation |
 | **HD Key Derivation** | `@scure/bip32` (`HDKey`) | BIP-32 Hierarchical Deterministic child key derivation |
 | **Elliptic Curves** | `@noble/secp256k1`, `@noble/ed25519` | ECDSA, Schnorr, Ed25519 keypairs and signatures |
-| **Encodings** | `@scure/base` (`base58`, `bech32`) | Base58 (Solana), Bech32 (Bitcoin, Nostr) |
+| **Encodings** | `@scure/base` (`base58`, `bech32`) | Base58 (Solana), Bech32 (Bitcoin) |
 | **Hash Functions** | `@noble/hashes` (`keccak_256`, `sha512`, `blake2b`, `ripemd160`) | Address derivation & checksums |
 | **Symmetric Encryption** | Web Crypto API (`AES-GCM`, 256-bit) | Vault envelope encryption & field encryption |
 | **Key Derivation (KDF)**| `hash-wasm` (`argon2id`) / Web Crypto `PBKDF2` | Master password to AuthKey derivation |
@@ -68,15 +68,15 @@ Each supported chain follows a distinct derivation path and address computation 
 ```
 [BIP-39 Mnemonic] ──> [512-bit Seed] ──> [HDKey Master Seed]
                                               │
-      ┌──────────────────┬────────────────────┼────────────────────┬──────────────────┐
-      │                  │                    │                    │                  │
-m/44'/60'/0'/0/0    m/44'/501'/0'/0'     m/84'/0'/0'/0/0      m/44'/784'/0'/0'/0'   EVM Child Key
- (EVM Family)          (Solana)           (Bitcoin)               (Sui)            (Nostr / Agent)
-      │                  │                    │                    │                  │
- Keccak-256          Ed25519 Pub          RIPEMD160           Ed25519 Pub         Schnorr x-only
-  (Last 20B)          (Base58)            + Bech32            + Blake2b-256        (npub / nsec)
-      │                  │                    │                    │                  │
- 0x... (EVM)         SOL Address          bc1q... (SegWit)     0x... (Sui)        npub1...
+      ┌──────────────────┬────────────────────┴────────────────────┐
+      │                  │                    │                    │
+m/44'/60'/0'/0/0    m/44'/501'/0'/0'     m/84'/0'/0'/0/0      m/44'/784'/0'/0'/0'
+ (EVM Family)          (Solana)           (Bitcoin)               (Sui)
+      │                  │                    │                    │
+ Keccak-256          Ed25519 Pub          RIPEMD160           Ed25519 Pub
+  (Last 20B)          (Base58)            + Bech32            + Blake2b-256
+      │                  │                    │                    │
+ 0x... (EVM)         SOL Address          bc1q... (SegWit)     0x... (Sui)
 ```
 
 ### 4.1. EVM Family (Ethereum, Base, Arbitrum, Polygon, USDC)
@@ -299,7 +299,7 @@ private async deriveEphemeralKey(pin: string, salt: Uint8Array): Promise<CryptoK
 For autonomous AI agents operating within agentic workspaces, the system supports autonomous key derivation (`deriveAgentSovereignCrypto` in `lib/api/resources.ts`).
 
 1. **Autonomous Seed:** Each agent receives an independent 12-word BIP-39 mnemonic.
-2. **Derived Addresses:** The agent's seed derives multi-chain addresses (`eth`, `sol`, `btc`, `sui`) and Nostr keypairs (`npub`/`nsec`).
+2. **Derived Addresses:** The agent's seed derives multi-chain addresses (`eth`, `sol`, `btc`, `sui`).
 3. **Sealed Keyblob (Gold Key -> Silver Key Hierarchy):**
    - The agent's MEK is encrypted with the user/owner's MEK (`encryptedKeyBlob`).
    - When the owner accesses an agent workspace, `EcosystemSecurity.getAgentMek(agentId)` decrypts the agent's MEK in memory to perform workspace operations.
@@ -346,21 +346,9 @@ async deriveAgentSovereignCrypto(customMnemonic?: string) {
   const suiHash = blake2b(tmp, { dkLen: 32 });
   const suiAddress = '0x' + bytesToHex(suiHash).slice(0, 64);
 
-  // 5. Nostr keypair
-  const nostrPriv = evmChild.privateKey!;
-  const nostrPubRaw = secp256k1.getPublicKey(nostrPriv, true).slice(1);
-  const nostrNpub = bech32.encode('npub', bech32.toWords(nostrPubRaw));
-  const nostrNsec = bech32.encode('nsec', bech32.toWords(nostrPriv));
-
-  return {
-    mnemonic,
-    ethAddress,
-    solAddress,
     btcAddress,
     suiAddress,
-    nostrNpub,
-    nostrNsec,
-    mekHex: bytesToHex(nostrPriv)
+    mekHex: bytesToHex(evmChild.privateKey!)
   };
 }
 ```

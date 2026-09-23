@@ -58,7 +58,7 @@ export const AgenticService = {
       agentPermissions(input.userId));
     agentsCache.invalidate();
 
-    // Mint Agentic Wallet, Nostr Identity & Sync Profile in profiles table
+    // Mint Agentic Wallet & Sync Profile in profiles table
     void (async () => {
       try {
         const { AgentIdentityService } = await import('./agent-identity');

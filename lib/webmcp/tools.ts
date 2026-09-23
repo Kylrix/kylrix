@@ -115,7 +115,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
 
   {
     name: 'kylrix_get_my_profile',
-    description: 'Get profile details, bio, avatar, and Nostr identity for the active session.',
+    description: 'Get profile details, bio, and avatar for the active session.',
     category: 'system',
     inputSchema: {
       type: 'object',
@@ -124,15 +124,13 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     execute: async () => {
       const uid = getEffectiveUserId();
       const cachedIdentity = await LocalEngine.cacheGet<any>(`identity:${uid}`).catch(() => null);
-      const nostrIdentity = await LocalEngine.cacheGet<any>('nostr:active_identity').catch(() => null);
 
       const profile = {
         userId: uid,
         name: cachedIdentity?.displayName || cachedIdentity?.name || 'Local User',
-        username: cachedIdentity?.username || (nostrIdentity?.npub ? nostrIdentity.npub.slice(0, 12) : 'local'),
-        avatar: cachedIdentity?.avatar || nostrIdentity?.picture || null,
+        username: cachedIdentity?.username || 'local',
+        avatar: cachedIdentity?.avatar || null,
         bio: cachedIdentity?.bio || '',
-        npub: nostrIdentity?.npub || cachedIdentity?.publicKey || null,
       };
 
       return formatResult(profile, `Profile: ${profile.name} (@${profile.username})`);

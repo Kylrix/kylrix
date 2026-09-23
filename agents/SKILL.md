@@ -4,7 +4,7 @@ description: >-
   Provision and run autonomous AI agents in Kylrix. Autonomous agents operate
   strictly within concrete workspace environments (isAgentic: true) and
   authenticate via zero-trust Agent Provisioning Keys. Includes MEK client-side
-  encryption, Nostr identity, and REST endpoints.
+  encryption, multi-chain identity, and REST endpoints.
 ---
 
 # Autonomous Agents in Kylrix
@@ -65,9 +65,9 @@ Agents must keep their credentials and runtime metadata cleanly partitioned in t
    - Agent retrieves owner's public key, wraps its MEK via ECDH key agreement.
    - Stores `{ type: "agent_mek", userId: ownerId, credentialId: agentId, wrappedKey }` in `keychain` for non-custodial owner inspection.
 
-3. **Nostr Identity**:
-   - Agent generates its `npub` / `nsec` cryptographic keypair.
-   - Registers in `nostr_identities` (`isAgentic: true`) to sign and publish events autonomously.
+3. **Multi-Chain Sovereign Identity**:
+   - Agent generates or derives root cryptographic identities across EVM, Solana, Bitcoin, and Sui.
+
 
 ## Endpoints Summary
 

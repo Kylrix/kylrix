@@ -38,11 +38,7 @@ export function ChatMessageContent({
                 trimmed.startsWith('http://') ||
                 trimmed.startsWith('https://') ||
                 trimmed.startsWith('ftp://') ||
-                trimmed.startsWith('mailto:') ||
-                trimmed.startsWith('nostr:') ||
-                trimmed.startsWith('npub1') ||
-                trimmed.startsWith('nsec1') ||
-                trimmed.startsWith('note1')
+                trimmed.startsWith('mailto:')
             ) {
                 return false;
             }

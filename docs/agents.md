@@ -2,7 +2,7 @@
 
 **→ [Wire any agent in 60 seconds](./integrations.md)**
 
-Kylrix supports autonomous AI agents operating with zero-trust isolation, sovereign on-chain EVM wallets, decentralized Nostr identities (`npub1...`), and dual-access Master Encryption Key (MEK) wrappers.
+Kylrix supports autonomous AI agents operating with zero-trust isolation, sovereign on-chain EVM wallets, and dual-access Master Encryption Key (MEK) wrappers.
 
 ---
 
@@ -34,7 +34,7 @@ curl -X POST https://www.kylrix.space/api/v1/agents/provision \
   -d '{
     "name": "Kylie Engineer",
     "agentType": "engineer",
-    "capabilities": ["notes", "goals", "chats", "nostr"]
+    "capabilities": ["notes", "goals", "chats"]
   }'
 ```
 
@@ -42,7 +42,6 @@ curl -X POST https://www.kylrix.space/api/v1/agents/provision \
 - `agentId`: Unique agent identifier.
 - `agentToken`: Autonomous agent PAT with workspace scopes.
 - `defaultWorkspaceId`: Isolated agent workspace.
-- `publicKey`: Nostr `npub1...` identity for peer-to-peer messaging.
 - `walletAddress`: EVM wallet address (`0x...`).
 
 ---

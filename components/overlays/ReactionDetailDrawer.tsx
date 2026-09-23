@@ -10,9 +10,6 @@ export interface ReactionDetailData {
     name?: string;
     username?: string;
     avatar?: string;
-    isNostr?: boolean;
-    npub?: string;
-    pubkey?: string;
     userId?: string;
   };
   title?: string;
@@ -35,9 +32,8 @@ export function ReactionDetailDrawer({
 
   const actor = data?.actor;
   const name = actor?.name || 'Someone';
-  const username = actor?.username || (actor?.npub ? `npub…${actor.npub.slice(-8)}` : undefined);
+  const username = actor?.username;
   const avatar = actor?.avatar;
-  const isNostr = Boolean(actor?.isNostr || actor?.npub || actor?.pubkey);
   const emoji = data?.emoji || '❤️';
 
   const isZap = data?.title?.toLowerCase().includes('zap') || data?.message?.toLowerCase().includes('zap');
@@ -49,9 +45,7 @@ export function ReactionDetailDrawer({
       username: actor?.username || actor?.name,
       name: actor?.name,
       avatar: actor?.avatar,
-      npub: actor?.npub,
-      pubkey: actor?.pubkey,
-      source: isNostr ? 'nostr' : 'ecosystem',
+      source: 'ecosystem',
     });
   };
 
@@ -112,13 +106,13 @@ export function ReactionDetailDrawer({
               {name}
             </h4>
             <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.06] text-[10px] font-bold uppercase text-white/40 font-mono">
-              {isNostr ? <Globe size={10} className="text-amber-400" /> : <Shield size={10} className="text-emerald-400" />}
-              {isNostr ? 'Nostr' : 'Kylrix'}
+              <Shield size={10} className="text-emerald-400" />
+              Kylrix
             </span>
           </div>
           {username && (
             <p className="text-xs text-white/40 font-mono truncate m-0 mt-0.5">
-              {username.startsWith('@') || username.startsWith('npub') ? username : `@${username}`}
+              {username.startsWith('@') ? username : `@${username}`}
             </p>
           )}
         </div>

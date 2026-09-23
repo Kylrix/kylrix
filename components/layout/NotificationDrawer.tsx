@@ -63,9 +63,6 @@ export interface KylrixNotification {
     username?: string;
     avatar?: string;
     avatarId?: string;
-    isNostr?: boolean;
-    npub?: string;
-    pubkey?: string;
   };
   source?: 'kylrix' | 'system';
   errorDetails?: {

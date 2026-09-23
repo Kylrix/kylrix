@@ -36,10 +36,10 @@ Base: `https://www.kylrix.space/api/v1` · MCP: `https://www.kylrix.space/api/v1
 | POST | `/flows/:id/publish` | flows:write |
 | GET | `/flows/installations` | flows:read |
 | POST | `/flows/:id/installations` | flows:install |
-| GET | `/feeds?source=ecosystem\|nostr\|all` | moments:read |
+| GET | `/feeds` | moments:read |
 | GET/POST | `/moments` | moments:read / moments:write |
-| GET | `/moments/:id` | moments:read (ecosystem or `nostr_<hex>`) |
-| GET/POST | `/moments/:id/comments` | moments:read / moments:write (internal only for POST) |
+| GET | `/moments/:id` | moments:read (ecosystem) |
+| GET/POST | `/moments/:id/comments` | moments:read / moments:write |
 | GET | `/threads?parent_kind=&parent_id=` | chats:read |
 | POST | `/threads` | chats:write — ensure thread (`{ parent_kind, parent_id }`) |
 | GET | `/threads/:id`, `/threads/:id/messages` | chats:read |
@@ -89,4 +89,4 @@ HTTP 429 response structure:
 
 Response headers include `RateLimit-Policy`, `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, and `Retry-After` on 429.
 
-Intentional gaps: E2EE chat send, Nostr comment/like (needs vault key), vault secret plaintext without MEK unlock, WebRTC calls.
+Intentional gaps: E2EE chat send, vault secret plaintext without MEK unlock, WebRTC calls.

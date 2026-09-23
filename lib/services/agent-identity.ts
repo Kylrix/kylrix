@@ -17,8 +17,6 @@ export interface AgentCryptoIdentity {
   agentUserId: string; // e.g. "agent_65..."
   username: string; // e.g. "ag_kylie"
   walletAddress: string; // e.g. "0x..."
-  nostrNpub: string; // e.g. "npub1..."
-  nostrPubkeyHex: string;
   ownerId: string;
   framework: string;
 }
@@ -27,13 +25,10 @@ export const AgentIdentityService = {
   /**
    * Derives or mints deterministic cryptographic keys for an agent:
    * 1. EVM Wallet Address (secp256k1 + keccak256)
-   * 2. Nostr Keypair (npub / nsec)
-   * 3. Autonomous MEK wrapper for owner inspection
+   * 2. Autonomous MEK wrapper for owner inspection
    */
   async generateAgentKeys(agentId: string, ownerId: string): Promise<{
     walletAddress: string;
-    nostrNpub: string;
-    nostrPubkeyHex: string;
     encryptedKeyBlob?: string;
   }> {
     try {
@@ -52,13 +47,7 @@ export const AgentIdentityService = {
       const evmHash = keccak_256(secpPub);
       const walletAddress = '0x' + bytesToHex(evmHash.slice(-20)).toLowerCase();
 
-      // 3. Derive Nostr Identity (npub)
-      const nostrPubRaw = secp256k1.getPublicKey(secpPriv, true).slice(1); // 32 bytes x-only
-      const nostrPubkeyHex = bytesToHex(nostrPubRaw);
-      const nostrWords = bech32.toWords(nostrPubRaw);
-      const nostrNpub = bech32.encode('npub', nostrWords);
-
-      // 4. Encrypt keys with owner MEK if available
+      // 3. Encrypt keys with owner MEK if available
       let encryptedKeyBlob: string | undefined;
       try {
         if (ecosystemSecurity.status.isUnlocked) {
@@ -67,8 +56,6 @@ export const AgentIdentityService = {
             agentId,
             ownerId,
             walletAddress,
-            nostrNpub,
-            nostrPubkeyHex,
             entropyHex: bytesToHex(rawEntropy),
           });
           encryptedKeyBlob = await ecosystemSecurity.encrypt(secretPayload);
@@ -79,8 +66,6 @@ export const AgentIdentityService = {
 
       return {
         walletAddress,
-        nostrNpub,
-        nostrPubkeyHex,
         encryptedKeyBlob,
       };
     } catch (err) {
@@ -88,8 +73,6 @@ export const AgentIdentityService = {
       const fallbackHex = bytesToHex(new Uint8Array(20));
       return {
         walletAddress: `0x${fallbackHex}`,
-        nostrNpub: `npub1${fallbackHex}`,
-        nostrPubkeyHex: fallbackHex,
       };
     }
   },
@@ -111,7 +94,7 @@ export const AgentIdentityService = {
     const agentUserId = `agent_${agentId}`;
     const cleanHandle = `ag_${name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') || agentId.slice(0, 8)}`;
 
-    const { walletAddress, nostrNpub, nostrPubkeyHex } = await this.generateAgentKeys(agentId, ownerId);
+    const { walletAddress } = await this.generateAgentKeys(agentId, ownerId);
 
     const preferencesJson = JSON.stringify({
       isAgentic: true,
@@ -120,7 +103,6 @@ export const AgentIdentityService = {
       framework,
       role: role || name,
       goal: goal || '',
-      nostrNpub,
       walletAddress,
       updatedAt: new Date().toISOString(),
     });
@@ -131,7 +113,6 @@ export const AgentIdentityService = {
       displayName: `${name.trim()} (Smart Agent)`,
       bio: goal?.trim() || role?.trim() || `Autonomous ${framework} smart partner`,
       walletAddress,
-      publicKey: nostrNpub || nostrPubkeyHex,
       avatar: avatar || null,
       status: 'active',
       preferences: preferencesJson,

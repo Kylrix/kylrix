@@ -258,7 +258,7 @@ export default function LandingPage() {
               <span className="font-clash font-bold text-xs sm:text-sm text-white">P2P Messaging</span>
             </div>
             <p className="text-[11px] sm:text-xs text-white/70 leading-normal">
-              Direct messages & Nostr protocol integration.
+              Direct discussions and encrypted sovereign chats.
             </p>
           </div>
 

@@ -967,7 +967,6 @@ export const ApiResources = {
             username: parsedConfig.username,
             name: parsedConfig.name,
             walletAddress: parsedConfig.walletAddress,
-            nostrNpub: existingAgentRow.publicKey,
             publicKey: existingAgentRow.publicKey,
             workspaceId: parsedConfig.workspaceId,
           };
@@ -1019,7 +1018,7 @@ export const ApiResources = {
         tableId: 'agents',
         rowId: agentId,
         data: {
-          publicKey: crypto.nostrNpub,
+          publicKey: crypto.ethAddress,
           config: JSON.stringify({
             name,
             agentType,
@@ -1027,9 +1026,8 @@ export const ApiResources = {
             username: cleanHandle,
             walletAddress: crypto.walletAddressJson,
             walletMap: crypto.walletMap,
-            nostrNpub: crypto.nostrNpub,
             workspaceId,
-            capabilities: body.capabilities || ['notes', 'goals', 'chats', 'nostr'],
+            capabilities: body.capabilities || ['notes', 'goals', 'chats', 'events'],
             updatedAt: now,
           }),
           status: 'active',
@@ -1042,7 +1040,7 @@ export const ApiResources = {
         rowId: agentId,
         data: {
           ownerId: actor.userId,
-          publicKey: crypto.nostrNpub,
+          publicKey: crypto.ethAddress,
           config: JSON.stringify({
             name,
             agentType,
@@ -1050,9 +1048,8 @@ export const ApiResources = {
             username: cleanHandle,
             walletAddress: crypto.walletAddressJson,
             walletMap: crypto.walletMap,
-            nostrNpub: crypto.nostrNpub,
             workspaceId,
-            capabilities: body.capabilities || ['notes', 'goals', 'chats', 'nostr'],
+            capabilities: body.capabilities || ['notes', 'goals', 'chats', 'events'],
             createdAt: now,
           }),
           status: 'active',
@@ -1074,7 +1071,7 @@ export const ApiResources = {
         displayName: `${name.trim()} (Smart Agent)`,
         bio: String(body.bio || body.goal || `Autonomous ${agentType} smart partner`),
         walletAddress: crypto.walletAddressJson,
-        publicKey: crypto.nostrNpub,
+        publicKey: crypto.ethAddress,
         status: 'online',
         preferences: JSON.stringify({
           isAgentic: true,
@@ -1083,7 +1080,6 @@ export const ApiResources = {
           agentType,
           role: String(body.role || name),
           goal: String(body.goal || ''),
-          nostrNpub: crypto.nostrNpub,
           walletAddress: crypto.walletMap,
           updatedAt: now,
         }),
@@ -1103,7 +1099,7 @@ export const ApiResources = {
           username: cleanHandle,
           displayName: `${name.trim()} (Smart Agent)`,
           walletAddress: crypto.walletAddressJson,
-          publicKey: crypto.nostrNpub,
+          publicKey: crypto.ethAddress,
           status: 'online',
           preferences: JSON.stringify({
             isAgentic: true,
@@ -1112,7 +1108,6 @@ export const ApiResources = {
             agentType,
             role: String(body.role || name),
             goal: String(body.goal || ''),
-            nostrNpub: crypto.nostrNpub,
             walletAddress: crypto.walletMap,
             updatedAt: now,
           }),
@@ -1131,10 +1126,8 @@ export const ApiResources = {
       mnemonic: crypto.mnemonic,
       walletAddress: crypto.walletAddressJson,
       walletMap: crypto.walletMap,
-      nostrNpub: crypto.nostrNpub,
-      nostrNsec: crypto.nostrNsec,
       mekHex: crypto.mekHex,
-      publicKey: crypto.nostrNpub,
+      publicKey: crypto.ethAddress,
       ownerId: actor.userId,
       createdAt: now,
     };
@@ -3308,18 +3301,10 @@ export const ApiResources = {
     const suiHash = blake2b(tmp, { dkLen: 32 });
     const suiAddress = '0x' + Array.from(suiHash).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 64);
 
-    // 5. Nostr keypair
-    const nostrPriv = evmChild.privateKey;
-    const nostrPubRaw = secp256k1.getPublicKey(nostrPriv, true).slice(1);
-    const nostrPubkeyHex = Array.from(nostrPubRaw).map((b) => b.toString(16).padStart(2, '0')).join('');
-    const nostrWords = bech32.toWords(nostrPubRaw);
-    const nostrNpub = bech32.encode('npub', nostrWords);
-    const nostrNsec = bech32.encode('nsec', bech32.toWords(nostrPriv));
+    // 5. 32-byte MEK Hex
+    const mekHex = Array.from(evmChild.privateKey).map((b) => b.toString(16).padStart(2, '0')).join('');
 
-    // 6. 32-byte MEK Hex
-    const mekHex = Array.from(nostrPriv).map((b) => b.toString(16).padStart(2, '0')).join('');
-
-    // 7. Multi-chain Wallet JSON map matching Kylrix standard
+    // 6. Multi-chain Wallet JSON map matching Kylrix standard
     const walletMap = {
       sol: solAddress,
       eth: ethAddress,
@@ -3345,9 +3330,6 @@ export const ApiResources = {
       solAddress,
       btcAddress,
       suiAddress,
-      nostrNpub,
-      nostrNsec,
-      nostrPubkeyHex,
       mekHex,
     };
   },

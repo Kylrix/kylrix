@@ -47,7 +47,7 @@ REST resources: notes, goals, workspaces, events, forms, flows/:id/installations
 feeds, moments (+ comments), threads (unified plaintext), chats (E2EE meta / plaintext send when open),
 vault metadata, tags, objects, agents/harness. **No** `/tools/execute` (410).
 
-Intentional gaps: E2EE send, Nostr signing, vault secrets, WebRTC.
+Intentional gaps: E2EE send, vault secrets, WebRTC.
 
 ## Limits (Rolling 1m / 24h)
 

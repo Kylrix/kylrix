@@ -67,7 +67,7 @@ export function ZapSecuritySettings() {
           <p className="text-sm font-bold text-white truncate">Zap vault safeguard</p>
           <p className="mt-1 text-[11px] text-white/40 font-satoshi">
             {enabled
-              ? 'Active — vault confirm before Kylrix rix or Nostr Lightning zaps'
+              ? 'Active — vault confirm before Kylrix rix zaps'
               : 'Direct mode — vault confirm only when locked'}
           </p>
         </div>

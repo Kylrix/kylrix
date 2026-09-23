@@ -343,7 +343,7 @@ export function CreateChatComposer({
 
         {selectedUsers.length === 0 ? (
           <p className="text-center text-xs text-white/35 py-6 font-semibold">
-            Add a person by username or Nostr npub to start a hangout.
+            Add a collaborator by username or email to start a hangout.
           </p>
         ) : null}
       </div>

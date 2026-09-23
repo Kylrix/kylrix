@@ -3,10 +3,10 @@ name: api
 description: >-
   Use the Kylrix HTTP API with Personal Access Tokens (PATs). REST toward UI
   parity: notes, goals, flows (+install), workspaces, events, forms, feeds,
-  moments (internal + Nostr view; internal comments), threads (unified plaintext
+  moments (internal view & comments), threads (unified plaintext
   discussions), chats (E2EE meta; plaintext send when unencrypted), vault
   metadata, tags, objects, agents/harness, and token self-service. Not a 1:1
-  UI clone — E2EE unlock, Nostr signing, WebRTC calls stay client-side.
+  UI clone — E2EE unlock, WebRTC calls stay client-side.
 ---
 
 # Kylrix HTTP API (PAT)
@@ -29,8 +29,8 @@ MCP and REST share `ApiResources` — prefer MCP for IDE agents, REST for script
 | Goals | Full CRUD | ✅ |
 | Workspaces | Full CRUD + nested projects | ✅ |
 | Discussions | `GET/POST /threads?parent_kind=&parent_id=` | ✅ Unified thread model |
-| Feeds | GET `/feeds?source=ecosystem\|nostr\|all` | ✅ |
-| Moments | List/get/create + comments | ✅ Internal comments; Nostr view-only |
+| Feeds | GET `/feeds` | ✅ |
+| Moments | List/get/create + comments | ✅ Internal comments |
 | Chats | List/get/messages; POST if unencrypted | ❌ E2EE send needs unlocked vault |
 | Vault | List metadata + Dual-Mode unseal | ✅ Sealed by default (Zero-Trust); on-the-fly unseal via MasterPass/MEK/shareKey |
 | Public Vault Bootstrap | `GET /vault/public/:id` (No auth) | ✅ Zero-auth .env/secret bootstrapping via share URL key |

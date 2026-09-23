@@ -10,7 +10,7 @@ const PROFILES_TABLE = APPWRITE_CONFIG.TABLES.CONNECT.PROFILES;
 export type AttributionPayload = {
   ref: string;
   src?: 'user' | 'agent' | 'partner' | 'campaign' | string;
-  origin?: 'direct' | 'nostr' | 'discord' | 'cli' | 'web' | string;
+  origin?: 'direct' | 'discord' | 'cli' | 'web' | string;
   timestamp?: number;
 };
 
