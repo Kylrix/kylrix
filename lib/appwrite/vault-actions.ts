@@ -251,7 +251,7 @@ export async function logoutAppwrite() {
   }
 }
 
-interface EmbeddedCredentialAttachmentMeta {
+export interface EmbeddedCredentialAttachmentMeta {
   id: string;
   name: string;
   size: number;
@@ -259,7 +259,7 @@ interface EmbeddedCredentialAttachmentMeta {
   createdAt: string;
 }
 
-function normalizeCredentialAttachmentsField(credential: any): EmbeddedCredentialAttachmentMeta[] {
+export function normalizeCredentialAttachmentsField(credential: any): EmbeddedCredentialAttachmentMeta[] {
   const raw = credential.attachments;
   if (!raw) return [];
   try {
