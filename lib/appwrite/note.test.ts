@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getNote, updateNote, deleteNote } from './note';
+import { getNote, updateNote, deleteNote, filterNoteData, isExcludedNote } from './note';
 import * as threadCrypto from '@/lib/encryption/thread-crypto';
 import * as clientOps from '@/lib/actions/client-ops';
 import * as secureOps from '@/lib/actions/secure-ops';
+import { unifiedDelete, unifiedUpdate } from '@/lib/services/unified-object-service';
 
 // Mock dependencies to prevent external connection errors or appwrite crashes
 vi.mock('./client', () => ({
@@ -37,6 +38,7 @@ vi.mock('@/lib/services/unified-object-service', () => ({
 
 vi.mock('@/lib/actions/client-ops', () => ({
   deleteNote: vi.fn(),
+  updateNote: vi.fn(),
 }));
 
 vi.mock('@/lib/actions/secure-ops', () => ({
@@ -398,6 +400,99 @@ describe('lib/appwrite/note thread notes operations', () => {
 
       expect(secureOps.deleteNoteSecure).toHaveBeenCalledWith('server-note-1', 'mock-jwt-token');
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('unified-object-service error path and fallthrough testing', () => {
+    it('returns { success: true } directly when unifiedDelete succeeds and skips clientOps/secureOps fallback', async () => {
+      vi.mocked(unifiedDelete).mockResolvedValueOnce(undefined);
+
+      const result = await deleteNote('note-unified-success');
+
+      expect(unifiedDelete).toHaveBeenCalledWith('note', 'note-unified-success', {
+        recursive: true,
+        cascade: [{ kind: 'comment', foreignField: 'noteId' }],
+      });
+      expect(clientOps.deleteNote).not.toHaveBeenCalled();
+      expect(result).toEqual({ success: true });
+    });
+
+    it('falls through to clientOps.deleteNote when unifiedDelete throws an error (line 634 error path)', async () => {
+      vi.mocked(unifiedDelete).mockRejectedValueOnce(new Error('Unified delete service failed'));
+      vi.mocked(clientOps.deleteNote).mockResolvedValueOnce({ success: true });
+
+      const result = await deleteNote('note-unified-fail');
+
+      expect(unifiedDelete).toHaveBeenCalledWith('note', 'note-unified-fail', expect.any(Object));
+      expect(clientOps.deleteNote).toHaveBeenCalledWith('note-unified-fail');
+      expect(result).toEqual({ success: true });
+    });
+
+    it('returns row directly when unifiedUpdate succeeds and skips fallback updateNote calls', async () => {
+      const mockUpdatedRow = { $id: 'note-up-1', title: 'Unified Title' };
+      vi.mocked(unifiedUpdate).mockResolvedValueOnce(mockUpdatedRow as any);
+
+      const result = await updateNote('note-up-1', { title: 'Unified Title' });
+
+      expect(unifiedUpdate).toHaveBeenCalledWith('note', 'note-up-1', { title: 'Unified Title' });
+      expect(clientOps.updateNote).not.toHaveBeenCalled();
+      expect(result).toEqual(mockUpdatedRow);
+    });
+
+    it('falls through to clientOps.updateNote when unifiedUpdate throws an error (line 543 error path)', async () => {
+      vi.mocked(unifiedUpdate).mockRejectedValueOnce(new Error('Unified update service failed'));
+      const fallbackRow = { $id: 'note-up-2', title: 'Fallback Title' };
+      vi.mocked(clientOps.updateNote).mockResolvedValueOnce(fallbackRow as any);
+
+      const result = await updateNote('note-up-2', { title: 'Fallback Title' });
+
+      expect(unifiedUpdate).toHaveBeenCalledWith('note', 'note-up-2', { title: 'Fallback Title' });
+      expect(clientOps.updateNote).toHaveBeenCalledWith('note-up-2', { title: 'Fallback Title' });
+      expect(result).toEqual(fallbackRow);
+    });
+  });
+
+  describe('filterNoteData and metadata parsing edge cases', () => {
+    it('safely merges non-schema fields into metadata JSON and handles existing metadata', () => {
+      const input = {
+        title: 'Note Title',
+        customAttribute1: 'customVal1',
+        metadata: JSON.stringify({ existingProp: true }),
+      };
+
+      const result = filterNoteData(input);
+
+      expect(result.title).toBe('Note Title');
+      expect(result.customAttribute1).toBeUndefined();
+      expect(JSON.parse(result.metadata)).toEqual({
+        existingProp: true,
+        customAttribute1: 'customVal1',
+      });
+    });
+
+    it('handles malformed metadata JSON in filterNoteData gracefully', () => {
+      const input = {
+        title: 'Note Title',
+        customField: 'val',
+        metadata: 'invalid-json-{',
+      };
+
+      const result = filterNoteData(input);
+
+      expect(result.title).toBe('Note Title');
+      expect(JSON.parse(result.metadata)).toEqual({
+        _raw: 'invalid-json-{',
+        customField: 'val',
+      });
+    });
+
+    it('handles malformed metadata JSON in isExcludedNote gracefully', () => {
+      const corruptNote = {
+        userId: 'user-123',
+        metadata: 'invalid-json-{',
+      };
+
+      expect(isExcludedNote(corruptNote)).toBe(false);
     });
   });
 });
