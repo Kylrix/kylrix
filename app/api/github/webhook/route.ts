@@ -6,7 +6,7 @@ import { logDebug, logError } from '@/lib/logger';
  * GitHub Webhook Ingestion Route
  *
  * Receives all webhook events directly from GitHub repositories/organizations.
- * Verifies HMAC-SHA256 signature if GITHUB_WEBHOOK_SECRET is configured.
+ * Mandates HMAC-SHA256 signature verification with GITHUB_WEBHOOK_SECRET.
  * Logs event telemetry and dispatches to internal systems/bus.
  */
 
@@ -17,17 +17,24 @@ export async function POST(req: NextRequest) {
     const delivery = req.headers.get('x-github-delivery') || '';
     const signature = req.headers.get('x-hub-signature-256') || '';
 
-    // Signature verification if secret is configured
+    // Mandatory signature verification
     const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
-    if (webhookSecret) {
-      if (!signature) {
-        return NextResponse.json({ error: 'Missing x-hub-signature-256' }, { status: 401 });
-      }
-      const hmac = crypto.createHmac('sha256', webhookSecret);
-      const digest = `sha256=${hmac.update(rawBody).digest('hex')}`;
-      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
-        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 403 });
-      }
+    if (!webhookSecret) {
+      logError('[github-webhook] GITHUB_WEBHOOK_SECRET is not configured on server');
+      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
+    }
+
+    if (!signature) {
+      return NextResponse.json({ error: 'Missing x-hub-signature-256' }, { status: 401 });
+    }
+
+    const hmac = crypto.createHmac('sha256', webhookSecret);
+    const digest = `sha256=${hmac.update(rawBody).digest('hex')}`;
+    const sigBuf = Buffer.from(signature);
+    const digestBuf = Buffer.from(digest);
+
+    if (sigBuf.length !== digestBuf.length || !crypto.timingSafeEqual(sigBuf, digestBuf)) {
+      return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 403 });
     }
 
     let payload: Record<string, any> = {};
