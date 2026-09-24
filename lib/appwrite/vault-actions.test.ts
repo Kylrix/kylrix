@@ -297,7 +297,22 @@ describe('vault-actions', () => {
       await expect(logoutAppwrite()).resolves.not.toThrow();
     });
 
-    it('invokes purgeAllClientStorageOnLogout when window is defined', async () => {
+    it('invokes purgeAllClientStorageOnLogout even when deleteSession fails in window environment', async () => {
+      vi.mocked(account.deleteSession).mockRejectedValue(new Error('Session network failure'));
+      const originalWindow = globalThis.window;
+      // @ts-ignore
+      globalThis.window = {} as any;
+
+      try {
+        await logoutAppwrite();
+        expect(purgeAllClientStorageOnLogout).toHaveBeenCalled();
+      } finally {
+        // @ts-ignore
+        globalThis.window = originalWindow;
+      }
+    });
+
+    it('invokes purgeAllClientStorageOnLogout when window is defined and deleteSession succeeds', async () => {
       vi.mocked(account.deleteSession).mockResolvedValue({} as any);
       const originalWindow = globalThis.window;
       // @ts-ignore
@@ -308,6 +323,20 @@ describe('vault-actions', () => {
         expect(purgeAllClientStorageOnLogout).toHaveBeenCalled();
       } finally {
         // @ts-ignore
+        globalThis.window = originalWindow;
+      }
+    });
+
+    it('does not invoke purgeAllClientStorageOnLogout when window is undefined (server side)', async () => {
+      vi.mocked(account.deleteSession).mockResolvedValue({} as any);
+      const originalWindow = globalThis.window;
+      // @ts-ignore
+      delete globalThis.window;
+
+      try {
+        await logoutAppwrite();
+        expect(purgeAllClientStorageOnLogout).not.toHaveBeenCalled();
+      } finally {
         globalThis.window = originalWindow;
       }
     });
@@ -363,6 +392,27 @@ describe('vault-actions', () => {
         globalThis.window = originalWindow;
       }
     });
+
+    it('returns null and logs error on server-side if admin databases.getRow throws', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const originalWindow = globalThis.window;
+      // @ts-ignore
+      delete globalThis.window;
+
+      try {
+        const adminClient = createSystemClient();
+        vi.mocked(adminClient.databases.getRow).mockRejectedValue(new Error('Admin DB error'));
+
+        const result = await validatePublicVaultAccess('cred-srv-err');
+        expect(result).toBeNull();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'validatePublicVaultAccess failed for cred-srv-err:',
+          expect.any(Error)
+        );
+      } finally {
+        globalThis.window = originalWindow;
+      }
+    });
   });
 
   describe('validatePublicTotpAccess', () => {
@@ -411,6 +461,27 @@ describe('vault-actions', () => {
 
         const result = await validatePublicTotpAccess('totp-srv-2');
         expect(result).toBeNull();
+      } finally {
+        globalThis.window = originalWindow;
+      }
+    });
+
+    it('returns null and logs error on server-side if admin databases.getRow throws', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const originalWindow = globalThis.window;
+      // @ts-ignore
+      delete globalThis.window;
+
+      try {
+        const adminClient = createSystemClient();
+        vi.mocked(adminClient.databases.getRow).mockRejectedValue(new Error('Admin DB error'));
+
+        const result = await validatePublicTotpAccess('totp-srv-err');
+        expect(result).toBeNull();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'validatePublicTotpAccess failed for totp-srv-err:',
+          expect.any(Error)
+        );
       } finally {
         globalThis.window = originalWindow;
       }
