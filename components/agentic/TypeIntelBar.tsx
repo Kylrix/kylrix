@@ -239,22 +239,3 @@ export function TypeIntelBar({
     </div>
   );
 }
-
-/** @deprecated use TypeIntelGhostLayer */
-export function TypeIntelGhostOverlay(props: {
-  draft: string;
-  suggestion: string;
-  enabled: boolean;
-  className?: string;
-}) {
-  if (!props.enabled || !props.suggestion) return null;
-  return (
-    <div
-      aria-hidden
-      className={`absolute inset-0 pointer-events-none whitespace-pre-wrap break-words ${props.className || ''}`}
-    >
-      <span className="text-transparent">{props.draft}</span>
-      <span className="text-white/28">{props.suggestion}</span>
-    </div>
-  );
-}
