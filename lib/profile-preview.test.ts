@@ -119,11 +119,18 @@ describe('lib/profile-preview', () => {
       expect(res).toBe('data:image/png;base64,valid_data_uri');
     });
 
-    describe('error paths in URL preview generation (line 62)', () => {
-      it('returns null when getProfilePicturePreview returns null/falsy', async () => {
+    describe('error paths in URL preview generation (line 68)', () => {
+      it('returns null when getProfilePicturePreview returns null', async () => {
         vi.mocked(getProfilePicturePreview).mockReturnValue(null as any);
 
         const res = await fetchProfilePreview('file-null-url');
+        expect(res).toBeNull();
+      });
+
+      it('returns null when getProfilePicturePreview returns undefined (throws Failed to generate preview URL)', async () => {
+        vi.mocked(getProfilePicturePreview).mockReturnValue(undefined as any);
+
+        const res = await fetchProfilePreview('file-undefined-url');
         expect(res).toBeNull();
       });
 
@@ -209,6 +216,75 @@ describe('lib/profile-preview', () => {
 
         const res = await fetchProfilePreview('http-fail-conversion-id');
         expect(res).toBe(httpUrl);
+
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      it('handles FileReader onerror failure inside convertUrlToBase64 gracefully', async () => {
+        const httpUrl = 'https://example.com/filereader-error.png';
+        vi.mocked(getProfilePicturePreview).mockReturnValue({
+          toString: () => httpUrl,
+        } as any);
+
+        const mockBlob = new Blob(['avatar_bytes'], { type: 'image/png' });
+        (globalThis.fetch as any).mockImplementation((url: string, opts?: any) => {
+          if (opts?.method === 'HEAD') {
+            return Promise.resolve({ ok: true });
+          }
+          return Promise.resolve({
+            blob: () => Promise.resolve(mockBlob),
+          });
+        });
+
+        const OriginalFileReader = globalThis.FileReader;
+        class MockFailingFileReader {
+          onloadend: any = null;
+          onerror: any = null;
+          readAsDataURL() {
+            setTimeout(() => {
+              if (this.onerror) {
+                this.onerror(new Error('FileReader read error'));
+              }
+            }, 5);
+          }
+        }
+        globalThis.FileReader = MockFailingFileReader as any;
+
+        try {
+          const res = await fetchProfilePreview('filereader-fail-id');
+          expect(res).toBe(httpUrl);
+          await new Promise((r) => setTimeout(r, 50));
+        } finally {
+          globalThis.FileReader = OriginalFileReader;
+        }
+      });
+
+      it('handles background LocalEngine.cacheSet rejection gracefully during data: URL save', async () => {
+        const dataUrl = 'data:image/png;base64,data_uri_bg_error';
+        vi.mocked(getProfilePicturePreview).mockReturnValue({
+          toString: () => dataUrl,
+        } as any);
+
+        (globalThis.fetch as any).mockResolvedValue({ ok: true });
+        vi.mocked(LocalEngine.cacheSet).mockRejectedValue(new Error('Background IndexedDB write failure'));
+
+        const res = await fetchProfilePreview('data-url-bg-error-id');
+        expect(res).toBe(dataUrl);
+
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      it('handles background LocalEngine.cacheSet rejection gracefully during secure fallback', async () => {
+        vi.mocked(getProfilePicturePreview).mockReturnValue({
+          toString: () => 'https://example.com/inaccessible.png',
+        } as any);
+
+        (globalThis.fetch as any).mockResolvedValue({ ok: false });
+        vi.mocked(getProfilePicturePreviewSecure).mockResolvedValue('data:image/png;base64,secure_fallback_bg_err');
+        vi.mocked(LocalEngine.cacheSet).mockRejectedValue(new Error('Secure fallback LocalEngine cacheSet error'));
+
+        const res = await fetchProfilePreview('secure-bg-err-id');
+        expect(res).toBe('data:image/png;base64,secure_fallback_bg_err');
 
         await new Promise((r) => setTimeout(r, 50));
       });
@@ -303,7 +379,7 @@ describe('lib/profile-preview', () => {
     });
   });
 
-  describe('sessionStorage initialization', () => {
+  describe('sessionStorage initialization & persistence exceptions', () => {
     it('loads existing valid cache from sessionStorage on module load', async () => {
       sessionStorage.setItem(
         'kylrix_avatar_cache_v2',
@@ -317,12 +393,40 @@ describe('lib/profile-preview', () => {
       expect(getCached('session-file-1')).toBe('data:image/png;base64,session_loaded');
     });
 
+    it('handles non-object JSON (e.g., number or null) in sessionStorage gracefully during module load', async () => {
+      sessionStorage.setItem('kylrix_avatar_cache_v2', '12345');
+
+      vi.resetModules();
+      const { getCachedProfilePreview: getCached } = await import('./profile-preview');
+      expect(getCached('any-file')).toBeUndefined();
+    });
+
     it('handles corrupted JSON in sessionStorage gracefully during module load', async () => {
       sessionStorage.setItem('kylrix_avatar_cache_v2', '{ invalid json ...');
 
       vi.resetModules();
       const { getCachedProfilePreview: getCached } = await import('./profile-preview');
       expect(getCached('any-file')).toBeUndefined();
+    });
+
+    it('handles sessionStorage.setItem QuotaExceededError or security exceptions gracefully when persistCache runs', async () => {
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('The quota has been exceeded', 'QuotaExceededError');
+      });
+
+      try {
+        const dataUrl = 'data:image/png;base64,valid_data_uri_quota_test';
+        vi.mocked(getProfilePicturePreview).mockReturnValue({
+          toString: () => dataUrl,
+        } as any);
+
+        (globalThis.fetch as any).mockResolvedValue({ ok: true });
+
+        const res = await fetchProfilePreview('file-quota-error');
+        expect(res).toBe(dataUrl);
+      } finally {
+        setItemSpy.mockRestore();
+      }
     });
   });
 });
