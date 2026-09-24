@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getNote, updateNote, deleteNote } from './note';
 import * as threadCrypto from '@/lib/encryption/thread-crypto';
+import * as clientOps from '@/lib/actions/client-ops';
+import * as secureOps from '@/lib/actions/secure-ops';
 
 // Mock dependencies to prevent external connection errors or appwrite crashes
 vi.mock('./client', () => ({
@@ -33,6 +35,14 @@ vi.mock('@/lib/services/unified-object-service', () => ({
   unifiedDelete: vi.fn().mockRejectedValue(new Error('Not implemented in unit test')),
 }));
 
+vi.mock('@/lib/actions/client-ops', () => ({
+  deleteNote: vi.fn(),
+}));
+
+vi.mock('@/lib/actions/secure-ops', () => ({
+  deleteNoteSecure: vi.fn(),
+}));
+
 vi.mock('@/lib/encryption/thread-crypto', async (importOriginal) => {
   const actual = await importOriginal<typeof threadCrypto>();
   return {
@@ -43,13 +53,24 @@ vi.mock('@/lib/encryption/thread-crypto', async (importOriginal) => {
 });
 
 describe('lib/appwrite/note thread notes operations', () => {
+  let originalWindow: typeof window | undefined;
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    originalWindow = global.window;
+    Object.defineProperty(navigator, 'onLine', {
+      value: true,
+      configurable: true,
+      writable: true,
+    });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    if (originalWindow !== undefined) {
+      global.window = originalWindow;
+    }
   });
 
   describe('updateNote with thread notes', () => {
@@ -225,7 +246,7 @@ describe('lib/appwrite/note thread notes operations', () => {
     });
   });
 
-  describe('deleteNote with thread notes', () => {
+  describe('deleteNote with thread notes and error paths', () => {
     it('removes thread note from localStorage on deleteNote', async () => {
       const note1 = { id: 'thread-del-1' };
       const note2 = { id: 'thread-del-2' };
@@ -237,6 +258,125 @@ describe('lib/appwrite/note thread notes operations', () => {
       const remaining = JSON.parse(localStorage.getItem('kylrix_thread_notes_v2') || '[]');
       expect(remaining).toHaveLength(1);
       expect(remaining[0].id).toBe('thread-del-2');
+    });
+
+    it('successfully deletes note via client-ops when online', async () => {
+      vi.mocked(clientOps.deleteNote).mockResolvedValueOnce({ success: true });
+
+      const result = await deleteNote('regular-note-1');
+
+      expect(clientOps.deleteNote).toHaveBeenCalledWith('regular-note-1');
+      expect(result).toEqual({ success: true });
+    });
+
+    it('saves deletion as thread note when device is offline', async () => {
+      Object.defineProperty(navigator, 'onLine', {
+        value: false,
+        configurable: true,
+        writable: true,
+      });
+
+      const existingThreadNote = { id: 'existing-thread-id', title: 'Old' };
+      localStorage.setItem('kylrix_thread_notes_v2', JSON.stringify([existingThreadNote]));
+
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const result = await deleteNote('offline-note-1');
+
+      expect(result).toEqual({ success: true });
+      expect(consoleLogSpy).toHaveBeenCalledWith('[deleteNote] Offline. Saving deletion as a thread note...');
+
+      const stored = JSON.parse(localStorage.getItem('kylrix_thread_notes_v2') || '[]');
+      expect(stored[0]).toMatchObject({
+        id: 'offline-note-1',
+        title: '',
+        content: '',
+      });
+      const metadata = JSON.parse(stored[0].metadata);
+      expect(metadata).toEqual({
+        isThread: true,
+        _deleted: true,
+        send_object: { kind: 'note' },
+      });
+    });
+
+    it('handles error gracefully when localStorage contains invalid JSON during offline deletion', async () => {
+      Object.defineProperty(navigator, 'onLine', {
+        value: false,
+        configurable: true,
+        writable: true,
+      });
+
+      localStorage.setItem('kylrix_thread_notes_v2', 'invalid-json-{');
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = await deleteNote('offline-note-corrupt-json');
+
+      expect(result).toEqual({ success: true });
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(SyntaxError));
+    });
+
+    it('catches network error from client-ops and falls back to offline thread note deletion (code: network_error)', async () => {
+      const networkErr = { code: 'network_error', message: 'Failed to fetch' };
+      vi.mocked(clientOps.deleteNote).mockRejectedValueOnce(networkErr);
+
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      localStorage.setItem('kylrix_thread_notes_v2', JSON.stringify([]));
+
+      const result = await deleteNote('network-err-note-1');
+
+      expect(result).toEqual({ success: true });
+      expect(consoleLogSpy).toHaveBeenCalledWith('[deleteNote] Network error. Saving deletion as a thread note...');
+
+      const stored = JSON.parse(localStorage.getItem('kylrix_thread_notes_v2') || '[]');
+      expect(stored[0].id).toBe('network-err-note-1');
+      const metadata = JSON.parse(stored[0].metadata);
+      expect(metadata._deleted).toBe(true);
+    });
+
+    it('catches network error from client-ops when error message includes "fetch"', async () => {
+      const networkErr = new Error('fetch failed due to DNS error');
+      vi.mocked(clientOps.deleteNote).mockRejectedValueOnce(networkErr);
+
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      localStorage.setItem('kylrix_thread_notes_v2', JSON.stringify([]));
+
+      const result = await deleteNote('fetch-err-note-1');
+
+      expect(result).toEqual({ success: true });
+      expect(consoleLogSpy).toHaveBeenCalledWith('[deleteNote] Network error. Saving deletion as a thread note...');
+    });
+
+    it('handles error gracefully when localStorage contains invalid JSON during network error fallback', async () => {
+      const networkErr = { status: undefined, message: 'NetworkError when attempting to fetch resource.' };
+      vi.mocked(clientOps.deleteNote).mockRejectedValueOnce(networkErr);
+
+      localStorage.setItem('kylrix_thread_notes_v2', 'corrupt-json-string');
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = await deleteNote('net-err-corrupt-json');
+
+      expect(result).toEqual({ success: true });
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(SyntaxError));
+    });
+
+    it('re-throws non-network error from client-ops', async () => {
+      const permErr = { status: 403, code: 403, message: 'Unauthorized permission' };
+      vi.mocked(clientOps.deleteNote).mockRejectedValueOnce(permErr);
+
+      await expect(deleteNote('forbidden-note-1')).rejects.toEqual(permErr);
+    });
+
+    it('executes deleteNoteSecure when window is undefined (server side)', async () => {
+      // @ts-expect-error simulating server side
+      delete global.window;
+
+      vi.mocked(secureOps.deleteNoteSecure).mockResolvedValueOnce({ success: true });
+
+      const result = await deleteNote('server-note-1', 'mock-jwt-token');
+
+      expect(secureOps.deleteNoteSecure).toHaveBeenCalledWith('server-note-1', 'mock-jwt-token');
+      expect(result).toEqual({ success: true });
     });
   });
 });
