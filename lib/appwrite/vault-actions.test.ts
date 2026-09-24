@@ -1,14 +1,17 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   normalizeCredentialAttachmentsField,
   addAttachmentToCredential,
   deleteCredentialAttachment,
   logoutAppwrite,
+  resetMasterpassAndWipe,
   validatePublicVaultAccess,
   validatePublicTotpAccess,
 } from './vault-actions';
 import { VaultService, vaultDatabases } from './vault-service';
 import { account, storage } from './client';
+import { createSystemClient } from '@/lib/appwrite-admin';
+import { purgeAllClientStorageOnLogout } from '@/lib/services/wipe-client-storage';
 
 // Mock dependencies
 vi.mock('./vault-service', () => ({
@@ -18,13 +21,26 @@ vi.mock('./vault-service', () => ({
   },
   vaultDatabases: {
     getRow: vi.fn(),
+    listRows: vi.fn(),
+    deleteRow: vi.fn(),
+    updateRow: vi.fn(),
   },
   APPWRITE_COLLECTION_CREDENTIALS_ID: 'credentials_id',
   APPWRITE_COLLECTION_TOTPSECRETS_ID: 'totp_id',
+  APPWRITE_COLLECTION_FOLDERS_ID: 'folders_id',
+  APPWRITE_COLLECTION_SECURITYLOGS_ID: 'security_logs_id',
+  APPWRITE_COLLECTION_USER_ID: 'user_id',
+  APPWRITE_COLLECTION_IDENTITIES_ID: 'identities_id',
+  PASSWORD_MANAGER_DATABASE_ID: 'pwd_db_id',
+  CHAT_DATABASE_ID: 'chat_db_id',
+  CHAT_COLLECTION_CONVERSATIONS_ID: 'chat_conversations',
+  CHAT_COLLECTION_MESSAGES_ID: 'chat_messages',
+  CHAT_COLLECTION_USERS_ID: 'chat_users',
 }));
 
 vi.mock('./client', () => ({
   APPWRITE_DATABASE_ID: 'db_id',
+  APPWRITE_COLLECTION_KEYCHAIN_ID: 'keychain_id',
   account: {
     deleteSession: vi.fn(),
   },
@@ -47,9 +63,91 @@ vi.mock('@/lib/services/wipe-client-storage', () => ({
   purgeAllClientStorageOnLogout: vi.fn(),
 }));
 
+vi.mock('@/lib/appwrite-admin', () => {
+  const getRowMock = vi.fn();
+  return {
+    createSystemClient: vi.fn(() => ({
+      databases: {
+        getRow: getRowMock,
+      },
+    })),
+    _adminGetRowMock: getRowMock,
+  };
+});
+
 describe('vault-actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('resetMasterpassAndWipe', () => {
+    it('wipes user table docs, self-chats, and clears public key successfully', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      vi.mocked(vaultDatabases.listRows).mockImplementation(async (dbId, collectionId) => {
+        if (collectionId === 'conversationMembers') {
+          return { rows: [{ conversationId: 'conv-1' }] } as any;
+        }
+        if (collectionId === 'chat_conversations') {
+          return {
+            rows: [{ $id: 'conv-1', type: 'direct', participants: ['user-123'] }],
+          } as any;
+        }
+        if (collectionId === 'chat_users') {
+          return { rows: [{ $id: 'user-123', publicKey: 'old-key' }] } as any;
+        }
+        return { rows: [{ $id: `doc-${collectionId}` }] } as any;
+      });
+
+      vi.mocked(vaultDatabases.deleteRow).mockResolvedValue({} as any);
+      vi.mocked(vaultDatabases.updateRow).mockResolvedValue({} as any);
+
+      await expect(resetMasterpassAndWipe('user-123')).resolves.not.toThrow();
+
+      expect(vaultDatabases.deleteRow).toHaveBeenCalled();
+      expect(vaultDatabases.updateRow).toHaveBeenCalledWith(
+        'chat_db_id',
+        'chat_users',
+        'user-123',
+        { publicKey: '' }
+      );
+    });
+
+    it('handles listRows throwing in deleteTableDocs gracefully', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(vaultDatabases.listRows).mockRejectedValue(new Error('Database fetch failed'));
+
+      await expect(resetMasterpassAndWipe('user-123')).resolves.not.toThrow();
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    });
+
+    it('handles deleteRow throwing in deleteTableDocs gracefully', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.mocked(vaultDatabases.listRows).mockResolvedValue({
+        rows: [{ $id: 'doc-1' }],
+      } as any);
+      vi.mocked(vaultDatabases.deleteRow).mockRejectedValue(new Error('Deletion restricted'));
+
+      await expect(resetMasterpassAndWipe('user-123')).resolves.not.toThrow();
+      expect(consoleWarnSpy).toHaveBeenCalled();
+    });
+
+    it('handles wipeChatData failure during public key update gracefully', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.mocked(vaultDatabases.listRows).mockImplementation(async (dbId, collectionId) => {
+        if (collectionId === 'conversationMembers') return { rows: [] } as any;
+        if (collectionId === 'chat_users') return { rows: [{ $id: 'user-123' }] } as any;
+        return { rows: [] } as any;
+      });
+      vi.mocked(vaultDatabases.updateRow).mockRejectedValue(new Error('Update failed'));
+
+      await expect(resetMasterpassAndWipe('user-123')).resolves.not.toThrow();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to clear chat public key:',
+        expect.any(Error)
+      );
+    });
   });
 
   describe('normalizeCredentialAttachmentsField', () => {
@@ -72,9 +170,15 @@ describe('vault-actions', () => {
       expect(normalizeCredentialAttachmentsField({ attachments: 'true' })).toEqual([]);
     });
 
-    it('handles JSON parsing errors gracefully when raw string is malformed JSON (error path)', () => {
+    it('returns empty array when raw attachments is non-string truthy value (object, boolean, number, array)', () => {
+      expect(normalizeCredentialAttachmentsField({ attachments: 12345 })).toEqual([]);
+      expect(normalizeCredentialAttachmentsField({ attachments: true })).toEqual([]);
+      expect(normalizeCredentialAttachmentsField({ attachments: { id: 'file-1' } })).toEqual([]);
+      expect(normalizeCredentialAttachmentsField({ attachments: [{ id: 'file-2' }] })).toEqual([]);
+    });
+
+    it('handles JSON parsing errors gracefully when raw string is malformed JSON (catch error path line 265)', () => {
       const invalidCredential = { attachments: '{ invalid json string ' };
-      // Should catch the error in try-catch and return []
       expect(normalizeCredentialAttachmentsField(invalidCredential)).toEqual([]);
     });
   });
@@ -192,6 +296,21 @@ describe('vault-actions', () => {
       vi.mocked(account.deleteSession).mockRejectedValue(new Error('No session active'));
       await expect(logoutAppwrite()).resolves.not.toThrow();
     });
+
+    it('invokes purgeAllClientStorageOnLogout when window is defined', async () => {
+      vi.mocked(account.deleteSession).mockResolvedValue({} as any);
+      const originalWindow = globalThis.window;
+      // @ts-ignore
+      globalThis.window = {} as any;
+
+      try {
+        await logoutAppwrite();
+        expect(purgeAllClientStorageOnLogout).toHaveBeenCalled();
+      } finally {
+        // @ts-ignore
+        globalThis.window = originalWindow;
+      }
+    });
   });
 
   describe('validatePublicVaultAccess', () => {
@@ -212,6 +331,38 @@ describe('vault-actions', () => {
       const result = await validatePublicVaultAccess('cred-1');
       expect(result).toBeNull();
     });
+
+    it('uses system admin client on server-side (window undefined) and returns doc if isPublic is true', async () => {
+      const originalWindow = globalThis.window;
+      // @ts-ignore
+      delete globalThis.window;
+
+      try {
+        const adminClient = createSystemClient();
+        vi.mocked(adminClient.databases.getRow).mockResolvedValue({ id: 'cred-srv-1', isPublic: true } as any);
+
+        const result = await validatePublicVaultAccess('cred-srv-1');
+        expect(result).toEqual({ id: 'cred-srv-1', isPublic: true });
+      } finally {
+        globalThis.window = originalWindow;
+      }
+    });
+
+    it('uses system admin client on server-side and returns null if isPublic is false', async () => {
+      const originalWindow = globalThis.window;
+      // @ts-ignore
+      delete globalThis.window;
+
+      try {
+        const adminClient = createSystemClient();
+        vi.mocked(adminClient.databases.getRow).mockResolvedValue({ id: 'cred-srv-2', isPublic: false } as any);
+
+        const result = await validatePublicVaultAccess('cred-srv-2');
+        expect(result).toBeNull();
+      } finally {
+        globalThis.window = originalWindow;
+      }
+    });
   });
 
   describe('validatePublicTotpAccess', () => {
@@ -231,6 +382,38 @@ describe('vault-actions', () => {
       vi.mocked(vaultDatabases.getRow).mockResolvedValue({ id: 'totp-1', isPublic: false } as any);
       const result = await validatePublicTotpAccess('totp-1');
       expect(result).toBeNull();
+    });
+
+    it('uses system admin client on server-side (window undefined) and returns totp if isPublic is true', async () => {
+      const originalWindow = globalThis.window;
+      // @ts-ignore
+      delete globalThis.window;
+
+      try {
+        const adminClient = createSystemClient();
+        vi.mocked(adminClient.databases.getRow).mockResolvedValue({ id: 'totp-srv-1', isPublic: true } as any);
+
+        const result = await validatePublicTotpAccess('totp-srv-1');
+        expect(result).toEqual({ id: 'totp-srv-1', isPublic: true });
+      } finally {
+        globalThis.window = originalWindow;
+      }
+    });
+
+    it('uses system admin client on server-side and returns null if isPublic is false', async () => {
+      const originalWindow = globalThis.window;
+      // @ts-ignore
+      delete globalThis.window;
+
+      try {
+        const adminClient = createSystemClient();
+        vi.mocked(adminClient.databases.getRow).mockResolvedValue({ id: 'totp-srv-2', isPublic: false } as any);
+
+        const result = await validatePublicTotpAccess('totp-srv-2');
+        expect(result).toBeNull();
+      } finally {
+        globalThis.window = originalWindow;
+      }
     });
   });
 });
