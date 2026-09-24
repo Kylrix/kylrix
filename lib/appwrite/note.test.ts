@@ -198,6 +198,27 @@ describe('lib/appwrite/note thread notes operations', () => {
   });
 
   describe('getNote with thread notes', () => {
+    it('returns unencrypted thread note directly when no decryptionKey is present', async () => {
+      const threadNote = {
+        id: 'thread-plain-1',
+        title: 'Plain Thread Note Title',
+        content: 'Plain Thread Note Content',
+        createdAt: '2025-01-01T00:00:00.000Z',
+        metadata: '{"custom":"data"}',
+      };
+      localStorage.setItem('kylrix_thread_notes_v2', JSON.stringify([threadNote]));
+
+      const result = await getNote('thread-plain-1');
+
+      expect(threadCrypto.decryptThreadData).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        $id: 'thread-plain-1',
+        title: 'Plain Thread Note Title',
+        content: 'Plain Thread Note Content',
+        metadata: '{"custom":"data"}',
+      });
+    });
+
     it('returns decrypted thread note if decryption is successful', async () => {
       const threadNote = {
         id: 'thread-789',
@@ -221,7 +242,7 @@ describe('lib/appwrite/note thread notes operations', () => {
       });
     });
 
-    it('handles decryption failure in getNote gracefully', async () => {
+    it('handles decryption failure in getNote gracefully (line 447 error path)', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const threadNote = {
