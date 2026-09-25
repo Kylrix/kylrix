@@ -7,6 +7,9 @@ import {
   resetMasterpassAndWipe,
   validatePublicVaultAccess,
   validatePublicTotpAccess,
+  listFolders,
+  setCredentialPinned,
+  setTotpPinned,
 } from './vault-actions';
 import { VaultService, vaultDatabases } from './vault-service';
 import { account, storage } from './client';
@@ -18,6 +21,8 @@ vi.mock('./vault-service', () => ({
   VaultService: {
     getCredential: vi.fn(),
     updateCredential: vi.fn(),
+    setCredentialPinned: vi.fn(),
+    setTotpPinned: vi.fn(),
   },
   vaultDatabases: {
     getRow: vi.fn(),
@@ -78,6 +83,24 @@ vi.mock('@/lib/appwrite-admin', () => {
 describe('vault-actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('listFolders', () => {
+    it('returns response.rows when response has rows property', async () => {
+      const mockFolders = [{ $id: 'folder-1', name: 'Work' }];
+      vi.mocked(vaultDatabases.listRows).mockResolvedValue({ rows: mockFolders } as any);
+
+      const result = await listFolders('user-1');
+      expect(result).toEqual(mockFolders);
+    });
+
+    it('returns response array directly when response.rows is undefined', async () => {
+      const mockFolders = [{ $id: 'folder-2', name: 'Personal' }];
+      vi.mocked(vaultDatabases.listRows).mockResolvedValue(mockFolders as any);
+
+      const result = await listFolders('user-1');
+      expect(result).toEqual(mockFolders);
+    });
   });
 
   describe('resetMasterpassAndWipe', () => {
@@ -218,12 +241,14 @@ describe('vault-actions', () => {
       );
     });
 
-    it('falls back to original file if image compression fails', async () => {
+    it('falls back to original file and logs warning if image compression fails', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       vi.mocked(VaultService.getCredential).mockResolvedValue({ attachments: 'invalid-json' } as any);
 
       const framework = await import('@/lib/storage/framework');
       vi.mocked(framework.getFileTypeCategory).mockReturnValue('image');
-      vi.mocked(framework.compressImageToWebP).mockRejectedValue(new Error('Compression failed'));
+      const compressionError = new Error('Compression failed');
+      vi.mocked(framework.compressImageToWebP).mockRejectedValue(compressionError);
 
       const clientOps = await import('@/lib/actions/client-ops');
       vi.mocked(clientOps.secureUploadFile).mockResolvedValue({ $id: 'file-fallback' });
@@ -233,11 +258,15 @@ describe('vault-actions', () => {
       const testFile = new File(['image-bytes'], 'image.png', { type: 'image/png' });
       await addAttachmentToCredential('cred-1', testFile);
 
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[vault-attachments] Client-side image compression failed, falling back to original:',
+        compressionError
+      );
       expect(clientOps.secureUploadFile).toHaveBeenCalled();
       expect(VaultService.updateCredential).toHaveBeenCalled();
     });
 
-    it('throws custom error when secureUploadFile fails', async () => {
+    it('throws custom error when secureUploadFile fails with error message', async () => {
       vi.mocked(VaultService.getCredential).mockResolvedValue({ attachments: '[]' } as any);
 
       const clientOps = await import('@/lib/actions/client-ops');
@@ -245,6 +274,16 @@ describe('vault-actions', () => {
 
       const testFile = new File(['test'], 'test.txt', { type: 'text/plain' });
       await expect(addAttachmentToCredential('cred-1', testFile)).rejects.toThrow('Upload quota exceeded');
+    });
+
+    it('throws default fallback error message "Server upload failed" when secureUploadFile error has no message', async () => {
+      vi.mocked(VaultService.getCredential).mockResolvedValue({ attachments: '[]' } as any);
+
+      const clientOps = await import('@/lib/actions/client-ops');
+      vi.mocked(clientOps.secureUploadFile).mockRejectedValue({});
+
+      const testFile = new File(['test'], 'test.txt', { type: 'text/plain' });
+      await expect(addAttachmentToCredential('cred-1', testFile)).rejects.toThrow('Server upload failed');
     });
   });
 
@@ -274,20 +313,52 @@ describe('vault-actions', () => {
       );
     });
 
-    it('catches storage deletion errors gracefully and proceeds with credential update', async () => {
+    it('catches storage deletion errors gracefully, logs console.warn, and proceeds with credential update', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const existing = [{ id: 'file-1', name: 'f1.pdf', size: 10, mime: 'application/pdf', createdAt: '2025-01-01' }];
+      const storageError = new Error('File not found in storage');
+
       vi.mocked(VaultService.getCredential).mockResolvedValue({ attachments: JSON.stringify(existing) } as any);
-      vi.mocked(storage.deleteFile).mockRejectedValue(new Error('File not found in storage'));
+      vi.mocked(storage.deleteFile).mockRejectedValue(storageError);
       vi.mocked(VaultService.updateCredential).mockResolvedValue({ id: 'cred-1' } as any);
 
       await deleteCredentialAttachment('cred-1', 'file-1');
 
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[vault-attachments] Failed to delete file from storage (might already be deleted):',
+        storageError
+      );
       expect(VaultService.updateCredential).toHaveBeenCalledWith(
         'cred-1',
         expect.objectContaining({
           attachments: JSON.stringify([]),
         })
       );
+    });
+
+    it('rejects when VaultService.updateCredential throws error', async () => {
+      const existing = [{ id: 'file-1', name: 'f1.pdf', size: 10, mime: 'application/pdf', createdAt: '2025-01-01' }];
+      vi.mocked(VaultService.getCredential).mockResolvedValue({ attachments: JSON.stringify(existing) } as any);
+      vi.mocked(storage.deleteFile).mockResolvedValue({} as any);
+      vi.mocked(VaultService.updateCredential).mockRejectedValue(new Error('Database update failed'));
+
+      await expect(deleteCredentialAttachment('cred-1', 'file-1')).rejects.toThrow('Database update failed');
+    });
+  });
+
+  describe('setCredentialPinned & setTotpPinned', () => {
+    it('delegates setCredentialPinned to VaultService.setCredentialPinned', async () => {
+      vi.mocked(VaultService.setCredentialPinned).mockResolvedValue({ id: 'cred-1', pinned: true } as any);
+      const res = await setCredentialPinned('cred-1', true);
+      expect(VaultService.setCredentialPinned).toHaveBeenCalledWith('cred-1', true);
+      expect(res).toEqual({ id: 'cred-1', pinned: true });
+    });
+
+    it('delegates setTotpPinned to VaultService.setTotpPinned', async () => {
+      vi.mocked(VaultService.setTotpPinned).mockResolvedValue({ id: 'totp-1', pinned: true } as any);
+      const res = await setTotpPinned('totp-1', true);
+      expect(VaultService.setTotpPinned).toHaveBeenCalledWith('totp-1', true);
+      expect(res).toEqual({ id: 'totp-1', pinned: true });
     });
   });
 
