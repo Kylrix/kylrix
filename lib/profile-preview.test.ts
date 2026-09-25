@@ -119,6 +119,20 @@ describe('lib/profile-preview', () => {
       expect(res).toBe('data:image/png;base64,valid_data_uri');
     });
 
+    it('handles synchronous error during LocalEngine.cacheGet gracefully and falls through to URL preview generation', async () => {
+      vi.mocked(LocalEngine.cacheGet).mockImplementation(() => {
+        throw new Error('Synchronous LocalEngine error');
+      });
+      vi.mocked(getProfilePicturePreview).mockReturnValue({
+        toString: () => 'data:image/png;base64,valid_data_uri_sync_err',
+      } as any);
+
+      (globalThis.fetch as any).mockResolvedValue({ ok: true });
+
+      const res = await fetchProfilePreview('file-with-sync-localengine-error');
+      expect(res).toBe('data:image/png;base64,valid_data_uri_sync_err');
+    });
+
     describe('error paths in URL preview generation (line 68)', () => {
       it('returns null when getProfilePicturePreview returns null', async () => {
         vi.mocked(getProfilePicturePreview).mockReturnValue(null as any);
@@ -325,6 +339,20 @@ describe('lib/profile-preview', () => {
         const res = await fetchProfilePreview('secure-throw-id');
         expect(res).toBeNull();
       });
+
+      it('returns null when getProfilePicturePreviewSecure throws a synchronous error during fallback', async () => {
+        vi.mocked(getProfilePicturePreview).mockReturnValue({
+          toString: () => 'https://example.com/inaccessible.png',
+        } as any);
+
+        (globalThis.fetch as any).mockResolvedValue({ ok: false });
+        vi.mocked(getProfilePicturePreviewSecure).mockImplementation(() => {
+          throw new Error('Synchronous secure ops failure');
+        });
+
+        const res = await fetchProfilePreview('secure-sync-throw-id');
+        expect(res).toBeNull();
+      });
     });
   });
 
@@ -407,6 +435,20 @@ describe('lib/profile-preview', () => {
       vi.resetModules();
       const { getCachedProfilePreview: getCached } = await import('./profile-preview');
       expect(getCached('any-file')).toBeUndefined();
+    });
+
+    it('handles sessionStorage.getItem SecurityError/AccessDenied gracefully during module load', async () => {
+      const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('Access is denied for this document', 'SecurityError');
+      });
+
+      try {
+        vi.resetModules();
+        const { getCachedProfilePreview: getCached } = await import('./profile-preview');
+        expect(getCached('any-file-sec-err')).toBeUndefined();
+      } finally {
+        getItemSpy.mockRestore();
+      }
     });
 
     it('handles sessionStorage.setItem QuotaExceededError or security exceptions gracefully when persistCache runs', async () => {
