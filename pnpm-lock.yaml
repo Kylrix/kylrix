@@ -212,15 +212,6 @@ importers:
         specifier: ^20.0.0
         version: 20.19.43
 
-  functions/discord-bot:
-    dependencies:
-      node-appwrite:
-        specifier: ^14.1.0
-        version: 14.2.0
-      tweetnacl:
-        specifier: ^1.0.3
-        version: 1.0.3
-
   functions/flow-event-sync:
     dependencies:
       node-appwrite:
@@ -8874,7 +8865,8 @@ snapshots:
     dependencies:
       tslib: 1.14.1
 
-  tweetnacl@1.0.3: {}
+  tweetnacl@1.0.3:
+    optional: true
 
   type-check@0.4.0:
     dependencies:
