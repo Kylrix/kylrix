@@ -6,7 +6,7 @@ import pc from 'picocolors';
 import * as clack from '@clack/prompts';
 
 export const PACKAGE_NAME = '@kylrix/cli';
-export const CURRENT_VERSION = '1.0.4';
+export const CURRENT_VERSION = '1.0.5';
 
 const CACHE_DIR = path.join(os.homedir(), '.kylrix');
 const CACHE_FILE = path.join(CACHE_DIR, 'update-cache.json');
