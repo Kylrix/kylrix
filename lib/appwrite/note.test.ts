@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getNote, updateNote, deleteNote, filterNoteData, isExcludedNote } from './note';
+import { getNote, updateNote, deleteNote, filterNoteData, isExcludedNote, decryptPublicEncryptedNote } from './note';
 import * as threadCrypto from '@/lib/encryption/thread-crypto';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import * as clientOps from '@/lib/actions/client-ops';
 import * as secureOps from '@/lib/actions/secure-ops';
 import { unifiedDelete, unifiedUpdate } from '@/lib/services/unified-object-service';
@@ -43,6 +44,10 @@ vi.mock('@/lib/actions/client-ops', () => ({
 
 vi.mock('@/lib/actions/secure-ops', () => ({
   deleteNoteSecure: vi.fn(),
+}));
+
+vi.mock('@/lib/masterpass-crypto', () => ({
+  decryptField: vi.fn(),
 }));
 
 vi.mock('@/lib/encryption/thread-crypto', async (importOriginal) => {
@@ -493,6 +498,145 @@ describe('lib/appwrite/note thread notes operations', () => {
       };
 
       expect(isExcludedNote(corruptNote)).toBe(false);
+    });
+  });
+
+  describe('updateNote client-side encryption and error paths', () => {
+    const validBase64Key = btoa(String.fromCharCode(...new Uint8Array(32)));
+
+    beforeEach(() => {
+      vi.spyOn(ecosystemSecurity, 'status', 'get').mockReturnValue({ isUnlocked: true } as any);
+    });
+
+    it('encrypts note title and content client-side when active key is present in activeNoteKeys', async () => {
+      const masterpassCrypto = await import('@/lib/masterpass-crypto');
+      vi.mocked(masterpassCrypto.decryptField).mockResolvedValueOnce(validBase64Key);
+
+      vi.spyOn(ecosystemSecurity, 'encryptWithKey')
+        .mockResolvedValueOnce('enc-title-123')
+        .mockResolvedValueOnce('enc-content-456');
+
+      vi.spyOn(ecosystemSecurity, 'decryptWithKey')
+        .mockResolvedValueOnce('Decrypted Title')
+        .mockResolvedValueOnce('Decrypted Content');
+
+      vi.mocked(clientOps.updateNote).mockResolvedValueOnce({
+        $id: 'note-enc-client',
+        title: '🔒 Encrypted Note',
+        content: 'enc-content-456',
+      } as any);
+
+      // Decrypt to register key in activeNoteKeys
+      await decryptPublicEncryptedNote({
+        $id: 'note-enc-client',
+        dek: 'some-wrapped-dek',
+        title: '🔒 Encrypted Note',
+        content: 'cipher-content',
+        metadata: '{}',
+      } as any);
+
+      const updateResult = await updateNote('note-enc-client', {
+        title: 'Secret Plaintext Title',
+        content: 'Secret Plaintext Content',
+        metadata: '{"existingKey":"existingVal"}',
+      });
+
+      expect(ecosystemSecurity.encryptWithKey).toHaveBeenCalledWith('Secret Plaintext Title', expect.anything());
+      expect(ecosystemSecurity.encryptWithKey).toHaveBeenCalledWith('Secret Plaintext Content', expect.anything());
+
+      expect(clientOps.updateNote).toHaveBeenCalledWith('note-enc-client', {
+        title: '🔒 Encrypted Note',
+        content: 'enc-content-456',
+        metadata: JSON.stringify({
+          existingKey: 'existingVal',
+          isEncrypted: true,
+          encryptedTitle: 'enc-title-123',
+        }),
+      });
+      expect(updateResult).toBeDefined();
+    });
+
+    it('logs error and falls back to unencrypted update if ecosystemSecurity.encryptWithKey throws (line 583 error path)', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const masterpassCrypto = await import('@/lib/masterpass-crypto');
+      vi.mocked(masterpassCrypto.decryptField).mockResolvedValueOnce(validBase64Key);
+
+      vi.spyOn(ecosystemSecurity, 'decryptWithKey')
+        .mockResolvedValueOnce('Decrypted Title')
+        .mockResolvedValueOnce('Decrypted Content');
+
+      const encryptError = new Error('Crypto failure during encryptWithKey');
+      vi.spyOn(ecosystemSecurity, 'encryptWithKey').mockRejectedValue(encryptError);
+
+      vi.mocked(clientOps.updateNote).mockResolvedValueOnce({
+        $id: 'note-enc-fail',
+        title: 'Plaintext Title',
+        content: 'Plaintext Content',
+      } as any);
+
+      // Decrypt to populate activeNoteKeys
+      await decryptPublicEncryptedNote({
+        $id: 'note-enc-fail',
+        dek: 'some-wrapped-dek',
+        title: '🔒 Encrypted Note',
+        content: 'cipher-content',
+        metadata: '{}',
+      } as any);
+
+      await updateNote('note-enc-fail', {
+        title: 'Plaintext Title',
+        content: 'Plaintext Content',
+      });
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to encrypt note update client-side:',
+        encryptError
+      );
+
+      expect(clientOps.updateNote).toHaveBeenCalledWith('note-enc-fail', {
+        title: 'Plaintext Title',
+        content: 'Plaintext Content',
+      });
+    });
+
+    it('handles malformed metadata JSON during client-side encryption gracefully', async () => {
+      const masterpassCrypto = await import('@/lib/masterpass-crypto');
+      vi.mocked(masterpassCrypto.decryptField).mockResolvedValueOnce(validBase64Key);
+
+      vi.spyOn(ecosystemSecurity, 'encryptWithKey')
+        .mockResolvedValueOnce('enc-title-789')
+        .mockResolvedValueOnce('enc-content-789');
+
+      vi.spyOn(ecosystemSecurity, 'decryptWithKey')
+        .mockResolvedValueOnce('Decrypted Title')
+        .mockResolvedValueOnce('Decrypted Content');
+
+      vi.mocked(clientOps.updateNote).mockResolvedValueOnce({
+        $id: 'note-malformed-meta',
+      } as any);
+
+      await decryptPublicEncryptedNote({
+        $id: 'note-malformed-meta',
+        dek: 'some-wrapped-dek',
+        title: '🔒 Encrypted Note',
+        content: 'cipher-content',
+        metadata: '{}',
+      } as any);
+
+      await updateNote('note-malformed-meta', {
+        title: 'Plain Title',
+        content: 'Plain Content',
+        metadata: 'invalid-json-{',
+      });
+
+      expect(clientOps.updateNote).toHaveBeenCalledWith('note-malformed-meta', {
+        title: '🔒 Encrypted Note',
+        content: 'enc-content-789',
+        metadata: JSON.stringify({
+          isEncrypted: true,
+          encryptedTitle: 'enc-title-789',
+        }),
+      });
     });
   });
 });
