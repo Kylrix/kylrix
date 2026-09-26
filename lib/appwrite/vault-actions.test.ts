@@ -8,6 +8,18 @@ import {
   validatePublicVaultAccess,
   validatePublicTotpAccess,
   listFolders,
+  createFolder,
+  setMasterpassFlag,
+  createTotpSecret,
+  updateTotpSecret,
+  listTotpSecrets,
+  deleteTotpSecret,
+  listRawTotpSecrets,
+  createCredential,
+  updateCredential,
+  deleteCredential,
+  listAllCredentials,
+  listRawCredentials,
   setCredentialPinned,
   setTotpPinned,
 } from './vault-actions';
@@ -21,6 +33,17 @@ vi.mock('./vault-service', () => ({
   VaultService: {
     getCredential: vi.fn(),
     updateCredential: vi.fn(),
+    createCredential: vi.fn(),
+    deleteCredential: vi.fn(),
+    listAllCredentials: vi.fn(),
+    listRawCredentials: vi.fn(),
+    createFolder: vi.fn(),
+    setMasterpassFlag: vi.fn(),
+    createTOTPSecret: vi.fn(),
+    updateTOTPSecret: vi.fn(),
+    listTOTPSecrets: vi.fn(),
+    deleteTOTPSecret: vi.fn(),
+    listRawTOTPSecrets: vi.fn(),
     setCredentialPinned: vi.fn(),
     setTotpPinned: vi.fn(),
   },
@@ -83,6 +106,120 @@ vi.mock('@/lib/appwrite-admin', () => {
 describe('vault-actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('Credential service wrappers', () => {
+    it('delegates createCredential to VaultService.createCredential', async () => {
+      const data = { title: 'My Login', username: 'user@example.com' } as any;
+      const options = { linkedNoteIds: ['note-1'] };
+      vi.mocked(VaultService.createCredential).mockResolvedValue({ $id: 'cred-1', ...data } as any);
+
+      const res = await createCredential(data, options);
+      expect(VaultService.createCredential).toHaveBeenCalledWith(data, options);
+      expect(res).toEqual({ $id: 'cred-1', ...data });
+    });
+
+    it('delegates updateCredential to VaultService.updateCredential', async () => {
+      const data = { title: 'My Login Updated' } as any;
+      const options = { linkedNoteIds: ['note-2'] };
+      vi.mocked(VaultService.updateCredential).mockResolvedValue({ $id: 'cred-1', ...data } as any);
+
+      const res = await updateCredential('cred-1', data, options);
+      expect(VaultService.updateCredential).toHaveBeenCalledWith('cred-1', data, options);
+      expect(res).toEqual({ $id: 'cred-1', ...data });
+    });
+
+    it('delegates deleteCredential to VaultService.deleteCredential', async () => {
+      vi.mocked(VaultService.deleteCredential).mockResolvedValue(true as any);
+
+      const res = await deleteCredential('cred-1');
+      expect(VaultService.deleteCredential).toHaveBeenCalledWith('cred-1');
+      expect(res).toBe(true);
+    });
+
+    it('delegates listAllCredentials to VaultService.listAllCredentials', async () => {
+      const mockCreds = [{ $id: 'cred-1' }];
+      vi.mocked(VaultService.listAllCredentials).mockResolvedValue(mockCreds as any);
+
+      const res = await listAllCredentials('user-1', ['query-1']);
+      expect(VaultService.listAllCredentials).toHaveBeenCalledWith('user-1', ['query-1']);
+      expect(res).toEqual(mockCreds);
+    });
+
+    it('delegates listRawCredentials to VaultService.listRawCredentials', async () => {
+      const mockRaw = [{ $id: 'cred-raw-1' }];
+      vi.mocked(VaultService.listRawCredentials).mockResolvedValue(mockRaw as any);
+
+      const res = await listRawCredentials('user-1', ['query-1']);
+      expect(VaultService.listRawCredentials).toHaveBeenCalledWith('user-1', ['query-1']);
+      expect(res).toEqual(mockRaw);
+    });
+  });
+
+  describe('TOTP service wrappers', () => {
+    it('delegates createTotpSecret to VaultService.createTOTPSecret', async () => {
+      const data = { accountName: 'GitHub', secretKey: 'secret' } as any;
+      const options = { linkedNoteIds: ['note-1'] };
+      vi.mocked(VaultService.createTOTPSecret).mockResolvedValue({ $id: 'totp-1', ...data } as any);
+
+      const res = await createTotpSecret(data, options);
+      expect(VaultService.createTOTPSecret).toHaveBeenCalledWith(data, options);
+      expect(res).toEqual({ $id: 'totp-1', ...data });
+    });
+
+    it('delegates updateTotpSecret to VaultService.updateTOTPSecret', async () => {
+      const data = { accountName: 'GitHub Updated' } as any;
+      const options = { linkedNoteIds: ['note-2'] };
+      vi.mocked(VaultService.updateTOTPSecret).mockResolvedValue({ $id: 'totp-1', ...data } as any);
+
+      const res = await updateTotpSecret('totp-1', data, options);
+      expect(VaultService.updateTOTPSecret).toHaveBeenCalledWith('totp-1', data, options);
+      expect(res).toEqual({ $id: 'totp-1', ...data });
+    });
+
+    it('delegates listTotpSecrets to VaultService.listTOTPSecrets', async () => {
+      const mockSecrets = [{ $id: 'totp-1' }];
+      vi.mocked(VaultService.listTOTPSecrets).mockResolvedValue(mockSecrets as any);
+
+      const res = await listTotpSecrets('user-1', ['query-1']);
+      expect(VaultService.listTOTPSecrets).toHaveBeenCalledWith('user-1', ['query-1']);
+      expect(res).toEqual(mockSecrets);
+    });
+
+    it('delegates deleteTotpSecret to VaultService.deleteTOTPSecret', async () => {
+      vi.mocked(VaultService.deleteTOTPSecret).mockResolvedValue(true as any);
+
+      const res = await deleteTotpSecret('totp-1');
+      expect(VaultService.deleteTOTPSecret).toHaveBeenCalledWith('totp-1');
+      expect(res).toBe(true);
+    });
+
+    it('delegates listRawTotpSecrets to VaultService.listRawTOTPSecrets', async () => {
+      const mockRaw = [{ $id: 'totp-raw-1' }];
+      vi.mocked(VaultService.listRawTOTPSecrets).mockResolvedValue(mockRaw as any);
+
+      const res = await listRawTotpSecrets('user-1', ['query-1']);
+      expect(VaultService.listRawTOTPSecrets).toHaveBeenCalledWith('user-1', ['query-1']);
+      expect(res).toEqual(mockRaw);
+    });
+  });
+
+  describe('folder and masterpass wrappers', () => {
+    it('delegates createFolder to VaultService.createFolder', async () => {
+      const folderData = { name: 'Work', userId: 'user-1' } as any;
+      vi.mocked(VaultService.createFolder).mockResolvedValue({ $id: 'folder-1', ...folderData } as any);
+
+      const res = await createFolder(folderData);
+      expect(VaultService.createFolder).toHaveBeenCalledWith(folderData);
+      expect(res).toEqual({ $id: 'folder-1', ...folderData });
+    });
+
+    it('delegates setMasterpassFlag to VaultService.setMasterpassFlag', async () => {
+      vi.mocked(VaultService.setMasterpassFlag).mockResolvedValue(undefined as any);
+
+      await setMasterpassFlag('user-1', 'test@example.com');
+      expect(VaultService.setMasterpassFlag).toHaveBeenCalledWith('user-1', 'test@example.com');
+    });
   });
 
   describe('listFolders', () => {
@@ -207,6 +344,27 @@ describe('vault-actions', () => {
   });
 
   describe('addAttachmentToCredential', () => {
+    it('throws error when validateFileUploadLimit fails (file size limit exceeded)', async () => {
+      vi.mocked(VaultService.getCredential).mockResolvedValue({ attachments: '[]' } as any);
+
+      const framework = await import('@/lib/storage/framework');
+      vi.mocked(framework.validateFileUploadLimit).mockImplementationOnce(() => {
+        throw new Error('File size (12.0MB) exceeds the maximum limit of 5.0MB for this upload.');
+      });
+
+      const clientOps = await import('@/lib/actions/client-ops');
+
+      const oversizedFile = new File(['oversized'], 'large-file.pdf', { type: 'application/pdf' });
+
+      await expect(addAttachmentToCredential('cred-1', oversizedFile)).rejects.toThrow(
+        'File size (12.0MB) exceeds the maximum limit of 5.0MB for this upload.'
+      );
+
+      expect(framework.compressImageToWebP).not.toHaveBeenCalled();
+      expect(clientOps.secureUploadFile).not.toHaveBeenCalled();
+      expect(VaultService.updateCredential).not.toHaveBeenCalled();
+    });
+
     it('throws error if credential is not found', async () => {
       vi.mocked(VaultService.getCredential).mockResolvedValue(null as any);
       const testFile = new File(['test'], 'test.txt', { type: 'text/plain' });
