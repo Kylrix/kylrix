@@ -45,7 +45,7 @@ kylrix login
 kylrix login --url http://localhost:3005
 ```
 
-The CLI displays your instant code, automatically opens the authorization page on the target server (e.g. `https://www.kylrix.space/login/KYL-XXXX` or `http://localhost:3005/login/KYL-XXXX`), and logs in immediately when approved in the browser.
+The CLI displays your instant code, automatically opens the authorization page on the target server (e.g. `https://www.kylrix.space/login/7K9M-4W2P` or `http://localhost:3005/login/7K9M-4W2P`), and logs in immediately when approved in the browser.
 
 ---
 

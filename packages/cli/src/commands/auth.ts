@@ -81,8 +81,10 @@ export async function pairCommand(opts: { url?: string; json?: boolean }) {
     console.log(pc.cyan('│') + '  1. Open browser URL:                                  ' + pc.cyan('│'));
     console.log(pc.cyan('│') + '     ' + pc.underline(pc.cyan(directLoginUrl.padEnd(51))) + pc.cyan('│'));
     console.log(pc.cyan('│') + '                                                         ' + pc.cyan('│'));
+    const codeDisplay = ` ${session.userCode} `;
+    const codePad = ' '.repeat(Math.max(0, 48 - codeDisplay.length));
     console.log(pc.cyan('│') + '  2. Authorization Code:                                 ' + pc.cyan('│'));
-    console.log(pc.cyan('│') + '     ' + pc.bgYellow(pc.black(pc.bold(` ${session.userCode} `))) + '                                            ' + pc.cyan('│'));
+    console.log(pc.cyan('│') + '     ' + pc.bgYellow(pc.black(pc.bold(codeDisplay))) + codePad + pc.cyan('│'));
     console.log(pc.cyan('╰────────────────────────────────────────────────────────╯'));
     console.log();
 

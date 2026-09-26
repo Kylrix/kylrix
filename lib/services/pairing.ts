@@ -32,17 +32,32 @@ const PAIRING_EXPIRY_SECONDS = 900;
 const POLLING_INTERVAL_SECONDS = 5;
 
 /**
- * Generate a clean, human-friendly 8-character code formatted as KYL-XXXX.
- * Omits ambiguous characters (0, O, 1, I, L) for error-free mobile & terminal input.
+ * Generate a high-entropy, human-friendly 8-character code formatted as XXXX-XXXX (e.g. 7K9M-4W2P).
+ * Uses Crockford-style Base32 characters (omitting ambiguous 0, O, 1, I, L) for error-free input.
+ * 31^8 = ~852.8 billion combinations (~39.6 bits of cryptographic entropy).
  */
 function generateHumanUserCode(): string {
   const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
-  let randomStr = '';
-  const bytes = randomBytes(4);
+  const bytes = randomBytes(8);
+  let p1 = '';
+  let p2 = '';
   for (let i = 0; i < 4; i++) {
-    randomStr += chars[bytes[i] % chars.length];
+    p1 += chars[bytes[i] % chars.length];
+    p2 += chars[bytes[i + 4] % chars.length];
   }
-  return `KYL-${randomStr}`;
+  return `${p1}-${p2}`;
+}
+
+/**
+ * Normalizes user code input for robust lookups:
+ * Trims whitespace, uppercases, and handles both XXXX-XXXX and XXXXXXXX.
+ */
+export function normalizeUserCode(input: string): string {
+  let clean = input.trim().toUpperCase().replace(/\s+/g, '');
+  if (/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/.test(clean)) {
+    return `${clean.slice(0, 4)}-${clean.slice(4)}`;
+  }
+  return clean;
 }
 
 export const PairingService = {
@@ -122,36 +137,44 @@ export const PairingService = {
     status: string;
     expiresAt: string;
   } | null> {
-    const cleanCode = userCode.trim().toUpperCase();
+    const rawClean = userCode.trim().toUpperCase();
+    const normalized = normalizeUserCode(rawClean);
     const tables = createSystemTablesDB();
 
-    const res = await tables.listRows({
-      databaseId: DB,
-      tableId: REQUESTS_TABLE,
-      queries: [
-        Query.equal('nonce', cleanCode),
-        Query.limit(1),
-      ],
-    }).catch(() => ({ rows: [] as any[] }));
+    const codesToTry = [normalized];
+    if (rawClean !== normalized) codesToTry.push(rawClean);
 
-    const row = res.rows[0];
-    if (!row) return null;
+    for (const codeToSearch of codesToTry) {
+      const res = await tables.listRows({
+        databaseId: DB,
+        tableId: REQUESTS_TABLE,
+        queries: [
+          Query.equal('nonce', codeToSearch),
+          Query.limit(1),
+        ],
+      }).catch(() => ({ rows: [] as any[] }));
 
-    let meta: any = {};
-    try {
-      meta = JSON.parse(row.requestMeta || '{}');
-    } catch {}
+      const row = res.rows[0];
+      if (row) {
+        let meta: any = {};
+        try {
+          meta = JSON.parse(row.requestMeta || '{}');
+        } catch {}
 
-    if (!meta.isPairing) return null;
+        if (!meta.isPairing) return null;
 
-    return {
-      id: row.$id,
-      clientName: meta.clientName || 'Kylrix Client',
-      clientType: meta.clientType || 'cli',
-      requestedScopes: normalizeScopes(row.requestedScopes),
-      status: row.status,
-      expiresAt: row.expiresAt,
-    };
+        return {
+          id: row.$id,
+          clientName: meta.clientName || 'Kylrix Client',
+          clientType: meta.clientType || 'cli',
+          requestedScopes: normalizeScopes(row.requestedScopes),
+          status: row.status,
+          expiresAt: row.expiresAt,
+        };
+      }
+    }
+
+    return null;
   },
 
   /**
@@ -163,19 +186,28 @@ export const PairingService = {
     action: 'approve' | 'deny';
     grantedScopes?: string[];
   }): Promise<{ ok: boolean; error?: string }> {
-    const cleanCode = params.userCode.trim().toUpperCase();
+    const rawClean = params.userCode.trim().toUpperCase();
+    const normalized = normalizeUserCode(rawClean);
     const tables = createSystemTablesDB();
 
-    const res = await tables.listRows({
-      databaseId: DB,
-      tableId: REQUESTS_TABLE,
-      queries: [
-        Query.equal('nonce', cleanCode),
-        Query.limit(1),
-      ],
-    }).catch(() => ({ rows: [] as any[] }));
+    const codesToTry = [normalized];
+    if (rawClean !== normalized) codesToTry.push(rawClean);
 
-    const row = res.rows[0];
+    let row: any = null;
+    for (const codeToSearch of codesToTry) {
+      const res = await tables.listRows({
+        databaseId: DB,
+        tableId: REQUESTS_TABLE,
+        queries: [
+          Query.equal('nonce', codeToSearch),
+          Query.limit(1),
+        ],
+      }).catch(() => ({ rows: [] as any[] }));
+      if (res.rows.length > 0) {
+        row = res.rows[0];
+        break;
+      }
+    }
     if (!row) {
       return { ok: false, error: 'Pairing session not found or expired.' };
     }

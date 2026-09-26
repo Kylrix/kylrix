@@ -33,6 +33,20 @@
 
 ---
 
+## ❤️ Sponsor & Back Development
+
+Kylrix is an independently bootstrapped, open-source engineering ecosystem built for decade-scale durability. Maintaining core runtimes, offline-first sync engines, zero-knowledge vault primitives, and sovereign agent toolchains requires continuous development and dedicated engineering bandwidth.
+
+If Kylrix powers your daily workflow or team infrastructure, consider sponsoring development to accelerate roadmap velocity and sustain active maintenance.
+
+<p align="center">
+  <a href="https://www.kylrix.space/sponsor" target="_blank" rel="noopener noreferrer">
+    <img src="https://img.shields.io/badge/Sponsor_Kylrix-%E2%9D%A4-EC4899?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor Kylrix" />
+  </a>
+</p>
+
+---
+
 ## 📱 Mobile, Desktop & Custom Clients
 
 You can build custom mobile apps (iOS/Android), desktop wrappers (Tauri/Electron), or menu bar companions for Kylrix.
@@ -104,16 +118,6 @@ kylrix mcp
 *(Zero-install alternative: run with `npx @kylrix/cli <command>`)*
 
 > 📖 See [**`docs/cli.md`**](docs/cli.md) for the complete command reference and SDK documentation.
-
----
-
-## Sponsor
-
-<p align="center">
-  <a href="https://www.kylrix.space/sponsor" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-EC4899?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor" />
-  </a>
-</p>
 
 ---
 

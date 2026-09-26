@@ -50,7 +50,7 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
   // Pairing (Authenticated verification and approval)
   if (a === S.pairing) {
     const { PairingService } = await import('@/lib/services/pairing');
-    // GET /api/v1/pairing/verify?code=KYL-XXXX
+    // GET /api/v1/pairing/verify?code=XXXX-XXXX
     if (b === SUB.verify && method === 'GET') {
       const code = params.get('code') || '';
       const session = await PairingService.lookupByUserCode(code);

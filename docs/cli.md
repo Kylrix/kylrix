@@ -69,7 +69,7 @@ kylrix mcp
 * **Sync When Ready**: Once authenticated (`kylrix login`), running **`kylrix sync`** synchronizes your silo's local records up to the active cloud or self-hosted workspace.
 
 ### 2. 1-Click Web Login & Pairing
-* Running `kylrix login` (or `kylrix login --url <url>`) initiates RFC 8628 pairing and opens `/login/KYL-XXXX` in your browser on the target server.
+* Running `kylrix login` (or `kylrix login --url <url>`) initiates RFC 8628 pairing and opens `/login/7K9M-4W2P` in your browser on the target server.
 * Clicking **"Authorize"** in the web workspace logs your CLI session in instantly with zero manual token copying, registering the account in the server's partition.
 
 ### 3. Bitwarden-Style Encrypted Vault & 2FA TOTP

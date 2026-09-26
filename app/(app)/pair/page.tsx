@@ -85,6 +85,7 @@ function PairContent() {
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           userCode: code.trim().toUpperCase(),
+          userId: currentUser?.$id,
           action,
         }),
       });
@@ -159,8 +160,8 @@ function PairContent() {
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="KYL-XXXX"
-                maxLength={8}
+                placeholder="XXXX-XXXX"
+                maxLength={9}
                 className="w-full bg-[#000000] border-2 border-white/20 focus:border-[#6366F1] rounded-2xl px-4 py-3 text-center text-xl font-mono tracking-widest text-white uppercase outline-none transition-colors"
               />
               <p className="text-[10px] text-white/40 mt-1.5 text-center">

@@ -16,8 +16,8 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ path?: string[]
   }
 
   // RFC 8628 Device Authorization / Punch Grant:
-  // /api/v1/pairing/request and /api/v1/pairing/exchange are unauthenticated initiation & poll endpoints.
-  if (path[0] === 'pairing' && (path[1] === 'request' || path[1] === 'exchange')) {
+  // /api/v1/pairing/* (request, exchange, verify, approve) handles initiation, polling, and web approval
+  if (path[0] === 'pairing') {
     const { handlePairingUnauthenticated } = await import('@/lib/api/v1/pairing-handler');
     return handlePairingUnauthenticated(req, path);
   }

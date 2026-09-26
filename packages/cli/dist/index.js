@@ -1017,8 +1017,10 @@ async function pairCommand(opts) {
     console.log(pc2.cyan("\u2502") + "  1. Open browser URL:                                  " + pc2.cyan("\u2502"));
     console.log(pc2.cyan("\u2502") + "     " + pc2.underline(pc2.cyan(directLoginUrl.padEnd(51))) + pc2.cyan("\u2502"));
     console.log(pc2.cyan("\u2502") + "                                                         " + pc2.cyan("\u2502"));
+    const codeDisplay = ` ${session.userCode} `;
+    const codePad = " ".repeat(Math.max(0, 48 - codeDisplay.length));
     console.log(pc2.cyan("\u2502") + "  2. Authorization Code:                                 " + pc2.cyan("\u2502"));
-    console.log(pc2.cyan("\u2502") + "     " + pc2.bgYellow(pc2.black(pc2.bold(` ${session.userCode} `))) + "                                            " + pc2.cyan("\u2502"));
+    console.log(pc2.cyan("\u2502") + "     " + pc2.bgYellow(pc2.black(pc2.bold(codeDisplay))) + codePad + pc2.cyan("\u2502"));
     console.log(pc2.cyan("\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256F"));
     console.log();
     tryOpenBrowser(directLoginUrl);

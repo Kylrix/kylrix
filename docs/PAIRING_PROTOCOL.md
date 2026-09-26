@@ -61,9 +61,9 @@ The **Kylrix Pairing Protocol** is an RFC 8628-inspired device authorization and
     "data": {
       "id": "req_...",
       "deviceCode": "dev_...",
-      "userCode": "KYL-8F29",
+      "userCode": "7K9M-4W2P",
       "verificationUri": "https://www.kylrix.space/pair",
-      "verificationUriComplete": "https://www.kylrix.space/pair?code=KYL-8F29",
+      "verificationUriComplete": "https://www.kylrix.space/pair?code=7K9M-4W2P",
       "expiresIn": 900,
       "interval": 5,
       "clientName": "CLI Terminal (macOS)",
@@ -75,7 +75,7 @@ The **Kylrix Pairing Protocol** is an RFC 8628-inspired device authorization and
   ```
 
 ### 2. Verify Pairing Code (Web)
-- **Endpoint**: `GET /api/v1/pairing/verify?code=KYL-8F29`
+- **Endpoint**: `GET /api/v1/pairing/verify?code=7K9M-4W2P`
 - **Auth**: Authenticated via Web Session
 - **Response**:
   ```json
@@ -101,7 +101,7 @@ The **Kylrix Pairing Protocol** is an RFC 8628-inspired device authorization and
 - **Payload**:
   ```json
   {
-    "userCode": "KYL-8F29",
+    "userCode": "7K9M-4W2P",
     "action": "approve",
     "grantedScopes": ["notes:read", "notes:write"]
   }
