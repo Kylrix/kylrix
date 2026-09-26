@@ -33,6 +33,22 @@
 
 ---
 
+## 📱 Mobile, Desktop & Custom Clients
+
+You can build custom mobile apps (iOS/Android), desktop wrappers (Tauri/Electron), or menu bar companions for Kylrix.
+
+### Recommendations:
+- **Personal Tools & Wrappers:** Mint a [Personal Access Token (PAT)](https://www.kylrix.space/settings?tab=developers) to connect directly to the [HTTP REST API (`/api/v1`)](https://www.kylrix.space/docs/api) or isomorphic SDK.
+- **Distributed / Third-Party Apps:** Register an [OAuth 2.1 Client](https://www.kylrix.space/settings?tab=developers) with PKCE flow so users can authorize your app securely without exposing private credentials.
+
+> [!CAUTION]
+> **Strict Branding Policy & Termination Warning:**
+> The primary requirement for building on Kylrix infrastructure is to **never use the name "Kylrix" or any confusingly similar branding** in your application name, domain, package, or public listing. Failure to adhere will result in immediate termination of the OAuth2 client and suspension of associated developer accounts.
+>
+> *Notice to Users:* The **only** official clients provided and maintained by the Kylrix team are the web app ([kylrix.space](https://www.kylrix.space)) and the official CLI (`@kylrix/cli`). Consciously using third-party clients that mimic the Kylrix brand risks credential theft and account suspension.
+
+---
+
 ## ⚡ CLI & Agent Bridge (`@kylrix/cli`)
 
 Install once for sovereign offline local-first execution (powered by embedded SQLite):

@@ -586,19 +586,31 @@ export async function POST(req: NextRequest) {
     const actor: ApiActor = { userId, kind: 'session', scopes: ['*'] };
 
     // 3. Handle persistent keyboard & commands
-    if (rawText === '📝 Notes' || rawText === '/notes') {
+    if (
+      rawText === '📝 Notes' ||
+      rawText === '/notes' ||
+      rawText === '/note' ||
+      rawText === '/ideas' ||
+      rawText === '/idea'
+    ) {
       const { text, replyMarkup } = await renderNotesMenu(actor);
       await sendTelegramMessage(chatId, text, replyMarkup);
       return NextResponse.json({ success: true });
     }
 
-    if (rawText === '🎯 Goals' || rawText === '/goals') {
+    if (
+      rawText === '🎯 Goals' ||
+      rawText === '/goals' ||
+      rawText === '/goal' ||
+      rawText === '/tasks' ||
+      rawText === '/task'
+    ) {
       const { text, replyMarkup } = await renderGoalsMenu(actor);
       await sendTelegramMessage(chatId, text, replyMarkup);
       return NextResponse.json({ success: true });
     }
 
-    if (rawText === '📂 Workspaces' || rawText === '/workspaces') {
+    if (rawText === '📂 Workspaces' || rawText === '/workspaces' || rawText === '/workspace') {
       const { text, replyMarkup } = await renderWorkspacesMenu(actor);
       await sendTelegramMessage(chatId, text, replyMarkup);
       return NextResponse.json({ success: true });
@@ -629,8 +641,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Specific CRUD slash commands
-    if (rawText.startsWith('/note ') || rawText.startsWith('/newnote ')) {
-      const rawParams = rawText.replace(/^\/(note|newnote)\s+/, '').trim();
+    if (
+      rawText.startsWith('/note ') ||
+      rawText.startsWith('/newnote ') ||
+      rawText.startsWith('/idea ') ||
+      rawText.startsWith('/newidea ')
+    ) {
+      const rawParams = rawText.replace(/^\/(note|newnote|idea|newidea)\s+/, '').trim();
       let title = 'Quick Note';
       let content = '';
 
