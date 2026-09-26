@@ -4281,7 +4281,7 @@ import * as os3 from "os";
 import { spawn } from "child_process";
 import pc21 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.3";
+var CURRENT_VERSION = "1.0.4";
 var CACHE_DIR = path5.join(os3.homedir(), ".kylrix");
 var CACHE_FILE = path5.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
