@@ -542,31 +542,304 @@ var KylrixClient = class {
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+var DEFAULT_API_URL = "https://www.kylrix.space";
 var CONFIG_DIR = path.join(os.homedir(), ".kylrix");
 var CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
+function normalizeBaseUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== "string") return DEFAULT_API_URL;
+  let url2 = rawUrl.trim();
+  if (!url2) return DEFAULT_API_URL;
+  if (!/^https?:\/\//i.test(url2)) {
+    url2 = `https://${url2}`;
+  }
+  url2 = url2.replace(/\/+$/, "");
+  url2 = url2.replace(/\/api\/v1$/, "").replace(/\/api$/, "");
+  return url2;
+}
+function getBaseUriPartitionKey(rawUrl) {
+  const normalized = normalizeBaseUrl(rawUrl);
+  if (normalized === DEFAULT_API_URL || normalized === "https://kylrix.space") {
+    return "default";
+  }
+  try {
+    const u2 = new URL(normalized);
+    const portPart = u2.port ? `_${u2.port}` : "";
+    const safeHost = `${u2.protocol.replace(":", "")}_${u2.hostname}${portPart}`;
+    return safeHost.replace(/[^a-zA-Z0-9_-]/g, "_");
+  } catch {
+    return normalized.replace(/[^a-zA-Z0-9_-]/g, "_");
+  }
+}
+function getAccountSlug(userId) {
+  if (!userId || typeof userId !== "string") return "anonymous";
+  return userId.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+function getSiloDir(baseUrl, userId) {
+  const partition = getBaseUriPartitionKey(baseUrl);
+  const accountSlug = getAccountSlug(userId);
+  const dir = path.join(CONFIG_DIR, "silos", partition, accountSlug);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+}
+function getSiloDbPath(baseUrl, userId) {
+  const dir = getSiloDir(baseUrl, userId);
+  const siloDb = path.join(dir, "local.db");
+  const legacyDb = path.join(CONFIG_DIR, "local.db");
+  if (!fs.existsSync(siloDb) && fs.existsSync(legacyDb) && getBaseUriPartitionKey(baseUrl) === "default") {
+    try {
+      fs.copyFileSync(legacyDb, siloDb);
+    } catch {
+    }
+  }
+  return siloDb;
+}
+function getSiloFallbackPath(baseUrl, userId) {
+  const dir = getSiloDir(baseUrl, userId);
+  const siloJson = path.join(dir, "local-store.json");
+  const legacyJson = path.join(CONFIG_DIR, "local-store.json");
+  if (!fs.existsSync(siloJson) && fs.existsSync(legacyJson) && getBaseUriPartitionKey(baseUrl) === "default") {
+    try {
+      fs.copyFileSync(legacyJson, siloJson);
+    } catch {
+    }
+  }
+  return siloJson;
+}
+function createEmptyConfig() {
+  const defaultServer = DEFAULT_API_URL;
+  return {
+    currentServer: defaultServer,
+    servers: {
+      [defaultServer]: {
+        baseUrl: defaultServer,
+        partitionKey: "default",
+        accounts: {}
+      }
+    },
+    apiUrl: defaultServer
+  };
+}
+function syncLegacyFields(config2, activeServerUrl, account) {
+  config2.apiUrl = activeServerUrl;
+  config2.token = account?.token;
+  config2.userId = account?.userId;
+  config2.email = account?.email;
+  config2.workspaceId = account?.workspaceId;
+  config2.tier = account?.tier;
+}
+function migrateConfigIfNeeded(parsed) {
+  if (parsed && typeof parsed === "object" && parsed.servers && typeof parsed.servers === "object") {
+    return parsed;
+  }
+  const legacyUrl = normalizeBaseUrl(parsed?.apiUrl || DEFAULT_API_URL);
+  const partitionKey = getBaseUriPartitionKey(legacyUrl);
+  const config2 = createEmptyConfig();
+  config2.currentServer = legacyUrl;
+  const legacyUserId = parsed?.userId;
+  config2.servers[legacyUrl] = {
+    baseUrl: legacyUrl,
+    partitionKey,
+    activeAccountId: legacyUserId,
+    accounts: {}
+  };
+  if (legacyUserId || parsed?.token) {
+    const accId = legacyUserId || "legacy_user";
+    config2.servers[legacyUrl].activeAccountId = accId;
+    config2.servers[legacyUrl].accounts[accId] = {
+      userId: accId,
+      email: parsed?.email,
+      token: parsed?.token,
+      workspaceId: parsed?.workspaceId,
+      tier: parsed?.tier,
+      lastUsedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+  syncLegacyFields(config2, legacyUrl, legacyUserId ? config2.servers[legacyUrl].accounts[legacyUserId] : void 0);
+  return config2;
+}
 function loadConfig() {
   try {
     if (!fs.existsSync(CONFIG_FILE)) {
-      return {};
+      return createEmptyConfig();
     }
     const raw = fs.readFileSync(CONFIG_FILE, "utf-8");
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return migrateConfigIfNeeded(parsed);
   } catch {
-    return {};
+    return createEmptyConfig();
   }
 }
-function saveConfig(updates) {
+function saveMasterConfig(config2) {
   try {
     if (!fs.existsSync(CONFIG_DIR)) {
       fs.mkdirSync(CONFIG_DIR, { recursive: true });
     }
-    const current = loadConfig();
-    const merged = { ...current, ...updates };
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2), { encoding: "utf-8", mode: 384 });
-    return merged;
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config2, null, 2), { encoding: "utf-8", mode: 384 });
   } catch (err) {
     throw new Error(`Failed to save config to ${CONFIG_FILE}: ${err.message}`);
   }
+}
+function saveConfig(updates, targetServerUrl) {
+  const config2 = loadConfig();
+  const rawUrl = updates.apiUrl || targetServerUrl || config2.currentServer || DEFAULT_API_URL;
+  const normUrl = normalizeBaseUrl(rawUrl);
+  const partitionKey = getBaseUriPartitionKey(normUrl);
+  if (!config2.servers[normUrl]) {
+    config2.servers[normUrl] = {
+      baseUrl: normUrl,
+      partitionKey,
+      accounts: {}
+    };
+  }
+  const server2 = config2.servers[normUrl];
+  let accId = updates.userId || server2.activeAccountId;
+  if (!accId) {
+    accId = updates.email ? updates.email.replace(/[^a-zA-Z0-9_-]/g, "_") : "anonymous";
+  }
+  const existingAcc = server2.accounts[accId] || { userId: accId };
+  const updatedAcc = {
+    ...existingAcc,
+    userId: updates.userId || existingAcc.userId || accId,
+    email: updates.email !== void 0 ? updates.email : existingAcc.email,
+    token: updates.token !== void 0 ? updates.token : existingAcc.token,
+    workspaceId: updates.workspaceId !== void 0 ? updates.workspaceId : existingAcc.workspaceId,
+    tier: updates.tier !== void 0 ? updates.tier : existingAcc.tier,
+    lastUsedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  server2.accounts[updatedAcc.userId] = updatedAcc;
+  server2.activeAccountId = updatedAcc.userId;
+  config2.currentServer = normUrl;
+  syncLegacyFields(config2, normUrl, updatedAcc);
+  saveMasterConfig(config2);
+  return config2;
+}
+function switchAccount(idOrEmail, serverUrl) {
+  const config2 = loadConfig();
+  const normUrl = normalizeBaseUrl(serverUrl || config2.currentServer);
+  const server2 = config2.servers[normUrl];
+  if (!server2) {
+    throw new Error(`Server ${normUrl} is not registered in configuration.`);
+  }
+  const query = idOrEmail.trim().toLowerCase();
+  const accounts2 = Object.values(server2.accounts);
+  const matched = accounts2.find(
+    (a2) => a2.userId.toLowerCase() === query || a2.email && a2.email.toLowerCase() === query
+  );
+  if (!matched) {
+    const list = accounts2.map((a2) => a2.email || a2.userId).join(", ");
+    throw new Error(`No account found matching "${idOrEmail}" on server ${normUrl}. Available: ${list || "none"}`);
+  }
+  server2.activeAccountId = matched.userId;
+  matched.lastUsedAt = (/* @__PURE__ */ new Date()).toISOString();
+  config2.currentServer = normUrl;
+  syncLegacyFields(config2, normUrl, matched);
+  saveMasterConfig(config2);
+  return matched;
+}
+function listAccounts(serverUrl) {
+  const config2 = loadConfig();
+  const normUrl = normalizeBaseUrl(serverUrl || config2.currentServer);
+  const server2 = config2.servers[normUrl];
+  if (!server2) {
+    return {
+      serverUrl: normUrl,
+      partitionKey: getBaseUriPartitionKey(normUrl),
+      activeAccountId: void 0,
+      accounts: []
+    };
+  }
+  return {
+    serverUrl: normUrl,
+    partitionKey: server2.partitionKey,
+    activeAccountId: server2.activeAccountId,
+    accounts: Object.values(server2.accounts)
+  };
+}
+function removeAccount(idOrEmail, serverUrl) {
+  const config2 = loadConfig();
+  const normUrl = normalizeBaseUrl(serverUrl || config2.currentServer);
+  const server2 = config2.servers[normUrl];
+  if (!server2) return false;
+  const query = idOrEmail.trim().toLowerCase();
+  const accounts2 = Object.values(server2.accounts);
+  const matched = accounts2.find(
+    (a2) => a2.userId.toLowerCase() === query || a2.email && a2.email.toLowerCase() === query
+  );
+  if (!matched) return false;
+  delete server2.accounts[matched.userId];
+  if (server2.activeAccountId === matched.userId) {
+    const remaining = Object.keys(server2.accounts);
+    server2.activeAccountId = remaining.length > 0 ? remaining[0] : void 0;
+  }
+  const activeAcc = server2.activeAccountId ? server2.accounts[server2.activeAccountId] : void 0;
+  syncLegacyFields(config2, normUrl, activeAcc);
+  saveMasterConfig(config2);
+  return true;
+}
+function clearServerAccounts(serverUrl) {
+  const config2 = loadConfig();
+  const normUrl = normalizeBaseUrl(serverUrl || config2.currentServer);
+  if (config2.servers[normUrl]) {
+    config2.servers[normUrl].accounts = {};
+    config2.servers[normUrl].activeAccountId = void 0;
+    syncLegacyFields(config2, normUrl, void 0);
+    saveMasterConfig(config2);
+  }
+}
+function switchServer(serverUrl) {
+  const config2 = loadConfig();
+  const normUrl = normalizeBaseUrl(serverUrl);
+  if (!config2.servers[normUrl]) {
+    config2.servers[normUrl] = {
+      baseUrl: normUrl,
+      partitionKey: getBaseUriPartitionKey(normUrl),
+      accounts: {}
+    };
+  }
+  config2.currentServer = normUrl;
+  const server2 = config2.servers[normUrl];
+  const activeAcc = server2.activeAccountId ? server2.accounts[server2.activeAccountId] : void 0;
+  syncLegacyFields(config2, normUrl, activeAcc);
+  saveMasterConfig(config2);
+  return server2;
+}
+function listServers() {
+  const config2 = loadConfig();
+  const entries = Object.values(config2.servers);
+  if (entries.length === 0) {
+    return [
+      {
+        baseUrl: DEFAULT_API_URL,
+        partitionKey: "default",
+        isCurrent: true,
+        accountCount: 0
+      }
+    ];
+  }
+  return entries.map((s) => ({
+    baseUrl: s.baseUrl,
+    partitionKey: s.partitionKey,
+    isCurrent: s.baseUrl === config2.currentServer,
+    activeAccount: s.activeAccountId ? s.accounts[s.activeAccountId]?.email || s.activeAccountId : void 0,
+    accountCount: Object.keys(s.accounts).length
+  }));
+}
+function removeServer(serverUrl) {
+  const config2 = loadConfig();
+  const normUrl = normalizeBaseUrl(serverUrl);
+  if (!config2.servers[normUrl]) return false;
+  delete config2.servers[normUrl];
+  if (config2.currentServer === normUrl) {
+    const remaining = Object.keys(config2.servers);
+    config2.currentServer = remaining.length > 0 ? remaining[0] : DEFAULT_API_URL;
+  }
+  const curServer = config2.servers[config2.currentServer];
+  const activeAcc = curServer?.activeAccountId ? curServer.accounts[curServer.activeAccountId] : void 0;
+  syncLegacyFields(config2, config2.currentServer, activeAcc);
+  saveMasterConfig(config2);
+  return true;
 }
 function clearConfig() {
   try {
@@ -578,13 +851,32 @@ function clearConfig() {
 }
 function resolveEnvironment(cliOptions = {}) {
   const config2 = loadConfig();
-  const apiUrl = cliOptions.url || process.env.KYLRIX_API_URL || config2.apiUrl || "https://www.kylrix.space";
-  const token = cliOptions.token || process.env.KYLRIX_API_KEY || process.env.KYLRIX_PAT || config2.token;
-  const workspaceId = cliOptions.workspace || process.env.KYLRIX_WORKSPACE_ID || config2.workspaceId;
+  const rawUrl = cliOptions.url || process.env.KYLRIX_API_URL || config2.currentServer || DEFAULT_API_URL;
+  const apiUrl = normalizeBaseUrl(rawUrl);
+  const partitionKey = getBaseUriPartitionKey(apiUrl);
+  const server2 = config2.servers[apiUrl];
+  const account = server2?.activeAccountId ? server2.accounts[server2.activeAccountId] : void 0;
+  const token = cliOptions.token || process.env.KYLRIX_API_KEY || process.env.KYLRIX_PAT || account?.token || config2.token;
+  const workspaceId = cliOptions.workspace || process.env.KYLRIX_WORKSPACE_ID || account?.workspaceId || config2.workspaceId;
+  const userId = account?.userId || config2.userId;
+  const email3 = account?.email || config2.email;
+  const tier = account?.tier || config2.tier;
+  const siloDir = getSiloDir(apiUrl, userId);
+  const siloDbPath = getSiloDbPath(apiUrl, userId);
+  const siloFallbackPath = getSiloFallbackPath(apiUrl, userId);
   return {
     apiUrl,
     token,
-    workspaceId
+    workspaceId,
+    userId,
+    email: email3,
+    tier,
+    serverBaseUrl: apiUrl,
+    partitionKey,
+    activeAccountId: account?.userId,
+    siloDir,
+    siloDbPath,
+    siloFallbackPath
   };
 }
 
@@ -673,18 +965,25 @@ function tryOpenBrowser(url2) {
   });
 }
 async function loginCommand(opts) {
+  const env = resolveEnvironment(opts);
   if (opts.token) {
-    const env = resolveEnvironment(opts);
     const client = getClient({ url: env.apiUrl, token: opts.token });
     try {
       const profile = await client.auth.me();
-      saveConfig({
-        apiUrl: env.apiUrl,
-        token: opts.token,
-        userId: profile.id,
-        email: profile.email
-      });
+      saveConfig(
+        {
+          apiUrl: env.apiUrl,
+          token: opts.token,
+          userId: profile.id,
+          email: profile.email,
+          tier: profile.tier
+        },
+        env.apiUrl
+      );
       printSuccess(`Logged in as ${pc2.bold(profile.email || profile.id)}`);
+      printInfo(`Server:    ${pc2.cyan(env.apiUrl)}`);
+      printInfo(`Partition: ${pc2.yellow(env.partitionKey)}`);
+      printInfo(`Data Silo: ${pc2.dim(env.siloDir)}`);
       return;
     } catch (err) {
       printError("Invalid token provided", err);
@@ -712,6 +1011,9 @@ async function pairCommand(opts) {
     console.log(pc2.cyan("\u256D\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256E"));
     console.log(pc2.cyan("\u2502") + pc2.bold("  Kylrix 1-Click Web Authorization                      ") + pc2.cyan("\u2502"));
     console.log(pc2.cyan("\u251C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524"));
+    console.log(pc2.cyan("\u2502") + "  Target Server: " + pc2.yellow(env.apiUrl.slice(0, 40).padEnd(40)) + pc2.cyan("\u2502"));
+    console.log(pc2.cyan("\u2502") + "  Partition:     " + pc2.dim(env.partitionKey.slice(0, 40).padEnd(40)) + pc2.cyan("\u2502"));
+    console.log(pc2.cyan("\u2502") + "                                                         " + pc2.cyan("\u2502"));
     console.log(pc2.cyan("\u2502") + "  1. Open browser URL:                                  " + pc2.cyan("\u2502"));
     console.log(pc2.cyan("\u2502") + "     " + pc2.underline(pc2.cyan(directLoginUrl.padEnd(51))) + pc2.cyan("\u2502"));
     console.log(pc2.cyan("\u2502") + "                                                         " + pc2.cyan("\u2502"));
@@ -740,12 +1042,30 @@ async function pairCommand(opts) {
     if (process.stdout.isTTY) {
       process.stdout.write("\r" + " ".repeat(50) + "\r");
     }
-    saveConfig({
-      apiUrl: env.apiUrl,
-      token: result.token,
-      userId: result.userId
-    });
-    printSuccess(`Logged in successfully as user ${pc2.bold(result.userId)}`);
+    let profileEmail;
+    let profileTier;
+    try {
+      const authClient = getClient({ url: env.apiUrl, token: result.token });
+      const profile = await authClient.auth.me();
+      profileEmail = profile.email;
+      profileTier = profile.tier;
+    } catch {
+    }
+    saveConfig(
+      {
+        apiUrl: env.apiUrl,
+        token: result.token,
+        userId: result.userId,
+        email: profileEmail,
+        tier: profileTier
+      },
+      env.apiUrl
+    );
+    const updatedEnv = resolveEnvironment({ url: env.apiUrl });
+    printSuccess(`Logged in successfully as user ${pc2.bold(profileEmail || result.userId)}`);
+    printInfo(`Server:    ${pc2.cyan(env.apiUrl)}`);
+    printInfo(`Partition: ${pc2.yellow(env.partitionKey)}`);
+    printInfo(`Data Silo: ${pc2.dim(updatedEnv.siloDir)}`);
   } catch (err) {
     if (process.stdout.isTTY) {
       process.stdout.write("\r" + " ".repeat(50) + "\r");
@@ -760,22 +1080,32 @@ async function whoamiCommand(opts) {
     const env = resolveEnvironment(opts);
     if (!env.token) {
       if (opts.json) {
-        printJson({ authenticated: false, message: "Not authenticated" });
+        printJson({ authenticated: false, message: "Not authenticated", server: env.apiUrl, partition: env.partitionKey });
       } else {
-        printInfo("Not currently logged in. Run `kylrix login` to authenticate.");
+        printInfo(`Not currently logged in on ${pc2.cyan(env.apiUrl)}.`);
+        printInfo(`Run \`kylrix login\` or \`kylrix login --url ${env.apiUrl}\` to authenticate.`);
+        printInfo(`Local-first SQLite silo: ${pc2.dim(env.siloDbPath)}`);
       }
       return;
     }
     const profile = await client.auth.me();
     if (opts.json) {
-      printJson(profile);
+      printJson({
+        ...profile,
+        apiUrl: env.apiUrl,
+        partitionKey: env.partitionKey,
+        siloDir: env.siloDir,
+        siloDbPath: env.siloDbPath
+      });
       return;
     }
     console.log("\n" + pc2.bold("Kylrix Session Info:"));
     console.log(`  ${pc2.dim("User ID:")}      ${pc2.bold(profile.id)}`);
     console.log(`  ${pc2.dim("Email:")}        ${profile.email || "N/A"}`);
     console.log(`  ${pc2.dim("Tier:")}         ${pc2.cyan(profile.tier || "FREE")}`);
-    console.log(`  ${pc2.dim("API URL:")}      ${env.apiUrl}`);
+    console.log(`  ${pc2.dim("API URL:")}      ${pc2.cyan(env.apiUrl)}`);
+    console.log(`  ${pc2.dim("Partition:")}    ${pc2.yellow(env.partitionKey)}`);
+    console.log(`  ${pc2.dim("Data Silo:")}    ${pc2.dim(env.siloDir)}`);
     console.log(`  ${pc2.dim("Scopes:")}       ${profile.scopes?.join(", ") || "all"}`);
     if (env.workspaceId) {
       console.log(`  ${pc2.dim("Workspace:")}    ${pc2.green(env.workspaceId)}`);
@@ -786,13 +1116,267 @@ async function whoamiCommand(opts) {
     process.exit(1);
   }
 }
-function logoutCommand() {
-  clearConfig();
-  printSuccess("Logged out successfully. Removed stored local session.");
+function logoutCommand(opts = {}) {
+  const env = resolveEnvironment({ url: opts.url });
+  if (opts.purge) {
+    clearConfig();
+    printSuccess("Purged all stored servers, account profiles, and local sessions.");
+    return;
+  }
+  if (opts.all) {
+    clearServerAccounts(env.apiUrl);
+    printSuccess(`Removed all stored accounts for server ${pc2.cyan(env.apiUrl)}.`);
+    return;
+  }
+  if (env.activeAccountId) {
+    const targetId = env.activeAccountId;
+    removeAccount(targetId, env.apiUrl);
+    const updated = resolveEnvironment({ url: env.apiUrl });
+    printSuccess(`Logged out active account ${pc2.bold(targetId)} from ${pc2.cyan(env.apiUrl)}.`);
+    if (updated.activeAccountId) {
+      printInfo(`Active account switched to ${pc2.bold(updated.email || updated.activeAccountId)}.`);
+    }
+  } else {
+    printInfo(`No active account session found on ${pc2.cyan(env.apiUrl)}.`);
+  }
+}
+
+// src/commands/accounts.ts
+import pc3 from "picocolors";
+function listAccountsCommand(opts = {}) {
+  const env = resolveEnvironment({ url: opts.url });
+  if (opts.all) {
+    const config2 = loadConfig();
+    const result = [];
+    if (opts.json) {
+      for (const server2 of Object.values(config2.servers)) {
+        result.push({
+          serverUrl: server2.baseUrl,
+          partitionKey: server2.partitionKey,
+          activeAccountId: server2.activeAccountId,
+          accounts: Object.values(server2.accounts)
+        });
+      }
+      printJson(result);
+      return;
+    }
+    console.log();
+    console.log(pc3.bold("Kylrix Accounts (All Base URIs & Silos):"));
+    for (const server2 of Object.values(config2.servers)) {
+      const isCurrentServer = server2.baseUrl === env.apiUrl;
+      const marker = isCurrentServer ? pc3.green("\u25CF ") : pc3.dim("\u25CB ");
+      console.log(`
+  ${marker}${pc3.cyan(server2.baseUrl)} ${pc3.dim(`(Partition: ${server2.partitionKey})`)}`);
+      const accs = Object.values(server2.accounts);
+      if (accs.length === 0) {
+        console.log(`    ${pc3.dim("No authenticated accounts. Run `kylrix login --url " + server2.baseUrl + "`")}`);
+      } else {
+        for (const acc of accs) {
+          const isActive = acc.userId === server2.activeAccountId;
+          const accMarker = isActive ? pc3.green("  * ") : "    ";
+          const emailStr = acc.email ? pc3.bold(acc.email) : pc3.bold(acc.userId);
+          const idStr = acc.email ? pc3.dim(`(${acc.userId})`) : "";
+          const tierStr = acc.tier ? pc3.cyan(`[${acc.tier}]`) : "";
+          const activeTag = isActive ? pc3.bgGreen(pc3.black(" ACTIVE ")) : "";
+          console.log(`${accMarker}${emailStr} ${idStr} ${tierStr} ${activeTag}`);
+          if (isActive) {
+            console.log(`      ${pc3.dim(`Silo: ~/.kylrix/silos/${server2.partitionKey}/${acc.userId}/`)}`);
+          }
+        }
+      }
+    }
+    console.log();
+    return;
+  }
+  const { serverUrl, partitionKey, activeAccountId, accounts: accounts2 } = listAccounts(env.apiUrl);
+  if (opts.json) {
+    printJson({
+      serverUrl,
+      partitionKey,
+      activeAccountId,
+      accounts: accounts2
+    });
+    return;
+  }
+  console.log();
+  console.log(pc3.bold(`Kylrix Accounts on ${pc3.cyan(serverUrl)}:`));
+  console.log(`  ${pc3.dim("Partition:")} ${pc3.yellow(partitionKey)}`);
+  if (accounts2.length === 0) {
+    console.log(`
+  ${pc3.dim("No accounts configured on this base URI.")}`);
+    console.log(`  ${pc3.dim(`Run \`kylrix login --url ${serverUrl}\` to authenticate a new account.`)}
+`);
+    return;
+  }
+  console.log();
+  for (const acc of accounts2) {
+    const isActive = acc.userId === activeAccountId;
+    const marker = isActive ? pc3.green("  * ") : "    ";
+    const emailStr = acc.email ? pc3.bold(acc.email) : pc3.bold(acc.userId);
+    const idStr = acc.email ? pc3.dim(`(${acc.userId})`) : "";
+    const tierStr = acc.tier ? pc3.cyan(`[${acc.tier}]`) : "";
+    const activeTag = isActive ? pc3.bgGreen(pc3.black(" ACTIVE ")) : "";
+    console.log(`${marker}${emailStr} ${idStr} ${tierStr} ${activeTag}`);
+    if (isActive) {
+      console.log(`      ${pc3.dim(`Silo: ~/.kylrix/silos/${partitionKey}/${acc.userId}/`)}`);
+    }
+  }
+  console.log();
+}
+function switchAccountCommand(idOrEmail, opts = {}) {
+  try {
+    const env = resolveEnvironment({ url: opts.url });
+    const switched = switchAccount(idOrEmail, env.apiUrl);
+    const updated = resolveEnvironment({ url: env.apiUrl });
+    if (opts.json) {
+      printJson(switched);
+      return;
+    }
+    printSuccess(`Switched active account to ${pc3.bold(switched.email || switched.userId)}`);
+    printInfo(`Server:    ${pc3.cyan(env.apiUrl)}`);
+    printInfo(`Partition: ${pc3.yellow(env.partitionKey)}`);
+    printInfo(`Data Silo: ${pc3.dim(updated.siloDir)}`);
+  } catch (err) {
+    printError("Failed to switch account", err);
+    process.exit(1);
+  }
+}
+function currentAccountCommand(opts = {}) {
+  const env = resolveEnvironment({ url: opts.url });
+  if (opts.json) {
+    printJson({
+      serverUrl: env.apiUrl,
+      partitionKey: env.partitionKey,
+      activeAccountId: env.activeAccountId,
+      email: env.email,
+      siloDir: env.siloDir
+    });
+    return;
+  }
+  if (!env.activeAccountId) {
+    printInfo(`No active account logged in on ${pc3.cyan(env.apiUrl)}.`);
+    printInfo(`Local anonymous silo: ${pc3.dim(env.siloDir)}`);
+    return;
+  }
+  console.log();
+  console.log(pc3.bold("Active Account Profile:"));
+  console.log(`  ${pc3.dim("User ID:")}      ${pc3.bold(env.userId || "N/A")}`);
+  console.log(`  ${pc3.dim("Email:")}        ${env.email || "N/A"}`);
+  console.log(`  ${pc3.dim("Tier:")}         ${pc3.cyan(env.tier || "FREE")}`);
+  console.log(`  ${pc3.dim("Base URI:")}     ${pc3.cyan(env.apiUrl)}`);
+  console.log(`  ${pc3.dim("Partition:")}    ${pc3.yellow(env.partitionKey)}`);
+  console.log(`  ${pc3.dim("Data Silo:")}    ${pc3.dim(env.siloDir)}`);
+  if (env.workspaceId) {
+    console.log(`  ${pc3.dim("Workspace:")}    ${pc3.green(env.workspaceId)}`);
+  }
+  console.log();
+}
+function removeAccountCommand(idOrEmail, opts = {}) {
+  const env = resolveEnvironment({ url: opts.url });
+  const ok = removeAccount(idOrEmail, env.apiUrl);
+  if (ok) {
+    printSuccess(`Removed account profile "${idOrEmail}" from ${pc3.cyan(env.apiUrl)}.`);
+  } else {
+    printError(`Account "${idOrEmail}" not found on server ${env.apiUrl}.`);
+    process.exit(1);
+  }
+}
+
+// src/commands/server.ts
+import pc4 from "picocolors";
+function listServersCommand(opts = {}) {
+  const servers = listServers();
+  if (opts.json) {
+    printJson(servers);
+    return;
+  }
+  console.log();
+  console.log(pc4.bold("Kylrix Server Base URIs & Silo Partitions:"));
+  for (const s of servers) {
+    const marker = s.isCurrent ? pc4.green("\u25CF ") : pc4.dim("\u25CB ");
+    const tag = s.isCurrent ? pc4.bgGreen(pc4.black(" ACTIVE ")) : "";
+    const accCountStr = s.accountCount === 1 ? "1 account" : `${s.accountCount} accounts`;
+    const accDetail = s.activeAccount ? `[Active: ${s.activeAccount}]` : pc4.dim("(no active login)");
+    console.log(`
+  ${marker}${pc4.cyan(s.baseUrl)} ${tag}`);
+    console.log(`    ${pc4.dim("Partition:")} ${pc4.yellow(s.partitionKey)}`);
+    console.log(`    ${pc4.dim("Accounts:")}  ${accCountStr} ${accDetail}`);
+    console.log(`    ${pc4.dim("Silo Root:")} ~/.kylrix/silos/${s.partitionKey}/`);
+  }
+  console.log();
+}
+function switchServerCommand(url2, opts = {}) {
+  try {
+    const norm = normalizeBaseUrl(url2);
+    const server2 = switchServer(norm);
+    const env = resolveEnvironment({ url: norm });
+    if (opts.json) {
+      printJson(server2);
+      return;
+    }
+    printSuccess(`Switched active server to ${pc4.cyan(server2.baseUrl)}`);
+    printInfo(`Partition: ${pc4.yellow(server2.partitionKey)}`);
+    if (env.activeAccountId) {
+      printInfo(`Active Account: ${pc4.bold(env.email || env.activeAccountId)}`);
+      printInfo(`Data Silo:      ${pc4.dim(env.siloDir)}`);
+    } else {
+      printInfo(`No active account yet. Authenticate with \`kylrix login --url ${server2.baseUrl}\`.`);
+    }
+  } catch (err) {
+    printError("Failed to switch server base URL", err);
+    process.exit(1);
+  }
+}
+function currentServerCommand(opts = {}) {
+  const env = resolveEnvironment();
+  if (opts.json) {
+    printJson({
+      baseUrl: env.apiUrl,
+      partitionKey: env.partitionKey,
+      activeAccountId: env.activeAccountId,
+      email: env.email,
+      siloDir: env.siloDir
+    });
+    return;
+  }
+  console.log();
+  console.log(pc4.bold("Active Server Base URI:"));
+  console.log(`  ${pc4.dim("URL:")}          ${pc4.cyan(env.apiUrl)}`);
+  console.log(`  ${pc4.dim("Partition:")}    ${pc4.yellow(env.partitionKey)}`);
+  console.log(`  ${pc4.dim("Silo Root:")}    ~/.kylrix/silos/${env.partitionKey}/`);
+  if (env.activeAccountId) {
+    console.log(`  ${pc4.dim("Active User:")}  ${pc4.bold(env.email || env.activeAccountId)}`);
+    console.log(`  ${pc4.dim("User Silo:")}    ${pc4.dim(env.siloDir)}`);
+  }
+  console.log();
+}
+function addServerCommand(url2) {
+  try {
+    const norm = normalizeBaseUrl(url2);
+    const server2 = switchServer(norm);
+    printSuccess(`Added and activated server ${pc4.cyan(server2.baseUrl)}`);
+    printInfo(`Partition: ${pc4.yellow(server2.partitionKey)}`);
+    printInfo(`Run \`kylrix login --url ${server2.baseUrl}\` to authenticate.`);
+  } catch (err) {
+    printError("Failed to add server", err);
+    process.exit(1);
+  }
+}
+function removeServerCommand(url2) {
+  const norm = normalizeBaseUrl(url2);
+  const ok = removeServer(norm);
+  if (ok) {
+    printSuccess(`Removed server ${pc4.cyan(norm)} and its account configuration.`);
+    const current = resolveEnvironment();
+    printInfo(`Active server is now ${pc4.cyan(current.apiUrl)} (${current.partitionKey}).`);
+  } else {
+    printError(`Server ${norm} is not in configuration.`);
+    process.exit(1);
+  }
 }
 
 // src/commands/workspaces.ts
-import pc3 from "picocolors";
+import pc5 from "picocolors";
 async function listWorkspacesCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -804,7 +1388,7 @@ async function listWorkspacesCommand(opts) {
       return;
     }
     const rows = (res.items || []).map((w2) => ({
-      active: w2.id === activeWs ? pc3.green("\u2714") : "",
+      active: w2.id === activeWs ? pc5.green("\u2714") : "",
       id: w2.id,
       name: w2.name,
       description: w2.description || "",
@@ -825,12 +1409,12 @@ async function getWorkspaceCommand(id, opts) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc3.bold("Workspace Details:"));
-    console.log(`  ${pc3.dim("ID:")}          ${item.id}`);
-    console.log(`  ${pc3.dim("Name:")}        ${pc3.bold(item.name)}`);
-    console.log(`  ${pc3.dim("Description:")} ${item.description || "N/A"}`);
-    console.log(`  ${pc3.dim("Agentic:")}     ${item.isAgentic ? pc3.cyan("yes") : "no"}`);
-    console.log(`  ${pc3.dim("Created At:")}  ${item.createdAt || "N/A"}
+    console.log("\n" + pc5.bold("Workspace Details:"));
+    console.log(`  ${pc5.dim("ID:")}          ${item.id}`);
+    console.log(`  ${pc5.dim("Name:")}        ${pc5.bold(item.name)}`);
+    console.log(`  ${pc5.dim("Description:")} ${item.description || "N/A"}`);
+    console.log(`  ${pc5.dim("Agentic:")}     ${item.isAgentic ? pc5.cyan("yes") : "no"}`);
+    console.log(`  ${pc5.dim("Created At:")}  ${item.createdAt || "N/A"}
 `);
   } catch (err) {
     printError(`Failed to get workspace "${id}"`, err);
@@ -849,7 +1433,7 @@ async function createWorkspaceCommand(name, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created workspace "${pc3.bold(item.title || item.name || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Created workspace "${pc5.bold(item.title || item.name || item.id)}" (ID: ${item.id})`);
   } catch (err) {
     printError("Failed to create workspace", err);
     process.exit(1);
@@ -878,7 +1462,7 @@ async function switchWorkspaceCommand(id, opts) {
       printJson({ activeWorkspaceId: ws.id, name: ws.name });
       return;
     }
-    printSuccess(`Switched active workspace to "${pc3.bold(ws.name)}" (${ws.id})`);
+    printSuccess(`Switched active workspace to "${pc5.bold(ws.name)}" (${ws.id})`);
   } catch (err) {
     printError(`Failed to switch to workspace "${id}"`, err);
     process.exit(1);
@@ -892,9 +1476,9 @@ function currentWorkspaceCommand(opts = {}) {
     return;
   }
   if (wsId) {
-    console.log(`Active Workspace: ${pc3.bold(pc3.cyan(wsId))}`);
+    console.log(`Active Workspace: ${pc5.bold(pc5.cyan(wsId))}`);
   } else {
-    console.log(`Active Workspace: ${pc3.bold("Personal Virtual Workspace")} (no project filter)`);
+    console.log(`Active Workspace: ${pc5.bold("Personal Virtual Workspace")} (no project filter)`);
   }
 }
 function clearWorkspaceCommand(opts = {}) {
@@ -907,20 +1491,16 @@ function clearWorkspaceCommand(opts = {}) {
 }
 
 // src/commands/ideas.ts
-import pc4 from "picocolors";
+import pc6 from "picocolors";
 
 // src/local/store.ts
 import * as fs3 from "fs";
 import * as path3 from "path";
-import * as os3 from "os";
 
 // src/local/sqlite.ts
 import * as fs2 from "fs";
 import * as path2 from "path";
-import * as os2 from "os";
 import { createRequire } from "module";
-var LOCAL_DIR = path2.join(os2.homedir(), ".kylrix");
-var DB_FILE = path2.join(LOCAL_DIR, "local.db");
 function generateLocalId(_prefix) {
   const now = /* @__PURE__ */ new Date();
   const sec = Math.floor(now.getTime() / 1e3);
@@ -932,7 +1512,7 @@ function generateLocalId(_prefix) {
   }
   return hexTimestamp + randomPadding;
 }
-var dbInstance = null;
+var dbInstances = /* @__PURE__ */ new Map();
 function getNativeSqlite() {
   try {
     const require2 = createRequire(import.meta.url);
@@ -942,16 +1522,22 @@ function getNativeSqlite() {
     return null;
   }
 }
-function getDatabase() {
-  if (dbInstance) return dbInstance;
-  if (!fs2.existsSync(LOCAL_DIR)) {
-    fs2.mkdirSync(LOCAL_DIR, { recursive: true });
+function getDatabase(targetDbPath) {
+  const env = resolveEnvironment();
+  const dbPath = targetDbPath || env.siloDbPath;
+  if (dbInstances.has(dbPath)) {
+    return dbInstances.get(dbPath);
+  }
+  const dir = path2.dirname(dbPath);
+  if (!fs2.existsSync(dir)) {
+    fs2.mkdirSync(dir, { recursive: true });
   }
   const DatabaseSync = getNativeSqlite();
   if (DatabaseSync) {
-    dbInstance = new DatabaseSync(DB_FILE);
-    initSqliteSchema(dbInstance);
-    return dbInstance;
+    const db = new DatabaseSync(dbPath);
+    initSqliteSchema(db);
+    dbInstances.set(dbPath, db);
+    return db;
   }
   return null;
 }
@@ -1054,24 +1640,27 @@ function initSqliteSchema(db) {
 }
 
 // src/local/store.ts
-var LOCAL_DIR2 = path3.join(os3.homedir(), ".kylrix");
-var FALLBACK_JSON_FILE = path3.join(LOCAL_DIR2, "local-store.json");
 function loadFallback() {
   try {
-    if (!fs3.existsSync(FALLBACK_JSON_FILE)) {
+    const env = resolveEnvironment();
+    const fallbackPath = env.siloFallbackPath;
+    if (!fs3.existsSync(fallbackPath)) {
       return { ideas: [], goals: [], events: [], forms: [], flows: [], vault: [], totp: [], tags: [], trash: [] };
     }
-    return JSON.parse(fs3.readFileSync(FALLBACK_JSON_FILE, "utf-8"));
+    return JSON.parse(fs3.readFileSync(fallbackPath, "utf-8"));
   } catch {
     return { ideas: [], goals: [], events: [], forms: [], flows: [], vault: [], totp: [], tags: [], trash: [] };
   }
 }
 function saveFallback(data) {
   try {
-    if (!fs3.existsSync(LOCAL_DIR2)) {
-      fs3.mkdirSync(LOCAL_DIR2, { recursive: true });
+    const env = resolveEnvironment();
+    const fallbackPath = env.siloFallbackPath;
+    const dir = path3.dirname(fallbackPath);
+    if (!fs3.existsSync(dir)) {
+      fs3.mkdirSync(dir, { recursive: true });
     }
-    fs3.writeFileSync(FALLBACK_JSON_FILE, JSON.stringify(data, null, 2), { encoding: "utf-8", mode: 384 });
+    fs3.writeFileSync(fallbackPath, JSON.stringify(data, null, 2), { encoding: "utf-8", mode: 384 });
   } catch {
   }
 }
@@ -1810,12 +2399,12 @@ async function listIdeasCommand(opts) {
       id: n.id,
       title: n.title || "(Untitled Idea)",
       category: n.category || "general",
-      mode: isAuthed ? n.workspaceId || "cloud" : pc4.dim("local"),
+      mode: isAuthed ? n.workspaceId || "cloud" : pc6.dim("local"),
       createdAt: n.createdAt?.substring(0, 10) || ""
     }));
     printTable(rows, ["id", "title", "category", "mode", "createdAt"]);
     if (!isAuthed) {
-      console.log(pc4.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync ideas with cloud."));
+      console.log(pc6.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync ideas with cloud."));
     }
   } catch (err) {
     printError("Failed to list ideas", err);
@@ -1830,14 +2419,14 @@ async function getIdeaCommand(id, opts) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc4.bold(item.title || "(Untitled Idea)"));
-    console.log(pc4.dim("\u2500".repeat(40)));
+    console.log("\n" + pc6.bold(item.title || "(Untitled Idea)"));
+    console.log(pc6.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Mode:      ${isAuthed ? "Cloud / " + (item.workspaceId || "personal") : "Local-First"}`);
     console.log(`Category:  ${item.category || "general"}`);
     console.log(`Updated:   ${item.updatedAt || item.createdAt || "N/A"}`);
-    console.log(pc4.dim("\u2500".repeat(40)));
-    console.log(item.content || pc4.dim("(Empty idea content)"));
+    console.log(pc6.dim("\u2500".repeat(40)));
+    console.log(item.content || pc6.dim("(Empty idea content)"));
     console.log();
   } catch (err) {
     printError(`Failed to get idea "${id}"`, err);
@@ -1866,7 +2455,7 @@ async function createIdeaCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created idea "${pc4.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created idea "${pc6.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create idea", err);
     process.exit(1);
@@ -1887,7 +2476,7 @@ async function updateIdeaCommand(id, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Updated idea "${pc4.bold(item.title || item.id)}"`);
+    printSuccess(`Updated idea "${pc6.bold(item.title || item.id)}"`);
   } catch (err) {
     printError(`Failed to update idea "${id}"`, err);
     process.exit(1);
@@ -1926,7 +2515,7 @@ async function listArticlesCommand(opts) {
     const rows = (res.items || []).map((n) => ({
       id: n.id,
       title: n.title || "(Untitled Article)",
-      mode: isAuthed ? n.workspaceId || "cloud" : pc4.dim("local"),
+      mode: isAuthed ? n.workspaceId || "cloud" : pc6.dim("local"),
       createdAt: n.createdAt?.substring(0, 10) || ""
     }));
     printTable(rows, ["id", "title", "mode", "createdAt"]);
@@ -1937,7 +2526,7 @@ async function listArticlesCommand(opts) {
 }
 
 // src/commands/goals.ts
-import pc5 from "picocolors";
+import pc7 from "picocolors";
 async function listGoalsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -1952,11 +2541,11 @@ async function listGoalsCommand(opts) {
       title: g2.title || "(Untitled Goal)",
       status: g2.status || "not_started",
       progress: `${g2.currentValue ?? 0}/${g2.targetValue ?? 100} ${g2.unit || ""}`.trim(),
-      mode: isAuthed ? g2.workspaceId || "cloud" : pc5.dim("local")
+      mode: isAuthed ? g2.workspaceId || "cloud" : pc7.dim("local")
     }));
     printTable(rows, ["id", "title", "status", "progress", "mode"]);
     if (!isAuthed) {
-      console.log(pc5.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync goals with cloud."));
+      console.log(pc7.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync goals with cloud."));
     }
   } catch (err) {
     printError("Failed to list goals", err);
@@ -1971,14 +2560,14 @@ async function getGoalCommand(id, opts) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc5.bold(item.title || "(Untitled Goal)"));
-    console.log(pc5.dim("\u2500".repeat(40)));
+    console.log("\n" + pc7.bold(item.title || "(Untitled Goal)"));
+    console.log(pc7.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Status:    ${item.status || "not_started"}`);
     console.log(`Progress:  ${item.currentValue ?? 0}/${item.targetValue ?? 100} ${item.unit || ""}`);
     console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
     if (item.description) {
-      console.log(pc5.dim("\u2500".repeat(40)));
+      console.log(pc7.dim("\u2500".repeat(40)));
       console.log(item.description);
     }
     console.log();
@@ -2007,7 +2596,7 @@ async function createGoalCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created goal "${pc5.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created goal "${pc7.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create goal", err);
     process.exit(1);
@@ -2029,7 +2618,7 @@ async function updateGoalCommand(id, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Updated goal "${pc5.bold(item.title || item.id)}"`);
+    printSuccess(`Updated goal "${pc7.bold(item.title || item.id)}"`);
   } catch (err) {
     printError(`Failed to update goal "${id}"`, err);
     process.exit(1);
@@ -2055,7 +2644,7 @@ async function deleteGoalCommand(id, opts) {
 }
 
 // src/commands/events.ts
-import pc6 from "picocolors";
+import pc8 from "picocolors";
 async function listEventsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -2070,11 +2659,11 @@ async function listEventsCommand(opts) {
       title: e2.title,
       startTime: e2.startTime || "",
       endTime: e2.endTime || "",
-      mode: isAuthed ? e2.workspaceId || "cloud" : pc6.dim("local")
+      mode: isAuthed ? e2.workspaceId || "cloud" : pc8.dim("local")
     }));
     printTable(rows, ["id", "title", "startTime", "endTime", "mode"]);
     if (!isAuthed) {
-      console.log(pc6.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync calendar events with cloud."));
+      console.log(pc8.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync calendar events with cloud."));
     }
   } catch (err) {
     printError("Failed to list events", err);
@@ -2096,7 +2685,7 @@ async function createEventCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created event "${pc6.bold(item.title)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created event "${pc8.bold(item.title)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create event", err);
     process.exit(1);
@@ -2122,7 +2711,7 @@ async function deleteEventCommand(id, opts) {
 }
 
 // src/commands/forms.ts
-import pc7 from "picocolors";
+import pc9 from "picocolors";
 async function listFormsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -2137,7 +2726,7 @@ async function listFormsCommand(opts) {
       title: f2.title || "(Untitled Form)",
       status: f2.status || "active",
       fields: Array.isArray(f2.schema) ? f2.schema.length : 0,
-      mode: isAuthed ? f2.workspaceId || "cloud" : pc7.dim("local")
+      mode: isAuthed ? f2.workspaceId || "cloud" : pc9.dim("local")
     }));
     printTable(rows, ["id", "title", "status", "fields", "mode"]);
   } catch (err) {
@@ -2153,8 +2742,8 @@ async function getFormCommand(id, opts) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc7.bold(item.title || "(Untitled Form)"));
-    console.log(pc7.dim("\u2500".repeat(40)));
+    console.log("\n" + pc9.bold(item.title || "(Untitled Form)"));
+    console.log(pc9.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Status:    ${item.status || "active"}`);
     console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
@@ -2179,7 +2768,7 @@ async function createFormCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created form "${pc7.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created form "${pc9.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create form", err);
     process.exit(1);
@@ -2205,7 +2794,7 @@ async function deleteFormCommand(id, opts) {
 }
 
 // src/commands/flows.ts
-import pc8 from "picocolors";
+import pc10 from "picocolors";
 async function listFlowsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -2220,7 +2809,7 @@ async function listFlowsCommand(opts) {
       title: f2.title || "(Untitled Flow)",
       status: f2.status || "draft",
       description: f2.description || "",
-      mode: isAuthed ? "cloud" : pc8.dim("local")
+      mode: isAuthed ? "cloud" : pc10.dim("local")
     }));
     printTable(rows, ["id", "title", "status", "description", "mode"]);
   } catch (err) {
@@ -2236,8 +2825,8 @@ async function getFlowCommand(id, opts) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc8.bold(item.title || "(Untitled Flow)"));
-    console.log(pc8.dim("\u2500".repeat(40)));
+    console.log("\n" + pc10.bold(item.title || "(Untitled Flow)"));
+    console.log(pc10.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Status:    ${item.status || "draft"}`);
     console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
@@ -2261,7 +2850,7 @@ async function createFlowCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created flow "${pc8.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created flow "${pc10.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create flow", err);
     process.exit(1);
@@ -2287,7 +2876,7 @@ async function deleteFlowCommand(id, opts) {
 }
 
 // src/commands/chats.ts
-import pc9 from "picocolors";
+import pc11 from "picocolors";
 async function listChatsCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -2319,8 +2908,8 @@ async function listChatMessagesCommand(conversationId, opts) {
       return;
     }
     for (const msg of res.items || []) {
-      const sender = pc9.bold(msg.senderId || "user");
-      const time3 = pc9.dim(msg.createdAt?.substring(11, 16) || "");
+      const sender = pc11.bold(msg.senderId || "user");
+      const time3 = pc11.dim(msg.createdAt?.substring(11, 16) || "");
       console.log(`[${time3}] ${sender}: ${msg.content}`);
     }
   } catch (err) {
@@ -2348,7 +2937,7 @@ async function sendChatMessageCommand(content, opts) {
 }
 
 // src/commands/threads.ts
-import pc10 from "picocolors";
+import pc12 from "picocolors";
 async function listThreadsCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -2385,8 +2974,8 @@ async function listThreadMessagesCommand(threadId, opts) {
       return;
     }
     for (const msg of res.items || []) {
-      const sender = pc10.bold(msg.userId || "user");
-      const time3 = pc10.dim(msg.createdAt?.substring(11, 16) || "");
+      const sender = pc12.bold(msg.userId || "user");
+      const time3 = pc12.dim(msg.createdAt?.substring(11, 16) || "");
       console.log(`[${time3}] ${sender}: ${msg.content}`);
     }
   } catch (err) {
@@ -2884,13 +3473,13 @@ var L2 = () => {
 
 // src/commands/vault.ts
 import * as fs5 from "fs";
-import pc11 from "picocolors";
+import pc13 from "picocolors";
 
 // src/crypto/session.ts
 import * as fs4 from "fs";
 import * as path4 from "path";
-import * as os4 from "os";
-var SESSION_DIR = path4.join(os4.homedir(), ".kylrix");
+import * as os2 from "os";
+var SESSION_DIR = path4.join(os2.homedir(), ".kylrix");
 var SESSION_FILE = path4.join(SESSION_DIR, "session.json");
 function getVaultSession() {
   const envMek = process.env.KYLRIX_MEK_SESSION || process.env.KYLRIX_MEK;
@@ -2967,20 +3556,20 @@ async function unlockVaultCommand(opts) {
     if (isAuthed) {
       const res = await getClient(opts).vault.unlockUserMek(masterPassword);
       if (!res.mek) {
-        spinner.stop(pc11.red("Unlock failed."));
+        spinner.stop(pc13.red("Unlock failed."));
         throw new Error("Could not unwrap Master Encryption Key. Verify your Master Password.");
       }
       mek = res.mek;
     }
     const expiry = opts.expiryMinutes ? parseInt(opts.expiryMinutes, 10) : 60;
     const session = setVaultSession(mek, expiry);
-    spinner.stop(pc11.green("Vault unlocked successfully!"));
+    spinner.stop(pc13.green("Vault unlocked successfully!"));
     if (opts.json) {
       printJson(session);
       return;
     }
     printSuccess(`Vault unlocked for the next ${expiry} minutes.`);
-    console.log(pc11.dim("Tip: Use `kylrix vault lock` anytime to immediately seal your secrets."));
+    console.log(pc13.dim("Tip: Use `kylrix vault lock` anytime to immediately seal your secrets."));
   } catch (err) {
     printError("Failed to unlock vault", err);
     process.exit(1);
@@ -3005,14 +3594,14 @@ function statusVaultCommand(opts = {}) {
     });
     return;
   }
-  console.log("\n" + pc11.bold("Vault Security Status:"));
+  console.log("\n" + pc13.bold("Vault Security Status:"));
   if (unlocked && session) {
     const remaining = Math.max(0, Math.round((session.expiresAt - Date.now()) / 6e4));
-    console.log(`  Status:    ${pc11.green(pc11.bold("UNLOCKED"))}`);
+    console.log(`  Status:    ${pc13.green(pc13.bold("UNLOCKED"))}`);
     console.log(`  Expires:   In ${remaining} minute(s)`);
   } else {
-    console.log(`  Status:    ${pc11.yellow(pc11.bold("LOCKED"))}`);
-    console.log(pc11.dim("  Run `kylrix vault unlock` to decrypt credentials and environment variables."));
+    console.log(`  Status:    ${pc13.yellow(pc13.bold("LOCKED"))}`);
+    console.log(pc13.dim("  Run `kylrix vault unlock` to decrypt credentials and environment variables."));
   }
   console.log();
 }
@@ -3038,12 +3627,12 @@ async function listVaultCommand(opts) {
       name: v2.name,
       type: v2.itemType || (v2.isEnv ? "env" : "login"),
       username: v2.username || v2.identity || (v2.isEnv ? "(env-vars)" : ""),
-      mode: isAuthed ? v2.workspaceId || "cloud" : pc11.dim("local"),
+      mode: isAuthed ? v2.workspaceId || "cloud" : pc13.dim("local"),
       updatedAt: v2.updatedAt?.substring(0, 10) || ""
     }));
     printTable(rows, ["id", "name", "type", "username", "mode", "updatedAt"]);
     if (!isAuthed) {
-      console.log(pc11.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync secrets with cloud."));
+      console.log(pc13.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync secrets with cloud."));
     }
   } catch (err) {
     printError("Failed to list vault items", err);
@@ -3067,8 +3656,8 @@ async function getVaultCommand(id, opts) {
       console.log(item.envText);
       return;
     }
-    console.log("\n" + pc11.bold(item.name || "(Untitled Secret)"));
-    console.log(pc11.dim("\u2500".repeat(40)));
+    console.log("\n" + pc13.bold(item.name || "(Untitled Secret)"));
+    console.log(pc13.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Type:      ${item.itemType || (item.isEnv ? "env" : "login")}`);
     console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
@@ -3076,12 +3665,12 @@ async function getVaultCommand(id, opts) {
     if (item.password) console.log(`Password:  ${item.password}`);
     if (item.url) console.log(`URL:       ${item.url}`);
     if (item.notes) {
-      console.log(pc11.dim("\u2500".repeat(40)));
+      console.log(pc13.dim("\u2500".repeat(40)));
       console.log(item.notes);
     }
     if (item.customFields) {
-      console.log(pc11.dim("\u2500".repeat(40)));
-      console.log(pc11.bold("Custom Fields / Environment Variables:"));
+      console.log(pc13.dim("\u2500".repeat(40)));
+      console.log(pc13.bold("Custom Fields / Environment Variables:"));
       console.log(typeof item.customFields === "string" ? item.customFields : JSON.stringify(item.customFields, null, 2));
     }
     console.log();
@@ -3119,7 +3708,7 @@ async function createVaultCommand(name, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created secret "${pc11.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created secret "${pc13.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create vault secret", err);
     process.exit(1);
@@ -3145,7 +3734,7 @@ async function deleteVaultCommand(id, opts) {
 }
 
 // src/commands/totp.ts
-import pc12 from "picocolors";
+import pc14 from "picocolors";
 
 // src/crypto/totp.ts
 import * as crypto from "crypto";
@@ -3198,13 +3787,13 @@ async function listTotpCommand(opts) {
       return;
     }
     const rows = (items || []).map((t) => {
-      let codeDisplay = pc12.dim("locked");
+      let codeDisplay = pc14.dim("locked");
       if (t.secret) {
         try {
           const { code, remainingSeconds } = generateTotp(t.secret);
-          codeDisplay = `${pc12.bold(pc12.green(code))} (${remainingSeconds}s)`;
+          codeDisplay = `${pc14.bold(pc14.green(code))} (${remainingSeconds}s)`;
         } catch {
-          codeDisplay = pc12.red("invalid secret");
+          codeDisplay = pc14.red("invalid secret");
         }
       }
       return {
@@ -3213,12 +3802,12 @@ async function listTotpCommand(opts) {
         issuer: t.issuer || "",
         account: t.account || "",
         code: codeDisplay,
-        mode: isAuthed ? t.workspaceId || "cloud" : pc12.dim("local")
+        mode: isAuthed ? t.workspaceId || "cloud" : pc14.dim("local")
       };
     });
     printTable(rows, ["id", "name", "issuer", "account", "code", "mode"]);
     if (isAuthed && !session) {
-      console.log(pc12.dim("\nTip: Run `kylrix vault unlock` to show live 2FA verification codes."));
+      console.log(pc14.dim("\nTip: Run `kylrix vault unlock` to show live 2FA verification codes."));
     }
   } catch (err) {
     printError("Failed to list TOTP entries", err);
@@ -3239,7 +3828,7 @@ async function getTotpCodeCommand(id, opts) {
       return;
     }
     console.log(`
-  ${pc12.bold(item.name || item.issuer || "2FA Code")}: ${pc12.bold(pc12.green(code))} (${remainingSeconds}s remaining)
+  ${pc14.bold(item.name || item.issuer || "2FA Code")}: ${pc14.bold(pc14.green(code))} (${remainingSeconds}s remaining)
 `);
   } catch (err) {
     printError(`Failed to generate TOTP code for "${id}"`, err);
@@ -3264,7 +3853,7 @@ async function createTotpCommand(name, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created TOTP seed "${pc12.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created TOTP seed "${pc14.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create TOTP entry", err);
     process.exit(1);
@@ -3290,7 +3879,7 @@ async function deleteTotpCommand(id, opts) {
 }
 
 // src/commands/agents.ts
-import pc13 from "picocolors";
+import pc15 from "picocolors";
 async function listAgentSessionsCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -3326,21 +3915,21 @@ async function getAgentSessionCommand(id, opts) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc13.bold(item.title || "(Untitled Agent Session)"));
-    console.log(pc13.dim("\u2500".repeat(40)));
+    console.log("\n" + pc15.bold(item.title || "(Untitled Agent Session)"));
+    console.log(pc15.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Harness:   ${item.harness || "gemini"}`);
     console.log(`Status:    ${item.status || "idle"}`);
     console.log(`Workspace: ${item.workspaceId || "personal"}`);
     console.log(`Updated:   ${item.updatedAt || item.createdAt || "N/A"}`);
     if (item.prompt) {
-      console.log(pc13.dim("\u2500".repeat(40)));
-      console.log(pc13.bold("Prompt:"));
+      console.log(pc15.dim("\u2500".repeat(40)));
+      console.log(pc15.bold("Prompt:"));
       console.log(item.prompt);
     }
     if (item.transcript) {
-      console.log(pc13.dim("\u2500".repeat(40)));
-      console.log(pc13.bold("Transcript:"));
+      console.log(pc15.dim("\u2500".repeat(40)));
+      console.log(pc15.bold("Transcript:"));
       console.log(typeof item.transcript === "string" ? item.transcript : JSON.stringify(item.transcript, null, 2));
     }
     console.log();
@@ -3362,7 +3951,7 @@ async function startAgentSessionCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Started agent session "${pc13.bold(item.title || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Started agent session "${pc15.bold(item.title || item.id)}" (ID: ${item.id})`);
   } catch (err) {
     printError("Failed to start agent session", err);
     process.exit(1);
@@ -3384,7 +3973,7 @@ async function deleteAgentSessionCommand(id, opts) {
 }
 
 // src/commands/search.ts
-import pc14 from "picocolors";
+import pc16 from "picocolors";
 async function searchCommand(query, opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -3399,18 +3988,18 @@ async function searchCommand(query, opts) {
     }
     if (!results || results.length === 0) {
       console.log(`
-No items matching "${pc14.bold(query)}" found.`);
+No items matching "${pc16.bold(query)}" found.`);
       return;
     }
     console.log(`
-Search results for "${pc14.bold(query)}":
+Search results for "${pc16.bold(query)}":
 `);
     const rows = results.map((r2) => ({
       kind: r2.kind.toUpperCase(),
       id: r2.id,
       title: r2.title,
       snippet: r2.snippet || "",
-      mode: isAuthed ? r2.isLocal ? pc14.dim("local") : "cloud" : pc14.dim("local")
+      mode: isAuthed ? r2.isLocal ? pc16.dim("local") : "cloud" : pc16.dim("local")
     }));
     printTable(rows, ["kind", "id", "title", "snippet", "mode"]);
   } catch (err) {
@@ -3420,7 +4009,7 @@ Search results for "${pc14.bold(query)}":
 }
 
 // src/commands/share.ts
-import pc15 from "picocolors";
+import pc17 from "picocolors";
 async function shareCommand(kind, id, opts) {
   try {
     const client = requireAuthClient(opts);
@@ -3441,10 +4030,10 @@ async function shareCommand(kind, id, opts) {
       });
       return;
     }
-    console.log("\n" + pc15.bold("Resource Share Link:"));
+    console.log("\n" + pc17.bold("Resource Share Link:"));
     console.log(`  Kind: ${kind}`);
     console.log(`  ID:   ${id}`);
-    console.log(`  URL:  ${pc15.underline(pc15.cyan(shareUrl))}`);
+    console.log(`  URL:  ${pc17.underline(pc17.cyan(shareUrl))}`);
     console.log(`  Collaborator Cap: ${profile.quotas?.maxCollaboratorsPerResource || 8} users`);
     console.log();
   } catch (err) {
@@ -3454,7 +4043,7 @@ async function shareCommand(kind, id, opts) {
 }
 
 // src/commands/billing.ts
-import pc16 from "picocolors";
+import pc18 from "picocolors";
 async function billingStatusCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -3463,9 +4052,9 @@ async function billingStatusCommand(opts) {
       printJson(status);
       return;
     }
-    console.log("\n" + pc16.bold("Subscription & Billing:"));
-    console.log(`  Tier:             ${pc16.bold(pc16.cyan(status.tier || "FREE"))}`);
-    console.log(`  Pro Active:       ${status.isPro ? pc16.green("Yes") : "No"}`);
+    console.log("\n" + pc18.bold("Subscription & Billing:"));
+    console.log(`  Tier:             ${pc18.bold(pc18.cyan(status.tier || "FREE"))}`);
+    console.log(`  Pro Active:       ${status.isPro ? pc18.green("Yes") : "No"}`);
     if (status.expiresAt) {
       console.log(`  Expires At:       ${status.expiresAt}`);
     }
@@ -3510,13 +4099,13 @@ async function checkoutBillingCommand(planId, opts) {
       return;
     }
     if (res.depositAddress) {
-      console.log("\n" + pc16.bold(pc16.green("Direct On-Chain Crypto Deposit Address Generated:")));
-      console.log(`  Address: ${pc16.bold(res.depositAddress)}`);
+      console.log("\n" + pc18.bold(pc18.green("Direct On-Chain Crypto Deposit Address Generated:")));
+      console.log(`  Address: ${pc18.bold(res.depositAddress)}`);
       console.log(`  Amount:  ${res.cryptoAmount || ""} ${res.ticker || ""}`);
       console.log(`  QR Code: ${res.qrCodeUrl || "N/A"}`);
     } else if (res.checkoutUrl) {
-      console.log("\n" + pc16.bold("Hosted Checkout Session:"));
-      console.log(`  Open: ${pc16.underline(pc16.cyan(res.checkoutUrl))}`);
+      console.log("\n" + pc18.bold("Hosted Checkout Session:"));
+      console.log(`  Open: ${pc18.underline(pc18.cyan(res.checkoutUrl))}`);
     }
     console.log();
   } catch (err) {
@@ -3532,7 +4121,7 @@ async function claimCouponCommand(couponId, opts) {
       printJson(res);
       return;
     }
-    printSuccess(`Redeemed coupon "${pc16.bold(couponId)}" successfully!`);
+    printSuccess(`Redeemed coupon "${pc18.bold(couponId)}" successfully!`);
   } catch (err) {
     printError(`Failed to redeem coupon "${couponId}"`, err);
     process.exit(1);
@@ -3540,7 +4129,7 @@ async function claimCouponCommand(couponId, opts) {
 }
 
 // src/commands/admin.ts
-import pc17 from "picocolors";
+import pc19 from "picocolors";
 async function adminStatusCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -3558,13 +4147,13 @@ async function adminStatusCommand(opts) {
       });
       return;
     }
-    console.log("\n" + pc17.bold("Kylrix Instance & Admin Verification:"));
-    console.log(`  Admin Status:     ${isAdmin ? pc17.green(pc17.bold("AUTHORIZED ADMIN")) : pc17.yellow("Standard User")}`);
+    console.log("\n" + pc19.bold("Kylrix Instance & Admin Verification:"));
+    console.log(`  Admin Status:     ${isAdmin ? pc19.green(pc19.bold("AUTHORIZED ADMIN")) : pc19.yellow("Standard User")}`);
     console.log(`  Actor User ID:    ${profile.id}`);
     console.log(`  Identity Email:   ${profile.email || "N/A"}`);
     console.log(`  Account Tier:     ${profile.tier}`);
     console.log(`  Token Scopes:     ${profile.scopes?.join(", ") || "*"}`);
-    console.log(`  Edge Shield:      ${pc17.green("Active (Bot & Burst Protected)")}`);
+    console.log(`  Edge Shield:      ${pc19.green("Active (Bot & Burst Protected)")}`);
     console.log();
   } catch (err) {
     printError("Failed to verify admin status", err);
@@ -3573,7 +4162,7 @@ async function adminStatusCommand(opts) {
 }
 
 // src/commands/tags.ts
-import pc18 from "picocolors";
+import pc20 from "picocolors";
 async function listTagsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -3586,7 +4175,7 @@ async function listTagsCommand(opts) {
       id: t.id,
       name: t.name,
       color: t.color || "",
-      mode: isAuthed ? "cloud" : pc18.dim("local")
+      mode: isAuthed ? "cloud" : pc20.dim("local")
     }));
     printTable(rows, ["id", "name", "color", "mode"]);
   } catch (err) {
@@ -3606,7 +4195,7 @@ async function createTagCommand(name, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created tag "${pc18.bold(item.name)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created tag "${pc20.bold(item.name)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create tag", err);
     process.exit(1);
@@ -3683,17 +4272,17 @@ async function purgeTrashCommand(kind, id, opts) {
 }
 
 // src/commands/update.ts
-import pc20 from "picocolors";
+import pc22 from "picocolors";
 
 // src/updater/index.ts
 import * as fs6 from "fs";
 import * as path5 from "path";
-import * as os5 from "os";
+import * as os3 from "os";
 import { spawn } from "child_process";
-import pc19 from "picocolors";
+import pc21 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
 var CURRENT_VERSION = "1.0.3";
-var CACHE_DIR = path5.join(os5.homedir(), ".kylrix");
+var CACHE_DIR = path5.join(os3.homedir(), ".kylrix");
 var CACHE_FILE = path5.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
 function compareSemver(v1, v2) {
@@ -3773,30 +4362,30 @@ async function executeUpgrade(targetVersion = "latest") {
     });
     child.on("close", (code) => {
       if (code === 0) {
-        spinner.stop(pc19.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
+        spinner.stop(pc21.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
         writeCachedUpdate(CURRENT_VERSION);
         resolve();
       } else {
-        spinner.stop(pc19.red(`Upgrade failed (exit code ${code})`));
+        spinner.stop(pc21.red(`Upgrade failed (exit code ${code})`));
         reject(new Error(stderr || `Failed to run ${pm} ${args.join(" ")}`));
       }
     });
     child.on("error", (err) => {
-      spinner.stop(pc19.red("Failed to launch package manager process"));
+      spinner.stop(pc21.red("Failed to launch package manager process"));
       reject(err);
     });
   });
 }
 function printUpdateBanner(latest) {
   const boxWidth = 58;
-  const title = `Update available! ${pc19.dim(CURRENT_VERSION)} \u2192 ${pc19.green(pc19.bold(latest))}`;
+  const title = `Update available! ${pc21.dim(CURRENT_VERSION)} \u2192 ${pc21.green(pc21.bold(latest))}`;
   const pm = detectPackageManager();
   const cmd = pm === "pnpm" ? `pnpm add -g ${PACKAGE_NAME}` : `npm i -g ${PACKAGE_NAME}`;
-  const hint = `Run ${pc19.cyan("kylrix update")} or ${pc19.cyan(cmd)}`;
-  console.error("\n" + pc19.yellow("\u250C" + "\u2500".repeat(boxWidth) + "\u2510"));
-  console.error(pc19.yellow("\u2502") + "  " + title.padEnd(boxWidth + 12) + pc19.yellow("\u2502"));
-  console.error(pc19.yellow("\u2502") + "  " + hint.padEnd(boxWidth + 10) + pc19.yellow("\u2502"));
-  console.error(pc19.yellow("\u2514" + "\u2500".repeat(boxWidth) + "\u2518") + "\n");
+  const hint = `Run ${pc21.cyan("kylrix update")} or ${pc21.cyan(cmd)}`;
+  console.error("\n" + pc21.yellow("\u250C" + "\u2500".repeat(boxWidth) + "\u2510"));
+  console.error(pc21.yellow("\u2502") + "  " + title.padEnd(boxWidth + 12) + pc21.yellow("\u2502"));
+  console.error(pc21.yellow("\u2502") + "  " + hint.padEnd(boxWidth + 10) + pc21.yellow("\u2502"));
+  console.error(pc21.yellow("\u2514" + "\u2500".repeat(boxWidth) + "\u2518") + "\n");
 }
 function scheduleBackgroundUpdateCheck() {
   const isMcp = process.argv.includes("mcp");
@@ -3836,26 +4425,26 @@ async function updateCommand(opts) {
     });
     return;
   }
-  we(pc20.bgCyan(pc20.black(" Kylrix CLI Updater ")));
+  we(pc22.bgCyan(pc22.black(" Kylrix CLI Updater ")));
   const spinner = L2();
   spinner.start("Checking for updates on npm registry...");
   const latest = await fetchLatestVersion(5e3);
   if (!latest) {
-    spinner.stop(pc20.yellow("Could not reach npm registry or version not published yet."));
+    spinner.stop(pc22.yellow("Could not reach npm registry or version not published yet."));
     return;
   }
   const hasUpdate = compareSemver(latest, CURRENT_VERSION) > 0;
   if (!hasUpdate && !opts.force) {
-    spinner.stop(pc20.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
-    fe(pc20.dim("No update required."));
+    spinner.stop(pc22.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
+    fe(pc22.dim("No update required."));
     return;
   }
   spinner.stop(
-    hasUpdate ? pc20.yellow(`New version available: ${pc20.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc20.green(pc20.bold(`v${latest}`))}`) : `Re-installing v${CURRENT_VERSION}...`
+    hasUpdate ? pc22.yellow(`New version available: ${pc22.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc22.green(pc22.bold(`v${latest}`))}`) : `Re-installing v${CURRENT_VERSION}...`
   );
   try {
     await executeUpgrade(latest);
-    fe(pc20.green(`\u2714 ${PACKAGE_NAME} is now up to date (v${latest})!`));
+    fe(pc22.green(`\u2714 ${PACKAGE_NAME} is now up to date (v${latest})!`));
   } catch (err) {
     printError("Update failed", err);
     process.exit(1);
@@ -3863,13 +4452,13 @@ async function updateCommand(opts) {
 }
 
 // src/commands/sync.ts
-import pc21 from "picocolors";
+import pc23 from "picocolors";
 async function syncCommand(opts) {
   if (!hasAuth(opts)) {
     if (opts.json) {
       printJson({ synced: false, error: "Authentication required to sync local items to cloud" });
     } else {
-      console.log(pc21.yellow("\u26A0 Not logged in. Run `kylrix login` first to sync your local data to cloud."));
+      console.log(pc23.yellow("\u26A0 Not logged in. Run `kylrix login` first to sync your local data to cloud."));
     }
     return;
   }
@@ -3907,14 +4496,14 @@ async function syncCommand(opts) {
         syncedGoals++;
       }
     }
-    spinner.stop(pc21.green("Sync complete!"));
+    spinner.stop(pc23.green("Sync complete!"));
     if (opts.json) {
       printJson({ synced: true, syncedIdeas, syncedGoals });
       return;
     }
     printSuccess(`Successfully synced ${syncedIdeas} ideas and ${syncedGoals} goals to your cloud workspace.`);
   } catch (err) {
-    spinner.stop(pc21.red("Sync interrupted"));
+    spinner.stop(pc23.red("Sync interrupted"));
     printError("Sync failed", err);
     process.exit(1);
   }
@@ -20120,10 +20709,21 @@ scheduleBackgroundUpdateCheck();
 var program = new Command();
 program.name("kylrix").description("Official CLI, Model Context Protocol (MCP) bridge, and sovereign client for Kylrix").version(CURRENT_VERSION);
 program.option("-u, --url <url>", "Kylrix API base URL (default: https://www.kylrix.space)").option("-t, --token <token>", "Personal Access Token (PAT) or Agent Key").option("-w, --workspace <id>", "Active workspace ID filter").option("--json", "Output raw JSON for machine parsing");
-program.command("login").description("1-Click Web Login / Device Pairing (opens browser and pairs automatically)").action((cmdOpts) => loginCommand({ ...program.opts(), ...cmdOpts }));
-program.command("pair").description("Authenticate using RFC 8628 browser device pairing code").action((cmdOpts) => pairCommand({ ...program.opts(), ...cmdOpts }));
+program.command("login").description("1-Click Web Login / Device Pairing (opens browser and pairs automatically)").option("-u, --url <url>", "Custom backend base URL (e.g. http://localhost:3005 or https://my-selfhost.example.com)").option("-t, --token <token>", "Personal Access Token (PAT) or Agent Key").action((cmdOpts) => loginCommand({ ...program.opts(), ...cmdOpts }));
+program.command("pair").description("Authenticate using RFC 8628 browser device pairing code").option("-u, --url <url>", "Custom backend base URL").action((cmdOpts) => pairCommand({ ...program.opts(), ...cmdOpts }));
 program.command("whoami").alias("me").description("Display currently authenticated identity, scopes, and session status").action((cmdOpts) => whoamiCommand({ ...program.opts(), ...cmdOpts }));
-program.command("logout").description("Log out and remove stored local authentication credentials").action(() => logoutCommand());
+program.command("logout").description("Log out and remove stored local authentication credentials").option("--all", "Log out all accounts on the current server base URI").option("--purge", "Purge all server base URIs, account profiles, and local sessions").option("-u, --url <url>", "Target server base URL").action((cmdOpts) => logoutCommand({ ...program.opts(), ...cmdOpts }));
+var accounts = program.command("accounts").alias("account").description("Manage multi-account profiles and switch active identities under base URI silos");
+accounts.command("list").alias("ls").description("List all accounts under the current base URI partition").option("--all", "List accounts across all configured server base URIs").action((cmdOpts) => listAccountsCommand({ ...program.opts(), ...cmdOpts }));
+accounts.command("switch <idOrEmail>").alias("use").description("Switch active account profile for the current base URI").action((idOrEmail, cmdOpts) => switchAccountCommand(idOrEmail, { ...program.opts(), ...cmdOpts }));
+accounts.command("current").description("Show currently active account on the active base URI").action((cmdOpts) => currentAccountCommand({ ...program.opts(), ...cmdOpts }));
+accounts.command("remove <idOrEmail>").alias("rm").description("Remove an account profile from local config").action((idOrEmail, cmdOpts) => removeAccountCommand(idOrEmail, { ...program.opts(), ...cmdOpts }));
+var server = program.command("server").alias("servers").description("Manage backend base URIs, partitions, and self-hosted instances");
+server.command("list").alias("ls").description("List configured server base URIs and partitions").action((cmdOpts) => listServersCommand({ ...program.opts(), ...cmdOpts }));
+server.command("switch <url>").alias("use").description("Switch active server base URI").action((url2, cmdOpts) => switchServerCommand(url2, { ...program.opts(), ...cmdOpts }));
+server.command("current").description("Show currently active server base URI and partition").action((cmdOpts) => currentServerCommand({ ...program.opts(), ...cmdOpts }));
+server.command("add <url>").description("Register a server base URI").action((url2, cmdOpts) => addServerCommand(url2));
+server.command("remove <url>").alias("rm").description("Remove a server base URI and its accounts").action((url2, cmdOpts) => removeServerCommand(url2));
 var workspaces = program.command("workspaces").alias("ws").description("Manage Kylrix workspaces");
 workspaces.command("list").description("List all accessible workspaces").option("-l, --limit <number>", "Number of records to return", "25").action((cmdOpts) => listWorkspacesCommand({ ...program.opts(), ...cmdOpts }));
 workspaces.command("get <id>").description("Get workspace details by ID").action((id, cmdOpts) => getWorkspaceCommand(id, { ...program.opts(), ...cmdOpts }));

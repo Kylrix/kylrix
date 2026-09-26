@@ -48,9 +48,26 @@ pnpm add -g @kylrix/cli
 
 ### Quick Commands
 
-**1-Click Web Login (or run offline without an account):**
+**1-Click Web Login (Cloud or Custom Base URI):**
 ```bash
+# Connect to Kylrix Cloud (default)
 kylrix login
+
+# Connect to self-hosted instance or custom backend base URI
+kylrix login --url http://localhost:3005
+```
+
+**Multi-Account Profiles & Base URI Silos:**
+```bash
+# List accounts partitioned under the active base URI
+kylrix accounts list
+
+# Switch active account profile seamlessly
+kylrix accounts switch user@example.com
+
+# Manage backend base URIs and partitions
+kylrix server list
+kylrix server switch http://localhost:3005
 ```
 
 **Manage Sovereign Ideas & Notes:**

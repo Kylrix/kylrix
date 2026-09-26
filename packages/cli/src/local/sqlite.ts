@@ -1,10 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as os from 'node:os';
 import { createRequire } from 'node:module';
-
-const LOCAL_DIR = path.join(os.homedir(), '.kylrix');
-const DB_FILE = path.join(LOCAL_DIR, 'local.db');
+import { resolveEnvironment } from '../config';
 
 /**
  * Canonical Appwrite-compatible unique ID generator.
@@ -23,7 +20,7 @@ export function generateLocalId(_prefix?: string): string {
   return hexTimestamp + randomPadding;
 }
 
-let dbInstance: any = null;
+const dbInstances = new Map<string, any>();
 
 function getNativeSqlite(): any {
   try {
@@ -35,21 +32,37 @@ function getNativeSqlite(): any {
   }
 }
 
-export function getDatabase(): any {
-  if (dbInstance) return dbInstance;
+export function getDatabase(targetDbPath?: string): any {
+  const env = resolveEnvironment();
+  const dbPath = targetDbPath || env.siloDbPath;
 
-  if (!fs.existsSync(LOCAL_DIR)) {
-    fs.mkdirSync(LOCAL_DIR, { recursive: true });
+  if (dbInstances.has(dbPath)) {
+    return dbInstances.get(dbPath);
+  }
+
+  const dir = path.dirname(dbPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 
   const DatabaseSync = getNativeSqlite();
   if (DatabaseSync) {
-    dbInstance = new DatabaseSync(DB_FILE);
-    initSqliteSchema(dbInstance);
-    return dbInstance;
+    const db = new DatabaseSync(dbPath);
+    initSqliteSchema(db);
+    dbInstances.set(dbPath, db);
+    return db;
   }
 
   return null;
+}
+
+export function resetDatabaseConnections(): void {
+  for (const [key, db] of dbInstances.entries()) {
+    try {
+      db?.close?.();
+    } catch {}
+  }
+  dbInstances.clear();
 }
 
 function initSqliteSchema(db: any) {

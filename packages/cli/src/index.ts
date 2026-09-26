@@ -1,6 +1,19 @@
 import { Command } from 'commander';
 import { loginCommand, logoutCommand, pairCommand, whoamiCommand } from './commands/auth';
 import {
+  listAccountsCommand,
+  switchAccountCommand,
+  currentAccountCommand,
+  removeAccountCommand,
+} from './commands/accounts';
+import {
+  listServersCommand,
+  switchServerCommand,
+  currentServerCommand,
+  addServerCommand,
+  removeServerCommand,
+} from './commands/server';
+import {
   listWorkspacesCommand,
   getWorkspaceCommand,
   createWorkspaceCommand,
@@ -87,11 +100,14 @@ program
 program
   .command('login')
   .description('1-Click Web Login / Device Pairing (opens browser and pairs automatically)')
+  .option('-u, --url <url>', 'Custom backend base URL (e.g. http://localhost:3005 or https://my-selfhost.example.com)')
+  .option('-t, --token <token>', 'Personal Access Token (PAT) or Agent Key')
   .action((cmdOpts) => loginCommand({ ...program.opts(), ...cmdOpts }));
 
 program
   .command('pair')
   .description('Authenticate using RFC 8628 browser device pairing code')
+  .option('-u, --url <url>', 'Custom backend base URL')
   .action((cmdOpts) => pairCommand({ ...program.opts(), ...cmdOpts }));
 
 program
@@ -103,7 +119,74 @@ program
 program
   .command('logout')
   .description('Log out and remove stored local authentication credentials')
-  .action(() => logoutCommand());
+  .option('--all', 'Log out all accounts on the current server base URI')
+  .option('--purge', 'Purge all server base URIs, account profiles, and local sessions')
+  .option('-u, --url <url>', 'Target server base URL')
+  .action((cmdOpts) => logoutCommand({ ...program.opts(), ...cmdOpts }));
+
+// ── Multi-Account Profiles & Switching ──
+const accounts = program
+  .command('accounts')
+  .alias('account')
+  .description('Manage multi-account profiles and switch active identities under base URI silos');
+
+accounts
+  .command('list')
+  .alias('ls')
+  .description('List all accounts under the current base URI partition')
+  .option('--all', 'List accounts across all configured server base URIs')
+  .action((cmdOpts) => listAccountsCommand({ ...program.opts(), ...cmdOpts }));
+
+accounts
+  .command('switch <idOrEmail>')
+  .alias('use')
+  .description('Switch active account profile for the current base URI')
+  .action((idOrEmail, cmdOpts) => switchAccountCommand(idOrEmail, { ...program.opts(), ...cmdOpts }));
+
+accounts
+  .command('current')
+  .description('Show currently active account on the active base URI')
+  .action((cmdOpts) => currentAccountCommand({ ...program.opts(), ...cmdOpts }));
+
+accounts
+  .command('remove <idOrEmail>')
+  .alias('rm')
+  .description('Remove an account profile from local config')
+  .action((idOrEmail, cmdOpts) => removeAccountCommand(idOrEmail, { ...program.opts(), ...cmdOpts }));
+
+// ── Server Base URIs & Silo Partitions ──
+const server = program
+  .command('server')
+  .alias('servers')
+  .description('Manage backend base URIs, partitions, and self-hosted instances');
+
+server
+  .command('list')
+  .alias('ls')
+  .description('List configured server base URIs and partitions')
+  .action((cmdOpts) => listServersCommand({ ...program.opts(), ...cmdOpts }));
+
+server
+  .command('switch <url>')
+  .alias('use')
+  .description('Switch active server base URI')
+  .action((url, cmdOpts) => switchServerCommand(url, { ...program.opts(), ...cmdOpts }));
+
+server
+  .command('current')
+  .description('Show currently active server base URI and partition')
+  .action((cmdOpts) => currentServerCommand({ ...program.opts(), ...cmdOpts }));
+
+server
+  .command('add <url>')
+  .description('Register a server base URI')
+  .action((url, cmdOpts) => addServerCommand(url));
+
+server
+  .command('remove <url>')
+  .alias('rm')
+  .description('Remove a server base URI and its accounts')
+  .action((url, cmdOpts) => removeServerCommand(url));
 
 // ── 2. Workspaces ──
 const workspaces = program.command('workspaces').alias('ws').description('Manage Kylrix workspaces');

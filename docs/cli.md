@@ -19,9 +19,26 @@ pnpm add -g @kylrix/cli
 
 ### 2. Run Directly from Terminal
 
-**1-Click Web Authorization (or use offline without an account):**
+**1-Click Web Authorization (Cloud or Custom Base URI):**
 ```bash
+# Cloud login
 kylrix login
+
+# Self-hosted or custom backend base URI
+kylrix login --url http://localhost:3005
+```
+
+**Manage Accounts & Backend Base URIs:**
+```bash
+# List accounts on active server
+kylrix accounts list
+
+# Switch between accounts seamlessly
+kylrix accounts switch user@example.com
+
+# Switch backend base URI / partition
+kylrix server list
+kylrix server switch http://localhost:3005
 ```
 
 **Create a sovereign idea:**
@@ -45,14 +62,15 @@ kylrix mcp
 
 ## 🛡️ Architecture & Key Features
 
-### 1. True Local-First (Powered by Embedded SQLite)
-* **Zero Login Required**: You can start managing ideas, goals, encrypted secrets, TOTP codes, and calendar events immediately offline without creating an account.
-* **Embedded SQLite**: All local state is persisted in an embedded SQLite database located at `~/.kylrix/local.db`.
-* **Sync When Ready**: Once you authenticate (`kylrix login`), running **`kylrix sync`** pushes your local SQLite records up to your Kylrix Cloud workspace.
+### 1. Partitioned Silos & True Local-First (Embedded SQLite)
+* **Base URI Partitioning**: Local databases and configuration are strictly partitioned by backend base URI. Kylrix Cloud is isolated under the `default` partition (`~/.kylrix/silos/default/`), while self-hosted instances (`http://localhost:3005`, `https://selfhost.company.internal`) are partitioned into their own directory silos (`~/.kylrix/silos/<partitionKey>/`).
+* **Multi-Account Silos**: Within each base URI partition, accounts are isolated into separate silos (`~/.kylrix/silos/<partitionKey>/<userId>/`). Switching accounts (`kylrix accounts switch <email>`) immediately routes local storage to that user's silo without data bleed.
+* **Zero Login Required**: Offline local-first state runs out of the `anonymous` silo (`~/.kylrix/silos/default/anonymous/local.db`) without creating an account.
+* **Sync When Ready**: Once authenticated (`kylrix login`), running **`kylrix sync`** synchronizes your silo's local records up to the active cloud or self-hosted workspace.
 
 ### 2. 1-Click Web Login & Pairing
-* Running `kylrix login` initiates RFC 8628 pairing and opens `https://www.kylrix.space/login/KYL-XXXX` in your browser.
-* Clicking **"Authorize"** in the web workspace logs your CLI session in instantly with zero manual token copying.
+* Running `kylrix login` (or `kylrix login --url <url>`) initiates RFC 8628 pairing and opens `/login/KYL-XXXX` in your browser on the target server.
+* Clicking **"Authorize"** in the web workspace logs your CLI session in instantly with zero manual token copying, registering the account in the server's partition.
 
 ### 3. Bitwarden-Style Encrypted Vault & 2FA TOTP
 * **`kylrix vault unlock`**: Prompts for your Master Password (or accepts `--password`), derives your Master Encryption Key (MEK), and holds a transient session.
@@ -80,15 +98,24 @@ Bridge your sovereign Kylrix workspace into Cursor, Windsurf, or Claude Code:
 
 ## 📋 Command Catalog
 
-### Authentication & Account
+### Authentication & Multi-Account
 | Command | Description |
 |---|---|
-| `kylrix login` | 1-Click web login & browser pairing |
-| `kylrix pair` | Authenticate with RFC 8628 code |
-| `kylrix whoami` (alias `me`) | Display active identity, email, scopes, and tier |
-| `kylrix logout` | Remove stored local authentication tokens |
+| `kylrix login` | 1-Click web login & browser pairing (`--url <url>`, `--token <token>`) |
+| `kylrix pair` | Authenticate with RFC 8628 code (`--url <url>`) |
+| `kylrix whoami` (alias `me`) | Display active identity, email, base URI, partition, and silo path |
+| `kylrix logout` | Remove stored local authentication tokens (`--all`, `--purge`) |
+| `kylrix accounts list` (alias `ls`) | List accounts under current base URI (`--all` across all servers) |
+| `kylrix accounts switch <id/email>` | Switch active account profile for the current base URI |
+| `kylrix accounts current` | Show currently active account profile |
+| `kylrix accounts remove <id/email>` | Remove an account profile from local config |
+| `kylrix server list` (alias `ls`) | List configured backend base URIs, partitions, and account counts |
+| `kylrix server switch <url>` | Switch active backend base URI |
+| `kylrix server current` | Print currently active base URI and partition |
+| `kylrix server add <url>` | Register a backend base URI |
+| `kylrix server remove <url>` | Remove a backend base URI |
 | `kylrix settings` | View account configuration and limits |
-| `kylrix admin` | Verify admin status and Edge Shield health |
+| `kylrix admin` | Verify server status and Edge Shield health |
 
 ### Workspace Management
 | Command | Description |

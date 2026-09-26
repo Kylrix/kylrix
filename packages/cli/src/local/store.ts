@@ -1,17 +1,16 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as os from 'node:os';
 import { getDatabase, generateLocalId } from './sqlite';
-
-const LOCAL_DIR = path.join(os.homedir(), '.kylrix');
-const FALLBACK_JSON_FILE = path.join(LOCAL_DIR, 'local-store.json');
+import { resolveEnvironment } from '../config';
 
 function loadFallback(): any {
   try {
-    if (!fs.existsSync(FALLBACK_JSON_FILE)) {
+    const env = resolveEnvironment();
+    const fallbackPath = env.siloFallbackPath;
+    if (!fs.existsSync(fallbackPath)) {
       return { ideas: [], goals: [], events: [], forms: [], flows: [], vault: [], totp: [], tags: [], trash: [] };
     }
-    return JSON.parse(fs.readFileSync(FALLBACK_JSON_FILE, 'utf-8'));
+    return JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
   } catch {
     return { ideas: [], goals: [], events: [], forms: [], flows: [], vault: [], totp: [], tags: [], trash: [] };
   }
@@ -19,10 +18,13 @@ function loadFallback(): any {
 
 function saveFallback(data: any): void {
   try {
-    if (!fs.existsSync(LOCAL_DIR)) {
-      fs.mkdirSync(LOCAL_DIR, { recursive: true });
+    const env = resolveEnvironment();
+    const fallbackPath = env.siloFallbackPath;
+    const dir = path.dirname(fallbackPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(FALLBACK_JSON_FILE, JSON.stringify(data, null, 2), { encoding: 'utf-8', mode: 0o600 });
+    fs.writeFileSync(fallbackPath, JSON.stringify(data, null, 2), { encoding: 'utf-8', mode: 0o600 });
   } catch {}
 }
 
