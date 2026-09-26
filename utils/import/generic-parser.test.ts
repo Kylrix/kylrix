@@ -22,6 +22,62 @@ describe('generic-parser', () => {
       expect(rows[0]).toEqual(['Header1', 'Header2']);
       expect(rows[1]).toEqual(['Val"1', 'Val2']);
     });
+
+    it('returns empty array for empty string input or whitespace-only input', () => {
+      expect(parseCSV('')).toEqual([]);
+      expect(parseCSV('   \n\r\n  ')).toEqual([]);
+    });
+
+    it('handles newlines inside quoted fields', () => {
+      const csv = 'Name,Notes\n"Item 1","Line 1\nLine 2\r\nLine 3"\n"Item 2","Simple note"';
+      const rows = parseCSV(csv);
+      expect(rows.length).toBe(3);
+      expect(rows[0]).toEqual(['Name', 'Notes']);
+      expect(rows[1]).toEqual(['Item 1', 'Line 1\nLine 2\r\nLine 3']);
+      expect(rows[2]).toEqual(['Item 2', 'Simple note']);
+    });
+
+    it('handles lone CR line endings (\r)', () => {
+      const csv = 'Header1,Header2\rVal1,Val2\rVal3,Val4';
+      const rows = parseCSV(csv);
+      expect(rows.length).toBe(3);
+      expect(rows[0]).toEqual(['Header1', 'Header2']);
+      expect(rows[1]).toEqual(['Val1', 'Val2']);
+      expect(rows[2]).toEqual(['Val3', 'Val4']);
+    });
+
+    it('trims leading and trailing whitespace around unquoted and quoted values', () => {
+      const csv = '  Name  ,  User  ,  Pass  \n  " App Name "  ,  " user@test.com "  ,  " 1234 "  ';
+      const rows = parseCSV(csv);
+      expect(rows.length).toBe(2);
+      expect(rows[0]).toEqual(['Name', 'User', 'Pass']);
+      expect(rows[1]).toEqual(['App Name', 'user@test.com', '1234']);
+    });
+
+    it('handles empty fields between delimiters', () => {
+      const csv = 'a,,c,;d\n,b,,';
+      const rows = parseCSV(csv);
+      expect(rows.length).toBe(2);
+      expect(rows[0]).toEqual(['a', '', 'c', '', 'd']);
+      expect(rows[1]).toEqual(['', 'b', '', '']);
+    });
+
+    it('parses single column input', () => {
+      const csv = 'Header\nValue1\nValue2';
+      const rows = parseCSV(csv);
+      expect(rows.length).toBe(3);
+      expect(rows[0]).toEqual(['Header']);
+      expect(rows[1]).toEqual(['Value1']);
+      expect(rows[2]).toEqual(['Value2']);
+    });
+
+    it('handles unclosed quote gracefully', () => {
+      const csv = 'Header1,Header2\n"Unclosed quote,val2';
+      const rows = parseCSV(csv);
+      expect(rows.length).toBe(2);
+      expect(rows[0]).toEqual(['Header1', 'Header2']);
+      expect(rows[1]).toEqual(['Unclosed quote,val2']);
+    });
   });
 
   describe('detectColumnMapping', () => {
