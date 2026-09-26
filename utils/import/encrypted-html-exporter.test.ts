@@ -350,6 +350,142 @@ describe('encrypted-html-exporter', () => {
       expect(unlockBtn.textContent).toBe('Unlock backup');
     });
 
+    it('shows error when legacy direct password unlock fails and re-enables submit button', async () => {
+      const legacyHtml = generateEncryptedHtmlPage(
+        {
+          ciphertext: btoa('invalid-ciphertext-data'),
+          salt: btoa(String.fromCharCode(...new Uint8Array(32))),
+          iv: btoa(String.fromCharCode(...new Uint8Array(12))),
+        },
+        'legacyuser'
+      );
+      const { doc } = setupGeneratedHtml(legacyHtml);
+
+      const passwordInput = doc.getElementById('password') as HTMLInputElement;
+      passwordInput.value = 'WrongPassword!';
+
+      const passwordForm = doc.getElementById('password-block') as HTMLFormElement;
+      const unlockBtn = doc.getElementById('unlock-btn') as HTMLButtonElement;
+
+      passwordForm.dispatchEvent(new doc.defaultView.Event('submit', { cancelable: true }));
+
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      const errorEl = doc.getElementById('error') as HTMLElement;
+
+      expect(errorEl.classList.contains('show')).toBe(true);
+      expect(errorEl.textContent).toBe('Unlock failed. Check the password.');
+      expect(unlockBtn.disabled).toBe(false);
+      expect(unlockBtn.textContent).toBe('Unlock backup');
+    });
+
+    it('clears pre-existing error state when password form submit event is triggered', async () => {
+      const bundle = await sealPlaintextExport(sampleData, masterPassword, null);
+      const html = generateEncryptedHtmlPage(bundle, 'testuser');
+      const { doc } = setupGeneratedHtml(html);
+
+      const errorEl = doc.getElementById('error') as HTMLElement;
+      errorEl.textContent = 'Previous error message';
+      errorEl.classList.add('show');
+      expect(errorEl.classList.contains('show')).toBe(true);
+
+      const passwordInput = doc.getElementById('password') as HTMLInputElement;
+      passwordInput.value = masterPassword;
+
+      const passwordForm = doc.getElementById('password-block') as HTMLFormElement;
+      passwordForm.dispatchEvent(new doc.defaultView.Event('submit', { cancelable: true }));
+
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      const unlockCard = doc.getElementById('unlock') as HTMLElement;
+      expect(unlockCard.classList.contains('hidden')).toBe(true);
+      expect(errorEl.classList.contains('show')).toBe(false);
+    });
+
+    it('handles error when password DEK unwrap or ciphertext decryption throws', async () => {
+      const bundle = {
+        ciphertext: btoa('corrupted-ciphertext'),
+        salt: btoa(String.fromCharCode(...new Uint8Array(32))),
+        iv: btoa(String.fromCharCode(...new Uint8Array(12))),
+        wrappedDekPassword: btoa('corrupted-wrapped-dek'),
+        wrappedDekIv: btoa(String.fromCharCode(...new Uint8Array(12))),
+        passkey: null,
+      };
+
+      const html = generateEncryptedHtmlPage(bundle, 'testuser');
+      const { doc } = setupGeneratedHtml(html);
+
+      const passwordInput = doc.getElementById('password') as HTMLInputElement;
+      passwordInput.value = masterPassword;
+
+      const unlockBtn = doc.getElementById('unlock-btn') as HTMLButtonElement;
+      unlockBtn.click();
+
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      const errorEl = doc.getElementById('error') as HTMLElement;
+      expect(errorEl.classList.contains('show')).toBe(true);
+      expect(errorEl.textContent).toBe('Unlock failed. Check the password.');
+      expect(unlockBtn.disabled).toBe(false);
+      expect(unlockBtn.textContent).toBe('Unlock backup');
+    });
+
+    it('handles passkey unlock error when passkey DEK unwrapping or decrypting throws', async () => {
+      const dummyPrfRaw = new Uint8Array(32);
+      const bundle = {
+        ciphertext: btoa('corrupted-ciphertext'),
+        salt: btoa(String.fromCharCode(...new Uint8Array(32))),
+        iv: btoa(String.fromCharCode(...new Uint8Array(12))),
+        wrappedDekPassword: '',
+        wrappedDekIv: '',
+        passkey: {
+          credentialId: btoa('cred-id'),
+          prfSalt: btoa(String.fromCharCode(...new Uint8Array(32))),
+          wrappedDek: btoa('corrupted-wrapped-dek'),
+          wrappedDekIv: btoa(String.fromCharCode(...new Uint8Array(12))),
+        },
+      };
+
+      const html = generateEncryptedHtmlPage(bundle, 'testuser');
+      const { doc } = setupGeneratedHtml(html, {
+        credentialsGet: vi.fn().mockResolvedValue({
+          getClientExtensionResults: () => ({
+            prf: { results: { first: dummyPrfRaw.buffer } },
+          }),
+        }),
+      });
+
+      const passkeyBtn = doc.getElementById('passkey-btn') as HTMLElement;
+      passkeyBtn.click();
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const errorEl = doc.getElementById('error') as HTMLElement;
+      expect(errorEl.classList.contains('show')).toBe(true);
+      expect(errorEl.textContent).toMatch(/failed/i);
+    });
+
+    it('handles fallback vault structure parsing when unlocked data has alternate or null formats', async () => {
+      const directData = JSON.stringify({
+        credentials: [{ name: 'DirectItem', username: 'user', password: 'pass', url: '' }],
+        totpSecrets: [],
+      });
+
+      const bundle = await sealPlaintextExport(directData, masterPassword, null);
+      const html = generateEncryptedHtmlPage(bundle, 'testuser');
+      const { doc } = setupGeneratedHtml(html);
+
+      const passwordInput = doc.getElementById('password') as HTMLInputElement;
+      passwordInput.value = masterPassword;
+
+      const unlockBtn = doc.getElementById('unlock-btn') as HTMLButtonElement;
+      unlockBtn.click();
+
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      expect(doc.getElementById('list')?.innerHTML).toContain('DirectItem');
+    });
+
     it('successfully unlocks vault with correct password and allows tab switching, search, and download', async () => {
       const bundle = await sealPlaintextExport(sampleData, masterPassword, null);
       const html = generateEncryptedHtmlPage(bundle, 'testuser');
