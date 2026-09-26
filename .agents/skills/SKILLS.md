@@ -1,197 +1,85 @@
-# Kylrix agent skills catalog
+# Kylrix Agent Skills Catalog
 
-**Read this file first.** Then open only the one skill that matches your task. Do not browse the directory skill-by-skill.
+**Read this file first.** Then open only the one skill that matches your domain task. Do not scan skills one-by-one.
 
 Hard policy also lives in repo-root `AGENTS.md` (Table/Row terms, single DB `passwordManagerDb`, no new in-app `app/api` routes, pnpm only, `/flows` + `/workspace/[id]` share routing — never `/workspaces`).
 
-_Catalog covers 88 skills._
+*Consolidated catalog covers 22 core skills (streamlined from 100+ to prevent model hallucination).*
 
-## How to pick a skill
+---
 
-1. Guardrails → `kylrix-guardrails`
-2. Strategy / vendor / long-term stack → `kylrix`
-3. Routes / nav → `system.routing-canonical`, `system.navigation-policy`
-4. Dead code / LOC → `system.dead-code-knip`
-5. Domain work → matching prefix (`security.*`, `note.*`, `call.*`, `billing.*`, …)
-6. Product “why” → `why.*` (rationale only; still follow implementation skills for code)
+## 1. Core Architecture & System Directives
 
-## Start here
+| Skill | Description |
+|---|---|
+| `kylrix` | **North Star:** Anti-fragility, vendor independence, decade survivability, bare-metal end state. Read before major architecture, backend, or dependency decisions. |
+| `guardrails` | Enforces Kylrix architecture rules, routing (`/flows`, `/workspace/[id]`), shipping velocity, same-tab navigation, and dead-code hygiene. |
+| `system.ops` | Hexagonal DI registry, Server SDK actions, query expression mappers, build error fixes, chat relay, and join gating. |
+| `why` | Architectural rationale library: zero-trust invariants, data sovereignty, E2EE vs UX balance, passkeys, crypto checkout, and Telegram notification bridges. |
 
-| Skill | Helps with |
-|-------|------------|
-| `kylrix` | **North star:** anti-fragility, vendor independence, decade survivability, bare-metal end state. Read before architecture, backend, AI provider, or dependency decisions. |
-| `kylrix-guardrails` | Enforces Kylrix safety and architecture rules in the single Next.js codebase. Use before editing app logic, data flows, shared services, or cross-app UX. |
-| `architecture.local-first` | Paint local first, live copy as SoT, soft remote merge, auth late-binding. |
-| `architecture.security-session` | Unlock as RAM session, prompt on gated ops, no general browser enclave, client seal + server escalate. |
-| `openbricks` | Canonical UI language: opaque ash panels, minimal copy, mobile drawers / desktop right rails. |
+---
 
-## Architecture & routing
+## 2. Design System & UI
 
-| Skill | Helps with |
-|-------|------------|
-| `kylrix` | North-star anti-fragility: vendor-independent ports, bare-metal end state, decade rewrite path. |
-| `architecture.local-first` | Product-wide local-first invariants (no store names). |
-| `architecture.security-session` | Unlock session and trust-boundary invariants (no key/table names). |
-| `system.navigation-policy` | Enforces same-tab navigation and canonical route helpers. Use when editing links, redirects, shell transitions, or chrome active states. |
-| `system.routing-canonical` | Canonical Kylrix App Router paths after the scorched-earth route wipe. Use before adding links, redirects, nav items, or isXPath helpers. |
+| Skill | Description |
+|---|---|
+| `openbricks` | **Canonical** OpenBricks design system: opaque ash surfaces (`#161412`), pitch-black cards (`#000000`), pure white text (`#FFFFFF`), mobile drawers vs desktop right sidebars, and plan upgrade patterns. |
 
-## Security & crypto
+---
 
-| Skill | Helps with |
-|-------|------------|
-| `security.agentic-execution-safety` | Deep dive into the Agentic AI execution and sandbox safety engine in Kylrix. Explains the strict ownership checking, Google Gemini API parameters, and framework |
-| `security.auth-lifecycle-guardrails` | "Prevents interactivity issues caused by unauthorized background tasks. Use when background services (like cleanup or sync tasks) throw 'Unauthorized' errors on |
-| `security.database-read-only-rls` | Explains why database-level ACL permissions are strictly read-only, how the Server SDK dynamically escalates write access using userId/creatorId and global coll |
-| `security.kylrix-integrity` | Integrity checks and trust boundaries for Kylrix secure operations and shared objects. |
-| `security.masterpass-crypto` | Deep dive into the cryptographic architecture powering the Kylrix secure state vault. Explains Argon2id key stretching, PBKDF2 legacy migrations, and AES-GCM cr |
-| `security.mfa-session-verification` | Deep dive into the temporal Multi-Factor Authentication (MFA) session verification in Kylrix. Explains factor normalization, temporal alignment (mfaUpdatedAt vs |
-| `security.permission-system` | Procedural guide for the Kylrix privileged permission system. Explains the relationship between the Actor ID, JWT auth fail-safe, and the Admin SDK adapter. Use |
-| `security.privileged-permissions` | Deep dive into the user visibility levels and Row-Level Security (RLS) system in Kylrix. Explains the permissions mapping matrix, and server-side privileged per |
-| `security.public-and-guest` | Native isPublic / isGuest / isGeneral columns as server-side escape hatches for sharing. |
-| `security.rate-limiting-bruteforce` | Deep dive into the client-side memory-based rate limiter and the server-side progressive auth rate limiter. Explains user pattern learning, email verification o |
-| `security.secure-ops-rls-bypass` | Explains the hybrid Row-Level Security (RLS) system in secure-ops, detailing how user-scoped fetches fallback to dynamic admin verification gates. |
-| `security.sudo-mode-gate` | Deep dive into the temporal Sudo Mode validation in Kylrix. Explains the RAM-only timestamp window, non-persistence policies, and multi-factor authorization bou |
-| `security.vault-keychain` | Applies zero-knowledge security constraints to masterpass, passkeys, keychain, credentials, and TOTP flows. Use for unlock/reset/wipe/security-critical logic. |
-| `security.wesp-security-context` | Deep dive into the Web Ecosystem Security Protocol (WESP) in Kylrix. Explains tab-specific RAM-only secrets, system-wide lock broadcasts, and key isolation to b |
+## 3. Security, Vault & Cryptography
 
-## Data, sync & Appwrite
+| Skill | Description |
+|---|---|
+| `security` | Complete zero-knowledge security architecture: Argon2id key stretching, MasterPass, AES-256-GCM encryption, RAM ephemeral unlock sessions, Sudo Mode, MFA verification, and RLS bypass. |
 
-| Skill | Helps with |
-|-------|------------|
-| `rxdb-appwrite-sync` | RxDB/IndexedDB substrate for local-first storage. For object list/detail sync architecture (pendingSync, upsert merge, detail-must-not-autosave), follow the can |
-| `rxdb-local-storage-only` | Strict mandate that all local copy engine operations must use RxDB / IndexedDB substrate (LocalEngine / getRxDB) and avoid browser localStorage. |
-| `storage.core` | Ecosystem standards and architectural rules for file uploads, size gating, client-side compression, and dynamic rendering across all Kylrix storage buckets. |
-| `storage.upload-gating` | Deep dive into the server-side file upload security engine in Kylrix. Explains the subscription plan gates, bucket-level byte ceilings, and Next.js Server Actio |
-| `sync` | Canonical offline-first local-copy sync for Kylrix. Live copy = UI content SoT; autonomic sync engine pending queue (RxDB) = amber/green SoT; Appwrite confirms  |
-| `fix.ideas-client-side-pinned-shared-filtering` | Pattern for simplifying over-engineered database-level pinned/shared filters with client-side sorting. |
-| `fix.vault-direct-client-pagination` | Post-mortem diagnosis, list of failed attempts, and working first-principles resolution for Vault Credentials and TOTP rendering issues. |
-| `system.appwrite-audit` | Audits table/index usage against live schema config without proposing schema edits. Use when validating data flow, query alignment, and stale table assumptions. |
-| `system.appwrite-cli-ops` | **Durable SoT** for Appwrite CLI/schema (survives official skill reinstall). Guardrails, no push tables, additive-only, deprecated `string` → varchar/text/mediumtext/longtext. |
-| `system.pat-http-api` | Personal Access Tokens, `/api/v1`, rate buckets, Developers tab, scopes catalog. |
-| `system.oauth2-sign-in-with-kylrix` | Appwrite OAuth2 Server IdP: consent URL, `oauth_apps` / installs / consent_requests schema. |
-| `system.chat-relay-relay` | Deep dive into the server-side real-time chat sync and event propagation. Explains conversation member permission mappings, SHA-256 base64url reaction indexing, |
-| `system.cross-app-linking` | Maintains cross-app pointers and metadata links between notes, tasks, calls, and secure objects. Use when connecting features across domain surfaces without dup |
-| `system.domain-canonicalization` | Enforce using the canonical www.kylrix.space subdomain for all outgoing URLs, email CTAs, Telegram push messages, share links, and public metadata assets. Use w |
-| `system.hexagonal-registry` | Deep dive into the dynamic Dependency Injection (DI) registry in Kylrix. Explains port/adapter decoupling, lazy instantiation, and run-time mock overrides for t |
-| `system.join-request-gating` | Deep dive into the Group Join Request system in Kylrix. Explains the composite-key SHA-256 ID derivation, invite link expiration verification, and admin-only no |
-| `system.query-expression-mapping` | Deep dive into the database query mapper in Kylrix. Explains how clean QueryExpressions (e.g. equal, contains, limit) are mapped to database-specific formats to |
-| `system.sdk-consistency` | Keeps shared sdk/service contracts consistent across the single codebase. Use when editing `sdk/`, shared exports, or broad consumer callsites. |
-| `system.server-sdk-action` | Server Actions vs Admin SDK patterns for privileged TablesDB mutations. |
-| `system.tablesdb-row-cache` | Explains the read-through caching engine for TablesDB. Explains key hashing, cache eviction schedules, and coalescing concurrent inflight queries to prevent net |
-| `selfhost` | One-command bundled Docker self-host: `selfhost.sh`, env overrides, drift detection, local Appwrite bootstrap. |
+---
 
-## Connect / calls
+## 4. Data, Local-First Sync & Storage
 
-| Skill | Helps with |
-|-------|------------|
-| `call.presence-heartbeat-mesh` | Deep dive into the real-time presence and typing indicators in Kylrix. Explains the ephemeral presence channels, table-scoped resource bindings, and broadcast l |
-| `call.webrtc-huddles` | Deep dive into the WebRTC real-time calls and audio/video mesh architecture in Kylrix. Explains direct P2P vs Cloudflare SFU transport modes, device dynamic hot |
+| Skill | Description |
+|---|---|
+| `sync` | Canonical offline-first sync engine: RxDB/IndexedDB substrate (LocalEngine), autonomic sync queue, local-copy merge reconciliation, and read-through caching. |
+| `storage` | File upload standards, storage buckets, subscription plan upload gates, and client-side image compression. |
 
-## Notes & objects
+---
 
-| Skill | Helps with |
-|-------|------------|
-| `note.crosslinks-tagging` | Deep dive into the tag-prefix relational mapping pattern in Kylrix. Explains how crosslink tags (e.g. `source:kylrixnote:id`) represent relationships without co |
-| `note.decoupled-sdk` | Deep dive into the platform-agnostic Notes SDK structure. Explains the injection pattern, isolation of database queries, and modular mock compatibility. |
-| `note.filtering` | Foundation for note discovery and partitioning in the Kylrix ecosystem. Use this to ensure notes are correctly routed between the primary Notes list, Shared Pri |
-| `note.thread-threads` | Guidelines and lifecycle rules for using thread Notes as a high-efficiency comment and chat thread channel across Kylrix resources (calls, tasks, tags, projects, |
-| `note.shared-cache` | Share note state globally via RxDB/NotesContext instead of making redundant network fetches. Ensure once notes are loaded/synced in /note, they are locally quer |
+## 5. Backend & Appwrite
 
-## Workspaces & Flow
+| Skill | Description |
+|---|---|
+| `appwrite-cli` | Durable CLI operations, additive-only database migrations, table/column/index manipulation, and strict push protection. |
+| `appwrite-typescript` | Appwrite TypeScript SDK reference for client-side queries, real-time events, and Server SDK actions. |
+| `selfhost` | Single-command bundled Docker Compose self-hosting (`./selfhost.sh`), container stack, and schema bootstrap. |
 
-| Skill | Helps with |
-|-------|------------|
-| `flow.cascading-on-demand` | The Cascading-on-Demand (CoD) CRUD optimization pattern for extremely snappy rendering and highly efficient data/permission queries in the Kylrix ecosystem. Use |
-| `flow.drafts-autosave-recovery` | Deep dive into the localized form drafts autosave and manifest tracking in Kylrix. Explains the uncommitted state persistence, metadata segregation, and storage |
-| `flow.realtime-input-rxdb-sync` | Realtime form/input sync through RxDB local copy before Appwrite confirm. |
-| `workspace.projects-table` | Workspaces UI over the projects table (ProjectsService). Use when editing /workspaces, project detail, discussion, or project-linked objects. |
+---
 
-## Billing & tokens
+## 6. APIs, Protocols & Developer Platform
 
-| Skill | Helps with |
-|-------|------------|
-| `billing.blockbee-pro` | Kylrix Pro/Teams billing via BlockBee hosted checkout, coupons, and subscription ledger. Use for pricing, checkout, success, and admin Pro grants. |
-| `blockbee.hosted-checkout` | BlockBee hosted checkout for Pro/Teams billing. Use when editing pricing, checkout server actions, BlockBee URLs, IPN fulfillment, or yearly discount charging. |
-| `vercel` | Safe Vercel CLI workflows (inspect, logs, preview/prod deploy). Never mutate Vercel env unless the user explicitly asks. Local commerce = `.env.local`, not Vercel. |
-| `system.token-ledger-minting` | Explains the internal Kylrix Token ledger architecture. Explains micro-denomination conversions, supply restrictions, risk tightening, and activity-based mint d |
-| `token.ops-security` | Hardens $KYLRIX token operations with append-only ledger discipline, singleton state-row gating, and server-admin security boundaries. Use when editing token mi |
+| Skill | Description |
+|---|---|
+| `api` | Kylrix HTTP API (`/api/v1`), Personal Access Tokens (PATs), rate limiting, developer scopes, and programmatic resource CRUD. |
+| `mcp` | Model Context Protocol (MCP) server: Stateless JSON-RPC over Streamable HTTP for AI tools, Claude Code, Cursor, and autonomous agents. |
+| `oauth2` | Sign in with Kylrix OAuth 2.1 / OIDC identity provider, authorization code flow with PKCE, and consent token exchange. |
 
-## UI / brand
+---
 
-| Skill | Helps with |
-|-------|------------|
-| `openbricks` | **Canonical** OpenBricks design system: opaque ash surfaces, no gradients/blur, minimal copy, shade sectioning, mobile drawers / desktop right rails. |
-| `brand.general` | A dark-only brand language system for Kylrix-style products. Use to define or critique UI tone, spacing, chrome, accent color direction, and the openbricks syst |
-| `brand.kylrix` | Applies Kylrix brand language (logo, palette, typography, surface hierarchy) while preserving readability and UX clarity. Use for top-level UI visual decisions. |
-| `brand.openbricks-3.0` | Legacy OpenBricks 3.0 notes — defers to `openbricks` for all product UI. |
-| `colors` | Canonical color map specifications for the Kylrix ecosystem, restricting all interfaces to five core branding hues plus neutral accents. |
-| `copy.plain-language` | Enforces plain, user-facing language and blocks jargon-heavy product copy. Use when UI text drifts into buzzwords, metaphors, or internal terminology that users |
-| `ui.chrome-surfaces` | Mobile top/bottom drawers vs desktop native right sidebars for details and drawers. |
-| `ui.drawer` | Applies drawer-first interaction patterns for secondary actions, pickers, and in-context workflows. Use when replacing modal-heavy flows or stabilizing drawer U |
-| `ui.drawer-sidebar-desktop-translation` | Direct layout translation of mobile drawers into unified desktop sidebars. Outlines rules for anchor placement, dimensions, stacking behavior, and responsive CS |
-| `ui.fluid-layouts` | Unified specifications for dynamic, responsive canvas layouts. Explains the deprecation of rigid multi-column sections in favor of fluid UI morphs that adapt se |
-| `ui.global-hud` | Handles global activity HUD behavior, unread/read pointers, and transient presence signals. Use for topbar/live activity indicators and ecosystem notification s |
-| `ui.interaction-design` | Expert architectural patterns for maintaining UI responsiveness and preventing 'click-blocking' in complex mono-apps. Use when refactoring layouts, adding globa |
-| `ui.interactivity-safety` | Expert guidance for maintaining UI interactivity and preventing 'Stacking Context traps' in the Kylrix mono-app. Use when modifying global layouts, adding new d |
-| `ui.render-glitch-detector` | Diagnose and fix React rendering glitches caused by real-time subscriptions, animation loops, and GPU-intensive operations. Detects infinite re-subscription cyc |
-| `ui.skeleton-philosophy` | Skeleton loading patterns for perceived performance without layout thrash. |
-| `ui.tailwind-fix` | Row and card text layout fixes after Tailwind v4 + OpenBricks migration. Use when list rows, cards, or drawer items have clipped text, crushed line-height, or c |
-| `ui.tailwind-v4` | Tailwind v4 + OpenBricks migration notes for utility and theme tokens. |
-| `ui.opengraph` | Canonical OpenGraph preview cards, social metadata, and dynamic ImageResponse card generation rules. |
-| `brand.openbricks-4.0` | Core principles, tactile patterns, and anti-SaaS upgrade rules for OpenBricks 4.0 drawers, overlays, and input surfaces. |
+## 7. Product Domains & Entities
 
-## Agentic
+| Skill | Description |
+|---|---|
+| `note` | Notes SDK, private/shared/public partitioning, crosslinks tagging relations, and shared caching. |
+| `threads` | Unified plaintext discussions, comments, thread messages, and reactions across notes, goals, workspaces, and objects. |
+| `workspace` | Workspaces UI over `projects` table, `project_objects` join mapping, workspace filtering, and workflow engine. |
+| `billing` | BlockBee Pro/Teams crypto checkout, subscription ledger, coupons, and $KYLRIX token ledger minting. |
 
-| Skill | Helps with |
-|-------|------------|
-| `agentic.runtime` | In-app agent runtime (settings agents, chat/session routes, tool registry, client executor). Use when editing agent drawers, tools, or session UX. |
+---
 
-## Why (product rationale)
+## 8. Agentic AI & Governance
 
-| Skill | Helps with |
-|-------|------------|
-| `why.cascade-delete-mechanic` | Explains the asynchronous and recursive cascade deletion logic designed to purge linked metadata, comment reactions, and storage voice files. |
-| `why.engagement-audit-views` | Deep dive into the dynamic engagement views and metric rollup architecture in Kylrix. Explains the SHA-256 salted IP/UserAgent anonymization, daily/monthly buck |
-| `why.exportability-data-sovereignty` | Explain why all user data is completely portable (importable/exportable) and how our Google integration promotes ultimate user data sovereignty. |
-| `why.free-tier-limits-8-collaborators` | Explain why databases, notes, passwords, forms, and TOTPs are completely free and unlimited, but capped at 8 collaborators per resource to avoid undocumented re |
-| `why.ispublic-isguest-escape-hatches` | Detail the isPublic, isGuest, and isGeneral columns that serve as secure server-side escape hatches to manage resource access for public, guest, and project con |
-| `why.scrapped-byok-ai` | Document the architectural decision to scrap the Bring Your Own Key (BYOK) AI model in Kylrix, explaining the conflicts with E2EE boundaries, decryption key UX, |
-| `why.telegram-notification-bridge` | Explain using Telegram as a push notification outlet to remain completely detached from Apple/Google developer platform constraints and fee structures. |
-| `why.universal-identity-hook` | Deep dive into the global Connect Directory profile and identity sync system. Explains sync event routing, caching layers, and cross-application identity lookup |
-| `why.unlock-upgrade-t5` | Explain the single Kylrix Pro subscription model, the symbolism of crypto-only payment, detachment from corporate compliance bloat, and the exclusion of Teams f |
-| `why.unorganic-email-dispatch` | Deep dive into the Unorganic Email Dispatch engine in Kylrix. Explains the prioritized event queue, theme mappings, anti-spam frequency caps, and ledger logging |
-| `why.ux-vs-encryption-balance` | Detail the balance between client-side end-to-end encryption and server-side encryption, highlighting why normal notes are server-side encrypted to prioritize r |
-| `why.workflow-engine` | Deep dive into the declarative workflow and task engine in Kylrix. Explains the reversible negations catalog, irreversible actions safety list, hierarchical Act |
-| `why.zero-support-passkeys` | Explain the "Zero-Support" philosophy and why passkeys are heavily incentivized to mathematically prevent account lockouts. |
-
-## Ops & shipping
-
-| Skill | Helps with |
-|-------|------------|
-| `ota` | "Use when working on anything Ota-specific: creating, refining, reviewing, or explaining Ota contracts (`ota.yaml`), modeling execution governance for humans an |
-| `schema-mismatch-audit` | Procedure for aligning database schema mismatches where client code attempts to push fields missing in Appwrite config and production. |
-| `shipping-mode` | Guidelines for ultra-high velocity shipping in the Kylrix organization. |
-| `system.build-errors` | Known Next/tsc build failure modes and the fastest surgical fixes. |
-| `system.dead-code-knip` | Aggressively remove unused files/exports with Knip and intra-file dead locals with ESLint. Use for LOC cuts and post-refactor cleanup. |
-
-## Vendor / SDK references
-
-| Skill | Helps with |
-|-------|------------|
-| `appwrite-cli` | Appwrite CLI skill. Use when managing Appwrite projects from the command line. Covers installation, login, project initialization, multi-file project configurat |
-| `appwrite-typescript` | Appwrite TypeScript SDK skill. Use when building browser-based JavaScript/TypeScript apps, React Native mobile apps, or server-side Node.js/Deno backends with A |
-
-## Removed / do not resurrect
-
-Retired during the 2026 route & architecture wipe (or replaced):
-
-- `system.accounts-api`, `system.router` — accounts shell & meta-router gone
-- `brand.openbricks`, `brand.openbricks-2.1` — use `openbricks` (canonical); `brand.openbricks-3.0` is a legacy pointer
-- `call.realtime`, `call.presence-mesh` — use `call.webrtc-huddles` + `call.presence-heartbeat-mesh`
-- `flow.tasks`, `note.intelligence` — superseded by routing + domain skills
-- `ui.gpu-compositor-feed-stability`, `ui.muted-v3-design` — obsolete surfaces
-- `upstash/` vendor dump — not Kylrix product skills
-- `why.projects-ecosystem-flagship` → `workspace.projects-table`
-- `agentic.universal-tooling` → `agentic.runtime`
-- Loose `blockbee.custom-flow.md`, `tailwind-fix-v2.md` — retired / merged
-
+| Skill | Description |
+|---|---|
+| `agents` | Autonomous AI agents, zero-trust provisioning keys, client-side MEK derivation, and sovereign multi-chain identity. |
+| `agentic.runtime` | In-app agent runtime, agent drawers, tools registry, execution sandboxing, and Vercel AI SDK integration. |
+| `ota` | Ota governance framework, contracts (`ota.yaml`), doctor verification, and run workflows. |
+| `vercel` | Safe Vercel CLI workflows, production/preview deployment guidelines, and environment variable rules. |

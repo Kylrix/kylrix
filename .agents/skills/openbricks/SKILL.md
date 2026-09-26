@@ -1,70 +1,40 @@
 ---
 name: openbricks
-description: >-
-  Canonical OpenBricks design system for Kylrix UI. Use for any visual work:
-  settings, details, drawers, sidebars, cards, copy density, colors, surfaces,
-  sectioning. This is the single source of truth — prefer it over scattered
-  brand.* / ui.* notes when they conflict.
+description: Canonical OpenBricks design system for Kylrix UI. Use for visual work, layouts, colors, surfaces, typography, drawers, sidebars, and interaction safety.
 ---
 
-# OpenBricks (canonical)
+# OpenBricks Design System (Canonical)
 
-Read this skill for product UI. Older `brand.openbricks-3.0`, `colors`, `ui.chrome-surfaces`, and `copy.plain-language` skills defer here when they conflict.
+The single source of truth for all Kylrix UI design, styling, and interactivity patterns.
 
-## Surfaces & chrome
+## 1. Surfaces, Chrome & Color Stack
+- **Opaque Surfaces Only**: No gradients, frosted glass, or translucent backdrop blurs on product chrome.
+- **Color Stack**:
+  - **Panel / Container Background**: \`#161412\` (Canonical deep ash background for shells, pages, drawers, sidebars)
+  - **Primary Components / Cards / Wells**: \`#000000\` (Pitch black for cards, input wells, interactive items)
+  - **Component Border**: \`rgba(255, 255, 255, 0.18)\` to \`0.25\` (Crisp, solid high-contrast outlines)
+  - **Text Color (STRICT)**: \`#FFFFFF\` (\`text-white\` only). Never use muted/gray text opacity (\`text-white/50\`). Differentiate hierarchy by font-size, weight (500 vs 800), and uppercase tracking.
+- **Core Accent Hues**:
+  - Indigo (Core/Primary): \`#6366F1\`
+  - Amber (Social/Moments): \`#F59E0B\`
+  - Purple (Flow/Automation): \`#A855F7\`
+  - Emerald (Vault/Security): \`#10B981\`
+  - Rose (Danger/Destructive): \`#EF4444\`
 
-- **Opaque only.** No gradients. No blur backdrops / frosted glass on product chrome.
-- **No translucent washes** on panels (no `bg-*/10` hero fills that read as haze). Borders and solid ash blocks only.
-- **Mobile:** top/bottom drawers for everything. Object details = full-screen (`100dvh`) drawers covering top + bottom chrome.
-- **Desktop:** native **right** sidebar for details and drawers. Never edge-to-edge fullscreen details on desktop.
-- Overlays: `keepMounted: false`, `disablePortal: true`, conditional mount `{isOpen && <X />}`.
+## 2. Typography & Copy Standards
+- **Font Stack**: Headers use \`font-clash\`, body and settings use \`font-satoshi\`.
+- **Layman-First Copy**: Prohibit technical buzzwords (E2EE, Entropy, Node, Nexus, Decentralized, Agentic) in user copy. Use clear plain terms: Secure, Private, System, Smart.
 
-## Unified panel color (STRICT)
+## 3. Responsive Chrome: Mobile Drawers vs Desktop Right Sidebars
+- **Mobile**: Top/bottom sheets and drawers for actions. Object details use full-screen (\`100dvh\`) drawers.
+- **Desktop**: Native **right sidebar** for details, actions, and secondary workflows. Never full-screen modals for details on desktop.
+- **Global Unmount Policy**: Always conditionally render overlays (\`{isOpen && <Drawer />}\`). Set \`keepMounted: false\` and \`disablePortal: true\` on drawers to avoid stacking context traps and DOM click-blocking.
 
-A single component / section uses **one continuous fill**. Do **not** split a card into a deep-ash header band and a pitch-black body with a hard seam.
+## 4. Plan Upgrade Patterns (Anti-SaaS)
+- **Never Hide Features**: Show available Pro capabilities to free tier users.
+- **On Attempt**: Trigger the upgrade drawer gracefully when clicking/toggling a Pro feature, rather than removing or disabling the button.
 
-- Wrong: panel shell `#161412` + inner well `#0A0908` sharing one border (two-tone slab).
-- Right: panel is all `#161412` (or all `#0A0908`). Title + actions sit on that same fill.
-- Need structure or contrast? Nest a **child** with its own background (icon chip, row tile, delete button, duration chip) — like the fingerprint / trash tiles on passkey rows.
-- Separate sections = separate sibling panels with gap, not internal color bands or long hairline dividers between list items.
-
-## Color stack (Inverted Accent Standard)
-
-| Role | Hex / token |
-|---|---|
-| Panel / Container Background | `#161412` (Canonical deep ash background for shells, pages, drawers, sidebars) |
-| Primary Components / Cards / Wells (STRICT) | `#000000` (Strictly pitch black for all components, interactive cards, input wells, and items with text) |
-| Component Border (STRICT) | `white/20`–`white/25` or `rgba(255, 255, 255, 0.18)`–`0.25` (Crisp, solid high-contrast outlines separating components from background) |
-| Text Color (STRICT) | `#FFFFFF` (`color: '#fff'`, `text-white` only — differentiate hierarchy by font-size, weight, or uppercase tracking, never muted/gray opacity) |
-| Accent (core) | `#6366F1` |
-| Accent (social/moment) | `#F59E0B` |
-| Accent (flow) | `#A855F7` |
-
-## Typography & Text Hierarchy
-
-- Headers: `font-clash`
-- Body / settings: `font-satoshi`
-- **Pure White Text Rule (STRICT)**: All text is pure `#FFFFFF`. Prohibit `rgba(255,255,255,0.45)`, `text-white/50`, or gray text.
-- Secondary / meta markers: smaller size (`0.72rem`), font-weight (`500` vs `800`), uppercase with letter-spacing (`letterSpacing: '0.08em'`).
-
-## Plan gating (STRICT)
-
-- **Do not hide** features a free plan lacks. Show every feature button/toggle (Kylie assist, voice, uploads, etc.).
-- **On attempt / enable / use**, open the Pro upgrade drawer — never silently remove the control.
-- Same convention on Moments, object composers, agent panel, and file tools. Detail: `brand.openbricks-4.0` §12.
-
-## Layered In-Tree Confirmation Drawer Pattern (STRICT)
-
-All multi-step confirmations, account selectors, and tool execution gates MUST use layered bottom sheets (`bg-[#0B0A09]` or `#161412` with `rounded-t-[24px]` and backdrop overlay) that mount directly over their host surface (like the agentic panel) **without closing, unmounting, or navigating away** from the active context:
-- **No In-Chat Confirmation Bloat**: Never render fragile, scrollable confirmation cards inside chat text streams. Step confirmations must elevate above the conversation using a layered bottom sheet.
-- **Bidirectional Component Signaling**: The confirmation drawer accepts execution callbacks (`onConfirm`, `onSelect`, `onClose`) and dispatches event/state confirmations back to the calling component without resetting runtime state.
-- **Contained Viewport**: On desktop, the drawer covers the host right sidebar; on mobile, it covers the viewport. Both utilize in-tree conditional mounting (`{isOpen && <Drawer />}`).
-
-## Related pointers
-
-- Chrome hosts: `ui.chrome-surfaces`
-- Drawer ↔ sidebar sizes: `ui.drawer-sidebar-desktop-translation`
-- Brand hues: `colors`
-- Interaction safety: `ui.interactivity-safety`, `ui.interaction-design`
-- OpenBricks 4 tactile + plan rules: `brand.openbricks-4.0`
-
+## 5. Layout & Glitch Prevention
+- **Fluid layouts**: Use flexible grid/flex containers that adapt seamlessly without rigid fixed-width columns.
+- **Skeleton loading**: Minimal, non-jarring skeletons to prevent layout shift.
+- **Glitch prevention**: Avoid infinite subscription re-trigger loops or GPU composite thrashing.
