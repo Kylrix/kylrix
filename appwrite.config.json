@@ -7440,7 +7440,17 @@
                     "default": null
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "idx_tg_chat_id",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "tg_chat_id"
+                    ],
+                    "orders": []
+                }
+            ]
         },
         {
             "$id": "source_control",
