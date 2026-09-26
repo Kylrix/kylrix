@@ -99,7 +99,7 @@ function PairContent() {
           toast.success('Pairing request denied.');
         }
       } else {
-        toast.error(json?.error?.message || 'Failed to authorize.');
+        toast.error(json?.error?.message || json?.data?.error || 'Failed to authorize.');
       }
     } catch (err: any) {
       toast.error(err.message || 'Authorization failed.');
@@ -204,14 +204,20 @@ function PairContent() {
                 Requested Capabilities:
               </span>
               <div className="bg-[#000000] border border-white/10 rounded-xl p-3 flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-                {session.requestedScopes.map((scope) => (
-                  <span
-                    key={scope}
-                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/80"
-                  >
-                    {scope}
+                {session.requestedScopes.length === 0 || session.requestedScopes.length >= 20 ? (
+                  <span className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
+                    Full Account & Workspace Access (* All Permissions)
                   </span>
-                ))}
+                ) : (
+                  session.requestedScopes.map((scope) => (
+                    <span
+                      key={scope}
+                      className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/80"
+                    >
+                      {scope}
+                    </span>
+                  ))
+                )}
               </div>
             </div>
 

@@ -18,4 +18,17 @@ describe('Pairing Service User Code Normalization & Entropy', () => {
     expect(normalizeUserCode('KYL-GWRP')).toBe('KYL-GWRP');
     expect(normalizeUserCode('kyl-gwrp')).toBe('KYL-GWRP');
   });
+
+  it('normalizes wildcard "*" and "all" to all catalog PAT scopes', async () => {
+    const { normalizeScopes, PAT_SCOPES } = await import('@/lib/api/scopes');
+    const fromStar = normalizeScopes(['*']);
+    expect(fromStar.length).toBe(PAT_SCOPES.length);
+    expect(fromStar).toEqual(PAT_SCOPES);
+
+    const fromAll = normalizeScopes('all');
+    expect(fromAll.length).toBe(PAT_SCOPES.length);
+
+    const fromJson = normalizeScopes('["*"]');
+    expect(fromJson.length).toBe(PAT_SCOPES.length);
+  });
 });

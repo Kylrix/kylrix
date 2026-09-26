@@ -102,6 +102,15 @@ export function normalizeScopes(input: unknown): PatScope[] {
           }
         })()
       : [];
+
+  const hasWildcard = arr.some((x) => {
+    const s = String(x || '').trim().toLowerCase();
+    return s === '*' || s === 'all' || s === 'full';
+  });
+  if (hasWildcard) {
+    return [...PAT_SCOPES];
+  }
+
   const out: PatScope[] = [];
   for (const raw of arr) {
     const s = String(raw || '').trim() as PatScope;

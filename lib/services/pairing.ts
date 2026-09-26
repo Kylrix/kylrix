@@ -246,8 +246,10 @@ export const PairingService = {
     } catch {}
 
     const scopes = params.grantedScopes && params.grantedScopes.length > 0
-      ? params.grantedScopes
+      ? normalizeScopes(params.grantedScopes)
       : normalizeScopes(row.requestedScopes);
+
+    const finalScopes = scopes.length > 0 ? scopes : normalizeScopes(['*']);
 
     const clientName = meta.clientName || 'Paired Client';
 
@@ -255,7 +257,7 @@ export const PairingService = {
     const { token, pat } = await PatService.create({
       userId: params.userId,
       name: `${clientName} (Punch Grant)`,
-      scopes: scopes as PatScope[],
+      scopes: finalScopes,
       keyCategory: 'punch_token',
     });
 
