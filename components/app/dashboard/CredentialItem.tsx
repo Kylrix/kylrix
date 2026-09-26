@@ -12,6 +12,7 @@ import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu';
+import toast from 'react-hot-toast';
 
 export default function CredentialItem({
   credential,
@@ -390,7 +391,6 @@ export default function CredentialItem({
   };
 
   return (
-    <>
     <div
       onClick={() => {
         if (isSelectMode) {

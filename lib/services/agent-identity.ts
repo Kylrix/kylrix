@@ -1,5 +1,4 @@
 import * as secp256k1 from '@noble/secp256k1';
-import { bech32 } from '@scure/base';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { tablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';

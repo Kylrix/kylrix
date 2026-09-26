@@ -233,6 +233,7 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
       onDelete,
       openUnified,
       removeEvent,
+      activeWorkspace?.id,
     ],
   );
 
@@ -261,7 +262,6 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
   };
 
   return (
-    <>
     <div
       role="button"
       tabIndex={0}

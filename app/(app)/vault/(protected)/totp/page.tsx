@@ -334,7 +334,7 @@ function TOTPCardStable({
         ]},
       { label: 'Edit', icon: <Pencil size={16} />, onClick: () => openEditDialog(totp) },
       { label: 'Delete', icon: <Trash2 size={16} />, variant: 'destructive' as const, onClick: () => openDeleteDialog(totp.$id) }
-  ], [pinned, totp, selection]);
+  ], [pinned, totp, selection, activeWorkspace?.id]);
   const handleContextMenu = (e: React.MouseEvent) => {
     if (selection.isSelectMode) return;
     e.preventDefault();
@@ -343,7 +343,6 @@ function TOTPCardStable({
   };
   const radius = 10; const circumference = 2 * Math.PI * radius; const strokeDashoffset = circumference - (progress / 100) * circumference;
   return (
-    <>
     <div
       onClick={() => {
         if (selection.isSelectMode) {

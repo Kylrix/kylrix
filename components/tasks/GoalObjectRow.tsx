@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Check,
   Pin,
@@ -365,6 +365,7 @@ export default function GoalObjectRow({ task }: Props) {
       task.description,
       task.id,
       task.title,
+      activeWorkspace?.id,
     ],
   );
 
@@ -419,7 +420,6 @@ export default function GoalObjectRow({ task }: Props) {
   }, [task, pinned, isActuallyLocked]);
 
   return (
-    <>
     <ObjectCard
       item={item}
       variant="task"

@@ -184,7 +184,7 @@ describe('lib/appwrite/note thread notes operations', () => {
 
       vi.mocked(threadCrypto.encryptThreadData).mockRejectedValue(new Error('Encryption failed'));
 
-      const result = await updateNote('thread-fail-encrypt', {
+      await updateNote('thread-fail-encrypt', {
         title: 'Brand New Title',
       });
 

@@ -63,6 +63,8 @@ export interface KylrixNotification {
     username?: string;
     avatar?: string;
     avatarId?: string;
+    npub?: string;
+    pubkey?: string;
   };
   source?: 'kylrix' | 'system';
   errorDetails?: {
@@ -362,8 +364,8 @@ export function NotificationContent({
     (actor?: KylrixNotification['actor']) => {
       if (!actor) return false;
       const keys = [
-        actor.pubkey?.toLowerCase(),
-        actor.npub?.toLowerCase(),
+        (actor as any).pubkey?.toLowerCase(),
+        (actor as any).npub?.toLowerCase(),
         actor.userId?.toLowerCase(),
         actor.username?.toLowerCase()?.replace(/^@/, ''),
       ].filter(Boolean) as string[];
@@ -378,13 +380,13 @@ export function NotificationContent({
     e: React.MouseEvent
   ) => {
     e.stopPropagation();
-    const primaryKey = actor.pubkey || actor.npub || actor.userId || actor.username;
+    const primaryKey = (actor as any).pubkey || (actor as any).npub || actor.userId || actor.username;
     if (!primaryKey) return;
 
     const currentlyFollowing = isFollowingActor(actor);
     const allKeysToToggle = [
-      actor.pubkey?.toLowerCase(),
-      actor.npub?.toLowerCase(),
+      (actor as any).pubkey?.toLowerCase(),
+      (actor as any).npub?.toLowerCase(),
       actor.userId?.toLowerCase(),
       actor.username?.toLowerCase()?.replace(/^@/, ''),
     ].filter(Boolean) as string[];

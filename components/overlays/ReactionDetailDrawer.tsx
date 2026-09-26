@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Heart, Zap, Repeat2, User, Globe, Shield, ArrowRight, X } from 'lucide-react';
+import { Heart, Zap, Repeat2, User, Shield, ArrowRight, X } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useRouter } from 'next/navigation';
 

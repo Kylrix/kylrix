@@ -42,7 +42,7 @@ function bookmarkSourceFor(input: BookmarkToSelfChatInput): BookmarkIndexEntry['
   return 'ecosystem';
 }
 
-function bookmarkSourceFromKind(kind: BookmarkObjectKind, objectId: string): BookmarkIndexEntry['source'] {
+function bookmarkSourceFromKind(kind: BookmarkObjectKind, _objectId: string): BookmarkIndexEntry['source'] {
   if (kind !== 'moment') return 'other';
   return 'ecosystem';
 }

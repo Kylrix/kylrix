@@ -339,6 +339,11 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     }
   });
 
+  const cardTitle = React.useMemo(
+    () => (isLocked ? 'Locked' : isEncryptedNote ? 'Encrypted' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled'),
+    [isEncryptedNote, isLocked, liveNote.content, liveNote.title],
+  );
+
   const useMemo = React.useMemo; const contextMenuItems = useMemo(() => [
     { label: pinned ? 'Unpin' : 'Pin', icon: <PinIcon size={16} className={pinned ? 'rotate-45 text-[#EC4899]' : ''} />, onClick: () => { handlePinToggle(); } },
     {
@@ -436,11 +441,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       onClick: openDelete,
     }
   ], [pinned, enterSelectMode, accessControlItems, isPro, handlePinToggle, isLocked, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete, liveNote, note, onUpdate, resolveNoteShareUrl, showError, showSuccess, showInfo, activeWorkspace?.id, cardTitle, upsertNote, openSidebar, openOverlay, closeSidebar, closeOverlay]);
-
-  const cardTitle = React.useMemo(
-    () => (isLocked ? 'Locked' : isEncryptedNote ? 'Encrypted' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled'),
-    [isEncryptedNote, isLocked, liveNote.content, liveNote.title],
-  );
 
   const previewText = React.useMemo(() => {
     if (isEncryptedNote) return isLocked ? 'Locked note' : 'Encrypted note';

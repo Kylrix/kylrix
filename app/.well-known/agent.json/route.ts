@@ -4,7 +4,7 @@ import { getProductSiteUrl, getProductName } from '@/lib/config/product';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const siteUrl = getProductSiteUrl();
   const productName = getProductName();
 

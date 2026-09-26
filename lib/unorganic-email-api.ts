@@ -2,7 +2,7 @@ import { Query as TablesQuery, TablesDB } from 'appwrite';
 import { createHash } from 'node:crypto';
 import { ID, Query, type Users, Client as NodeAppwriteClient } from 'node-appwrite';
 import { createSystemClient } from '@/lib/appwrite-admin';
-import { APPWRITE_CONFIG, KYLRIX_AUTH_URI } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { configureInternalAppwriteClient } from '@/lib/appwrite/internal-headers';
 
 import {
