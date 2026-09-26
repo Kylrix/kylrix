@@ -57,7 +57,7 @@ export function getDatabase(targetDbPath?: string): any {
 }
 
 export function resetDatabaseConnections(): void {
-  for (const [key, db] of dbInstances.entries()) {
+  for (const db of dbInstances.values()) {
     try {
       db?.close?.();
     } catch {}

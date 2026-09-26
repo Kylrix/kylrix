@@ -180,13 +180,13 @@ server
 server
   .command('add <url>')
   .description('Register a server base URI')
-  .action((url, cmdOpts) => addServerCommand(url));
+  .action((url) => addServerCommand(url));
 
 server
   .command('remove <url>')
   .alias('rm')
   .description('Remove a server base URI and its accounts')
-  .action((url, cmdOpts) => removeServerCommand(url));
+  .action((url) => removeServerCommand(url));
 
 // ── 2. Workspaces ──
 const workspaces = program.command('workspaces').alias('ws').description('Manage Kylrix workspaces');

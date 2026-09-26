@@ -4,7 +4,6 @@ import {
   switchAccount,
   removeAccount,
   resolveEnvironment,
-  listServers,
   loadConfig,
 } from '../config';
 import { printError, printInfo, printJson, printSuccess } from '../formatter';

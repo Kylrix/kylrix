@@ -5,8 +5,6 @@ import {
   removeServer,
   resolveEnvironment,
   normalizeBaseUrl,
-  getBaseUriPartitionKey,
-  saveConfig,
 } from '../config';
 import { printError, printInfo, printJson, printSuccess } from '../formatter';
 
