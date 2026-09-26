@@ -9,6 +9,7 @@ import {
   clearServerAccounts,
 } from '../config';
 import { printError, printInfo, printJson, printSuccess } from '../formatter';
+import { handlePostLoginAutoSync } from '../local/sync-resolver';
 
 function tryOpenBrowser(url: string) {
   const start =
@@ -41,6 +42,7 @@ export async function loginCommand(opts: { url?: string; token?: string }) {
       printInfo(`Server:    ${pc.cyan(env.apiUrl)}`);
       printInfo(`Partition: ${pc.yellow(env.partitionKey)}`);
       printInfo(`Data Silo: ${pc.dim(env.siloDir)}`);
+      await handlePostLoginAutoSync(env.apiUrl, profile.id, opts.token);
       return;
     } catch (err: any) {
       printError('Invalid token provided', err);
@@ -69,7 +71,7 @@ export async function pairCommand(opts: { url?: string; json?: boolean }) {
     }
 
     const baseWebUrl = env.apiUrl.replace(/\/api\/v1$/, '');
-    const directLoginUrl = `${baseWebUrl}/login/${session.userCode}`;
+    const directLoginUrl = session.verificationUriComplete || `${baseWebUrl}/pair?code=${encodeURIComponent(session.userCode)}`;
 
     console.log();
     console.log(pc.cyan('╭────────────────────────────────────────────────────────╮'));
@@ -99,7 +101,7 @@ export async function pairCommand(opts: { url?: string; json?: boolean }) {
 
     let pollCount = 0;
     const result = await client.pairing.pollExchange(session.deviceCode, {
-      intervalSeconds: session.interval || 3,
+      intervalSeconds: Math.max(session.interval || 5, 5),
       timeoutSeconds: session.expiresIn || 600,
       onPoll: () => {
         if (process.stdout.isTTY) {
@@ -141,6 +143,9 @@ export async function pairCommand(opts: { url?: string; json?: boolean }) {
     printInfo(`Server:    ${pc.cyan(env.apiUrl)}`);
     printInfo(`Partition: ${pc.yellow(env.partitionKey)}`);
     printInfo(`Data Silo: ${pc.dim(updatedEnv.siloDir)}`);
+
+    // Automatic sync of existing offline container data if eligible
+    await handlePostLoginAutoSync(env.apiUrl, result.userId, result.token);
   } catch (err: any) {
     if (process.stdout.isTTY) {
       process.stdout.write('\r' + ' '.repeat(50) + '\r');

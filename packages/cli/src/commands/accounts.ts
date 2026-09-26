@@ -165,3 +165,101 @@ export function removeAccountCommand(idOrEmail: string, opts: { url?: string } =
     process.exit(1);
   }
 }
+
+export function syncSourceAccountCommand(containerName?: string, opts: { json?: boolean } = {}) {
+  const config = loadConfig();
+
+  if (containerName) {
+    config.defaultSyncSource = containerName.trim();
+    if (config.pendingWarning) {
+      delete config.pendingWarning;
+    }
+    saveMasterConfig(config);
+
+    if (opts.json) {
+      printJson({ defaultSyncSource: config.defaultSyncSource });
+      return;
+    }
+
+    printSuccess(`Default offline sync point set to container: "${pc.bold(config.defaultSyncSource)}"`);
+    printInfo(`New logins on the standard Kylrix partition will automatically sync data from this container.`);
+    return;
+  }
+
+  const { listOfflineContainers } = require('../local/sync-resolver');
+  const containers = listOfflineContainers('default');
+  const current = config.defaultSyncSource || 'default';
+
+  if (opts.json) {
+    printJson({ defaultSyncSource: current, containers });
+    return;
+  }
+
+  console.log();
+  console.log(pc.bold('Offline Data Containers (Default Partition):'));
+  console.log(`  ${pc.dim('Default sync point:')} ${pc.green(pc.bold(current))}`);
+  console.log();
+
+  if (containers.length === 0) {
+    console.log(pc.dim('  No offline containers found.'));
+  } else {
+    for (const c of containers) {
+      const isCurrent = c.name === current;
+      const marker = isCurrent ? pc.green('● ') : pc.dim('○ ');
+      const nameStr = isCurrent ? pc.bold(c.name) : c.name;
+      const countStr = pc.cyan(`(${c.itemCount} items)`);
+      const defaultTag = isCurrent ? pc.bgGreen(pc.black(' ACTIVE SYNC SOURCE ')) : '';
+      console.log(`  ${marker}${nameStr} ${countStr} ${defaultTag}`);
+      console.log(`    ${pc.dim(c.path)}`);
+    }
+  }
+
+  console.log();
+  console.log(pc.dim('To switch default sync source: `kylrix accounts sync-source <container>`'));
+  console.log(pc.dim('To manually sync a container:  `kylrix accounts sync-offline <container>`\n'));
+}
+
+export async function syncOfflineAccountCommand(
+  containerName?: string,
+  opts: { url?: string; json?: boolean } = {}
+) {
+  const env = resolveEnvironment({ url: opts.url });
+
+  if (!env.token) {
+    printError('You must be logged in to sync offline data to an account. Run `kylrix login` first.');
+    process.exit(1);
+  }
+
+  const config = loadConfig();
+  const targetContainer = (containerName || config.defaultSyncSource || 'default').trim();
+
+  try {
+    const { migrateOfflineData, pushLocalItemsToCloud } = require('../local/sync-resolver');
+    const migrated = migrateOfflineData(targetContainer, env.userId, 'default');
+
+    if (migrated.total === 0) {
+      printInfo(`No offline items found in container "${targetContainer}".`);
+      return;
+    }
+
+    const pushed = await pushLocalItemsToCloud({ url: env.apiUrl, token: env.token });
+
+    if (config.pendingWarning) {
+      delete config.pendingWarning;
+      saveMasterConfig(config);
+    }
+
+    if (opts.json) {
+      printJson({ synced: true, container: targetContainer, migrated, pushed });
+      return;
+    }
+
+    printSuccess(
+      `Successfully synced ${migrated.total} items from container "${targetContainer}" to account ${pc.bold(env.email || env.userId)}.`
+    );
+    printInfo(`Pushed ${pushed.pushedIdeas} ideas and ${pushed.pushedGoals} goals to Kylrix Cloud.`);
+  } catch (err: any) {
+    printError(`Failed to sync container "${targetContainer}"`, err);
+    process.exit(1);
+  }
+}

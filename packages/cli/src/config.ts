@@ -32,9 +32,13 @@ export interface CliMasterConfig {
   userId?: string;
   email?: string;
   tier?: string;
+  defaultSyncSource?: string;
+  pendingWarning?: string;
 }
 
 export type CliConfig = Partial<CliMasterConfig>;
+
+export const DEFAULT_OFFLINE_ACCOUNT = 'default';
 
 const CONFIG_DIR = path.join(os.homedir(), '.kylrix');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
@@ -84,9 +88,19 @@ export function getBaseUriPartitionKey(rawUrl?: string): string {
 
 /**
  * Derives a filesystem-safe account silo slug.
+ * Offline anonymous accounts resolve to the configured default sync source (or 'default').
  */
 export function getAccountSlug(userId?: string): string {
-  if (!userId || typeof userId !== 'string') return 'anonymous';
+  if (!userId || typeof userId !== 'string') {
+    try {
+      if (fs.existsSync(CONFIG_FILE)) {
+        const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed?.defaultSyncSource) return String(parsed.defaultSyncSource).replace(/[^a-zA-Z0-9_-]/g, '_');
+      }
+    } catch {}
+    return DEFAULT_OFFLINE_ACCOUNT;
+  }
   return userId.replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
@@ -105,17 +119,28 @@ export function getSiloDir(baseUrl?: string, userId?: string): string {
 
 /**
  * Resolves the SQLite database path for a specific partition & silo.
- * Automatically copies existing legacy DB if present so no data is lost.
+ * Automatically copies existing legacy or anonymous DB if present so no data is lost.
  */
 export function getSiloDbPath(baseUrl?: string, userId?: string): string {
   const dir = getSiloDir(baseUrl, userId);
   const siloDb = path.join(dir, 'local.db');
   const legacyDb = path.join(CONFIG_DIR, 'local.db');
-  if (!fs.existsSync(siloDb) && fs.existsSync(legacyDb) && getBaseUriPartitionKey(baseUrl) === 'default') {
+  const partitionKey = getBaseUriPartitionKey(baseUrl);
+
+  if (!fs.existsSync(siloDb) && fs.existsSync(legacyDb) && partitionKey === 'default') {
     try {
       fs.copyFileSync(legacyDb, siloDb);
     } catch {}
   }
+
+  // Also bridge legacy anonymous silo to default container if present
+  const anonDb = path.join(CONFIG_DIR, 'silos', partitionKey, 'anonymous', 'local.db');
+  if (!fs.existsSync(siloDb) && fs.existsSync(anonDb) && getAccountSlug(userId) === DEFAULT_OFFLINE_ACCOUNT) {
+    try {
+      fs.copyFileSync(anonDb, siloDb);
+    } catch {}
+  }
+
   return siloDb;
 }
 
@@ -126,11 +151,21 @@ export function getSiloFallbackPath(baseUrl?: string, userId?: string): string {
   const dir = getSiloDir(baseUrl, userId);
   const siloJson = path.join(dir, 'local-store.json');
   const legacyJson = path.join(CONFIG_DIR, 'local-store.json');
-  if (!fs.existsSync(siloJson) && fs.existsSync(legacyJson) && getBaseUriPartitionKey(baseUrl) === 'default') {
+  const partitionKey = getBaseUriPartitionKey(baseUrl);
+
+  if (!fs.existsSync(siloJson) && fs.existsSync(legacyJson) && partitionKey === 'default') {
     try {
       fs.copyFileSync(legacyJson, siloJson);
     } catch {}
   }
+
+  const anonJson = path.join(CONFIG_DIR, 'silos', partitionKey, 'anonymous', 'local-store.json');
+  if (!fs.existsSync(siloJson) && fs.existsSync(anonJson) && getAccountSlug(userId) === DEFAULT_OFFLINE_ACCOUNT) {
+    try {
+      fs.copyFileSync(anonJson, siloJson);
+    } catch {}
+  }
+
   return siloJson;
 }
 

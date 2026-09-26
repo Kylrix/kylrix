@@ -22,7 +22,7 @@ export function generateLocalId(_prefix?: string): string {
 
 const dbInstances = new Map<string, any>();
 
-function getNativeSqlite(): any {
+export function getNativeSqlite(): any {
   try {
     const require = createRequire(import.meta.url);
     const sqlite = require('node:sqlite');

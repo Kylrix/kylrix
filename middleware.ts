@@ -93,6 +93,11 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/api/dev') ||
     pathname.startsWith('/mcp')
   ) {
+    // Exempt RFC 8628 pairing protocol from coarse edge IP burst blocks
+    if (pathname.startsWith('/api/v1/pairing/')) {
+      return NextResponse.next();
+    }
+
     const shield = enforceApiIpShield(request);
     if (!shield.allowed) {
       return NextResponse.json(
@@ -274,6 +279,11 @@ export function middleware(request: NextRequest) {
   }
 
   // ─── RAPID RELOAD STORM DEFENSE ───────────────────────────────────────
+  // Exempt pairing and direct login pairing redirection from rapid reload defense
+  if (pathname.startsWith('/pair') || pathname.startsWith('/login')) {
+    return NextResponse.next();
+  }
+
   const now = Date.now();
   const reloadCookie = request.cookies.get(RELOAD_COOKIE)?.value;
   let reloadData: { count: number; windowStart: number } = { count: 0, windowStart: now };

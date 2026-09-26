@@ -70,8 +70,23 @@ export class PairingClient {
         continue;
       }
 
-      if (json?.error?.code === 'slow_down') {
-        await new Promise((resolve) => setTimeout(resolve, interval + 5000));
+      if (
+        res.status === 429 ||
+        json?.error?.code === 'slow_down' ||
+        json?.error === 'edge_rate_limited' ||
+        json?.error === 'rate_limit_exceeded'
+      ) {
+        // Rate limited or requested to slow down — back off and continue polling without crashing
+        const retryHeader = res.headers?.get?.('retry-after');
+        const retrySec = Number(retryHeader || json?.retry_after || 5);
+        const delay = Math.max(retrySec * 1000, interval + 2000);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+
+      if (res.status >= 500 && res.status < 600) {
+        // Transient server error during restart or deployment — wait and retry
+        await new Promise((resolve) => setTimeout(resolve, interval));
         continue;
       }
 

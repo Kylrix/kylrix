@@ -5,7 +5,10 @@ import {
   getBaseUriPartitionKey,
   getSiloDir,
   getSiloDbPath,
+  getAccountSlug,
   saveConfig,
+  loadConfig,
+  saveMasterConfig,
   switchAccount,
   listAccounts,
   removeAccount,
@@ -14,7 +17,9 @@ import {
   resolveEnvironment,
   clearConfig,
   DEFAULT_API_URL,
+  DEFAULT_OFFLINE_ACCOUNT,
 } from './config';
+import { evaluateOfflineAutoSync, listOfflineContainers } from './local/sync-resolver';
 
 describe('CLI Base URI Partitioning and Multi-Account Silos', () => {
   beforeEach(() => {
@@ -176,4 +181,60 @@ describe('CLI Base URI Partitioning and Multi-Account Silos', () => {
       expect(updated.activeAccountId).toBe('usr_a');
     });
   });
+
+  describe('Offline Container Auto-Sync & Multi-Account Safety', () => {
+    it('defaults offline account slug to DEFAULT_OFFLINE_ACCOUNT (default)', () => {
+      expect(getAccountSlug()).toBe(DEFAULT_OFFLINE_ACCOUNT);
+      expect(getAccountSlug(undefined)).toBe('default');
+      expect(getSiloDir('https://www.kylrix.space')).toContain(path.join('silos', 'default', 'default'));
+    });
+
+    it('allows switching the default sync point container via config', () => {
+      const config = loadConfig();
+      config.defaultSyncSource = 'work_container';
+      saveMasterConfig(config);
+
+      expect(getAccountSlug()).toBe('work_container');
+      expect(getSiloDir('https://www.kylrix.space')).toContain(path.join('silos', 'default', 'work_container'));
+    });
+
+    it('blocks automatic sync if active server is on a custom partition', () => {
+      saveConfig({
+        apiUrl: 'http://localhost:3005',
+        userId: 'dev_user',
+      });
+
+      const verdict = evaluateOfflineAutoSync('http://localhost:3005', 'dev_user');
+      expect(verdict.canAutoSync).toBe(false);
+      expect(verdict.reason).toContain('custom partition');
+    });
+
+    it('blocks automatic sync if partition already has multiple accounts (earmarked)', () => {
+      saveConfig({
+        apiUrl: 'https://www.kylrix.space',
+        userId: 'first_user',
+      });
+      saveConfig({
+        apiUrl: 'https://www.kylrix.space',
+        userId: 'second_user',
+      });
+
+      const verdict = evaluateOfflineAutoSync('https://www.kylrix.space', 'third_user');
+      expect(verdict.canAutoSync).toBe(false);
+      expect(verdict.reason).toContain('already contains multiple accounts');
+    });
+
+    it('lists offline containers without leaking authenticated user accounts', () => {
+      saveConfig({
+        apiUrl: 'https://www.kylrix.space',
+        userId: 'authenticated_user_99',
+      });
+
+      const containers = listOfflineContainers('default');
+      const names = containers.map((c) => c.name);
+      expect(names).toContain('default');
+      expect(names).not.toContain('authenticated_user_99');
+    });
+  });
 });
+

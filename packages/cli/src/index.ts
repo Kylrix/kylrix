@@ -5,6 +5,8 @@ import {
   switchAccountCommand,
   currentAccountCommand,
   removeAccountCommand,
+  syncSourceAccountCommand,
+  syncOfflineAccountCommand,
 } from './commands/accounts';
 import {
   listServersCommand,
@@ -96,6 +98,18 @@ program
   .option('-w, --workspace <id>', 'Active workspace ID filter')
   .option('--json', 'Output raw JSON for machine parsing');
 
+program.hook('preAction', (_thisCommand, actionCommand) => {
+  if (actionCommand.name() === 'mcp' || program.opts().json) return;
+  try {
+    const { loadConfig } = require('./config');
+    const config = loadConfig();
+    if (config.pendingWarning) {
+      const pc = require('picocolors');
+      console.warn(pc.yellow(`\n⚠ Warning: ${config.pendingWarning}\n`));
+    }
+  } catch {}
+});
+
 // ── 1. Authentication ──
 program
   .command('login')
@@ -153,6 +167,16 @@ accounts
   .alias('rm')
   .description('Remove an account profile from local config')
   .action((idOrEmail, cmdOpts) => removeAccountCommand(idOrEmail, { ...program.opts(), ...cmdOpts }));
+
+accounts
+  .command('sync-source [container]')
+  .description('View or set default offline container used for automatic sync upon login')
+  .action((container, cmdOpts) => syncSourceAccountCommand(container, { ...program.opts(), ...cmdOpts }));
+
+accounts
+  .command('sync-offline [container]')
+  .description('Manually migrate and sync an offline container into currently active account')
+  .action((container, cmdOpts) => syncOfflineAccountCommand(container, { ...program.opts(), ...cmdOpts }));
 
 // ── Server Base URIs & Silo Partitions ──
 const server = program
