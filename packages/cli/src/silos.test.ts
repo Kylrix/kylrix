@@ -19,8 +19,9 @@ import {
   DEFAULT_API_URL,
   DEFAULT_OFFLINE_ACCOUNT,
 } from './config';
-import { evaluateOfflineAutoSync, listOfflineContainers } from './local/sync-resolver';
+import { evaluateOfflineAutoSync, listOfflineContainers, extractItems } from './local/sync-resolver';
 import { LocalStore } from './local/store';
+import { toListResult } from '@/sdk/api/client';
 
 describe('CLI Base URI Partitioning and Multi-Account Silos', () => {
   beforeEach(() => {
@@ -289,6 +290,41 @@ describe('CLI Base URI Partitioning and Multi-Account Silos', () => {
       expect(match?.kind).toBe('idea');
       expect(match?.syncStatus).toBe('unsynced');
       expect(match?.isLocal).toBe(true);
+    });
+
+    it('extractItems extracts arrays from raw arrays, { items: [] }, and { data: [] }', () => {
+      const rawArr = [{ id: '1', title: 'Note 1' }];
+      expect(extractItems(rawArr)).toEqual(rawArr);
+
+      const itemsObj = { items: [{ id: '2', title: 'Note 2' }], count: 1 };
+      expect(extractItems(itemsObj)).toEqual(itemsObj.items);
+
+      const dataObj = { data: [{ id: '3', title: 'Note 3' }], ok: true };
+      expect(extractItems(dataObj)).toEqual(dataObj.data);
+
+      expect(extractItems(null)).toEqual([]);
+      expect(extractItems(undefined)).toEqual([]);
+      expect(extractItems({})).toEqual([]);
+    });
+
+    it('toListResult creates dual array + object result supporting both .items and array methods', () => {
+      const raw = [{ id: 'item_a', title: 'Alpha' }, { id: 'item_b', title: 'Beta' }];
+      const res = toListResult(raw);
+
+      // Array behavior
+      expect(Array.isArray(res)).toBe(true);
+      expect(res.length).toBe(2);
+      expect(res[0].id).toBe('item_a');
+      expect(res.map((x: any) => x.id)).toEqual(['item_a', 'item_b']);
+
+      // Object envelope behavior
+      expect(res.items).toBeDefined();
+      expect(res.items.length).toBe(2);
+      expect(res.count).toBe(2);
+      expect(res.items[1].id).toBe('item_b');
+
+      // extractItems compatibility
+      expect(extractItems(res)).toEqual(raw);
     });
   });
 });

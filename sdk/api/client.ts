@@ -59,6 +59,22 @@ export class KylrixApiError extends Error {
   }
 }
 
+export type ListResult<T> = { items: T[]; count: number } & T[];
+
+export function toListResult<T>(raw: any): ListResult<T> {
+  const items: T[] = Array.isArray(raw)
+    ? raw
+    : Array.isArray(raw?.items)
+      ? raw.items
+      : Array.isArray(raw?.data)
+        ? raw.data
+        : [];
+  const result = [...items] as any;
+  result.items = items;
+  result.count = items.length;
+  return result;
+}
+
 export class KylrixClient {
   private baseUrl: string;
   private token?: string;
@@ -181,8 +197,10 @@ export class KylrixClient {
 
   // ── 2. Workspaces ──
   public workspaces = {
-    list: (limit = 25): Promise<{ items: WorkspaceRecord[]; count: number }> =>
-      this.request('GET', '/workspaces', { query: { limit } }),
+    list: async (limit = 25): Promise<ListResult<WorkspaceRecord>> => {
+      const raw = await this.request('GET', '/workspaces', { query: { limit } });
+      return toListResult<WorkspaceRecord>(raw);
+    },
     get: (id: string): Promise<WorkspaceRecord> => this.request('GET', `/workspaces/${id}`),
     create: (data: WorkspaceCreateInput): Promise<WorkspaceRecord> =>
       this.request('POST', '/workspaces', { body: data }),
@@ -190,21 +208,25 @@ export class KylrixClient {
       this.request('PATCH', `/workspaces/${id}`, { body: data }),
     delete: (id: string): Promise<{ success: boolean }> =>
       this.request('DELETE', `/workspaces/${id}`),
-    listCollaborators: (workspaceId: string) =>
-      this.request('GET', `/workspaces/${workspaceId}/collaborators`),
+    listCollaborators: async (workspaceId: string): Promise<ListResult<any>> => {
+      const raw = await this.request('GET', `/workspaces/${workspaceId}/collaborators`);
+      return toListResult<any>(raw);
+    },
     addCollaborator: (workspaceId: string, data: { email: string; role?: string }) =>
       this.request('POST', `/workspaces/${workspaceId}/collaborators`, { body: data }),
   };
 
   // ── 3. Ideas (aliased to notes) ──
   public ideas = {
-    list: (opts: { limit?: number; workspaceId?: string | null } = {}): Promise<{ items: NoteRecord[]; count: number }> =>
-      this.request('GET', '/notes', {
+    list: async (opts: { limit?: number; workspaceId?: string | null } = {}): Promise<ListResult<NoteRecord>> => {
+      const raw = await this.request('GET', '/notes', {
         query: {
           limit: opts.limit ?? 25,
           workspaceId: opts.workspaceId !== undefined ? opts.workspaceId : this.activeWorkspaceId,
         },
-      }),
+      });
+      return toListResult<NoteRecord>(raw);
+    },
     get: (id: string): Promise<NoteRecord> => this.request('GET', `/notes/${id}`),
     create: (data: NoteCreateInput): Promise<NoteRecord> =>
       this.request('POST', '/notes', {
@@ -217,24 +239,26 @@ export class KylrixClient {
       this.request('PATCH', `/notes/${id}`, { body: data }),
     delete: (id: string): Promise<{ success: boolean }> =>
       this.request('DELETE', `/notes/${id}`),
-    articles: async (opts: { limit?: number; workspaceId?: string | null } = {}): Promise<{ items: NoteRecord[]; count: number }> => {
+    articles: async (opts: { limit?: number; workspaceId?: string | null } = {}): Promise<ListResult<NoteRecord>> => {
       const res = await this.ideas.list(opts);
       const articles = (res.items || []).filter((item: any) => item.category === 'article');
-      return { items: articles, count: articles.length };
+      return toListResult<NoteRecord>(articles);
     },
   };
   public notes = this.ideas;
 
   // ── 4. Goals ──
   public goals = {
-    list: (opts: { limit?: number; workspaceId?: string | null; status?: string | null } = {}): Promise<{ items: GoalRecord[]; count: number }> =>
-      this.request('GET', '/goals', {
+    list: async (opts: { limit?: number; workspaceId?: string | null; status?: string | null } = {}): Promise<ListResult<GoalRecord>> => {
+      const raw = await this.request('GET', '/goals', {
         query: {
           limit: opts.limit ?? 25,
           workspaceId: opts.workspaceId !== undefined ? opts.workspaceId : this.activeWorkspaceId,
           status: opts.status || undefined,
         },
-      }),
+      });
+      return toListResult<GoalRecord>(raw);
+    },
     get: (id: string): Promise<GoalRecord> => this.request('GET', `/goals/${id}`),
     create: (data: GoalCreateInput): Promise<GoalRecord> =>
       this.request('POST', '/goals', {
@@ -251,13 +275,15 @@ export class KylrixClient {
 
   // ── 5. Events / Calendar ──
   public events = {
-    list: (opts: { limit?: number; workspaceId?: string | null } = {}): Promise<{ items: EventRecord[]; count: number }> =>
-      this.request('GET', '/events', {
+    list: async (opts: { limit?: number; workspaceId?: string | null } = {}): Promise<ListResult<EventRecord>> => {
+      const raw = await this.request('GET', '/events', {
         query: {
           limit: opts.limit ?? 25,
           workspaceId: opts.workspaceId !== undefined ? opts.workspaceId : this.activeWorkspaceId,
         },
-      }),
+      });
+      return toListResult<EventRecord>(raw);
+    },
     get: (id: string): Promise<EventRecord> => this.request('GET', `/events/${id}`),
     create: (data: EventCreateInput): Promise<EventRecord> =>
       this.request('POST', '/events', {
@@ -274,13 +300,15 @@ export class KylrixClient {
 
   // ── 6. Forms ──
   public forms = {
-    list: (opts: { limit?: number; workspaceId?: string | null } = {}): Promise<{ items: FormRecord[]; count: number }> =>
-      this.request('GET', '/forms', {
+    list: async (opts: { limit?: number; workspaceId?: string | null } = {}): Promise<ListResult<FormRecord>> => {
+      const raw = await this.request('GET', '/forms', {
         query: {
           limit: opts.limit ?? 25,
           workspaceId: opts.workspaceId !== undefined ? opts.workspaceId : this.activeWorkspaceId,
         },
-      }),
+      });
+      return toListResult<FormRecord>(raw);
+    },
     get: (id: string): Promise<FormRecord> => this.request('GET', `/forms/${id}`),
     create: (data: FormCreateInput): Promise<FormRecord> =>
       this.request('POST', '/forms', {
@@ -295,8 +323,10 @@ export class KylrixClient {
 
   // ── 7. Flows ──
   public flows = {
-    list: (limit = 25): Promise<{ items: FlowRecord[]; count: number }> =>
-      this.request('GET', '/flows', { query: { limit } }),
+    list: async (limit = 25): Promise<ListResult<FlowRecord>> => {
+      const raw = await this.request('GET', '/flows', { query: { limit } });
+      return toListResult<FlowRecord>(raw);
+    },
     get: (id: string): Promise<FlowRecord> => this.request('GET', `/flows/${id}`),
     create: (data: FlowCreateInput): Promise<FlowRecord> =>
       this.request('POST', '/flows', { body: data }),
@@ -306,11 +336,15 @@ export class KylrixClient {
 
   // ── 8. Chats & Hangouts ──
   public chats = {
-    list: (limit = 25): Promise<{ items: ChatRecord[]; count: number }> =>
-      this.request('GET', '/chats', { query: { limit } }),
+    list: async (limit = 25): Promise<ListResult<ChatRecord>> => {
+      const raw = await this.request('GET', '/chats', { query: { limit } });
+      return toListResult<ChatRecord>(raw);
+    },
     get: (id: string): Promise<ChatRecord> => this.request('GET', `/chats/${id}`),
-    messages: (conversationId: string, limit = 50): Promise<{ items: ChatMessageRecord[]; count: number }> =>
-      this.request('GET', `/chats/${conversationId}/messages`, { query: { limit } }),
+    messages: async (conversationId: string, limit = 50): Promise<ListResult<ChatMessageRecord>> => {
+      const raw = await this.request('GET', `/chats/${conversationId}/messages`, { query: { limit } });
+      return toListResult<ChatMessageRecord>(raw);
+    },
     sendMessage: (data: { conversationId?: string; participantId?: string; content: string }) =>
       this.request('POST', '/chats', { body: data }),
   };
@@ -318,19 +352,25 @@ export class KylrixClient {
 
   // ── 9. Threads ──
   public threads = {
-    list: (opts: { limit?: number; parentKind?: string; parentId?: string } = {}): Promise<{ items: ThreadRecord[]; count: number }> =>
-      this.request('GET', '/threads', { query: opts as any }),
+    list: async (opts: { limit?: number; parentKind?: string; parentId?: string } = {}): Promise<ListResult<ThreadRecord>> => {
+      const raw = await this.request('GET', '/threads', { query: opts as any });
+      return toListResult<ThreadRecord>(raw);
+    },
     get: (id: string): Promise<ThreadRecord> => this.request('GET', `/threads/${id}`),
-    messages: (threadId: string, limit = 50): Promise<{ items: ThreadMessageRecord[]; count: number }> =>
-      this.request('GET', `/threads/${threadId}/messages`, { query: { limit } }),
+    messages: async (threadId: string, limit = 50): Promise<ListResult<ThreadMessageRecord>> => {
+      const raw = await this.request('GET', `/threads/${threadId}/messages`, { query: { limit } });
+      return toListResult<ThreadMessageRecord>(raw);
+    },
     sendMessage: (threadId: string, content: string): Promise<ThreadMessageRecord> =>
       this.request('POST', `/threads/${threadId}/messages`, { body: { content } }),
   };
 
   // ── 10. Tags ──
   public tags = {
-    list: (): Promise<{ items: TagRecord[]; count: number }> =>
-      this.request('GET', '/tags'),
+    list: async (): Promise<ListResult<TagRecord>> => {
+      const raw = await this.request('GET', '/tags');
+      return toListResult<TagRecord>(raw);
+    },
     create: (data: TagCreateInput): Promise<TagRecord> =>
       this.request('POST', '/tags', { body: data }),
     delete: (id: string): Promise<{ success: boolean }> =>
@@ -339,8 +379,10 @@ export class KylrixClient {
 
   // ── 11. Trash ──
   public trash = {
-    list: (limit = 25): Promise<{ items: TrashRecord[]; count: number }> =>
-      this.request('GET', '/trash', { query: { limit } }),
+    list: async (limit = 25): Promise<ListResult<TrashRecord>> => {
+      const raw = await this.request('GET', '/trash', { query: { limit } });
+      return toListResult<TrashRecord>(raw);
+    },
     restore: (kind: string, id: string): Promise<{ restored: boolean }> =>
       this.request('POST', '/trash/restore', { body: { kind, id } }),
     purge: (kind: string, id: string): Promise<{ purged: boolean }> =>
@@ -349,14 +391,16 @@ export class KylrixClient {
 
   // ── 12. Vault & Secrets ──
   public vault = {
-    list: (opts: { limit?: number; workspaceId?: string; mek?: string } = {}) =>
-      this.request<any[]>('GET', '/vault', {
+    list: async (opts: { limit?: number; workspaceId?: string; mek?: string } = {}): Promise<ListResult<any>> => {
+      const raw = await this.request<any[]>('GET', '/vault', {
         query: {
           limit: opts.limit ?? 50,
           workspaceId: opts.workspaceId || this.activeWorkspaceId,
         },
         headers: opts.mek ? { 'x-mek': opts.mek } : undefined,
-      }),
+      });
+      return toListResult<any>(raw);
+    },
     get: (id: string, opts: { mek?: string; masterPassword?: string; shareKey?: string; format?: string; pure?: boolean } = {}) =>
       this.request<any>('GET', `/vault/${id}`, {
         query: {
@@ -399,14 +443,16 @@ export class KylrixClient {
 
   // ── 13. TOTP 2FA Secrets ──
   public totp = {
-    list: (opts: { limit?: number; workspaceId?: string; mek?: string } = {}) =>
-      this.request<any[]>('GET', '/totp', {
+    list: async (opts: { limit?: number; workspaceId?: string; mek?: string } = {}): Promise<ListResult<any>> => {
+      const raw = await this.request<any[]>('GET', '/totp', {
         query: {
           limit: opts.limit ?? 50,
           workspaceId: opts.workspaceId || this.activeWorkspaceId,
         },
         headers: opts.mek ? { 'x-mek': opts.mek } : undefined,
-      }),
+      });
+      return toListResult<any>(raw);
+    },
     get: (id: string, opts: { mek?: string; masterPassword?: string } = {}) =>
       this.request<any>('GET', `/totp/${id}`, {
         headers: {
@@ -432,14 +478,16 @@ export class KylrixClient {
 
   // ── 14. Autonomous Agents & Sessions ──
   public agents = {
-    listSessions: (opts: { limit?: number; harness?: string; workspaceId?: string } = {}) =>
-      this.request<any[]>('GET', '/agents/sessions', {
+    listSessions: async (opts: { limit?: number; harness?: string; workspaceId?: string } = {}): Promise<ListResult<any>> => {
+      const raw = await this.request<any[]>('GET', '/agents/sessions', {
         query: {
           limit: opts.limit ?? 25,
           harness: opts.harness,
           workspaceId: opts.workspaceId || this.activeWorkspaceId,
         },
-      }),
+      });
+      return toListResult<any>(raw);
+    },
     getSession: (id: string) => this.request<any>('GET', `/agents/sessions/${id}`),
     createHarnessSession: (data: { title: string; prompt?: string; harness?: string; workspaceId?: string }) =>
       this.request<any>('POST', '/agents/harness', {

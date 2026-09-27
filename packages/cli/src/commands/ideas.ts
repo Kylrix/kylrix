@@ -2,6 +2,7 @@ import pc from 'picocolors';
 import { getClient, hasAuth } from '../client';
 import { printError, printJson, printSuccess, printTable } from '../formatter';
 import { LocalStore } from '../local/store';
+import { extractItems } from '../local/sync-resolver';
 
 export async function listIdeasCommand(opts: {
   url?: string;
@@ -19,10 +20,9 @@ export async function listIdeasCommand(opts: {
       try {
         const client = getClient(opts);
         const cloudRes = await client.ideas.list({ limit, workspaceId: opts.workspace });
-        if (cloudRes?.items) {
-          for (const item of cloudRes.items) {
-            LocalStore.upsertIdeaFromCloud(item);
-          }
+        const items = extractItems(cloudRes);
+        for (const item of items) {
+          LocalStore.upsertIdeaFromCloud(item);
         }
       } catch {
         // Fall back gracefully to existing local SQLite cache
@@ -129,15 +129,16 @@ export async function createIdeaCommand(
       tags.push(`category:${opts.category}`);
     }
 
+    let syncStatus = isAuthed ? 'unsynced' : 'local';
+
     // 1. Always create locally first (instant local persistence)
     const item = LocalStore.createIdea({
       title,
       content: opts.content,
       category: opts.category,
       tags: tags.length > 0 ? tags : undefined,
+      syncStatus,
     });
-
-    let syncStatus = isAuthed ? 'unsynced' : 'local';
 
     // 2. If authed, push to cloud immediately
     if (isAuthed) {

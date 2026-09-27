@@ -2,6 +2,7 @@ import pc from 'picocolors';
 import { getClient, hasAuth } from '../client';
 import { printError, printJson, printSuccess, printTable } from '../formatter';
 import { LocalStore } from '../local/store';
+import { extractItems } from '../local/sync-resolver';
 
 export async function listGoalsCommand(opts: {
   url?: string;
@@ -20,10 +21,9 @@ export async function listGoalsCommand(opts: {
       try {
         const client = getClient(opts);
         const cloudRes = await client.goals.list({ limit, workspaceId: opts.workspace, status: opts.status });
-        if (cloudRes?.items) {
-          for (const item of cloudRes.items) {
-            LocalStore.upsertGoalFromCloud(item);
-          }
+        const items = extractItems(cloudRes);
+        for (const item of items) {
+          LocalStore.upsertGoalFromCloud(item);
         }
       } catch {
         // Fall back gracefully to local SQLite
@@ -133,6 +133,8 @@ export async function createGoalCommand(
     const isAuthed = hasAuth(opts);
     const targetValue = opts.targetValue ? parseFloat(opts.targetValue) : 100;
 
+    let syncStatus = isAuthed ? 'unsynced' : 'local';
+
     // 1. Create locally first
     const item = LocalStore.createGoal({
       title,
@@ -140,9 +142,8 @@ export async function createGoalCommand(
       targetValue,
       unit: opts.unit,
       status: opts.status,
+      syncStatus,
     });
-
-    let syncStatus = isAuthed ? 'unsynced' : 'local';
 
     // 2. If authed, push to cloud immediately
     if (isAuthed) {

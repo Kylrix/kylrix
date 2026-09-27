@@ -29,13 +29,29 @@ export function getNativeSqlite(): any {
     (process as any).emit = function (name: string, data: any, ...args: any[]) {
       if (
         name === 'warning' &&
-        typeof data === 'object' &&
-        (data?.name === 'ExperimentalWarning' || String(data?.message || '').includes('SQLite'))
+        (data?.name === 'ExperimentalWarning' ||
+          String(data?.message || '').toLowerCase().includes('sqlite') ||
+          String(data || '').toLowerCase().includes('sqlite'))
       ) {
         return false;
       }
       return origEmit.apply(process, [name, data, ...args]);
     };
+
+    const origEmitWarning = (process as any).emitWarning;
+    if (typeof origEmitWarning === 'function') {
+      (process as any).emitWarning = function (warning: any, ...args: any[]) {
+        if (
+          (typeof warning === 'string' && warning.toLowerCase().includes('sqlite')) ||
+          (typeof warning === 'object' &&
+            (warning?.name === 'ExperimentalWarning' ||
+              String(warning?.message || '').toLowerCase().includes('sqlite')))
+        ) {
+          return;
+        }
+        return origEmitWarning.apply(process, [warning, ...args]);
+      };
+    }
 
     const require = createRequire(import.meta.url);
     const sqlite = require('node:sqlite');
@@ -45,8 +61,8 @@ export function getNativeSqlite(): any {
   }
 }
 
-export function getDatabase(targetDbPath?: string): any {
-  const env = resolveEnvironment();
+export function getDatabase(targetDbPath?: string, cliOptions?: { url?: string; token?: string; workspace?: string }): any {
+  const env = resolveEnvironment(cliOptions);
   const dbPath = targetDbPath || env.siloDbPath;
 
   if (dbInstances.has(dbPath)) {

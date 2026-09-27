@@ -379,14 +379,23 @@ export function migrateOfflineData(
   return { total, ideas, goals, events, forms, flows };
 }
 
+export function extractItems<T = any>(res: any): T[] {
+  if (!res) return [];
+  if (Array.isArray(res.items)) return res.items;
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.data)) return res.data;
+  return [];
+}
+
 /**
  * Pushes unsynced local items to Kylrix Cloud and updates their sync_status to 'synced'.
  * Retains items locally so local SQLite remains the authoritative, offline-first cache.
  */
 export async function pushLocalItemsToCloud(opts: { url?: string; token?: string; workspace?: string } = {}) {
   const client = getClient(opts);
+  const env = resolveEnvironment(opts);
   const DatabaseSync = getNativeSqlite();
-  const db = DatabaseSync ? getDatabase() : null;
+  const db = DatabaseSync ? getDatabase(env.siloDbPath) : null;
 
   let pushedIdeas = 0;
   let pushedGoals = 0;
@@ -399,8 +408,11 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
         .all() as any[];
       for (const item of ideas) {
         try {
-          const tags = item.tags ? JSON.parse(item.tags) : [];
-          if (item.category) tags.push(`category:${item.category}`);
+          const rawTags = item.tags ? (typeof item.tags === 'string' ? JSON.parse(item.tags) : item.tags) : [];
+          const tags = Array.isArray(rawTags) ? [...rawTags] : [];
+          if (item.category && !tags.includes(`category:${item.category}`)) {
+            tags.push(`category:${item.category}`);
+          }
           const created = await client.ideas.create({
             title: item.title,
             content: item.content,
@@ -409,7 +421,9 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
           });
           db.prepare("UPDATE ideas SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
           pushedIdeas++;
-        } catch {}
+        } catch (err: any) {
+          console.warn(pc.yellow(`⚠ [sync] Failed to push local idea "${item.title}": ${err?.message || err}`));
+        }
       }
     } catch {}
 
@@ -428,9 +442,63 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
           });
           db.prepare("UPDATE goals SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
           pushedGoals++;
-        } catch {}
+        } catch (err: any) {
+          console.warn(pc.yellow(`⚠ [sync] Failed to push local goal "${item.title}": ${err?.message || err}`));
+        }
       }
     } catch {}
+  } else {
+    // Fallback store push (when SQLite is unavailable)
+    const fallbackPath = env.siloFallbackPath;
+    if (fs.existsSync(fallbackPath)) {
+      try {
+        const store = JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
+        let changed = false;
+        if (Array.isArray(store.ideas)) {
+          for (const item of store.ideas) {
+            if (item.syncStatus === 'unsynced' || (!item.syncStatus && !item.cloudId)) {
+              try {
+                const created = await client.ideas.create({
+                  title: item.title,
+                  content: item.content,
+                  tags: Array.isArray(item.tags) && item.tags.length > 0 ? item.tags : undefined,
+                  workspaceId: opts.workspace,
+                });
+                item.syncStatus = 'synced';
+                item.cloudId = created.id;
+                pushedIdeas++;
+                changed = true;
+              } catch (err: any) {
+                console.warn(pc.yellow(`⚠ [sync] Failed to push local idea "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (Array.isArray(store.goals)) {
+          for (const item of store.goals) {
+            if (item.syncStatus === 'unsynced' || (!item.syncStatus && !item.cloudId)) {
+              try {
+                const created = await client.goals.create({
+                  title: item.title,
+                  description: item.description,
+                  status: item.status || 'not_started',
+                  workspaceId: opts.workspace,
+                });
+                item.syncStatus = 'synced';
+                item.cloudId = created.id;
+                pushedGoals++;
+                changed = true;
+              } catch (err: any) {
+                console.warn(pc.yellow(`⚠ [sync] Failed to push local goal "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (changed) {
+          fs.writeFileSync(fallbackPath, JSON.stringify(store, null, 2), { encoding: 'utf-8', mode: 0o600 });
+        }
+      } catch {}
+    }
   }
 
   return { pushedIdeas, pushedGoals };
@@ -450,55 +518,50 @@ export async function pullCloudItemsToLocal(opts: { url?: string; token?: string
   // 1. Ideas
   try {
     const res = await client.ideas.list({ limit: 100, workspaceId: opts.workspace });
-    if (res?.items) {
-      for (const item of res.items) {
-        LocalStore.upsertIdeaFromCloud(item);
-        pulledIdeas++;
-      }
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertIdeaFromCloud(item);
+      pulledIdeas++;
     }
   } catch {}
 
   // 2. Goals
   try {
     const res = await client.goals.list({ limit: 100, workspaceId: opts.workspace });
-    if (res?.items) {
-      for (const item of res.items) {
-        LocalStore.upsertGoalFromCloud(item);
-        pulledGoals++;
-      }
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertGoalFromCloud(item);
+      pulledGoals++;
     }
   } catch {}
 
   // 3. Events
   try {
     const res = await client.events.list({ limit: 100, workspaceId: opts.workspace });
-    if (res?.items) {
-      for (const item of res.items) {
-        LocalStore.upsertEventFromCloud(item);
-        pulledEvents++;
-      }
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertEventFromCloud(item);
+      pulledEvents++;
     }
   } catch {}
 
   // 4. Forms
   try {
     const res = await client.forms.list({ limit: 100, workspaceId: opts.workspace });
-    if (res?.items) {
-      for (const item of res.items) {
-        LocalStore.upsertFormFromCloud(item);
-        pulledForms++;
-      }
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertFormFromCloud(item);
+      pulledForms++;
     }
   } catch {}
 
   // 5. Flows
   try {
     const res = await client.flows.list(100);
-    if (res?.items) {
-      for (const item of res.items) {
-        LocalStore.upsertFlowFromCloud(item);
-        pulledFlows++;
-      }
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertFlowFromCloud(item);
+      pulledFlows++;
     }
   } catch {}
 

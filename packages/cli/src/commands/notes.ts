@@ -1,6 +1,7 @@
 import pc from 'picocolors';
 import { requireAuthClient } from '../client';
 import { printError, printJson, printSuccess, printTable } from '../formatter';
+import { extractItems } from '../local/sync-resolver';
 
 export async function listNotesCommand(opts: {
   url?: string;
@@ -19,7 +20,8 @@ export async function listNotesCommand(opts: {
       return;
     }
 
-    const rows = (res.items || []).map((n) => ({
+    const items = extractItems(res);
+    const rows = items.map((n: any) => ({
       id: n.id,
       title: n.title || '(Untitled)',
       category: n.category || 'general',

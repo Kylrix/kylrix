@@ -110,6 +110,13 @@ var init_pairing_client = __esm({
 });
 
 // ../../sdk/api/client.ts
+function toListResult(raw) {
+  const items = Array.isArray(raw) ? raw : Array.isArray(raw?.items) ? raw.items : Array.isArray(raw?.data) ? raw.data : [];
+  const result = [...items];
+  result.items = items;
+  result.count = items.length;
+  return result;
+}
 var KylrixApiError, KylrixClient;
 var init_client = __esm({
   "../../sdk/api/client.ts"() {
@@ -220,22 +227,31 @@ var init_client = __esm({
       };
       // ── 2. Workspaces ──
       workspaces = {
-        list: (limit = 25) => this.request("GET", "/workspaces", { query: { limit } }),
+        list: async (limit = 25) => {
+          const raw = await this.request("GET", "/workspaces", { query: { limit } });
+          return toListResult(raw);
+        },
         get: (id) => this.request("GET", `/workspaces/${id}`),
         create: (data) => this.request("POST", "/workspaces", { body: data }),
         update: (id, data) => this.request("PATCH", `/workspaces/${id}`, { body: data }),
         delete: (id) => this.request("DELETE", `/workspaces/${id}`),
-        listCollaborators: (workspaceId) => this.request("GET", `/workspaces/${workspaceId}/collaborators`),
+        listCollaborators: async (workspaceId) => {
+          const raw = await this.request("GET", `/workspaces/${workspaceId}/collaborators`);
+          return toListResult(raw);
+        },
         addCollaborator: (workspaceId, data) => this.request("POST", `/workspaces/${workspaceId}/collaborators`, { body: data })
       };
       // ── 3. Ideas (aliased to notes) ──
       ideas = {
-        list: (opts = {}) => this.request("GET", "/notes", {
-          query: {
-            limit: opts.limit ?? 25,
-            workspaceId: opts.workspaceId !== void 0 ? opts.workspaceId : this.activeWorkspaceId
-          }
-        }),
+        list: async (opts = {}) => {
+          const raw = await this.request("GET", "/notes", {
+            query: {
+              limit: opts.limit ?? 25,
+              workspaceId: opts.workspaceId !== void 0 ? opts.workspaceId : this.activeWorkspaceId
+            }
+          });
+          return toListResult(raw);
+        },
         get: (id) => this.request("GET", `/notes/${id}`),
         create: (data) => this.request("POST", "/notes", {
           body: {
@@ -248,19 +264,22 @@ var init_client = __esm({
         articles: async (opts = {}) => {
           const res = await this.ideas.list(opts);
           const articles = (res.items || []).filter((item) => item.category === "article");
-          return { items: articles, count: articles.length };
+          return toListResult(articles);
         }
       };
       notes = this.ideas;
       // ── 4. Goals ──
       goals = {
-        list: (opts = {}) => this.request("GET", "/goals", {
-          query: {
-            limit: opts.limit ?? 25,
-            workspaceId: opts.workspaceId !== void 0 ? opts.workspaceId : this.activeWorkspaceId,
-            status: opts.status || void 0
-          }
-        }),
+        list: async (opts = {}) => {
+          const raw = await this.request("GET", "/goals", {
+            query: {
+              limit: opts.limit ?? 25,
+              workspaceId: opts.workspaceId !== void 0 ? opts.workspaceId : this.activeWorkspaceId,
+              status: opts.status || void 0
+            }
+          });
+          return toListResult(raw);
+        },
         get: (id) => this.request("GET", `/goals/${id}`),
         create: (data) => this.request("POST", "/goals", {
           body: {
@@ -273,12 +292,15 @@ var init_client = __esm({
       };
       // ── 5. Events / Calendar ──
       events = {
-        list: (opts = {}) => this.request("GET", "/events", {
-          query: {
-            limit: opts.limit ?? 25,
-            workspaceId: opts.workspaceId !== void 0 ? opts.workspaceId : this.activeWorkspaceId
-          }
-        }),
+        list: async (opts = {}) => {
+          const raw = await this.request("GET", "/events", {
+            query: {
+              limit: opts.limit ?? 25,
+              workspaceId: opts.workspaceId !== void 0 ? opts.workspaceId : this.activeWorkspaceId
+            }
+          });
+          return toListResult(raw);
+        },
         get: (id) => this.request("GET", `/events/${id}`),
         create: (data) => this.request("POST", "/events", {
           body: {
@@ -291,12 +313,15 @@ var init_client = __esm({
       };
       // ── 6. Forms ──
       forms = {
-        list: (opts = {}) => this.request("GET", "/forms", {
-          query: {
-            limit: opts.limit ?? 25,
-            workspaceId: opts.workspaceId !== void 0 ? opts.workspaceId : this.activeWorkspaceId
-          }
-        }),
+        list: async (opts = {}) => {
+          const raw = await this.request("GET", "/forms", {
+            query: {
+              limit: opts.limit ?? 25,
+              workspaceId: opts.workspaceId !== void 0 ? opts.workspaceId : this.activeWorkspaceId
+            }
+          });
+          return toListResult(raw);
+        },
         get: (id) => this.request("GET", `/forms/${id}`),
         create: (data) => this.request("POST", "/forms", {
           body: {
@@ -308,47 +333,71 @@ var init_client = __esm({
       };
       // ── 7. Flows ──
       flows = {
-        list: (limit = 25) => this.request("GET", "/flows", { query: { limit } }),
+        list: async (limit = 25) => {
+          const raw = await this.request("GET", "/flows", { query: { limit } });
+          return toListResult(raw);
+        },
         get: (id) => this.request("GET", `/flows/${id}`),
         create: (data) => this.request("POST", "/flows", { body: data }),
         delete: (id) => this.request("DELETE", `/flows/${id}`)
       };
       // ── 8. Chats & Hangouts ──
       chats = {
-        list: (limit = 25) => this.request("GET", "/chats", { query: { limit } }),
+        list: async (limit = 25) => {
+          const raw = await this.request("GET", "/chats", { query: { limit } });
+          return toListResult(raw);
+        },
         get: (id) => this.request("GET", `/chats/${id}`),
-        messages: (conversationId, limit = 50) => this.request("GET", `/chats/${conversationId}/messages`, { query: { limit } }),
+        messages: async (conversationId, limit = 50) => {
+          const raw = await this.request("GET", `/chats/${conversationId}/messages`, { query: { limit } });
+          return toListResult(raw);
+        },
         sendMessage: (data) => this.request("POST", "/chats", { body: data })
       };
       hangouts = this.chats;
       // ── 9. Threads ──
       threads = {
-        list: (opts = {}) => this.request("GET", "/threads", { query: opts }),
+        list: async (opts = {}) => {
+          const raw = await this.request("GET", "/threads", { query: opts });
+          return toListResult(raw);
+        },
         get: (id) => this.request("GET", `/threads/${id}`),
-        messages: (threadId, limit = 50) => this.request("GET", `/threads/${threadId}/messages`, { query: { limit } }),
+        messages: async (threadId, limit = 50) => {
+          const raw = await this.request("GET", `/threads/${threadId}/messages`, { query: { limit } });
+          return toListResult(raw);
+        },
         sendMessage: (threadId, content) => this.request("POST", `/threads/${threadId}/messages`, { body: { content } })
       };
       // ── 10. Tags ──
       tags = {
-        list: () => this.request("GET", "/tags"),
+        list: async () => {
+          const raw = await this.request("GET", "/tags");
+          return toListResult(raw);
+        },
         create: (data) => this.request("POST", "/tags", { body: data }),
         delete: (id) => this.request("DELETE", `/tags/${id}`)
       };
       // ── 11. Trash ──
       trash = {
-        list: (limit = 25) => this.request("GET", "/trash", { query: { limit } }),
+        list: async (limit = 25) => {
+          const raw = await this.request("GET", "/trash", { query: { limit } });
+          return toListResult(raw);
+        },
         restore: (kind, id) => this.request("POST", "/trash/restore", { body: { kind, id } }),
         purge: (kind, id) => this.request("POST", "/trash/purge", { body: { kind, id } })
       };
       // ── 12. Vault & Secrets ──
       vault = {
-        list: (opts = {}) => this.request("GET", "/vault", {
-          query: {
-            limit: opts.limit ?? 50,
-            workspaceId: opts.workspaceId || this.activeWorkspaceId
-          },
-          headers: opts.mek ? { "x-mek": opts.mek } : void 0
-        }),
+        list: async (opts = {}) => {
+          const raw = await this.request("GET", "/vault", {
+            query: {
+              limit: opts.limit ?? 50,
+              workspaceId: opts.workspaceId || this.activeWorkspaceId
+            },
+            headers: opts.mek ? { "x-mek": opts.mek } : void 0
+          });
+          return toListResult(raw);
+        },
         get: (id, opts = {}) => this.request("GET", `/vault/${id}`, {
           query: {
             format: opts.format,
@@ -385,13 +434,16 @@ var init_client = __esm({
       };
       // ── 13. TOTP 2FA Secrets ──
       totp = {
-        list: (opts = {}) => this.request("GET", "/totp", {
-          query: {
-            limit: opts.limit ?? 50,
-            workspaceId: opts.workspaceId || this.activeWorkspaceId
-          },
-          headers: opts.mek ? { "x-mek": opts.mek } : void 0
-        }),
+        list: async (opts = {}) => {
+          const raw = await this.request("GET", "/totp", {
+            query: {
+              limit: opts.limit ?? 50,
+              workspaceId: opts.workspaceId || this.activeWorkspaceId
+            },
+            headers: opts.mek ? { "x-mek": opts.mek } : void 0
+          });
+          return toListResult(raw);
+        },
         get: (id, opts = {}) => this.request("GET", `/totp/${id}`, {
           headers: {
             ...opts.mek ? { "x-mek": opts.mek } : {},
@@ -413,13 +465,16 @@ var init_client = __esm({
       };
       // ── 14. Autonomous Agents & Sessions ──
       agents = {
-        listSessions: (opts = {}) => this.request("GET", "/agents/sessions", {
-          query: {
-            limit: opts.limit ?? 25,
-            harness: opts.harness,
-            workspaceId: opts.workspaceId || this.activeWorkspaceId
-          }
-        }),
+        listSessions: async (opts = {}) => {
+          const raw = await this.request("GET", "/agents/sessions", {
+            query: {
+              limit: opts.limit ?? 25,
+              harness: opts.harness,
+              workspaceId: opts.workspaceId || this.activeWorkspaceId
+            }
+          });
+          return toListResult(raw);
+        },
         getSession: (id) => this.request("GET", `/agents/sessions/${id}`),
         createHarnessSession: (data) => this.request("POST", "/agents/harness", {
           body: {
@@ -526,7 +581,7 @@ __export(config_exports, {
   normalizeBaseUrl: () => normalizeBaseUrl,
   removeAccount: () => removeAccount,
   removeServer: () => removeServer,
-  resolveEnvironment: () => resolveEnvironment,
+  resolveEnvironment: () => resolveEnvironment2,
   saveConfig: () => saveConfig,
   saveMasterConfig: () => saveMasterConfig2,
   switchAccount: () => switchAccount,
@@ -871,7 +926,7 @@ function clearConfig() {
   } catch {
   }
 }
-function resolveEnvironment(cliOptions = {}) {
+function resolveEnvironment2(cliOptions = {}) {
   const config2 = loadConfig();
   const rawUrl = cliOptions.url || process.env.KYLRIX_API_URL || config2.currentServer || DEFAULT_API_URL;
   const apiUrl = normalizeBaseUrl(rawUrl);
@@ -914,11 +969,11 @@ var init_config = __esm({
 
 // src/client.ts
 function hasAuth(cliOptions = {}) {
-  const env = resolveEnvironment(cliOptions);
+  const env = resolveEnvironment2(cliOptions);
   return Boolean(env.token);
 }
 function getClient(cliOptions = {}) {
-  const env = resolveEnvironment(cliOptions);
+  const env = resolveEnvironment2(cliOptions);
   return new KylrixClient({
     baseUrl: env.apiUrl,
     token: env.token,
@@ -927,7 +982,7 @@ function getClient(cliOptions = {}) {
 }
 function requireAuthClient(cliOptions = {}) {
   const client = getClient(cliOptions);
-  const env = resolveEnvironment(cliOptions);
+  const env = resolveEnvironment2(cliOptions);
   if (!env.token) {
     throw new Error(
       "Authentication required for this cloud operation. Run `kylrix login` or set KYLRIX_API_KEY."
@@ -1021,11 +1076,20 @@ function getNativeSqlite() {
   try {
     const origEmit2 = process.emit;
     process.emit = function(name, data, ...args) {
-      if (name === "warning" && typeof data === "object" && (data?.name === "ExperimentalWarning" || String(data?.message || "").includes("SQLite"))) {
+      if (name === "warning" && (data?.name === "ExperimentalWarning" || String(data?.message || "").toLowerCase().includes("sqlite") || String(data || "").toLowerCase().includes("sqlite"))) {
         return false;
       }
       return origEmit2.apply(process, [name, data, ...args]);
     };
+    const origEmitWarning = process.emitWarning;
+    if (typeof origEmitWarning === "function") {
+      process.emitWarning = function(warning, ...args) {
+        if (typeof warning === "string" && warning.toLowerCase().includes("sqlite") || typeof warning === "object" && (warning?.name === "ExperimentalWarning" || String(warning?.message || "").toLowerCase().includes("sqlite"))) {
+          return;
+        }
+        return origEmitWarning.apply(process, [warning, ...args]);
+      };
+    }
     const require2 = createRequire(import.meta.url);
     const sqlite = require2("node:sqlite");
     return sqlite.DatabaseSync || sqlite.default?.DatabaseSync;
@@ -1033,8 +1097,8 @@ function getNativeSqlite() {
     return null;
   }
 }
-function getDatabase(targetDbPath) {
-  const env = resolveEnvironment();
+function getDatabase(targetDbPath, cliOptions) {
+  const env = resolveEnvironment2(cliOptions);
   const dbPath = targetDbPath || env.siloDbPath;
   if (dbInstances.has(dbPath)) {
     return dbInstances.get(dbPath);
@@ -1233,7 +1297,7 @@ import * as fs3 from "fs";
 import * as path3 from "path";
 function loadFallback() {
   try {
-    const env = resolveEnvironment();
+    const env = resolveEnvironment2();
     const fallbackPath = env.siloFallbackPath;
     if (!fs3.existsSync(fallbackPath)) {
       return { ideas: [], goals: [], events: [], forms: [], flows: [], vault: [], totp: [], tags: [], trash: [] };
@@ -1245,7 +1309,7 @@ function loadFallback() {
 }
 function saveFallback(data) {
   try {
-    const env = resolveEnvironment();
+    const env = resolveEnvironment2();
     const fallbackPath = env.siloFallbackPath;
     const dir = path3.dirname(fallbackPath);
     if (!fs3.existsSync(dir)) {
@@ -2324,6 +2388,7 @@ __export(sync_resolver_exports, {
   bidirectionalSync: () => bidirectionalSync,
   countLocalContainerItems: () => countLocalContainerItems,
   evaluateOfflineAutoSync: () => evaluateOfflineAutoSync,
+  extractItems: () => extractItems,
   handlePostLoginAutoSync: () => handlePostLoginAutoSync,
   listOfflineContainers: () => listOfflineContainers,
   migrateOfflineData: () => migrateOfflineData,
@@ -2626,10 +2691,18 @@ function migrateOfflineData(sourceContainer, targetUserId, partitionKey = "defau
   }
   return { total, ideas: ideas2, goals: goals2, events: events2, forms: forms2, flows: flows2 };
 }
+function extractItems(res) {
+  if (!res) return [];
+  if (Array.isArray(res.items)) return res.items;
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.data)) return res.data;
+  return [];
+}
 async function pushLocalItemsToCloud(opts = {}) {
   const client = getClient(opts);
+  const env = resolveEnvironment(opts);
   const DatabaseSync = getNativeSqlite();
-  const db = DatabaseSync ? getDatabase() : null;
+  const db = DatabaseSync ? getDatabase(env.siloDbPath) : null;
   let pushedIdeas = 0;
   let pushedGoals = 0;
   if (db) {
@@ -2637,8 +2710,11 @@ async function pushLocalItemsToCloud(opts = {}) {
       const ideas2 = db.prepare("SELECT * FROM ideas WHERE sync_status = 'unsynced' OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
       for (const item of ideas2) {
         try {
-          const tags2 = item.tags ? JSON.parse(item.tags) : [];
-          if (item.category) tags2.push(`category:${item.category}`);
+          const rawTags = item.tags ? typeof item.tags === "string" ? JSON.parse(item.tags) : item.tags : [];
+          const tags2 = Array.isArray(rawTags) ? [...rawTags] : [];
+          if (item.category && !tags2.includes(`category:${item.category}`)) {
+            tags2.push(`category:${item.category}`);
+          }
           const created = await client.ideas.create({
             title: item.title,
             content: item.content,
@@ -2647,7 +2723,8 @@ async function pushLocalItemsToCloud(opts = {}) {
           });
           db.prepare("UPDATE ideas SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
           pushedIdeas++;
-        } catch {
+        } catch (err) {
+          console.warn(pc2.yellow(`\u26A0 [sync] Failed to push local idea "${item.title}": ${err?.message || err}`));
         }
       }
     } catch {
@@ -2664,10 +2741,63 @@ async function pushLocalItemsToCloud(opts = {}) {
           });
           db.prepare("UPDATE goals SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
           pushedGoals++;
-        } catch {
+        } catch (err) {
+          console.warn(pc2.yellow(`\u26A0 [sync] Failed to push local goal "${item.title}": ${err?.message || err}`));
         }
       }
     } catch {
+    }
+  } else {
+    const fallbackPath = env.siloFallbackPath;
+    if (fs4.existsSync(fallbackPath)) {
+      try {
+        const store = JSON.parse(fs4.readFileSync(fallbackPath, "utf-8"));
+        let changed = false;
+        if (Array.isArray(store.ideas)) {
+          for (const item of store.ideas) {
+            if (item.syncStatus === "unsynced" || !item.syncStatus && !item.cloudId) {
+              try {
+                const created = await client.ideas.create({
+                  title: item.title,
+                  content: item.content,
+                  tags: Array.isArray(item.tags) && item.tags.length > 0 ? item.tags : void 0,
+                  workspaceId: opts.workspace
+                });
+                item.syncStatus = "synced";
+                item.cloudId = created.id;
+                pushedIdeas++;
+                changed = true;
+              } catch (err) {
+                console.warn(pc2.yellow(`\u26A0 [sync] Failed to push local idea "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (Array.isArray(store.goals)) {
+          for (const item of store.goals) {
+            if (item.syncStatus === "unsynced" || !item.syncStatus && !item.cloudId) {
+              try {
+                const created = await client.goals.create({
+                  title: item.title,
+                  description: item.description,
+                  status: item.status || "not_started",
+                  workspaceId: opts.workspace
+                });
+                item.syncStatus = "synced";
+                item.cloudId = created.id;
+                pushedGoals++;
+                changed = true;
+              } catch (err) {
+                console.warn(pc2.yellow(`\u26A0 [sync] Failed to push local goal "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (changed) {
+          fs4.writeFileSync(fallbackPath, JSON.stringify(store, null, 2), { encoding: "utf-8", mode: 384 });
+        }
+      } catch {
+      }
     }
   }
   return { pushedIdeas, pushedGoals };
@@ -2681,51 +2811,46 @@ async function pullCloudItemsToLocal(opts = {}) {
   let pulledFlows = 0;
   try {
     const res = await client.ideas.list({ limit: 100, workspaceId: opts.workspace });
-    if (res?.items) {
-      for (const item of res.items) {
-        LocalStore.upsertIdeaFromCloud(item);
-        pulledIdeas++;
-      }
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertIdeaFromCloud(item);
+      pulledIdeas++;
     }
   } catch {
   }
   try {
     const res = await client.goals.list({ limit: 100, workspaceId: opts.workspace });
-    if (res?.items) {
-      for (const item of res.items) {
-        LocalStore.upsertGoalFromCloud(item);
-        pulledGoals++;
-      }
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertGoalFromCloud(item);
+      pulledGoals++;
     }
   } catch {
   }
   try {
     const res = await client.events.list({ limit: 100, workspaceId: opts.workspace });
-    if (res?.items) {
-      for (const item of res.items) {
-        LocalStore.upsertEventFromCloud(item);
-        pulledEvents++;
-      }
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertEventFromCloud(item);
+      pulledEvents++;
     }
   } catch {
   }
   try {
     const res = await client.forms.list({ limit: 100, workspaceId: opts.workspace });
-    if (res?.items) {
-      for (const item of res.items) {
-        LocalStore.upsertFormFromCloud(item);
-        pulledForms++;
-      }
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertFormFromCloud(item);
+      pulledForms++;
     }
   } catch {
   }
   try {
     const res = await client.flows.list(100);
-    if (res?.items) {
-      for (const item of res.items) {
-        LocalStore.upsertFlowFromCloud(item);
-        pulledFlows++;
-      }
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertFlowFromCloud(item);
+      pulledFlows++;
     }
   } catch {
   }
@@ -2851,7 +2976,7 @@ function tryOpenBrowser(url2) {
   });
 }
 async function loginCommand(opts) {
-  const env = resolveEnvironment(opts);
+  const env = resolveEnvironment2(opts);
   if (opts.token) {
     const client = getClient({ url: env.apiUrl, token: opts.token });
     try {
@@ -2880,7 +3005,7 @@ async function loginCommand(opts) {
   await pairCommand(opts);
 }
 async function pairCommand(opts) {
-  const env = resolveEnvironment({ url: opts.url });
+  const env = resolveEnvironment2({ url: opts.url });
   const client = getClient({ url: env.apiUrl });
   try {
     const session = await client.pairing.requestPairing({
@@ -2950,7 +3075,7 @@ async function pairCommand(opts) {
       },
       env.apiUrl
     );
-    const updatedEnv = resolveEnvironment({ url: env.apiUrl });
+    const updatedEnv = resolveEnvironment2({ url: env.apiUrl });
     printSuccess(`Logged in successfully as user ${pc3.bold(profileEmail || result.userId)}`);
     printInfo(`Server:    ${pc3.cyan(env.apiUrl)}`);
     printInfo(`Partition: ${pc3.yellow(env.partitionKey)}`);
@@ -2967,7 +3092,7 @@ async function pairCommand(opts) {
 async function whoamiCommand(opts) {
   try {
     const client = getClient(opts);
-    const env = resolveEnvironment(opts);
+    const env = resolveEnvironment2(opts);
     if (!env.token) {
       if (opts.json) {
         printJson({ authenticated: false, message: "Not authenticated", server: env.apiUrl, partition: env.partitionKey });
@@ -3007,7 +3132,7 @@ async function whoamiCommand(opts) {
   }
 }
 async function logoutCommand(opts = {}) {
-  const env = resolveEnvironment({ url: opts.url });
+  const env = resolveEnvironment2({ url: opts.url });
   if (opts.purge) {
     if (env.token) {
       try {
@@ -3039,7 +3164,7 @@ async function logoutCommand(opts = {}) {
       }
     }
     removeAccount(targetId, env.apiUrl);
-    const updated = resolveEnvironment({ url: env.apiUrl });
+    const updated = resolveEnvironment2({ url: env.apiUrl });
     printSuccess(`Logged out active account ${pc3.bold(targetId)} from ${pc3.cyan(env.apiUrl)} (server token revoked).`);
     if (updated.activeAccountId) {
       printInfo(`Active account switched to ${pc3.bold(updated.email || updated.activeAccountId)}.`);
@@ -3054,7 +3179,7 @@ init_config();
 init_formatter();
 import pc4 from "picocolors";
 function listAccountsCommand(opts = {}) {
-  const env = resolveEnvironment({ url: opts.url });
+  const env = resolveEnvironment2({ url: opts.url });
   if (opts.all) {
     const config2 = loadConfig();
     const result = [];
@@ -3135,9 +3260,9 @@ function listAccountsCommand(opts = {}) {
 }
 function switchAccountCommand(idOrEmail, opts = {}) {
   try {
-    const env = resolveEnvironment({ url: opts.url });
+    const env = resolveEnvironment2({ url: opts.url });
     const switched = switchAccount(idOrEmail, env.apiUrl);
-    const updated = resolveEnvironment({ url: env.apiUrl });
+    const updated = resolveEnvironment2({ url: env.apiUrl });
     if (opts.json) {
       printJson(switched);
       return;
@@ -3152,7 +3277,7 @@ function switchAccountCommand(idOrEmail, opts = {}) {
   }
 }
 function currentAccountCommand(opts = {}) {
-  const env = resolveEnvironment({ url: opts.url });
+  const env = resolveEnvironment2({ url: opts.url });
   if (opts.json) {
     printJson({
       serverUrl: env.apiUrl,
@@ -3182,7 +3307,7 @@ function currentAccountCommand(opts = {}) {
   console.log();
 }
 function removeAccountCommand(idOrEmail, opts = {}) {
-  const env = resolveEnvironment({ url: opts.url });
+  const env = resolveEnvironment2({ url: opts.url });
   const ok = removeAccount(idOrEmail, env.apiUrl);
   if (ok) {
     printSuccess(`Removed account profile "${idOrEmail}" from ${pc4.cyan(env.apiUrl)}.`);
@@ -3236,7 +3361,7 @@ function syncSourceAccountCommand(containerName, opts = {}) {
   console.log(pc4.dim("To manually sync a container:  `kylrix accounts sync-offline <container>`\n"));
 }
 async function syncOfflineAccountCommand(containerName, opts = {}) {
-  const env = resolveEnvironment({ url: opts.url });
+  const env = resolveEnvironment2({ url: opts.url });
   if (!env.token) {
     printError("You must be logged in to sync offline data to an account. Run `kylrix login` first.");
     process.exit(1);
@@ -3298,7 +3423,7 @@ function switchServerCommand(url2, opts = {}) {
   try {
     const norm = normalizeBaseUrl(url2);
     const server2 = switchServer(norm);
-    const env = resolveEnvironment({ url: norm });
+    const env = resolveEnvironment2({ url: norm });
     if (opts.json) {
       printJson(server2);
       return;
@@ -3317,7 +3442,7 @@ function switchServerCommand(url2, opts = {}) {
   }
 }
 function currentServerCommand(opts = {}) {
-  const env = resolveEnvironment();
+  const env = resolveEnvironment2();
   if (opts.json) {
     printJson({
       baseUrl: env.apiUrl,
@@ -3356,7 +3481,7 @@ function removeServerCommand(url2) {
   const ok = removeServer(norm);
   if (ok) {
     printSuccess(`Removed server ${pc5.cyan(norm)} and its account configuration.`);
-    const current = resolveEnvironment();
+    const current = resolveEnvironment2();
     printInfo(`Active server is now ${pc5.cyan(current.apiUrl)} (${current.partitionKey}).`);
   } else {
     printError(`Server ${norm} is not in configuration.`);
@@ -3486,6 +3611,7 @@ function clearWorkspaceCommand(opts = {}) {
 init_client2();
 init_formatter();
 init_store();
+init_sync_resolver();
 import pc7 from "picocolors";
 async function listIdeasCommand(opts) {
   try {
@@ -3495,10 +3621,9 @@ async function listIdeasCommand(opts) {
       try {
         const client = getClient(opts);
         const cloudRes = await client.ideas.list({ limit, workspaceId: opts.workspace });
-        if (cloudRes?.items) {
-          for (const item of cloudRes.items) {
-            LocalStore.upsertIdeaFromCloud(item);
-          }
+        const items = extractItems(cloudRes);
+        for (const item of items) {
+          LocalStore.upsertIdeaFromCloud(item);
         }
       } catch {
       }
@@ -3580,13 +3705,14 @@ async function createIdeaCommand(title, opts) {
     if (opts.category) {
       tags2.push(`category:${opts.category}`);
     }
+    let syncStatus = isAuthed ? "unsynced" : "local";
     const item = LocalStore.createIdea({
       title,
       content: opts.content,
       category: opts.category,
-      tags: tags2.length > 0 ? tags2 : void 0
+      tags: tags2.length > 0 ? tags2 : void 0,
+      syncStatus
     });
-    let syncStatus = isAuthed ? "unsynced" : "local";
     if (isAuthed) {
       try {
         const client = getClient(opts);
@@ -3712,6 +3838,7 @@ async function listArticlesCommand(opts) {
 init_client2();
 init_formatter();
 init_store();
+init_sync_resolver();
 import pc8 from "picocolors";
 async function listGoalsCommand(opts) {
   try {
@@ -3721,10 +3848,9 @@ async function listGoalsCommand(opts) {
       try {
         const client = getClient(opts);
         const cloudRes = await client.goals.list({ limit, workspaceId: opts.workspace, status: opts.status });
-        if (cloudRes?.items) {
-          for (const item of cloudRes.items) {
-            LocalStore.upsertGoalFromCloud(item);
-          }
+        const items2 = extractItems(cloudRes);
+        for (const item of items2) {
+          LocalStore.upsertGoalFromCloud(item);
         }
       } catch {
       }
@@ -3808,14 +3934,15 @@ async function createGoalCommand(title, opts) {
   try {
     const isAuthed = hasAuth(opts);
     const targetValue = opts.targetValue ? parseFloat(opts.targetValue) : 100;
+    let syncStatus = isAuthed ? "unsynced" : "local";
     const item = LocalStore.createGoal({
       title,
       description: opts.description,
       targetValue,
       unit: opts.unit,
-      status: opts.status
+      status: opts.status,
+      syncStatus
     });
-    let syncStatus = isAuthed ? "unsynced" : "local";
     if (isAuthed) {
       try {
         const client = getClient(opts);
@@ -5327,7 +5454,7 @@ import pc18 from "picocolors";
 async function shareCommand(kind, id, opts) {
   try {
     const client = requireAuthClient(opts);
-    const env = resolveEnvironment(opts);
+    const env = resolveEnvironment2(opts);
     const profile = await client.auth.me();
     const baseUrl = env.apiUrl.replace(/\/api\/v1$/, "");
     let shareUrl = `${baseUrl}/${kind}/${id}`;
@@ -5605,7 +5732,7 @@ import * as os3 from "os";
 import { spawn } from "child_process";
 import pc22 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.8";
+var CURRENT_VERSION = "1.0.9";
 var CACHE_DIR = path6.join(os3.homedir(), ".kylrix");
 var CACHE_FILE = path6.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
@@ -5791,7 +5918,7 @@ async function syncCommand(opts) {
     }
     return;
   }
-  const env = resolveEnvironment(opts);
+  const env = resolveEnvironment2(opts);
   const verdict = evaluateOfflineAutoSync(env.apiUrl, env.userId);
   if (verdict.canAutoSync && verdict.sourceContainer && verdict.itemCount > 0) {
     if (!opts.json) {
