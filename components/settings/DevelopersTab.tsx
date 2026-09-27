@@ -29,6 +29,7 @@ type PatItem = {
   scopes: string[];
   status: string;
   category?: string;
+  expiresAt?: string | null;
 };
 
 function Section({

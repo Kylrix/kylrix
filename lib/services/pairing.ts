@@ -15,7 +15,7 @@ import { ID, Query } from 'node-appwrite';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { PatService } from '@/lib/services/pats';
-import { normalizeScopes, type PatScope } from '@/lib/api/scopes';
+import { normalizeScopes } from '@/lib/api/scopes';
 import { 
   shapePairingSession, 
   type PairingSessionRecord, 
