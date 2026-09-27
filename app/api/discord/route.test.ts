@@ -11,7 +11,6 @@ import {
 } from './route';
 import { ApiResources } from '@/lib/api/resources';
 import { PairingService } from '@/lib/services/pairing';
-import { PatService } from '@/lib/services/pats';
 
 vi.mock('@/lib/appwrite-admin', () => ({
   createSystemTablesDB: vi.fn().mockReturnValue({
