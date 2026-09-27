@@ -8,6 +8,7 @@ import {
   normalizeBaseUrl,
   getBaseUriPartitionKey,
   getAccountSlug,
+  resolveEnvironment,
   DEFAULT_API_URL,
   DEFAULT_OFFLINE_ACCOUNT,
 } from '../config';

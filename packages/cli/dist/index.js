@@ -581,7 +581,7 @@ __export(config_exports, {
   normalizeBaseUrl: () => normalizeBaseUrl,
   removeAccount: () => removeAccount,
   removeServer: () => removeServer,
-  resolveEnvironment: () => resolveEnvironment2,
+  resolveEnvironment: () => resolveEnvironment,
   saveConfig: () => saveConfig,
   saveMasterConfig: () => saveMasterConfig2,
   switchAccount: () => switchAccount,
@@ -926,7 +926,7 @@ function clearConfig() {
   } catch {
   }
 }
-function resolveEnvironment2(cliOptions = {}) {
+function resolveEnvironment(cliOptions = {}) {
   const config2 = loadConfig();
   const rawUrl = cliOptions.url || process.env.KYLRIX_API_URL || config2.currentServer || DEFAULT_API_URL;
   const apiUrl = normalizeBaseUrl(rawUrl);
@@ -969,11 +969,11 @@ var init_config = __esm({
 
 // src/client.ts
 function hasAuth(cliOptions = {}) {
-  const env = resolveEnvironment2(cliOptions);
+  const env = resolveEnvironment(cliOptions);
   return Boolean(env.token);
 }
 function getClient(cliOptions = {}) {
-  const env = resolveEnvironment2(cliOptions);
+  const env = resolveEnvironment(cliOptions);
   return new KylrixClient({
     baseUrl: env.apiUrl,
     token: env.token,
@@ -982,7 +982,7 @@ function getClient(cliOptions = {}) {
 }
 function requireAuthClient(cliOptions = {}) {
   const client = getClient(cliOptions);
-  const env = resolveEnvironment2(cliOptions);
+  const env = resolveEnvironment(cliOptions);
   if (!env.token) {
     throw new Error(
       "Authentication required for this cloud operation. Run `kylrix login` or set KYLRIX_API_KEY."
@@ -1098,7 +1098,7 @@ function getNativeSqlite() {
   }
 }
 function getDatabase(targetDbPath, cliOptions) {
-  const env = resolveEnvironment2(cliOptions);
+  const env = resolveEnvironment(cliOptions);
   const dbPath = targetDbPath || env.siloDbPath;
   if (dbInstances.has(dbPath)) {
     return dbInstances.get(dbPath);
@@ -1297,7 +1297,7 @@ import * as fs3 from "fs";
 import * as path3 from "path";
 function loadFallback() {
   try {
-    const env = resolveEnvironment2();
+    const env = resolveEnvironment();
     const fallbackPath = env.siloFallbackPath;
     if (!fs3.existsSync(fallbackPath)) {
       return { ideas: [], goals: [], events: [], forms: [], flows: [], vault: [], totp: [], tags: [], trash: [] };
@@ -1309,7 +1309,7 @@ function loadFallback() {
 }
 function saveFallback(data) {
   try {
-    const env = resolveEnvironment2();
+    const env = resolveEnvironment();
     const fallbackPath = env.siloFallbackPath;
     const dir = path3.dirname(fallbackPath);
     if (!fs3.existsSync(dir)) {
@@ -2976,7 +2976,7 @@ function tryOpenBrowser(url2) {
   });
 }
 async function loginCommand(opts) {
-  const env = resolveEnvironment2(opts);
+  const env = resolveEnvironment(opts);
   if (opts.token) {
     const client = getClient({ url: env.apiUrl, token: opts.token });
     try {
@@ -3005,7 +3005,7 @@ async function loginCommand(opts) {
   await pairCommand(opts);
 }
 async function pairCommand(opts) {
-  const env = resolveEnvironment2({ url: opts.url });
+  const env = resolveEnvironment({ url: opts.url });
   const client = getClient({ url: env.apiUrl });
   try {
     const session = await client.pairing.requestPairing({
@@ -3075,7 +3075,7 @@ async function pairCommand(opts) {
       },
       env.apiUrl
     );
-    const updatedEnv = resolveEnvironment2({ url: env.apiUrl });
+    const updatedEnv = resolveEnvironment({ url: env.apiUrl });
     printSuccess(`Logged in successfully as user ${pc3.bold(profileEmail || result.userId)}`);
     printInfo(`Server:    ${pc3.cyan(env.apiUrl)}`);
     printInfo(`Partition: ${pc3.yellow(env.partitionKey)}`);
@@ -3092,7 +3092,7 @@ async function pairCommand(opts) {
 async function whoamiCommand(opts) {
   try {
     const client = getClient(opts);
-    const env = resolveEnvironment2(opts);
+    const env = resolveEnvironment(opts);
     if (!env.token) {
       if (opts.json) {
         printJson({ authenticated: false, message: "Not authenticated", server: env.apiUrl, partition: env.partitionKey });
@@ -3132,7 +3132,7 @@ async function whoamiCommand(opts) {
   }
 }
 async function logoutCommand(opts = {}) {
-  const env = resolveEnvironment2({ url: opts.url });
+  const env = resolveEnvironment({ url: opts.url });
   if (opts.purge) {
     if (env.token) {
       try {
@@ -3164,7 +3164,7 @@ async function logoutCommand(opts = {}) {
       }
     }
     removeAccount(targetId, env.apiUrl);
-    const updated = resolveEnvironment2({ url: env.apiUrl });
+    const updated = resolveEnvironment({ url: env.apiUrl });
     printSuccess(`Logged out active account ${pc3.bold(targetId)} from ${pc3.cyan(env.apiUrl)} (server token revoked).`);
     if (updated.activeAccountId) {
       printInfo(`Active account switched to ${pc3.bold(updated.email || updated.activeAccountId)}.`);
@@ -3179,7 +3179,7 @@ init_config();
 init_formatter();
 import pc4 from "picocolors";
 function listAccountsCommand(opts = {}) {
-  const env = resolveEnvironment2({ url: opts.url });
+  const env = resolveEnvironment({ url: opts.url });
   if (opts.all) {
     const config2 = loadConfig();
     const result = [];
@@ -3260,9 +3260,9 @@ function listAccountsCommand(opts = {}) {
 }
 function switchAccountCommand(idOrEmail, opts = {}) {
   try {
-    const env = resolveEnvironment2({ url: opts.url });
+    const env = resolveEnvironment({ url: opts.url });
     const switched = switchAccount(idOrEmail, env.apiUrl);
-    const updated = resolveEnvironment2({ url: env.apiUrl });
+    const updated = resolveEnvironment({ url: env.apiUrl });
     if (opts.json) {
       printJson(switched);
       return;
@@ -3277,7 +3277,7 @@ function switchAccountCommand(idOrEmail, opts = {}) {
   }
 }
 function currentAccountCommand(opts = {}) {
-  const env = resolveEnvironment2({ url: opts.url });
+  const env = resolveEnvironment({ url: opts.url });
   if (opts.json) {
     printJson({
       serverUrl: env.apiUrl,
@@ -3307,7 +3307,7 @@ function currentAccountCommand(opts = {}) {
   console.log();
 }
 function removeAccountCommand(idOrEmail, opts = {}) {
-  const env = resolveEnvironment2({ url: opts.url });
+  const env = resolveEnvironment({ url: opts.url });
   const ok = removeAccount(idOrEmail, env.apiUrl);
   if (ok) {
     printSuccess(`Removed account profile "${idOrEmail}" from ${pc4.cyan(env.apiUrl)}.`);
@@ -3361,7 +3361,7 @@ function syncSourceAccountCommand(containerName, opts = {}) {
   console.log(pc4.dim("To manually sync a container:  `kylrix accounts sync-offline <container>`\n"));
 }
 async function syncOfflineAccountCommand(containerName, opts = {}) {
-  const env = resolveEnvironment2({ url: opts.url });
+  const env = resolveEnvironment({ url: opts.url });
   if (!env.token) {
     printError("You must be logged in to sync offline data to an account. Run `kylrix login` first.");
     process.exit(1);
@@ -3423,7 +3423,7 @@ function switchServerCommand(url2, opts = {}) {
   try {
     const norm = normalizeBaseUrl(url2);
     const server2 = switchServer(norm);
-    const env = resolveEnvironment2({ url: norm });
+    const env = resolveEnvironment({ url: norm });
     if (opts.json) {
       printJson(server2);
       return;
@@ -3442,7 +3442,7 @@ function switchServerCommand(url2, opts = {}) {
   }
 }
 function currentServerCommand(opts = {}) {
-  const env = resolveEnvironment2();
+  const env = resolveEnvironment();
   if (opts.json) {
     printJson({
       baseUrl: env.apiUrl,
@@ -3481,7 +3481,7 @@ function removeServerCommand(url2) {
   const ok = removeServer(norm);
   if (ok) {
     printSuccess(`Removed server ${pc5.cyan(norm)} and its account configuration.`);
-    const current = resolveEnvironment2();
+    const current = resolveEnvironment();
     printInfo(`Active server is now ${pc5.cyan(current.apiUrl)} (${current.partitionKey}).`);
   } else {
     printError(`Server ${norm} is not in configuration.`);
@@ -5454,7 +5454,7 @@ import pc18 from "picocolors";
 async function shareCommand(kind, id, opts) {
   try {
     const client = requireAuthClient(opts);
-    const env = resolveEnvironment2(opts);
+    const env = resolveEnvironment(opts);
     const profile = await client.auth.me();
     const baseUrl = env.apiUrl.replace(/\/api\/v1$/, "");
     let shareUrl = `${baseUrl}/${kind}/${id}`;
@@ -5918,7 +5918,7 @@ async function syncCommand(opts) {
     }
     return;
   }
-  const env = resolveEnvironment2(opts);
+  const env = resolveEnvironment(opts);
   const verdict = evaluateOfflineAutoSync(env.apiUrl, env.userId);
   if (verdict.canAutoSync && verdict.sourceContainer && verdict.itemCount > 0) {
     if (!opts.json) {
