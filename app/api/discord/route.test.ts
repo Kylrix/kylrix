@@ -2,27 +2,93 @@ import { describe, it, vi } from 'vitest';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { NextRequest } from 'next/server';
-import { isValidDiscordWebhookUrl, verifyDiscordSignature, POST } from './route';
+import {
+  isValidDiscordWebhookUrl,
+  verifyDiscordSignature,
+  POST,
+  GET,
+  DISCORD_SLASH_COMMANDS,
+} from './route';
 import { ApiResources } from '@/lib/api/resources';
+import { PairingService } from '@/lib/services/pairing';
+import { PatService } from '@/lib/services/pats';
+
+vi.mock('@/lib/appwrite-admin', () => ({
+  createSystemTablesDB: vi.fn().mockReturnValue({
+    listRows: vi.fn().mockResolvedValue({ rows: [] }),
+    createRow: vi.fn().mockResolvedValue({ $id: 'row_created' }),
+    updateRow: vi.fn().mockResolvedValue({ $id: 'row_updated' }),
+  }),
+}));
+
+vi.mock('@/lib/services/pairing', () => ({
+  PairingService: {
+    requestPairing: vi.fn().mockResolvedValue({
+      id: 'req_123',
+      deviceCode: 'dev_abc123',
+      userCode: '7K9M-4W2P',
+      verificationUri: 'https://www.kylrix.space/pair',
+      verificationUriComplete: 'https://www.kylrix.space/pair?code=7K9M-4W2P',
+    }),
+    exchangeDeviceCode: vi.fn().mockImplementation(async (code: string) => {
+      if (code === 'dev_granted') {
+        return { status: 'granted', token: 'kyl_punch_123_456', userId: 'user_paired_99' };
+      }
+      return { status: 'authorization_pending' };
+    }),
+  },
+}));
+
+vi.mock('@/lib/services/pats', () => ({
+  PatService: {
+    verifyBearer: vi.fn().mockImplementation(async (token: string) => {
+      if (token === 'kyl_pat_valid_token') {
+        return {
+          userId: 'user_pat_42',
+          scopes: ['*'],
+          pat: { tokenPrefix: 'pat_test', id: 'pat_1' },
+        };
+      }
+      return null;
+    }),
+  },
+}));
 
 vi.mock('@/lib/api/resources', () => ({
   ApiResources: {
     listNotes: vi.fn().mockResolvedValue({
       items: [{ id: 'note_123', title: 'Roadmap', content: 'Decentralized sync' }],
     }),
+    getNote: vi.fn().mockResolvedValue({
+      id: 'note_123',
+      title: 'Roadmap',
+      content: 'Decentralized sync in depth',
+    }),
     createNote: vi.fn().mockResolvedValue({
       id: 'note_created',
       title: 'Project Roadmap',
       content: 'Ship decentralized sync engine',
     }),
+    deleteNote: vi.fn().mockResolvedValue({ success: true }),
     listGoals: vi.fn().mockResolvedValue({
       items: [{ id: 'goal_123', title: 'Launch App', status: 'todo' }],
+    }),
+    getGoal: vi.fn().mockResolvedValue({
+      id: 'goal_123',
+      title: 'Launch App',
+      status: 'todo',
     }),
     createGoal: vi.fn().mockResolvedValue({
       id: 'goal_created',
       title: 'Launch App',
       status: 'todo',
     }),
+    updateGoal: vi.fn().mockResolvedValue({
+      id: 'goal_123',
+      title: 'Launch App',
+      status: 'completed',
+    }),
+    deleteGoal: vi.fn().mockResolvedValue({ success: true }),
     listWorkspaces: vi.fn().mockResolvedValue({
       items: [{ id: 'ws_1', name: 'Alpha Lab', collaboratorsCount: 3 }],
     }),
@@ -90,6 +156,26 @@ describe('verifyDiscordSignature', () => {
 });
 
 describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
+  it('should export all 1:1 slash commands specification', () => {
+    const commandNames = DISCORD_SLASH_COMMANDS.map((c) => c.name);
+    assert.ok(commandNames.includes('menu'));
+    assert.ok(commandNames.includes('notes'));
+    assert.ok(commandNames.includes('note'));
+    assert.ok(commandNames.includes('note_read'));
+    assert.ok(commandNames.includes('note_delete'));
+    assert.ok(commandNames.includes('goals'));
+    assert.ok(commandNames.includes('goal'));
+    assert.ok(commandNames.includes('goal_done'));
+    assert.ok(commandNames.includes('goal_delete'));
+    assert.ok(commandNames.includes('workspaces'));
+    assert.ok(commandNames.includes('pair'));
+    assert.ok(commandNames.includes('link'));
+    assert.ok(commandNames.includes('unlink'));
+    assert.ok(commandNames.includes('whoami'));
+    assert.ok(commandNames.includes('settings'));
+    assert.ok(commandNames.includes('agent'));
+  });
+
   it('should handle Discord PING interaction (type 1)', async () => {
     const req = new NextRequest('http://localhost:3005/api/discord', {
       method: 'POST',
@@ -119,7 +205,6 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     const json = await res.json();
     assert.equal(json.type, 4);
     assert.ok(json.data.embeds[0].title.includes('Dashboard'));
-    // Verify select menu component
     assert.equal(json.data.components[0].components[0].type, 3);
     assert.equal(json.data.components[0].components[0].custom_id, 'kylrix_main_select');
   });
@@ -169,5 +254,160 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     assert.equal(json.type, 4);
     assert.ok(json.data.embeds[0].title.includes('Project Roadmap'));
     assert.ok(ApiResources.createNote.mock.calls.length > 0);
+  });
+
+  it('should handle slash command /note_read to fetch and read a note', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          name: 'note_read',
+          options: [{ name: 'id', value: 'note_123' }],
+        },
+        user: { username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Roadmap'));
+    assert.ok(json.data.embeds[0].description.includes('Decentralized sync'));
+  });
+
+  it('should handle slash command /note_delete to delete a note', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          name: 'note_delete',
+          options: [{ name: 'id', value: 'note_123' }],
+        },
+        user: { username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Deleted'));
+  });
+
+  it('should handle slash command /goal_done to complete a goal', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          name: 'goal_done',
+          options: [{ name: 'id', value: 'goal_123' }],
+        },
+        user: { username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Completed'));
+  });
+
+  it('should handle slash command /pair for 1-click device pairing', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: { name: 'pair' },
+        user: { id: 'discord_user_88', username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Pair Kylrix Account'));
+    assert.ok(json.data.embeds[0].description.includes('7K9M-4W2P'));
+    assert.equal(PairingService.requestPairing.mock.calls.length > 0, true);
+  });
+
+  it('should handle slash command /link with a Personal Access Token', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          name: 'link',
+          options: [{ name: 'token', value: 'kyl_pat_valid_token' }],
+        },
+        user: { id: 'discord_user_88', username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Linked'));
+    assert.ok(json.data.embeds[0].description.includes('user_pat_42'));
+  });
+
+  it('should handle slash command /whoami', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: { name: 'whoami' },
+        user: { id: 'discord_user_88', username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Identity'));
+  });
+
+  it('should handle message component check_pair when granted', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 3,
+        data: { custom_id: 'check_pair:dev_granted' },
+        user: { id: 'discord_user_88', username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 7); // UPDATE_MESSAGE
+    assert.ok(json.data.embeds[0].title.includes('Successfully Paired'));
+    assert.ok(json.data.embeds[0].description.includes('user_paired_99'));
+  });
+
+  it('should handle GET /api/discord and return online status with all commands', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord');
+    const res = await GET(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.ok, true);
+    assert.equal(json.service, 'kylrix-discord-bot');
+    assert.ok(json.commands.includes('/notes'));
+    assert.ok(json.commands.includes('/pair'));
+    assert.ok(json.commands.includes('/goals'));
   });
 });
