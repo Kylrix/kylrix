@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getNote, updateNote, deleteNote, filterNoteData, isExcludedNote } from './note';
+import { getNote, updateNote, deleteNote, filterNoteData, isExcludedNote, decryptPublicEncryptedNote } from './note';
 import * as threadCrypto from '@/lib/encryption/thread-crypto';
 import * as clientOps from '@/lib/actions/client-ops';
 import * as secureOps from '@/lib/actions/secure-ops';
+import * as masterpassCrypto from '@/lib/masterpass-crypto';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { unifiedDelete, unifiedUpdate } from '@/lib/services/unified-object-service';
 
 // Mock dependencies to prevent external connection errors or appwrite crashes
@@ -43,6 +45,7 @@ vi.mock('@/lib/actions/client-ops', () => ({
 
 vi.mock('@/lib/actions/secure-ops', () => ({
   deleteNoteSecure: vi.fn(),
+  updateNoteSecure: vi.fn(),
 }));
 
 vi.mock('@/lib/encryption/thread-crypto', async (importOriginal) => {
@@ -53,6 +56,20 @@ vi.mock('@/lib/encryption/thread-crypto', async (importOriginal) => {
     encryptThreadData: vi.fn(actual.encryptThreadData),
   };
 });
+
+vi.mock('@/lib/masterpass-crypto', () => ({
+  decryptField: vi.fn(),
+  encryptField: vi.fn(),
+}));
+
+vi.mock('@/lib/ecosystem/security', () => ({
+  ecosystemSecurity: {
+    encryptWithKey: vi.fn(),
+    decryptWithKey: vi.fn(),
+    decrypt: vi.fn(),
+    status: { isUnlocked: true },
+  },
+}));
 
 describe('lib/appwrite/note thread notes operations', () => {
   let originalWindow: typeof window | undefined;
@@ -449,6 +466,122 @@ describe('lib/appwrite/note thread notes operations', () => {
       expect(unifiedUpdate).toHaveBeenCalledWith('note', 'note-up-2', { title: 'Fallback Title' });
       expect(clientOps.updateNote).toHaveBeenCalledWith('note-up-2', { title: 'Fallback Title' });
       expect(result).toEqual(fallbackRow);
+    });
+
+    it('falls through to clientOps when unifiedUpdate resolves with an object without $id', async () => {
+      vi.mocked(unifiedUpdate).mockResolvedValueOnce({} as any);
+      const fallbackRow = { $id: 'note-no-id-1', title: 'Fallback' };
+      vi.mocked(clientOps.updateNote).mockResolvedValueOnce(fallbackRow as any);
+
+      const result = await updateNote('note-no-id-1', { title: 'Fallback' });
+
+      expect(unifiedUpdate).toHaveBeenCalledWith('note', 'note-no-id-1', { title: 'Fallback' });
+      expect(clientOps.updateNote).toHaveBeenCalledWith('note-no-id-1', { title: 'Fallback' });
+      expect(result).toEqual(fallbackRow);
+    });
+
+    it('encrypts fields client-side when activeNoteKeys contains key for noteId', async () => {
+      const mock32ByteKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(32)));
+      vi.mocked(masterpassCrypto.decryptField).mockResolvedValueOnce(mock32ByteKeyBase64);
+      vi.mocked(ecosystemSecurity.decryptWithKey).mockResolvedValueOnce('Decrypted Title');
+      vi.mocked(ecosystemSecurity.decryptWithKey).mockResolvedValueOnce('Decrypted Content');
+
+      const noteToDecrypt = {
+        $id: 'encrypted-note-1',
+        title: '🔒 Encrypted Note',
+        content: 'rawEncryptedContent',
+        dek: 'wrappedDekString',
+        metadata: JSON.stringify({ encryptedTitle: 'rawEncryptedTitle' }),
+      } as any;
+
+      await decryptPublicEncryptedNote(noteToDecrypt);
+
+      vi.mocked(unifiedUpdate).mockRejectedValueOnce(new Error('Skip unified update'));
+      vi.mocked(ecosystemSecurity.encryptWithKey)
+        .mockResolvedValueOnce('newEncryptedTitle')
+        .mockResolvedValueOnce('newEncryptedContent');
+
+      vi.mocked(clientOps.updateNote).mockImplementationOnce(async (_id, data) => data as any);
+
+      const result = await updateNote('encrypted-note-1', {
+        title: 'My Secret Title',
+        content: 'My Secret Content',
+      });
+
+      expect(ecosystemSecurity.encryptWithKey).toHaveBeenCalledWith('My Secret Title', expect.anything());
+      expect(ecosystemSecurity.encryptWithKey).toHaveBeenCalledWith('My Secret Content', expect.anything());
+      expect(result.title).toBe('🔒 Encrypted Note');
+      expect(result.content).toBe('newEncryptedContent');
+      const meta = JSON.parse(result.metadata as string);
+      expect(meta.isEncrypted).toBe(true);
+      expect(meta.encryptedTitle).toBe('newEncryptedTitle');
+    });
+
+    it('handles invalid metadata JSON gracefully during client-side encryption (line 563 catch path)', async () => {
+      const mock32ByteKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(32)));
+      vi.mocked(masterpassCrypto.decryptField).mockResolvedValueOnce(mock32ByteKeyBase64);
+      vi.mocked(ecosystemSecurity.decryptWithKey).mockResolvedValue('Plaintext');
+
+      await decryptPublicEncryptedNote({
+        $id: 'corrupt-meta-note',
+        dek: 'wrappedDek',
+        metadata: '{}',
+      } as any);
+
+      vi.mocked(unifiedUpdate).mockRejectedValueOnce(new Error('Skip unified'));
+      vi.mocked(ecosystemSecurity.encryptWithKey).mockResolvedValue('encryptedVal');
+      vi.mocked(clientOps.updateNote).mockImplementationOnce(async (_id, data) => data as any);
+
+      const result = await updateNote('corrupt-meta-note', {
+        title: 'Title',
+        metadata: 'invalid-json-{',
+      });
+
+      expect(result.title).toBe('🔒 Encrypted Note');
+      const meta = JSON.parse(result.metadata as string);
+      expect(meta.isEncrypted).toBe(true);
+      expect(meta.encryptedTitle).toBe('encryptedVal');
+    });
+
+    it('catches and logs client-side encryption errors gracefully (line 576 catch path)', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const mock32ByteKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(32)));
+      vi.mocked(masterpassCrypto.decryptField).mockResolvedValueOnce(mock32ByteKeyBase64);
+      vi.mocked(ecosystemSecurity.decryptWithKey).mockResolvedValue('Plaintext');
+
+      await decryptPublicEncryptedNote({
+        $id: 'encrypt-fail-note',
+        dek: 'wrappedDek',
+        metadata: '{}',
+      } as any);
+
+      vi.mocked(unifiedUpdate).mockRejectedValueOnce(new Error('Skip unified'));
+      vi.mocked(ecosystemSecurity.encryptWithKey).mockRejectedValueOnce(new Error('Encryption failure'));
+      vi.mocked(clientOps.updateNote).mockImplementationOnce(async (_id, data) => data as any);
+
+      const result = await updateNote('encrypt-fail-note', {
+        title: 'Original Title',
+      });
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to encrypt note update client-side:',
+        expect.any(Error)
+      );
+      expect(result.title).toBe('Original Title');
+    });
+
+    it('executes updateNoteSecure on server side when window is undefined', async () => {
+      // @ts-expect-error simulating server side
+      delete global.window;
+
+      vi.mocked(unifiedUpdate).mockRejectedValueOnce(new Error('Skip unified'));
+      const serverUpdatedRow = { $id: 'server-note-2', title: 'Server Updated' };
+      vi.mocked(secureOps.updateNoteSecure).mockResolvedValueOnce(serverUpdatedRow as any);
+
+      const result = await updateNote('server-note-2', { title: 'Server Updated' }, 'jwt-token-xyz');
+
+      expect(secureOps.updateNoteSecure).toHaveBeenCalledWith('server-note-2', { title: 'Server Updated' }, 'jwt-token-xyz');
+      expect(result).toEqual(serverUpdatedRow);
     });
   });
 
