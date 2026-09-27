@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getNote, updateNote, deleteNote, filterNoteData, isExcludedNote, decryptPublicEncryptedNote } from './note';
+import { getNote, updateNote, deleteNote, createTag, filterNoteData, isExcludedNote, decryptPublicEncryptedNote } from './note';
 import * as threadCrypto from '@/lib/encryption/thread-crypto';
 import * as clientOps from '@/lib/actions/client-ops';
 import * as secureOps from '@/lib/actions/secure-ops';
 import * as masterpassCrypto from '@/lib/masterpass-crypto';
+import { getCurrentUser } from './client';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { unifiedDelete, unifiedUpdate } from '@/lib/services/unified-object-service';
+import { readLocalTagRows, findLocalTagByName } from '@/lib/data/local/tags';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
+import { invalidateCache } from '@/lib/ecosystem/nexus-fetcher';
 
 // Mock dependencies to prevent external connection errors or appwrite crashes
 vi.mock('./client', () => ({
@@ -41,6 +45,23 @@ vi.mock('@/lib/services/unified-object-service', () => ({
 vi.mock('@/lib/actions/client-ops', () => ({
   deleteNote: vi.fn(),
   updateNote: vi.fn(),
+  createRow: vi.fn(),
+}));
+
+vi.mock('@/lib/data/local/tags', () => ({
+  readLocalTagRows: vi.fn().mockResolvedValue([]),
+  findLocalTagByName: vi.fn().mockReturnValue(null),
+}));
+
+vi.mock('@/lib/services/sync-engine', () => ({
+  autonomicSyncEngine: {
+    markPending: vi.fn(),
+  },
+}));
+
+vi.mock('@/lib/ecosystem/nexus-fetcher', () => ({
+  invalidateCache: vi.fn(),
+  fetchOptimized: vi.fn(),
 }));
 
 vi.mock('@/lib/actions/secure-ops', () => ({
@@ -626,6 +647,116 @@ describe('lib/appwrite/note thread notes operations', () => {
       };
 
       expect(isExcludedNote(corruptNote)).toBe(false);
+    });
+  });
+
+  describe('createTag operations and error paths', () => {
+    it('throws an error if tag name is missing or whitespace', async () => {
+      await expect(createTag({ name: '' })).rejects.toThrow('Tag name is required');
+      await expect(createTag({ name: '   ' })).rejects.toThrow('Tag name is required');
+    });
+
+    it('returns local tag match if tag already exists locally on client', async () => {
+      vi.mocked(getCurrentUser).mockResolvedValueOnce({ $id: 'user-100' } as any);
+      vi.mocked(readLocalTagRows).mockResolvedValueOnce([{ $id: 'local-tag-1', name: 'Frontend' }] as any);
+      vi.mocked(findLocalTagByName).mockReturnValueOnce({
+        $id: 'local-tag-1',
+        name: 'Frontend',
+        metadata: '{"color":"#123456"}',
+      } as any);
+
+      const result = await createTag({ name: 'Frontend' });
+
+      expect(readLocalTagRows).toHaveBeenCalledWith('user-100');
+      expect(findLocalTagByName).toHaveBeenCalledWith(expect.anything(), 'Frontend');
+      expect(result).toMatchObject({
+        $id: 'local-tag-1',
+        name: 'Frontend',
+        color: '#123456',
+      });
+      expect(clientOps.createRow).not.toHaveBeenCalled();
+    });
+
+    it('successfully creates optimistic tag client-side and completes background sync', async () => {
+      vi.mocked(getCurrentUser).mockResolvedValueOnce({ $id: 'user-100' } as any);
+      vi.mocked(readLocalTagRows).mockResolvedValueOnce([]);
+      vi.mocked(findLocalTagByName).mockReturnValueOnce(null);
+
+      vi.mocked(clientOps.createRow).mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ $id: 'synced-doc-id' } as any), 10))
+      );
+
+      const result = await createTag({ name: 'Backend', color: '#00FF00', description: 'Server code' });
+
+      expect(result).toMatchObject({
+        name: 'Backend',
+        nameLower: 'backend',
+        userId: 'user-100',
+        color: '#00FF00',
+        description: 'Server code',
+      });
+
+      // Wait for background IIFE to complete
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      expect(clientOps.createRow).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({
+          name: 'Backend',
+          nameLower: 'backend',
+        })
+      );
+      expect(autonomicSyncEngine.markPending).toHaveBeenCalledWith('synced-doc-id');
+      expect(invalidateCache).toHaveBeenCalledWith('list:tags');
+    });
+
+    it('handles error in background sync (createRow rejection) gracefully and logs warning (line 847 error path)', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      vi.mocked(getCurrentUser).mockResolvedValueOnce({ $id: 'user-100' } as any);
+      vi.mocked(readLocalTagRows).mockResolvedValueOnce([]);
+      vi.mocked(findLocalTagByName).mockReturnValueOnce(null);
+
+      const syncError = new Error('Network error during tag creation');
+      vi.mocked(clientOps.createRow).mockImplementation(
+        () => new Promise((_, reject) => setTimeout(() => reject(syncError), 10))
+      );
+
+      const result = await createTag({ name: 'FailingTag' });
+
+      expect(result).toMatchObject({
+        name: 'FailingTag',
+        nameLower: 'failingtag',
+      });
+
+      // Wait for background IIFE to run and hit catch block
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith('[createTag] background sync failed:', syncError);
+    });
+
+    it('handles error when autonomicSyncEngine.markPending throws inside background sync (line 844 catch path)', async () => {
+      vi.mocked(getCurrentUser).mockResolvedValueOnce({ $id: 'user-100' } as any);
+      vi.mocked(readLocalTagRows).mockResolvedValueOnce([]);
+      vi.mocked(findLocalTagByName).mockReturnValueOnce(null);
+
+      vi.mocked(clientOps.createRow).mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ $id: 'doc-id-1' } as any), 10))
+      );
+      vi.mocked(autonomicSyncEngine.markPending).mockImplementation(() => {
+        throw new Error('Sync engine failed');
+      });
+
+      const result = await createTag({ name: 'TagWithSyncEngineFailure' });
+
+      expect(result).toMatchObject({
+        name: 'TagWithSyncEngineFailure',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      expect(invalidateCache).toHaveBeenCalledWith('list:tags');
     });
   });
 });
