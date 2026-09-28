@@ -11,6 +11,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import type { AttachmentMetadata } from '@/types/p2p';
 import { MessagesType, type ChatMessage } from './chat-types';
 import { ChatAttachmentCard } from './ChatAttachmentCard';
+import { unwrapThreadJsonContent } from '@/lib/chat/thread-json';
 
 const decryptedMessageCache = new Map<string, string>();
 
@@ -57,19 +58,7 @@ export function ChatMessageContent({
             return trimmed.length >= 32 && !trimmed.includes(' ') && /^[A-Za-z0-9+/=_-]+$/.test(trimmed);
         };
 
-        let displayedContent = msg.content as string;
-        // Thread leak fix: older thread messages stored as JSON {"text":"...","type":"text","sendToGeneral":true}
-        // Render only the text, drop sendToGeneral/type wrapper.
-        if (typeof displayedContent === 'string' && displayedContent.trim().startsWith('{')) {
-          try {
-            const parsed = JSON.parse(displayedContent);
-            if (parsed && typeof parsed.text === 'string' && parsed.text.trim()) {
-              displayedContent = parsed.text;
-            } else if (parsed && typeof parsed.content === 'string') {
-              displayedContent = parsed.content;
-            }
-          } catch {}
-        }
+        let displayedContent = unwrapThreadJsonContent(msg.content);
         const isEncrypted = isLikelyEncrypted(displayedContent);
 
         if (msg.type === MessagesType.TEXT && isEncrypted) {
@@ -87,7 +76,7 @@ export function ChatMessageContent({
             const cacheKey = `decrypted_msg_${msg.$id || msg.id}`;
             const cachedDecrypted = decryptedMessageCache.get(cacheKey);
             if (cachedDecrypted) {
-                displayedContent = cachedDecrypted;
+                displayedContent = unwrapThreadJsonContent(cachedDecrypted);
                 // Fall through to render plaintext below
                 if (!isLikelyEncrypted(displayedContent)) {
                     // plaintext ready
@@ -97,8 +86,9 @@ export function ChatMessageContent({
                 if (convKey) {
                     ecosystemSecurity.decryptWithKey(displayedContent, convKey)
                         .then((decrypted) => {
-                            decryptedMessageCache.set(cacheKey, decrypted);
-                            onDecrypted(String(msg.$id || msg.id), decrypted);
+                            const unwrapped = unwrapThreadJsonContent(decrypted);
+                            decryptedMessageCache.set(cacheKey, unwrapped);
+                            onDecrypted(String(msg.$id || msg.id), unwrapped);
                         })
                         .catch(() => {});
                 }
@@ -174,7 +164,7 @@ export function ChatMessageContent({
                                 className="w-full max-h-[65vh] object-contain rounded-2xl cursor-pointer hover:opacity-95 transition-opacity"
                             />
                         </Box>
-                        {msg.content && <Typography variant="body2" sx={{ mt: 1 }}>{msg.content}</Typography>}
+                        {displayedContent && <Typography variant="body2" sx={{ mt: 1 }}>{displayedContent}</Typography>}
                     </Box>
                 );
             case 'video':
@@ -186,7 +176,7 @@ export function ChatMessageContent({
                             playsInline
                             style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: 16 }}
                         />
-                        {msg.content && <Typography variant="body2" sx={{ mt: 1 }}>{msg.content}</Typography>}
+                        {displayedContent && <Typography variant="body2" sx={{ mt: 1 }}>{displayedContent}</Typography>}
                     </Box>
                 );
             case 'audio':
