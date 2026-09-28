@@ -10,6 +10,24 @@
     "source": "github",
     "subfolder": "packages/cli"
   },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://www.kylrix.space/api/v1/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {api_key}"
+        }
+      ],
+      "variables": {
+        "api_key": {
+          "description": "Kylrix Personal Access Token (PAT) or Punch Token",
+          "isSecret": true
+        }
+      }
+    }
+  ],
   "packages": [
     {
       "registryType": "npm",
