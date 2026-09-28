@@ -1,0 +1,41 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.kylrix/cli",
+  "title": "Kylrix Sovereign Workspace",
+  "description": "Official CLI and MCP bridge for Kylrix sovereign agentic workspaces",
+  "version": "1.0.10",
+  "websiteUrl": "https://www.kylrix.space",
+  "repository": {
+    "url": "https://github.com/kylrix/kylrix",
+    "source": "github",
+    "subfolder": "packages/cli"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@kylrix/cli",
+      "version": "1.0.10",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "KYLRIX_API_TOKEN",
+          "description": "Kylrix Personal Access Token (PAT) or Punch Token",
+          "isSecret": true
+        },
+        {
+          "name": "KYLRIX_BASE_URL",
+          "description": "Kylrix API base URL (defaults to https://www.kylrix.space/api/v1)",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

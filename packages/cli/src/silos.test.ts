@@ -278,14 +278,14 @@ describe('CLI Base URI Partitioning and Multi-Account Silos', () => {
     });
 
     it('searches across local store and returns syncStatus', () => {
-      LocalStore.createIdea({
-        title: 'Unique Searchable Keyword X7',
+      const created = LocalStore.createIdea({
+        title: `Unique Searchable Keyword X7 ${Date.now()}`,
         content: 'Testing local search functionality',
       });
 
-      const results = LocalStore.search('Keyword X7');
+      const results = LocalStore.search(created.title);
       expect(results.length).toBeGreaterThan(0);
-      const match = results.find((r: any) => r.title.includes('Keyword X7'));
+      const match = results.find((r: any) => r.id === created.id);
       expect(match).toBeDefined();
       expect(match?.kind).toBe('idea');
       expect(match?.syncStatus).toBe('unsynced');
