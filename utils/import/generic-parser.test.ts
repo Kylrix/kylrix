@@ -230,26 +230,134 @@ describe('generic-parser', () => {
   });
 
   describe('mapRowsToItems', () => {
+    const standardMapping = {
+      nameIdx: 0,
+      usernameIdx: 1,
+      passwordIdx: 2,
+      urlIdx: 3,
+      notesIdx: 4,
+    };
+
     it('maps CSV rows to ImportItems using mapping with or without header', () => {
       const rows = [
         ['Title', 'User', 'Pass', 'URL', 'Notes'],
         ['Gmail', 'user@gmail.com', 'secret123', 'https://gmail.com', 'Personal mail'],
         ['', 'anon@gmail.com', 'pass456', '', ''],
       ];
-      const mapping = {
-        nameIdx: 0,
-        usernameIdx: 1,
-        passwordIdx: 2,
-        urlIdx: 3,
-        notesIdx: 4,
-      };
-      const items = mapRowsToItems(rows, mapping, true);
+      const items = mapRowsToItems(rows, standardMapping, true);
       expect(items.length).toBe(2);
-      expect(items[0].name).toBe('Gmail');
+      expect(items[0]).toEqual({
+        name: 'Gmail',
+        username: 'user@gmail.com',
+        password: 'secret123',
+        url: 'https://gmail.com',
+        notes: 'Personal mail',
+        _status: 'new',
+      });
       expect(items[1].name).toBe('Imported Item 2');
 
       const noHeaderItems = mapRowsToItems([['App', 'usr', 'pwd']], { nameIdx: 0, usernameIdx: 1, passwordIdx: 2, urlIdx: -1, notesIdx: -1 }, false);
       expect(noHeaderItems.length).toBe(1);
+      expect(noHeaderItems[0]).toEqual({
+        name: 'App',
+        username: 'usr',
+        password: 'pwd',
+        url: '',
+        notes: '',
+        _status: 'new',
+      });
+    });
+
+    it('filters out rows that have neither username nor password', () => {
+      const rows = [
+        ['Header Name', 'Header User', 'Header Pass', 'Header URL', 'Header Notes'],
+        ['Item With User Only', 'user@test.com', '', 'https://test.com', 'Note 1'],
+        ['Item With Pass Only', '', 'supersecret', 'https://test.com', 'Note 2'],
+        ['Item With Both', 'user2@test.com', 'pass2', 'https://test2.com', 'Note 3'],
+        ['Item With No Credentials', '', '', 'https://nocreds.com', 'Only URL and Notes'],
+      ];
+
+      const items = mapRowsToItems(rows, standardMapping, true);
+      expect(items.length).toBe(3);
+      expect(items.map(i => i.name)).toEqual([
+        'Item With User Only',
+        'Item With Pass Only',
+        'Item With Both',
+      ]);
+    });
+
+    it('correctly respects hasHeader flag when skipping header or including first row', () => {
+      const rows = [
+        ['App1', 'user1@test.com', 'pass1'],
+        ['App2', 'user2@test.com', 'pass2'],
+      ];
+      const mapping = { nameIdx: 0, usernameIdx: 1, passwordIdx: 2, urlIdx: -1, notesIdx: -1 };
+
+      const withHeader = mapRowsToItems(rows, mapping, true);
+      expect(withHeader.length).toBe(1);
+      expect(withHeader[0].name).toBe('App2');
+
+      const withoutHeader = mapRowsToItems(rows, mapping, false);
+      expect(withoutHeader.length).toBe(2);
+      expect(withoutHeader[0].name).toBe('App1');
+      expect(withoutHeader[1].name).toBe('App2');
+    });
+
+    it('falls back to "Imported Item {i}" when name is missing, empty, or unmapped', () => {
+      const rows = [
+        ['Title', 'User', 'Pass'],
+        ['', 'user1@test.com', 'pass1'],
+        ['', 'user2@test.com', 'pass2'],
+      ];
+      const mappingWithName = { nameIdx: 0, usernameIdx: 1, passwordIdx: 2, urlIdx: -1, notesIdx: -1 };
+      const itemsWithName = mapRowsToItems(rows, mappingWithName, true);
+      expect(itemsWithName[0].name).toBe('Imported Item 1');
+      expect(itemsWithName[1].name).toBe('Imported Item 2');
+
+      const mappingUnmappedName = { nameIdx: -1, usernameIdx: 1, passwordIdx: 2, urlIdx: -1, notesIdx: -1 };
+      const itemsUnmappedName = mapRowsToItems(rows, mappingUnmappedName, true);
+      expect(itemsUnmappedName[0].name).toBe('Imported Item 1');
+      expect(itemsUnmappedName[1].name).toBe('Imported Item 2');
+    });
+
+    it('handles unmapped column indices (-1) and out-of-bounds row lengths gracefully', () => {
+      const rows = [
+        ['Header Name', 'Header User'],
+        ['Short Row', 'user1@test.com'], // row length 2, missing password, url, notes columns
+      ];
+      const mapping = { nameIdx: 0, usernameIdx: 1, passwordIdx: 5, urlIdx: 6, notesIdx: -1 };
+
+      const items = mapRowsToItems(rows, mapping, true);
+      expect(items.length).toBe(1);
+      expect(items[0]).toEqual({
+        name: 'Short Row',
+        username: 'user1@test.com',
+        password: '',
+        url: '',
+        notes: '',
+        _status: 'new',
+      });
+    });
+
+    it('returns an empty array when rows array is empty or contains only a header row', () => {
+      expect(mapRowsToItems([], standardMapping, true)).toEqual([]);
+      expect(mapRowsToItems([], standardMapping, false)).toEqual([]);
+
+      const headerOnlyRows = [['Name', 'Username', 'Password']];
+      expect(mapRowsToItems(headerOnlyRows, standardMapping, true)).toEqual([]);
+    });
+
+    it('handles sparse or empty array rows within data rows without throwing', () => {
+      const rows: string[][] = [
+        ['Name', 'User', 'Pass'],
+        [],
+        ['Item 2', 'user2@test.com', 'pass2'],
+      ];
+      const mapping = { nameIdx: 0, usernameIdx: 1, passwordIdx: 2, urlIdx: -1, notesIdx: -1 };
+
+      const items = mapRowsToItems(rows, mapping, true);
+      expect(items.length).toBe(1);
+      expect(items[0].name).toBe('Item 2');
     });
   });
 });
