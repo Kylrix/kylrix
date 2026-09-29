@@ -14,7 +14,7 @@ export default async function Image() {
       productLabel: productName,
       eyebrow: 'Build, ship and think',
       title: 'Build, ship and think in one living agentic workspace.',
-      description: 'Your workflow becomes a living, scalable system that compounds daily leverage over time.',
+      description: 'Your projects, context, knowledge and agents stay connected—so every session builds on the last.',
       accent: 'indigo',
       ownerLabel: 'Philosophy',
       ownerName: 'Every object → tool call → more context',

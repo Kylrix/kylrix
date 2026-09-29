@@ -5,7 +5,7 @@
 <h1 align="center">Build, ship and think in one living agentic workspace.</h1>
 
 <p align="center">
-  <strong>Your workflow becomes a living, scalable system that compounds daily leverage over time.</strong>
+  <strong>Your projects, context, knowledge and agents stay connected—so every session builds on the last.</strong>
 </p>
 
 <p align="center">
