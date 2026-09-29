@@ -21,6 +21,18 @@ export default async function Image({
     .replace(/\s+/g, ' ')
     .trim();
 
+  let firstMedia: string | null = null;
+  const match = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/i.exec(String(payload?.message?.content || ''));
+  if (match && match[1]) {
+    try {
+      const res = await fetch(match[1]);
+      if (res.ok) {
+        const ct = res.headers.get('content-type') || 'image/png';
+        firstMedia = `data:${ct};base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
+      }
+    } catch {}
+  }
+
   return new ImageResponse(
     renderKylrixShareCard({
       productLabel: 'Kylrix Agents',
@@ -30,7 +42,12 @@ export default async function Image({
       accent: 'violet',
       ownerName: owner.ownerName,
       ownerAvatarDataUrl: owner.ownerAvatarDataUrl,
-      chips: ['Agent', isAssistant ? 'Reply' : 'Prompt']}),
+      chips: ['Agent', isAssistant ? 'Reply' : 'Prompt'],
+      cardType: 'object',
+      objectIcon: 'agent',
+      objectColor: '#818CF8',
+      mediaDataUrl: firstMedia,
+    }),
     size
   );
 }

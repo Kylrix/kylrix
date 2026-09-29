@@ -17,6 +17,23 @@ export default async function Image({
   const session = await getPublicAgentSessionSecure(id).catch(() => null);
   const owner = await resolveOwnerForOg(session?.userId);
 
+  let firstMedia: string | null = null;
+  if (Array.isArray(session?.messages)) {
+    for (const msg of session.messages) {
+      const match = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/i.exec(String(msg?.content || ''));
+      if (match && match[1]) {
+        try {
+          const res = await fetch(match[1]);
+          if (res.ok) {
+            const ct = res.headers.get('content-type') || 'image/png';
+            firstMedia = `data:${ct};base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
+            break;
+          }
+        } catch {}
+      }
+    }
+  }
+
   return new ImageResponse(
     renderKylrixShareCard({
       productLabel: 'Kylrix Agents',
@@ -29,7 +46,12 @@ export default async function Image({
       chips: [
         'Agent',
         session?.messages?.length ? `${session.messages.length} msgs` : 'Public',
-      ]}),
+      ],
+      cardType: 'object',
+      objectIcon: 'agent',
+      objectColor: '#818CF8',
+      mediaDataUrl: firstMedia,
+    }),
     size
   );
 }

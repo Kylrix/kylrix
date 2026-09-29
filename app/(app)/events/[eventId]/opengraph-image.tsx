@@ -69,6 +69,10 @@ export default async function Image({
       ownerName,
       ownerAvatarDataUrl,
       chips,
+      cardType: 'object',
+      objectIcon: 'event',
+      objectColor: '#F59E0B',
+      mediaDataUrl: (event as any)?.cover || (event as any)?.imageUrl || null,
     }),
     {
       ...size,

@@ -24,7 +24,11 @@ export default async function Image({
         : 'View this shared credential securely.',
       accent: 'amber',
       ownerName: 'Kylrix Vault',
-      chips: ['Zero-knowledge', 'Secure handoff']}),
+      chips: ['Zero-knowledge', 'Secure handoff'],
+      cardType: 'object',
+      objectIcon: 'vault',
+      objectColor: '#10B981',
+    }),
     size
   );
 }

@@ -52,6 +52,9 @@ export default async function FormOGImage({
       accent: 'emerald',
       ownerName: 'Kylrix Flow',
       chips,
+      cardType: 'object',
+      objectIcon: 'form',
+      objectColor: '#3B82F6',
     }),
     { ...size }
   );

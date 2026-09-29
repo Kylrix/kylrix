@@ -33,7 +33,12 @@ export default async function Image({
       accent: 'violet',
       ownerName: owner.ownerName,
       ownerAvatarDataUrl: owner.ownerAvatarDataUrl,
-      chips: [status, priority]}),
+      chips: [status, priority],
+      cardType: 'object',
+      objectIcon: 'goal',
+      objectColor: '#A855F7',
+      mediaDataUrl: (goal as any)?.cover || (goal as any)?.imageUrl || null,
+    }),
     {
       ...size}
   );

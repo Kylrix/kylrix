@@ -97,6 +97,20 @@ async function resolveOptionalPreviewImage(note: any, isEncrypted: boolean): Pro
         /* try next */
       }
     }
+
+    const mdImageMatch = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/i.exec(content);
+    if (mdImageMatch && mdImageMatch[1]) {
+      try {
+        const imgRes = await fetch(mdImageMatch[1]);
+        if (imgRes.ok) {
+          const buf = Buffer.from(await imgRes.arrayBuffer());
+          const ct = imgRes.headers.get('content-type') || 'image/png';
+          return `data:${ct};base64,${buf.toString('base64')}`;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
   } catch {
     /* card still renders without preview image */
   }
@@ -163,6 +177,10 @@ export default async function SharedNoteOGImage({
       ownerName,
       ownerAvatarDataUrl,
       chips: [dateText, ...tags].filter(Boolean).slice(0, 3),
+      cardType: 'object',
+      objectIcon: isEncrypted ? 'vault' : 'idea',
+      objectColor: isEncrypted ? '#10B981' : '#EC4899',
+      mediaDataUrl: previewImageDataUrl,
       previewImageDataUrl,
       previewImageAlt: noteTitle}),
     { ...size }

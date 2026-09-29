@@ -7,6 +7,16 @@ export async function resolveProfileAvatarDataUrl(
   const id = String(fileId || '').trim();
   if (!id) return null;
   try {
+    if (id.startsWith('data:')) return id;
+    if (id.startsWith('http://') || id.startsWith('https://')) {
+      const res = await fetch(id);
+      if (res.ok) {
+        const ct = res.headers.get('content-type') || 'image/png';
+        const buf = Buffer.from(await res.arrayBuffer());
+        return `data:${ct};base64,${buf.toString('base64')}`;
+      }
+      return null;
+    }
     const { storage } = await import('@/lib/appwrite-admin').then((m) => m.createSystemClient());
     const fileBuffer = await storage.getFilePreview(
       APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES,

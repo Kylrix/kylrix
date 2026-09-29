@@ -20,9 +20,12 @@ export default async function UserProfileOGImage({
   let avatarDataUrl: string | null = null;
   let chips: string[] = [`@${username}`];
 
+  let userId = '';
+
   try {
     const profile = await UsersService.getProfile(username);
     if (profile) {
+      userId = profile.userId || profile.$id || '';
       displayName = profile.displayName || profile.username || username;
       bioText = profile.bio || `Connect with @${username} on Kylrix.`;
       try {
@@ -55,7 +58,11 @@ export default async function UserProfileOGImage({
       ownerLabel: 'Profile',
       ownerName: `@${username}`,
       ownerAvatarDataUrl: avatarDataUrl,
-      chips}),
+      mediaDataUrl: avatarDataUrl,
+      chips,
+      cardType: 'profile',
+      userId: userId || username,
+    }),
     { ...size }
   );
 }
