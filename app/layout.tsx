@@ -35,9 +35,9 @@ const productSiteUrl = getProductSiteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(productSiteUrl),
   title: {
-    default: `Build, ship and think in one living agentic workspace. — ${productName}`,
+    default: `${productName} — The sovereign workspace for developers who run local AI agents.`,
     template: `%s · ${productName}`},
-  description: 'Your projects, secrets, and agents stay connected—so every session builds on the last.',
+  description: 'Your projects, secrets, and agents stay connected—so every session builds on the last. Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.',
   keywords: ['agentic workspace', 'local-first', 'PAT', 'OAuth2', 'WebRTC', 'offline-first', 'productivity system'],
   icons: {
     icon: '/favicon.ico',
@@ -47,19 +47,19 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: productSiteUrl,
     siteName: productName,
-    title: 'Build, ship and think in one living agentic workspace.',
-    description: 'Your projects, secrets, and agents stay connected—so every session builds on the last.',
+    title: `${productName} — The sovereign workspace for developers who run local AI agents.`,
+    description: 'Your projects, secrets, and agents stay connected—so every session builds on the last. Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.',
     images: [
       {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'Build, ship and think in one living agentic workspace.'},
+        alt: `${productName} — The sovereign workspace for developers who run local AI agents.`},
     ]},
   twitter: {
     card: 'summary_large_image',
-    title: `Build, ship and think in one living agentic workspace. — ${productName}`,
-    description: 'Your projects, secrets, and agents stay connected—so every session builds on the last.',
+    title: `${productName} — The sovereign workspace for developers who run local AI agents.`,
+    description: 'Your projects, secrets, and agents stay connected—so every session builds on the last. Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.',
     images: ['/opengraph-image']},
   other: {
     'ory-verify': 'orynth-9809db1def8b427d8c82b09db6ae2bac',

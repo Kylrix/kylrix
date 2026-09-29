@@ -1,7 +1,7 @@
 {
   "name": "kylrix",
   "version": "1.0.0",
-  "description": "Model Context Protocol (MCP) server and sovereign local-first agentic workspace ecosystem",
+  "description": "The sovereign workspace for developers who run local AI agents.",
   "homepage": "https://www.kylrix.space",
   "repository": {
     "type": "git",

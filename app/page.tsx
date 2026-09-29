@@ -182,9 +182,9 @@ export default function LandingPage() {
             transition={{ duration: 0.35, delay: 0.05 }}
             className="font-clash text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.08] [text-shadow:_0_2px_12px_rgba(0,0,0,0.9)]"
           >
-            Build, ship and think in <br className="hidden sm:inline" />
+            The sovereign workspace for <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-[#818CF8] via-[#EC4899] to-[#10B981] bg-clip-text text-transparent">
-              one living agentic workspace.
+              developers who run local AI agents.
             </span>
           </motion.h1>
 
@@ -194,8 +194,18 @@ export default function LandingPage() {
             transition={{ duration: 0.35, delay: 0.1 }}
             className="text-base sm:text-lg text-white/90 max-w-2xl font-normal leading-relaxed drop-shadow-md"
           >
-            Notes, goals, encrypted vault, direct messages, and autonomous AI tools sharing the exact same workspace.
+            Your projects, secrets, and agents stay connected—so every session builds on the last.
           </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.12 }}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-xs sm:text-sm text-white/90 font-mono"
+          >
+            <span className="flex h-1.5 w-1.5 rounded-full bg-[#10B981]" />
+            <span>Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.</span>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}

@@ -12,13 +12,13 @@ export default async function Image() {
   return new ImageResponse(
     renderKylrixShareCard({
       productLabel: productName,
-      eyebrow: 'Build, ship and think',
-      title: 'Build, ship and think in one living agentic workspace.',
-      description: 'Your projects, secrets, and agents stay connected—so every session builds on the last.',
+      eyebrow: 'Sovereign AI Workspace',
+      title: 'The sovereign workspace for developers who run local AI agents.',
+      description: 'Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.',
       accent: 'indigo',
       ownerLabel: 'Philosophy',
       ownerName: 'Every object → tool call → more context',
-      chips: ['Ideas', 'Flow', 'Vault', 'Workspaces', 'Connect', 'Agents']}),
+      chips: ['MCP', 'Cursor', 'Claude Code', 'Vault', 'Notes', 'Agents']}),
     size
   );
 }

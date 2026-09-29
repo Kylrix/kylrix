@@ -2,14 +2,15 @@
   <img src="public/logo.svg" width="120" alt="Kylrix Logo">
 </p>
 
-<h1 align="center">Build, ship and think in one living agentic workspace.</h1>
+<h1 align="center">The sovereign workspace for developers who run local AI agents.</h1>
 
 <p align="center">
-  <strong>Your projects, secrets, and agents stay connected—so every session builds on the last.</strong>
+  <strong>Your projects, secrets, and agents stay connected—so every session builds on the last.</strong><br>
+  <em>Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.</em>
 </p>
 
 <p align="center">
-  Open source · Self-hostable · Local-first · Optional encryption
+  Open source · Self-hostable · Local-first · Argon2id + AES-256-GCM
 </p>
 
 <p align="center">
