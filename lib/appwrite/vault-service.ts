@@ -2227,13 +2227,12 @@ export class VaultService {
     const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
     const file = new File([blob], `${APPWRITE_CONFIG.SYSTEM.RP_NAME}-backup-${new Date().getTime()}.json`, { type: "application/json" });
 
-    return await storage.createFile(
-      APPWRITE_BUCKET_BACKUPS_ID,
-      ID.unique(),
-      file,
-      [
-        Permission.read(Role.user(userId))]
-    );
+    const { secureUploadFile } = await import('@/lib/actions/secure-upload');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('bucketId', APPWRITE_BUCKET_BACKUPS_ID);
+    formData.append('fileId', ID.unique());
+    return await secureUploadFile(formData);
   }
 
   static async listCloudBackups(_userId: string): Promise<Models.FileList> {

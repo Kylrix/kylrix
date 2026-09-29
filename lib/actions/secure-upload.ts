@@ -32,6 +32,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
     APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS,
     APPWRITE_CONFIG.BUCKETS.CHAT_UPLOADS,
     APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL,
+    APPWRITE_CONFIG.BUCKETS.BACKUPS,
     'voice'
   ]);
 
@@ -65,6 +66,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
     form_media: 10 * 1024 * 1024,        // 10 MB
     form_attachments: 5 * 1024 * 1024,   // 5 MB
     chat_uploads: 10 * 1024 * 1024,      // 10 MB
+    backups: 5 * 1024 * 1024,            // 5 MB
     default: 10 * 1024 * 1024,           // 10 MB Guideline ceiling
   };
 
