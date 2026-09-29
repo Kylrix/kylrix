@@ -186,15 +186,29 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
   try {
     const user = await users.get(userId);
     const prefs = readUserPrefs(user);
-    prefsTier = normalizeBillingPrefsTier(prefs);
-    if (prefsTier !== 'FREE') {
+    const rawPrefsTier = normalizeBillingPrefsTier(prefs);
+    if (rawPrefsTier !== 'FREE') {
+      const { verifySubscriptionSig } = await import('@/lib/services/internal/subscription-prefs-merge');
       const expRaw = prefs.subscriptionExpiresAt;
-      prefsExpiresAt = typeof expRaw === 'string' ? expRaw : null;
-      prefsSource = prefsTier === 'LIFETIME'
-        ? 'prefs_lifetime'
-        : prefsTier === 'ORG'
-          ? 'prefs_org'
-          : 'prefs_sync';
+      const expStr = typeof expRaw === 'string' ? expRaw : '';
+      const sig = typeof prefs.subscriptionSig === 'string' ? prefs.subscriptionSig : '';
+      const isSigValid = Boolean(sig && verifySubscriptionSig(userId, rawPrefsTier, expStr, sig));
+
+      // In Cloud, user prefs can be edited client-side via account.updatePrefs().
+      // If there is no active subscription ledger row, an unverified paid tier claim in prefs is spoofed.
+      if (ledgerTier !== 'FREE' || isSigValid) {
+        prefsTier = rawPrefsTier;
+        prefsExpiresAt = expStr || null;
+        prefsSource = prefsTier === 'LIFETIME'
+          ? 'prefs_lifetime'
+          : prefsTier === 'ORG'
+            ? 'prefs_org'
+            : 'prefs_sync';
+      } else {
+        console.warn(`[getVerifiedProEntitlementForUser] Detected unverified paid prefs claim (${rawPrefsTier}) for user ${userId}. Rejecting and enforcing FREE.`);
+        prefsTier = 'FREE';
+        prefsSource = 'none';
+      }
     }
   } catch {
     // fall through

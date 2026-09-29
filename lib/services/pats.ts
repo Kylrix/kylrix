@@ -192,6 +192,22 @@ export const PatService = {
     const now = new Date().toISOString();
     const tables = createSystemTablesDB();
 
+    // Enforce active PAT ceiling to prevent unbounded database rows
+    const existingPats = await tables.listRows({
+      databaseId: DB,
+      tableId: TABLE,
+      queries: [
+        Query.equal('userId', params.userId),
+        Query.equal('status', 'active'),
+        Query.limit(30),
+      ],
+    }).catch(() => ({ total: 0, rows: [] as any[] }));
+
+    const MAX_ACTIVE_PATS = 25;
+    if (existingPats.rows.length >= MAX_ACTIVE_PATS) {
+      throw new Error(`Active access token limit reached (maximum ${MAX_ACTIVE_PATS} active tokens). Please revoke unused tokens.`);
+    }
+
     const isWs = params.isWorkspace === true;
 
     const row = await tables.createRow({

@@ -100,6 +100,23 @@ function forbidden(message: string): never {
   throw err;
 }
 
+export class PaymentRequiredError extends Error {
+  status = 402;
+  code = 'payment_required';
+  constructor(message = 'Backend database storage requires a paid plan.') {
+    super(message);
+    this.name = 'PaymentRequiredError';
+  }
+}
+
+export async function assertPaidActor(actor: ApiActor, message = 'Backend database storage requires a paid plan.') {
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  const isPaid = await hasPaidKylrixPlanServer(actor.userId);
+  if (!isPaid) {
+    throw new PaymentRequiredError(message);
+  }
+}
+
 async function assertOwnedNote(tables: SystemTablesPort, actor: ApiActor, id: string) {
   const row = (await tables
     .getRow({ databaseId: DB, tableId: NOTES, rowId: id })
@@ -490,6 +507,7 @@ export const ApiResources = {
 
   async createNote(actor: ApiActor, body: Record<string, unknown>) {
     requireScope(actor, 'notes:write');
+    await assertPaidActor(actor, 'Creating notes in cloud storage requires a paid plan.');
     const title = clampNoteTitle(String(body?.title || '').trim() || 'Untitled', 'Untitled');
     const content = body?.content != null ? String(body.content) : '';
     const requestedWs = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
@@ -675,6 +693,7 @@ export const ApiResources = {
 
   async createGoal(actor: ApiActor, body: Record<string, unknown>) {
     requireScope(actor, 'goals:write');
+    await assertPaidActor(actor, 'Creating goals in cloud storage requires a paid plan.');
     const title = String(body?.title || '').trim();
     if (!title) badRequest('title required');
     const requestedWs = resolveWorkspaceId(body);
@@ -780,6 +799,7 @@ export const ApiResources = {
 
   async createFlow(actor: ApiActor, body: Record<string, unknown>) {
     requireScope(actor, 'flows:write');
+    await assertPaidActor(actor, 'Creating flows in cloud storage requires a paid plan.');
     let fields: ReturnType<typeof resolveFlowCreateFields>;
     try {
       fields = resolveFlowCreateFields(body);
@@ -1772,6 +1792,7 @@ export const ApiResources = {
 
   async createWorkspace(actor: ApiActor, body: Record<string, unknown>) {
     requireScope(actor, 'workspaces:write');
+    await assertPaidActor(actor, 'Creating workspaces in cloud storage requires a paid plan.');
     if (isWorkspaceJailed(actor)) {
       throw new WorkspaceJailError('Jailed workspace actors cannot create new workspaces');
     }
@@ -1899,6 +1920,7 @@ export const ApiResources = {
 
   async createEvent(actor: ApiActor, body: Record<string, unknown>) {
     requireScope(actor, 'events:write');
+    await assertPaidActor(actor, 'Creating events in cloud storage requires a paid plan.');
     const title = String(body.title || '').trim();
     if (!title) badRequest('title required');
     const requestedWs = (body.workspaceId || body.projectId || (body as any).wsId) as string | undefined;
@@ -2037,6 +2059,7 @@ export const ApiResources = {
 
   async createForm(actor: ApiActor, body: Record<string, unknown>) {
     requireScope(actor, 'forms:write');
+    await assertPaidActor(actor, 'Creating forms in cloud storage requires a paid plan.');
     const title = String(body.title || '').trim();
     if (!title) badRequest('title required');
     const requestedWs = (body.workspaceId || body.projectId || (body as any).wsId) as string | undefined;
@@ -2465,6 +2488,7 @@ export const ApiResources = {
     opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
   ) {
     requireScope(actor, 'vault:write');
+    await assertPaidActor(actor, 'Saving vault secrets in cloud storage requires a paid plan.');
     const name = String(body.name || body.title || '').trim();
     if (!name) badRequest('name required');
 
@@ -2831,6 +2855,7 @@ export const ApiResources = {
     opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
   ) {
     requireScope(actor, 'vault:write');
+    await assertPaidActor(actor, 'Saving TOTP secrets in cloud storage requires a paid plan.');
     const secretKey = String(body.secretKey || body.secret || '').trim();
     if (!secretKey) badRequest('secretKey required');
 

@@ -643,8 +643,21 @@ export async function addObjectToProjectSecure(
   }
 
   const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+  const isActorPaid = await hasPaidKylrixPlanServer(actor.$id);
+  if (!isActorPaid) {
+    const probeTables = createSystemTablesDB();
+    const proj = (await probeTables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+        tableId: 'projects',
+        rowId: projectId,
+      })
+      .catch(() => null)) as { userId?: string | null; ownerId?: string | null } | null;
+    const projOwnerId = String(proj?.ownerId || proj?.userId || '').trim();
+    const isOwnerPaid = Boolean(projOwnerId && (await hasPaidKylrixPlanServer(projOwnerId)));
+    if (!isOwnerPaid) {
+      throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+    }
   }
 
   const isAllowed = await verifyProjectPermission(projectId, actor.$id, 'editor');
@@ -1035,6 +1048,11 @@ export async function createFormSecure(data: any, jwt?: string) {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+  }
+
   // Mathematically tie the create operation to the current user
   if (!data) {
     data = {};
@@ -1256,6 +1274,11 @@ export async function createEventSecure(data: any, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
   }
 
   // Mathematically tie the create operation to the current user
@@ -1798,6 +1821,11 @@ export async function createGoalSecure(data: any, jwt?: string): Promise<any> {
       throw new Error('Unauthorized: Session expired or invalid');
     }
 
+    const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+    if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+      throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+    }
+
     const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
     const { pickGoalAutosavePayload } = await import('@/lib/goals/pick-goal-autosave-payload');
 
@@ -1885,6 +1913,12 @@ export async function updateGoalSecure(goalId: string, data: any, jwt?: string):
     const ownerId = String(existing?.creatorId || existing?.userId || '').trim();
     if (ownerId && ownerId !== actor.$id && ownerId !== 'guest' && ownerId !== 'thread') {
       throw new Error('Forbidden: Insufficient permissions on goal');
+    }
+
+    const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+    const effectivePaidUserId = (ownerId && ownerId !== 'guest' && ownerId !== 'thread') ? ownerId : actor.$id;
+    if (!(await hasPaidKylrixPlanServer(effectivePaidUserId))) {
+      throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
     }
 
     const merged = {

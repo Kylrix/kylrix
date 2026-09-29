@@ -558,6 +558,26 @@ export async function createRowSecure(
       if (!(rowData as any).userId && !(rowData as any).ownerId && isAuthenticatedActor) {
         (rowData as any).userId = actor.$id;
       }
+
+      const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+      let isAllowedPaid = actor?.$id ? await hasPaidKylrixPlanServer(actor.$id) : false;
+      if (!isAllowedPaid && isWorkspaceLinked && (rowData as any).projectId) {
+        const tablesProbe = createSystemTablesDB();
+        const proj = (await tablesProbe
+          .getRow({
+            databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+            tableId: 'projects',
+            rowId: String((rowData as any).projectId),
+          })
+          .catch(() => null)) as { userId?: string | null; ownerId?: string | null } | null;
+        const projOwnerId = String(proj?.ownerId || proj?.userId || '').trim();
+        if (projOwnerId && (await hasPaidKylrixPlanServer(projOwnerId))) {
+          isAllowedPaid = true;
+        }
+      }
+      if (!isAllowedPaid) {
+        throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+      }
     } else {
       // Specialized Table Policies on creation
       if (tblId === 'Collaborators' || tblId === 'collaborators') {
@@ -752,6 +772,21 @@ export async function updateRowSecure(
   }
 
   if (!isAllowed) throw new Error('Forbidden');
+
+  if (!isSpecializedTable) {
+    const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+    let isPaid = await hasPaidKylrixPlanServer(actor.$id);
+    if (!isPaid) {
+      const existingRow = await getRowCached({ databaseId: dbId, tableId: tblId, rowId: rId });
+      const rowOwnerId = String(existingRow?.userId || existingRow?.ownerId || existingRow?.creatorId || '').trim();
+      if (rowOwnerId && rowOwnerId !== actor.$id && (await hasPaidKylrixPlanServer(rowOwnerId))) {
+        isPaid = true;
+      }
+    }
+    if (!isPaid) {
+      throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+    }
+  }
 
   const result = await Registry.getDatabase().updateRow<any>(
     dbId,

@@ -238,6 +238,28 @@ async function rollAndBump(opts: {
   };
 }
 
+const memoryBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function checkMemoryBurst(key: string, limit: number): { count: number; resetAt: number } {
+  const now = Date.now();
+  const existing = memoryBuckets.get(key);
+  if (!existing || now >= existing.resetAt) {
+    const next = { count: 1, resetAt: now + 60_000 };
+    memoryBuckets.set(key, next);
+    return next;
+  }
+  existing.count += 1;
+  if (existing.count > limit) {
+    const resetEpoch = Math.ceil(existing.resetAt / 1000);
+    throw new RateLimitError(
+      `You have exceeded your rolling 1-minute limit of ${limit} requests.`,
+      'per_minute',
+      resetEpoch
+    );
+  }
+  return existing;
+}
+
 /**
  * Enforce PAT + account rate limits with 1–2 row reads and atomic increments.
  */
@@ -246,6 +268,11 @@ export async function enforceApiRateLimits(params: {
   patId: string;
 }): Promise<{ limits: ApiRateLimits }> {
   const baseLimits = await resolveApiRateLimits(params.userId);
+
+  // Fast in-memory shield: reject burst traffic without hitting the database cluster
+  checkMemoryBurst(`pat:${params.patId}`, baseLimits.perMinute);
+  checkMemoryBurst(`user:${params.userId}`, baseLimits.perMinute);
+
   const patRow = await ensurePatRateRow(params.patId, params.userId);
   const patStats = await rollAndBump({ tableId: PAT_RATE, row: patRow, limits: baseLimits });
 

@@ -48,7 +48,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
     actor = await getActor(validatedJwt);
   } catch {}
 
-  const isAnonymousAllowedBucket = bucketId === APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS || bucketId === APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL;
+  const isAnonymousAllowedBucket = bucketId === APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS;
 
   if (!actor && !isAnonymousAllowedBucket) {
     throw new Error('Unauthorized: Session expired or invalid');
@@ -80,7 +80,31 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
     APPWRITE_CONFIG.BUCKETS.APP_LOGOS,
   ];
 
-  if (!allowedFreeBuckets.includes(bucketId) && actor?.$id) {
+  if (bucketId === APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS) {
+    const formId = String(formData.get('formId') || '').trim();
+    if (!formId) {
+      throw new Error('Forbidden: Form ID is required to upload form attachments.');
+    }
+    const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
+    const tables = createSystemTablesDB();
+    const form = (await tables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+        rowId: formId,
+      })
+      .catch(() => null)) as { userId?: string | null } | null;
+    if (!form || !form.userId) {
+      throw new Error('Forbidden: Form not found.');
+    }
+    const isFormOwnerPaid = await hasPaidKylrixPlanServer(form.userId);
+    if (!isFormOwnerPaid) {
+      throw new Error('Forbidden: Form creator must have an active paid plan to accept file attachments.');
+    }
+  } else if (!allowedFreeBuckets.includes(bucketId)) {
+    if (!actor?.$id) {
+      throw new Error('Unauthorized: Session required for this upload operation.');
+    }
     const isPro = await hasPaidKylrixPlanServer(actor.$id);
     if (!isPro) {
       throw new Error('Forbidden: Pro subscription required for this upload operation.');

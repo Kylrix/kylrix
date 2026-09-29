@@ -723,8 +723,24 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
   }
 
   const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+  const isActorPaid = await hasPaidKylrixPlanServer(actor.$id);
+
+  if (!isActorPaid) {
+    const probeTables = createSystemTablesDB();
+    const existing = (await probeTables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+        tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+        rowId: noteId,
+      })
+      .catch(() => null)) as { userId?: string | null; creatorId?: string | null } | null;
+
+    const ownerId = String(existing?.creatorId || existing?.userId || '').trim();
+    const isOwnerPaid = Boolean(ownerId && ownerId !== actor.$id && (await hasPaidKylrixPlanServer(ownerId)));
+
+    if (!isOwnerPaid) {
+      throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+    }
   }
 
   const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');

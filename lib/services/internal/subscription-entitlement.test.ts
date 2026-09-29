@@ -4,19 +4,24 @@ import {
   suspendAccountAndLogIpSecure,
   invalidateEntitlementCache,
 } from './subscription-entitlement';
+import { computeSubscriptionSig } from './subscription-prefs-merge';
+
+const mockListRows = vi.fn(async () => ({ rows: [] }));
+const mockUsersGet = vi.fn(async (id: string) => ({
+  $id: id,
+  prefs: { subscriptionTier: 'FREE' },
+}));
+const mockUpdateStatus = vi.fn(async (_id: string, _status: boolean) => ({}));
 
 // Mock dependencies
 vi.mock('@/lib/appwrite-admin', () => ({
   createSystemClient: vi.fn(() => ({
     databases: {
-      listRows: vi.fn(async () => ({ rows: [] })),
+      listRows: mockListRows,
     },
     users: {
-      get: vi.fn(async (id: string) => ({
-        $id: id,
-        prefs: { subscriptionTier: 'FREE' },
-      })),
-      updateStatus: vi.fn(async (_id: string, _status: boolean) => ({})),
+      get: mockUsersGet,
+      updateStatus: mockUpdateStatus,
     },
   })),
   createSystemTablesDB: vi.fn(() => ({
@@ -33,6 +38,11 @@ describe('Subscription Entitlement & Fraud Suspension', () => {
   beforeEach(() => {
     invalidateEntitlementCache();
     vi.clearAllMocks();
+    mockUsersGet.mockImplementation(async (id: string) => ({
+      $id: id,
+      prefs: { subscriptionTier: 'FREE' },
+    }));
+    mockListRows.mockResolvedValue({ rows: [] });
   });
 
   it('assumes FREE plan instantly for user without subscription rows or paid prefs with zero-trip caching', async () => {
@@ -52,5 +62,34 @@ describe('Subscription Entitlement & Fraud Suspension', () => {
       reason: 'Spoofed paid tier claim without subscription ledger record',
     });
     expect(success).toBe(true);
+  });
+
+  it('rejects unverified spoofed paid tier in user prefs when no subscription ledger row exists', async () => {
+    mockUsersGet.mockResolvedValueOnce({
+      $id: 'user_attacker',
+      prefs: { subscriptionTier: 'LIFETIME', tier: 'LIFETIME' },
+    });
+
+    const entitlement = await getVerifiedProEntitlementForUser('user_attacker');
+    expect(entitlement.active).toBe(false);
+    expect(entitlement.uiTier).toBe('FREE');
+  });
+
+  it('accepts paid tier in user prefs when valid HMAC signature is present', async () => {
+    const exp = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
+    const sig = computeSubscriptionSig('user_vip', 'PRO', exp);
+
+    mockUsersGet.mockResolvedValueOnce({
+      $id: 'user_vip',
+      prefs: {
+        subscriptionTier: 'PRO',
+        subscriptionExpiresAt: exp,
+        subscriptionSig: sig,
+      },
+    });
+
+    const entitlement = await getVerifiedProEntitlementForUser('user_vip');
+    expect(entitlement.active).toBe(true);
+    expect(entitlement.uiTier).toBe('PRO');
   });
 });

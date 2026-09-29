@@ -1241,6 +1241,22 @@ export const autonomicSyncEngine = {
                   await flushNotePending(pendingId, queuedRevision, db, activeUserId);
                 }
               } catch (err: any) {
+                const msg = String(err?.message || '').toLowerCase();
+                const isPaidPlanRequired = msg.includes('paid plan') || err?.code === 'payment_required' || err?.status === 402;
+                if (isPaidPlanRequired) {
+                  console.info(`[SyncEngine] Item ${pendingId} is saved locally on device (cloud storage requires paid plan)`);
+                  failedSyncAttempts.delete(pendingId);
+                  autonomicSyncEngine.ack(pendingId, queuedRevision);
+                  notifyStatusListeners();
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(
+                      new CustomEvent('kylrix:sync-local-only', {
+                        detail: { id: pendingId, reason: 'paid_plan_required' },
+                      })
+                    );
+                  }
+                  return;
+                }
                 console.error(`[SyncEngine] Sync failed for item ${pendingId}:`, err);
                 const prev = failedSyncAttempts.get(pendingId) || { count: 0, lastFailedAt: 0 };
                 failedSyncAttempts.set(pendingId, { count: prev.count + 1, lastFailedAt: Date.now() });
