@@ -1091,7 +1091,7 @@ export async function POST(req: NextRequest) {
       const deviceCode = customId.replace('check_pair:', '');
       try {
         const exchange = await PairingService.exchangeDeviceCode(deviceCode);
-        if (exchange.status === 'granted' && exchange.userId) {
+        if ((exchange.status === 'approved' || exchange.status === 'granted') && exchange.userId) {
           await linkDiscordUserAccount(callerId, exchange.userId, callerName);
           return NextResponse.json({
             type: 7,

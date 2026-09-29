@@ -19,7 +19,7 @@ export type PairingStatus = (typeof PAIRING_STATUSES)[number];
 
 export const pairingRequestInputZod = z.object({
   clientName: z.string().min(1).max(128).default('Kylrix Client'),
-  clientType: z.enum(['cli', 'self_hosted_sync', 'mobile', 'daemon']).default('cli'),
+  clientType: z.enum(['cli', 'self_hosted_sync', 'mobile', 'daemon', 'discord', 'telegram', 'bot']).default('cli'),
   requestedScopes: z.array(z.string()).default([
     'profile:read',
     'notes:read',
@@ -59,7 +59,7 @@ export interface PairingSessionRecord {
 }
 
 export interface PairingExchangeResult {
-  status: 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired' | 'approved';
+  status: 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired' | 'approved' | 'granted';
   token?: string;
   tokenType?: 'Bearer';
   userId?: string;

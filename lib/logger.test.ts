@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import logger, { logDebug, logInfo, logWarn, logError, setErrorTrackingHandler, SecureLogger } from './logger';
+import { logWarn, logError, setErrorTrackingHandler, SecureLogger } from './logger';
 
 describe('SecureLogger', () => {
   const originalEnv = process.env;
