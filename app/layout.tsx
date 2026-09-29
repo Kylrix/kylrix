@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   title: {
     default: `Build, ship and think in one living agentic workspace. — ${productName}`,
     template: `%s · ${productName}`},
-  description: 'Your projects, context, knowledge and agents stay connected—so every session builds on the last.',
+  description: 'Your projects, secrets, and agents stay connected—so every session builds on the last.',
   keywords: ['agentic workspace', 'local-first', 'PAT', 'OAuth2', 'WebRTC', 'offline-first', 'productivity system'],
   icons: {
     icon: '/favicon.ico',
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     url: productSiteUrl,
     siteName: productName,
     title: 'Build, ship and think in one living agentic workspace.',
-    description: 'Your projects, context, knowledge and agents stay connected—so every session builds on the last.',
+    description: 'Your projects, secrets, and agents stay connected—so every session builds on the last.',
     images: [
       {
         url: '/opengraph-image',
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: `Build, ship and think in one living agentic workspace. — ${productName}`,
-    description: 'Your projects, context, knowledge and agents stay connected—so every session builds on the last.',
+    description: 'Your projects, secrets, and agents stay connected—so every session builds on the last.',
     images: ['/opengraph-image']},
   other: {
     'ory-verify': 'orynth-9809db1def8b427d8c82b09db6ae2bac',
