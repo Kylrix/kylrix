@@ -102,20 +102,84 @@ describe('getLoginChallengeFactors', () => {
   it('returns recoverycode by default when factors are missing', () => {
     expect(getLoginChallengeFactors('password', null)).toEqual(['recoverycode']);
     expect(getLoginChallengeFactors('password', undefined)).toEqual(['recoverycode']);
+    expect(getLoginChallengeFactors('email-otp', null)).toEqual(['recoverycode']);
+    expect(getLoginChallengeFactors('oauth2', null)).toEqual(['recoverycode']);
+    expect(getLoginChallengeFactors('unknown', null)).toEqual(['recoverycode']);
   });
 
-  it('includes email for password login when email factor is enabled', () => {
+  it('handles empty factors object or falsy factor values', () => {
+    expect(getLoginChallengeFactors('password', {})).toEqual(['recoverycode']);
+    expect(
+      getLoginChallengeFactors('password', { email: false, totp: false })
+    ).toEqual(['recoverycode']);
+    expect(
+      getLoginChallengeFactors('password', { email: undefined, totp: undefined })
+    ).toEqual(['recoverycode']);
+  });
+
+  it('includes email for non-email-otp login methods when email factor is enabled', () => {
     const factors = { email: true, totp: false };
     expect(getLoginChallengeFactors('password', factors)).toEqual(['email', 'recoverycode']);
+    expect(getLoginChallengeFactors('oauth2', factors)).toEqual(['email', 'recoverycode']);
+    expect(getLoginChallengeFactors('unknown', factors)).toEqual(['email', 'recoverycode']);
   });
 
-  it('excludes email factor when login method is email-otp', () => {
+  it('excludes email factor when login method is email-otp even if email factor is true', () => {
     const factors = { email: true, totp: false };
     expect(getLoginChallengeFactors('email-otp', factors)).toEqual(['recoverycode']);
   });
 
   it('includes totp factor when enabled across any login method', () => {
+    const factors = { email: false, totp: true };
+    expect(getLoginChallengeFactors('password', factors)).toEqual(['totp', 'recoverycode']);
+    expect(getLoginChallengeFactors('email-otp', factors)).toEqual(['totp', 'recoverycode']);
+    expect(getLoginChallengeFactors('oauth2', factors)).toEqual(['totp', 'recoverycode']);
+    expect(getLoginChallengeFactors('unknown', factors)).toEqual(['totp', 'recoverycode']);
+  });
+
+  it('includes both email and totp in correct order for eligible login methods', () => {
     const factors = { email: true, totp: true };
+    expect(getLoginChallengeFactors('password', factors)).toEqual([
+      'email',
+      'totp',
+      'recoverycode',
+    ]);
+    expect(getLoginChallengeFactors('oauth2', factors)).toEqual([
+      'email',
+      'totp',
+      'recoverycode',
+    ]);
+    expect(getLoginChallengeFactors('unknown', factors)).toEqual([
+      'email',
+      'totp',
+      'recoverycode',
+    ]);
+  });
+
+  it('excludes email and includes totp for email-otp login method when both are enabled', () => {
+    const factors = { email: true, totp: true };
+    expect(getLoginChallengeFactors('email-otp', factors)).toEqual(['totp', 'recoverycode']);
+  });
+
+  it('ignores additional factor flags like phone, passkey, and mfaEnabled', () => {
+    const factors = {
+      email: false,
+      totp: false,
+      phone: true,
+      passkey: true,
+      mfaEnabled: true,
+    };
+    expect(getLoginChallengeFactors('password', factors)).toEqual(['recoverycode']);
+  });
+
+  it('combines email and totp with extra factor flags correctly', () => {
+    const factors = {
+      email: true,
+      totp: true,
+      phone: true,
+      passkey: true,
+      mfaEnabled: true,
+    };
     expect(getLoginChallengeFactors('password', factors)).toEqual([
       'email',
       'totp',
