@@ -190,22 +190,65 @@ describe('getLoginChallengeFactors', () => {
 });
 
 describe('getPreferredLoginChallengeFactor', () => {
-  it('prefers totp when totp factor is available', () => {
-    const factors = { email: true, totp: true };
-    expect(getPreferredLoginChallengeFactor('password', factors)).toBe('totp');
+  it('prefers totp when totp factor is available regardless of email factor', () => {
+    const factorsBoth = { email: true, totp: true };
+    const factorsTotpOnly = { email: false, totp: true };
+
+    expect(getPreferredLoginChallengeFactor('password', factorsBoth)).toBe('totp');
+    expect(getPreferredLoginChallengeFactor('oauth2', factorsBoth)).toBe('totp');
+    expect(getPreferredLoginChallengeFactor('email-otp', factorsBoth)).toBe('totp');
+    expect(getPreferredLoginChallengeFactor('unknown', factorsBoth)).toBe('totp');
+
+    expect(getPreferredLoginChallengeFactor('password', factorsTotpOnly)).toBe('totp');
+    expect(getPreferredLoginChallengeFactor('email-otp', factorsTotpOnly)).toBe('totp');
   });
 
-  it('prefers email when totp is unavailable and email is eligible', () => {
+  it('prefers email when totp is unavailable and email factor is active for eligible login methods', () => {
     const factors = { email: true, totp: false };
     expect(getPreferredLoginChallengeFactor('password', factors)).toBe('email');
+    expect(getPreferredLoginChallengeFactor('oauth2', factors)).toBe('email');
+    expect(getPreferredLoginChallengeFactor('unknown', factors)).toBe('email');
   });
 
-  it('falls back to recoverycode when email is excluded due to email-otp login method', () => {
+  it('falls back to recoverycode when email is excluded due to email-otp login method and totp is unavailable', () => {
     const factors = { email: true, totp: false };
     expect(getPreferredLoginChallengeFactor('email-otp', factors)).toBe('recoverycode');
   });
 
-  it('falls back to recoverycode when no other factors are available', () => {
+  it('falls back to recoverycode when no preferred factors (totp or email) are available', () => {
     expect(getPreferredLoginChallengeFactor('password', null)).toBe('recoverycode');
+    expect(getPreferredLoginChallengeFactor('password', undefined)).toBe('recoverycode');
+    expect(getPreferredLoginChallengeFactor('password', {})).toBe('recoverycode');
+    expect(getPreferredLoginChallengeFactor('password', { email: false, totp: false })).toBe('recoverycode');
+    expect(getPreferredLoginChallengeFactor('email-otp', { email: false, totp: false })).toBe('recoverycode');
+  });
+
+  it('ignores non-challenge factors like phone, passkey, and mfaEnabled when determining preferred factor', () => {
+    const factorsOnlyOther = {
+      email: false,
+      totp: false,
+      phone: true,
+      passkey: true,
+      mfaEnabled: true,
+    };
+    expect(getPreferredLoginChallengeFactor('password', factorsOnlyOther)).toBe('recoverycode');
+
+    const factorsWithTotpAndOther = {
+      email: false,
+      totp: true,
+      phone: true,
+      passkey: true,
+      mfaEnabled: true,
+    };
+    expect(getPreferredLoginChallengeFactor('password', factorsWithTotpAndOther)).toBe('totp');
+
+    const factorsWithEmailAndOther = {
+      email: true,
+      totp: false,
+      phone: true,
+      passkey: true,
+      mfaEnabled: true,
+    };
+    expect(getPreferredLoginChallengeFactor('password', factorsWithEmailAndOther)).toBe('email');
   });
 });
