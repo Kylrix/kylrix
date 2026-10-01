@@ -43,6 +43,8 @@ import {
   readThreadsListLocal,
   writeChatsListLocal,
   writeThreadsListLocal,
+  clearChatsListMemory,
+  clearThreadsListMemory,
 } from '@/lib/chat/local-chat-cache';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import type { PublicResourceType } from '@/lib/share/resource-types';

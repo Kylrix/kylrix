@@ -206,6 +206,7 @@ export type Projects = Models.Row & {
     isPinned?: boolean;
     isGuest?: boolean;
     isPublic?: boolean;
+    inviteCode?: string | null;
 }
 
 export type ProjectObjects = Models.Row & {

@@ -10,6 +10,8 @@ import {
   createProjectSecure,
   updateProjectSecure,
   deleteProjectSecure,
+  rotateWorkspaceInviteCodeSecure,
+  joinWorkspaceByInviteCodeSecure,
   addProjectCollaboratorSecure,
   removeProjectCollaboratorSecure,
   createFormSecure,
@@ -157,6 +159,16 @@ export async function addProjectCollaborator(projectId: string, userId: string, 
 export async function removeProjectCollaborator(projectId: string, userId: string) {
   const jwt = await getJwt();
   return removeProjectCollaboratorSecure(projectId, userId, jwt);
+}
+
+export async function rotateWorkspaceInviteCode(projectId: string, explicitCode?: string) {
+  const jwt = await getJwt();
+  return rotateWorkspaceInviteCodeSecure(projectId, jwt, explicitCode);
+}
+
+export async function joinWorkspaceByInviteCode(projectId: string, inviteCode: string) {
+  const jwt = await getJwt();
+  return joinWorkspaceByInviteCodeSecure(projectId, inviteCode, jwt);
 }
 
 export async function approveProjectJoinRequest(

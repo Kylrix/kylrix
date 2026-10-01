@@ -245,6 +245,7 @@ export async function createProjectSecure(data: any, jwt?: string) {
     isGuest: validated.isGuest ?? visibility === 'public',
     kind: 'workspace',
     parentProjectId: null,
+    inviteCode: validated.inviteCode || ID.unique(),
     ownerId: actor.$id};
 
   const isCreateAllowed = await verifyResourcePermissionSecure({
@@ -2082,6 +2083,215 @@ export async function resolveWorkspaceShareAccessSecure(workspaceId: string, jwt
     reason: 'forbidden' as const,
     ownerName,
     message: `No access to workspace. Ask ${ownerName} to make public or add you to collaborators.`,
+  };
+}
+
+/**
+ * Rotates or initializes the invite code for a workspace.
+ * Requires workspace owner or admin permissions.
+ */
+export async function rotateWorkspaceInviteCodeSecure(workspaceId: string, jwt?: string, explicitCode?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const cleanWorkspaceId = String(workspaceId || '').trim();
+  if (!cleanWorkspaceId) {
+    throw new Error('Missing workspace ID');
+  }
+
+  const tables = createSystemTablesDB();
+  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+  const tableId = 'projects';
+
+  const project = await tables.getRow({
+    databaseId: dbId,
+    tableId,
+    rowId: cleanWorkspaceId,
+  }).catch(() => null);
+
+  if (!project || project.isTrash === true || project.isDeleted === true) {
+    throw new Error('Workspace not found');
+  }
+
+  const isOwner = (project.ownerId || project.userId) === actor.$id;
+  const isAdmin = isOwner || (await verifyProjectPermission(cleanWorkspaceId, actor.$id, 'admin').catch(() => false));
+
+  if (!isAdmin) {
+    throw new Error('Forbidden: Only the workspace owner or admins can rotate invite codes');
+  }
+
+  const newInviteCode = explicitCode && explicitCode.trim().length >= 6
+    ? explicitCode.trim()
+    : ID.unique();
+
+  const now = new Date().toISOString();
+  await tables.updateRow({
+    databaseId: dbId,
+    tableId,
+    rowId: cleanWorkspaceId,
+    data: {
+      inviteCode: newInviteCode,
+      updatedAt: now,
+    },
+  });
+
+  return {
+    success: true,
+    inviteCode: newInviteCode,
+    projectId: cleanWorkspaceId,
+  };
+}
+
+/**
+ * Auto-joins an authenticated visitor to a workspace using a valid invite code.
+ * Grants read and write access ('write' / 'editor') and accepts immediately.
+ */
+export async function joinWorkspaceByInviteCodeSecure(workspaceId: string, inviteCode: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized: Please sign in to join this workspace');
+  }
+
+  const cleanWorkspaceId = String(workspaceId || '').trim();
+  const cleanInviteCode = String(inviteCode || '').trim();
+
+  if (!cleanWorkspaceId || !cleanInviteCode) {
+    throw new Error('Invalid workspace or invite code');
+  }
+
+  const tables = createSystemTablesDB();
+  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+  const tableId = 'projects';
+
+  const project = await tables.getRow({
+    databaseId: dbId,
+    tableId,
+    rowId: cleanWorkspaceId,
+  }).catch(() => null);
+
+  if (!project || project.isTrash === true || project.isDeleted === true) {
+    throw new Error('Workspace not found or has been removed');
+  }
+
+  // Validate invite code match
+  if (!project.inviteCode || project.inviteCode !== cleanInviteCode) {
+    throw new Error('Invalid or expired invite link');
+  }
+
+  const ownerId = project.ownerId || project.userId || '';
+  if (actor.$id === ownerId) {
+    return {
+      success: true,
+      alreadyMember: true,
+      workspace: {
+        id: project.$id,
+        title: project.title || project.name || 'Untitled Workspace',
+        ownerId,
+        isPublic: !!project.isPublic,
+        isAgentic: !!project.isAgentic,
+        role: 'owner',
+      },
+    };
+  }
+
+  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+
+  // Check existing collaborator record
+  try {
+    const existing = await tables.listRows({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      queries: [
+        Query.equal('resourceId', cleanWorkspaceId),
+        Query.equal('resourceType', 'project'),
+        Query.equal('userId', actor.$id),
+      ] as any,
+    });
+
+    if (existing.rows.length > 0) {
+      const c = existing.rows[0];
+      if (c.status !== 'accepted' || !c.accepted) {
+        await tables.updateRow({
+          databaseId: FLOW_DATABASE_ID,
+          tableId: COLLABORATORS_TABLE,
+          rowId: c.$id,
+          data: {
+            status: 'accepted',
+            accepted: true,
+            permission: c.permission || 'write',
+            role: 'collaborator',
+          },
+        });
+      }
+    } else {
+      await tables.createRow({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        rowId: ID.unique(),
+        data: {
+          resourceId: cleanWorkspaceId,
+          resourceType: 'project',
+          userId: actor.$id,
+          permission: 'write',
+          invitedAt: new Date().toISOString(),
+          accepted: true,
+          status: 'accepted',
+          role: 'collaborator',
+        },
+      });
+    }
+  } catch (collabErr: any) {
+    console.error('[joinWorkspaceByInviteCodeSecure] Collaborators mutation failed:', collabErr?.message || collabErr);
+  }
+
+  // Grant physical Appwrite permissions and hybrid team expansion if applicable
+  try {
+    const newPermissions = new Set(project.$permissions || []);
+    newPermissions.add(`read("user:${actor.$id}")`);
+
+    const { users, databases } = createSystemClient();
+    const owner = await users.get(ownerId).catch(() => null);
+    const isPro = owner ? hasPaidKylrixPlan(owner) : false;
+
+    if (isPro) {
+      try {
+        const { isTeamExpanded, newAcl } = await provisionHybridTeamExpansionSecure(
+          databases, cleanWorkspaceId, 'project', ownerId, actor.$id, 'editor'
+        );
+        if (isTeamExpanded && newAcl) {
+          newPermissions.add(newAcl);
+        }
+      } catch (teamErr: any) {
+        console.warn('[joinWorkspaceByInviteCodeSecure] Hybrid Team expansion skipped:', teamErr?.message);
+      }
+    }
+
+    await tables.updateRow({
+      databaseId: dbId,
+      tableId,
+      rowId: cleanWorkspaceId,
+      data: {
+        updatedAt: new Date().toISOString(),
+      },
+      permissions: Array.from(newPermissions),
+    }).catch(() => null);
+  } catch (permErr: any) {
+    console.warn('[joinWorkspaceByInviteCodeSecure] Permission sync warning:', permErr?.message);
+  }
+
+  return {
+    success: true,
+    workspace: {
+      id: project.$id,
+      title: project.title || project.name || 'Untitled Workspace',
+      ownerId,
+      isPublic: !!project.isPublic,
+      isAgentic: !!project.isAgentic,
+      role: 'editor',
+    },
   };
 }
 

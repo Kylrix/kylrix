@@ -163,6 +163,24 @@ export const ProjectsService = {
     return await removeProjectCollaboratorSecure(projectId, userId);
   },
 
+  async rotateInviteCode(projectId: string, explicitCode?: string) {
+    if (typeof window !== 'undefined') {
+      const { rotateWorkspaceInviteCode } = await import('@/lib/actions/client-ops');
+      return await rotateWorkspaceInviteCode(projectId, explicitCode);
+    }
+    const { rotateWorkspaceInviteCodeSecure } = await import('@/lib/actions/secure-ops');
+    return await rotateWorkspaceInviteCodeSecure(projectId, undefined, explicitCode);
+  },
+
+  async joinByInviteCode(projectId: string, inviteCode: string) {
+    if (typeof window !== 'undefined') {
+      const { joinWorkspaceByInviteCode } = await import('@/lib/actions/client-ops');
+      return await joinWorkspaceByInviteCode(projectId, inviteCode);
+    }
+    const { joinWorkspaceByInviteCodeSecure } = await import('@/lib/actions/secure-ops');
+    return await joinWorkspaceByInviteCodeSecure(projectId, inviteCode);
+  },
+
   async updateProject(projectId: string, data: Partial<Projects>, permissions?: string[]) {
     projectsCache.invalidate();
     clearSessionProjectsList();

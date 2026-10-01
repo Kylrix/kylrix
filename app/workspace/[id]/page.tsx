@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Lock, ArrowRight } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { resolveWorkspaceShareAccessSecure } from '@/lib/actions/secure-ops';
+import { resolveWorkspaceShareAccessSecure, joinWorkspaceByInviteCodeSecure } from '@/lib/actions/secure-ops';
 import { account } from '@/lib/appwrite/client';
 
 /**
@@ -18,6 +18,8 @@ export default function WorkspaceSharePage() {
   const router = useRouter();
   const { setActiveWorkspaceId, registerSharedWorkspace } = useWorkspace();
   const id = (params?.id as string) || '';
+  const searchParams = useSearchParams();
+  const inviteCodeQuery = searchParams?.get('code') || searchParams?.get('invite');
 
   const [deniedInfo, setDeniedInfo] = useState<{
     ownerName: string;
@@ -44,6 +46,32 @@ export default function WorkspaceSharePage() {
           ]);
           jwt = res?.jwt;
         } catch {}
+
+        if (inviteCodeQuery) {
+          const joinRes = await joinWorkspaceByInviteCodeSecure(id, inviteCodeQuery, jwt).catch(() => null);
+          if (joinRes && joinRes.success && joinRes.workspace) {
+            try {
+              await registerSharedWorkspace({
+                id: joinRes.workspace.id,
+                title: joinRes.workspace.title,
+                ownerId: joinRes.workspace.ownerId,
+                isPublic: joinRes.workspace.isPublic,
+              });
+            } catch {}
+
+            try {
+              setActiveWorkspaceId(joinRes.workspace.id);
+            } catch {}
+
+            router.replace('/app');
+            setTimeout(() => {
+              if (typeof window !== 'undefined' && window.location.pathname.startsWith('/workspace/')) {
+                window.location.replace('/app');
+              }
+            }, 500);
+            return;
+          }
+        }
 
         const access = await resolveWorkspaceShareAccessSecure(id, jwt);
 
@@ -89,7 +117,7 @@ export default function WorkspaceSharePage() {
         setLoading(false);
       }
     })();
-  }, [id, setActiveWorkspaceId, registerSharedWorkspace, router]);
+  }, [id, inviteCodeQuery, setActiveWorkspaceId, registerSharedWorkspace, router]);
 
   const handleReturnToApp = () => {
     router.replace('/app');

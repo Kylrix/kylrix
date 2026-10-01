@@ -49,6 +49,8 @@ import {
   createProjectSecure,
   updateProjectSecure,
   deleteProjectSecure,
+  rotateWorkspaceInviteCodeSecure,
+  joinWorkspaceByInviteCodeSecure,
   requestProjectAccessSecure,
   acceptProjectInviteSecure,
   addObjectToProjectSecure,
@@ -182,7 +184,8 @@ export {
   createProjectSecure,
   updateProjectSecure,
   deleteProjectSecure,
-  
+  rotateWorkspaceInviteCodeSecure,
+  joinWorkspaceByInviteCodeSecure,
   requestProjectAccessSecure,
   acceptProjectInviteSecure,
   addObjectToProjectSecure,

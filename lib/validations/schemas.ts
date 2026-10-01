@@ -66,6 +66,7 @@ export const ProjectSchema = z.object({
   isPinned: z.boolean().optional().nullable(),
   kind: z.enum(['workspace', 'project']).optional(),
   parentProjectId: z.string().max(64).optional().nullable(),
+  inviteCode: z.string().max(64).optional().nullable(),
   metadata: z.string().nullable().optional()});
 
 

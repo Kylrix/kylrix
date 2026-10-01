@@ -58,6 +58,7 @@ export interface WorkspaceRecord {
   isAgentic: boolean;
   isShared?: boolean;
   role?: string;
+  inviteCode?: string | null;
   updatedAt: string | null;
   createdAt: string | null;
 }
@@ -77,6 +78,7 @@ export function shapeWorkspace(
     description: summary,
     visibility: r.visibility ?? null,
     isAgentic: Boolean(r.isAgentic),
+    inviteCode: r.inviteCode ?? null,
     ...(extras?.isShared !== undefined ? { isShared: extras.isShared } : {}),
     ...(extras?.role ? { role: extras.role } : {}),
     updatedAt: r.$updatedAt || r.updatedAt || null,
@@ -107,6 +109,7 @@ export const WORKSPACE_RECORD_JSON_SCHEMA = {
     isAgentic: { type: 'boolean' },
     isShared: { type: 'boolean' },
     role: { type: 'string' },
+    inviteCode: { type: 'string', nullable: true },
     updatedAt: { type: 'string', nullable: true },
     createdAt: { type: 'string', nullable: true },
   },

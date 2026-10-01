@@ -16,8 +16,13 @@ import {
   Plus,
   Code2,
   Clock,
-  UserCheck
+  UserCheck,
+  Copy,
+  Check,
+  RotateCcw,
+  Link2
 } from 'lucide-react';
+import { ID } from 'appwrite';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { Projects } from '@/types/appwrite';
@@ -40,6 +45,9 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
   const [_project, setProject] = useState<Projects | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string>('');
+  const [rotatingInviteCode, setRotatingInviteCode] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState(false);
 
   // Global Inbound Invites & Sent Requests across ALL workspaces
   const [globalInvites, setGlobalInvites] = useState<any[]>([]);
@@ -188,6 +196,9 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
           setSummary(cached.project.summary || '');
           setVisibility(cached.project.visibility === 'public' || cached.project.isPublic ? 'public' : 'private');
           setStatus(cached.project.status === 'archived' ? 'archived' : 'active');
+          if (cached.project.inviteCode) {
+            setInviteCode(cached.project.inviteCode);
+          }
         }
         if (cached.collaborators) {
           setCollaborators(cached.collaborators);
@@ -195,10 +206,24 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
       }
     } catch {}
 
+    if (activeWorkspace.inviteCode) {
+      setInviteCode(activeWorkspace.inviteCode);
+    }
+
     try {
       const data = await ProjectsService.getProject(activeWorkspace.id);
       let rows: any[] = [];
       if (data) {
+        let code = data.inviteCode || activeWorkspace.inviteCode;
+        if (!code) {
+          // If empty, generate code on the fly, first to local sync engine, then rapidly syncing
+          code = ID.unique();
+          data.inviteCode = code;
+          void ProjectsService.rotateInviteCode(activeWorkspace.id, code).catch((err) => {
+            console.warn('[WorkspaceTab] Failed to sync generated inviteCode:', err);
+          });
+        }
+        setInviteCode(code);
         setProject(data);
         setTitle(data.title || '');
         setSummary(data.summary || '');
@@ -223,6 +248,62 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
       setLoading(false);
     }
   }, [activeWorkspace, isCustomWorkspace]);
+
+  const isOwnerOrAdmin = Boolean(
+    activeWorkspace?.role === 'owner' ||
+    activeWorkspace?.role === 'admin' ||
+    activeWorkspace?.ownerId === user?.$id ||
+    _project?.ownerId === user?.$id
+  );
+
+  const getInviteUrl = useCallback((code?: string) => {
+    const activeCode = code || inviteCode || activeWorkspace?.inviteCode || '';
+    if (typeof window === 'undefined') return `/workspace/${activeWorkspace.id}/${activeCode}`;
+    return `${window.location.origin}/workspace/${activeWorkspace.id}/${activeCode}`;
+  }, [activeWorkspace?.id, activeWorkspace?.inviteCode, inviteCode]);
+
+  const handleCopyInviteLink = async () => {
+    let code = inviteCode || activeWorkspace?.inviteCode || '';
+    if (!code) {
+      code = ID.unique();
+      setInviteCode(code);
+      if (_project) {
+        const updated = { ..._project, inviteCode: code };
+        setProject(updated);
+        void LocalEngine.cacheSet(`ws_details_${activeWorkspace.id}`, { project: updated, collaborators });
+      }
+      void ProjectsService.rotateInviteCode(activeWorkspace.id, code);
+    }
+    const url = getInviteUrl(code);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedInvite(true);
+      toast.success('Workspace invite link copied to clipboard!');
+      setTimeout(() => setCopiedInvite(false), 2000);
+    } catch {
+      toast.error('Failed to copy link to clipboard');
+    }
+  };
+
+  const handleRotateInviteCode = async () => {
+    if (!isOwnerOrAdmin || rotatingInviteCode) return;
+    setRotatingInviteCode(true);
+    const newCode = ID.unique();
+    setInviteCode(newCode);
+    if (_project) {
+      const updated = { ..._project, inviteCode: newCode };
+      setProject(updated);
+      void LocalEngine.cacheSet(`ws_details_${activeWorkspace.id}`, { project: updated, collaborators });
+    }
+    try {
+      await ProjectsService.rotateInviteCode(activeWorkspace.id, newCode);
+      toast.success('Invite link rotated! Old link is now expired.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to rotate invite link');
+    } finally {
+      setRotatingInviteCode(false);
+    }
+  };
 
   useEffect(() => {
     void loadWorkspaceDetails();
@@ -631,6 +712,70 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
             <UserPlus size={13} />
             <span>Manage & Invite</span>
           </button>
+        </div>
+
+        {/* Workspace Invite Link */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#0A0908] border-2 border-white/15 space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#6366F1]/15 text-[#818CF8] border border-[#6366F1]/30 grid place-items-center shrink-0">
+                <Link2 size={15} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white font-clash flex items-center gap-2">
+                  <span>Workspace Invite Link</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase">
+                    Auto-Join
+                  </span>
+                </div>
+                <p className="text-[11px] text-white/40 mt-0.5 m-0">
+                  Anyone visiting this link automatically joins as a member with read &amp; write access.
+                </p>
+              </div>
+            </div>
+
+            {isOwnerOrAdmin && (
+              <button
+                type="button"
+                onClick={handleRotateInviteCode}
+                disabled={rotatingInviteCode}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-[11px] font-bold transition-all border border-white/10 cursor-pointer disabled:opacity-50"
+                title="Invalidate current link and generate a new invite code"
+              >
+                <RotateCcw size={12} className={rotatingInviteCode ? 'animate-spin' : ''} />
+                <span>Rotate Link</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+            <div className="relative flex-1 min-w-0">
+              <input
+                type="text"
+                readOnly
+                value={getInviteUrl()}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+                className="w-full h-10 px-3.5 rounded-xl bg-[#161412] border border-white/15 text-white/80 text-xs font-mono font-medium focus:outline-none focus:border-[#6366F1] transition-colors select-all truncate"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleCopyInviteLink}
+              className="inline-flex items-center justify-center gap-1.5 px-4 h-10 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white text-xs font-bold transition-all cursor-pointer border-2 border-[#6366F1] shadow-md shrink-0 active:scale-95"
+            >
+              {copiedInvite ? (
+                <>
+                  <Check size={14} className="text-white" />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={14} />
+                  <span>Copy Link</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleAddMember} className="p-4 rounded-2xl bg-[#0A0908] border-2 border-white/15 space-y-4">

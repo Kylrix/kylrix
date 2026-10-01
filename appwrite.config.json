@@ -7072,6 +7072,15 @@
                         "workspace",
                         "project"
                     ]
+                },
+                {
+                    "key": "inviteCode",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -7220,6 +7229,15 @@
                         "ASC",
                         "ASC"
                     ]
+                },
+                {
+                    "key": "inviteCode_idx",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "inviteCode"
+                    ],
+                    "orders": []
                 }
             ]
         },

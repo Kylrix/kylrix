@@ -924,6 +924,7 @@ export type Projects = Models.Row & {
     dek: string | null;
     parentProjectId: string | null;
     kind: ProjectsKind;
+    inviteCode?: string | null;
 }
 
 export type ProjectObjects = Models.Row & {

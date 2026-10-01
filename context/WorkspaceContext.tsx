@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { ID } from 'appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -21,6 +22,7 @@ export interface WorkspaceItem {
   isAgentic?: boolean;
   agentId?: string | null;
   role?: string;
+  inviteCode?: string | null;
 }
 
 interface WorkspaceContextType {
@@ -113,6 +115,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             agentId: p.agentId || null,
             isPublic: !!p.isPublic,
             role: p.role || (isOwned ? 'owner' : 'viewer'),
+            inviteCode: p.inviteCode || null,
           };
         })
         .filter((w) => w.id && w.id !== personalWorkspace.id),
@@ -701,6 +704,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     async (title: string, summary?: string): Promise<WorkspaceItem | null> => {
       try {
         let created: any = null;
+        const inviteCode = ID.unique();
         try {
           created = await ProjectsService.createProject({
             title,
@@ -708,6 +712,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             ownerId: userId,
             kind: 'workspace',
             parentProjectId: null,
+            inviteCode,
           });
         } catch (netErr) {
           console.warn('[WorkspaceContext] Network create failed, creating offline workspace:', netErr);
@@ -717,6 +722,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             summary: summary || '',
             ownerId: userId,
             kind: 'workspace',
+            inviteCode,
             $createdAt: new Date().toISOString(),
             $updatedAt: new Date().toISOString(),
           };
