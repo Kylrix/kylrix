@@ -73,12 +73,8 @@ export function FlowDetailDrawer({
     void (async () => {
       try {
         const { isFlowInstalled, pullAndSyncUserFlowInstalls } = await import('@/lib/flows/installed');
-        if (isFlowInstalled(flow.id)) {
-          if (active) setInstalled(true);
-          return;
-        }
         const synced = await pullAndSyncUserFlowInstalls();
-        if (active) setInstalled(synced.includes(flow.id));
+        if (active) setInstalled(synced.includes(flow.id) || isFlowInstalled(flow.id));
       } catch {}
     })();
     return () => { active = false; };

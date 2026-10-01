@@ -47,18 +47,40 @@ export default function FlowSharePage({ params }: { params: Promise<{ id: string
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
-    setInstalled(isFlowInstalled(id));
+    let active = true;
+    const checkStatus = async () => {
+      try {
+        const { pullAndSyncUserFlowInstalls } = await import('@/lib/flows/installed');
+        const synced = await pullAndSyncUserFlowInstalls();
+        if (active) setInstalled(synced.includes(id) || isFlowInstalled(id));
+      } catch {
+        if (active) setInstalled(isFlowInstalled(id));
+      }
+    };
+    void checkStatus();
+
+    const handleChanged = () => void checkStatus();
+    const handleLogout = () => {
+      if (active) setInstalled(false);
+    };
+
+    window.addEventListener('kylrix:flows-changed', handleChanged);
+    window.addEventListener('kylrix:auth:logout', handleLogout);
+
     const load = async () => {
       setLoading(true);
       const builtin = getBuiltinFlow(id);
       if (builtin) {
-        setFlow(builtin);
-        setPublisher(KYLRIX_PUBLISHER);
-        setIsOwner(false);
-        setLoading(false);
+        if (active) {
+          setFlow(builtin);
+          setPublisher(KYLRIX_PUBLISHER);
+          setIsOwner(false);
+          setLoading(false);
+        }
         return;
       }
       const res = await getFlowAction(id);
+      if (!active) return;
       if (!res.success || !res.data) {
         setError(res.error || 'Flow not found');
         setFlow(null);
@@ -71,6 +93,12 @@ export default function FlowSharePage({ params }: { params: Promise<{ id: string
       setLoading(false);
     };
     void load();
+
+    return () => {
+      active = false;
+      window.removeEventListener('kylrix:flows-changed', handleChanged);
+      window.removeEventListener('kylrix:auth:logout', handleLogout);
+    };
   }, [id]);
 
   const shareUrl = buildPublicResourceUrl('flow', id);

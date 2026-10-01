@@ -10,9 +10,19 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 export const CHATS_LIST_CACHE_KEY = 'f_chats_list';
 export const THREADS_LIST_CACHE_KEY = 'f_threads_list';
 
+export function chatsListCacheKey(userId?: string | null): string {
+  return userId ? `f_chats_list_${userId}` : CHATS_LIST_CACHE_KEY;
+}
+
+export function threadsListCacheKey(userId?: string | null): string {
+  return userId ? `f_threads_list_${userId}` : THREADS_LIST_CACHE_KEY;
+}
+
 /** Sync in-memory mirrors — remount / tab switch paint at 0ms without waiting on RxDB. */
 let memoryChatsList: any[] | null = null;
 let memoryThreadsList: any[] | null = null;
+let memoryChatsUserId: string | null = null;
+let memoryThreadsUserId: string | null = null;
 
 export function chatConversationCacheKey(conversationId: string) {
   return `f_chat_conv_${conversationId}`;
@@ -67,6 +77,7 @@ export function patchConversationListPreview(
     lastMessageId?: string;
     isEncrypted?: boolean;
   },
+  userId?: string | null,
 ): void {
   if (!conversationId) return;
   const list = memoryChatsList ? [...memoryChatsList] : [];
@@ -92,7 +103,7 @@ export function patchConversationListPreview(
       new Date(b.lastMessageAt || b.updatedAt || 0).getTime() -
       new Date(a.lastMessageAt || a.updatedAt || 0).getTime(),
   );
-  writeChatsListLocal(list);
+  writeChatsListLocal(list, userId || memoryChatsUserId);
 }
 
 function isLikelyCiphertext(val: unknown): boolean {
@@ -155,52 +166,96 @@ export function sanitizeMessagesForRest<T extends Record<string, any>>(
   });
 }
 
-export function peekChatsListMemory(): any[] {
+export function peekChatsListMemory(userId?: string | null): any[] {
+  if (userId && memoryChatsUserId && memoryChatsUserId !== userId) {
+    return [];
+  }
   return memoryChatsList ? [...memoryChatsList] : [];
 }
 
-export function peekThreadsListMemory(): any[] {
+export function peekThreadsListMemory(userId?: string | null): any[] {
+  if (userId && memoryThreadsUserId && memoryThreadsUserId !== userId) {
+    return [];
+  }
   return memoryThreadsList ? [...memoryThreadsList] : [];
 }
 
-export async function readChatsListLocal(): Promise<any[]> {
+export async function readChatsListLocal(userId?: string | null): Promise<any[]> {
+  if (userId && memoryChatsUserId && memoryChatsUserId !== userId) {
+    memoryChatsList = null;
+    memoryChatsUserId = null;
+  }
   if (memoryChatsList?.length) return [...memoryChatsList];
-  const cached = await LocalEngine.cacheGet<any[]>(CHATS_LIST_CACHE_KEY);
+  const key = chatsListCacheKey(userId);
+  const cached = await LocalEngine.cacheGet<any[]>(key);
   if (cached?.length) {
     memoryChatsList = cached;
+    memoryChatsUserId = userId || null;
     return [...cached];
   }
   return [];
 }
 
-export async function readThreadsListLocal(): Promise<any[]> {
+export async function readThreadsListLocal(userId?: string | null): Promise<any[]> {
+  if (userId && memoryThreadsUserId && memoryThreadsUserId !== userId) {
+    memoryThreadsList = null;
+    memoryThreadsUserId = null;
+  }
   if (memoryThreadsList?.length) return [...memoryThreadsList];
-  const cached = await LocalEngine.cacheGet<any[]>(THREADS_LIST_CACHE_KEY);
+  const key = threadsListCacheKey(userId);
+  const cached = await LocalEngine.cacheGet<any[]>(key);
   if (cached?.length) {
     memoryThreadsList = cached;
+    memoryThreadsUserId = userId || null;
     return [...cached];
   }
   return [];
 }
 
-export function writeChatsListLocal(rows: any[]): void {
+export function writeChatsListLocal(rows: any[], userId?: string | null): void {
   const safe = sanitizeConversationListForRest(rows || []);
   memoryChatsList = safe;
-  void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, safe);
+  memoryChatsUserId = userId || null;
+  const key = chatsListCacheKey(userId);
+  void LocalEngine.cacheSet(key, safe);
+  if (key !== CHATS_LIST_CACHE_KEY) {
+    void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, safe);
+  }
 }
 
-export function writeThreadsListLocal(rows: any[]): void {
+export function writeThreadsListLocal(rows: any[], userId?: string | null): void {
   const safe = rows || [];
   memoryThreadsList = safe;
-  void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, safe);
+  memoryThreadsUserId = userId || null;
+  const key = threadsListCacheKey(userId);
+  void LocalEngine.cacheSet(key, safe);
+  if (key !== THREADS_LIST_CACHE_KEY) {
+    void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, safe);
+  }
 }
 
 export function clearChatsListMemory(): void {
   memoryChatsList = null;
+  memoryChatsUserId = null;
 }
 
 export function clearThreadsListMemory(): void {
   memoryThreadsList = null;
+  memoryThreadsUserId = null;
+}
+
+export function clearAllChatMemory(): void {
+  memoryChatsList = null;
+  memoryThreadsList = null;
+  memoryChatsUserId = null;
+  memoryThreadsUserId = null;
+  memoryMessagesByConv.clear();
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('kylrix:auth:logout', () => {
+    clearAllChatMemory();
+  });
 }
 
 export { isLikelyCiphertext as isLikelyChatCiphertext };

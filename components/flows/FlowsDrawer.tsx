@@ -26,14 +26,15 @@ import { PromptDrawer } from '@/components/flows/PromptDrawer';
 import { CreateFlowDrawer } from '@/components/flows/CreateFlowDrawer';
 import { BUILTIN_FLOWS } from '@/lib/flows/builtins';
 import type { DiscoverFlow, FlowPublisher } from '@/lib/flows/types';
+import { useAuth } from '@/lib/auth';
 import {
   installFlowLocal,
   listInstalledFlowIds,
+  pullAndSyncUserFlowInstalls,
   uninstallFlowLocal,
 } from '@/lib/flows/installed';
 import { installFlow } from '@/lib/actions/client-ops';
 import toast from 'react-hot-toast';
-import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import {
   FlowInstallConfirmDrawer,
   isFlowConfirmPromptEnabled,
@@ -120,19 +121,33 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
     clearSavedWorkflows,
   } = useLocalContext();
 
+  const { user } = useAuth();
   const [tab, setTab] = useState<Tab>(initialTab);
-  const [installedIds, setInstalledIds] = useState<string[]>([]);
+  const [installedIds, setInstalledIds] = useState<string[]>(() => listInstalledFlowIds(user?.$id));
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<string>>(new Set());
   const [community, setCommunity] = useState<any[]>([]);
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
-    setInstalledIds(listInstalledFlowIds());
-    autonomicSyncEngine.requestObjectFreshness('flows', undefined, (synced) => {
-      setInstalledIds(synced);
-    });
-    const handleFlowsChanged = () => setInstalledIds(listInstalledFlowIds());
+    const currentUid = user?.$id;
+    setInstalledIds(listInstalledFlowIds(currentUid));
+
+    if (currentUid) {
+      void pullAndSyncUserFlowInstalls(currentUid).then((synced) => {
+        if (synced) setInstalledIds(synced);
+      });
+    } else {
+      setInstalledIds([]);
+    }
+
+    const handleFlowsChanged = () => setInstalledIds(listInstalledFlowIds(user?.$id));
     window.addEventListener('kylrix:flows-changed', handleFlowsChanged);
+
+    const handleLogout = () => {
+      setInstalledIds([]);
+    };
+    window.addEventListener('kylrix:auth:logout', handleLogout);
+
     const handleFlowsUpdated = (e: Event) => {
       const ids = Object.keys((e as CustomEvent).detail?.updates ?? {});
       if (!ids.length) return;
@@ -148,9 +163,10 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
     window.addEventListener('kylrix:flows-updated', handleFlowsUpdated);
     return () => {
       window.removeEventListener('kylrix:flows-changed', handleFlowsChanged);
+      window.removeEventListener('kylrix:auth:logout', handleLogout);
       window.removeEventListener('kylrix:flows-updated', handleFlowsUpdated);
     };
-  }, []);
+  }, [user?.$id]);
 
   useEffect(() => {
     const update = () => setIsDesktop(window.innerWidth >= 900);
@@ -230,11 +246,11 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
   const list = tab === 'discover' ? discoverList : installedList;
 
   const performInstall = useCallback((flow: DiscoverFlow) => {
-    installFlowLocal(flow.id);
+    installFlowLocal(flow.id, user?.$id);
     setInstalledIds((prev) => (prev.includes(flow.id) ? prev : [...prev, flow.id]));
     toast.success(`Installed "${flow.name}"`);
     installFlow({ flowId: flow.id }).catch(() => {});
-  }, []);
+  }, [user?.$id]);
 
   const openInstallConfirmation = useCallback(
     (flow: DiscoverFlow) => {
@@ -248,10 +264,10 @@ export function FlowsDrawer({ onClose, initialTab = 'discover' }: FlowsDrawerPro
   );
 
   const handleUninstall = useCallback((flow: DiscoverFlow) => {
-    uninstallFlowLocal(flow.id);
+    uninstallFlowLocal(flow.id, user?.$id);
     setInstalledIds((prev) => prev.filter((id) => id !== flow.id));
     toast.success(`Uninstalled "${flow.name}"`);
-  }, []);
+  }, [user?.$id]);
 
   const openDetail = useCallback(
     (flow: DiscoverFlow, isOwner: boolean) => {

@@ -79,13 +79,9 @@ export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose }: FlowInsta
     void (async () => {
       try {
         const { isFlowInstalled, pullAndSyncUserFlowInstalls } = await import('@/lib/flows/installed');
-        if (isFlowInstalled(flow.id)) {
-          if (active) { setInstalled(true); setChecking(false); }
-          return;
-        }
         const synced = await pullAndSyncUserFlowInstalls();
         if (active) {
-          setInstalled(synced.includes(flow.id));
+          setInstalled(synced.includes(flow.id) || isFlowInstalled(flow.id));
           setChecking(false);
         }
       } catch {

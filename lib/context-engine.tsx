@@ -505,13 +505,19 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
     const handleChanged = () => {
       void refreshInstalledFlows();
     };
+    const handleLogout = () => {
+      setSavedWorkflows({});
+      setInstalledFlowIds([]);
+    };
     if (typeof window !== 'undefined') {
       window.addEventListener('kylrix:flows-changed', handleChanged);
+      window.addEventListener('kylrix:auth:logout', handleLogout);
     }
 
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('kylrix:flows-changed', handleChanged);
+        window.removeEventListener('kylrix:auth:logout', handleLogout);
       }
     };
   }, [refreshInstalledFlows]);

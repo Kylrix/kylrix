@@ -101,4 +101,32 @@ describe('local-chat-cache', () => {
     expect(sanitized[1].lastMessageText).toBe('{"iv":"abc","data":"xyz"}');
     expect(sanitized[2].lastMessageText).toBe('Unencrypted open');
   });
+
+  it('isolates conversation lists per user and clears cleanly on logout', async () => {
+    const userAChats = [{ $id: 'c_user_a', name: 'User A Hangout' }];
+    const userBChats = [{ $id: 'c_user_b', name: 'User B Hangout' }];
+
+    // Write for user A
+    writeChatsListLocal(userAChats, 'user_a');
+    expect(peekChatsListMemory('user_a')).toEqual(userAChats);
+    expect(peekChatsListMemory('user_b')).toEqual([]); // User B sees nothing from User A
+
+    // Write for user B
+    writeChatsListLocal(userBChats, 'user_b');
+    expect(peekChatsListMemory('user_b')).toEqual(userBChats);
+    expect(peekChatsListMemory('user_a')).toEqual([]); // User A is no longer in memory
+
+    // Read back user A from LocalEngine
+    const readUserA = await readChatsListLocal('user_a');
+    expect(readUserA).toEqual(userAChats);
+
+    // Read back user B from LocalEngine
+    const readUserB = await readChatsListLocal('user_b');
+    expect(readUserB).toEqual(userBChats);
+
+    // Logout event clears all memory
+    window.dispatchEvent(new CustomEvent('kylrix:auth:logout'));
+    expect(peekChatsListMemory('user_b')).toEqual([]);
+    expect(peekChatsListMemory('user_a')).toEqual([]);
+  });
 });

@@ -52,10 +52,6 @@ import { openCommObjectDetail } from '@/components/objects/CommObjectDetail';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ChatCreateDrawer } from '@/components/objects/ChatCreateDrawer';
 import {
-  shouldRunEmptyEscapeHatch,
-  markEmptyEscapeHatchRan,
-} from '@/lib/sync/local-copy-sync';
-import {
   formatConversationListTime,
   resolveConversationListLabel,
   resolveDirectChatPeerId,
@@ -121,9 +117,9 @@ export function HangoutsDrawer({
     }
   }, []);
 
-  const [secureChats, setSecureChats] = useState<any[]>(() => peekChatsListMemory());
-  const [threads, setThreads] = useState<any[]>(() => peekThreadsListMemory());
-  const [initialLoading, setInitialLoading] = useState<boolean>(() => !peekChatsListMemory().length && !peekThreadsListMemory().length);
+  const [secureChats, setSecureChats] = useState<any[]>(() => peekChatsListMemory(user?.$id));
+  const [threads, setThreads] = useState<any[]>(() => peekThreadsListMemory(user?.$id));
+  const [initialLoading, setInitialLoading] = useState<boolean>(() => !peekChatsListMemory(user?.$id).length && !peekThreadsListMemory(user?.$id).length);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -131,6 +127,18 @@ export function HangoutsDrawer({
   const [showCreateChat, setShowCreateChat] = useState(false);
   const [identityHydrationTick, setIdentityHydrationTick] = useState(0);
   const [isUnlocked, setIsUnlocked] = useState(() => ecosystemSecurity.status.isUnlocked);
+
+  useEffect(() => {
+    const handleLogout = () => {
+      setSecureChats([]);
+      setThreads([]);
+      setInitialLoading(false);
+      clearChatsListMemory();
+      clearThreadsListMemory();
+    };
+    window.addEventListener('kylrix:auth:logout', handleLogout);
+    return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
+  }, []);
 
   useEffect(() => {
     return ecosystemSecurity.onStatusChange((status) => {
@@ -206,10 +214,18 @@ export function HangoutsDrawer({
 
   // Eagerly hydrate chats and threads
   const refreshChats = useCallback(async () => {
+    const currentUserId = user?.$id;
+    if (!currentUserId) {
+      setSecureChats([]);
+      setThreads([]);
+      setInitialLoading(false);
+      return;
+    }
+
     try {
       const [cachedChats, cachedThreads] = await Promise.all([
-        readChatsListLocal(),
-        readThreadsListLocal(),
+        readChatsListLocal(currentUserId),
+        readThreadsListLocal(currentUserId),
       ]);
 
       const enrichFromMessageCache = async (rows: any[]) => {
@@ -242,37 +258,29 @@ export function HangoutsDrawer({
         return next;
       };
 
-      let hasAnyLocal = false;
       if (cachedChats?.length) {
         const enriched = await enrichFromMessageCache(cachedChats);
         const decryptedCached = await hydrateDecryptedSecureChats(enriched);
         startTransition(() => setSecureChats(decryptedCached));
-        void writeChatsListLocal(enriched);
-        hasAnyLocal = true;
+      } else {
+        startTransition(() => setSecureChats([]));
       }
       if (cachedThreads?.length) {
         startTransition(() => setThreads(cachedThreads));
-        hasAnyLocal = true;
+      } else {
+        startTransition(() => setThreads([]));
       }
 
-
-
-      const shouldEscape = shouldRunEmptyEscapeHatch('chats', user?.$id);
-
-      if (user?.$id && (!hasAnyLocal || shouldEscape)) {
-        try {
-          const res = await ChatService.getConversations(user.$id, { forceRefresh: !hasAnyLocal });
-          const rows = Array.isArray(res) ? res : res?.rows || [];
-          if (rows.length) {
-            const enriched = await enrichFromMessageCache(rows);
-            const decryptedRows = await hydrateDecryptedSecureChats(enriched);
-            startTransition(() => setSecureChats(decryptedRows));
-            void writeChatsListLocal(enriched);
-          }
-          markEmptyEscapeHatchRan('chats', user.$id);
-        } catch (fetchErr) {
-          console.warn('[HangoutsDrawer] Escape hatch fetch error:', fetchErr);
-        }
+      // Authoritative remote fetch in background
+      try {
+        const res = await ChatService.getConversations(currentUserId, { forceRefresh: true });
+        const rows = Array.isArray(res) ? res : res?.rows || [];
+        const enriched = await enrichFromMessageCache(rows);
+        const decryptedRows = await hydrateDecryptedSecureChats(enriched);
+        startTransition(() => setSecureChats(decryptedRows));
+        void writeChatsListLocal(enriched, currentUserId);
+      } catch (fetchErr) {
+        console.warn('[HangoutsDrawer] Network conversations fetch error:', fetchErr);
       }
     } catch (err) {
       console.warn('[HangoutsDrawer] Local read error:', err);
@@ -280,6 +288,17 @@ export function HangoutsDrawer({
       setInitialLoading(false);
     }
   }, [user?.$id, hydrateDecryptedSecureChats]);
+
+  const prevUserIdRef = useRef<string | undefined>(user?.$id);
+  useEffect(() => {
+    if (prevUserIdRef.current !== user?.$id) {
+      prevUserIdRef.current = user?.$id;
+      setSecureChats(peekChatsListMemory(user?.$id));
+      setThreads(peekThreadsListMemory(user?.$id));
+      setInitialLoading(true);
+      void refreshChats();
+    }
+  }, [user?.$id, refreshChats]);
 
   const openHangoutMenu = useCallback(
     (target: any, e?: React.MouseEvent | React.TouchEvent) => {
@@ -375,7 +394,7 @@ export function HangoutsDrawer({
                   startTransition(() => {
                     setSecureChats((prev) => {
                       const next = prev.filter((c: any) => (c.$id || c.id) !== target.id);
-                      void writeChatsListLocal(next);
+                      void writeChatsListLocal(next, user?.$id);
                       return next;
                     });
                   });
@@ -384,7 +403,7 @@ export function HangoutsDrawer({
                   startTransition(() => {
                     setThreads((prev) => {
                       const next = prev.filter((t: any) => (t.$id || t.id) !== target.id);
-                      void writeThreadsListLocal(next);
+                      void writeThreadsListLocal(next, user?.$id);
                       return next;
                     });
                   });
@@ -437,17 +456,17 @@ export function HangoutsDrawer({
     if (!isVaultUnlocked) return;
     let cancelled = false;
     void (async () => {
-      const current = peekChatsListMemory();
+      const current = peekChatsListMemory(user?.$id);
       if (!current.length) return;
       const decryptedRows = await hydrateDecryptedSecureChats(current);
       if (cancelled) return;
       startTransition(() => setSecureChats(decryptedRows));
-      void writeChatsListLocal(decryptedRows);
+      void writeChatsListLocal(decryptedRows, user?.$id);
     })();
     return () => {
       cancelled = true;
     };
-  }, [isVaultUnlocked, hydrateDecryptedSecureChats]);
+  }, [isVaultUnlocked, hydrateDecryptedSecureChats, user?.$id]);
 
   // Realtime subscription
   useEffect(() => {

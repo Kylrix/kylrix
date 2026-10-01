@@ -3,6 +3,8 @@ import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { invalidateCurrentUserCache, clearKylrixPulse } from '@/lib/appwrite/client';
 import { clearSessionProjectsList } from '@/lib/projects/projects-cache';
+import { clearAllChatMemory } from '@/lib/chat/local-chat-cache';
+import { clearInstalledFlowsMemory } from '@/lib/flows/installed';
 
 /**
  * Total Client Compartmentalization & Storage Wipe on Logout / Account Switch.
@@ -19,11 +21,13 @@ export async function purgeAllClientStorageOnLogout(): Promise<void> {
     ecosystemSecurity.lock();
   } catch {}
 
-  // 2. Clear Appwrite user snapshot cache, heartbeat, and in-memory project caches
+  // 2. Clear Appwrite user snapshot cache, heartbeat, and in-memory project/chat/flow caches
   try {
     invalidateCurrentUserCache();
     clearKylrixPulse();
     clearSessionProjectsList();
+    clearAllChatMemory();
+    clearInstalledFlowsMemory();
   } catch {}
 
   // 3. Purge RxDB & Dexie local storage
