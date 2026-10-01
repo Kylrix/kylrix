@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Box, Typography, alpha } from '@/lib/openbricks/primitives';
+import { Box, Typography } from '@/lib/openbricks/primitives';
 import { CheckCircle as CheckCircleIcon } from '@/lib/openbricks/icons';
 import { useAuth } from '@/lib/auth';
 import { UserPresenceState } from '@/lib/services/presence';
 
 import { getCachedIdentityById, resolveIdentityById, subscribeIdentityCache } from '@/lib/identity-cache';
 import { computeIdentityFlags, type IdentitySignals } from '@/sdk/identity';
+import { UserIdenticon } from '@/components/ui/UserIdenticon';
 
 export type { IdentitySignals };
 export { computeIdentityFlags };
@@ -298,21 +299,14 @@ export function IdentityAvatar({
             display: 'block'}}
         />
       ) : (
-        <Box
-          sx={{
-            width: '100%',
-            height: '100%',
+        <UserIdenticon
+          value={userId || resolvedUsername || resolvedDisplayName || initial}
+          size={size}
+          className="w-full h-full block"
+          style={{
             borderRadius: `calc(${typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius} - 2px)`,
-            bgcolor: alpha('#F59E0B', 0.12),
-            color: '#F59E0B',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 900,
-            fontSize: `${Math.max(11, size / 3)}px`}}
-        >
-          {initial}
-        </Box>
+          }}
+        />
       )}
       {status && status !== 'offline' && (
           <Box 

@@ -28,9 +28,11 @@ import { secureUploadFile } from '@/lib/actions/client-ops';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan, getEffectiveUsername } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { UserIdenticon } from '@/components/ui/UserIdenticon';
 
 const storage = new Storage(client);
-const AVATAR_BUCKET_ID = 'profile_pictures';
+const AVATAR_BUCKET_ID = APPWRITE_CONFIG.BUCKETS.ATTACHMENTS;
 
 const compressImage = (file: File, maxWidth = 512, maxHeight = 512, quality = 0.7): Promise<File> => {
   return new Promise((resolve, reject) => {
@@ -565,11 +567,15 @@ export function EditProfileModal({
                         src={profilePicUrl} 
                         alt="Avatar" 
                         className="w-full h-full object-cover"
+                        onError={() => setProfilePicUrl(null)}
                       />
                     ) : (
-                      <span className="text-xl font-black font-clash text-white/40">
-                        {(displayName || username || 'U').slice(0, 1).toUpperCase()}
-                      </span>
+                      <UserIdenticon
+                        value={user?.$id || username || displayName || 'kylrix'}
+                        size={64}
+                        rounded
+                        className="w-full h-full"
+                      />
                     )}
                   </div>
                   <label className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-lg bg-[#6366F1] hover:bg-[#5254E8] text-white flex items-center justify-center cursor-pointer shadow-lg transition-all">

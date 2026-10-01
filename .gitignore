@@ -69,3 +69,6 @@ functions/**/.env.*
 .repo/
 
 .env*
+*.db
+*.db-journal
+*.sqlite*

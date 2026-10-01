@@ -117,6 +117,8 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    const targetBucketId = APPWRITE_CONFIG.BUCKETS.ATTACHMENTS || 'notes_attachments';
+
     // Delete existing file with the same ID if the actor owns it or if it matches user's eponymous ID
     if (fileId && actor?.$id) {
       try {
@@ -125,13 +127,13 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
           shouldDelete = true;
         } else {
           const { storage: adminStorage } = createSystemClient();
-          const existing = await adminStorage.getFile(bucketId, fileId);
+          const existing = await adminStorage.getFile(targetBucketId, fileId);
           if (existing && existing.$permissions) {
             shouldDelete = existing.$permissions.some((p: string) => p.includes(`user:${actor.$id}`));
           }
         }
         if (shouldDelete) {
-          await Registry.getStorage().deleteFile(bucketId, fileId);
+          await Registry.getStorage().deleteFile(targetBucketId, fileId);
         }
       } catch (_err) {
         // File may not exist or deletion failed, proceed with upload
@@ -149,7 +151,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
       }
     }
 
-    const uploadedFile = await Registry.getStorage().uploadFile(bucketId, fileId, {
+    const uploadedFile = await Registry.getStorage().uploadFile(targetBucketId, fileId, {
       name: file.name,
       type: file.type,
       size: file.size,

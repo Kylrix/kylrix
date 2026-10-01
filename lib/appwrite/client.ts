@@ -298,7 +298,22 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
 
 export const tablesDB = typeof window !== 'undefined' ? (tablesDBProxy as unknown as TablesDB) : originalTablesDB;
 
-export const storage = new Storage(client);
+const originalStorage = new Storage(client);
+export const storage = new Proxy(originalStorage, {
+    get(target: any, prop: string | symbol) {
+        const val = target[prop];
+        if (typeof val === 'function') {
+            return (...args: any[]) => {
+                if (args.length > 0 && typeof args[0] === 'string') {
+                    // Normalize all storage buckets to unified attachment bucket
+                    args[0] = APPWRITE_CONFIG.BUCKETS.ATTACHMENTS;
+                }
+                return val.apply(target, args);
+            };
+        }
+        return val;
+    }
+}) as unknown as Storage;
 export const avatars = new Avatars(client);
 export const teams = new Teams(client);
 export const functions = new Functions(client);
@@ -562,11 +577,11 @@ export class AppwriteService {
 }
 
 export function getFilePreview(bucketId: string, fileId: string, width: number = 64, height: number = 64) {
-    return storage.getFilePreview(bucketId, fileId, width, height);
+    return storage.getFilePreview(bucketId || APPWRITE_CONFIG.BUCKETS.ATTACHMENTS, fileId, width, height);
 }
 
 export function getProfilePicturePreview(fileId: string, width: number = 64, height: number = 64) {
-    return getFilePreview("profile_pictures", fileId, width, height);
+    return getFilePreview(APPWRITE_CONFIG.BUCKETS.ATTACHMENTS, fileId, width, height);
 }
 
 const PULSE_COOKIE_NAME = 'kylrix_pulse_v2';

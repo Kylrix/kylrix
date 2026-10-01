@@ -154,45 +154,30 @@ export const APPWRITE_CONFIG = {
         // Identical to CONNECT — assigned after object init
         CHAT: null as any},
     BUCKETS: {
-        PROFILE_PICTURES: 'profile_pictures',
-        GROUP_AVATARS: 'group_avatars',
+        ATTACHMENTS: 'notes_attachments',
         NOTES_ATTACHMENTS: 'notes_attachments',
-        GENERAL_STORAGE: 'generalstorage',
-        BLOG_MEDIA: 'event_covers',
-        EXTENSION_ASSETS: 'extension_assets',
-        BACKUPS: 'backups',
-        TEMP_UPLOADS: 'temp_uploads',
-        /** Ephemeral file payloads for Send by Kylrix (provision in Appwrite; TTL ~7d via cron/cleanup). */
-        SEND_EPHEMERAL: 'kylrix_send',
-        MESSAGES: 'messages',
-        VAULT_ATTACHMENTS: 'vault_attachments',
-        FORM_MEDIA: 'form_media',
-        FORM_ATTACHMENTS: 'form_attachments',
-        CHAT_UPLOADS: 'chat_uploads',
-        TASK_ATTACHMENTS: 'notes_attachments', // Alias
-        EVENT_COVERS: 'event_covers', // Alias
-        VOICE: 'voice',
-        APP_LOGOS: 'app_logos'
+        PROFILE_PICTURES: 'notes_attachments',
+        GROUP_AVATARS: 'notes_attachments',
+        GENERAL_STORAGE: 'notes_attachments',
+        BLOG_MEDIA: 'notes_attachments',
+        EXTENSION_ASSETS: 'notes_attachments',
+        BACKUPS: 'notes_attachments',
+        TEMP_UPLOADS: 'notes_attachments',
+        /** Ephemeral file payloads for Send by Kylrix (TTL ~7d via cron/cleanup). */
+        SEND_EPHEMERAL: 'notes_attachments',
+        MESSAGES: 'notes_attachments',
+        VAULT_ATTACHMENTS: 'notes_attachments',
+        FORM_MEDIA: 'notes_attachments',
+        FORM_ATTACHMENTS: 'notes_attachments',
+        CHAT_UPLOADS: 'notes_attachments',
+        TASK_ATTACHMENTS: 'notes_attachments',
+        EVENT_COVERS: 'notes_attachments',
+        VOICE: 'notes_attachments',
+        APP_LOGOS: 'notes_attachments'
     },
     FUNCTIONS: {
-        PERMISSION_UPDATER: '69c0ff79001b60e664d2',
-        SEARCH_USERS: '69a582720012957d2027',
-        SYNC_USER_PROFILE: '69a583ac002b674685b0',
-        NOTIFY_ON_SHARE: '69a58c1c001c39695bf6',
-        NOTIFY_ON_SOCIAL_ACTIVITY: '69a6bf6200180e70aca1',
-        FLOW_EVENT_SYNC: '69a6c28f003bb7d7e054',
-        LOG_SECURITY_EVENT: '69a6c45a002085baa8dd',
-        SYNC_SUBSCRIPTION_STATUS: '69a6c56d00203438232c',
-        ACCOUNT_CLEANUP: '69a6c6fc001dc877979d',
-        CONNECT_CALL_CLEANUP: '69a6c841000b2c5aaae3',
         DATA_PORTER: 'data-porter',
-        WEB3_WALLET: '68e76f25001e8b80a6c2',
-        FLOW_AGENT_ORCHESTRATOR: 'flow-agent-orchestrator',
-        ECOSYSTEM_CONTEXT_AGGREGATOR: 'ecosystem-context-aggregator',
-        AGENT_ACTION_GUARDRAIL: 'agent-action-guardrail',
-        GOAL_REMINDER_DISPATCH: 'goal-reminder-dispatch',
-        DISCORD_BOT: 'discord-bot',
-        MCP_SERVER: '6a8f212e003d1f3518db'
+        GOAL_REMINDER_DISPATCH: 'goal-reminder-dispatch'
     },
     SYSTEM: {
         DOMAIN: 'kylrix.space',

@@ -28,6 +28,7 @@ import { EditProfileModal } from '@/components/profile/EditProfileModal';
 import { getUserBadgesAction } from '@/lib/actions/sponsor-actions';
 import { BadgeChip } from '@/components/sponsor/SponsorBadges';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
+import { UserIdenticon } from '@/components/ui/UserIdenticon';
 import toast from 'react-hot-toast';
 
 function isCleanUsername(val?: string | null): boolean {
@@ -621,11 +622,15 @@ export function UnifiedProfileView({
                     src={resolvedAvatarUrl}
                     alt={activeDisplayName}
                     className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl object-cover border-2 border-white/20 shadow-md"
+                    onError={() => setResolvedAvatarUrl(null)}
                   />
                 ) : (
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-gradient-to-tr from-amber-500/20 to-pink-500/20 border-2 border-white/20 flex items-center justify-center text-white text-2xl sm:text-3xl font-black font-clash">
-                    {activeDisplayName.charAt(0).toUpperCase()}
-                  </div>
+                  <UserIdenticon
+                    value={targetUid || activeHandle || activeDisplayName}
+                    size={88}
+                    rounded
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl border-2 border-white/20 shadow-md"
+                  />
                 )}
               </div>
 

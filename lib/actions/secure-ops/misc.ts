@@ -340,7 +340,7 @@ export async function executeMasterPurgeSecure(jwt?: string) {
 
   // Storage buckets: purge files owned by user (best-effort, no retention)
   actions.push((async () => {
-    const bucketIds = ['notes_attachments', 'voice', 'profile_pictures', 'form_attachments', 'project_files'];
+    const bucketIds = [APPWRITE_CONFIG.BUCKETS.ATTACHMENTS];
     for (const bid of bucketIds) {
       try {
         const { Query } = await import('node-appwrite');
@@ -1780,7 +1780,7 @@ export async function getProfilePicturePreviewSecure(fileId: string): Promise<st
 
   try {
     const { storage } = createSystemClient();
-    const fileBuffer = await storage.getFilePreview('profile_pictures', targetId, 160, 160);
+    const fileBuffer = await storage.getFilePreview(APPWRITE_CONFIG.BUCKETS.ATTACHMENTS, targetId, 160, 160);
     const base64 = Buffer.from(fileBuffer).toString('base64');
     return `data:image/png;base64,${base64}`;
   } catch (err: any) {
