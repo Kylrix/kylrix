@@ -71,7 +71,11 @@
   - `agentToken`: The Personal Access Token (`kyl_wpat_...` or `kyl_pat_...`) used as `Authorization: Bearer <agentToken>` for all API/MCP calls.
   - `defaultWorkspaceId`: The assigned workspace ID (e.g. `6a56931700162d00af2f` for `kylrix`).
   - `ownerId`: The human owner's account ID (`userId`).
-- **Autonomous Liberty to Dogfood in Assigned Workspace**: Agents have full liberty to read, write, track tasks, and record ideas, plans, architectural notes, and artifacts inside their assigned workspace (`defaultWorkspaceId`, typically `kylrix`). Agents do not need to ask for permission to use this workspace key or record dogfooding notes/ideas.
+- **Shared Canonical Filesystem Substrate (`~/.kylrix`)**:
+  - Both the official CLI (`@kylrix/cli`) and autonomous agents share `~/.kylrix` as their single canonical root directory.
+  - Both operate under the same human owner account context (`ownerId`). The CLI manages local sessions, `local.db`, and silos in `~/.kylrix`, while agents authenticate API/MCP requests with `agentToken`.
+  - Agents and the CLI can pull and drop ideas, notes, and objects into the assigned workspace (`defaultWorkspaceId`), ensuring instantaneous cross-surface synchronization across CLI commands, agents, and web UI.
+- **Autonomous Liberty to Dogfood in Assigned Workspace**: Agents have full liberty to read, write, track tasks, pull and record ideas, plans, architectural notes, and artifacts inside their assigned workspace (`defaultWorkspaceId`, typically `kylrix`). Agents do not need to ask for permission to use this workspace key or record dogfooding notes/ideas.
 - **Strict Protocol**: When creating resources with this token, target the local API at `http://localhost:3005/api/v1` or the authenticated MCP transport. Never attempt raw Appwrite CLI mutations or admin API bypasses.
 
 ### 🌐 Backend Modularity & Cloud Equivalence (STRICT)
