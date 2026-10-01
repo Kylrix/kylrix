@@ -41,6 +41,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
+import { ObjectQuickActionCard } from '@/components/objects/ObjectQuickActionCard';
 import { useTask } from '@/context/TaskContext';
 import { useAI } from '@/hooks/useAI';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -807,6 +808,16 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
 
       {/* Content Area - Scrollable */}
       <div className="relative z-10 flex-1 overflow-y-auto p-5 md:p-6 space-y-6 scrollbar-thin">
+        {/* Contextual Quick Action (auto-detects env variables, non-invasive) */}
+        {task?.description && (
+          <ObjectQuickActionCard
+            content={task.description}
+            title={task.title}
+            objectId={task.id}
+            objectKind="goal"
+          />
+        )}
+
         {/* Objective Details Box */}
         <div className="p-5 rounded-[28px] bg-[#000000] border border-white/[0.08] shadow-[0_12px_32px_rgba(0,0,0,0.4)] flex flex-col">
           <div className="flex items-center justify-between mb-2.5">

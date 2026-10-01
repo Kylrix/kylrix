@@ -38,6 +38,7 @@ marked.setOptions({ gfm: true, breaks: true });
 const MATH_PURIFY: DomPurifyConfig = {
   ADD_TAGS: [
     'a',
+    'span',
     'math',
     'annotation',
     'semantics',
@@ -67,6 +68,10 @@ const MATH_PURIFY: DomPurifyConfig = {
   ADD_ATTR: [
     'class',
     'style',
+    'target',
+    'rel',
+    'data-env-key',
+    'data-env-val',
     'viewBox',
     'xmlns',
     'd',
@@ -118,7 +123,16 @@ export function renderMarkdownHtml(
   const pre = runMarkdownPipeline(prepped, 'pre', context);
   const raw = marked.parse(pre) as string;
   const post = runMarkdownPipeline(raw, 'post', context);
-  return sanitizeHtml(post);
+
+  // Syntax highlight environment variables (KEY=VALUE) in rendered markdown
+  const withEnvHighlight = post.replace(
+    /(^|>|\n|<br\s*\/?>)([A-Za-z_][A-Za-z0-9_]{1,63})(=)([^<\r\n]+|<a\s+[^>]+>.*?<\/a>)/g,
+    (_match, prefix, key, _eq, val) => {
+      return `${prefix}<span class="kylrix-env-key text-amber-400 font-mono font-bold">${key}</span><span class="kylrix-env-eq text-white/40 font-mono">=</span><span class="kylrix-env-val text-emerald-400 font-mono break-all">${val}</span>`;
+    }
+  );
+
+  return sanitizeHtml(withEnvHighlight);
 }
 
 export function isMathModeFlowInstalled(): boolean {

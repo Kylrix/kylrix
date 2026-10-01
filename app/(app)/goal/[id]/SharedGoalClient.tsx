@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Flag, Calendar, Lock, AlertTriangle } from 'lucide-react';
 import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { ObjectQuickActionCard } from '@/components/objects/ObjectQuickActionCard';
+import { AgenticMarkdown } from '@/components/agentic/AgenticMarkdown';
 
 type PublicGoal = {
   id: string;
@@ -227,11 +229,20 @@ export default function SharedGoalClient({
           )}
         </div>
 
+        {view.description && (
+          <div className="mb-4">
+            <ObjectQuickActionCard
+              content={view.description}
+              title={view.title}
+              objectId={view.id}
+              objectKind="goal"
+            />
+          </div>
+        )}
+
         {view.description ? (
           <div className="rounded-2xl border border-[#2C2A28] bg-[#141210] p-5">
-            <p className="text-sm sm:text-base text-[#D4D1CC] leading-relaxed whitespace-pre-wrap break-words">
-              {view.description}
-            </p>
+            <AgenticMarkdown content={view.description} />
           </div>
         ) : (
           <p className="text-sm text-[#9B9691]">No description was added to this goal.</p>

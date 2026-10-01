@@ -11,7 +11,7 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
-import { EditorState, StateField, Range } from '@codemirror/state';
+import { EditorState, StateField, Range, RangeSetBuilder } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting, syntaxTree, ensureSyntaxTree } from '@codemirror/language';
@@ -36,7 +36,6 @@ const MARKDOWN_MARK_NODES = new Set([
   'StrikethroughMark',
   'QuoteMark',
   'ListMark',
-  'URL',
   'LinkTitle',
 ]);
 
@@ -116,6 +115,78 @@ const liveMarkdownMarkHider = ViewPlugin.fromClass(
       ) {
         this.decorations = buildHiddenMarkdownMarks(update.view);
       }
+    }
+  },
+  { decorations: (v) => v.decorations }
+);
+
+/**
+ * Live decoration plugin that highlights environment variables (KEY=VALUE)
+ * and detects plain URIs/URLs, giving them high-contrast, distinct styling.
+ */
+const envAndUriDecorationPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.buildDecorations(view);
+    }
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.buildDecorations(update.view);
+      }
+    }
+    buildDecorations(view: EditorView): DecorationSet {
+      const builder = new RangeSetBuilder<Decoration>();
+      for (const { from, to } of view.visibleRanges) {
+        let pos = from;
+        while (pos <= to) {
+          const line = view.state.doc.lineAt(pos);
+          const lineText = line.text;
+          const envMatch = lineText.match(/^([A-Za-z_][A-Za-z0-9_]{1,63})(=)(.*)$/);
+          if (envMatch) {
+            const keyStart = line.from;
+            const keyEnd = keyStart + envMatch[1].length;
+            const eqStart = keyEnd;
+            const eqEnd = eqStart + 1;
+            const valStart = eqEnd;
+            const valEnd = line.to;
+
+            builder.add(keyStart, keyEnd, Decoration.mark({ class: 'cm-env-key' }));
+            builder.add(eqStart, eqEnd, Decoration.mark({ class: 'cm-env-eq' }));
+
+            if (valStart < valEnd) {
+              const valText = envMatch[3];
+              const uriMatch = valText.match(/(?:https?|libsql|wss?|ftp):\/\/[^\s<>"')]+/);
+              if (uriMatch && uriMatch.index !== undefined && uriMatch[0].length > 0) {
+                const uriStart = valStart + uriMatch.index;
+                const uriEnd = uriStart + uriMatch[0].length;
+                if (valStart < uriStart) {
+                  builder.add(valStart, uriStart, Decoration.mark({ class: 'cm-env-val' }));
+                }
+                builder.add(uriStart, uriEnd, Decoration.mark({ class: 'cm-detected-uri' }));
+                if (uriEnd < valEnd) {
+                  builder.add(uriEnd, valEnd, Decoration.mark({ class: 'cm-env-val' }));
+                }
+              } else {
+                builder.add(valStart, valEnd, Decoration.mark({ class: 'cm-env-val' }));
+              }
+            }
+          } else {
+            const uriRegex = /(?:https?|libsql|wss?|ftp):\/\/[^\s<>"')]+/g;
+            let m: RegExpExecArray | null;
+            while ((m = uriRegex.exec(lineText)) !== null) {
+              const uStart = line.from + m.index;
+              const uEnd = uStart + m[0].length;
+              if (uStart < uEnd) {
+                builder.add(uStart, uEnd, Decoration.mark({ class: 'cm-detected-uri' }));
+              }
+            }
+          }
+          if (line.to >= view.state.doc.length) break;
+          pos = line.to + 1;
+        }
+      }
+      return builder.finish();
     }
   },
   { decorations: (v) => v.decorations }
@@ -373,6 +444,28 @@ export function KylrixWYSIWYGEditor({
         color: 'rgba(155, 150, 145, 0.45)',
         fontStyle: 'normal',
       },
+      '.cm-link, .cm-url, .cm-detected-uri': {
+        color: '#818CF8 !important',
+        textDecoration: 'underline !important',
+        textUnderlineOffset: '2px',
+      },
+      '.cm-detected-uri:hover': {
+        color: '#A5B4FC !important',
+      },
+      '.cm-env-key': {
+        color: '#F59E0B !important',
+        fontFamily: 'var(--font-mono, monospace)',
+        fontWeight: '700',
+      },
+      '.cm-env-eq': {
+        color: 'rgba(255, 255, 255, 0.45) !important',
+        fontFamily: 'var(--font-mono, monospace)',
+        fontWeight: '600',
+      },
+      '.cm-env-val': {
+        color: '#34D399 !important',
+        fontFamily: 'var(--font-mono, monospace)',
+      },
     });
 
     const objectBlockField = StateField.define<DecorationSet>({
@@ -411,6 +504,7 @@ export function KylrixWYSIWYGEditor({
         markdown({ base: markdownLanguage }),
         syntaxHighlighting(liveMarkdownHighlight),
         liveMarkdownMarkHider,
+        envAndUriDecorationPlugin,
         cmPlaceholder(placeholder),
         customTheme,
         objectBlockField,
@@ -439,6 +533,16 @@ export function KylrixWYSIWYGEditor({
         EditorView.domEventHandlers({
           keydown: (event) => {
             if (onKeyDown) onKeyDown(event);
+            return false;
+          },
+          click: (event) => {
+            const target = event.target as HTMLElement;
+            if (target?.classList?.contains('cm-detected-uri')) {
+              const url = target.textContent?.trim();
+              if (url && /^https?:\/\//i.test(url)) {
+                window.open(url, '_blank', 'noopener,noreferrer');
+              }
+            }
             return false;
           },
         }),

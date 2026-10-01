@@ -5,6 +5,7 @@ import { Notes } from '@/types/appwrite';
 
 import { AgenticDiffViewer } from '@/components/agentic/AgenticDiffViewer';
 import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
+import { ObjectQuickActionCard } from '@/components/objects/ObjectQuickActionCard';
 
 import {
   Mic,
@@ -1429,6 +1430,16 @@ export function NoteDetailSidebar({
             : 'flex-1 min-h-0 overflow-y-auto scrollbar-thin overscroll-contain p-4 gap-4'
         }`}
       >
+        {/* Contextual Quick Action (non-invasive, auto-detects env variables) */}
+        {!shouldMaskEncrypted && content && (
+          <ObjectQuickActionCard
+            content={content}
+            title={liveNote.title}
+            objectId={liveNote.$id}
+            objectKind="idea"
+          />
+        )}
+
         {/* Unified WYSIWYG Editor */}
         <div className="flex flex-col rounded-[24px] bg-[#000000] border-2 border-white/20 overflow-hidden flex-shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-5 pt-4 pb-3 border-b border-white/5">

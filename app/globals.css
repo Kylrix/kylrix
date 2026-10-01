@@ -169,14 +169,58 @@ html {
   color: inherit;
 }
 
-.note-markdown-preview a {
-  color: #6366f1;
+.note-markdown-preview a,
+.agentic-markdown a,
+.chat-markdown a,
+.kylrix-markdown a,
+.cm-editor a,
+.cm-link,
+.cm-url,
+.cm-detected-uri,
+.prose a,
+[data-markdown] a,
+.markdown-body a {
+  color: #818CF8 !important;
   font-weight: 600;
-  text-decoration: none;
+  text-decoration: underline !important;
+  text-underline-offset: 2px;
+  word-break: break-all;
 }
 
-.note-markdown-preview a:hover {
-  text-decoration: underline;
+.note-markdown-preview a:hover,
+.agentic-markdown a:hover,
+.chat-markdown a:hover,
+.kylrix-markdown a:hover,
+.cm-editor a:hover,
+.cm-link:hover,
+.cm-url:hover,
+.cm-detected-uri:hover,
+.prose a:hover,
+[data-markdown] a:hover,
+.markdown-body a:hover {
+  color: #A5B4FC !important;
+}
+
+/* Environment Variable Syntax Highlighting (Key vs Value) */
+.cm-env-key,
+.kylrix-env-key {
+  color: #F59E0B !important;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+}
+
+.cm-env-eq,
+.kylrix-env-eq {
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+}
+
+.cm-env-val,
+.kylrix-env-val {
+  color: #34D399 !important;
+  font-family: var(--font-mono, monospace);
+  word-break: break-all;
 }
 
 @keyframes shine {
