@@ -16,10 +16,13 @@ vi.mock('@/lib/appwrite/client', () => ({
 
 /** Helper to render and test React hooks without external dependencies */
 function renderDevModeHook() {
-  const result: { current: ReturnType<typeof useDevMode> | null } = { current: null };
+  const resultRef: { current: ReturnType<typeof useDevMode> | null } = { current: null };
 
   function TestComponent() {
-    result.current = useDevMode();
+    const value = useDevMode();
+    React.useEffect(() => {
+      resultRef.current = value;
+    });
     return null;
   }
 
@@ -32,7 +35,7 @@ function renderDevModeHook() {
   });
 
   return {
-    result: result as { current: ReturnType<typeof useDevMode> },
+    result: resultRef as { current: ReturnType<typeof useDevMode> },
     unmount: () => {
       act(() => {
         root.unmount();

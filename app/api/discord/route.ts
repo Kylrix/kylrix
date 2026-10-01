@@ -1672,10 +1672,17 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  const applicationId = process.env.DISCORD_APPLICATION_ID || process.env.NEXT_PUBLIC_DISCORD_APPLICATION_ID || '';
+  const installUrl = applicationId
+    ? `https://discord.com/oauth2/authorize?client_id=${applicationId}&scope=bot+applications.commands&permissions=277025778752&integration_type=0,1`
+    : null;
+
   return NextResponse.json({
     ok: true,
     service: 'kylrix-discord-bot',
     status: 'online',
+    applicationId: applicationId || undefined,
+    installUrl: installUrl || undefined,
     commands: DISCORD_SLASH_COMMANDS.map((c) => `/${c.name}`),
   });
 }
