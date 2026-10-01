@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { emailOTP } from 'better-auth/plugins/email-otp';
-import { apiKey } from 'better-auth/plugins/apiKey';
+import { bearer } from 'better-auth/plugins';
 import { sendTransactionalEmail } from '@/lib/email/dispatcher';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
@@ -14,7 +14,6 @@ export const auth = betterAuth({
       session: schema.session,
       account: schema.account,
       verification: schema.verification,
-      apikey: schema.apikey,
     },
   }),
   secret: process.env.BETTER_AUTH_SECRET || 'kylrix_default_dev_secret_must_be_32_chars_long_min',
@@ -38,6 +37,7 @@ export const auth = betterAuth({
       : {}),
   },
   plugins: [
+    bearer(),
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
         await sendTransactionalEmail({
@@ -52,9 +52,6 @@ export const auth = betterAuth({
           </div>`,
         });
       },
-    }),
-    apiKey({
-      prefix: 'kylrix_pat_',
     }),
   ],
 });

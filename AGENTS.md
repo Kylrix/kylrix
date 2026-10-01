@@ -81,3 +81,9 @@
 ### 🌐 Backend Modularity & Cloud Equivalence (STRICT)
 - **Cloud is Just a Specialized Self-Host**: The public Cloud environment is architecturally just a specially configured self-hosted instance targeting remote database/API clusters. It is not proprietary or locked to internal infrastructure; any open-source fork or organization can host a full Cloud fork of this product.
 - **Optional Backend Mode (`BACKEND=false` by default)**: When self-hosting or running standalone, the system supports operating without a bundled local backend (`BACKEND=false`). This actively skips all Appwrite self-host setup (MariaDB, Redis, schema bootstrapping) and launches only the Next.js application, utilizing client-side, local-first (LocalEngine/RxDB), WebRTC, and external API connectors. Setting `BACKEND=true` (or `BACKEND=appwrite`) enables the bundled Appwrite container stack. Modularity must always be prioritized so the frontend application can survive independently.
+
+### 📁 The `.ignore/` Ephemeral Directory Paradigm (STRICT)
+- **Designated Uncommitted Workspace**: The `.ignore/` directory at the repository root is specifically designated for all temporary tools, one-off execution scripts, ad-hoc migration helpers, scratch code, and experimental inspection files.
+- **Strictly Untracked**: `.ignore/` is permanently ignored via `.gitignore`. Never check in or commit files residing in `.ignore/`.
+- **Cleaner Working Trees**: Whenever an agent or developer needs to write a temporary diagnostic script, database probe, or migration runner, it MUST be placed inside `.ignore/` (e.g. `.ignore/migrate-auth.ts`, `.ignore/inspect-turso.mjs`) to mathematically prevent git tree pollution or accidental commits of scratch files.
+

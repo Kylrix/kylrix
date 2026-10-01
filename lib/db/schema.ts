@@ -173,3 +173,43 @@ export const vaultItems = sqliteTable('vault_items', {
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
+
+export const forms = sqliteTable('forms', {
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
+  userId: text('user_id').notNull(),
+  title: text('title').notNull(),
+  description: text('description').default(''),
+  schemaJson: text('schema_json').notNull(),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(true),
+  isClosed: integer('is_closed', { mode: 'boolean' }).default(false),
+  isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  projectId: text('project_id'),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const formResponses = sqliteTable('form_responses', {
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
+  formId: text('form_id').notNull().references(() => forms.id, { onDelete: 'cascade' }),
+  respondentId: text('respondent_id'),
+  dataJson: text('data_json').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const events = sqliteTable('events', {
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
+  creatorId: text('creator_id').notNull(),
+  title: text('title').notNull(),
+  description: text('description').default(''),
+  startTime: text('start_time').notNull(),
+  endTime: text('end_time').notNull(),
+  location: text('location'),
+  isAllDay: integer('is_all_day', { mode: 'boolean' }).default(false),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  projectId: text('project_id'),
+  metadata: text('metadata'),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
+});
+

@@ -72,3 +72,7 @@ functions/**/.env.*
 *.db
 *.db-journal
 *.sqlite*
+
+# local ephemeral tools, scratch scripts, migration helpers
+.ignore/
+
