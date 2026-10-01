@@ -1,0 +1,120 @@
+{
+  "$schema": "https://kylrix.space/schemas/v1/kylrix.config.schema.json",
+  "name": "kylrix",
+  "version": "1.0.0",
+  "architecture": {
+    "databaseStrategy": "single-database",
+    "primaryDatabaseId": "passwordManagerDb",
+    "idGenerator": "ulid",
+    "offlineFirst": true
+  },
+  "services": {
+    "database": {
+      "provider": "turso",
+      "engine": "libsql",
+      "orm": "drizzle-orm",
+      "singleDatabase": true,
+      "databaseName": "passwordManagerDb",
+      "localFallback": {
+        "provider": "sqlite",
+        "file": "kylrix.db"
+      },
+      "legacyFallback": {
+        "provider": "appwrite",
+        "databaseId": "passwordManagerDb"
+      }
+    },
+    "auth": {
+      "provider": "better_auth",
+      "sessionStrategy": "cookie_bearer",
+      "supportedFlows": [
+        "passkey_prf",
+        "masterpass",
+        "email_otp",
+        "pat_api_key",
+        "oauth"
+      ],
+      "legacyFallback": {
+        "provider": "appwrite"
+      }
+    },
+    "storage": {
+      "provider": "cloudflare_r2",
+      "protocol": "s3",
+      "singleBucket": true,
+      "bucketName": "kylrix-storage",
+      "egressCost": "$0",
+      "legacyFallback": {
+        "provider": "appwrite",
+        "bucketId": "notes_attachments"
+      }
+    },
+    "messaging": {
+      "provider": "maileroo",
+      "endpoint": "https://smtp.maileroo.com/send",
+      "fallback": {
+        "provider": "resend"
+      },
+      "devFallback": {
+        "provider": "console"
+      }
+    },
+    "idGenerator": {
+      "standard": "ulid",
+      "encoding": "crockford_base32",
+      "length": 26,
+      "timeSortable": true,
+      "resolution": "millisecond"
+    }
+  },
+  "tables": [
+    {
+      "name": "notes",
+      "description": "User notes, documents, and workspace articles with encryption and publishing flags."
+    },
+    {
+      "name": "projects",
+      "description": "Collaborative workspaces with privacy mode, agentic execution, and invite tokens."
+    },
+    {
+      "name": "project_objects",
+      "description": "Zero-bloat join mappings connecting arbitrary entities (notes, goals, tasks) to workspaces."
+    },
+    {
+      "name": "keychain",
+      "description": "Zero-knowledge client-encrypted MasterPass credentials, passkeys, and derived auth tokens."
+    },
+    {
+      "name": "totp_secrets",
+      "description": "Zero-knowledge client-encrypted two-factor authenticator secrets and seeds."
+    },
+    {
+      "name": "tasks",
+      "description": "Tasks, goals, deadlines, and milestone trackers across personal and workspace contexts."
+    },
+    {
+      "name": "vault_items",
+      "description": "Zero-knowledge client-encrypted vault items, secure notes, and credentials."
+    },
+    {
+      "name": "user",
+      "description": "Better Auth core account identity and profile metadata."
+    },
+    {
+      "name": "session",
+      "description": "Better Auth active authentication sessions and device tokens."
+    },
+    {
+      "name": "account",
+      "description": "Better Auth OAuth linkings (Google, GitHub) and credential providers."
+    },
+    {
+      "name": "verification",
+      "description": "Better Auth email OTP, magic link, and session verification tokens."
+    },
+    {
+      "name": "apikey",
+      "description": "Better Auth Personal Access Tokens (PATs) with kylrix_pat_ prefixes and rate-limiting."
+    }
+  ]
+}

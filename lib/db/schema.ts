@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { generateId } from '@/lib/utils/id';
 
 // ========================================================
 // BETTER AUTH SCHEMA (SQLITE / TURSO)
@@ -85,7 +86,7 @@ export const apikey = sqliteTable('apikey', {
 // ========================================================
 
 export const notes = sqliteTable('notes', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
   userId: text('user_id').notNull(),
   title: text('title').notNull().default(''),
   content: text('content').notNull().default(''),
@@ -97,12 +98,12 @@ export const notes = sqliteTable('notes', {
   projectId: text('project_id'),
   category: text('category'),
   tags: text('tags'), // JSON string array
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const projects = sqliteTable('projects', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
   creatorId: text('creator_id').notNull(),
   name: text('name').notNull(),
   description: text('description').default(''),
@@ -112,42 +113,42 @@ export const projects = sqliteTable('projects', {
   isLocked: integer('is_locked', { mode: 'boolean' }).default(false),
   privacyMode: integer('privacy_mode', { mode: 'boolean' }).default(false),
   metadata: text('metadata'), // JSON string
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const projectObjects = sqliteTable('project_objects', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
   projectId: text('project_id').notNull(),
   entityKind: text('entity_kind').notNull(),
   entityId: text('entity_id').notNull(),
   userId: text('user_id').notNull(),
-  createdAt: text('created_at').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const keychain = sqliteTable('keychain', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
   userId: text('user_id').notNull(),
   account: text('account').notNull(),
   type: text('type').notNull(), // 'password' | 'passkey' | 'secret'
   encryptedPayload: text('encrypted_payload').notNull(),
   nonce: text('nonce'),
   metadata: text('metadata'), // JSON string
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const totpSecrets = sqliteTable('totp_secrets', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
   userId: text('user_id').notNull(),
   account: text('account').notNull(),
   encryptedSecret: text('encrypted_secret').notNull(),
   metadata: text('metadata'), // JSON string
-  createdAt: text('created_at').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const tasks = sqliteTable('tasks', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
   userId: text('user_id').notNull(),
   title: text('title').notNull(),
   description: text('description').default(''),
@@ -156,12 +157,12 @@ export const tasks = sqliteTable('tasks', {
   dueDate: text('due_date'),
   isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
   projectId: text('project_id'),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
 
 export const vaultItems = sqliteTable('vault_items', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
   userId: text('user_id').notNull(),
   title: text('title').notNull(),
   type: text('type').notNull(),
@@ -169,6 +170,6 @@ export const vaultItems = sqliteTable('vault_items', {
   iv: text('iv'),
   metadata: text('metadata'),
   isTrashed: integer('is_trashed', { mode: 'boolean' }).default(false),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 });
