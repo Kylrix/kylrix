@@ -20,7 +20,9 @@ import {
   Copy,
   Check,
   RotateCcw,
-  Link2
+  Link2,
+  ShieldAlert,
+  EyeOff
 } from 'lucide-react';
 import { ID } from 'appwrite';
 import { useWorkspace } from '@/context/WorkspaceContext';
@@ -48,6 +50,9 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
   const [inviteCode, setInviteCode] = useState<string>('');
   const [rotatingInviteCode, setRotatingInviteCode] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
+  const [privacyMode, setPrivacyMode] = useState<boolean>(activeWorkspace?.privacyMode || false);
+  const [privacyConfirmOpen, setPrivacyConfirmOpen] = useState<boolean>(false);
+  const [savingPrivacyMode, setSavingPrivacyMode] = useState<boolean>(false);
 
   // Global Inbound Invites & Sent Requests across ALL workspaces
   const [globalInvites, setGlobalInvites] = useState<any[]>([]);
@@ -199,6 +204,14 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
           if (cached.project.inviteCode) {
             setInviteCode(cached.project.inviteCode);
           }
+          if (cached.project.metadata) {
+            try {
+              const meta = typeof cached.project.metadata === 'string' ? JSON.parse(cached.project.metadata) : cached.project.metadata;
+              if (typeof meta?.privacyMode === 'boolean') {
+                setPrivacyMode(meta.privacyMode);
+              }
+            } catch {}
+          }
         }
         if (cached.collaborators) {
           setCollaborators(cached.collaborators);
@@ -208,6 +221,9 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
 
     if (activeWorkspace.inviteCode) {
       setInviteCode(activeWorkspace.inviteCode);
+    }
+    if (typeof activeWorkspace.privacyMode === 'boolean') {
+      setPrivacyMode(activeWorkspace.privacyMode);
     }
 
     try {
@@ -229,6 +245,14 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
         setSummary(data.summary || '');
         setVisibility(data.visibility === 'public' || data.isPublic ? 'public' : 'private');
         setStatus(data.status === 'archived' ? 'archived' : 'active');
+        if (data.metadata) {
+          try {
+            const meta = typeof data.metadata === 'string' ? JSON.parse(data.metadata) : data.metadata;
+            if (typeof meta?.privacyMode === 'boolean') {
+              setPrivacyMode(meta.privacyMode);
+            }
+          } catch {}
+        }
       }
 
       try {
@@ -302,6 +326,54 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
       toast.error(err?.message || 'Failed to rotate invite link');
     } finally {
       setRotatingInviteCode(false);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof activeWorkspace?.privacyMode === 'boolean') {
+      setPrivacyMode(activeWorkspace.privacyMode);
+    }
+  }, [activeWorkspace?.id, activeWorkspace?.privacyMode]);
+
+  const handleConfirmTogglePrivacyMode = async (nextMode: boolean) => {
+    if (!activeWorkspace?.id) return;
+    setSavingPrivacyMode(true);
+    try {
+      let currentMeta: Record<string, any> = {};
+      try {
+        if (_project?.metadata) {
+          currentMeta = typeof _project.metadata === 'string' ? JSON.parse(_project.metadata) : _project.metadata;
+        } else if (activeWorkspace?.metadata) {
+          currentMeta = typeof activeWorkspace.metadata === 'string' ? JSON.parse(activeWorkspace.metadata) : activeWorkspace.metadata;
+        }
+      } catch {}
+
+      const updatedMeta = {
+        ...currentMeta,
+        privacyMode: nextMode,
+      };
+
+      const updatedMetaStr = JSON.stringify(updatedMeta);
+
+      if (_project) {
+        const updatedProj = { ..._project, metadata: updatedMetaStr, privacyMode: nextMode };
+        setProject(updatedProj);
+        void LocalEngine.cacheSet(`ws_details_${activeWorkspace.id}`, { project: updatedProj, collaborators });
+      }
+
+      await ProjectsService.updateProject(activeWorkspace.id, {
+        metadata: updatedMetaStr,
+      });
+
+      setPrivacyMode(nextMode);
+      setPrivacyConfirmOpen(false);
+      toast.success(nextMode ? 'Privacy Mode enabled! AI is now disabled for this workspace.' : 'Privacy Mode disabled. AI is now enabled.');
+      void refreshWorkspaces();
+      void loadWorkspaceDetails();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update Privacy Mode');
+    } finally {
+      setSavingPrivacyMode(false);
     }
   };
 
@@ -674,6 +746,46 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
                 </div>
               </button>
             </div>
+          </div>
+
+          {/* Workspace Privacy Mode */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#0A0908] border-2 border-white/15 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className={`w-9 h-9 rounded-xl border grid place-items-center shrink-0 ${
+                privacyMode 
+                  ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' 
+                  : 'bg-white/5 text-white/40 border-white/15'
+              }`}>
+                <EyeOff size={16} />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-white font-clash">Workspace Privacy Mode</span>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-bold uppercase ${
+                    privacyMode 
+                      ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' 
+                      : 'bg-white/10 text-white/50 border border-white/10'
+                  }`}>
+                    {privacyMode ? 'Active (AI Disabled)' : 'Standard'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-white/40 leading-relaxed m-0 max-w-lg">
+                  Strictly disables all AI integrations, assistants (including Kylie), and cloud models for this workspace. No workspace notes or objects enter external models. Offline engines only.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setPrivacyConfirmOpen(true)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold font-clash transition-all cursor-pointer border shrink-0 ${
+                privacyMode
+                  ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30 hover:border-rose-500/50'
+                  : 'bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border-white/15'
+              }`}
+            >
+              {privacyMode ? 'Disable Privacy Mode' : 'Enable Privacy Mode'}
+            </button>
           </div>
 
           <div className="flex justify-end pt-2">
@@ -1121,6 +1233,84 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
           </button>
         </div>
       </div>
+
+      {/* Workspace Privacy Mode Confirmation Bottom Drawer */}
+      {privacyConfirmOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200"
+          onClick={() => {
+            if (!savingPrivacyMode) setPrivacyConfirmOpen(false);
+          }}
+        >
+          <div 
+            className="w-full max-w-lg bg-[#161412] border-t-2 sm:border-2 border-white/20 rounded-t-[28px] sm:rounded-[28px] p-6 sm:p-7 shadow-2xl space-y-5 animate-in slide-in-from-bottom-6 duration-250 font-satoshi"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto sm:hidden mb-2" />
+            
+            <div className="flex items-start gap-4">
+              <div className={`w-12 h-12 rounded-2xl grid place-items-center shrink-0 border-2 ${
+                privacyMode 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                  : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+              }`}>
+                {privacyMode ? <ShieldAlert size={22} /> : <EyeOff size={22} />}
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white font-clash m-0">
+                  {privacyMode ? 'Disable Workspace Privacy Mode?' : 'Enable Workspace Privacy Mode?'}
+                </h3>
+                <p className="text-xs text-white/50 mt-1 leading-relaxed">
+                  {privacyMode
+                    ? 'Disabling Privacy Mode will re-enable AI features, assistants (including Kylie), and AI processing for objects in this workspace.'
+                    : 'Enabling Privacy Mode strictly shuts down all AI integrations for this workspace. The Kylie assistant icon will disappear, and zero data from this workspace will be sent to external AI models. Only local offline assistance will function.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#0A0908] border border-white/10 text-[11px] font-mono text-white/70 leading-relaxed">
+              {privacyMode ? (
+                <span className="text-emerald-400 font-bold">Note:</span>
+              ) : (
+                <span className="text-rose-400 font-bold">Strict Guarantee:</span>
+              )}{' '}
+              {privacyMode
+                ? 'Collaborators in this workspace will regain access to AI assistance and generation actions.'
+                : 'All workspace notes, goals, events, and flows are protected from AI ingestion while this mode is active.'}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={savingPrivacyMode}
+                onClick={() => setPrivacyConfirmOpen(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 border border-white/10 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingPrivacyMode}
+                onClick={() => void handleConfirmTogglePrivacyMode(!privacyMode)}
+                className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all cursor-pointer border shadow-md disabled:opacity-50 ${
+                  privacyMode
+                    ? 'bg-[#6366F1] hover:bg-[#5254E8] border-[#6366F1]'
+                    : 'bg-rose-600 hover:bg-rose-500 border-rose-500'
+                }`}
+              >
+                {savingPrivacyMode && <RefreshCw size={12} className="animate-spin" />}
+                <span>
+                  {savingPrivacyMode
+                    ? 'Applying...'
+                    : privacyMode
+                    ? 'Confirm & Disable'
+                    : 'Confirm & Enable Privacy'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

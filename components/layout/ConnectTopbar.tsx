@@ -89,6 +89,7 @@ import { SyncIndicator } from './SyncIndicator';
 import { NotificationDrawer, CompactNotificationPill, type KylrixNotification } from './NotificationDrawer';
 import { useLayout } from '@/context/LayoutContext';
 import { executeNotificationAction } from '@/lib/notifications/resolve-notification-action';
+import { toast } from 'react-hot-toast';
 
 
 
@@ -112,6 +113,7 @@ export default function ConnectTopbar({
   const pathname = usePathname();
   const { setIsCollapsed } = useSidebar();
   const { activeWorkspace, workspaces, setActiveWorkspaceId, markWorkspacePublic, loadingWorkspaces } = useWorkspace();
+  const isWorkspacePrivacyMode = Boolean(activeWorkspace?.privacyMode);
   const { notes = [] } = useNotes();
   const { tasks = [], projects = [], selectTask } = useTask();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
@@ -469,6 +471,10 @@ export default function ConnectTopbar({
   ]);
 
   const openAgenticFromTopbar = useCallback(() => {
+    if (activeWorkspace?.privacyMode) {
+      toast.error('AI is disabled in this workspace (Privacy Mode active)');
+      return;
+    }
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
     setSearchOpen(false);
@@ -476,7 +482,7 @@ export default function ConnectTopbar({
     setNotificationsOpen(false);
     setNotifHint(null);
     openAgenticDrawer();
-  }, [openAgenticDrawer]);
+  }, [openAgenticDrawer, activeWorkspace?.privacyMode]);
 
   const openSearchShortcuts = useCallback(() => {
     setProfileMenuAnchorEl(null);
@@ -2582,9 +2588,11 @@ export default function ConnectTopbar({
                       </Tooltip>
                     )}
 
-                    <IconButton onClick={openAgenticFromTopbar} sx={{ color: appAccent, bgcolor: '#161412', border: '1px solid', borderColor: alpha(appAccent, 0.35), borderRadius: '14px', width: 44, height: 44, boxShadow: `0 8px 24px ${alpha(appAccent, 0.25)}`, '&:hover': { bgcolor: '#201D1A', transform: 'scale(1.05)' }, transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                      <Bot size={20} strokeWidth={2.2} />
-                    </IconButton>
+                    {!isWorkspacePrivacyMode && (
+                      <IconButton onClick={openAgenticFromTopbar} sx={{ color: appAccent, bgcolor: '#161412', border: '1px solid', borderColor: alpha(appAccent, 0.35), borderRadius: '14px', width: 44, height: 44, boxShadow: `0 8px 24px ${alpha(appAccent, 0.25)}`, '&:hover': { bgcolor: '#201D1A', transform: 'scale(1.05)' }, transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                        <Bot size={20} strokeWidth={2.2} />
+                      </IconButton>
+                    )}
 
 
                     <ButtonBase onClick={openProfileMenu} sx={{ borderRadius: '50%', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>

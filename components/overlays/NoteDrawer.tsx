@@ -23,7 +23,7 @@ export function NoteDrawer() {
   const isWorkspaceReadOnly = Boolean(
     activeWorkspace &&
       !activeWorkspace.isPersonal &&
-      activeWorkspace.isShared &&
+      (activeWorkspace.isShared || activeWorkspace.isPublic || activeWorkspace.role === 'viewer') &&
       activeWorkspace.role !== 'owner' &&
       activeWorkspace.role !== 'editor' &&
       activeWorkspace.role !== 'admin'

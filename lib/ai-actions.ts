@@ -4,6 +4,20 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { createTaskFromNote } from '@/lib/appwrite';
 
 export async function generateAIAction(note: Notes, action: 'summarize' | 'grammar' | 'expand') {
+  const noteProjectId = (note as any)?.projectId;
+  if (noteProjectId) {
+    try {
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      const wsDetails = await LocalEngine.cacheGet<any>(`ws_details_${noteProjectId}`);
+      const meta = wsDetails?.project?.metadata ? (typeof wsDetails.project.metadata === 'string' ? JSON.parse(wsDetails.project.metadata) : wsDetails.project.metadata) : null;
+      if (meta?.privacyMode === true || wsDetails?.project?.privacyMode === true) {
+        throw new Error('AI actions are disabled: Workspace Privacy Mode is active.');
+      }
+    } catch (e: any) {
+      if (e?.message?.includes('Privacy Mode is active')) throw e;
+    }
+  }
+
   const systemInstructions = {
     summarize: "Summarize the following note concisely while preserving key details. Use bullet points if helpful.",
     grammar: "Improve the grammar and clarity of the following note while keeping the original intent and tone.",

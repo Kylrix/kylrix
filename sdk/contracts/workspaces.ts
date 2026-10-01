@@ -59,6 +59,7 @@ export interface WorkspaceRecord {
   isShared?: boolean;
   role?: string;
   inviteCode?: string | null;
+  privacyMode?: boolean;
   updatedAt: string | null;
   createdAt: string | null;
 }
@@ -70,6 +71,15 @@ export function shapeWorkspace(
   const r = row as any;
   const title = r.title || r.name || 'Untitled';
   const summary = r.summary ?? r.description ?? null;
+  let privacyMode = false;
+  try {
+    if (r.metadata) {
+      const meta = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata;
+      privacyMode = Boolean(meta?.privacyMode);
+    }
+  } catch {}
+  if (r.privacyMode !== undefined) privacyMode = Boolean(r.privacyMode);
+
   return {
     id: String(r.$id || r.id),
     title,
@@ -79,6 +89,7 @@ export function shapeWorkspace(
     visibility: r.visibility ?? null,
     isAgentic: Boolean(r.isAgentic),
     inviteCode: r.inviteCode ?? null,
+    privacyMode,
     ...(extras?.isShared !== undefined ? { isShared: extras.isShared } : {}),
     ...(extras?.role ? { role: extras.role } : {}),
     updatedAt: r.$updatedAt || r.updatedAt || null,
@@ -110,6 +121,7 @@ export const WORKSPACE_RECORD_JSON_SCHEMA = {
     isShared: { type: 'boolean' },
     role: { type: 'string' },
     inviteCode: { type: 'string', nullable: true },
+    privacyMode: { type: 'boolean' },
     updatedAt: { type: 'string', nullable: true },
     createdAt: { type: 'string', nullable: true },
   },

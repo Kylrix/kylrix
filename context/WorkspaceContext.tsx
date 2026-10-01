@@ -23,6 +23,8 @@ export interface WorkspaceItem {
   agentId?: string | null;
   role?: string;
   inviteCode?: string | null;
+  privacyMode?: boolean;
+  metadata?: string | null;
 }
 
 interface WorkspaceContextType {
@@ -105,6 +107,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             Boolean(p.isShared === true && !isOwned) ||
             Boolean(!isOwned && !isAgentic) ||
             Boolean(p.collabStatus && p.collabStatus !== 'owner' && !isOwned);
+          let privacyMode = false;
+          try {
+            if (p.metadata) {
+              const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+              privacyMode = Boolean(meta?.privacyMode);
+            }
+          } catch {}
+          if (p.privacyMode !== undefined) privacyMode = Boolean(p.privacyMode);
+
           return {
             id,
             title: p.title || p.name || 'Untitled Workspace',
@@ -116,6 +127,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             isPublic: !!p.isPublic,
             role: p.role || (isOwned ? 'owner' : 'viewer'),
             inviteCode: p.inviteCode || null,
+            privacyMode,
+            metadata: p.metadata || null,
           };
         })
         .filter((w) => w.id && w.id !== personalWorkspace.id),

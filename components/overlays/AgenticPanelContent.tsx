@@ -869,6 +869,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         return;
       }
 
+      if (activeWorkspace?.privacyMode) {
+        appendMessage('assistant', 'AI processing is disabled: Privacy Mode is active for this workspace. Zero workspace data can be sent to AI models.');
+        return;
+      }
+
       const promptWithAttachment = pendingObject
         ? `${trimmed}\n\n[Attached: ${pendingObject.payload.label || 'Object'} (${pendingObject.payload.childKind || 'item'}) - ID: ${pendingObject.payload.childId}]`
         : trimmed;

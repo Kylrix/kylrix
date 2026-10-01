@@ -147,6 +147,8 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
     isCustomWorkspace &&
       (activeWorkspace?.isShared ||
         activeWorkspace?.isAgentic ||
+        activeWorkspace?.isPublic ||
+        activeWorkspace?.role === 'viewer' ||
         activeWorkspace?.role !== 'owner' ||
         (activeWorkspace?.ownerId && activeWorkspace.ownerId !== userId))
   );

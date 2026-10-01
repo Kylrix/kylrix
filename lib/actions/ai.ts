@@ -24,6 +24,16 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
     return { success: false, error: "Invalid analysis mode." };
   }
 
+  // Workspace Privacy Mode Guard: zero data leaves for AI processing
+  if (
+    payload.localContext?.workspacePrivacyMode === true ||
+    payload.localContext?.privacyMode === true ||
+    (payload as any).workspacePrivacyMode === true ||
+    (payload as any).privacyMode === true
+  ) {
+    return { success: false, error: "AI is completely disabled for this workspace because Privacy Mode is active." };
+  }
+
   const activeKey = (typeof payload.byokKey === 'string' ? payload.byokKey.trim() : null) || process.env.GOOGLE_API_KEY;
   if (!activeKey) {
     return { success: false, error: "AI Service not configured. Please supply your own private API Key in Settings." };

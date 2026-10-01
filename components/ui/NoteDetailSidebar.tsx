@@ -122,7 +122,7 @@ export function NoteDetailSidebar({
   showExpandButton = true,
   showHeaderDeleteButton = true,
   isLoading: _isLoading = false,
-  readOnly = false,
+  readOnly: readOnlyProp = false,
   accessRole,
   decryptionKey}: NoteDetailSidebarProps) {
   const { open: openUnified } = useUnifiedDrawer();
@@ -140,6 +140,15 @@ export function NoteDetailSidebar({
 
   const { setCachedData } = useDataNexus();
   const { activeWorkspace } = useWorkspace();
+  const isWorkspaceReadOnly = Boolean(
+    activeWorkspace &&
+      !activeWorkspace.isPersonal &&
+      (activeWorkspace.isShared || activeWorkspace.isPublic || activeWorkspace.role === 'viewer') &&
+      activeWorkspace.role !== 'owner' &&
+      activeWorkspace.role !== 'editor' &&
+      activeWorkspace.role !== 'admin'
+  );
+  const readOnly = readOnlyProp || isWorkspaceReadOnly;
   const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote, registerComposeSession } = useNotes();
   const isPinnedFunc = useMemo(() => typeof isPinned === 'function' ? isPinned : () => false, [isPinned]);
   const pinNoteFunc = useMemo(() => typeof pinNote === 'function' ? pinNote : async () => {}, [pinNote]);

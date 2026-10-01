@@ -924,7 +924,8 @@ export type Projects = Models.Row & {
     dek: string | null;
     parentProjectId: string | null;
     kind: ProjectsKind;
-    inviteCode?: string | null;
+    inviteCode: string | null;
+    privacyMode?: boolean;
 }
 
 export type ProjectObjects = Models.Row & {
@@ -1079,6 +1080,7 @@ export type Forms = Models.Row & {
     isWorkspace: boolean;
     isAgentic: boolean;
     dek: string | null;
+    isMultiple: boolean;
 }
 
 export type FormSubmissions = Models.Row & {
