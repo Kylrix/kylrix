@@ -326,6 +326,12 @@ export const realtime = new Proxy(originalRealtime, {
                 if (isDogfoodSafetyActive()) {
                     return () => {};
                 }
+                if (process.env.NEXT_PUBLIC_PARTYKIT_HOST) {
+                    try {
+                        const { partyRealtime } = require('@/lib/realtime/partykit');
+                        return partyRealtime.subscribe(args[0], args[1]);
+                    } catch {}
+                }
                 return (target as any).subscribe(...args);
             };
         }

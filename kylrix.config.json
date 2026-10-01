@@ -59,6 +59,14 @@
         "provider": "console"
       }
     },
+    "realtime": {
+      "provider": "partykit",
+      "platform": "cloudflare",
+      "protocol": "websocket",
+      "legacyFallback": {
+        "provider": "appwrite"
+      }
+    },
     "idGenerator": {
       "standard": "ulid",
       "encoding": "crockford_base32",
