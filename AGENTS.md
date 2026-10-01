@@ -65,6 +65,15 @@
   2. Create/ensure the `project_objects` join record under the human `userId` linking `(projectId, entityKind, entityId)`.
   This guarantees that `useWorkspaceFilteredItems` displays the item in the active workspace and prevents unintended fallback into the Virtual Personal Workspace.
 
+### 🔑 Agent Workspace Provisioning & Identity Keys (`~/.kylrix/agents/`)
+- **Key Discovery & Storage**: Autonomous agents store their zero-trust provisioning identity in `~/.kylrix/agents/{agentName}.json` (e.g. `/home/codespace/.kylrix/agents/antigravity.json`).
+- **Configuration Structure**:
+  - `agentToken`: The Personal Access Token (`kyl_wpat_...` or `kyl_pat_...`) used as `Authorization: Bearer <agentToken>` for all API/MCP calls.
+  - `defaultWorkspaceId`: The assigned workspace ID (e.g. `6a56931700162d00af2f` for `kylrix`).
+  - `ownerId`: The human owner's account ID (`userId`).
+- **Autonomous Liberty to Dogfood in Assigned Workspace**: Agents have full liberty to read, write, track tasks, and record ideas, plans, architectural notes, and artifacts inside their assigned workspace (`defaultWorkspaceId`, typically `kylrix`). Agents do not need to ask for permission to use this workspace key or record dogfooding notes/ideas.
+- **Strict Protocol**: When creating resources with this token, target the local API at `http://localhost:3005/api/v1` or the authenticated MCP transport. Never attempt raw Appwrite CLI mutations or admin API bypasses.
+
 ### 🌐 Backend Modularity & Cloud Equivalence (STRICT)
 - **Cloud is Just a Specialized Self-Host**: The public Cloud environment is architecturally just a specially configured self-hosted instance targeting remote database/API clusters. It is not proprietary or locked to internal infrastructure; any open-source fork or organization can host a full Cloud fork of this product.
 - **Optional Backend Mode (`BACKEND=false` by default)**: When self-hosting or running standalone, the system supports operating without a bundled local backend (`BACKEND=false`). This actively skips all Appwrite self-host setup (MariaDB, Redis, schema bootstrapping) and launches only the Next.js application, utilizing client-side, local-first (LocalEngine/RxDB), WebRTC, and external API connectors. Setting `BACKEND=true` (or `BACKEND=appwrite`) enables the bundled Appwrite container stack. Modularity must always be prioritized so the frontend application can survive independently.
