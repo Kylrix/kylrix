@@ -2,12 +2,9 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { emailOTP } from 'better-auth/plugins/email-otp';
 import { apiKey } from 'better-auth/plugins/apiKey';
-import { Resend } from 'resend';
+import { sendTransactionalEmail } from '@/lib/email/dispatcher';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
-
-const resendApiKey = process.env.RESEND_API_KEY;
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -43,16 +40,17 @@ export const auth = betterAuth({
   plugins: [
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
-        if (resend) {
-          await resend.emails.send({
-            from: 'Kylrix Security <auth@kylrix.space>',
-            to: email,
-            subject: `Kylrix Verification Code: ${otp}`,
-            text: `Your Kylrix ${type} one-time passcode is ${otp}. It expires in 5 minutes. If you did not request this, please ignore.`,
-          });
-        } else {
-          console.log(`[BetterAuth Dev OTP] ${type.toUpperCase()} for ${email}: ${otp}`);
-        }
+        await sendTransactionalEmail({
+          to: email,
+          subject: `Kylrix Verification Code: ${otp}`,
+          text: `Your Kylrix ${type} one-time passcode is ${otp}. It expires in 5 minutes. If you did not request this, please ignore.`,
+          html: `<div style="font-family: sans-serif; background: #161412; color: #fff; padding: 24px; border-radius: 12px;">
+            <h2 style="margin: 0 0 16px 0; color: #6366F1;">Kylrix Security</h2>
+            <p style="font-size: 14px; color: #a1a1aa;">Your one-time passcode for ${type} is:</p>
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #34D399; margin: 20px 0;">${otp}</div>
+            <p style="font-size: 12px; color: #71717a;">This code expires in 5 minutes. If you did not make this request, you can safely ignore this email.</p>
+          </div>`,
+        });
       },
     }),
     apiKey({
