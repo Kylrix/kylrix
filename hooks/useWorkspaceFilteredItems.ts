@@ -177,12 +177,37 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
       workspaceProjectObjects.map((po) => po.entityId).filter(Boolean) as string[],
     );
 
+    const extractItemPid = (item: any): string | null => {
+      if (item.projectId) return item.projectId;
+      if (item.project_id) return item.project_id;
+      if (item.workspaceId) return item.workspaceId;
+      if (item.metadata) {
+        try {
+          const meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
+          if (meta?.projectId) return meta.projectId;
+          if (meta?.workspaceId) return meta.workspaceId;
+        } catch {}
+      }
+      if (Array.isArray(item.tags)) {
+        for (const t of item.tags) {
+          if (typeof t === 'string') {
+            if (t.startsWith('project:')) return t.slice(8);
+            if (t.startsWith('workspace:')) return t.slice(10);
+            if (t.startsWith('ws:')) return t.slice(3);
+          }
+        }
+      }
+      return null;
+    };
+
     const localMatching = list.filter((item) => {
       const id = item.$id || item.id;
-      if (!id && !item.projectId) return false;
+      const itemPid = extractItemPid(item);
+      if (!id && !itemPid) return false;
       if (id && registeredIds.has(id)) return true;
+      if (itemPid === pid) return true;
       if (item.projectId === pid) return true;
-      if ((item as any).isWorkspace === true && item.projectId === pid) return true;
+      if ((item as any).isWorkspace === true && itemPid === pid) return true;
       if (id && isEntityPendingInActiveWorkspace(entityKind, id)) return true;
       return false;
     });

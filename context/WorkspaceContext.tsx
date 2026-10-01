@@ -35,7 +35,9 @@ interface WorkspaceContextType {
   agentWorkspaces: WorkspaceItem[];
   loadingWorkspaces: boolean;
   setActiveWorkspaceId: (id: string) => void;
-  registerSharedWorkspace: (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean }) => Promise<void>;
+  registerSharedWorkspace: (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean; role?: string }) => Promise<void>;
+  removeSharedWorkspace: (workspaceId: string) => Promise<void>;
+  updateWorkspacePrivacyMode: (workspaceId: string, enabled: boolean) => Promise<void>;
   markWorkspacePublic: (workspaceId: string) => void;
   refreshWorkspaces: () => Promise<void>;
   createWorkspace: (title: string, summary?: string) => Promise<WorkspaceItem | null>;
@@ -257,17 +259,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [personalWorkspace, getCachedDataAsync, fetchOptimized, mapProjectRows, userId, persistWorkspacesOffline]);
 
   const registerSharedWorkspace = useCallback(
-    async (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean }) => {
+    async (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean; role?: string }) => {
       if (!workspace.id || workspace.id === personalWorkspace.id) return;
       if (workspace.ownerId && workspace.ownerId === userId) return;
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const userProjects = await LocalEngine.cacheGet<any[]>(`f_projects_list_${userId}`);
-        if (Array.isArray(userProjects) && userProjects.some((p) => p.$id === workspace.id || p.id === workspace.id)) {
+        if (Array.isArray(userProjects) && userProjects.some((p) => (p.$id === workspace.id || p.id === workspace.id) && !workspace.role)) {
           return;
         }
         const cacheKey = `visited_shared_workspaces_${userId}`;
         const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
+        const effectiveRole = workspace.role || 'editor';
         const item: WorkspaceItem = {
           id: workspace.id,
           title: workspace.title || 'Shared Workspace',
@@ -275,17 +278,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           isPersonal: false,
           isShared: true,
           isPublic: workspace.isPublic !== undefined ? workspace.isPublic : true,
-          role: 'viewer',
+          role: effectiveRole,
         };
         const filtered = existing.filter((w) => w.id !== workspace.id);
         const updated = [item, ...filtered].slice(0, 30);
         await LocalEngine.cacheSet(cacheKey, updated);
         setWorkspaces((prev) => {
           const existingItem = prev.find((w) => w.id === workspace.id);
-          if (existingItem && !existingItem.isShared) return prev;
+          if (existingItem && !existingItem.isShared && !workspace.role) return prev;
 
           const byId = new Map(prev.map((w) => [w.id, w]));
-          byId.set(item.id, item);
+          byId.set(item.id, { ...existingItem, ...item, role: effectiveRole });
           const next = [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
           persistWorkspacesOffline(next, userId);
           return next;
@@ -295,6 +298,123 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [personalWorkspace, userId, persistWorkspacesOffline]
+  );
+
+  const removeSharedWorkspace = useCallback(
+    async (workspaceId: string) => {
+      if (!workspaceId || workspaceId === personalWorkspace.id) return;
+      // 1. Immediately update local state
+      setWorkspaces((prev) => {
+        const next = prev.filter((w) => w.id !== workspaceId);
+        persistWorkspacesOffline(next, userId);
+        return next;
+      });
+
+      // If active workspace was the removed one, reset to personal workspace
+      if (activeWorkspaceId === workspaceId) {
+        setActiveWorkspaceIdState(userId);
+      }
+
+      // 2. Remove from LocalEngine visited cache & purge workspace caches
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cacheKey = `visited_shared_workspaces_${userId}`;
+        const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
+        const filtered = existing.filter((w) => w.id !== workspaceId);
+        await LocalEngine.cacheSet(cacheKey, filtered);
+
+        await Promise.allSettled([
+          LocalEngine.cacheDelete(`ws_details_${workspaceId}`),
+          LocalEngine.cacheDelete(`project_objects_${workspaceId}`),
+          LocalEngine.cacheDelete(`f_shared_ws_${workspaceId}`),
+        ]);
+        const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
+        for (const kind of kinds) {
+          await LocalEngine.cacheDelete(projectObjectsKindCacheKey(workspaceId, kind)).catch(() => {});
+        }
+      } catch (e) {
+        console.warn('[WorkspaceContext] Failed to purge removed workspace cache:', e);
+      }
+
+      // 3. Notify remote backend (remove collaborator if joined)
+      try {
+        await ProjectsService.removeCollaborator(workspaceId, userId).catch(() => {});
+      } catch {}
+
+      // 4. Background refresh
+      void refreshWorkspaces();
+    },
+    [personalWorkspace.id, userId, activeWorkspaceId, persistWorkspacesOffline, setActiveWorkspaceIdState, refreshWorkspaces]
+  );
+
+  const updateWorkspacePrivacyMode = useCallback(
+    async (workspaceId: string, enabled: boolean) => {
+      if (!workspaceId || workspaceId === personalWorkspace.id) return;
+      // 1. Optimistically update local React state
+      setWorkspaces((prev) => {
+        const next = prev.map((w) => {
+          if (w.id === workspaceId) {
+            let metaObj: any = {};
+            try {
+              if (w.metadata) {
+                metaObj = typeof w.metadata === 'string' ? JSON.parse(w.metadata) : w.metadata;
+              }
+            } catch {}
+            metaObj.privacyMode = enabled;
+            return {
+              ...w,
+              privacyMode: enabled,
+              metadata: JSON.stringify(metaObj),
+            };
+          }
+          return w;
+        });
+        persistWorkspacesOffline(next, userId);
+        return next;
+      });
+
+      // 2. Update LocalEngine cached projects
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const userProjects = (await LocalEngine.cacheGet<any[]>(`f_projects_list_${userId}`)) || [];
+        const updated = userProjects.map((p) => {
+          if (p.$id === workspaceId || p.id === workspaceId) {
+            let metaObj: any = {};
+            try {
+              if (p.metadata) {
+                metaObj = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+              }
+            } catch {}
+            metaObj.privacyMode = enabled;
+            return {
+              ...p,
+              privacyMode: enabled,
+              metadata: JSON.stringify(metaObj),
+            };
+          }
+          return p;
+        });
+        await LocalEngine.cacheSet(`f_projects_list_${userId}`, updated);
+      } catch {}
+
+      // 3. Persist to Appwrite backend
+      try {
+        let metaObj: any = {};
+        const currentItem = workspaces.find((w) => w.id === workspaceId);
+        if (currentItem?.metadata) {
+          try {
+            metaObj = typeof currentItem.metadata === 'string' ? JSON.parse(currentItem.metadata) : currentItem.metadata;
+          } catch {}
+        }
+        metaObj.privacyMode = enabled;
+        await ProjectsService.updateProject(workspaceId, {
+          metadata: JSON.stringify(metaObj),
+        });
+      } catch (err) {
+        console.warn('[WorkspaceContext] Failed to persist privacyMode to backend:', err);
+      }
+    },
+    [personalWorkspace.id, userId, persistWorkspacesOffline, workspaces]
   );
 
   const markWorkspacePublic = useCallback(
@@ -916,6 +1036,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       loadingWorkspaces,
       setActiveWorkspaceId,
       registerSharedWorkspace,
+      removeSharedWorkspace,
+      updateWorkspacePrivacyMode,
       markWorkspacePublic,
       refreshWorkspaces,
       createWorkspace,
@@ -933,6 +1055,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       loadingWorkspaces,
       setActiveWorkspaceId,
       registerSharedWorkspace,
+      removeSharedWorkspace,
+      updateWorkspacePrivacyMode,
       markWorkspacePublic,
       refreshWorkspaces,
       createWorkspace,
@@ -964,6 +1088,8 @@ const fallbackWorkspaceContext: WorkspaceContextType = {
   loadingWorkspaces: false,
   setActiveWorkspaceId: () => {},
   registerSharedWorkspace: async () => {},
+  removeSharedWorkspace: async () => {},
+  updateWorkspacePrivacyMode: async () => {},
   markWorkspacePublic: () => {},
   refreshWorkspaces: async () => {},
   createWorkspace: async () => null,

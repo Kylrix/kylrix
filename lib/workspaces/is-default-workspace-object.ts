@@ -14,15 +14,25 @@ export function isDefaultWorkspaceObject(row: {
 }): boolean {
   if (!row) return true;
 
-  // Check isWorkspace variations (boolean, string, number)
-  const isWs = row.isWorkspace ?? row.is_workspace ?? (row as any).isWorkspaceItem;
-  if (isWs === true || isWs === 'true' || isWs === 1 || isWs === '1') {
+  let meta: any = null;
+  if (row.metadata) {
+    try {
+      meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+    } catch {}
+  }
+
+  // Explicit inbox / personal marker always means default workspace
+  const pid = row.projectId ?? row.project_id ?? row.workspaceId ?? row.workspace_id ?? meta?.projectId;
+  if (pid && typeof pid === 'string') {
+    if (pid === 'inbox' || pid === 'personal' || pid === 'default') {
+      return true;
+    }
     return false;
   }
 
-  // Check project / workspace ID
-  const pid = row.projectId ?? row.project_id ?? row.workspaceId ?? row.workspace_id;
-  if (pid && typeof pid === 'string' && pid !== 'inbox' && pid !== 'personal' && pid !== 'default') {
+  // Check isWorkspace variations (boolean, string, number)
+  const isWs = row.isWorkspace ?? row.is_workspace ?? (row as any).isWorkspaceItem ?? meta?.isWorkspace;
+  if (isWs === true || isWs === 'true' || isWs === 1 || isWs === '1') {
     return false;
   }
 

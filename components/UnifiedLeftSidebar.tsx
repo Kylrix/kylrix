@@ -375,7 +375,7 @@ export function UnifiedLeftSidebar() {
                               component="span"
                               onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
-                                openUnified('project-settings', { project: w });
+                                openUnified('workspace-options', { workspace: w });
                               }}
                               sx={{
                                 display: 'flex',

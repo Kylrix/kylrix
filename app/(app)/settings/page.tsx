@@ -470,20 +470,32 @@ function SettingsPageInner() {
             if (status.isArgon !== isArgon) {
                 setIsArgon(status.isArgon);
             }
+            if (status.hasMasterpass !== undefined) {
+                setHasMasterpass(status.hasMasterpass);
+            }
         });
 
         if (user?.$id) {
             loadPasskeys();
             (async () => {
                 try {
-                    const entries = await KeychainService.listKeychainEntries(user.$id);
-                    const passwordEntry = entries.find((e: any) => e.type === 'password');
-                    setHasMasterpass(!!passwordEntry);
+                    const { SecurityEnclave } = await import('@/lib/security/enclave');
+                    const probe = await SecurityEnclave.probeCapabilities(user.$id);
+                    setHasMasterpass(probe.hasMasterpass || probe.hasPasskey || probe.keychain.length > 0);
+                    const passwordEntry = probe.keychain.find((e: any) => e.type === 'password');
                     setIsAuthPassConfigured(Boolean(passwordEntry?.authPass || user?.prefs?.hasPass));
                     setMasterpassChangedAt(passwordEntry?.$updatedAt || passwordEntry?.$createdAt || null);
                 } catch (e) {
                     console.error('Failed to check masterpass presence', e);
-                    setHasMasterpass(null);
+                    try {
+                        const entries = await KeychainService.listKeychainEntries(user.$id);
+                        const passwordEntry = entries.find((e: any) => e.type === 'password');
+                        setHasMasterpass(!!passwordEntry || entries.some((e: any) => e.type === 'passkey'));
+                        setIsAuthPassConfigured(Boolean(passwordEntry?.authPass || user?.prefs?.hasPass));
+                        setMasterpassChangedAt(passwordEntry?.$updatedAt || passwordEntry?.$createdAt || null);
+                    } catch {
+                        setHasMasterpass(null);
+                    }
                 }
             })();
         }

@@ -504,10 +504,11 @@ export function SecurityTab({
 }: Props) {
   const { devMode } = useDevMode();
 
-  // hasMasterpass === null means still loading / offline — don't show setup button in that state
-  const vaultSetup = hasMasterpass === true;
-  const vaultLoading = hasMasterpass === null;
-  const needsSetup = hasMasterpass === false;
+  // Account has configured vault if masterpass exists or passkey entries exist
+  const hasPasskey = Array.isArray(passkeyEntries) && passkeyEntries.length > 0;
+  const vaultSetup = hasMasterpass === true || hasPasskey;
+  const vaultLoading = hasMasterpass === null && loadingPasskeys;
+  const needsSetup = hasMasterpass === false && !hasPasskey && !loadingPasskeys;
 
   return (
     <div className="flex flex-col gap-4 pb-24 max-w-3xl text-white">

@@ -68,6 +68,7 @@ export default function WorkspaceInvitePage() {
               title: res.workspace.title,
               ownerId: res.workspace.ownerId,
               isPublic: res.workspace.isPublic,
+              role: res.workspace.role || 'editor',
             });
           } catch {}
 

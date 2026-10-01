@@ -2198,6 +2198,12 @@ export async function joinWorkspaceByInviteCodeSecure(workspaceId: string, invit
 
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
   const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+  const collabPermissions = [
+    Permission.read(Role.user(actor.$id)),
+    Permission.read(Role.user(ownerId)),
+    Permission.update(Role.user(actor.$id)),
+    Permission.delete(Role.user(ownerId)),
+  ];
 
   // Check existing collaborator record
   try {
@@ -2213,19 +2219,19 @@ export async function joinWorkspaceByInviteCodeSecure(workspaceId: string, invit
 
     if (existing.rows.length > 0) {
       const c = existing.rows[0];
-      if (c.status !== 'accepted' || !c.accepted) {
-        await tables.updateRow({
-          databaseId: FLOW_DATABASE_ID,
-          tableId: COLLABORATORS_TABLE,
-          rowId: c.$id,
-          data: {
-            status: 'accepted',
-            accepted: true,
-            permission: c.permission || 'write',
-            role: 'collaborator',
-          },
-        });
-      }
+      await tables.updateRow({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        rowId: c.$id,
+        data: {
+          status: 'accepted',
+          accepted: true,
+          permission: 'write',
+          role: 'collaborator',
+          inviterId: ownerId,
+        },
+        permissions: collabPermissions,
+      });
     } else {
       await tables.createRow({
         databaseId: FLOW_DATABASE_ID,
@@ -2240,7 +2246,9 @@ export async function joinWorkspaceByInviteCodeSecure(workspaceId: string, invit
           accepted: true,
           status: 'accepted',
           role: 'collaborator',
+          inviterId: ownerId,
         },
+        permissions: collabPermissions,
       });
     }
   } catch (collabErr: any) {
@@ -2250,7 +2258,8 @@ export async function joinWorkspaceByInviteCodeSecure(workspaceId: string, invit
   // Grant physical Appwrite permissions and hybrid team expansion if applicable
   try {
     const newPermissions = new Set(project.$permissions || []);
-    newPermissions.add(`read("user:${actor.$id}")`);
+    newPermissions.add(Permission.read(Role.user(actor.$id)));
+    newPermissions.add(Permission.update(Role.user(actor.$id)));
 
     const { users, databases } = createSystemClient();
     const owner = await users.get(ownerId).catch(() => null);

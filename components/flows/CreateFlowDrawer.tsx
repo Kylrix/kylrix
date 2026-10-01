@@ -23,10 +23,12 @@ export function CreateFlowDrawer({ onClose, onCreated, draftId: draftIdProp, ini
   const isWorkspaceReadOnly = Boolean(
     activeWorkspace &&
       !activeWorkspace.isPersonal &&
-      (activeWorkspace.isShared || activeWorkspace.isPublic || activeWorkspace.role === 'viewer') &&
+      (activeWorkspace.role === 'viewer' ||
+        (!activeWorkspace.role && (activeWorkspace.isPublic || activeWorkspace.isShared))) &&
       activeWorkspace.role !== 'owner' &&
+      activeWorkspace.role !== 'admin' &&
       activeWorkspace.role !== 'editor' &&
-      activeWorkspace.role !== 'admin'
+      activeWorkspace.role !== 'member'
   );
 
   const [draftId] = useState(() => draftIdProp || `draft-${Date.now()}-${Math.random().toString(36).slice(2,6)}`);

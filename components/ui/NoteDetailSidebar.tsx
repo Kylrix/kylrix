@@ -143,10 +143,12 @@ export function NoteDetailSidebar({
   const isWorkspaceReadOnly = Boolean(
     activeWorkspace &&
       !activeWorkspace.isPersonal &&
-      (activeWorkspace.isShared || activeWorkspace.isPublic || activeWorkspace.role === 'viewer') &&
+      (activeWorkspace.role === 'viewer' ||
+        (!activeWorkspace.role && (activeWorkspace.isPublic || activeWorkspace.isShared))) &&
       activeWorkspace.role !== 'owner' &&
+      activeWorkspace.role !== 'admin' &&
       activeWorkspace.role !== 'editor' &&
-      activeWorkspace.role !== 'admin'
+      activeWorkspace.role !== 'member'
   );
   const readOnly = readOnlyProp || isWorkspaceReadOnly;
   const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote, registerComposeSession } = useNotes();

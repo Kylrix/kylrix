@@ -143,8 +143,10 @@ function normalizeVisibility(note: Notes): Notes {
   })();
   // Prefer real DB projectId; fall back to metadata for local drafts
   const projectId = (note as any).projectId || meta.projectId || undefined;
-  // Respect DB/metadata isWorkspace flag or fallback to presence of projectId
-  const isWorkspace = note.isWorkspace === true || meta.isWorkspace === true || Boolean(projectId);
+  const isExplicitPersonal = projectId === 'inbox' || projectId === 'personal' || projectId === 'default';
+  const isActualWorkspaceId = Boolean(projectId && !isExplicitPersonal);
+  // Respect DB/metadata isWorkspace flag or fallback to presence of actual workspace ID
+  const isWorkspace = !isExplicitPersonal && (note.isWorkspace === true || meta.isWorkspace === true || isActualWorkspaceId);
   return {
     ...note,
     isPublic: getNotePublicState(note),
@@ -231,7 +233,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     isAuthLoading = false;
   }
 
-  const { fetchOptimized, setCachedData, invalidate, getCachedData, getCachedDataAsync } = useDataNexus();
+  const { fetchOptimized, setCachedData, invalidate, getCachedData, getCachedDataAsync, refreshInBackground } = useDataNexus();
   const { pinSets, isPinned: isResourcePinned, togglePin } = useResourcePins();
   const { activeWorkspace } = useWorkspace();
 
@@ -393,7 +395,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           cursor: null,
           userId: user?.$id});
         
-        const optimizedRes = await fetchOptimized(INITIAL_NOTES_CACHE_KEY, fetcher);
+        const optimizedRes = await fetchOptimized(INITIAL_NOTES_CACHE_KEY, fetcher, 15_000);
         res = optimizedRes;
         
         // Update other states based on this initial fetch
@@ -421,6 +423,30 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           if (note?.$id) setCachedData(`note_${note.$id}`, note);
         });
         if (user?.$id) void warmNotesLocalCopy(user.$id, withthreads);
+
+        // Trigger background revalidation so newly created notes from other devices/sync sweeps load immediately
+        refreshInBackground(INITIAL_NOTES_CACHE_KEY, fetcher, 15_000, ({ data }) => {
+          if (data && (data as any).rows) {
+            const revalidatedBatch = mergeFetchedNotesWithLocalDrafts(
+              ((data as any).rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id) && !isExcludedNote(n)),
+              notesRef.current,
+              liveEditGuardsRef.current,
+              deletedIds,
+            );
+            const revalidatedAll = dedupeNotesById([...threadNotes, ...revalidatedBatch]) as Notes[];
+            setNotes((prev) =>
+              mergeFetchedNotesWithLocalDrafts(
+                revalidatedAll,
+                Array.isArray(prev) ? prev : [],
+                liveEditGuardsRef.current,
+                deletedIds,
+              ),
+            );
+            setTotalNotes((data as any).total || 0);
+            setHasMore(!!(data as any).hasMore);
+            setCursor((data as any).nextCursor || null);
+          }
+        });
 
       } else {
         // Normal pagination or force refetch

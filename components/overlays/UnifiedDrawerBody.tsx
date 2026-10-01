@@ -82,6 +82,10 @@ const ProjectVisibilityDrawer = dynamic(() => import('../projects/ProjectVisibil
 const ProjectAutoSweepDrawer = dynamic(() => import('../projects/ProjectAutoSweepDrawer'), {
   ssr: false,
 });
+const WorkspaceOptionsDrawer = dynamic(
+  () => import('../projects/WorkspaceOptionsDrawer').then((m) => m.WorkspaceOptionsDrawer),
+  { ssr: false },
+);
 const JoinRequestConfirmDrawer = dynamic(
   () => import('./JoinRequestConfirmDrawer').then((m) => m.JoinRequestConfirmDrawer),
   { ssr: false },
@@ -344,6 +348,14 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           title={drawerData?.title as string | undefined}
           onClose={onClose}
           onCommitted={drawerData?.onCommitted as (() => void) | undefined}
+        />
+      );
+    case 'workspace-options':
+      return (
+        <WorkspaceOptionsDrawer
+          isOpen
+          onClose={onClose}
+          workspace={drawerData?.workspace || drawerData?.project}
         />
       );
     case 'project-settings':

@@ -2117,7 +2117,7 @@ export default function ConnectTopbar({
                       onClick={(e: MouseEvent) => {
                         e.stopPropagation();
                         handleCloseAll();
-                        openUnified('project-settings', { project: w });
+                        openUnified('workspace-options', { workspace: w });
                       }}
                       sx={{
                         color: 'rgba(255, 255, 255, 0.35)',

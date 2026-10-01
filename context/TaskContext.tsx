@@ -179,8 +179,9 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
       ? String(rawParent).trim()
       : null;
 
-  const isWs = Boolean(
-    (projectId && projectId !== 'inbox' && projectId !== 'default' && projectId !== 'personal') ||
+  const isPersonalOrInbox = !projectId || projectId === 'inbox' || projectId === 'default' || projectId === 'personal';
+  const isWs = !isPersonalOrInbox && Boolean(
+    projectId ||
     raw.isWorkspace === true ||
     String(raw.isWorkspace) === 'true' ||
     raw.is_workspace === true ||
@@ -1319,8 +1320,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const targetProjectId = task.projectId && task.projectId !== 'inbox'
         ? task.projectId
         : (existingTask?.projectId || 'inbox');
-      const targetIsWorkspace = Boolean(
-        (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal') ||
+      const isPersonalOrInbox = !targetProjectId || targetProjectId === 'inbox' || targetProjectId === 'personal' || targetProjectId === 'default';
+      const targetIsWorkspace = !isPersonalOrInbox && Boolean(
+        targetProjectId ||
         task.isWorkspace === true ||
         (task.isWorkspace === undefined && existingTask?.isWorkspace === true)
       );
@@ -1391,8 +1393,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         const targetProjectId = mapped.projectId && mapped.projectId !== 'inbox'
           ? mapped.projectId
           : (existingTask?.projectId || 'inbox');
-        const targetIsWorkspace = Boolean(
-          (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal') ||
+        const isPersonalOrInbox = !targetProjectId || targetProjectId === 'inbox' || targetProjectId === 'personal' || targetProjectId === 'default';
+        const targetIsWorkspace = !isPersonalOrInbox && Boolean(
+          targetProjectId ||
           mapped.isWorkspace === true ||
           (mapped.isWorkspace === undefined && existingTask?.isWorkspace === true)
         );
