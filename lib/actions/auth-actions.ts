@@ -319,7 +319,7 @@ export async function checkEmailAuthStatusAction(email: string): Promise<EmailAu
     const userId = usersList.users[0].$id;
 
     // 2. Strict check: masterpass enabled FOR LOGIN (authPass flag) — keychain only
-    // New users or users without authPass must NOT see password input (OTP only in cloud)
+    // Users without authPass or login disabled must NOT see password input (OTP only in cloud)
     let hasMasterpass = false;
     try {
       const keychainRows = await db.listRows(
@@ -328,12 +328,18 @@ export async function checkEmailAuthStatusAction(email: string): Promise<EmailAu
         [
           Query.equal('userId', userId),
           Query.equal('type', 'password'),
-          Query.equal('authPass', true),
-          Query.limit(1)
+          Query.limit(5)
         ]
       );
       if (keychainRows.total > 0) {
-        hasMasterpass = true;
+        const userPrefs = usersList.users[0]?.prefs || {};
+        const loginDisabled = userPrefs?.masterpass_for_login_enabled === false;
+        if (!loginDisabled) {
+          const hasAuthPass = keychainRows.rows.some((row: any) => row.authPass === true || (userPrefs?.hasPass && row.authPass !== false));
+          if (hasAuthPass) {
+            hasMasterpass = true;
+          }
+        }
       }
     } catch (e) {
       console.warn('Error checking keychain table for authPass:', e);

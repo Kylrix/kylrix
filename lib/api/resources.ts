@@ -554,6 +554,7 @@ export const ApiResources = {
         format: 'markdown',
         isPublic,
         isGuest,
+        isWorkspace: Boolean(wsId),
         metadata: JSON.stringify(metadataObj),
         tags: cleanTags,
         createdAt: now,

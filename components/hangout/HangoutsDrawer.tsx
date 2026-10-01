@@ -32,6 +32,7 @@ import { ChatService } from '@/lib/services/chat';
 import { UsersService } from '@/lib/services/users';
 import { realtime } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 import {
   peekChatsListMemory,
   peekThreadsListMemory,
@@ -260,13 +261,15 @@ export function HangoutsDrawer({
 
       if (cachedChats?.length) {
         const enriched = await enrichFromMessageCache(cachedChats);
-        const decryptedCached = await hydrateDecryptedSecureChats(enriched);
+        const filteredCached = enriched.filter((c: any) => !LocalEngine.isDeleted(c.$id || c.id, currentUserId));
+        const decryptedCached = await hydrateDecryptedSecureChats(filteredCached);
         startTransition(() => setSecureChats(decryptedCached));
       } else {
         startTransition(() => setSecureChats([]));
       }
       if (cachedThreads?.length) {
-        startTransition(() => setThreads(cachedThreads));
+        const filteredThreads = cachedThreads.filter((t: any) => !LocalEngine.isDeleted(t.$id || t.id, currentUserId));
+        startTransition(() => setThreads(filteredThreads));
       } else {
         startTransition(() => setThreads([]));
       }
@@ -274,7 +277,7 @@ export function HangoutsDrawer({
       // Authoritative remote fetch in background
       try {
         const res = await ChatService.getConversations(currentUserId, { forceRefresh: true });
-        const rows = Array.isArray(res) ? res : res?.rows || [];
+        const rows = (Array.isArray(res) ? res : res?.rows || []).filter((r: any) => !LocalEngine.isDeleted(r.$id || r.id, currentUserId));
         const enriched = await enrichFromMessageCache(rows);
         const decryptedRows = await hydrateDecryptedSecureChats(enriched);
         startTransition(() => setSecureChats(decryptedRows));
@@ -390,6 +393,18 @@ export function HangoutsDrawer({
               resourceName: 'this hangout',
               confirmLabel: 'Delete Hangout',
               onConfirm: async () => {
+                try {
+                  await LocalEngine.trashHangout(
+                    {
+                      id: target.id,
+                      title: target.label,
+                      kind: target.kind === 'secure' ? 'secure' : 'thread',
+                      rawData: target.raw,
+                    },
+                    user?.$id,
+                  );
+                } catch {}
+
                 if (target.kind === 'secure') {
                   startTransition(() => {
                     setSecureChats((prev) => {
@@ -398,7 +413,6 @@ export function HangoutsDrawer({
                       return next;
                     });
                   });
-                  await ChatService.deleteConversationFully(target.id).catch(() => null);
                 } else {
                   startTransition(() => {
                     setThreads((prev) => {
@@ -407,10 +421,8 @@ export function HangoutsDrawer({
                       return next;
                     });
                   });
-                  const { ThreadService } = await import('@/lib/services/threads');
-                  await ThreadService.deleteThread(target.id).catch(() => null);
                 }
-                toast.success('Hangout deleted');
+                toast.success('Hangout moved to trash');
                 window.dispatchEvent(new CustomEvent('kylrix:trash-updated', { detail: { id: target.id } }));
                 void refreshChats();
               },

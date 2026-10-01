@@ -479,7 +479,7 @@ function SettingsPageInner() {
                     const entries = await KeychainService.listKeychainEntries(user.$id);
                     const passwordEntry = entries.find((e: any) => e.type === 'password');
                     setHasMasterpass(!!passwordEntry);
-                    setIsAuthPassConfigured(!!passwordEntry?.authPass);
+                    setIsAuthPassConfigured(Boolean(passwordEntry?.authPass || user?.prefs?.hasPass));
                     setMasterpassChangedAt(passwordEntry?.$updatedAt || passwordEntry?.$createdAt || null);
                 } catch (e) {
                     console.error('Failed to check masterpass presence', e);
@@ -936,7 +936,7 @@ function SettingsPageInner() {
                                         KeychainService.listKeychainEntries(user.$id).then(entries => {
                                             const pe = entries.find((e: any) => e.type === 'password');
                                             setHasMasterpass(!!pe);
-                                            setIsAuthPassConfigured(!!pe?.authPass);
+                                            setIsAuthPassConfigured(Boolean(pe?.authPass || user?.prefs?.hasPass));
                                             setMasterpassChangedAt(pe?.$updatedAt || pe?.$createdAt || null);
                                         }).catch(() => {});
                                     }

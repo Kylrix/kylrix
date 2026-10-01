@@ -280,10 +280,20 @@ class MasterPassCrypto {
     }
 
     this.masterKey = await this.generateRandomMEK();
-    await this.createKeychainEntry(this.masterKey, masterPassword, userId);
+    await this.createKeychainEntry(this.masterKey, masterPassword, userId, true, false, true);
 
     const rawMek = await crypto.subtle.exportKey("raw", this.masterKey!);
     await ecosystemSecurity.importMasterKey(rawMek);
+
+    // Opportunistically synchronize MasterPass to Appwrite account password
+    try {
+      const { syncMasterpassToAccountPassword } = await import("./actions/client-ops");
+      syncMasterpassToAccountPassword(userId, masterPassword)
+        .then(() => console.log('[Vault] Synchronized masterpass to account password during setup.'))
+        .catch((err: any) => console.warn('[Vault] Masterpass sync deferred during setup:', err));
+    } catch (e) {
+      console.warn('[Vault] Failed to initiate account password sync:', e);
+    }
 
     this.markAsUnlocked();
     await this.syncToServiceWorker();
@@ -599,7 +609,7 @@ class MasterPassCrypto {
   }
 
   // Create a new keychain entry (wraps the MEK with the password)
-  private async createKeychainEntry(mek: CryptoKey, password: string, userId: string, useArgon = true, isPending = false): Promise<any> {
+  private async createKeychainEntry(mek: CryptoKey, password: string, userId: string, useArgon = true, isPending = false, authPass = true): Promise<any> {
     try {
       const { AppwriteService } = await import("./appwrite");
 
@@ -657,7 +667,7 @@ class MasterPassCrypto {
         isPending: isPending,
         params: paramsJson,
         isBackup: false,
-        authPass: false,
+        authPass: Boolean(authPass),
         $createdAt: new Date().toISOString(),
       };
 
@@ -696,7 +706,7 @@ class MasterPassCrypto {
           isPending: isPending,
           params: paramsJson,
           isBackup: false,
-          authPass: false
+          authPass: Boolean(authPass)
         }).catch(() => null);
 
         if (remote) {

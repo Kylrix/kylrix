@@ -370,7 +370,7 @@ export const ProjectsService = {
 
         const [notes, tasks, credentials, totps, events, forms, moments, sessions] = await Promise.all([
           resourceIdsByType['note']?.size
-            ? listNotes([Query.equal('$id', Array.from(resourceIdsByType['note'])), Query.limit(500)]).then((r: any) => r.rows || []).catch(() => [])
+            ? listNotes([Query.equal('$id', Array.from(resourceIdsByType['note'])), Query.limit(500)]).then((r: any) => (r.rows || []).map((n: any) => ({ ...n, projectId, isWorkspace: true }))).catch(() => [])
             : Promise.resolve([]),
           resourceIdsByType['task']?.size
             ? listFlowTasks([Query.equal('$id', Array.from(resourceIdsByType['task'])), Query.limit(500)]).then((r: any) => r.rows || []).catch(() => [])

@@ -785,12 +785,33 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           };
           const tableId = tableByKind[entityKind];
           if (tableId) {
-            await databases.updateRow(
-              APPWRITE_CONFIG.DATABASE_ID,
-              tableId,
-              entityId,
-              { isWorkspace: true, projectId: activeWorkspace.id },
-            );
+            let existingMetadata: any = {};
+            try {
+              const row = (await databases.getRow(APPWRITE_CONFIG.DATABASE_ID, tableId, entityId).catch(() => null)) as any;
+              if (row?.metadata) {
+                existingMetadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+              }
+            } catch {}
+            const newMeta = {
+              ...existingMetadata,
+              projectId: activeWorkspace.id,
+              isWorkspace: true,
+            };
+            try {
+              await databases.updateRow(
+                APPWRITE_CONFIG.DATABASE_ID,
+                tableId,
+                entityId,
+                { isWorkspace: true, metadata: JSON.stringify(newMeta) },
+              );
+            } catch {
+              await databases.updateRow(
+                APPWRITE_CONFIG.DATABASE_ID,
+                tableId,
+                entityId,
+                { isWorkspace: true },
+              ).catch(() => null);
+            }
           }
         } catch (flagErr) {
           console.warn('[WorkspaceContext] isWorkspace flag update failed:', flagErr);
@@ -821,12 +842,33 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         };
         const tableId = tableByKind[entityKind];
         if (tableId) {
-          await databases.updateRow(
-            APPWRITE_CONFIG.DATABASE_ID,
-            tableId,
-            entityId,
-            { isWorkspace: !inPersonal, projectId: inPersonal ? null : activeWorkspace.id },
-          );
+          let existingMetadata: any = {};
+          try {
+            const row = (await databases.getRow(APPWRITE_CONFIG.DATABASE_ID, tableId, entityId).catch(() => null)) as any;
+            if (row?.metadata) {
+              existingMetadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+            }
+          } catch {}
+          const newMeta = {
+            ...existingMetadata,
+            projectId: inPersonal ? null : activeWorkspace.id,
+            isWorkspace: !inPersonal,
+          };
+          try {
+            await databases.updateRow(
+              APPWRITE_CONFIG.DATABASE_ID,
+              tableId,
+              entityId,
+              { isWorkspace: !inPersonal, metadata: JSON.stringify(newMeta) },
+            );
+          } catch {
+            await databases.updateRow(
+              APPWRITE_CONFIG.DATABASE_ID,
+              tableId,
+              entityId,
+              { isWorkspace: !inPersonal },
+            ).catch(() => null);
+          }
         }
       } catch (err) {
         console.warn(`[WorkspaceContext] Failed to update isWorkspace flag for ${entityKind} ${entityId}:`, err);

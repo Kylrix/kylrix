@@ -944,6 +944,20 @@ export default function CreateNoteForm({
       composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought'
     );
 
+    const targetProjectId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined;
+    const isWs = Boolean(targetProjectId);
+    const existingMeta = (() => {
+      try {
+        return source.metadata ? JSON.parse(source.metadata) : {};
+      } catch {
+        return {};
+      }
+    })();
+    const noteMeta = {
+      ...existingMeta,
+      ...(targetProjectId ? { projectId: targetProjectId, isWorkspace: true } : {}),
+    };
+
     const payload = {
       title: generatedTitle,
       content: source.content || '',
@@ -953,9 +967,9 @@ export default function CreateNoteForm({
       isPublic,
       isGuest,
       article: isArticle,
-      isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
-      projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined,
-      metadata: JSON.stringify({}),
+      isWorkspace: isWs,
+      projectId: targetProjectId,
+      metadata: JSON.stringify(noteMeta),
     };
 
     if (!user?.$id) {
@@ -1022,7 +1036,13 @@ export default function CreateNoteForm({
           isPublic: persistedIsPublic,
           isGuest: persistedIsGuest,
           title: generatedTitle,
+          isWorkspace: isWs,
+          projectId: targetProjectId,
+          metadata: JSON.stringify(noteMeta),
         })) as Notes;
+        if (saved?.$id && activeWorkspace && !activeWorkspace.isPersonal) {
+          await attachEntityToActiveWorkspace('note', saved.$id);
+        }
       } else {
         const ephemeralId = source.$id;
         saved = (await createNote({

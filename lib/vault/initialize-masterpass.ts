@@ -40,8 +40,12 @@ export async function initializeMasterPassVault(
 
   await setMasterpassFlag(userId, email);
 
-  const { syncMasterpassToAccountPasswordAction } = await import('@/lib/actions/secure-ops/misc');
-  await syncMasterpassToAccountPasswordAction({ userId, masterpass: masterPassword });
+  try {
+    const { syncMasterpassToAccountPassword } = await import('@/lib/actions/client-ops');
+    await syncMasterpassToAccountPassword(userId, masterPassword);
+  } catch (syncErr) {
+    console.warn('[Vault] Account password sync deferred/handled:', syncErr);
+  }
 
   try {
     await ecosystemSecurity.ensureE2EIdentity(userId);

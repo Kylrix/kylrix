@@ -263,6 +263,9 @@ function tierRank(tier: BillingUiTier): number {
 }
 
 export async function hasPaidKylrixPlanServer(userId: string): Promise<boolean> {
+  if (isSelfHostedDeployment()) {
+    return true;
+  }
   const ent = await getVerifiedProEntitlementForUser(userId).catch(() => null);
   return !!(ent && ent.active && ent.uiTier !== 'FREE');
 }

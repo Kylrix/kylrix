@@ -107,6 +107,22 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
       const chunkResults = await Promise.all(fetchPromises);
       chunkResults.forEach((arr) => results.push(...arr));
 
+      // Append trashed hangouts from LocalEngine
+      try {
+        const trashedHangouts = await LocalEngine.getTrashedHangouts(user.$id);
+        trashedHangouts.forEach((h: any) => {
+          results.push({
+            id: h.id,
+            title: h.title || 'Untitled Hangout',
+            type: 'Hangout',
+            deletedAt: h.deletedAt || new Date().toISOString(),
+            databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+            tableId: h.kind === 'secure' ? 'conversations' : 'threads',
+            kind: h.kind,
+          } as any);
+        });
+      } catch {}
+
       results.sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
       setItemsAll(results);
       await LocalEngine.cacheSet(cacheKeyAll, results).catch(() => {});
@@ -141,6 +157,7 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
       if (activeTab === 'Notes') return it.type === 'Note';
       if (activeTab === 'Goals') return it.type === 'Goal';
       if (activeTab === 'Forms') return it.type === 'Form';
+      if (activeTab === 'Hangouts') return it.type === 'Hangout';
       if (activeTab === 'Vault') return it.type === 'Credential' || it.type === 'TOTP Secret';
       if (activeTab === 'Workspaces') return it.type === 'Project';
       return it.type === activeTab;
@@ -157,7 +174,12 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
       setItemsAll(remaining);
       if (cacheKeyAll) await LocalEngine.cacheSet(cacheKeyAll, remaining).catch(() => {});
 
-      await databases.updateRow(item.databaseId, item.tableId, item.id, { isTrash: false });
+      if (item.type === 'Hangout') {
+        await LocalEngine.restoreTrashedHangout(item.id, user?.$id);
+      } else {
+        await databases.updateRow(item.databaseId, item.tableId, item.id, { isTrash: false });
+      }
+
       toast.success(`Restored "${item.title}"`);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('kylrix:trash-updated'));
@@ -180,10 +202,23 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
           setItemsAll(remaining);
           if (cacheKeyAll) await LocalEngine.cacheSet(cacheKeyAll, remaining).catch(() => {});
 
-          const { executeCascadeDeleteSecure } = await import('@/lib/actions/cascade-delete');
-          await (executeCascadeDeleteSecure as any)(item.databaseId, item.tableId, item.id).catch(() =>
-            databases.deleteRow(item.databaseId, item.tableId, item.id).catch(() => null)
-          );
+          if (item.type === 'Hangout') {
+            await LocalEngine.purgeTrashedHangout(item.id, user?.$id);
+            try {
+              if (item.tableId === 'conversations') {
+                const { ChatService } = await import('@/lib/services/chat');
+                await ChatService.deleteConversationFully(item.id).catch(() => null);
+              } else {
+                const { ThreadService } = await import('@/lib/services/threads');
+                await ThreadService.deleteThread(item.id).catch(() => null);
+              }
+            } catch {}
+          } else {
+            const { executeCascadeDeleteSecure } = await import('@/lib/actions/cascade-delete');
+            await (executeCascadeDeleteSecure as any)(item.databaseId, item.tableId, item.id).catch(() =>
+              databases.deleteRow(item.databaseId, item.tableId, item.id).catch(() => null)
+            );
+          }
 
           toast.success('Deleted permanently');
           if (typeof window !== 'undefined') {
@@ -214,6 +249,19 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
           await Promise.all(
             toDelete.map((it) =>
               (async () => {
+                if (it.type === 'Hangout') {
+                  await LocalEngine.purgeTrashedHangout(it.id, user?.$id);
+                  try {
+                    if (it.tableId === 'conversations') {
+                      const { ChatService } = await import('@/lib/services/chat');
+                      await ChatService.deleteConversationFully(it.id).catch(() => null);
+                    } else {
+                      const { ThreadService } = await import('@/lib/services/threads');
+                      await ThreadService.deleteThread(it.id).catch(() => null);
+                    }
+                  } catch {}
+                  return;
+                }
                 try {
                   const { executeCascadeDeleteSecure } = await import('@/lib/actions/cascade-delete');
                   await (executeCascadeDeleteSecure as any)(it.databaseId, it.tableId, it.id).catch(() =>
@@ -287,7 +335,7 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
 
       {/* Filter Tabs */}
       <div className="p-3 border-b border-white/4 flex items-center gap-1.5 overflow-x-auto scrollbar-none bg-[#161412]">
-        {['All', 'Notes', 'Goals', 'Forms', 'Vault', 'Workspaces'].map((tab) => (
+        {['All', 'Notes', 'Goals', 'Forms', 'Hangouts', 'Vault', 'Workspaces'].map((tab) => (
           <button
             key={tab}
             type="button"

@@ -522,6 +522,74 @@ export const LocalEngine = {
     const { systemDelete } = await import('./unified-object-service');
     return (systemDelete as any)(kind, id);
   },
+
+  /** Move a hangout (conversation or thread) to local trash */
+  async trashHangout(item: { id: string; title: string; kind: 'secure' | 'thread'; rawData?: any }, userId?: string): Promise<void> {
+    if (typeof window === 'undefined' || !item?.id) return;
+    const uid = userId || 'guest';
+    const key = `kylrix_trashed_hangouts_${uid}`;
+    try {
+      const existing = await this.getTrashedHangouts(uid);
+      const filtered = existing.filter((h) => h.id !== item.id);
+      const trashedItem = {
+        id: item.id,
+        title: item.title || 'Untitled Hangout',
+        type: 'Hangout',
+        kind: item.kind,
+        rawData: item.rawData,
+        deletedAt: new Date().toISOString(),
+        userId: uid,
+      };
+      const updated = [trashedItem, ...filtered];
+      localStorage.setItem(key, JSON.stringify(updated));
+      await this.cacheSet(key, updated).catch(() => {});
+      await this.markDeleted(item.id, uid);
+    } catch {}
+  },
+
+  /** Get all trashed hangouts for a user */
+  async getTrashedHangouts(userId?: string): Promise<any[]> {
+    if (typeof window === 'undefined') return [];
+    const uid = userId || 'guest';
+    const key = `kylrix_trashed_hangouts_${uid}`;
+    try {
+      const cached = await this.cacheGet<any[]>(key).catch(() => null);
+      if (Array.isArray(cached) && cached.length) return cached;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  },
+
+  /** Restore a trashed hangout */
+  async restoreTrashedHangout(id: string, userId?: string): Promise<void> {
+    if (typeof window === 'undefined' || !id) return;
+    const uid = userId || 'guest';
+    const key = `kylrix_trashed_hangouts_${uid}`;
+    try {
+      const existing = await this.getTrashedHangouts(uid);
+      const updated = existing.filter((h) => h.id !== id);
+      localStorage.setItem(key, JSON.stringify(updated));
+      await this.cacheSet(key, updated).catch(() => {});
+      await this.unmarkDeleted(id, uid);
+    } catch {}
+  },
+
+  /** Purge a trashed hangout permanently */
+  async purgeTrashedHangout(id: string, userId?: string): Promise<void> {
+    if (typeof window === 'undefined' || !id) return;
+    const uid = userId || 'guest';
+    const key = `kylrix_trashed_hangouts_${uid}`;
+    try {
+      const existing = await this.getTrashedHangouts(uid);
+      const updated = existing.filter((h) => h.id !== id);
+      localStorage.setItem(key, JSON.stringify(updated));
+      await this.cacheSet(key, updated).catch(() => {});
+    } catch {}
+  },
 };
 
 function pickComparablePayload(payload: any): Record<string, any> {
