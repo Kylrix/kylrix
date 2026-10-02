@@ -36,6 +36,10 @@ const Overlay: React.FC = () => {
     setIsExpanded(isHangoutsDrawerContent(content));
   }, [isOpen, content]);
 
+  if (!isOpen) {
+    return null;
+  }
+
   const hasOwnDrawer = React.isValidElement(content) && (content.props as any).open !== undefined;
 
   if (hasOwnDrawer) {

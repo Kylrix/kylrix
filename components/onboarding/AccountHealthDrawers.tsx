@@ -207,7 +207,7 @@ export function AccountHealthDrawers() {
         !(normalizedTyping !== canonicalSavedHandle && available === false) &&
         !checkingAvailability;
 
-    if (activeContent === 'login') {
+    if (!user || !user.$id || user.isPulse || currentStep === 'none' || activeContent === 'login') {
         return null;
     }
 

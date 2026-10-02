@@ -358,3 +358,74 @@ export async function upsertVaultItemTurso(data: typeof schema.vaultItems.$infer
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Ensures a Better Auth user record exists in Turso for an Appwrite/authenticated user.
+ * Seamless background minting without prompting the user.
+ */
+export async function ensureBetterAuthUserTurso(params: {
+  id: string;
+  name: string;
+  email: string;
+  emailVerified?: boolean;
+  image?: string;
+}) {
+  try {
+    const existing = await db
+      .select({ id: schema.user.id })
+      .from(schema.user)
+      .where(eq(schema.user.id, params.id))
+      .limit(1);
+
+    const now = new Date();
+    if (existing.length > 0) {
+      await db
+        .update(schema.user)
+        .set({
+          name: params.name,
+          email: params.email,
+          emailVerified: params.emailVerified ?? false,
+          image: params.image || null,
+          updatedAt: now,
+        })
+        .where(eq(schema.user.id, params.id));
+    } else {
+      await db.insert(schema.user).values({
+        id: params.id,
+        name: params.name,
+        email: params.email,
+        emailVerified: params.emailVerified ?? false,
+        image: params.image || null,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Also ensure an account link entry for provider 'appwrite'
+      const existingAccount = await db
+        .select({ id: schema.account.id })
+        .from(schema.account)
+        .where(
+          and(
+            eq(schema.account.userId, params.id),
+            eq(schema.account.providerId, 'appwrite')
+          )
+        )
+        .limit(1);
+
+      if (existingAccount.length === 0) {
+        await db.insert(schema.account).values({
+          id: generateId(),
+          accountId: params.id,
+          providerId: 'appwrite',
+          userId: params.id,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] ensureBetterAuthUserTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}

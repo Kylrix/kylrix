@@ -199,6 +199,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } catch (err) {
           console.warn('[AuthContext] Background profile bootstrapping failed:', err);
         }
+        try {
+          const { ensureBetterAuthUserTurso } = await import('@/lib/actions/turso-ops');
+          await ensureBetterAuthUserTurso({
+            id: user.$id,
+            name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
+            email: user.email || `${user.$id}@local.kylrix`,
+            emailVerified: Boolean(user.emailVerification),
+          });
+        } catch (err) {
+          console.warn('[AuthContext] Background Better Auth user sync failed:', err);
+        }
       };
       void initProfile();
 
