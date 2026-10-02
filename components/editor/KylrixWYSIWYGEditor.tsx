@@ -17,13 +17,9 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting, syntaxTree, ensureSyntaxTree } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { parseObjectBlocks, serializeObjectBlock, type SecondaryObjectPayload } from '@/lib/note-object-secondary';
-import { Mic, Paperclip, Loader2 } from 'lucide-react';
 import { StorageService } from '@/lib/services/storage';
 import { attachObject, detachObjectByRelation } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { useAuth } from '@/context/auth/AuthContext';
-import { useProUpgrade } from '@/context/ProUpgradeContext';
-import { hasPaidKylrixPlan } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 /** Markdown punctuation nodes to hide unless the caret is inside that construct. */
@@ -371,17 +367,6 @@ export function KylrixWYSIWYGEditor({
   const isExternalSyncRef = useRef(false);
   const lastEditAtRef = useRef(0);
 
-  const { user } = useAuth();
-  const { openProUpgrade } = useProUpgrade();
-
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const durationIntervalRef = useRef<any>(null);
-
   const handleRemoveObject = useCallback(
     async (payload: SecondaryObjectPayload, rawBlock: string) => {
       if (readOnly) return;
@@ -593,200 +578,8 @@ export function KylrixWYSIWYGEditor({
     }
   }, [value]);
 
-  const insertTextAtCursor = useCallback((textToInsert: string) => {
-    if (!viewRef.current) return;
-    const { from, to } = viewRef.current.state.selection.main;
-    viewRef.current.dispatch({
-      changes: { from, to, insert: textToInsert },
-      selection: { anchor: from + textToInsert.length },
-    });
-    viewRef.current.focus();
-  }, []);
-
-  // Voice recording flow
-  const toggleRecording = async () => {
-    if (isRecording) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      setIsRecording(false);
-    } else {
-      if (!hasPaidKylrixPlan(user)) {
-        openProUpgrade('Voice recording');
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        let options = { audioBitsPerSecond: 16000 };
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          (options as any).mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-          (options as any).mimeType = 'audio/ogg;codecs=opus';
-        }
-
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunksRef.current.push(e.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-          if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
-          stream.getTracks().forEach((track) => track.stop());
-
-          try {
-            setIsUploading(true);
-            const uploaded = await StorageService.uploadFile(audioFile, 'voice');
-
-            // Attach object relation if parentId exists
-            let objectId: string | undefined;
-            if (parentId) {
-              try {
-                const relation = await attachObject({
-                  parentId,
-                  parentKind,
-                  childId: uploaded.$id,
-                  childKind: 'voice',
-                  metadata: {
-                    isSecondary: true,
-                    filename: audioFile.name,
-                    mimeType: audioFile.type,
-                    size: audioFile.size,
-                    duration: recordingDuration,
-                  },
-                });
-                objectId = relation?.$id;
-              } catch {}
-            }
-
-            const block = serializeObjectBlock({
-              objectId,
-              childId: uploaded.$id,
-              childKind: 'voice',
-              bucketId: 'voice',
-              label: `Voice note (${recordingDuration}s)`,
-              isSecondary: true,
-              metadata: { duration: recordingDuration },
-            });
-
-            insertTextAtCursor(`\n\n${block}\n\n`);
-            toast.success('Voice note recorded and attached');
-          } catch (err: any) {
-            console.error('Failed to upload voice note:', err);
-            toast.error('Could not save voice note');
-          } finally {
-            setIsUploading(false);
-          }
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-        setRecordingDuration(0);
-        durationIntervalRef.current = setInterval(() => {
-          setRecordingDuration((prev) => prev + 1);
-        }, 1000);
-      } catch (err) {
-        console.error('Microphone error:', err);
-        toast.error('Microphone access is required to record voice notes');
-      }
-    }
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    event.target.value = '';
-
-    if (!hasPaidKylrixPlan(user)) {
-      openProUpgrade('File upload');
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      const bucketId = APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE;
-      const uploaded = await StorageService.uploadFile(file, bucketId);
-      const childKind = file.type.startsWith('image/') ? 'image' : 'file';
-
-      let objectId: string | undefined;
-      if (parentId) {
-        try {
-          const relation = await attachObject({
-            parentId,
-            parentKind,
-            childId: uploaded.$id,
-            childKind,
-            metadata: {
-              isSecondary: true,
-              bucketId,
-              fileName: file.name,
-              mimeType: file.type,
-              size: file.size,
-            },
-          });
-          objectId = relation?.$id;
-        } catch {}
-      }
-
-      const block = serializeObjectBlock({
-        objectId,
-        childId: uploaded.$id,
-        childKind: childKind as any,
-        bucketId,
-        label: file.name,
-        isSecondary: true,
-        metadata: { mimeType: file.type, fileName: file.name },
-      });
-
-      insertTextAtCursor(`\n\n${block}\n\n`);
-      toast.success('File attached');
-    } catch (err: any) {
-      console.error('Upload failed:', err);
-      toast.error('Failed to attach file');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   return (
     <div className={`kylrix-wysiwyg-wrapper flex flex-col w-full ${className}`}>
-      {showToolbar && !readOnly && (
-        <div className="flex items-center justify-between gap-2 px-1 py-1.5 border-b border-white/6 mb-2">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={toggleRecording}
-              disabled={isUploading}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold font-satoshi flex items-center gap-1.5 transition-all cursor-pointer ${
-                isRecording
-                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse'
-                  : 'bg-white/4 hover:bg-white/8 text-white/70 hover:text-white border border-white/4'
-              }`}
-            >
-              <Mic size={14} className={isRecording ? 'text-rose-400' : 'text-[#6366F1]'} />
-              <span>{isRecording ? `Recording (${recordingDuration}s)` : 'Voice Note'}</span>
-            </button>
-
-            <label className="px-2.5 py-1.5 rounded-xl text-xs font-bold font-satoshi flex items-center gap-1.5 bg-white/4 hover:bg-white/8 text-white/70 hover:text-white border border-white/4 transition-all cursor-pointer">
-              <Paperclip size={14} className="text-white/50" />
-              <span>Attach File</span>
-              <input type="file" onChange={handleFileUpload} className="hidden" />
-            </label>
-
-            {isUploading && (
-              <div className="flex items-center gap-1 text-[11px] text-white/40 pl-2">
-                <Loader2 size={12} className="animate-spin text-[#6366F1]" />
-                <span>Uploading…</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       <div
         ref={containerRef}
         style={{ minHeight }}

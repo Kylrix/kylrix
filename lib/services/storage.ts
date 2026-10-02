@@ -1,38 +1,28 @@
-import { secureUploadFile } from '../actions/client-ops';
-import { storage } from '../appwrite/client';
-import { APPWRITE_CONFIG } from '../appwrite/config';
-
-const BUCKETS = {
-    MESSAGES: APPWRITE_CONFIG.BUCKETS.MESSAGES,
-    VOICE: 'voice',
-    GENERAL_STORAGE: APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE};
+/**
+ * Zero-Storage Architecture Mandate:
+ * Storage buckets and file upload integrations (S3, Cloudflare R2, Appwrite Storage)
+ * have been decommissioned. The entire Kylrix backend is strictly defined as
+ * relational database objects that can be dumped and restored as a single file.
+ */
 
 export const StorageService = {
-    async uploadFile(file: File, bucketId: string = BUCKETS.MESSAGES) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('bucketId', bucketId);
-        return await secureUploadFile(formData);
+    async uploadFile(_file: File, _bucketId?: string): Promise<never> {
+        throw new Error('Storage has been decommissioned. Kylrix operates on a zero-storage, database-only architecture.');
     },
 
-    getFileView(fileId: string, bucketId: string = BUCKETS.MESSAGES) {
-        return storage.getFileView(bucketId, fileId);
+    getFileView(_fileId?: string, _bucketId?: string): string {
+        return '';
     },
 
-    getFilePreview(fileId: string, bucketId: string = BUCKETS.MESSAGES, width?: number, height?: number) {
-        return storage.getFilePreview(bucketId, fileId, width, height);
+    getFilePreview(_fileId?: string, _bucketId?: string, _width?: number, _height?: number): string {
+        return '';
     },
 
-    getFileDownload(fileId: string, bucketId: string = BUCKETS.MESSAGES) {
-        return storage.getFileDownload(bucketId, fileId);
+    getFileDownload(_fileId?: string, _bucketId?: string): string {
+        return '';
     },
     
-    getBucketForType(type: 'image' | 'video' | 'audio' | 'file') {
-        switch (type) {
-            case 'audio': return BUCKETS.VOICE;
-            case 'video': return BUCKETS.GENERAL_STORAGE;
-            case 'file': return BUCKETS.GENERAL_STORAGE;
-            default: return BUCKETS.GENERAL_STORAGE;
-        }
+    getBucketForType(_type: 'image' | 'video' | 'audio' | 'file'): string {
+        return '';
     }
 };

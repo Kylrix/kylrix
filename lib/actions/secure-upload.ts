@@ -13,12 +13,9 @@ import { IDSchema, JWTSchema } from '@/lib/validations/schemas';
  * Enforces Pro subscription checks and strict bucket whitelisting.
  * Follows "The Golden Rule of Server Action Security".
  */
-export async function secureUploadFile(formData: FormData, jwt?: string) {
-  // Rigorous runtime validation
-  const validatedJwt = JWTSchema.parse(jwt);
-  const bucketId = IDSchema.parse(String(formData.get('bucketId') || '').trim());
-  const file = formData.get('file') as File;
-  const fileId = IDSchema.parse(String(formData.get('fileId') || ID.unique()).trim());
+export async function secureUploadFile(_formData: FormData, _jwt?: string): Promise<never> {
+  throw new Error('File storage is decommissioned. Kylrix operates on a zero-storage, database-only architecture.');
+}
 
   // 1. Strict Bucket Whitelist
   const ALLOWED_BUCKETS = new Set([
