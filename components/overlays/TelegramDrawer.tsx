@@ -190,7 +190,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
 
         const channel = `databases.${APPWRITE_CONFIG.DATABASES.CONNECT}.collections.${APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS}.documents.${userId}`;
         
-        const sub = await realtime.subscribe(channel, (response: any) => {
+        const sub = realtime.subscribe(channel, (response: any) => {
           const payload = response.payload;
           if (payload && payload.is_verified) {
             stopPolling();

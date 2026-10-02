@@ -96,7 +96,7 @@ class PartyKitRealtimeEngine {
       sock.send(JSON.stringify({ type: 'subscribe', channels: list }));
     }
 
-    return () => {
+    const unsub = () => {
       for (const ch of list) {
         const set = this.listeners.get(ch);
         if (set) {
@@ -110,6 +110,9 @@ class PartyKitRealtimeEngine {
         }
       }
     };
+
+    const { createThenableUnsubscribe } = require('@/lib/appwrite/client');
+    return createThenableUnsubscribe(unsub);
   }
 
   /**
