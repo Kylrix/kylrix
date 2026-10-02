@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kylrix-party",
+  "main": "party/server.ts",
+  "compatibility_date": "2026-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "59242241c3c3cb486f3d201d0d89fe6f",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WorkspaceServer",
+        "class_name": "WorkspaceServer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["WorkspaceServer"]
+    }
+  ]
+}

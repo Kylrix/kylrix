@@ -88,6 +88,7 @@
     "happy-dom": "^20.9.0",
     "knip": "^6.29.0",
     "partykit": "^0.0.115",
+    "partyserver": "^0.5.10",
     "playwright": "1.62.1",
     "tailwindcss": "^4.3.0",
     "typescript": "^5.9.3",

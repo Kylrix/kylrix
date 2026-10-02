@@ -1,25 +1,31 @@
-import type * as Party from "partykit/server";
+import { Server, routePartykitRequest, type Connection } from "partyserver";
 
-export default class WorkspaceServer implements Party.Server {
-  constructor(readonly room: Party.Room) {}
-
-  // Triggered when a client connects (e.g. opens a workspace, note, or thread)
-  onConnect(conn: Party.Connection, _ctx: Party.ConnectionContext) {
-    console.log(`[party] Client ${conn.id} connected to room ${this.room.id}`);
+export class WorkspaceServer extends Server {
+  onConnect(conn: Connection) {
+    console.log(`[party] Client ${conn.id} connected to room ${this.name}`);
   }
 
-  // Handle incoming messages
-  onMessage(message: string, sender: Party.Connection) {
+  onMessage(conn: Connection, message: string) {
     try {
-      const data = JSON.parse(message);
       // Broadcast updates to all other participants in the room
-      this.room.broadcast(JSON.stringify(data), [sender.id]);
+      this.broadcast(message, [conn.id]);
     } catch (err) {
-      console.warn('[party] Invalid JSON message received:', err);
+      console.warn("[party] Error broadcasting message:", err);
     }
   }
 
-  onClose(conn: Party.Connection) {
-    console.log(`[party] Client ${conn.id} left room ${this.room.id}`);
+  onClose(conn: Connection) {
+    console.log(`[party] Client ${conn.id} disconnected from room ${this.name}`);
   }
 }
+
+export default {
+  async fetch(request: Request, env: any, _ctx: any): Promise<Response> {
+    const response = await routePartykitRequest(request, env);
+    if (response) return response;
+    return new Response("Kylrix Realtime PartyServer OK", {
+      status: 200,
+      headers: { "Content-Type": "text/plain" },
+    });
+  },
+};
