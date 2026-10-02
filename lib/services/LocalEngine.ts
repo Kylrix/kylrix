@@ -9,6 +9,15 @@ import type { Models } from 'appwrite';
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
 import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
 import { client } from '@/lib/appwrite/client';
+import {
+  stampTursoSync,
+  isTursoSynced,
+  getTursoSyncMarker,
+  recordTursoSyncedId,
+  getTursoSyncedIds,
+  stripTursoMarker,
+  type TursoSyncMarker,
+} from '@/lib/sync/turso-marker';
 
 /** Realtime subscription registry — one per channel, survives HMR */
 const realtimeSubs = new Map<string, { unsubscribe: () => void; refCount: number }>();
@@ -191,19 +200,64 @@ export const LocalEngine = {
     }
   },
 
-  /** Upsert generic cached payload by key */
-  async cacheSet<T = any>(id: string, data: T): Promise<void> {
+  /** Upsert generic cached payload by key, optionally attaching quiet Turso sync marker */
+  async cacheSet<T = any>(
+    id: string,
+    data: T,
+    options?: { tursoSynced?: boolean; table?: string; userId?: string }
+  ): Promise<void> {
     if (typeof window === 'undefined') return;
     try {
+      let payloadToStore = data;
+      if (
+        options?.tursoSynced ||
+        (data && typeof data === 'object' && ((data as any)._tursoSynced || (data as any)._tursoSync))
+      ) {
+        payloadToStore = stampTursoSync(data, {
+          table: options?.table,
+          rowId: id,
+          userId: options?.userId,
+        });
+      }
       const db = await getRxDB().catch(() => null);
       if (!db) return;
       await db.cache.upsert({
         id,
-        data: data as any,
+        data: payloadToStore as any,
         timestamp: Date.now()}).catch(() => {});
     } catch (_err) {
       // Non-blocking storage
     }
+  },
+
+  /** Stamp an in-memory data copy with the quiet Turso sync marker */
+  stampTursoSync<T>(target: T, options?: { table?: string; rowId?: string; at?: string; userId?: string }): T {
+    return stampTursoSync(target, options);
+  },
+
+  /** Check if a cached item or ID has been synced to Turso */
+  isTursoSynced(itemOrId: any, userId?: string): boolean {
+    return isTursoSynced(itemOrId, userId);
+  },
+
+  /** Extract quiet Turso sync marker metadata */
+  getTursoSyncMarker(item: any): TursoSyncMarker | null {
+    return getTursoSyncMarker(item);
+  },
+
+  /** Mark a specific key or entity ID as synced to Turso and persist the quiet marker */
+  async markTursoSynced(id: string, options?: { table?: string; rowId?: string; userId?: string }): Promise<void> {
+    recordTursoSyncedId(options?.rowId || id, options?.userId);
+    const cached = await this.cacheGet(id);
+    if (cached) {
+      const stamped = stampTursoSync(cached, { ...options, rowId: options?.rowId || id });
+      await this.cacheSet(id, stamped);
+    }
+  },
+
+  /** Get all IDs marked as synced to Turso */
+  getTursoSyncedIds(userId?: string): Set<string> {
+    return getTursoSyncedIds(userId);
   },
 
   /** Remove cached payload by key */
