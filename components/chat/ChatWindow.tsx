@@ -3,7 +3,6 @@
 import { Query } from 'appwrite';
 import React, { useEffect, useState, useRef, useTransition, useMemo } from 'react';
 import { ChatService } from '@/lib/services/chat';
-import { StorageService } from '@/lib/services/storage';
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -178,7 +177,6 @@ export const ChatWindow = ({
     const [sending, setSending] = useState(false);
     const [attachment, setAttachment] = useState<File | null>(null);
     const [pendingObject, setPendingObject] = useState<ChatPendingObject | null>(null);
-    const [isRecording, setIsRecording] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [attachAnchorEl, setAttachAnchorEl] = useState<null | HTMLElement>(null);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -237,10 +235,6 @@ export const ChatWindow = ({
     };
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const recordingTimerRef = useRef<any>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
     const router = useRouter();
     const clientReadSegments = React.useMemo(
         () => getClientReadSegments(messages, user?.$id, conversation?.type === 'direct', conversationReadAt),
@@ -1139,18 +1133,6 @@ export const ChatWindow = ({
         };
     }, [conversationId, user?.$id, startTransition, applyDisplayName, loadReactions]);
 
-    useEffect(() => {
-        return () => {
-            if (recordingTimerRef.current) {
-                clearTimeout(recordingTimerRef.current);
-            }
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-                try {
-                    mediaRecorderRef.current.stop();
-                } catch (_) {}
-            }
-        };
-    }, []);
 
     useEffect(() => {
         if (conversation?.isEncrypted && !isUnlocked && !unlockModalOpen) {
@@ -1475,12 +1457,7 @@ export const ChatWindow = ({
                 // Thread/discussion hangout — NOT conversations/messages table.
                 // Underlying substrate is notes/idea → threads/thread_messages (canonical) with legacy comments fallback.
                 // Mirrors project discussion: ensure thread then post (bottom-up: thread_messages, not conversations).
-                let actualAttachments = initialAttachments;
-                if (file) {
-                    const bucketId = StorageService.getBucketForType(type);
-                    const uploaded = await StorageService.uploadFile(file, bucketId);
-                    actualAttachments = [uploaded.$id];
-                }
+                const actualAttachments = initialAttachments;
                 const { getOrCreateThread, postThreadMessage } = await import('@/lib/actions/client-ops');
                 let threadId = conversationId;
                 try {
@@ -1528,12 +1505,7 @@ export const ChatWindow = ({
                 return true;
             }
 
-            let actualAttachments = initialAttachments;
-            if (file) {
-                const bucketId = StorageService.getBucketForType(type);
-                const uploaded = await StorageService.uploadFile(file, bucketId);
-                actualAttachments = [uploaded.$id];
-            }
+            const actualAttachments = initialAttachments;
 
             const sentMessage = await ChatService.sendMessage(conversationId, user.$id, finalText, type, actualAttachments, replyToId);
 
@@ -1602,106 +1574,6 @@ export const ChatWindow = ({
         setAnchorEl(null);
     };
 
-    const handleFileSelect = (type: string) => {
-        if (fileInputRef.current) {
-            fileInputRef.current.accept = type;
-            fileInputRef.current.click();
-        }
-        handleAttachClose();
-    };
-
-    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setAttachment(e.target.files[0]);
-        }
-    };
-
-    const toggleRecording = async () => {
-        if (isRecording) {
-            // Stop recording
-            if (recordingTimerRef.current) {
-                clearTimeout(recordingTimerRef.current);
-                recordingTimerRef.current = null;
-            }
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-                mediaRecorderRef.current.stop();
-            }
-            setIsRecording(false);
-        } else {
-            // Start recording
-            if (!hasPaidKylrixPlan(user)) {
-                openProUpgrade('Voice recording');
-                return;
-            }
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
-                // Heavily compress voice note on client side (16kbps bitrate & Opus format)
-                let options = { audioBitsPerSecond: 16000 };
-                if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                    (options as any).mimeType = 'audio/webm;codecs=opus';
-                } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-                    (options as any).mimeType = 'audio/ogg;codecs=opus';
-                }
-                
-                const mediaRecorder = new MediaRecorder(stream, options);
-                mediaRecorderRef.current = mediaRecorder;
-                audioChunksRef.current = [];
-
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) {
-                        audioChunksRef.current.push(e.data);
-                    }
-                };
-
-                mediaRecorder.onstop = async () => {
-                    if (recordingTimerRef.current) {
-                        clearTimeout(recordingTimerRef.current);
-                        recordingTimerRef.current = null;
-                    }
-                    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                    const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
-                    
-                    // Stop all tracks to release microphone
-                    stream.getTracks().forEach(track => track.stop());
-
-                    // Send the audio file — branch on substrate (thread thread vs secure conversation)
-                    setSending(true);
-                    try {
-                        const uploaded = await StorageService.uploadFile(audioFile, StorageService.getBucketForType('audio'));
-                        const isThreadHangoutVoice = !!(conversation as any)?.isThreadFallback || (conversation as any)?.type === 'thread' || !!(conversation as any)?.isthreadChat || !!(conversation as any)?.isSelfBookmarks;
-                        if (isThreadHangoutVoice) {
-                            const { getOrCreateThread, postThreadMessage } = await import('@/lib/actions/client-ops');
-                            let threadId: any = conversationId;
-                            try {
-                                const parentKind: any = (conversation as any)?.isSelfBookmarks ? 'user' : 'chat';
-                                const parentId: any = (conversation as any)?.isSelfBookmarks ? user?.$id : conversationId;
-                                const channel: any = (conversation as any)?.isSelfBookmarks ? 'bookmarks' : 'general';
-                                const ensured: any = await getOrCreateThread({ parentKind, parentId, channel, title: (conversation as any)?.name || 'Bookmarks', legacyNoteId: conversationId } as any);
-                                threadId = ensured?.thread?.id || threadId;
-                            } catch {}
-                            await postThreadMessage({ threadId, content: `__voice_note__:${uploaded.$id}` } as any);
-                        } else {
-                            await ChatService.sendMessage(conversationId, user?.$id || '', 'Voice Message', 'audio', [uploaded.$id]);
-                        }
-                    } catch (error) {
-                        console.error('Failed to send voice note:', error);
-                    } finally {
-                        setSending(false);
-                    }
-                };
-
-                mediaRecorder.start();
-                setIsRecording(true);
-
-                // Audio length limit removed for Pro/Teams users.
-
-            } catch (err) {
-                console.error("Failed to start recording:", err);
-                alert("Microphone access is required for voice notes.");
-            }
-        }
-    };
 
     const handleNoteSelect = async (note: any) => {
         if (!user) return;
@@ -2367,8 +2239,6 @@ export const ChatWindow = ({
                     </div>
                 )}
                 <div className="relative z-[2]">
-                    <input type="file" hidden ref={fileInputRef} onChange={onFileChange} />
-
                     <Menu
                         anchorEl={attachAnchorEl}
                         open={Boolean(attachAnchorEl)}
@@ -2386,9 +2256,6 @@ export const ChatWindow = ({
                                 boxShadow: '0 12px 32px rgba(0,0,0,0.5)'}
                         }}
                     >
-                        <MenuItem onClick={() => { handleFileSelect('*'); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.5, px: 2, fontWeight: 700, fontSize: '0.85rem', '&:hover': { bgcolor: '#252321' } }}>
-                            <FileIcon size={18} strokeWidth={2} color="#9B9691" /> Upload File
-                        </MenuItem>
                         <MenuItem onClick={() => { setNoteModalOpen(true); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.5, px: 2, fontWeight: 700, fontSize: '0.85rem', '&:hover': { bgcolor: '#252321' } }}>
                             <FileText size={18} strokeWidth={2} color="#9B9691" /> Attach Note
                         </MenuItem>
@@ -2402,7 +2269,6 @@ export const ChatWindow = ({
                         attachment={attachment}
                         pendingObject={pendingObject}
                         sending={sending}
-                        isRecording={isRecording}
                         attachmentDisabled={!isProPlan}
                         enableMentions={conversation?.type === 'group'}
                         mentionTargets={groupMentionTargets}
@@ -2410,7 +2276,9 @@ export const ChatWindow = ({
                         isDirect={conversation?.type === 'direct'}
                         onAttach={() => {
                             openFileDrawer({
-                                title: 'Attach to chat',
+                                title: 'Attach object to chat',
+                                initialTab: 'objects',
+                                disabledTabs: ['synced', 'upload'],
                                 onSelectFile: (file: any) => {
                                     const parsed = parseChatAttachFile(file);
                                     if (parsed) setPendingObject(parsed);
@@ -2419,9 +2287,8 @@ export const ChatWindow = ({
                         }}
                         onClearAttachment={() => setAttachment(null)}
                         onClearPendingObject={() => setPendingObject(null)}
-                        onUpgradeRequested={() => showUpgradeIsland('attach files/images/videos')}
+                        onUpgradeRequested={() => showUpgradeIsland('attach objects')}
                         onSend={handleSend}
-                        onToggleRecording={toggleRecording}
                         typingUsers={typingUsers}
                         conversationId={conversationId}
                         typingTimeoutRef={typingTimeoutRef}

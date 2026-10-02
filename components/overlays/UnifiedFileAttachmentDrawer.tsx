@@ -1,24 +1,17 @@
 'use client';
 
 /**
- * UnifiedFileAttachmentDrawer — 3-Tab Unified Attachment Drawer.
- * Tabs:
- *   1. 'objects' (Default) with sub-tabs: Goals, Ideas, Projects, Threads, TOTPs, Forms, Events, Vault, Tags.
- *      Fully hydrated from live SDK getters + RxDB + LocalEngine. Displays "Encrypted" badge when items are encrypted.
- *   2. 'synced': Synced Media from Storage Buckets cached in LocalEngine (0ms Local Copy + Live Refresh).
- *   3. 'upload': Drag-and-drop or file uploader.
- *
- * Fullscreen Expansion Supported.
+ * UnifiedFileAttachmentDrawer — Workspace Object Attachment Drawer.
+ * Focuses purely on relational workspace objects:
+ *   Goals, Ideas, Projects, Threads, TOTPs, Forms, Events, Vault, Tags, Sessions.
+ * Fully hydrated from live SDK getters + RxDB + LocalEngine.
+ * Displays "Encrypted" badge when items are encrypted.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   X,
-  UploadCloud,
   FileText,
-  Image as ImageIcon,
-  Music,
-  Video,
   Search,
   Loader2,
   Target,
@@ -34,20 +27,12 @@ import {
   MessageSquare,
   ShieldAlert,
   Bot,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Eye,
-  Mic,
-  CheckSquare,
-  Square} from 'lucide-react';
-import { useUnifiedFileDrawer, SyncedMediaFile } from '@/context/UnifiedFileDrawerContext';
+} from 'lucide-react';
+import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { StorageService } from '@/lib/services/storage';
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNotes } from '@/context/NotesContext';
-import { storage } from '@/lib/appwrite/client';
 import { getAllTags, listNotesPaginated } from '@/lib/appwrite';
 import { FormsService } from '@/lib/services/forms';
 import { serializeObjectBlock } from '@/lib/note-object-secondary';
@@ -56,20 +41,7 @@ import { ProjectsService } from '@/lib/appwrite/projects';
 import { VaultService } from '@/lib/appwrite/vault';
 import { tasks, events } from '@/lib/kylrixflow';
 import { useSudo } from '@/context/SudoContext';
-import { useProUpgrade } from '@/context/ProUpgradeContext';
-import { hasPaidKylrixPlan } from '@/lib/utils';
 
-const BUCKETS = [
-  'general_storage',
-  'notes_attachments',
-  'messages',
-  'task_attachments',
-  'voice',
-  'profile_pictures',
-  'event_covers',
-];
-
-type MainTab = 'objects' | 'synced' | 'upload';
 type ObjectSubTab =
   | 'goals'
   | 'ideas'
@@ -103,78 +75,33 @@ export function UnifiedFileAttachmentDrawer() {
   const { isOpen, options, closeFileDrawer } = useUnifiedFileDrawer();
   const { user } = useAuth();
   const { promptSudo, isUnlocked } = useSudo();
-  const { openProUpgrade } = useProUpgrade();
-  const isPro = hasPaidKylrixPlan(user);
   const userId = user?.$id || 'guest';
   const { notes: localContextNotes } = useNotes();
-
   const { tasks: localContextGoals } = useTask();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activeTab, setActiveTab] = useState<MainTab>('synced');
   const [activeSubTab, setActiveSubTab] = useState<ObjectSubTab>('goals');
   const [searchQuery, setSearchQuery] = useState('');
+  const [objectItems, setObjectItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const disabledTabs = options?.disabledTabs || [];
-  const availableTabs: MainTab[] = (['objects', 'synced', 'upload'] as MainTab[]).filter(
-    (tab) => !disabledTabs.includes(tab)
-  );
-
-  // Honor caller defaults each open (e.g. moment composer → Objects / Ideas).
+  // Honor caller defaults each open
   useEffect(() => {
     if (!isOpen) return;
-    const requestedTab = options?.initialTab || 'synced';
-    const effectiveTab = disabledTabs.includes(requestedTab)
-      ? availableTabs[0] || 'objects'
-      : requestedTab;
-    setActiveTab(effectiveTab);
     setActiveSubTab(options?.initialSubTab || 'goals');
     setSearchQuery('');
-    setSelectedFile(null);
-    setSelectedMediaIds([]);
-    setPreviewFile(null);
-  }, [isOpen, options?.initialTab, options?.initialSubTab, options?.disabledTabs]);
+  }, [isOpen, options?.initialSubTab]);
 
-  // Auto MasterPass when switching to encrypted sub-tabs — suppressed when unlock-on-demand (default).
+  // Auto MasterPass when switching to encrypted sub-tabs
   useEffect(() => {
-    if (isOpen && activeTab === 'objects' && (activeSubTab === 'totps' || activeSubTab === 'vault')) {
+    if (isOpen && (activeSubTab === 'totps' || activeSubTab === 'vault')) {
       if (!isUnlocked) {
         void promptSudo('unlock', false, true);
       }
     }
-  }, [isOpen, activeTab, activeSubTab, isUnlocked, promptSudo]);
+  }, [isOpen, activeSubTab, isUnlocked, promptSudo]);
 
-  const [mediaFiles, setMediaFiles] = useState<SyncedMediaFile[]>([]);
-  const [objectItems, setObjectItems] = useState<any[]>([]);
-
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<SyncedMediaFile | null>(null);
-
-  // Multi-Select & Lightbox Sub-Drawer State (z-[99999])
-  const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
-  const [previewFile, setPreviewFile] = useState<SyncedMediaFile | null>(null);
-  const [zoomScale, setZoomScale] = useState(1);
-
-  const toggleMediaSelection = (fileId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setSelectedMediaIds((prev) =>
-      prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]
-    );
-  };
-
-  const handleAttachBatchMedia = () => {
-    const selectedFiles = mediaFiles.filter((f) => selectedMediaIds.includes(f.$id));
-    if (selectedFiles.length > 0) {
-      selectedFiles.forEach((f) => options?.onSelectFile(f));
-      closeFileDrawer();
-    } else if (selectedFile) {
-      options?.onSelectFile(selectedFile);
-      closeFileDrawer();
-    }
-  };
-
-  // 1. Comprehensive 0ms Local & Live SDK Hydration for All Object Types
+  // Comprehensive 0ms Local & Live SDK Hydration for All Object Types
   const loadLocalObjects = useCallback(async () => {
     setLoading(true);
     try {
@@ -182,7 +109,6 @@ export function UnifiedFileAttachmentDrawer() {
       const db = await getRxDB();
 
       if (activeSubTab === 'ideas') {
-        // Ideas / Notes — Unified 0ms Local Copy (context → RxDB → LocalEngine → network)
         items = localContextNotes && localContextNotes.length > 0 ? localContextNotes : [];
         if (items.length === 0) {
           const { loadNotesFromLocalCopy } = await import('@/lib/notes/load-local-notes');
@@ -197,195 +123,100 @@ export function UnifiedFileAttachmentDrawer() {
         const { loadGoalsFromLocalCopy } = await import('@/lib/goals/load-local-goals');
         items = await loadGoalsFromLocalCopy({
           userId,
-          existingTasks: localContextGoals});
+          existingTasks: localContextGoals,
+        });
         if (items.length === 0) {
-          try {
-            const res = await tasks.list();
-            items = res.rows || [];
-          } catch (_e) {
-            /* optional fallback */
-          }
+          const { rows } = await tasks.listTasksPaginated({ limit: 100 });
+          items = rows || [];
         }
       } else if (activeSubTab === 'projects') {
-        // Projects
-        try {
-          items = (await LocalEngine.cacheGet<any[]>('f_projects_list')) || [];
-          if (items.length === 0) {
-            const res = await ProjectsService.listProjects(true);
-            items = res.rows || [];
-          }
-        } catch (_e) {
-          items = (await LocalEngine.cacheGet<any[]>('f_projects_list')) || [];
+        const cached = await LocalEngine.cacheGet<any[]>(`f_user_projects_${userId}`);
+        if (cached && cached.length > 0) {
+          items = cached;
+        } else {
+          items = await ProjectsService.listProjects();
+          await LocalEngine.cacheSet(`f_user_projects_${userId}`, items);
         }
       } else if (activeSubTab === 'threads') {
-        // Threads / Discussions
-        const allNotes = (await db.notes.find().exec()).map((d) => d.toJSON());
-        items = allNotes.filter((n: any) => n.isThread || n.isDiscussion || n.isthread);
-        if (items.length === 0) {
-          items = (await LocalEngine.cacheGet<any[]>('f_threads_list')) || [];
-        }
+        const { listDiscussions } = await import('@/lib/threads/thread-service');
+        const rows = await listDiscussions({ limit: 50 });
+        items = rows || [];
       } else if (activeSubTab === 'totps') {
-        // Decrypt only in RAM via VaultService while unlocked — never persist plaintext.
-        void LocalEngine.cacheDelete(`f_decrypted_totps_${userId}`).catch(() => undefined);
-        if (isUnlocked) {
-          try {
-            const res = await VaultService.listTOTPSecrets(userId);
-            items = Array.isArray(res) ? res : [];
-          } catch (_e) {
-            items = [];
-          }
+        const { getDecryptedTOTPs } = await import('@/lib/appwrite/vault');
+        const cached = await LocalEngine.cacheGet<any[]>(`f_decrypted_totps_${userId}`);
+        if (cached && cached.length > 0) {
+          items = cached;
         } else {
-          items = [];
+          items = await getDecryptedTOTPs();
+          if (items.length > 0) {
+            await LocalEngine.cacheSet(`f_decrypted_totps_${userId}`, items);
+          }
         }
       } else if (activeSubTab === 'vault') {
-        // Decrypt only in RAM via VaultService while unlocked — never persist plaintext.
-        void LocalEngine.cacheDelete(`f_decrypted_vault_${userId}`).catch(() => undefined);
-        if (isUnlocked) {
-          try {
-            const res = await VaultService.listAllCredentials(userId);
-            items = Array.isArray(res) ? res : (res as any)?.rows || [];
-          } catch (_e) {
-            items = [];
-          }
+        const cached = await LocalEngine.cacheGet<any[]>(`f_decrypted_vault_${userId}`);
+        if (cached && cached.length > 0) {
+          items = cached;
         } else {
-          items = [];
-        }
-      } else if (activeSubTab === 'tags') {
-        // Tags
-        try {
-          const res = await getAllTags();
-          items = res.rows || [];
-        } catch (_e) {
-          items = (await db.tags.find().exec()).map((d) => d.toJSON());
+          items = await VaultService.listCredentials();
+          if (items.length > 0) {
+            await LocalEngine.cacheSet(`f_decrypted_vault_${userId}`, items);
+          }
         }
       } else if (activeSubTab === 'forms') {
-        // Forms
-        try {
-          const res = await FormsService.listUserForms(userId);
-          items = Array.isArray(res) ? res : (res as any)?.rows || [];
-        } catch (_e) {
-          items = (await db.forms.find().exec()).map((d) => d.toJSON());
-          if (items.length === 0) {
-            items = (await LocalEngine.cacheGet<any[]>('f_forms_list')) || [];
-          }
+        const cached = await LocalEngine.cacheGet<any[]>(`f_user_forms_${userId}`);
+        if (cached && cached.length > 0) {
+          items = cached;
+        } else {
+          const res = await FormsService.listForms({ limit: 100 });
+          items = res.rows || [];
+          await LocalEngine.cacheSet(`f_user_forms_${userId}`, items);
         }
       } else if (activeSubTab === 'events') {
-        // Events
-        try {
-          const res = await events.list();
-          items = res.rows || (Array.isArray(res) ? res : []);
-        } catch (_e) {
-          items = (await db.events.find().exec()).map((d) => d.toJSON());
-          if (items.length === 0) {
-            items = (await LocalEngine.cacheGet<any[]>('f_events_list')) || [];
-          }
+        const cached = await LocalEngine.cacheGet<any[]>(`f_user_events_${userId}`);
+        if (cached && cached.length > 0) {
+          items = cached;
+        } else {
+          const res = await events.listEventsPaginated({ limit: 100 });
+          items = res.rows || [];
+          await LocalEngine.cacheSet(`f_user_events_${userId}`, items);
+        }
+      } else if (activeSubTab === 'tags') {
+        const cached = await LocalEngine.cacheGet<any[]>(`f_user_tags_${userId}`);
+        if (cached && cached.length > 0) {
+          items = cached;
+        } else {
+          items = await getAllTags();
+          await LocalEngine.cacheSet(`f_user_tags_${userId}`, items);
         }
       } else if (activeSubTab === 'sessions') {
-        const { AgenticSessionLocalStore } = await import('@/lib/agentic/session-local-store');
-        const sessions = await AgenticSessionLocalStore.getSessionsList(userId);
-        items = sessions.map((s) => {
-          let title = `Session ${new Date(s.createdAt || Date.now()).toLocaleDateString()}`;
-          try {
-            const hist = JSON.parse(s.chatHistory || '[]');
-            const firstUser = hist.find((m: any) => m.role === 'user');
-            if (firstUser?.content) title = String(firstUser.content).slice(0, 80);
-          } catch {
-            /* ignore */
+        if (db && db.agent_sessions) {
+          const docs = await db.agent_sessions.find().exec();
+          if (docs && docs.length > 0) {
+            items = docs.map((d: any) => d.toJSON());
           }
-          return { $id: s.id, id: s.id, title, chatHistory: s.chatHistory, isPublic: s.isPublic };
-        });
+        }
+        if (items.length === 0) {
+          const { KylieAgentService } = await import('@/lib/ai/kylie-service');
+          items = await KylieAgentService.listSessions(userId);
+        }
       }
 
       setObjectItems(items);
-    } catch (_e) {
+    } catch (err) {
+      console.warn('[UnifiedAttachment] Error loading objects for tab', activeSubTab, err);
       setObjectItems([]);
     } finally {
       setLoading(false);
     }
-  }, [activeSubTab, userId, localContextNotes, localContextGoals, isUnlocked]);
-
-  // Load Synced Media from LocalEngine + Storage Buckets + Local Notes Attachments
-  const loadSyncedMedia = useCallback(async () => {
-    try {
-      const cachedMedia = await LocalEngine.cacheGet<SyncedMediaFile[]>(`f_user_media_${userId}`);
-      if (cachedMedia && cachedMedia.length > 0) {
-        setMediaFiles(cachedMedia);
-      }
-
-      // Live fetch across storage buckets
-      const fetchedFiles: SyncedMediaFile[] = [];
-      const seenIds = new Set<string>();
-
-      // Scan attached media objects from local notes SoT
-      if (localContextNotes && localContextNotes.length > 0) {
-        localContextNotes.forEach((note: any) => {
-          if (note.attachments) {
-            try {
-              const atts = typeof note.attachments === 'string' ? JSON.parse(note.attachments) : note.attachments;
-              if (Array.isArray(atts)) {
-                atts.forEach((a: any) => {
-                  const fid = a.fileId || a.$id;
-                  if (fid && !seenIds.has(fid)) {
-                    seenIds.add(fid);
-                    const bId = a.bucketId || 'notes_attachments';
-                    fetchedFiles.push({
-                      $id: fid,
-                      name: a.name || a.title || 'Note Attachment',
-                      bucketId: bId,
-                      sizeOriginal: a.size || a.sizeOriginal || 0,
-                      mimeType: a.mimeType || a.type || 'image/png',
-                      createdAt: a.createdAt || note.createdAt || new Date().toISOString(),
-                      fileUrl: a.fileUrl || StorageService.getFileView(fid, bId)});
-                  }
-                });
-              }
-            } catch (_e) {}
-          }
-        });
-      }
-
-      for (const bucketId of BUCKETS) {
-        try {
-          const listRes = await storage.listFiles(bucketId);
-          if (listRes?.files) {
-            listRes.files.forEach((f: any) => {
-              if (!seenIds.has(f.$id)) {
-                seenIds.add(f.$id);
-                fetchedFiles.push({
-                  $id: f.$id,
-                  name: f.name,
-                  bucketId,
-                  sizeOriginal: f.sizeOriginal || f.size || 0,
-                  mimeType: f.mimeType,
-                  createdAt: f.$createdAt || f.createdAt,
-                  fileUrl: StorageService.getFileView(f.$id, bucketId)});
-              }
-            });
-          }
-        } catch (_e) {}
-      }
-
-      if (fetchedFiles.length > 0) {
-        setMediaFiles(fetchedFiles);
-        await LocalEngine.cacheSet(`f_user_media_${userId}`, fetchedFiles);
-      }
-    } catch (_err) {}
-  }, [userId, localContextNotes]);
+  }, [activeSubTab, userId, localContextNotes, localContextGoals]);
 
   useEffect(() => {
     if (isOpen) {
-      const requestedTab = options?.initialTab || 'synced';
-      const effectiveTab = disabledTabs.includes(requestedTab)
-        ? availableTabs[0] || 'objects'
-        : requestedTab;
-      setActiveTab(effectiveTab);
-      setSelectedFile(null);
       void loadLocalObjects();
-      void loadSyncedMedia();
     }
-  }, [isOpen, options?.initialTab, options?.disabledTabs, disabledTabs, availableTabs, loadLocalObjects, loadSyncedMedia]);
+  }, [isOpen, activeSubTab, loadLocalObjects]);
 
-  // Re-hydrate when unlocked; clear RAM list when locked (never keep plaintext rows).
+  // Re-hydrate when unlocked; clear RAM list when locked
   useEffect(() => {
     if (!isOpen) return;
     if (activeSubTab !== 'totps' && activeSubTab !== 'vault') return;
@@ -425,7 +256,8 @@ export function UnifiedFileAttachmentDrawer() {
     else if (activeSubTab === 'forms') childKind = 'form';
     else if (activeSubTab === 'sessions') {
       const ok = window.confirm(
-        'Attaching a Kylie session makes the entire conversation visible to anyone who can see this note. Continue?');
+        'Attaching an agent session makes the entire conversation visible to anyone who can see this note. Continue?'
+      );
       if (!ok) return;
       childKind = 'session';
     }
@@ -436,7 +268,8 @@ export function UnifiedFileAttachmentDrawer() {
       bucketId: activeSubTab,
       label: itemTitle,
       appTheme: 'idea',
-      metadata: { title: itemTitle, subTab: activeSubTab }});
+      metadata: { title: itemTitle, subTab: activeSubTab },
+    });
 
     options.onSelectFile({
       $id: childId,
@@ -444,76 +277,20 @@ export function UnifiedFileAttachmentDrawer() {
       bucketId: activeSubTab,
       sizeOriginal: 0,
       mimeType: 'application/x-kylrix-object',
-      fileUrl: objectBlock});
+      fileUrl: objectBlock,
+    });
     closeFileDrawer();
   };
 
+  const filteredObjects = objectItems.filter((item) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const str = `${item.title || ''} ${item.name || ''} ${item.label || ''} ${item.serviceName || ''} ${item.issuer || ''} ${item.accountName || ''}`.toLowerCase();
+    return str.includes(q);
+  });
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!isPro) {
-      e.target.value = '';
-      openProUpgrade('File upload');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const bucket = 'notes_attachments';
-      const uploaded = await StorageService.uploadFile(file, bucket);
-      const childKind = file.type.startsWith('image/') ? 'image' : 'file';
-      const fileUrl = StorageService.getFileView(uploaded.$id, bucket);
-
-      const objectBlock = serializeObjectBlock({
-        childId: uploaded.$id,
-        childKind,
-        bucketId: bucket,
-        label: uploaded.name,
-        appTheme: 'idea',
-        metadata: { mimeType: uploaded.mimeType || file.type, fileName: uploaded.name, fileUrl }});
-
-      const newMedia: SyncedMediaFile = {
-        $id: uploaded.$id,
-        name: uploaded.name,
-        bucketId: bucket,
-        sizeOriginal: uploaded.sizeOriginal || file.size,
-        mimeType: uploaded.mimeType || file.type,
-        createdAt: new Date().toISOString(),
-        fileUrl: objectBlock};
-
-      const updated = [newMedia, ...mediaFiles];
-      setMediaFiles(updated);
-      await LocalEngine.cacheSet(`f_user_media_${userId}`, updated);
-
-      options.onSelectFile(newMedia);
-      closeFileDrawer();
-    } catch (err) {
-      console.error('Failed to upload file:', err);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const filteredMedia = mediaFiles.filter((f) =>
-    f.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredObjects = objectItems.filter((o) =>
-    String(o.title || o.name || o.label || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const renderFileIcon = (file: SyncedMediaFile) => {
-    const mime = file.mimeType || '';
-    if (mime.startsWith('image/')) return <ImageIcon className="w-5 h-5 text-[#A855F7]" />;
-    if (mime.startsWith('video/')) return <Video className="w-5 h-5 text-[#3B82F6]" />;
-    if (mime.startsWith('audio/')) return <Music className="w-5 h-5 text-[#10B981]" />;
-    return <FileText className="w-5 h-5 text-[#F59E0B]" />;
-  };
-
-  const getSubTabIcon = (subTab: ObjectSubTab) => {
-    switch (subTab) {
+  const getSubTabIcon = (tab: ObjectSubTab) => {
+    switch (tab) {
       case 'goals': return Target;
       case 'ideas': return FileText;
       case 'projects': return FolderKanban;
@@ -545,10 +322,10 @@ export function UnifiedFileAttachmentDrawer() {
             </div>
             <div>
               <h3 className="font-clash font-extrabold text-xl text-[#F5F2ED]">
-                {options?.title || 'Attach'}
+                {options?.title || 'Attach Workspace Object'}
               </h3>
               <p className="text-xs text-[#9B9691] font-mono mt-0.5 capitalize">
-                Select {activeTab === 'objects' ? activeSubTab : activeTab} to attach
+                Select {activeSubTab} to link
               </p>
             </div>
           </div>
@@ -556,516 +333,135 @@ export function UnifiedFileAttachmentDrawer() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsFullscreen((prev) => !prev)}
-              className="p-2 rounded-xl text-[#9B9691] hover:text-[#F5F2ED] bg-[#0A0908] border border-[#1C1A18] hover:border-[#34322F] transition-all"
+              className="p-2 rounded-xl text-[#9B9691] hover:text-[#F5F2ED] bg-[#0A0908] border border-[#1C1A18] hover:border-[#34322F] transition-all cursor-pointer"
               title={isFullscreen ? 'Shrink Drawer' : 'Full Screen'}
             >
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
             <button
               onClick={closeFileDrawer}
-              className="p-2 rounded-xl text-[#9B9691] hover:text-[#F5F2ED] bg-[#0A0908] border border-[#1C1A18] hover:border-[#34322F] transition-all"
+              className="p-2 rounded-xl text-[#9B9691] hover:text-[#F5F2ED] bg-[#0A0908] border border-[#1C1A18] hover:border-[#34322F] transition-all cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Main Tab Switcher (Objects, Synced, Upload) — Hides disabled tabs */}
-        {availableTabs.length > 1 && (
-          <div className="flex items-center gap-2 mt-4 p-1.5 bg-[#0A0908] rounded-2xl border border-[#1C1A18] shrink-0">
-            {!disabledTabs.includes('objects') && (
-              <button
-                onClick={() => setActiveTab('objects')}
-                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-                  activeTab === 'objects'
-                    ? 'bg-[#161412] text-[#F5F2ED] border border-[#34322F] shadow-md'
-                    : 'text-[#9B9691] hover:text-[#F5F2ED]'
-                }`}
-              >
-                Objects
-              </button>
-            )}
-            {!disabledTabs.includes('synced') && (
-              <button
-                onClick={() => setActiveTab('synced')}
-                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-                  activeTab === 'synced'
-                    ? 'bg-[#161412] text-[#F5F2ED] border border-[#34322F] shadow-md'
-                    : 'text-[#9B9691] hover:text-[#F5F2ED]'
-                }`}
-              >
-                Synced ({mediaFiles.length})
-              </button>
-            )}
-            {!disabledTabs.includes('upload') && (
-              <button
-                onClick={() => setActiveTab('upload')}
-                className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${
-                  activeTab === 'upload'
-                    ? 'bg-[#161412] text-[#F5F2ED] border border-[#34322F] shadow-md'
-                    : 'text-[#9B9691] hover:text-[#F5F2ED]'
-                }`}
-              >
-                Upload
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Tab 1: Objects */}
-        {activeTab === 'objects' && (
-          <div className="flex-1 flex flex-col overflow-hidden mt-4">
-            {/* Scrollable Sub-Tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar shrink-0">
-              {[
-                { id: 'goals', label: 'Goals', icon: Target },
-                { id: 'ideas', label: 'Ideas', icon: FileText },
-                { id: 'projects', label: 'Projects', icon: FolderKanban },
-                { id: 'threads', label: 'Threads', icon: MessageSquare },
-                { id: 'totps', label: 'TOTPs', icon: ShieldAlert },
-                { id: 'forms', label: 'Forms', icon: FileCode },
-                { id: 'events', label: 'Events', icon: Calendar },
-                { id: 'sessions', label: 'Chats', icon: Bot },
-                { id: 'vault', label: 'Vault', icon: Key },
-                { id: 'tags', label: 'Tags', icon: TagIcon },
-              ].map((sub) => {
-                const IconComponent = sub.icon;
-                const isSelected = activeSubTab === sub.id;
-                return (
-                  <button
-                    key={sub.id}
-                    onClick={() => setActiveSubTab(sub.id as ObjectSubTab)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                      isSelected
-                        ? 'bg-[#A855F7] text-white shadow-lg shadow-[#A855F7]/20'
-                        : 'bg-[#0A0908] text-[#9B9691] hover:text-[#F5F2ED] border border-[#1C1A18]'
-                    }`}
-                  >
-                    <IconComponent className="w-4 h-4" />
-                    <span>{sub.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="relative my-3 shrink-0">
-              <Search className="absolute left-3.5 top-3 w-4 h-4 text-[#9B9691]" />
-              <input
-                type="text"
-                placeholder={`Search ${activeSubTab}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#0A0908] border border-[#1C1A18] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[#F5F2ED] focus:outline-none focus:border-[#A855F7] transition-all"
-              />
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
-              {loading ? (
-                <div className="flex justify-center items-center py-16 text-[#9B9691]">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#A855F7]" />
-                </div>
-              ) : filteredObjects.length === 0 ? (
-                <div className="text-center py-16 text-[#9B9691] text-xs space-y-3">
-                  {!isUnlocked && (activeSubTab === 'totps' || activeSubTab === 'vault') ? (
-                    <>
-                      <p>Unlock to browse and attach {activeSubTab}.</p>
-                      <button
-                        type="button"
-                        onClick={() => void promptSudo('unlock')}
-                        className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#6366F1] text-white text-[11px] font-extrabold cursor-pointer border-none"
-                      >
-                        Unlock
-                      </button>
-                    </>
-                  ) : (
-                    <p>No {activeSubTab} found.</p>
-                  )}
-                </div>
-              ) : (
-                filteredObjects.map((item, idx) => {
-                  const rawTitle = item.title || item.name || item.label || item.serviceName || item.issuer || item.accountName || '';
-                  const isEncrypted = item.isEncrypted || item.encrypted || item.locked || isLikelyEncrypted(rawTitle);
-                  let titleText = rawTitle;
-                  if (isEncrypted) {
-                    titleText = `Encrypted ${activeSubTab.charAt(0).toUpperCase() + activeSubTab.slice(1)}`;
-                  } else if (!titleText || titleText.trim() === '') {
-                    titleText = 'Untitled Item';
-                  }
-
-                  return (
-                    <div
-                      key={item.$id || item.id || idx}
-                      onClick={() => handleSelectObject(item)}
-                      className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0A0908] border border-[#1C1A18] hover:border-[#A855F7] transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="p-2.5 rounded-xl bg-[#161412] border border-[#1C1A18] text-[#A855F7] shrink-0">
-                          {isEncrypted ? <Lock className="w-4 h-4 text-amber-400" /> : <CurrentSubTabIcon className="w-4 h-4" />}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-[#F5F2ED] truncate group-hover:text-[#A855F7] transition-colors">
-                              {titleText}
-                            </p>
-                            {isEncrypted && (
-                              <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/20">
-                                Encrypted
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-[#9B9691] font-mono mt-0.5 capitalize">
-                            {activeSubTab}
-                          </p>
-                        </div>
-                      </div>
-                      <button className="px-3.5 py-1.5 rounded-xl bg-[#161412] border border-[#1C1A18] group-hover:bg-[#A855F7] group-hover:border-[#A855F7] text-xs font-bold text-[#F5F2ED] group-hover:text-white transition-all shrink-0">
-                        Attach
-                      </button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tab 2: Synced */}
-        {activeTab === 'synced' && (
-          <div className="flex-1 flex flex-col overflow-hidden mt-4">
-            <div className="relative mb-3">
-              <Search className="absolute left-3.5 top-3 w-4 h-4 text-[#9B9691]" />
-              <input
-                type="text"
-                placeholder="Search synced media..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#0A0908] border border-[#1C1A18] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[#F5F2ED] focus:outline-none focus:border-[#A855F7]"
-              />
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
-              {filteredMedia.length === 0 ? (
-                <div className="text-center py-16 text-[#9B9691] text-xs flex flex-col items-center gap-2">
-                  <span>No synced media files found in local storage.</span>
-                  <button
-                    onClick={() => void loadSyncedMedia()}
-                    className="mt-2 px-3 py-1.5 rounded-xl bg-[#0A0908] border border-[#1C1A18] text-[#A855F7] text-xs font-bold hover:bg-[#161412]"
-                  >
-                    Refresh Media Storage
-                  </button>
-                </div>
-              ) : (
-                filteredMedia.map((file) => {
-                  const isSelected = selectedMediaIds.includes(file.$id) || selectedFile?.$id === file.$id;
-                  const isImg = file.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name);
-                  const isAudio = file.mimeType?.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|webm)$/i.test(file.name) || file.bucketId === 'voice';
-
-                  return (
-                    <div
-                      key={file.$id}
-                      onClick={() => setSelectedFile(file)}
-                      className={`flex flex-col gap-2 p-3.5 rounded-2xl border transition-all cursor-pointer group ${
-                        isSelected
-                          ? 'bg-[#161412] border-[#A855F7] shadow-lg shadow-[#A855F7]/10'
-                          : 'bg-[#0A0908] border-[#1C1A18] hover:border-[#34322F]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between min-w-0 w-full">
-                        <div className="flex items-center gap-3.5 min-w-0">
-                          {/* Multi-select Checkbox */}
-                          <button
-                            type="button"
-                            onClick={(e) => toggleMediaSelection(file.$id, e)}
-                            className="text-[#9B9691] hover:text-[#A855F7] transition-colors p-1"
-                            title={isSelected ? 'Unselect' : 'Select'}
-                          >
-                            {isSelected ? (
-                              <CheckSquare className="w-5 h-5 text-[#A855F7]" />
-                            ) : (
-                              <Square className="w-5 h-5" />
-                            )}
-                          </button>
-
-                          {/* Left-side Preview Thumbnail Trigger */}
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPreviewFile(file);
-                              setZoomScale(1);
-                            }}
-                            className="relative group/prev cursor-pointer shrink-0"
-                            title="Click to expand full preview"
-                          >
-                            {isImg ? (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img
-                                src={file.fileUrl}
-                                alt={file.name}
-                                className="w-12 h-12 rounded-xl object-cover border border-[#1C1A18] group-hover/prev:border-[#A855F7] transition-all bg-[#161412]"
-                              />
-                            ) : (
-                              <div className="p-2.5 rounded-xl bg-[#161412] border border-[#1C1A18] text-[#A855F7] group-hover/prev:border-[#A855F7] transition-all">
-                                {renderFileIcon(file)}
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover/prev:opacity-100 flex items-center justify-center transition-opacity text-white">
-                              <Eye className="w-4 h-4" />
-                            </div>
-                          </div>
-
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-[#F5F2ED] truncate group-hover:text-[#A855F7] transition-colors">
-                              {file.name}
-                            </p>
-                            <p className="text-xs text-[#9B9691] font-mono mt-0.5 capitalize">
-                              {file.bucketId.replace('_', ' ')} • {(file.sizeOriginal / 1024).toFixed(1)} KB
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0 ml-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPreviewFile(file);
-                              setZoomScale(1);
-                            }}
-                            className="p-2 rounded-xl bg-[#161412] border border-[#1C1A18] hover:border-[#A855F7] text-[#9B9691] hover:text-[#F5F2ED] text-xs font-bold transition-all flex items-center gap-1.5"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-[#A855F7]" />
-                            Preview
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Inline Audio Player Preview for Voice Notes */}
-                      {isAudio && (
-                        <div className="mt-1 pt-2 border-t border-[#1C1A18]/60 w-full" onClick={(e) => e.stopPropagation()}>
-                          <audio controls src={file.fileUrl} className="w-full h-8 rounded-lg bg-[#161412]" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {(selectedFile || selectedMediaIds.length > 0) && (
-              <div className="mt-4 pt-3 border-t border-[#1C1A18] flex items-center justify-between">
-                <span className="text-xs font-mono text-[#9B9691]">
-                  {selectedMediaIds.length > 0
-                    ? `${selectedMediaIds.length} media file(s) selected`
-                    : '1 media file selected'}
-                </span>
+        {/* Objects Container */}
+        <div className="flex-1 flex flex-col overflow-hidden mt-4">
+          {/* Scrollable Sub-Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar shrink-0">
+            {[
+              { id: 'goals', label: 'Goals', icon: Target },
+              { id: 'ideas', label: 'Ideas', icon: FileText },
+              { id: 'projects', label: 'Projects', icon: FolderKanban },
+              { id: 'threads', label: 'Threads', icon: MessageSquare },
+              { id: 'totps', label: 'TOTPs', icon: ShieldAlert },
+              { id: 'forms', label: 'Forms', icon: FileCode },
+              { id: 'events', label: 'Events', icon: Calendar },
+              { id: 'sessions', label: 'Chats', icon: Bot },
+              { id: 'vault', label: 'Vault', icon: Key },
+              { id: 'tags', label: 'Tags', icon: TagIcon },
+            ].map((sub) => {
+              const IconComponent = sub.icon;
+              const isSelected = activeSubTab === sub.id;
+              return (
                 <button
-                  onClick={handleAttachBatchMedia}
-                  className="px-6 py-2.5 bg-[#A855F7] hover:bg-[#9333EA] text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-[#A855F7]/20"
+                  key={sub.id}
+                  onClick={() => setActiveSubTab(sub.id as ObjectSubTab)}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#A855F7] text-white shadow-lg shadow-[#A855F7]/20'
+                      : 'bg-[#0A0908] text-[#9B9691] hover:text-[#F5F2ED] border border-[#1C1A18]'
+                  }`}
                 >
-                  Attach {selectedMediaIds.length > 1 ? `(${selectedMediaIds.length}) ` : ''}Selected Media
+                  <IconComponent className="w-4 h-4" />
+                  <span>{sub.label}</span>
                 </button>
-              </div>
-            )}
+              );
+            })}
           </div>
-        )}
 
-        {/* Tab 3: Upload */}
-        {activeTab === 'upload' && (
-          <div className="flex-1 flex flex-col items-center justify-center py-16 mt-4 border-2 border-dashed border-[#1C1A18] rounded-2xl bg-[#0A0908]">
-            {uploading ? (
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-[#A855F7]" />
-                <p className="text-xs text-[#9B9691]">Uploading and caching to local media...</p>
-              </div>
-            ) : !isPro ? (
-              <button
-                type="button"
-                onClick={() => openProUpgrade('File upload')}
-                className="flex flex-col items-center gap-3 cursor-pointer"
-              >
-                <div className="p-4 rounded-2xl bg-[#161412] border border-[#1C1A18] text-[#F59E0B]">
-                  <UploadCloud className="w-8 h-8" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-bold text-[#F5F2ED]">Upload is Pro</p>
-                  <p className="text-xs text-[#9B9691] mt-1">
-                    Attach existing objects for free — uploads need Pro
-                  </p>
-                </div>
-              </button>
-            ) : (
-              <label className="flex flex-col items-center gap-3 cursor-pointer">
-                <div className="p-4 rounded-2xl bg-[#161412] border border-[#1C1A18] text-[#A855F7]">
-                  <UploadCloud className="w-8 h-8" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-bold text-[#F5F2ED]">Click to browse file</p>
-                  <p className="text-xs text-[#9B9691] mt-1">
-                    File will be uploaded and cached to your local media
-                  </p>
-                </div>
-                <input
-                  type="file"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
-            )}
+          <div className="relative my-3 shrink-0">
+            <Search className="absolute left-3.5 top-3 w-4 h-4 text-[#9B9691]" />
+            <input
+              type="text"
+              placeholder={`Search ${activeSubTab}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#0A0908] border border-[#1C1A18] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[#F5F2ED] focus:outline-none focus:border-[#A855F7] transition-all"
+            />
           </div>
-        )}
-      </div>
 
-      {/* 4. Top-level Media Preview Sub-Drawer & Lightbox (Z-Index 99999) */}
-      {previewFile && (
-        <div
-          className="fixed inset-0 z-[99999] bg-black/85 flex items-center justify-center p-4 transition-all animate-fadeIn"
-          onClick={() => {
-            setPreviewFile(null);
-            setZoomScale(1);
-          }}
-        >
-          <div
-            className="relative w-full max-w-4xl max-h-[92vh] bg-[#161412] border border-[#34322F] rounded-3xl p-6 shadow-2xl flex flex-col font-satoshi overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Sub-Drawer Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-[#1C1A18] shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2.5 rounded-xl bg-[#0A0908] border border-[#1C1A18] text-[#A855F7] shrink-0">
-                  <Eye className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <h4 className="font-extrabold text-lg text-[#F5F2ED] truncate">
-                    {previewFile.name}
-                  </h4>
-                  <p className="text-xs text-[#9B9691] font-mono mt-0.5 capitalize">
-                    {previewFile.bucketId.replace('_', ' ')} • {(previewFile.sizeOriginal / 1024).toFixed(1)} KB
-                  </p>
-                </div>
+          <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
+            {loading ? (
+              <div className="flex justify-center items-center py-16 text-[#9B9691]">
+                <Loader2 className="w-6 h-6 animate-spin text-[#A855F7]" />
               </div>
-
-              {/* Zoom & Close Controls */}
-              <div className="flex items-center gap-2">
-                {(previewFile.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(previewFile.name)) && (
-                  <div className="flex items-center gap-1 bg-[#0A0908] border border-[#1C1A18] rounded-xl p-1">
-                    <button
-                      onClick={() => setZoomScale((s) => Math.max(0.5, s - 0.25))}
-                      className="p-1.5 rounded-lg text-[#9B9691] hover:text-[#F5F2ED] hover:bg-[#161412] transition-all"
-                      title="Zoom Out"
-                    >
-                      <ZoomOut className="w-4 h-4" />
-                    </button>
-                    <span className="text-xs font-mono text-[#F5F2ED] px-2 min-w-[45px] text-center">
-                      {Math.round(zoomScale * 100)}%
-                    </span>
-                    <button
-                      onClick={() => setZoomScale((s) => Math.min(4, s + 0.25))}
-                      className="p-1.5 rounded-lg text-[#9B9691] hover:text-[#F5F2ED] hover:bg-[#161412] transition-all"
-                      title="Zoom In"
-                    >
-                      <ZoomIn className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setZoomScale(1)}
-                      className="p-1.5 rounded-lg text-[#9B9691] hover:text-[#F5F2ED] hover:bg-[#161412] transition-all"
-                      title="Reset Zoom"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-
-                <button
-                  onClick={() => {
-                    setPreviewFile(null);
-                    setZoomScale(1);
-                  }}
-                  className="p-2 rounded-xl text-[#9B9691] hover:text-[#F5F2ED] bg-[#0A0908] border border-[#1C1A18] hover:border-[#34322F] transition-all"
-                  title="Close Preview"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Sub-Drawer Main Preview Body */}
-            <div className="flex-1 overflow-auto flex items-center justify-center py-6 custom-scrollbar min-h-[300px]">
-              {previewFile.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(previewFile.name) ? (
-                <div
-                  className="overflow-auto max-w-full max-h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
-                  onWheel={(e) => {
-                    if (e.deltaY < 0) {
-                      setZoomScale((s) => Math.min(4, s + 0.15));
-                    } else {
-                      setZoomScale((s) => Math.max(0.5, s - 0.15));
-                    }
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={previewFile.fileUrl}
-                    alt={previewFile.name}
-                    style={{ transform: `scale(${zoomScale})` }}
-                    className="max-h-[65vh] max-w-full object-contain rounded-2xl transition-transform duration-150 shadow-2xl border border-[#34322F]"
-                  />
-                </div>
-              ) : previewFile.mimeType?.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|webm)$/i.test(previewFile.name) || previewFile.bucketId === 'voice' ? (
-                <div className="w-full max-w-md p-8 rounded-3xl bg-[#0A0908] border border-[#1C1A18] flex flex-col items-center gap-6 shadow-2xl">
-                  <div className="p-5 rounded-2xl bg-[#6366F1]/10 text-[#6366F1] border border-[#6366F1]/20">
-                    <Mic className="w-10 h-10 animate-pulse" />
-                  </div>
-                  <div className="text-center">
-                    <h5 className="font-bold text-base text-[#F5F2ED]">{previewFile.name}</h5>
-                    <p className="text-xs text-[#9B9691] font-mono mt-1 capitalize">
-                      {previewFile.bucketId.replace('_', ' ')} • Voice Note
-                    </p>
-                  </div>
-                  <audio controls src={previewFile.fileUrl} className="w-full h-10 rounded-xl bg-[#161412]" />
-                </div>
-              ) : (
-                <div className="text-center py-16 text-[#9B9691] flex flex-col items-center gap-3">
-                  <FileCode className="w-12 h-12 text-[#A855F7]" />
-                  <p className="text-sm font-bold text-[#F5F2ED]">{previewFile.name}</p>
-                  <p className="text-xs font-mono text-[#9B9691]">No visual preview available for this file type.</p>
-                </div>
-              )}
-            </div>
-
-            {/* Sub-Drawer Action Footer */}
-            <div className="pt-4 border-t border-[#1C1A18] flex items-center justify-between shrink-0">
-              <button
-                onClick={(e) => toggleMediaSelection(previewFile.$id, e)}
-                className={`px-4 py-2.5 rounded-xl border font-bold text-xs flex items-center gap-2 transition-all ${
-                  selectedMediaIds.includes(previewFile.$id)
-                    ? 'bg-[#A855F7]/10 border-[#A855F7] text-[#A855F7]'
-                    : 'bg-[#0A0908] border-[#1C1A18] text-[#9B9691] hover:text-[#F5F2ED]'
-                }`}
-              >
-                {selectedMediaIds.includes(previewFile.$id) ? (
+            ) : filteredObjects.length === 0 ? (
+              <div className="text-center py-16 text-[#9B9691] text-xs space-y-3">
+                {!isUnlocked && (activeSubTab === 'totps' || activeSubTab === 'vault') ? (
                   <>
-                    <CheckSquare className="w-4 h-4" /> Selected
+                    <p>Unlock to browse and attach {activeSubTab}.</p>
+                    <button
+                      type="button"
+                      onClick={() => void promptSudo('unlock')}
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#6366F1] text-white text-[11px] font-extrabold cursor-pointer border-none"
+                    >
+                      Unlock
+                    </button>
                   </>
                 ) : (
-                  <>
-                    <Square className="w-4 h-4" /> Select for Batch Attach
-                  </>
+                  <p>No {activeSubTab} found.</p>
                 )}
-              </button>
+              </div>
+            ) : (
+              filteredObjects.map((item, idx) => {
+                const rawTitle = item.title || item.name || item.label || item.serviceName || item.issuer || item.accountName || '';
+                const isEncrypted = item.isEncrypted || item.encrypted || item.locked || isLikelyEncrypted(rawTitle);
+                let titleText = rawTitle;
+                if (isEncrypted) {
+                  titleText = `Encrypted ${activeSubTab.charAt(0).toUpperCase() + activeSubTab.slice(1)}`;
+                } else if (!titleText || titleText.trim() === '') {
+                  titleText = 'Untitled Item';
+                }
 
-              <button
-                onClick={() => {
-                  options?.onSelectFile(previewFile);
-                  setPreviewFile(null);
-                  closeFileDrawer();
-                }}
-                className="px-6 py-2.5 bg-[#A855F7] hover:bg-[#9333EA] text-white font-bold text-sm rounded-xl transition-all shadow-lg"
-              >
-                Attach This File
-              </button>
-            </div>
+                return (
+                  <div
+                    key={item.$id || item.id || idx}
+                    onClick={() => handleSelectObject(item)}
+                    className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0A0908] border border-[#1C1A18] hover:border-[#A855F7] transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="p-2.5 rounded-xl bg-[#161412] border border-[#1C1A18] text-[#A855F7] shrink-0">
+                        {isEncrypted ? <Lock className="w-4 h-4 text-amber-400" /> : <CurrentSubTabIcon className="w-4 h-4" />}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-[#F5F2ED] truncate group-hover:text-[#A855F7] transition-colors">
+                            {titleText}
+                          </p>
+                          {isEncrypted && (
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/20">
+                              Encrypted
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[#9B9691] font-mono mt-0.5 capitalize">
+                          {activeSubTab}
+                        </p>
+                      </div>
+                    </div>
+                    <button className="px-3.5 py-1.5 rounded-xl bg-[#161412] border border-[#1C1A18] group-hover:bg-[#A855F7] group-hover:border-[#A855F7] text-xs font-bold text-[#F5F2ED] group-hover:text-white transition-all shrink-0">
+                      Attach
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

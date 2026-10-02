@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Paperclip, Mic, Square, Send, Loader2, X } from 'lucide-react';
+import { Paperclip, Send, Loader2, X } from 'lucide-react';
 import { PresenceService } from '@/lib/services/presence';
 import { toast } from 'react-hot-toast';
 import type { ChatPendingObject } from '@/lib/chat/pending-object';
@@ -11,14 +11,14 @@ type Props = {
   attachment: File | null;
   pendingObject?: ChatPendingObject | null;
   sending: boolean;
-  isRecording: boolean;
+  isRecording?: boolean;
   enableMentions?: boolean;
   mentionTargets?: Array<{ id: string; label: string; token: string }>;
   onAttach: (event: React.MouseEvent<HTMLElement>) => void;
   attachmentDisabled?: boolean;
-  onUpgradeRequested: () => void;
+  onUpgradeRequested?: () => void;
   onSend: (text: string) => Promise<boolean>;
-  onToggleRecording: () => void;
+  onToggleRecording?: () => void;
   onClearAttachment?: () => void;
   onClearPendingObject?: () => void;
   typingUsers: string[];
@@ -215,24 +215,10 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
           value={draft}
           onChange={onChange}
           onKeyDown={onKeyDown}
-          placeholder={isRecording ? 'Recording…' : 'Message'}
-          disabled={isRecording}
-          className="flex-1 min-w-0 max-h-[120px] resize-none bg-transparent border-0 outline-none shadow-none ring-0 focus:ring-0 focus:outline-none text-[0.9375rem] leading-[1.45] text-white font-satoshi font-medium placeholder:text-white/30 py-2 px-1.5 disabled:opacity-50"
+          placeholder="Message"
+          className="flex-1 min-w-0 max-h-[120px] resize-none bg-transparent border-0 outline-none shadow-none ring-0 focus:ring-0 focus:outline-none text-[0.9375rem] leading-[1.45] text-white font-satoshi font-medium placeholder:text-white/30 py-2 px-1.5"
           style={{ height: 'auto' }}
         />
-
-        <button
-          type="button"
-          onClick={onToggleRecording}
-          aria-label={isRecording ? 'Stop recording' : 'Voice note'}
-          className={`shrink-0 w-9 h-9 mb-0.5 rounded-full inline-flex items-center justify-center transition-colors ${
-            isRecording
-              ? 'text-[#EF4444] bg-[#EF4444]/15 hover:bg-[#EF4444]/25'
-              : 'text-white/45 hover:text-white hover:bg-white/[0.06]'
-          }`}
-        >
-          {isRecording ? <Square size={14} fill="currentColor" /> : <Mic size={18} strokeWidth={2} />}
-        </button>
 
         <button
           type="button"

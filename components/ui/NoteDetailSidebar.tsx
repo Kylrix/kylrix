@@ -8,7 +8,6 @@ import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 import { ObjectQuickActionCard } from '@/components/objects/ObjectQuickActionCard';
 
 import {
-  Mic,
   Square,
   Trash2 as TrashIcon,
   ExternalLink as OpenIcon,
@@ -78,7 +77,6 @@ import {
 } from '@/lib/appwrite';
 import { convertNoteToGoalAgentic } from '@/lib/ai-actions';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { StorageService } from '@/lib/services/storage';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { isValidAppwriteRowId } from '@/lib/utils/resource-ids';
@@ -368,19 +366,6 @@ export function NoteDetailSidebar({
   const [isLocallyDecrypted, setIsLocallyDecrypted] = useState(false);
   const [_attachedObjects, setAttachedObjects] = useState<any[]>([]);
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
-      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-    };
-  }, []);
 
   // ENCRYPTION LOGIC
   const isT4Encrypted = useMemo(
@@ -707,7 +692,6 @@ export function NoteDetailSidebar({
   const [isObjectPermissionInfoOpen, setIsObjectPermissionInfoOpen] = useState(false);
   const [pendingBlockDelete, setPendingBlockDelete] = useState<ParsedObjectBlock | null>(null);
   const [_isAttachingObject, setIsAttachingObject] = useState(false);
-  const objectUploadInputRef = useRef<HTMLInputElement | null>(null);
   // Allow attachment when: not readOnly AND (no role set = own-notes drawer context, OR explicitly owner/write-collab).
   // accessRole is only set by IdeaPageClient for shared/public note views — undefined means user is in their own notes.
   const canAttachSecondaryObject = !readOnly && (!accessRole || accessRole === 'owner' || accessRole === 'write-collab');
@@ -948,95 +932,6 @@ export function NoteDetailSidebar({
   const displayTags = useMemo(() => tags.split(',').map((t: string) => t.trim()).filter(Boolean), [tags]);
 
 
-  const toggleRecording = useCallback(async () => {
-    if (isRecording) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      setIsRecording(false);
-    } else {
-      if (!hasPaidKylrixPlan(user)) {
-        openProUpgrade('Voice recording');
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        let options = { audioBitsPerSecond: 16000 };
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          (options as any).mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-          (options as any).mimeType = 'audio/ogg;codecs=opus';
-        }
-
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            audioChunksRef.current.push(e.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
-          if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
-          if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
-
-          stream.getTracks().forEach(track => track.stop());
-
-          try {
-            const uploaded = await StorageService.uploadFile(audioFile, 'voice');
-            
-            // AUTHORITATIVE SYNC: Wire into objects table to prevent zombie attachments
-            try {
-              const line = getCursorLineNumber();
-              await attachObject({
-                parentId: liveNote.$id,
-                parentKind: 'note',
-                childId: uploaded.$id,
-                childKind: 'voice',
-                metadata: {
-                  filename: audioFile.name,
-                  mimeType: audioFile.type,
-                  size: audioFile.size,
-                  duration: recordingDuration,
-                  insertLine: line
-                }
-              });
-              // Refresh local objects list
-              const { getObjectsByParent } = await import('@/lib/actions/client-ops');
-              const rows = await getObjectsByParent(liveNote.$id, 'note');
-              setAttachedObjects(rows);
-              showSuccess('Voice note recorded', 'Attached to this note.');
-            } catch (attachErr: any) {
-              console.warn('[NoteDetailSidebar] Failed to register attachment in objects table:', attachErr);
-              showError('Recording limit reached', attachErr.message || 'Could not attach voice note.');
-            }
-          } catch (error) {
-            console.error('Failed to upload voice note:', error);
-            showError('Recording failed', 'Could not save voice note.');
-          }
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-        setRecordingDuration(0);
-
-        durationIntervalRef.current = setInterval(() => {
-          setRecordingDuration(prev => prev + 1);
-        }, 1000);
-
-        // Audio length limit removed for Pro/Teams users.
-
-      } catch (err) {
-        console.error("Failed to start recording:", err);
-        showError('Permission denied', 'Microphone access is required to record voice notes.');
-      }
-    }
-  }, [isRecording, showSuccess, showError]);
 
 
   const replaceContentWithSave = useCallback(async (nextContent: string) => {
@@ -1095,44 +990,6 @@ export function NoteDetailSidebar({
     setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
   }, [canAttachSecondaryObject, showError, liveNote.$id, getCursorLineNumber, insertObjectBlockAtCursor]);
 
-  const onPickExternalFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    event.target.value = '';
-    if (!canAttachSecondaryObject) {
-      showError('No access', 'Only owners and write collaborators can attach objects.');
-      return;
-    }
-    setIsAttachingObject(true);
-    try {
-      const bucketId = APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE;
-      const uploaded = await StorageService.uploadFile(file, bucketId);
-      const childKind = file.type.startsWith('image/') ? 'image' : 'file';
-      const relation = await attachObject({
-        parentId: liveNote.$id,
-        parentKind: 'note',
-        childId: uploaded.$id,
-        childKind,
-        metadata: { bucketId, fileName: file.name, mimeType: file.type, size: file.size, insertLine: getCursorLineNumber() }});
-      await insertObjectBlockAtCursor(serializeObjectBlock({
-        objectId: relation?.$id,
-        childId: uploaded.$id,
-        childKind,
-        bucketId,
-        label: file.name,
-        line: getCursorLineNumber(),
-        appTheme: 'idea',
-        metadata: { mimeType: file.type, fileName: file.name }}));
-      const { getObjectsByParent } = await import('@/lib/actions/client-ops');
-      setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
-      showSuccess('Attachment added');
-    } catch (err: any) {
-      showError('Attach failed', err?.message || 'Unable to upload and attach file.');
-    } finally {
-      setIsAttachingObject(false);
-      closeContextActions();
-    }
-  }, [canAttachSecondaryObject, showError, liveNote.$id, getCursorLineNumber, insertObjectBlockAtCursor, showSuccess, closeContextActions]);
 
   useEffect(() => {
     const previous = previousContentRef.current;
@@ -1328,21 +1185,6 @@ export function NoteDetailSidebar({
             </div>
           ) : null}
 
-          {/* Voice recorder — only for editors */}
-          {!readOnly && !shouldMaskEncrypted && (
-            <button 
-              type="button"
-              onClick={toggleRecording} 
-              className={`p-1.5 rounded-lg transition-all flex items-center justify-center border voice-recorder-btn ${
-                isRecording 
-                  ? 'bg-red-500/15 border-red-500/25 text-red-400 animate-pulse' 
-                  : 'bg-white/5 border-white/5 text-white/60 hover:text-white hover:bg-white/10'
-              }`}
-              title={isRecording ? `Stop (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}) & Insert` : "Record Voice Note"}
-            >
-              {isRecording ? <Square className="w-4 h-4 fill-red-500 text-red-500" /> : <Mic className="w-4 h-4" />}
-            </button>
-          )}
 
           {/* Copy link — available to all (share link reading) */}
           {showExpandButton && isPublic && (
@@ -1961,12 +1803,6 @@ export function NoteDetailSidebar({
         </Drawer>
       )}
 
-      <input
-        ref={objectUploadInputRef}
-        type="file"
-        className="hidden"
-        onChange={onPickExternalFile}
-      />
 
     </div>
   );

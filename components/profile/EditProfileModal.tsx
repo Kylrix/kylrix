@@ -6,7 +6,6 @@ import {
   X, 
   CheckCircle2, 
   AlertCircle, 
-  Camera, 
   Trash2, 
   Maximize2, 
   Minimize2, 
@@ -255,40 +254,6 @@ export function EditProfileModal({
     return () => clearTimeout(timer);
   }, [username, profile?.username]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (!file.type.startsWith('image/')) {
-        setError('Only image files are allowed.');
-        return;
-      }
-      setError('');
-      try {
-        const compressed = await compressImage(file, 512, 512, 0.7);
-        if (compressed.size > 1024 * 1024) {
-          setError('Maximum file size of 1MB exceeded after compression.');
-          return;
-        }
-        setProfilePic(compressed);
-        setProfilePicUrl(URL.createObjectURL(compressed));
-        setRemovePicRequested(false);
-      } catch (_err) {
-        if (file.size > 1024 * 1024) {
-          setError('Maximum file size of 1MB exceeded.');
-          return;
-        }
-        setProfilePic(file);
-        setProfilePicUrl(URL.createObjectURL(file));
-        setRemovePicRequested(false);
-      }
-    }
-  };
-
-  const handleRemovePic = () => {
-    setProfilePic(null);
-    setProfilePicUrl(null);
-    setRemovePicRequested(true);
-  };
 
   const handleAddLink = () => {
     if (links.length >= 3) return;
@@ -338,38 +303,7 @@ export function EditProfileModal({
     setLoading(true);
     setError('');
     try {
-      // 1. Process profile picture delete / upload
-      if (removePicRequested) {
-        try {
-          await storage.deleteFile(AVATAR_BUCKET_ID, userId);
-        } catch (e) {
-          console.warn('Best effort deletion of profile photo failed:', e);
-        }
-        const currentPrefs = user?.prefs || {};
-        await account.updatePrefs({ ...currentPrefs, profilePicId: null });
-      }
-
-      if (profilePic) {
-        if (profilePic.size > 1024 * 1024) {
-          throw new Error('Maximum file size of 1MB exceeded.');
-        }
-        
-        const formData = new FormData();
-        formData.append('file', profilePic);
-        formData.append('bucketId', AVATAR_BUCKET_ID);
-        formData.append('fileId', userId);
-        
-        const uploadedFile = await secureUploadFile(formData);
-        const currentPrefs = user?.prefs || {};
-        await account.updatePrefs({ ...currentPrefs, profilePicId: uploadedFile.$id });
-      }
-
-      let avatarVal = profile?.avatar;
-      if (removePicRequested) {
-        avatarVal = null;
-      } else if (profilePic) {
-        avatarVal = userId;
-      }
+      const avatarVal = profile?.avatar;
 
       // 2. Setup public key E2E identity if unlocked
       let publicKey: string | undefined;
@@ -578,15 +512,6 @@ export function EditProfileModal({
                       />
                     )}
                   </div>
-                  <label className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-lg bg-[#6366F1] hover:bg-[#5254E8] text-white flex items-center justify-center cursor-pointer shadow-lg transition-all">
-                    <Camera size={13} />
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleFileChange} 
-                      className="hidden" 
-                    />
-                  </label>
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-1">
@@ -596,16 +521,6 @@ export function EditProfileModal({
                   <p className="text-xs font-mono text-[#818cf8] truncate m-0">
                     @{username || 'handle'}
                   </p>
-                  {profilePicUrl && (
-                    <button
-                      type="button"
-                      onClick={handleRemovePic}
-                      className="inline-flex items-center gap-1 text-[11px] text-rose-400 hover:text-rose-300 font-bold transition-colors cursor-pointer pt-0.5"
-                    >
-                      <Trash2 size={11} />
-                      <span>Remove Photo</span>
-                    </button>
-                  )}
                 </div>
               </div>
 

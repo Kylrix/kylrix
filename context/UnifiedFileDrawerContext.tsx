@@ -29,7 +29,7 @@ interface OpenFileDrawerOptions {
   onSelectFile: (file: SyncedMediaFile) => void;
   allowedBuckets?: string[];
   title?: string;
-  /** Open on Objects / Synced / Upload (default synced). */
+  /** Open on Objects / Synced / Upload (default objects). */
   initialTab?: UnifiedFileDrawerMainTab;
   /** Objects sub-tab when initialTab is objects (default goals). */
   initialSubTab?: UnifiedFileDrawerObjectSubTab;

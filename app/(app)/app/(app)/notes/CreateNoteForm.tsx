@@ -6,7 +6,6 @@ import {
   Check, 
   ArrowLeft,
   ArrowUpRight, 
-  Mic, 
   Square, 
   FileText, 
   Lock, 
@@ -21,7 +20,6 @@ import {
   Copy,
 } from 'lucide-react';
 import { Drawer, Box, Typography } from '@/lib/openbricks/primitives';
-import { StorageService } from '@/lib/services/storage';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
 import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -149,23 +147,13 @@ export default function CreateNoteForm({
   const isPastedRef = useRef(false);
   const pasteTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [_isUploadingVoice, setIsUploadingVoice] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
   const [isMobile, setIsMobile] = useState(false);
   const [localIsExpanded, setLocalIsExpanded] = useState(true);
   const isExpanded = controlledIsExpanded !== undefined ? controlledIsExpanded : localIsExpanded;
   const toggleExpand = onToggleExpand || (() => setLocalIsExpanded(prev => !prev));
   const [isAttachDrawerOpen, setIsAttachDrawerOpen] = useState(false);
-  const [_isAttachingFile, setIsAttachingFile] = useState(false);
   const [_isCheckingUrl, setIsCheckingUrl] = useState(false);
   const [pendingBlockDelete, setPendingBlockDelete] = useState<ParsedObjectBlock | null>(null);
-  const fileUploadRef = useRef<HTMLInputElement | null>(null);
   // Debounced live-copy sync (mirrors CreateGoalComposer.scheduleLiveGoalSync — 250ms)
   // Keeps typing snappy: React state updates instantly, RxDB/DataNexus/NotesContext fanout debounced.
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -193,81 +181,6 @@ export default function CreateNoteForm({
     return () => window.removeEventListener('resize', checkMobile);
   }, [controlledIsExpanded]);
 
-  useEffect(() => {
-    return () => {
-      if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
-      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-    };
-  }, []);
-
-  const toggleRecording = async () => {
-    if (isRecording) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      setIsRecording(false);
-    } else {
-      if (!hasPaidKylrixPlan(user)) {
-        openProUpgrade('Voice recording');
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        let options = { audioBitsPerSecond: 16000 };
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          (options as any).mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-          (options as any).mimeType = 'audio/ogg;codecs=opus';
-        }
-
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            audioChunksRef.current.push(e.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
-          if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
-          if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
-
-          stream.getTracks().forEach(track => track.stop());
-
-          try {
-            setIsUploadingVoice(true);
-            const uploaded = await StorageService.uploadFile(audioFile, 'voice');
-            insertTextAtCursor(` [voice:${uploaded.$id}] `);
-            showSuccess('Voice note recorded', 'Inserted into your note content.');
-          } catch (error) {
-            console.error('Failed to upload voice note:', error);
-            showError('Recording failed', 'Could not save voice note.');
-          } finally {
-            setIsUploadingVoice(false);
-          }
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-        setRecordingDuration(0);
-
-        durationIntervalRef.current = setInterval(() => {
-          setRecordingDuration(prev => prev + 1);
-        }, 1000);
-
-        // Audio length limit removed for Pro/Teams users.
-
-      } catch (err) {
-        console.error("Failed to start recording:", err);
-        showError('Permission denied', 'Microphone access is required to record voice notes.');
-      }
-    }
-  };
 
   // Insert [[kylrix-object:...]] block into textarea at cursor with surrounding blank lines
   const insertObjectBlock = useCallback((block: string) => {
@@ -288,41 +201,6 @@ export default function CreateNoteForm({
     }
   }, [content]);
 
-  // Upload file → objects table → insert block
-  const onPickFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    const noteId = ensureLiveDraftId();
-    if (!noteId) return;
-    setIsAttachingFile(true);
-    try {
-      const bucketId = APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE;
-      const uploaded = await StorageService.uploadFile(file, bucketId);
-      const childKind = file.type.startsWith('image/') ? 'image' : 'file';
-      const relation = await attachObject({
-        parentId: noteId,
-        parentKind: 'note',
-        childId: uploaded.$id,
-        childKind,
-        metadata: { bucketId, fileName: file.name, mimeType: file.type, size: file.size },
-      });
-      insertObjectBlock(serializeObjectBlock({
-        objectId: relation?.$id,
-        childId: uploaded.$id,
-        childKind,
-        bucketId,
-        label: file.name,
-        appTheme: 'idea',
-        metadata: { mimeType: file.type, fileName: file.name },
-      }));
-      showSuccess('File attached', file.name);
-    } catch (err: any) {
-      showError('Attach failed', err?.message || 'Could not upload file.');
-    } finally {
-      setIsAttachingFile(false);
-    }
-  }, [ensureLiveDraftId, insertObjectBlock, showSuccess, showError]);
 
   // Paste URL → HEAD-check → objects table → insert block
   const _attachUrl = useCallback(async () => {
@@ -1477,31 +1355,6 @@ export default function CreateNoteForm({
               </button>
             </div>
 
-            {/* Voice Recorder & Info */}
-            <div className="flex items-center gap-2">
-              <button
-                  type="button"
-                  onClick={toggleRecording}
-                  className={`h-9 px-3 rounded-lg flex items-center justify-center gap-1.5 font-mono text-xs font-bold transition-all select-none border ${
-                    isRecording 
-                      ? 'bg-red-500/20 border-red-500/30 text-red-400 animate-pulse' 
-                      : 'bg-black/40 border-white/5 text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                  title={isRecording ? "Click to Stop & Insert" : "Record Voice Idea"}
-                >
-                  {isRecording ? (
-                    <>
-                      <Square className="w-4 h-4 fill-current" />
-                      <span>{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-5 h-5" />
-                      {!isMobile && <span>Record</span>}
-                    </>
-                  )}
-                </button>
-            </div>
           </div>
 
           {/* Tags section */}
@@ -1753,14 +1606,6 @@ export default function CreateNoteForm({
           </Drawer>
         )}
 
-        {/* Hidden file input for upload */}
-        <input
-          ref={fileUploadRef}
-          type="file"
-          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip"
-          className="hidden"
-          onChange={onPickFile}
-        />
       </div>
   );
 }

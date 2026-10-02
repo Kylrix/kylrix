@@ -71,7 +71,6 @@ const FIELD_TYPES = [
   { value: 'select', label: 'Dropdown Menu', icon: <ListFilter size={14} /> },
   { value: 'radio', label: 'Single Choice (Radio)', icon: <CheckCircle2 size={14} /> },
   { value: 'checkbox', label: 'Multiple Choice (Checkbox)', icon: <List size={14} /> },
-  { value: 'file', label: 'File Upload (Pro)', icon: <UploadCloud size={14} /> },
 ];
 
 function SortableField({
@@ -145,12 +144,7 @@ function SortableField({
             <select
               value={field.type}
               onChange={(e) => {
-                const val = e.target.value;
-                if (val === 'file' && !hasPaidKylrixPlan(user)) {
-                  openProUpgrade('Form File Uploads');
-                  return;
-                }
-                updateField(fIdx, { type: val });
+                updateField(fIdx, { type: e.target.value });
               }}
               className="bg-[#161412] border border-white/10 hover:border-white/20 text-white font-satoshi text-xs font-bold rounded-xl px-3 py-2 pr-8 outline-none appearance-none cursor-pointer transition-all"
             >

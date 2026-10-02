@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { X, ChevronLeft, ChevronRight, Copy, AppWindow, ImagePlus } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, ChevronLeft, ChevronRight, Copy, AppWindow } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   Drawer,
@@ -9,10 +9,9 @@ import {
   useMediaQuery,
 } from '@/lib/openbricks/primitives';
 import { createApp, createAppSecret } from '@/lib/oauth2/apps';
-import { uploadOAuthAppLogo } from '@/lib/oauth2/logo';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
-type Step = 'name' | 'type' | 'redirect' | 'logo' | 'done';
+type Step = 'name' | 'type' | 'redirect' | 'done';
 
 function paperSx(isDesktop: boolean) {
   return {
@@ -49,13 +48,10 @@ export function CreateOAuthAppDrawer({
 }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  const fileRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>('name');
   const [name, setName] = useState('');
   const [clientType, setClientType] = useState<'confidential' | 'public'>('confidential');
   const [redirectUri, setRedirectUri] = useState('');
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
   const [result, setResult] = useState<{
     appId: string;
@@ -68,17 +64,9 @@ export function CreateOAuthAppDrawer({
     setName('');
     setClientType('confidential');
     setRedirectUri('');
-    setLogoPreview(null);
-    setLogoFile(null);
     setCreating(false);
     setResult(null);
   }, [open]);
-
-  useEffect(() => {
-    return () => {
-      if (logoPreview) URL.revokeObjectURL(logoPreview);
-    };
-  }, [logoPreview]);
 
   if (!open) return null;
 
@@ -89,21 +77,6 @@ export function CreateOAuthAppDrawer({
     } catch {
       toast.success(text);
     }
-  };
-
-  const onPickLogo = (file: File | null) => {
-    if (logoPreview) URL.revokeObjectURL(logoPreview);
-    if (!file) {
-      setLogoFile(null);
-      setLogoPreview(null);
-      return;
-    }
-    if (!file.type.startsWith('image/')) {
-      toast.error('Pick an image file');
-      return;
-    }
-    setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
   };
 
   const handleCreate = async () => {
@@ -118,22 +91,10 @@ export function CreateOAuthAppDrawer({
     }
     setCreating(true);
     try {
-      let logoUri: string | undefined;
-      if (logoFile) {
-        try {
-          const uploaded = await uploadOAuthAppLogo(logoFile);
-          logoUri = uploaded.logoUri;
-        } catch (logoErr: any) {
-          toast.error(logoErr?.message || 'Logo upload failed');
-          setCreating(false);
-          return;
-        }
-      }
       const app = await createApp({
         name: name.trim(),
         redirectUris: [uri],
         type: clientType,
-        logoUri,
       });
       let secret: string | null = null;
       if (clientType === 'confidential') {
@@ -311,69 +272,7 @@ export function CreateOAuthAppDrawer({
                 </button>
                 <button
                   type="button"
-                  disabled={!redirectUri.trim()}
-                  onClick={() => setStep('logo')}
-                  className="inline-flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#6366F1] text-white text-sm font-extrabold cursor-pointer disabled:opacity-40"
-                >
-                  Next
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </>
-          )}
-
-          {step === 'logo' && (
-            <>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                className="hidden"
-                onChange={(e) => onPickLogo(e.target.files?.[0] || null)}
-              />
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="w-full rounded-2xl border border-dashed border-white/15 bg-[#0A0908] px-4 py-6 flex flex-col items-center gap-2 cursor-pointer"
-              >
-                {logoPreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={logoPreview}
-                    alt=""
-                    className="h-16 w-16 rounded-2xl object-cover border border-white/10"
-                  />
-                ) : (
-                  <div className="p-3 rounded-2xl bg-[#161412] border border-white/[0.06] text-[#6366F1]">
-                    <ImagePlus size={22} />
-                  </div>
-                )}
-                <p className="text-sm font-bold text-white">
-                  {logoPreview ? 'Change logo' : 'Add logo (optional)'}
-                </p>
-                <p className="text-[11px] text-white/35">Compressed under 1MB before upload</p>
-              </button>
-              {logoFile && (
-                <button
-                  type="button"
-                  onClick={() => onPickLogo(null)}
-                  className="text-[11px] font-extrabold text-white/40 cursor-pointer"
-                >
-                  Remove
-                </button>
-              )}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStep('redirect')}
-                  className="inline-flex items-center justify-center gap-1.5 py-3 rounded-2xl border border-white/10 text-white/70 text-sm font-extrabold cursor-pointer"
-                >
-                  <ChevronLeft size={16} />
-                  Back
-                </button>
-                <button
-                  type="button"
-                  disabled={creating}
+                  disabled={!redirectUri.trim() || creating}
                   onClick={() => void handleCreate()}
                   className="inline-flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#6366F1] text-white text-sm font-extrabold cursor-pointer disabled:opacity-40"
                 >

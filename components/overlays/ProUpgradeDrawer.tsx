@@ -98,12 +98,12 @@ const FALLBACK_GROUPS = [
     pro: 'Unlimited AI agents (Kylie & custom personas), background tool calling & daily compute',
   },
   {
-    title: 'Storage & File Uploads',
+    title: 'Relational Sync & Snapshots',
     icon: HardDrive,
     color: 'text-[#10B981]',
     bg: 'bg-[#10B981]/10',
     border: 'border-[#10B981]/20',
-    pro: 'Unlimited images/storage and file uploads, voice notes & attachment archives',
+    pro: 'Unlimited database snapshots, instant file exports & multi-device sync',
   },
   {
     title: 'Workspaces & Collaboration',

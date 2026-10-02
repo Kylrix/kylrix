@@ -120,8 +120,6 @@ export default function CredentialDialog({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attachments, setAttachments] = useState<any[]>([]);
-  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [envHint, setEnvHint] = useState<string | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -295,11 +293,6 @@ export default function CredentialDialog({
       setCustomFields(normalizeCustomFields(row.customFields));
       setIsEnvMode(Boolean(row.isEnv));
       setIsNameManuallyEdited(true);
-      try {
-        setAttachments(row.attachments ? JSON.parse(row.attachments) : []);
-      } catch {
-        setAttachments([]);
-      }
       setEnvHint(null);
       setError(null);
     };
@@ -401,33 +394,6 @@ export default function CredentialDialog({
     setCustomFields(customFields.filter((cf) => cf.id !== id));
   };
 
-  const handleUploadAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !initial?.$id) return;
-    setUploadingAttachment(true);
-    setError(null);
-    try {
-      const { addAttachmentToCredential } = await import('@/lib/appwrite/vault');
-      const updated = await addAttachmentToCredential(initial.$id, file);
-      setAttachments(updated.attachments ? JSON.parse(updated.attachments) : []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload attachment.');
-    } finally {
-      setUploadingAttachment(false);
-    }
-  };
-
-  const handleDeleteAttachment = async (fileId: string) => {
-    if (!initial?.$id) return;
-    setError(null);
-    try {
-      const { deleteCredentialAttachment } = await import('@/lib/appwrite/vault');
-      const updated = await deleteCredentialAttachment(initial.$id, fileId);
-      setAttachments(updated.attachments ? JSON.parse(updated.attachments) : []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete attachment.');
-    }
-  };
 
   const buildCredentialData = (): CredentialsCreate => {
     if (!user) throw new Error('Not authenticated');
@@ -982,61 +948,6 @@ export default function CredentialDialog({
           </div>
         )}
 
-        <div className="flex flex-col gap-2 w-full">
-          <div className="flex items-center justify-between">
-            <span className={labelClass}>Attachments</span>
-            {initial && initial.$id && (
-              <label
-                className={`flex items-center gap-1.5 text-xs text-[#10B981] font-bold hover:bg-[#10B981]/10 px-2.5 py-1.5 rounded-lg cursor-pointer ${
-                  uploadingAttachment ? 'opacity-50 pointer-events-none' : ''
-                }`}
-              >
-                {uploadingAttachment ? (
-                  <div className="w-4 h-4 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <UploadCloud className="w-4 h-4" />
-                )}
-                <span>{uploadingAttachment ? 'Uploading…' : 'Upload'}</span>
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={handleUploadAttachment}
-                  disabled={uploadingAttachment}
-                />
-              </label>
-            )}
-          </div>
-          {initial && initial.$id ? (
-            attachments.length === 0 ? (
-              <p className="text-sm text-white">No files yet.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {attachments.map((att: any, idx: number) => (
-                  <div
-                    key={att.id || idx}
-                    className="flex justify-between items-center p-3 rounded-xl bg-black border border-white/20"
-                  >
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p className="text-sm font-bold text-white truncate">{att.name}</p>
-                      <p className="text-[0.72rem] text-white uppercase tracking-wide">
-                        {(att.size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteAttachment(att.id)}
-                      className="p-2 text-white hover:bg-[#161412] rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )
-          ) : (
-            <p className="text-sm text-white">Save first to attach files.</p>
-          )}
-        </div>
 
         {error && (
           <div className="flex items-center gap-2 bg-black text-[#ef4444] p-3 rounded-xl border border-white/20 text-xs font-medium">
