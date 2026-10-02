@@ -2,7 +2,7 @@ import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqli
 import { generateId } from '@/lib/utils/id';
 
 // ========================================================
-// BETTER AUTH CORE SCHEMA (SQLITE / TURSO)
+// BETTER AUTH CORE SCHEMA & EXTENSIONS (SQLITE / TURSO)
 // ========================================================
 
 export const user = sqliteTable('user', {
@@ -26,9 +26,17 @@ export const session = sqliteTable('session', {
   userId: text('user_id')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
+  // Session extension for CLI / Agent / Device authentication
+  tokenType: text('token_type').notNull().default('web'), // 'web' | 'cli' | 'agent'
+  clientName: text('client_name').default('Web Browser'),
+  workspaceId: text('workspace_id')
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  scopes: text('scopes'), // JSON array of permitted scopes
+  lastActiveAt: integer('last_active_at', { mode: 'timestamp' }),
 }, (table) => [
   index('idx_session_user_id').on(table.userId),
   index('idx_session_token').on(table.token),
+  index('idx_session_token_type').on(table.tokenType),
 ]);
 
 export const account = sqliteTable('account', {
@@ -66,7 +74,7 @@ export const verification = sqliteTable('verification', {
 export const apikey = sqliteTable('apikey', {
   id: text('id').primaryKey(),
   name: text('name'),
-  start: text('start'),
+  start: text('start'), // Token prefix e.g. kyl_pat_
   prefix: text('prefix'),
   key: text('key').notNull(),
   userId: text('user_id')
@@ -87,9 +95,19 @@ export const apikey = sqliteTable('apikey', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   permissions: text('permissions'),
   metadata: text('metadata'),
+  // Extensions: token category, workspace assignment, and session mirroring
+  category: text('category').notNull().default('user_pat'), // 'user_pat' | 'cli_token' | 'agentic_pat' | 'workspace_pat' | 'punch_token'
+  workspaceId: text('workspace_id')
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  displayInSessions: integer('display_in_sessions', { mode: 'boolean' }).default(false),
+  clientName: text('client_name'),
+  lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
 }, (table) => [
   index('idx_apikey_user_id').on(table.userId),
   index('idx_apikey_key').on(table.key),
+  index('idx_apikey_category').on(table.category),
+  index('idx_apikey_display_sessions').on(table.displayInSessions),
 ]);
 
 // ========================================================
@@ -372,12 +390,3 @@ export const threadMessages = sqliteTable('thread_messages', {
   index('idx_tm_sender_id').on(table.senderId),
   index('idx_tm_created_at').on(table.createdAt),
 ]);
-
-// ========================================================
-// BACKWARD-COMPATIBILITY ALIASES
-// ========================================================
-
-export const notes = ideas;
-export const tasks = goals;
-export const projects = workspaces;
-export const projectObjects = workspaceObjects;

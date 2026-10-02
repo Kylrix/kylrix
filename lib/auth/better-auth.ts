@@ -14,8 +14,35 @@ export const auth = betterAuth({
       session: schema.session,
       account: schema.account,
       verification: schema.verification,
+      apikey: schema.apikey,
     },
   }),
+  session: {
+    additionalFields: {
+      tokenType: {
+        type: 'string',
+        required: false,
+        defaultValue: 'web',
+      },
+      clientName: {
+        type: 'string',
+        required: false,
+        defaultValue: 'Web Browser',
+      },
+      workspaceId: {
+        type: 'string',
+        required: false,
+      },
+      scopes: {
+        type: 'string',
+        required: false,
+      },
+      lastActiveAt: {
+        type: 'date',
+        required: false,
+      },
+    },
+  },
   secret: process.env.BETTER_AUTH_SECRET || 'kylrix_default_dev_secret_must_be_32_chars_long_min',
   baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3005',
   socialProviders: {
