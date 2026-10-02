@@ -9,7 +9,6 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import Link from 'next/link';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 import { FlowTabTrigger } from '@/components/flows/FlowTabTrigger';
@@ -56,7 +55,7 @@ export default function IdeasPage() {
   }, [setConfiguration, resetConfiguration, openCreateNote]);
 
   const activeNotes = useMemo(() => (notes || []).filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true), [notes]);
-  const { filteredItems: workspaceScopedNotes } = useWorkspaceFilteredItems(activeNotes, 'note');
+  const workspaceScopedNotes = activeNotes;
 
   const pinnedNotes = useMemo(() => workspaceScopedNotes.filter((n: any) => Boolean(n.isPinned)), [workspaceScopedNotes]);
   const unpinnedNotes = useMemo(() => workspaceScopedNotes.filter((n: any) => !n.isPinned), [workspaceScopedNotes]);

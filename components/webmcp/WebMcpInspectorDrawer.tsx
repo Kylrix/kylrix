@@ -720,6 +720,8 @@ const result = await navigator.modelContext.executeTool('kylrix_create_note', {
     </div>
   );
 
+  if (!isInspectorOpen) return null;
+
   if (isDesktop && nativeSidebar) {
     return (
       <NativeSidebarMount
@@ -732,8 +734,6 @@ const result = await navigator.modelContext.executeTool('kylrix_create_note', {
       </NativeSidebarMount>
     );
   }
-
-  if (!isInspectorOpen) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[15000] flex flex-col justify-end pointer-events-auto">

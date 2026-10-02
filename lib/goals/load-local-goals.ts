@@ -93,7 +93,11 @@ export async function loadGoalsFromLocalCopy(opts: {
       const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
       const db = await getRxDB().catch(() => null);
       if (db?.tasks) {
-        const rxRows = (await db.tasks.find({ selector: { userId: { $eq: userId } } }).exec()).map((d: any) => d.toJSON());
+        const selector: any = { _deleted: { $ne: true } };
+        if (userId && userId !== 'guest') {
+          selector.$or = [{ userId: { $eq: userId } }, { userId: { $eq: 'guest' } }, { userId: { $exists: false } }];
+        }
+        const rxRows = (await db.tasks.find({ selector }).exec()).map((d: any) => d.toJSON());
         const rxTasks = rxRows.map((r) => normalizeGoalRow(r, userId)).filter((t): t is Task => !!t);
         if (rxTasks.length) return rxTasks;
       }

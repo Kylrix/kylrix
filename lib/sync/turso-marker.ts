@@ -40,11 +40,20 @@ function getSyncedIdsSet(userId = 'guest'): Set<string> {
   return set;
 }
 
+const pendingPersistTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 function persistSyncedIdsSet(userId = 'guest', set: Set<string>): void {
   if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(`f_turso_synced_ids_${userId}`, JSON.stringify(Array.from(set)));
-  } catch {}
+  const existing = pendingPersistTimers.get(userId);
+  if (existing) clearTimeout(existing);
+  
+  const timer = setTimeout(() => {
+    pendingPersistTimers.delete(userId);
+    try {
+      localStorage.setItem(`f_turso_synced_ids_${userId}`, JSON.stringify(Array.from(set)));
+    } catch {}
+  }, 100);
+  pendingPersistTimers.set(userId, timer);
 }
 
 /**
