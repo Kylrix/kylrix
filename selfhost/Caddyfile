@@ -7,6 +7,6 @@
 	reverse_proxy kylrix:3000
 }
 
-{$APPWRITE_DOMAIN:appwrite.localhost} {
-	reverse_proxy appwrite:80
+{$DB_DOMAIN:db.localhost} {
+	reverse_proxy turso:8080
 }

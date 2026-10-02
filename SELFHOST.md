@@ -1,134 +1,109 @@
-# Self-Hosting Kylrix
+# Self-Hosting Kylrix (Turso / libSQL Stack)
 
-Run a **fully isolated** Kylrix instance with bundled Appwrite, MariaDB, and Redis. No cloud Appwrite dependency — project ID and API keys are minted locally on first boot.
+Run a **fully isolated**, ultra-lightweight Kylrix instance using the modern **Turso / libSQL (`sqld`)** and **Better Auth** stack.
+
+Zero BaaS bloat: no MariaDB, no Redis, no Appwrite. Boots in under 2 seconds and runs in under 100 MB of RAM.
 
 ---
 
-## Quick Start
-
-**Agent skill:** `npx skills add kylrix/kylrix --skill selfhost`
-
-**Configure** (shell exports — optional; skip to auto-mint admin credentials):
-
-```bash
-export SELFHOST_ADMIN_EMAIL=you@example.com
-export SELFHOST_ADMIN_PASSWORD='your-secure-password'
-```
-
-Other overrides use the same pattern (`export KYLRIX_PORT=5003`, `export AUTH_EMAIL_PASSWORD_SIGNUP=true`, SMTP vars, …). See [selfhost/SKILL.md](selfhost/SKILL.md). Bootstrap-minted values (`APPWRITE_API_KEY`, existing project ID) are not overridden.
-
-**Install:**
+## ⚡ Quick Start (1 Command)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
 ```
 
-Defaults:
-- **Kylrix app:** `http://localhost:5003`
-- **Backend Mode:** `BACKEND=false` (standalone Next.js application by default, skipping Appwrite infrastructure).
-- **Integrated Backend Mode:** Set `BACKEND=true` (or run `./selfhost.sh --with-backend`) to spin up bundled Appwrite (`http://localhost:8080/v1`) + MariaDB + Redis.
-
-Without exports, admin credentials are written to `.env` as `SELFHOST_ADMIN_EMAIL` / `SELFHOST_ADMIN_PASSWORD`.
-
-## Authentication policy
-
-Independent of `SELFHOSTED` — enable per deployment:
-
-```env
-AUTH_EMAIL_PASSWORD_SIGNUP=true   # new accounts via email + password
-AUTH_PASSKEY_SIGNUP=false         # passkey signup (UI wiring incremental)
-AUTH_PASSWORDLESS_MODE=false      # when true, disables all password auth
-APPWRITE_UNSTABLE=false           # true → Appwrite 2.0.0-rc.1 (dogfood only)
-APPWRITE_IMAGE=appwrite/appwrite:1.9.6
-```
-
-Self-host `mint-env.sh` sets `AUTH_EMAIL_PASSWORD_SIGNUP=true` by default.
-
-**Sign-in flow:** password submit always tries login first. A new account is created only when login fails with invalid credentials *and* `AUTH_EMAIL_PASSWORD_SIGNUP=true`.
-
-### Appwrite version
-
-| Mode | Env | Image |
-|------|-----|-------|
-| Stable (default) | `APPWRITE_UNSTABLE=false` | `appwrite/appwrite:1.9.6` |
-| Unstable dogfood | `APPWRITE_UNSTABLE=true` | `appwrite/appwrite:2.0.0-rc.1` |
-
-Upgrading from an older bundled Appwrite (e.g. 1.6.x) requires a fresh data volume:
-
-```bash
-docker compose down -v
-APPWRITE_UNSTABLE=true make up   # or set in .env before make up
-```
-
-**In-place upgrade** (1.8+ → 1.9.6, preserves data):
-
-```bash
-make upgrade-appwrite
-make schema-push
-```
-
-Appwrite does **not** seamlessly jump 1.6 → 1.9 in one step on existing MariaDB data. Use `make upgrade-appwrite` for nearby versions; for 1.6.x dogfood stacks, prefer `make clean && make up && make schema-push`.
-
----
+— or from a local clone —
 
 ```bash
 git clone https://github.com/Kylrix/kylrix.git
 cd kylrix
-cp env.sample .env
-make up          # mint env → start Appwrite → bootstrap project → build Kylrix
-make schema-push # provision tables/indexes/buckets from appwrite.config.json
+./selfhost.sh
 ```
 
----
-
-## What gets started
-
-| Service | Purpose | Default port |
-|---------|---------|--------------|
-| `kylrix` | Next.js app | `5003` |
-| `appwrite` | Local BaaS API (`1.9.6` stable; `2.0.0-rc.1` when `APPWRITE_UNSTABLE=true`) | `8080` |
-| `mariadb` | Appwrite database | internal |
-| `redis` | Appwrite cache | internal |
-| `caddy` | Optional HTTPS (`--profile production`) | `80`/`443` |
+**Defaults:**
+- **Application:** `http://localhost:5003`
+- **Turso Database API:** `http://localhost:8080` (open-source `sqld` libSQL engine)
+- **Database File:** Stored at `/var/lib/sqld/kylrix.db` in `turso_data` Docker volume.
 
 ---
 
-## App-only mode (bring your own Appwrite)
+## 🏗️ Architecture
 
-If you already run Appwrite elsewhere:
-
-```bash
-cp env.sample .env
-# Set APPWRITE_ENDPOINT + APPWRITE_PROJECT_ID + APPWRITE_API_KEY to your instance
-make app-only
+```
+┌────────────────────────────────────────────────────────┐
+│  Kylrix Web Application (Next.js + Better Auth)        │
+│  - Serves UI, HTTP REST API (/api/v1), and MCP Server  │
+└──────────────────────────┬─────────────────────────────┘
+                           │ Hrana / HTTP Wire Protocol
+┌──────────────────────────▼─────────────────────────────┐
+│  Turso libSQL Server (sqld container)                  │
+│  - Exact same engine & format as Turso Cloud           │
+│  - Relational tables: ideas, goals, workspaces, auth   │
+│  - Single SQLite database file: /var/lib/sqld/kylrix.db│
+└────────────────────────────────────────────────────────┘
 ```
 
+| Service | Image | Purpose | Port | RAM Usage |
+|---------|-------|---------|------|-----------|
+| `kylrix` | Node.js (Next.js standalone) | Application, Better Auth, UI, API | `5003` | ~70 MB |
+| `turso` | `ghcr.io/tursodatabase/libsql-server:latest` | libSQL relational database server | `8080` | ~15 MB |
+| `caddy` | `caddy:2-alpine` (optional) | Automated Let's Encrypt SSL proxy | `80`/`443` | ~10 MB |
+
 ---
 
-## Local AI
+## 🚀 Environment Configuration
 
-Set in `.env` before `make up`:
+Key configuration parameters (stored in `.env`):
 
 ```env
-GOOGLE_API_KEY=...
-OLLAMA_BASE_URL=http://host.docker.internal:11434
-OLLAMA_MODEL=llama3:latest
+APP_PORT=5003
+TURSO_PORT=8080
+DOMAIN=localhost
+NEXT_PUBLIC_APP_URL=http://localhost:5003
+BETTER_AUTH_SECRET=your_32_byte_cryptographic_secret
+BETTER_AUTH_URL=http://localhost:5003
+TURSO_DATABASE_URL=http://turso:8080
+NEXT_PUBLIC_DATABASE_PROVIDER=turso
 ```
 
 ---
 
-## Updates
+## ☁️ App-Only Mode (Turso Cloud)
+
+If you already use hosted Turso Cloud (`libsql://...`), you can bypass the local `turso` container completely:
+
+1. In `.env`:
+   ```env
+   TURSO_DATABASE_URL=libsql://your-db-org.turso.io
+   TURSO_AUTH_TOKEN=your-turso-auth-token
+   ```
+
+2. Run with app-only override:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.app-only.yml up -d
+   ```
+
+---
+
+## 🔒 Automated Production SSL (Caddy)
+
+For automated Let's Encrypt HTTPS on a custom domain or VPS:
 
 ```bash
-cd ~/kylrix-selfhost
-git pull origin master
-docker compose up -d --build
+export DOMAIN=kylrix.yourdomain.com
+docker compose --profile production up -d
 ```
 
 ---
 
-## Troubleshooting
+## 💾 Instant Sovereign Backups
 
-- **Re-bootstrap Appwrite credentials:** `make bootstrap`
-- **Re-provision schema:** `make schema-push`
-- **Nuclear reset:** `make clean` (destroys volumes)
+Because the entire backend is defined as a pure libSQL/SQLite database, backups are instantaneous:
+
+```bash
+# 1. Direct SQLite dump
+docker compose exec turso sqlite3 /var/lib/sqld/kylrix.db .dump > backup_$(date +%F).sql
+
+# 2. Or snapshot copy
+docker compose cp turso:/var/lib/sqld/kylrix.db ./backup.db
+```
