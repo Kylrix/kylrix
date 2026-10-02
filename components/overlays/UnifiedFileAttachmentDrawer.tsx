@@ -126,28 +126,29 @@ export function UnifiedFileAttachmentDrawer() {
           existingTasks: localContextGoals,
         });
         if (items.length === 0) {
-          const { rows } = await tasks.listTasksPaginated({ limit: 100 });
-          items = rows || [];
+          const res = await tasks.list();
+          items = res?.rows || [];
         }
       } else if (activeSubTab === 'projects') {
         const cached = await LocalEngine.cacheGet<any[]>(`f_user_projects_${userId}`);
         if (cached && cached.length > 0) {
           items = cached;
         } else {
-          items = await ProjectsService.listProjects();
+          const res: any = await ProjectsService.listProjects();
+          items = Array.isArray(res) ? res : (res?.rows || []);
           await LocalEngine.cacheSet(`f_user_projects_${userId}`, items);
         }
       } else if (activeSubTab === 'threads') {
-        const { listDiscussions } = await import('@/lib/threads/thread-service');
-        const rows = await listDiscussions({ limit: 50 });
+        const { ThreadService } = await import('@/lib/services/threads');
+        const rows = await ThreadService.listForOwner(userId, 50).catch(() => []);
         items = rows || [];
       } else if (activeSubTab === 'totps') {
-        const { getDecryptedTOTPs } = await import('@/lib/appwrite/vault');
         const cached = await LocalEngine.cacheGet<any[]>(`f_decrypted_totps_${userId}`);
         if (cached && cached.length > 0) {
           items = cached;
         } else {
-          items = await getDecryptedTOTPs();
+          const totpList = await VaultService.listTOTPSecrets(userId).catch(() => []);
+          items = totpList || [];
           if (items.length > 0) {
             await LocalEngine.cacheSet(`f_decrypted_totps_${userId}`, items);
           }
@@ -157,7 +158,8 @@ export function UnifiedFileAttachmentDrawer() {
         if (cached && cached.length > 0) {
           items = cached;
         } else {
-          items = await VaultService.listCredentials();
+          const res = await VaultService.listCredentials(userId).catch(() => ({ rows: [] }));
+          items = res.rows || [];
           if (items.length > 0) {
             await LocalEngine.cacheSet(`f_decrypted_vault_${userId}`, items);
           }
@@ -167,8 +169,8 @@ export function UnifiedFileAttachmentDrawer() {
         if (cached && cached.length > 0) {
           items = cached;
         } else {
-          const res = await FormsService.listForms({ limit: 100 });
-          items = res.rows || [];
+          const res = await FormsService.listUserForms(userId).catch(() => []);
+          items = Array.isArray(res) ? res : ((res as any)?.rows || []);
           await LocalEngine.cacheSet(`f_user_forms_${userId}`, items);
         }
       } else if (activeSubTab === 'events') {
@@ -176,7 +178,7 @@ export function UnifiedFileAttachmentDrawer() {
         if (cached && cached.length > 0) {
           items = cached;
         } else {
-          const res = await events.listEventsPaginated({ limit: 100 });
+          const res = await events.list().catch(() => ({ rows: [] }));
           items = res.rows || [];
           await LocalEngine.cacheSet(`f_user_events_${userId}`, items);
         }
@@ -185,7 +187,8 @@ export function UnifiedFileAttachmentDrawer() {
         if (cached && cached.length > 0) {
           items = cached;
         } else {
-          items = await getAllTags();
+          const res = await getAllTags().catch(() => ({ rows: [] }));
+          items = res.rows || [];
           await LocalEngine.cacheSet(`f_user_tags_${userId}`, items);
         }
       } else if (activeSubTab === 'sessions') {
@@ -196,8 +199,8 @@ export function UnifiedFileAttachmentDrawer() {
           }
         }
         if (items.length === 0) {
-          const { KylieAgentService } = await import('@/lib/ai/kylie-service');
-          items = await KylieAgentService.listSessions(userId);
+          const { AgenticSessionLocalStore } = await import('@/lib/agentic/session-local-store');
+          items = await AgenticSessionLocalStore.getSessionsList(userId).catch(() => []);
         }
       }
 

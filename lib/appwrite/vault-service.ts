@@ -2232,7 +2232,7 @@ export class VaultService {
     formData.append('file', file);
     formData.append('bucketId', APPWRITE_BUCKET_BACKUPS_ID);
     formData.append('fileId', ID.unique());
-    return await secureUploadFile(formData);
+    return (await secureUploadFile(formData)) as unknown as Models.File;
   }
 
   static async listCloudBackups(_userId: string): Promise<Models.FileList> {

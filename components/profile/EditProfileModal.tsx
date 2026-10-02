@@ -23,7 +23,6 @@ import { useAuth } from '@/lib/auth';
 import { account, client } from '@/lib/appwrite/client';
 import { Storage } from 'appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { secureUploadFile } from '@/lib/actions/client-ops';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan, getEffectiveUsername } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
@@ -32,61 +31,6 @@ import { UserIdenticon } from '@/components/ui/UserIdenticon';
 
 const storage = new Storage(client);
 const AVATAR_BUCKET_ID = APPWRITE_CONFIG.BUCKETS.ATTACHMENTS;
-
-const compressImage = (file: File, maxWidth = 512, maxHeight = 512, quality = 0.7): Promise<File> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Failed to get canvas context'));
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error('Canvas compression failed'));
-              return;
-            }
-            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-              type: 'image/jpeg',
-              lastModified: Date.now()
-            });
-            resolve(compressedFile);
-          },
-          'image/jpeg',
-          quality
-        );
-      };
-      img.onerror = () => reject(new Error('Failed to load image for compression'));
-      img.src = event.target?.result as string;
-    };
-    reader.onerror = () => reject(new Error('Failed to read image file'));
-    reader.readAsDataURL(file);
-  });
-};
 
 export type ProfileDrawerMode = 'full' | 'username_only' | 'avatar_only' | 'privacy_only';
 
@@ -141,9 +85,7 @@ export function EditProfileModal({
   const isPro = hasPaidKylrixPlan(user);
 
   // Profile picture local state
-  const [profilePic, setProfilePic] = useState<File | null>(null);
   const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
-  const [removePicRequested, setRemovePicRequested] = useState(false);
 
   // Sync mode from initialMode
   useEffect(() => {
@@ -192,9 +134,7 @@ export function EditProfileModal({
       setIsGuest(profile.isGuest ?? true);
       setIsAvatar(profile.isAvatar ?? true);
       setIsContact(profile.isContact ?? true);
-      setProfilePic(null);
       setProfilePicUrl(null);
-      setRemovePicRequested(false);
       
       // Parse preferences JSON
       try {

@@ -260,6 +260,11 @@ export const LocalEngine = {
     return getTursoSyncedIds(userId);
   },
 
+  /** Strip the quiet Turso sync marker from an item */
+  stripTursoMarker<T>(target: T): T {
+    return stripTursoMarker(target);
+  },
+
   /** Remove cached payload by key */
   async cacheDelete(id: string): Promise<void> {
     if (typeof window === 'undefined') return;

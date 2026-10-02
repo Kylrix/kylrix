@@ -28,7 +28,6 @@ import {
 import { ChatSettingsPanel } from '@/components/chat/ChatSettingsPanel';
 import {
     ChevronLeft,
-    File as FileIcon,
     MoreVertical,
     Trash2,
     FileText,
@@ -155,7 +154,7 @@ export const ChatWindow = ({
     seedTitle?: string;
 }) => {
     const { user } = useAuth();
-    const { openProUpgrade } = useProUpgrade();
+    const { openProUpgrade: _openProUpgrade } = useProUpgrade();
     const { markConversationRead: markConversationReadInContext } = useChatNotifications();
     const { globalPresence} = usePresence();
     // Typing/online via Appwrite presence (ephemeral) — mutual prefs from profile.preferences (privacy tab)
@@ -1570,7 +1569,7 @@ export const ChatWindow = ({
         setAnchorEl(event.currentTarget);
     };
 
-    const handleAttachClose = () => {
+    const _handleAttachClose = () => {
         setAnchorEl(null);
     };
 

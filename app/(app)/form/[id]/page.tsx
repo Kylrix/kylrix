@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useEffect, useState, use } from 'react';
-import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ArrowLeft } from 'lucide-react';
+import { Send, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
 import { getEnabledGhostFields, resolveGhostFields } from '@/lib/forms/ghost-fields';
 import { GhostFieldsNotice } from '@/components/forms/GhostFieldsNotice';
-import { secureUploadFile, createthreadNoteChat } from '@/lib/actions/client-ops';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { createthreadNoteChat } from '@/lib/actions/client-ops';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import UserSearch from '@/components/UserSearch';
 import { UsersService } from '@/lib/services/users';

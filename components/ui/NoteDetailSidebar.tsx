@@ -8,7 +8,6 @@ import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 import { ObjectQuickActionCard } from '@/components/objects/ObjectQuickActionCard';
 
 import {
-  Square,
   Trash2 as TrashIcon,
   ExternalLink as OpenIcon,
   Pin as PinIcon,
@@ -51,7 +50,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { exportToMarkdown, exportToPDF, exportToDOCX } from '@/lib/utils/export';
 import { useAuth } from '@/lib/auth';
-import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
+import { getUserSubscriptionTier } from '@/lib/utils';
 import { userCanUseProjects } from '@/lib/projects/feature-gate-client';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
@@ -691,7 +690,6 @@ export function NoteDetailSidebar({
   const [isAttachObjectPickerOpen, setIsAttachObjectPickerOpen] = useState(false);
   const [isObjectPermissionInfoOpen, setIsObjectPermissionInfoOpen] = useState(false);
   const [pendingBlockDelete, setPendingBlockDelete] = useState<ParsedObjectBlock | null>(null);
-  const [_isAttachingObject, setIsAttachingObject] = useState(false);
   // Allow attachment when: not readOnly AND (no role set = own-notes drawer context, OR explicitly owner/write-collab).
   // accessRole is only set by IdeaPageClient for shared/public note views — undefined means user is in their own notes.
   const canAttachSecondaryObject = !readOnly && (!accessRole || accessRole === 'owner' || accessRole === 'write-collab');
@@ -1276,7 +1274,7 @@ export function NoteDetailSidebar({
         {!shouldMaskEncrypted && content && (
           <ObjectQuickActionCard
             content={content}
-            title={liveNote.title}
+            title={liveNote.title || undefined}
             objectId={liveNote.$id}
             objectKind="idea"
           />

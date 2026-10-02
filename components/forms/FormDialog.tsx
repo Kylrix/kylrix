@@ -19,7 +19,6 @@ import {
   ListFilter,
   CheckCircle2,
   List,
-  UploadCloud,
   Ghost,
 } from 'lucide-react';
 import { GHOST_FIELDS_REGISTRY, getEnabledGhostFields } from '@/lib/forms/ghost-fields';
@@ -82,8 +81,8 @@ function SortableField({
   updateOption,
   removeOption,
   isChoiceType,
-  user,
-  openProUpgrade,
+  user: _user,
+  openProUpgrade: _openProUpgrade,
   openSettingsDrawer,
 }: any) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({

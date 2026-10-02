@@ -41,7 +41,7 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
   attachmentDisabled = false,
   onUpgradeRequested,
   onSend,
-  onToggleRecording,
+  onToggleRecording: _onToggleRecording,
   onClearAttachment,
   onClearPendingObject,
   typingUsers,

@@ -23,6 +23,7 @@ const eslintConfig = [
       "functions/**",
       ".repo/**",
       ".agents/**",
+      ".ignore/**",
     ],
   },
   ...nextConfigs,

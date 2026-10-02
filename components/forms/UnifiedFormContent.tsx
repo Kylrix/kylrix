@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
     CheckCircle2, 
-    Upload as UploadIcon, 
     X as XIcon, 
     ArrowLeft,
     ArrowRight,
@@ -18,8 +17,6 @@ import { Forms } from '@/generated/appwrite/types';
 import { getEnabledGhostFields, resolveGhostFields } from '@/lib/forms/ghost-fields';
 import { GhostFieldsNotice } from './GhostFieldsNotice';
 import { useDataNexus } from '@/context/DataNexusContext';
-import { secureUploadFile } from '@/lib/actions/client-ops';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 

@@ -3,7 +3,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { parseEnvText, measureEnvFieldsJson, ENV_CUSTOM_FIELDS_SOFT_MAX_CHARS, type EnvField } from '@/lib/vault/parse-env';
 import { createCredential } from '@/lib/appwrite';
-import type { CredentialsCreate } from '@/lib/appwrite/types';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { useSudo } from '@/context/SudoContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
@@ -78,8 +77,8 @@ export function ObjectQuickActionCard({
         throw new Error('Environment bundle is too large.');
       }
 
-      const credentialData: CredentialsCreate = {
-        type: 'secret',
+      const credentialData: any = {
+        itemType: 'secret',
         name: resolvedSecretTitle,
         customFields: JSON.stringify(usable),
         isEnv: true,

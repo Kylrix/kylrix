@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import {
   EditorView,
   keymap,
@@ -16,9 +16,9 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting, syntaxTree, ensureSyntaxTree } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
-import { parseObjectBlocks, serializeObjectBlock, type SecondaryObjectPayload } from '@/lib/note-object-secondary';
+import { parseObjectBlocks, type SecondaryObjectPayload } from '@/lib/note-object-secondary';
 import { StorageService } from '@/lib/services/storage';
-import { attachObject, detachObjectByRelation } from '@/lib/actions/client-ops';
+import { detachObjectByRelation } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import toast from 'react-hot-toast';
 
@@ -352,14 +352,14 @@ export function KylrixWYSIWYGEditor({
   value,
   onChange,
   parentId,
-  parentKind = 'note',
+  parentKind: _parentKind = 'note',
   placeholder = 'Write in markdown…',
   readOnly = false,
   minHeight = '240px',
   className = '',
   onKeyDown,
   autoFocus = false,
-  showToolbar = true,
+  showToolbar: _showToolbar = true,
 }: KylrixWYSIWYGEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);

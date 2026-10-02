@@ -11,22 +11,24 @@ import { randomBytes, createHash } from 'crypto';
  */
 export async function upsertIdeaTurso(data: typeof schema.ideas.$inferInsert) {
   try {
+    const id = data.id || generateId();
+    const payload = { ...data, id };
     const existing = await db
       .select({ id: schema.ideas.id })
       .from(schema.ideas)
-      .where(eq(schema.ideas.id, data.id))
+      .where(eq(schema.ideas.id, id))
       .limit(1);
 
     if (existing.length > 0) {
       await db
         .update(schema.ideas)
         .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
+          ...payload,
+          updatedAt: payload.updatedAt || new Date().toISOString(),
         })
-        .where(eq(schema.ideas.id, data.id));
+        .where(eq(schema.ideas.id, id));
     } else {
-      await db.insert(schema.ideas).values(data);
+      await db.insert(schema.ideas).values(payload);
     }
     return { success: true };
   } catch (err: any) {
@@ -57,22 +59,24 @@ export async function listIdeasTurso(userId: string) {
  */
 export async function upsertGoalTurso(data: typeof schema.goals.$inferInsert) {
   try {
+    const id = data.id || generateId();
+    const payload = { ...data, id };
     const existing = await db
       .select({ id: schema.goals.id })
       .from(schema.goals)
-      .where(eq(schema.goals.id, data.id))
+      .where(eq(schema.goals.id, id))
       .limit(1);
 
     if (existing.length > 0) {
       await db
         .update(schema.goals)
         .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
+          ...payload,
+          updatedAt: payload.updatedAt || new Date().toISOString(),
         })
-        .where(eq(schema.goals.id, data.id));
+        .where(eq(schema.goals.id, id));
     } else {
-      await db.insert(schema.goals).values(data);
+      await db.insert(schema.goals).values(payload);
     }
     return { success: true };
   } catch (err: any) {
@@ -103,22 +107,24 @@ export async function listGoalsTurso(userId: string) {
  */
 export async function upsertWorkspaceTurso(data: typeof schema.workspaces.$inferInsert) {
   try {
+    const id = data.id || generateId();
+    const payload = { ...data, id };
     const existing = await db
       .select({ id: schema.workspaces.id })
       .from(schema.workspaces)
-      .where(eq(schema.workspaces.id, data.id))
+      .where(eq(schema.workspaces.id, id))
       .limit(1);
 
     if (existing.length > 0) {
       await db
         .update(schema.workspaces)
         .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
+          ...payload,
+          updatedAt: payload.updatedAt || new Date().toISOString(),
         })
-        .where(eq(schema.workspaces.id, data.id));
+        .where(eq(schema.workspaces.id, id));
     } else {
-      await db.insert(schema.workspaces).values(data);
+      await db.insert(schema.workspaces).values(payload);
     }
     return { success: true };
   } catch (err: any) {
@@ -296,22 +302,24 @@ export async function createApiKeyTurso(params: {
  */
 export async function upsertKeychainTurso(data: typeof schema.keychain.$inferInsert) {
   try {
+    const id = data.id || generateId();
+    const payload = { ...data, id };
     const existing = await db
       .select({ id: schema.keychain.id })
       .from(schema.keychain)
-      .where(eq(schema.keychain.id, data.id))
+      .where(eq(schema.keychain.id, id))
       .limit(1);
 
     if (existing.length > 0) {
       await db
         .update(schema.keychain)
         .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
+          ...payload,
+          updatedAt: payload.updatedAt || new Date().toISOString(),
         })
-        .where(eq(schema.keychain.id, data.id));
+        .where(eq(schema.keychain.id, id));
     } else {
-      await db.insert(schema.keychain).values(data);
+      await db.insert(schema.keychain).values(payload);
     }
     return { success: true };
   } catch (err: any) {
@@ -325,22 +333,24 @@ export async function upsertKeychainTurso(data: typeof schema.keychain.$inferIns
  */
 export async function upsertVaultItemTurso(data: typeof schema.vaultItems.$inferInsert) {
   try {
+    const id = data.id || generateId();
+    const payload = { ...data, id };
     const existing = await db
       .select({ id: schema.vaultItems.id })
       .from(schema.vaultItems)
-      .where(eq(schema.vaultItems.id, data.id))
+      .where(eq(schema.vaultItems.id, id))
       .limit(1);
 
     if (existing.length > 0) {
       await db
         .update(schema.vaultItems)
         .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
+          ...payload,
+          updatedAt: payload.updatedAt || new Date().toISOString(),
         })
-        .where(eq(schema.vaultItems.id, data.id));
+        .where(eq(schema.vaultItems.id, id));
     } else {
-      await db.insert(schema.vaultItems).values(data);
+      await db.insert(schema.vaultItems).values(payload);
     }
     return { success: true };
   } catch (err: any) {

@@ -6,7 +6,6 @@ import {
   Check, 
   ArrowLeft,
   ArrowUpRight, 
-  Square, 
   FileText, 
   Lock, 
   Globe, 
@@ -28,7 +27,6 @@ import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { getNote, getNotePublicState, toggleNoteVisibility } from '@/lib/appwrite';
 import { createNote, updateNote, attachObject } from '@/lib/actions/client-ops';
 import type { Notes } from '@/types/appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { serializeObjectBlock } from '@/lib/note-object-secondary';
 import type { ParsedObjectBlock } from '@/lib/note-object-secondary';
 import { useNotes } from '@/context/NotesContext';
@@ -364,21 +362,6 @@ export default function CreateNoteForm({
     }
   }, [createWithAgent, agentSuggestion, acceptSuggestion, inlineSuffix, applyContentDraft, content]);
 
-  const insertTextAtCursor = (text: string) => {
-    const textarea = contentRef.current;
-    if (textarea) {
-      const start = textarea.selectionStart || 0;
-      const end = textarea.selectionEnd || 0;
-      const nextContent = content.substring(0, start) + text + content.substring(end);
-      handleContentChange(nextContent);
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start + text.length, start + text.length);
-      }, 50);
-    } else {
-      handleContentChange(content + text);
-    }
-  };
 
   const existingTags = useMemo(() => {
     const tagSet = new Set<string>();

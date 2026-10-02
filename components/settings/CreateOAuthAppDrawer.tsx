@@ -161,7 +161,6 @@ export function CreateOAuthAppDrawer({
               {step === 'name' && 'App name'}
               {step === 'type' && 'Client type'}
               {step === 'redirect' && 'Redirect URL'}
-              {step === 'logo' && 'Logo'}
               {step === 'done' && 'Credentials'}
             </h2>
           </div>

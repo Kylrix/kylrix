@@ -25,7 +25,6 @@ import {
   RotateCw,
   Save,
   Tag,
-  Trash2,
   UploadCloud,
   User,
   X,
@@ -156,7 +155,6 @@ export default function CredentialDialog({
         setCustomFields([]);
         setIsEnvMode(false);
         setIsNameManuallyEdited(Boolean(prefill?.name));
-        setAttachments([]);
         setEnvHint(null);
         setError(null);
       };
@@ -197,7 +195,6 @@ export default function CredentialDialog({
       setCustomFields(draft.customFields || []);
       setIsEnvMode(Boolean(draft.isEnvMode));
       setIsNameManuallyEdited(Boolean(draft.isNameManuallyEdited));
-      setAttachments([]);
       setEnvHint(null);
       setError(null);
       setDraftReady(true);
