@@ -17,11 +17,12 @@ class PartyKitRealtimeEngine {
   private isConnecting = false;
 
   private getHost(): string {
-    return (
+    const raw =
       process.env.NEXT_PUBLIC_PARTYKIT_HOST ||
+      process.env.NEXT_PUBLIC_PARTY_HOST ||
       (typeof window !== 'undefined' ? (window as any).__PARTYKIT_HOST__ : null) ||
-      'localhost:1999'
-    );
+      'localhost:1999';
+    return String(raw).replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/+$/, '');
   }
 
   private initSocket(): PartySocket | null {
@@ -50,6 +51,10 @@ class PartyKitRealtimeEngine {
         if (activeChannels.length > 0 && this.socket) {
           this.socket.send(JSON.stringify({ type: 'subscribe', channels: activeChannels }));
         }
+      });
+
+      this.socket.addEventListener('error', (err) => {
+        console.warn('[PartyKit Realtime] Socket error event:', err);
       });
     } catch (err) {
       console.warn('[PartyKit Realtime] Connection failed:', err);

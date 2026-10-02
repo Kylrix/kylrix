@@ -367,7 +367,12 @@ export const realtime = new Proxy(originalRealtime, {
                     } catch {}
                 }
                 if (!rawUnsub) {
-                    rawUnsub = (target as any).subscribe(...args);
+                    try {
+                        rawUnsub = (target as any).subscribe(...args);
+                    } catch (err) {
+                        console.warn('[Realtime] Appwrite subscribe failed, using fallback:', err);
+                        rawUnsub = () => {};
+                    }
                 }
                 return createThenableUnsubscribe(rawUnsub);
             };

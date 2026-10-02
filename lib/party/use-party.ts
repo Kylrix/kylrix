@@ -2,8 +2,11 @@
 
 import usePartySocket from 'partysocket/react';
 
-export const DEFAULT_PARTY_HOST =
-  process.env.NEXT_PUBLIC_PARTY_HOST || 'localhost:1999';
+export const DEFAULT_PARTY_HOST = String(
+  process.env.NEXT_PUBLIC_PARTY_HOST ||
+  process.env.NEXT_PUBLIC_PARTYKIT_HOST ||
+  'localhost:1999'
+).replace(/^https?:\/\//i, '').replace(/^wss?:\/\//i, '').replace(/\/+$/, '');
 
 export interface UsePartyOptions {
   room: string;
