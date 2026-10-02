@@ -1020,7 +1020,7 @@ export const ChatWindow = ({
             } catch { /* ignore */ }
         };
         const initRealtime = async () => {
-            const sub = await realtime.subscribe(
+            const sub = realtime.subscribe(
                 [
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`,
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.rows`,
@@ -1153,7 +1153,7 @@ export const ChatWindow = ({
             } catch { /* ignore */ }
         };
         const initRealtime = async () => {
-            const sub = await realtime.subscribe(
+            const sub = realtime.subscribe(
                 [
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.rows`,
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`,

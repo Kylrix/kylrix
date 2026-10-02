@@ -526,7 +526,7 @@ export const SocialService = {
         const momentsChannel = `databases.${DB_ID}.tables.${MOMENTS_TABLE}.rows`;
         const interactionsChannel = `databases.${DB_ID}.tables.${INTERACTIONS_TABLE}.rows`;
 
-        const unsubMomentsPromise = realtime.subscribe(momentsChannel, (response) => {
+        const unsubMoments = realtime.subscribe(momentsChannel, (response) => {
             const payload = response.payload;
             let type: 'create' | 'update' | 'delete' | null = null;
 
@@ -539,22 +539,19 @@ export const SocialService = {
             }
         });
 
-        const unsubInteractionsPromise = realtime.subscribe(interactionsChannel, (response) => {
+        const unsubInteractions = realtime.subscribe(interactionsChannel, (response) => {
             if (response.events.some(e => e.includes('.create') || e.includes('.delete'))) {
                 const payload = response.payload;
                 callback({ type: 'update', payload: { $id: payload.messageId, _interactionUpdate: true } });
             }
         });
 
-        return async () => {
-            const unsubMoments = await unsubMomentsPromise as any;
-            const unsubInteractions = await unsubInteractionsPromise as any;
+        return () => {
+            if (typeof unsubMoments === 'function') (unsubMoments as any)();
+            else if ((unsubMoments as any)?.unsubscribe) (unsubMoments as any).unsubscribe();
 
-            if (typeof unsubMoments === 'function') unsubMoments();
-            else if (unsubMoments?.unsubscribe) unsubMoments.unsubscribe();
-            
-            if (typeof unsubInteractions === 'function') unsubInteractions();
-            else if (unsubInteractions?.unsubscribe) unsubInteractions.unsubscribe();
+            if (typeof unsubInteractions === 'function') (unsubInteractions as any)();
+            else if ((unsubInteractions as any)?.unsubscribe) (unsubInteractions as any).unsubscribe();
         };
     },
 

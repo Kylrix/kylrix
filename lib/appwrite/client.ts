@@ -27,6 +27,39 @@ export function getSessionTablesDB(): TablesDB {
   return originalTablesDB;
 }
 
+/**
+ * Wraps an unsubscribe callback (or handle) into a thenable function.
+ * Prevents "realtime.subscribe(...).then is not a function" errors if callers
+ * await or call .then() on realtime.subscribe().
+ */
+export function createThenableUnsubscribe(unsubFn: any) {
+    const fn = () => {
+        try {
+            if (typeof unsubFn === 'function') {
+                unsubFn();
+            } else if (unsubFn && typeof unsubFn.unsubscribe === 'function') {
+                unsubFn.unsubscribe();
+            }
+        } catch (_e) {}
+    };
+    fn.unsubscribe = fn;
+    fn.then = function (onFulfilled?: (val: any) => any, onRejected?: (reason: any) => any) {
+        try {
+            const res = onFulfilled ? onFulfilled(fn) : fn;
+            return Promise.resolve(res);
+        } catch (err) {
+            if (onRejected) {
+                return Promise.resolve(onRejected(err));
+            }
+            return Promise.reject(err);
+        }
+    };
+    fn.catch = function (onRejected?: (reason: any) => any) {
+        return fn.then(undefined, onRejected);
+    };
+    return fn;
+}
+
 // Helper to fetch JWT securely from client-side SDK
 async function getJwt(): Promise<string | undefined> {
   if (isDogfoodSafetyActive()) {
@@ -324,15 +357,19 @@ export const realtime = new Proxy(originalRealtime, {
         if (prop === 'subscribe') {
             return (...args: any[]) => {
                 if (isDogfoodSafetyActive()) {
-                    return () => {};
+                    return createThenableUnsubscribe(() => {});
                 }
+                let rawUnsub: any;
                 if (process.env.NEXT_PUBLIC_PARTYKIT_HOST) {
                     try {
                         const { partyRealtime } = require('@/lib/realtime/partykit');
-                        return partyRealtime.subscribe(args[0], args[1]);
+                        rawUnsub = partyRealtime.subscribe(args[0], args[1]);
                     } catch {}
                 }
-                return (target as any).subscribe(...args);
+                if (!rawUnsub) {
+                    rawUnsub = (target as any).subscribe(...args);
+                }
+                return createThenableUnsubscribe(rawUnsub);
             };
         }
         const val = Reflect.get(target, prop, receiver);
