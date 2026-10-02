@@ -17,11 +17,11 @@ const AUTH_PROVIDER_KEY = 'kylrix:auth_provider';
  * Defaults to 'turso' if migration has commenced, otherwise respects local marker.
  */
 export function getActiveSyncTarget(): SyncTarget {
-  if (typeof window === 'undefined') return 'turso';
+  if (typeof window === 'undefined') return 'appwrite';
   const saved = localStorage.getItem(SYNC_TARGET_KEY) as SyncTarget | null;
   if (saved === 'turso' || saved === 'appwrite') return saved;
-  // Default to Turso if environment indicates Turso migration
-  return process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'turso' ? 'turso' : 'turso';
+  // Default to Turso if environment indicates Turso migration, otherwise default to Appwrite
+  return process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'turso' ? 'turso' : 'appwrite';
 }
 
 /**

@@ -103,9 +103,16 @@ export async function loadGoalsFromLocalCopy(opts: {
   }
 
   try {
-    const goalsList = await LocalEngine.cacheGet<any[]>(`f_goals_list_${userId}`);
-    if (goalsList?.length) {
-      const cached = goalsList.map((r) => normalizeGoalRow(r, userId)).filter((t): t is Task => !!t);
+    const [goalsList, unPrefixedGoals, guestGoals] = await Promise.all([
+      LocalEngine.cacheGet<any[]>(`f_goals_list_${userId}`).catch(() => null),
+      LocalEngine.cacheGet<any[]>('f_goals_list').catch(() => null),
+      userId !== 'guest' ? LocalEngine.cacheGet<any[]>('f_goals_list_guest').catch(() => null) : null,
+    ]);
+    const candidates = (goalsList && goalsList.length > 0 ? goalsList : null) ||
+      (unPrefixedGoals && unPrefixedGoals.length > 0 ? unPrefixedGoals : null) ||
+      (guestGoals && guestGoals.length > 0 ? guestGoals : null);
+    if (candidates?.length) {
+      const cached = candidates.map((r) => normalizeGoalRow(r, userId)).filter((t): t is Task => !!t);
       if (cached.length) return cached;
     }
   } catch {

@@ -101,15 +101,26 @@ export async function loadNotesFromLocalCopy(opts: {
     /* non-fatal */
   }
 
-  // 3) LocalEngine flat list — check f_notes_list_${userId} and f_ideas_${userId}
+  // 3) LocalEngine flat list — check f_notes_list_${userId}, f_ideas_${userId}, and un-prefixed/guest fallbacks
   try {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const [list, ideasObj] = await Promise.all([
+    const [list, ideasObj, fallbackList, fallbackIdeasObj, guestList, guestIdeasObj] = await Promise.all([
       LocalEngine.cacheGet<any[]>(`f_notes_list_${userId}`).catch(() => null),
       LocalEngine.cacheGet<{ rows?: any[] } | any[]>(`f_ideas_${userId}`).catch(() => null),
+      LocalEngine.cacheGet<any[]>('f_notes_list').catch(() => null),
+      LocalEngine.cacheGet<{ rows?: any[] } | any[]>('f_ideas').catch(() => null),
+      userId !== 'guest' ? LocalEngine.cacheGet<any[]>('f_notes_list_guest').catch(() => null) : null,
+      userId !== 'guest' ? LocalEngine.cacheGet<{ rows?: any[] } | any[]>('f_ideas_guest').catch(() => null) : null,
     ]);
     const ideasList = Array.isArray(ideasObj) ? ideasObj : ideasObj?.rows;
-    const candidates = (list && list.length > 0 ? list : ideasList) || [];
+    const fbIdeasList = Array.isArray(fallbackIdeasObj) ? fallbackIdeasObj : fallbackIdeasObj?.rows;
+    const gstIdeasList = Array.isArray(guestIdeasObj) ? guestIdeasObj : guestIdeasObj?.rows;
+
+    const activeUserItems = (list && list.length > 0 ? list : null) || (ideasList && ideasList.length > 0 ? ideasList : null);
+    const fallbackItems = (fallbackList && fallbackList.length > 0 ? fallbackList : null) || (fbIdeasList && fbIdeasList.length > 0 ? fbIdeasList : null);
+    const guestItems = (guestList && guestList.length > 0 ? guestList : null) || (gstIdeasList && gstIdeasList.length > 0 ? gstIdeasList : null);
+
+    const candidates = activeUserItems || fallbackItems || guestItems || [];
     const notes = candidates.map((row) => normalizeNoteRow(row, userId)).filter((n): n is Notes => !!n);
     if (notes.length) {
       return {
