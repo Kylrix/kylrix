@@ -215,7 +215,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
         menuTitle = 'Navigation Hub';
         items.push(
           { label: 'Notes & Ideas', icon: <FileText size={16} />, onClick: () => router.push('/app') },
-          { label: 'Connect Hub', icon: <MessageSquare size={16} />, onClick: () => router.push('/connect') },
+          { label: 'Agent Inbox', icon: <MessageSquare size={16} />, onClick: () => router.push('/connect') },
           { label: 'Goals & Tasks', icon: <CheckCircle2 size={16} />, onClick: () => router.push('/goals') },
           { label: 'Security Vault', icon: <Lock size={16} />, onClick: () => router.push('/vault') },
           { label: 'Workspaces', icon: <Layers size={16} />, onClick: () => router.push('/app') },
@@ -231,7 +231,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
       } else {
         // Highly contextual per-route actions
         if (appType === 'connect') {
-          menuTitle = 'Connect Hub';
+          menuTitle = 'Agent Inbox';
           items.push(
             {
               label: 'Create New Moment',
@@ -266,7 +266,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
               },
             },
             {
-              label: 'Chats & Hangouts',
+              label: 'Chats & Inbound Logs',
               icon: <MessageSquare size={16} />,
               onClick: () => openUnifiedDrawer('hangouts'),
             }
@@ -305,7 +305,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
           items.push(
             { label: 'Quick Capture Note', icon: <Plus size={16} />, onClick: () => openUnifiedDrawer('note') },
             { label: 'Universal Search', icon: <Search size={16} />, onClick: () => focusGlobalSearch() },
-            { label: 'Connect Stream', icon: <MessageSquare size={16} />, onClick: () => router.push('/connect') },
+            { label: 'Agent Inbox', icon: <MessageSquare size={16} />, onClick: () => router.push('/connect') },
             { label: 'Settings', icon: <Settings size={16} />, onClick: () => router.push('/settings') }
           );
         }
