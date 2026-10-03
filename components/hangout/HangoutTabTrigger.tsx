@@ -42,10 +42,10 @@ export function HangoutTabTrigger({
         type="button"
         onClick={handleOpenHangouts}
         className={`relative inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-[#161412] border border-white/25 text-white hover:text-white hover:bg-[#201D1A] hover:border-white/60 active:scale-95 transition-all select-none cursor-pointer shadow-sm ${className}`}
-        title={isRealWorkspace ? 'Workspace Discussion & Hangouts' : 'Hangouts & Discussions'}
+        title={isRealWorkspace ? 'Workspace Agent Inbox & Sessions' : 'Agent Inbox & Discussions'}
       >
         <MessageCircleMore size={16} className="text-[#EC4899]" />
-        <span>Hangouts</span>
+        <span>Agent Inbox</span>
         {hasUnread && (
           <span className="h-2 w-2 rounded-full bg-[#EC4899] animate-pulse" />
         )}
@@ -58,8 +58,8 @@ export function HangoutTabTrigger({
       type="button"
       onClick={handleOpenHangouts}
       className={`relative inline-flex items-center justify-center p-2.5 rounded-xl bg-[#161412] border border-white/25 text-white hover:text-white hover:bg-[#201D1A] hover:border-white/60 active:scale-95 transition-all select-none cursor-pointer shadow-sm ${className}`}
-      title={isRealWorkspace ? 'Workspace Discussion & Hangouts' : 'Hangouts & Discussions'}
-      aria-label="Hangouts"
+      title={isRealWorkspace ? 'Workspace Agent Inbox & Sessions' : 'Agent Inbox & Discussions'}
+      aria-label="Agent Inbox"
     >
       <MessageCircleMore size={16} className="text-white group-hover:text-white" />
       {isRealWorkspace && (

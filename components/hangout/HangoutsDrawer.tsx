@@ -317,7 +317,7 @@ export function HangoutsDrawer({
 
       const items = [
         {
-          label: 'Open Hangout',
+          label: 'Open Session',
           icon: <MessageSquare size={16} className="text-[#A855F7]" />,
           onClick: () => {
             openConversation(
@@ -328,7 +328,7 @@ export function HangoutsDrawer({
           },
         },
         {
-          label: isPinned ? 'Unpin Hangout' : 'Pin Hangout',
+          label: isPinned ? 'Unpin Session' : 'Pin Session',
           icon: <Pin size={16} className={isPinned ? 'rotate-45 text-[#A855F7]' : ''} />,
           onClick: async () => {
             try {
@@ -339,7 +339,7 @@ export function HangoutsDrawer({
                 rowIsPinned: false,
                 setOwnerRowPin: async () => {},
               });
-              toast.success(isPinned ? 'Hangout unpinned' : 'Hangout pinned');
+              toast.success(isPinned ? 'Session unpinned' : 'Session pinned');
             } catch (err: any) {
               toast.error(err?.message || 'Failed to toggle pin');
             }
@@ -352,7 +352,7 @@ export function HangoutsDrawer({
             try {
               const url = `${window.location.origin}/connect?chat=${target.id}`;
               await navigator.clipboard.writeText(url);
-              toast.success('Hangout link copied');
+              toast.success('Session link copied');
             } catch {
               toast.error('Failed to copy link');
             }
@@ -386,14 +386,14 @@ export function HangoutsDrawer({
           },
         },
         {
-          label: 'Delete Hangout',
+          label: 'Delete Session',
           icon: <Trash2 size={16} className="text-red-500" />,
           variant: 'destructive' as const,
           onClick: () => {
             openUnified('delete-confirm', {
               title: `Delete "${target.label}"?`,
-              resourceName: 'this hangout',
-              confirmLabel: 'Delete Hangout',
+              resourceName: 'this session',
+              confirmLabel: 'Delete Session',
               onConfirm: async () => {
                 try {
                   await LocalEngine.trashHangout(
@@ -424,7 +424,7 @@ export function HangoutsDrawer({
                     });
                   });
                 }
-                toast.success('Hangout moved to trash');
+                toast.success('Session moved to trash');
                 window.dispatchEvent(new CustomEvent('kylrix:trash-updated', { detail: { id: target.id } }));
                 void refreshChats();
               },
@@ -783,7 +783,7 @@ export function HangoutsDrawer({
           }
         })
       );
-      toast.success(`Shared to ${targets.length} hangout${targets.length > 1 ? 's' : ''}`);
+      toast.success(`Shared to ${targets.length} session${targets.length > 1 ? 's' : ''}`);
       onClose?.();
     } catch (err: any) {
       toast.error(err?.message || 'Failed to share');
@@ -797,7 +797,7 @@ export function HangoutsDrawer({
       {/* Slim top controls */}
       <div className="flex shrink-0 items-center justify-between border-b-2 border-white/20 bg-[#161412] px-4 sm:px-6 py-3">
         <span className="truncate text-xs font-mono font-bold uppercase tracking-wider text-[#A855F7]">
-          {mode === 'share' ? 'Share to Hangout' : 'Hangouts'}
+          {mode === 'share' ? 'Share to Agent Inbox' : 'Agent Inbox'}
         </span>
         <div className="flex shrink-0 items-center gap-1.5">
           {mode === 'browse' && (
@@ -805,7 +805,7 @@ export function HangoutsDrawer({
               type="button"
               onClick={() => setShowCreateChat(true)}
               className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#000000] border-2 border-white/20 text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
-              title="New hangout"
+              title="New session"
             >
               <Plus size={15} />
             </button>
@@ -835,14 +835,14 @@ export function HangoutsDrawer({
         {/* Title */}
         <div className="shrink-0 px-5 pt-4 pb-1">
           <h2 className="m-0 truncate font-clash text-lg font-black text-white">
-            {mode === 'share' && object ? `Share "${object.title || 'Item'}"` : 'Hangouts & Chats'}
+            {mode === 'share' && object ? `Share "${object.title || 'Item'}"` : 'Agent Inbox & Chats'}
           </h2>
           <p className="m-0 mt-1 truncate font-satoshi text-xs font-bold text-white/60">
             {mode === 'share'
-              ? 'Pick hangouts to send this to'
+              ? 'Pick sessions to send this to'
               : currentWorkspaceTitle
-                ? `${currentWorkspaceTitle} · Connect`
-                : 'Discussions, channels, and private chats'}
+                ? `${currentWorkspaceTitle} · Agent Inbox`
+                : 'Inbound logs, messages, and collaborative sessions'}
           </p>
         </div>
 
@@ -855,7 +855,7 @@ export function HangoutsDrawer({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search hangouts..."
+              placeholder="Search sessions & messages..."
               className="h-10 w-full rounded-2xl border-2 border-white/20 bg-[#000000] pl-9 pr-3 text-xs text-white placeholder:text-white/40 focus:border-[#A855F7] focus:outline-none"
             />
           </div>
@@ -906,7 +906,7 @@ export function HangoutsDrawer({
               <MessageCircleMore size={20} />
             </div>
             <p className="m-0 font-satoshi text-xs font-bold text-white/40">
-              {searchQuery ? 'No matching hangouts' : 'No hangouts yet'}
+              {searchQuery ? 'No matching sessions' : 'No sessions yet'}
             </p>
             {mode === 'browse' && (
               <button
@@ -915,7 +915,7 @@ export function HangoutsDrawer({
                 className="inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl bg-[#A855F7] px-4 py-2.5 text-xs font-extrabold text-white transition-all hover:bg-[#9333ea]"
               >
                 <Plus size={14} />
-                <span>Start a hangout</span>
+                <span>Start a session</span>
               </button>
             )}
           </div>
@@ -1062,7 +1062,7 @@ export function HangoutsDrawer({
                           openHangoutMenu(target, e);
                         }}
                         className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#161412] border border-white/10 text-white/50 transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white cursor-pointer"
-                        title="Hangout actions"
+                        title="Session actions"
                       >
                         <MoreVertical size={15} />
                       </button>
@@ -1088,7 +1088,7 @@ export function HangoutsDrawer({
             {sending
               ? 'Sending...'
               : `Send to ${selected.size || ''} ${
-                  selected.size === 1 ? 'hangout' : selected.size ? 'hangouts' : 'hangout'
+                  selected.size === 1 ? 'session' : selected.size ? 'sessions' : 'session'
                 }`.trim()}
           </button>
         </div>
