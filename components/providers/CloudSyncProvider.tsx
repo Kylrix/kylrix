@@ -51,17 +51,29 @@ export function CloudSyncProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Initial check on mount
-    void checkAndTriggerSync('mount');
+    const scheduleSync = (reason = 'timer') => {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(() => {
+          void checkAndTriggerSync(reason);
+        }, { timeout: 3000 });
+      } else {
+        setTimeout(() => {
+          void checkAndTriggerSync(reason);
+        }, 300);
+      }
+    };
+
+    // Initial check on mount (deferred to idle)
+    scheduleSync('mount');
 
     // Interval checker: check every 15 minutes when idle
     syncTimerRef.current = setInterval(() => {
-      void checkAndTriggerSync('timer');
+      scheduleSync('timer');
     }, 15 * 60 * 1000);
 
     // Online & focus reconnect handlers
-    const handleOnline = () => void checkAndTriggerSync('online');
-    const handleConfigChange = () => void checkAndTriggerSync('config_change');
+    const handleOnline = () => scheduleSync('online');
+    const handleConfigChange = () => scheduleSync('config_change');
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('kylrix:cloud-sync-config-changed', handleConfigChange);

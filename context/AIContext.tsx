@@ -6,7 +6,7 @@ import { PrivacyFilter } from '@/lib/ai/sanitizer';
 import { generateAIContent } from '@/lib/actions/ai';
 import { useLocalContext } from '@/lib/context-engine';
 import dynamic from 'next/dynamic';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/context/auth/AuthContext';
 import { BYOKManager } from '@/lib/ai/byok';
 
 const AIModal = dynamic(() => import("@/components/ai/AIModal").then(mod => mod.AIModal), {
