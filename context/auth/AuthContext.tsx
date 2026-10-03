@@ -197,16 +197,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           import('@/lib/services/users')
             .then(({ UsersService }) => UsersService.ensureProfileForUser(user))
             .catch((err) => console.warn('[AuthContext] Background profile bootstrapping failed:', err)),
-          import('@/lib/actions/turso-ops')
-            .then(({ ensureBetterAuthUserTurso }) =>
-              ensureBetterAuthUserTurso({
-                id: user.$id,
-                name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
-                email: user.email || `${user.$id}@local.kylrix`,
-                emailVerified: Boolean(user.emailVerification),
-              })
-            )
-            .catch((err) => console.warn('[AuthContext] Background Better Auth user sync failed:', err)),
+          fetch('/api/auth/sync-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: user.$id,
+              name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
+              email: user.email || `${user.$id}@local.kylrix`,
+              emailVerified: Boolean(user.emailVerification),
+            }),
+          }).catch((err) => console.warn('[AuthContext] Background Better Auth user sync failed:', err)),
         ];
         await Promise.allSettled(tasks);
       };
