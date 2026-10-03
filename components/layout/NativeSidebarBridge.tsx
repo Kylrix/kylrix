@@ -10,6 +10,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import {
   NATIVE_SIDEBAR_WIDTHS,
   useNativeSidebar,
+  useNativeSidebarApiOptional,
 } from '@/context/RightRailContext';
 import {
   isUnifiedOverlayOnly,
@@ -48,7 +49,12 @@ function useIsDesktopRail() {
  * Mobile object details stay on Overlay / DynamicSidebar (true fullscreen drawers).
  */
 export function NativeSidebarBridge() {
-  const { open, close, dismiss, swap, isOpen, activeKey, sticky } = useNativeSidebar();
+  const sidebarApi = useNativeSidebarApiOptional();
+  const { isOpen, activeKey, sticky } = useNativeSidebar();
+  const open = sidebarApi?.open || (() => {});
+  const close = sidebarApi?.close || (() => {});
+  const dismiss = sidebarApi?.dismiss || (() => {});
+  const swap = sidebarApi?.swap || (() => {});
   const overlay = useOverlay();
   const dynamic = useDynamicSidebar();
   const agentic = useAgenticDrawer();

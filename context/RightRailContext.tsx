@@ -203,15 +203,13 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
       const nextSticky = Boolean(options?.sticky);
       const nextWidth = options?.width ?? DEFAULT_WIDTH;
       const nextTitle = options?.title ?? null;
-      // Idempotent guard — prevents Maximum update depth when bridge re-calls open with same key/content
-      // Use refs (not state) so guard is stable across renders and avoids stale closure loops.
-      if (
-        keyRef.current === nextKey &&
-        contentRef.current === next &&
-        stickyRef.current === nextSticky &&
-        widthRef.current === nextWidth &&
-        titleRef.current === nextTitle
-      ) {
+      const isSameKey = keyRef.current === nextKey;
+      const isSameSticky = stickyRef.current === nextSticky;
+      const isSameWidth = widthRef.current === nextWidth;
+      const isSameTitle = titleRef.current === nextTitle;
+
+      // Idempotent guard — prevents infinite update loops when callers re-open same active key
+      if (isSameKey && isSameSticky && isSameWidth && isSameTitle && mode === 'open') {
         return;
       }
       if (mode === 'open' || keyRef.current !== nextKey) {
