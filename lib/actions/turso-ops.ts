@@ -359,6 +359,9 @@ export async function upsertVaultItemTurso(data: typeof schema.vaultItems.$infer
   }
 }
 
+const userSyncCache = new Map<string, { hash: string; timestamp: number }>();
+const SYNC_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 /**
  * Ensures a Better Auth user record exists in Turso for an Appwrite/authenticated user.
  * Seamless background minting without prompting the user.
@@ -371,6 +374,14 @@ export async function ensureBetterAuthUserTurso(params: {
   image?: string;
 }) {
   try {
+    const payloadHash = `${params.id}:${params.name}:${params.email}:${Boolean(params.emailVerified)}:${params.image || ''}`;
+    const cached = userSyncCache.get(params.id);
+    const nowMs = Date.now();
+
+    if (cached && cached.hash === payloadHash && nowMs - cached.timestamp < SYNC_CACHE_TTL_MS) {
+      return { success: true };
+    }
+
     const existing = await db
       .select({ id: schema.user.id })
       .from(schema.user)
@@ -423,6 +434,7 @@ export async function ensureBetterAuthUserTurso(params: {
         });
       }
     }
+    userSyncCache.set(params.id, { hash: payloadHash, timestamp: nowMs });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] ensureBetterAuthUserTurso failed:', err);

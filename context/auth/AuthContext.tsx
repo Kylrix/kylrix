@@ -193,23 +193,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       userProfileBootstrappedRef.current = user.$id;
 
       const initProfile = async () => {
-        try {
-          const { UsersService } = await import('@/lib/services/users');
-          await UsersService.ensureProfileForUser(user);
-        } catch (err) {
-          console.warn('[AuthContext] Background profile bootstrapping failed:', err);
-        }
-        try {
-          const { ensureBetterAuthUserTurso } = await import('@/lib/actions/turso-ops');
-          await ensureBetterAuthUserTurso({
-            id: user.$id,
-            name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
-            email: user.email || `${user.$id}@local.kylrix`,
-            emailVerified: Boolean(user.emailVerification),
-          });
-        } catch (err) {
-          console.warn('[AuthContext] Background Better Auth user sync failed:', err);
-        }
+        const tasks: Promise<any>[] = [
+          import('@/lib/services/users')
+            .then(({ UsersService }) => UsersService.ensureProfileForUser(user))
+            .catch((err) => console.warn('[AuthContext] Background profile bootstrapping failed:', err)),
+          import('@/lib/actions/turso-ops')
+            .then(({ ensureBetterAuthUserTurso }) =>
+              ensureBetterAuthUserTurso({
+                id: user.$id,
+                name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
+                email: user.email || `${user.$id}@local.kylrix`,
+                emailVerified: Boolean(user.emailVerification),
+              })
+            )
+            .catch((err) => console.warn('[AuthContext] Background Better Auth user sync failed:', err)),
+        ];
+        await Promise.allSettled(tasks);
       };
       void initProfile();
 
