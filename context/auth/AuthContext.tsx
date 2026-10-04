@@ -6,7 +6,7 @@ import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPul
 import { getEcosystemUrl } from '@/lib/ecosystem';
 import { assertAuthenticatedAccount, completeMfaChallenge, isMfaRequiredError } from '@/lib/mfa';
 
-interface User {
+export interface User {
   $id: string;
   email: string | null;
   name: string | null;
