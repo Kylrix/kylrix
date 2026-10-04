@@ -116,8 +116,20 @@ class PartyKitRealtimeEngine {
       }
     };
 
-    const { createThenableUnsubscribe } = require('@/lib/appwrite/client');
-    return createThenableUnsubscribe(unsub);
+    const fn: any = () => {
+      try {
+        unsub();
+      } catch (_e) {}
+    };
+    fn.unsubscribe = fn;
+    fn.then = function (onFulfilled?: (val: any) => any) {
+      const res = onFulfilled ? onFulfilled(fn) : fn;
+      return Promise.resolve(res);
+    };
+    fn.catch = function () {
+      return Promise.resolve(fn);
+    };
+    return fn;
   }
 
   /**

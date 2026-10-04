@@ -192,40 +192,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (userProfileBootstrappedRef.current === user.$id) return;
       userProfileBootstrappedRef.current = user.$id;
 
-      const initProfile = () => {
-        const execute = async () => {
-          const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-          const timeoutId = controller ? setTimeout(() => controller.abort(), 3500) : null;
-          const tasks: Promise<any>[] = [
-            import('@/lib/services/users')
-              .then(({ UsersService }) => UsersService.ensureProfileForUser(user))
-              .catch((err) => console.warn('[AuthContext] Background profile bootstrapping failed:', err)),
-            fetch('/api/auth/sync-user', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                id: user.$id,
-                name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
-                email: user.email || `${user.$id}@local.kylrix`,
-                emailVerified: Boolean(user.emailVerification),
-              }),
-              ...(controller ? { signal: controller.signal } : {}),
-            })
-              .catch((err) => console.warn('[AuthContext] Background Better Auth user sync failed:', err))
-              .finally(() => {
-                if (timeoutId) clearTimeout(timeoutId);
-              }),
-          ];
-          await Promise.allSettled(tasks);
-        };
-
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          (window as any).requestIdleCallback(execute, { timeout: 2000 });
-        } else {
-          setTimeout(execute, 200);
+      const initProfile = async () => {
+        try {
+          const { UsersService } = await import('@/lib/services/users');
+          await UsersService.ensureProfileForUser(user);
+        } catch (err) {
+          console.warn('[AuthContext] Background profile bootstrapping failed:', err);
         }
       };
-      initProfile();
+      void initProfile();
 
       // 5. Silent Attribution & Referral Claiming (new + existing accounts, once)
       const claimAttribution = async () => {

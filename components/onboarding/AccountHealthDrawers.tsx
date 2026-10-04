@@ -220,7 +220,7 @@ export function AccountHealthDrawers() {
                     open={true}
                     onClose={() => dismissStep('masterpass', 3)}
                     slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-                    ModalProps={{ keepMounted: false, disableScrollLock: false }}
+                    ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
                     PaperProps={{ sx: { ...drawerPaperSx, maxHeight: 'min(380px, 88dvh)' } }}
                 >
                     <Box sx={{ maxWidth: 720, width: '100%', mx: 'auto', p: { xs: 2, sm: 2.75 }, pt: 2.25 }}>
@@ -284,7 +284,7 @@ export function AccountHealthDrawers() {
                     open={true}
                     onClose={() => dismissStep('username', 7)}
                     slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-                    ModalProps={{ keepMounted: false, disableScrollLock: false }}
+                    ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
                     PaperProps={{ sx: drawerPaperSx }}
                 >
                     <Box sx={{ maxWidth: 720, width: '100%', mx: 'auto', p: { xs: 2, sm: 2.75 }, pt: 2.25 }}>
@@ -416,7 +416,7 @@ export function AccountHealthDrawers() {
                     open={true}
                     onClose={() => dismissStep('passkey', 7)}
                     slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-                    ModalProps={{ keepMounted: false, disableScrollLock: false }}
+                    ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
                     PaperProps={{ sx: { ...drawerPaperSx, maxHeight: 'min(400px, 90dvh)' } }}
                 >
                     <Box sx={{ p: 4, maxWidth: '600px', mx: 'auto', width: '100%' }}>

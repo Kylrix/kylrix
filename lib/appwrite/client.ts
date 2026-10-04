@@ -360,19 +360,11 @@ export const realtime = new Proxy(originalRealtime, {
                     return createThenableUnsubscribe(() => {});
                 }
                 let rawUnsub: any;
-                if (process.env.NEXT_PUBLIC_PARTYKIT_HOST) {
-                    try {
-                        const { partyRealtime } = require('@/lib/realtime/partykit');
-                        rawUnsub = partyRealtime.subscribe(args[0], args[1]);
-                    } catch {}
-                }
-                if (!rawUnsub) {
-                    try {
-                        rawUnsub = (target as any).subscribe(...args);
-                    } catch (err) {
-                        console.warn('[Realtime] Appwrite subscribe failed, using fallback:', err);
-                        rawUnsub = () => {};
-                    }
+                try {
+                    rawUnsub = (target as any).subscribe(...args);
+                } catch (err) {
+                    console.warn('[Realtime] Appwrite subscribe failed, using fallback:', err);
+                    rawUnsub = () => {};
                 }
                 return createThenableUnsubscribe(rawUnsub);
             };

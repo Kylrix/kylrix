@@ -11,7 +11,6 @@
  */
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { stampTursoSync, isTursoSynced } from '@/lib/sync/turso-marker';
 
 const PREFIX = 'sec_enclave';
 
@@ -118,13 +117,10 @@ export const SecurityEnclave = {
     return Array.isArray(primary) ? primary : [];
   },
 
-  async setKeychain(userId: string, rows: any[], options?: { tursoSynced?: boolean }): Promise<void> {
+  async setKeychain(userId: string, rows: any[]): Promise<void> {
     if (!userId) return;
-    let list = Array.isArray(rows) ? rows : [];
-    if (options?.tursoSynced) {
-      list = stampTursoSync(list, { table: 'keychain', userId });
-    }
-    await LocalEngine.cacheSet(keychainKey(userId), list, { tursoSynced: options?.tursoSynced, table: 'keychain', userId });
+    const list = Array.isArray(rows) ? rows : [];
+    await LocalEngine.cacheSet(keychainKey(userId), list);
     // Keep legacy keys warm so older readers still work during rollout
     await LocalEngine.cacheSet(`kylrix_keychain_${userId}`, list);
     await LocalEngine.cacheSet(`f_keychain_${userId}`, list);
@@ -132,21 +128,6 @@ export const SecurityEnclave = {
       keychainCount: list.length,
       hasMasterpass: list.some((e) => e?.type === 'password'),
       hasPasskey: list.some((e) => e?.type === 'passkey')});
-  },
-
-  /** Quietly mark cached masterpass/passkeys keychain as synced to Turso */
-  async markKeychainTursoSynced(userId: string): Promise<void> {
-    const list = await this.getKeychain(userId);
-    if (list && list.length) {
-      await this.setKeychain(userId, list, { tursoSynced: true });
-    }
-  },
-
-  /** Check if masterpass/passkeys keychain carries the Turso quiet sync marker */
-  async isKeychainTursoSynced(userId: string): Promise<boolean> {
-    const list = await this.getKeychain(userId);
-    if (!list || !list.length) return false;
-    return list.some((e) => isTursoSynced(e, userId));
   },
 
   async getPasswordEntry(userId: string): Promise<any | null> {
@@ -185,31 +166,13 @@ export const SecurityEnclave = {
     return null;
   },
 
-  async setUserDoc(userId: string, doc: any, options?: { tursoSynced?: boolean }): Promise<void> {
+  async setUserDoc(userId: string, doc: any): Promise<void> {
     if (!userId || !doc) return;
-    let payload = doc;
-    if (options?.tursoSynced) {
-      payload = stampTursoSync(doc, { table: 'user', userId });
-    }
-    await LocalEngine.cacheSet(userDocKey(userId), payload, { tursoSynced: options?.tursoSynced, table: 'user', userId });
-    await LocalEngine.cacheSet(`kylrix_userdoc_${userId}`, payload);
+    await LocalEngine.cacheSet(userDocKey(userId), doc);
+    await LocalEngine.cacheSet(`kylrix_userdoc_${userId}`, doc);
     await this.touchMeta(userId, {
       hasMasterpass: !!(doc?.masterpass === true),
       hasPasskey: !!(doc?.isPasskey === true)});
-  },
-
-  /** Quietly mark cached userDoc as synced to Turso */
-  async markUserDocTursoSynced(userId: string): Promise<void> {
-    const doc = await this.getUserDoc(userId);
-    if (doc) {
-      await this.setUserDoc(userId, doc, { tursoSynced: true });
-    }
-  },
-
-  /** Check if userDoc carries the Turso quiet sync marker */
-  async isUserDocTursoSynced(userId: string): Promise<boolean> {
-    const doc = await this.getUserDoc(userId);
-    return isTursoSynced(doc, userId);
   },
 
   async getIdentity(userId: string): Promise<any | null> {
