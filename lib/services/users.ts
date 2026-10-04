@@ -157,7 +157,7 @@ export const UsersService = {
         // 1. Memory Cache
         const hit = profileRowCache.get(userId);
         if (hit && Date.now() - hit.at < PROFILE_ROW_TTL_MS) {
-            return hit.row ? { ...hit.row } : null;
+            return hit.row ? hit.row : null;
         }
 
         // 2. LocalEngine Cache (Browser environment)
@@ -167,7 +167,7 @@ export const UsersService = {
                 const cached = await LocalEngine.cacheGet<any>(`profile_${userId}`, PROFILE_ROW_TTL_MS);
                 if (cached) {
                     rememberProfileRow(cached, userId);
-                    return { ...cached };
+                    return profileRowCache.get(userId)?.row || cached;
                 }
             } catch {}
         }
@@ -321,7 +321,7 @@ export const UsersService = {
         const normalized = username.replace(/^@/, '').toLowerCase().trim();
         const hit = profileRowCache.get(normalized);
         if (hit && Date.now() - hit.at < PROFILE_ROW_TTL_MS) {
-            return hit.row ? { ...hit.row } : null;
+            return hit.row ? hit.row : null;
         }
 
         if (typeof window !== 'undefined') {
@@ -330,7 +330,7 @@ export const UsersService = {
                 const cached = await LocalEngine.cacheGet<any>(`profile_${normalized}`, PROFILE_ROW_TTL_MS);
                 if (cached) {
                     rememberProfileRow(cached, normalized);
-                    return { ...cached };
+                    return profileRowCache.get(normalized)?.row || cached;
                 }
             } catch {}
         }

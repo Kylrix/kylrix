@@ -41,18 +41,59 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { user, isLoading: authLoading } = useAuth();
   const { activeContent } = useUnifiedDrawer();
   const pathname = usePathname();
-  const [currentStep, setCurrentStep] = useState<SetupStep>('none');
-  const [isLoading, setIsLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
-  const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
-  const [hasPasskey, setHasPasskey] = useState<boolean | null>(null);
+  const [currentStep, setCurrentStepState] = useState<SetupStep>('none');
+  const [isLoading, setIsLoadingState] = useState(true);
+  const [profile, setProfileState] = useState<any>(null);
+  const [hasMasterpass, setHasMasterpassState] = useState<boolean | null>(null);
+  const [hasPasskey, setHasPasskeyState] = useState<boolean | null>(null);
+
+  const currentStepRef = useRef<SetupStep>('none');
+  const isLoadingRef = useRef<boolean>(true);
+  const profileRef = useRef<any>(null);
+  const hasMasterpassRef = useRef<boolean | null>(null);
+  const hasPasskeyRef = useRef<boolean | null>(null);
+
+  const setCurrentStep = useCallback((step: SetupStep) => {
+    if (currentStepRef.current !== step) {
+      currentStepRef.current = step;
+      setCurrentStepState(step);
+    }
+  }, []);
+
+  const setIsLoading = useCallback((loading: boolean) => {
+    if (isLoadingRef.current !== loading) {
+      isLoadingRef.current = loading;
+      setIsLoadingState(loading);
+    }
+  }, []);
+
+  const setProfile = useCallback((prof: any) => {
+    if (profileRef.current !== prof) {
+      profileRef.current = prof;
+      setProfileState(prof);
+    }
+  }, []);
+
+  const setHasMasterpass = useCallback((val: boolean | null) => {
+    if (hasMasterpassRef.current !== val) {
+      hasMasterpassRef.current = val;
+      setHasMasterpassState(val);
+    }
+  }, []);
+
+  const setHasPasskey = useCallback((val: boolean | null) => {
+    if (hasPasskeyRef.current !== val) {
+      hasPasskeyRef.current = val;
+      setHasPasskeyState(val);
+    }
+  }, []);
+
   const checkInflight = useRef(false);
+  const identityPublishAttemptedRef = useRef<string | null>(null);
+  const silentUsernameAttemptedRef = useRef<string | null>(null);
 
   const userRef = useRef(user);
   userRef.current = user;
-
-  const profileRef = useRef(profile);
-  profileRef.current = profile;
 
   const pathnameRef = useRef(pathname);
   pathnameRef.current = pathname;
@@ -80,6 +121,8 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const silentPublishUsername = useCallback(async (): Promise<boolean> => {
     const currentUser = userRef.current;
     if (!currentUser?.$id) return false;
+    if (silentUsernameAttemptedRef.current === currentUser.$id) return false;
+    silentUsernameAttemptedRef.current = currentUser.$id;
     
     const emailPrefix = currentUser.email ? currentUser.email.split('@')[0] : '';
     let cleanHandle = emailPrefix.toLowerCase().replace(/[^a-z_]/g, '');
@@ -212,7 +255,8 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (mpOk && ecosystemSecurity.status.isUnlocked) {
         const hasPubKey = prof?.publicKey && prof.publicKey.length > 5;
-        if (!hasPubKey) {
+        if (!hasPubKey && identityPublishAttemptedRef.current !== currentUser.$id) {
+          identityPublishAttemptedRef.current = currentUser.$id;
           try {
             const pub = await ecosystemSecurity.ensureE2EIdentity(currentUser.$id);
             if (pub) {
