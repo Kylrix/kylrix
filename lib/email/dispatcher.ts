@@ -18,7 +18,7 @@ export async function sendTransactionalEmail({
   subject,
   text,
   html,
-  from = process.env.EMAIL_FROM || 'Kylrix Security <auth@kylrix.space>',
+  from = process.env.EMAIL_FROM || 'Kylrix <noreply@kylrix.space>',
 }: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
   const mailerooApiKey = process.env.MAILEROO_API_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
