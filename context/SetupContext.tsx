@@ -48,30 +48,44 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [hasPasskey, setHasPasskey] = useState<boolean | null>(null);
   const checkInflight = useRef(false);
 
+  const userRef = useRef(user);
+  userRef.current = user;
+
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
+
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+
+  const activeContentRef = useRef(activeContent);
+  activeContentRef.current = activeContent;
+
   const dismissStep = useCallback((step: SetupStep, durationDays?: number) => {
-    if (user?.$id) {
+    const currentUser = userRef.current;
+    if (currentUser?.$id) {
       const expiresAt = Date.now() + (durationDays ?? 7) * 24 * 60 * 60 * 1000;
       
       if (step === 'username') {
-        localStorage.setItem(`${USERNAME_DISMISS_KEY}${user.$id}`, String(expiresAt));
+        localStorage.setItem(`${USERNAME_DISMISS_KEY}${currentUser.$id}`, String(expiresAt));
       } else if (step === 'masterpass') {
-        localStorage.setItem(`${MP_DISMISS_KEY}${user.$id}`, String(expiresAt));
+        localStorage.setItem(`${MP_DISMISS_KEY}${currentUser.$id}`, String(expiresAt));
       } else if (step === 'passkey') {
-        localStorage.setItem(`${PASSKEY_DISMISS_KEY}${user.$id}`, String(expiresAt));
+        localStorage.setItem(`${PASSKEY_DISMISS_KEY}${currentUser.$id}`, String(expiresAt));
       }
     }
     
     setCurrentStep('none');
-  }, [user?.$id]);
+  }, []);
 
   const silentPublishUsername = useCallback(async (): Promise<boolean> => {
-    if (!user?.$id) return false;
+    const currentUser = userRef.current;
+    if (!currentUser?.$id) return false;
     
-    const emailPrefix = user.email ? user.email.split('@')[0] : '';
+    const emailPrefix = currentUser.email ? currentUser.email.split('@')[0] : '';
     let cleanHandle = emailPrefix.toLowerCase().replace(/[^a-z_]/g, '');
     
     if (cleanHandle.length < 3) {
-      const nameClean = (user.name || '').toLowerCase().replace(/[^a-z_]/g, '');
+      const nameClean = (currentUser.name || '').toLowerCase().replace(/[^a-z_]/g, '');
       if (nameClean.length >= 3) {
         cleanHandle = nameClean;
       } else {
@@ -89,33 +103,34 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         const isAvailable = await UsersService.isUsernameAvailable(handle);
         if (isAvailable) {
-          const displayName = user.name || (handle.charAt(0).toUpperCase() + handle.slice(1));
+          const displayName = currentUser.name || (handle.charAt(0).toUpperCase() + handle.slice(1));
           
           let publicKey: string | undefined;
           try {
             if (ecosystemSecurity.status.isUnlocked) {
-              const pub = await ecosystemSecurity.ensureE2EIdentity(user.$id);
+              const pub = await ecosystemSecurity.ensureE2EIdentity(currentUser.$id);
               if (pub) publicKey = pub;
             }
           } catch {
             // Best effort
           }
 
-          if (profile?.$id) {
-            await UsersService.updateProfile(user.$id, {
+          const currentProfile = profileRef.current;
+          if (currentProfile?.$id) {
+            await UsersService.updateProfile(currentUser.$id, {
               username: handle,
               displayName,
               ...(publicKey ? { publicKey } : {}),
             });
           } else {
-            await UsersService.createProfile(user.$id, handle, {
+            await UsersService.createProfile(currentUser.$id, handle, {
               displayName,
               ...(publicKey ? { publicKey } : {}),
             });
           }
           
-          invalidateUsersProfileRowCache(user.$id);
-          const p = await UsersService.getProfileById(user.$id);
+          invalidateUsersProfileRowCache(currentUser.$id);
+          const p = await UsersService.getProfileById(currentUser.$id);
           setProfile(p);
           toast.success(`Automatically set handle: @${handle}`);
           return true;
@@ -125,35 +140,39 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }
     return false;
-  }, [user, profile]);
+  }, []);
 
   const triggerCheck = useCallback(async () => {
-    if (!user?.$id || checkInflight.current) return;
+    const currentUser = userRef.current;
+    const currentPathname = pathnameRef.current;
+    const currentActiveContent = activeContentRef.current;
+
+    if (!currentUser?.$id || checkInflight.current) return;
     checkInflight.current = true;
     setIsLoading(true);
 
     try {
-      if (activeContent === 'login') {
+      if (currentActiveContent === 'login') {
         setCurrentStep('none');
         return;
       }
 
       const [prof, mpOk] = await Promise.all([
-        UsersService.getProfileById(user.$id),
-        KeychainService.hasMasterpass(user.$id).catch(() => false),
+        UsersService.getProfileById(currentUser.$id),
+        KeychainService.hasMasterpass(currentUser.$id).catch(() => false),
       ]);
 
       setProfile(prof);
       setHasMasterpass(mpOk);
 
-      const keychainRes = await KeychainService.listKeychainEntries(user.$id).catch(() => []);
+      const keychainRes = await KeychainService.listKeychainEntries(currentUser.$id).catch(() => []);
       const lastAuthMethod = typeof window !== 'undefined' ? localStorage.getItem('kylrix_last_auth_method') : null;
-      const cachedHasPasskey = typeof window !== 'undefined' && localStorage.getItem(`kylrix_has_passkey_${user.$id}`) === 'true';
+      const cachedHasPasskey = typeof window !== 'undefined' && localStorage.getItem(`kylrix_has_passkey_${currentUser.$id}`) === 'true';
       const passkeyOk = keychainRes.some((e: any) => e.type === 'passkey') || lastAuthMethod === 'passkey' || cachedHasPasskey;
       setHasPasskey(passkeyOk);
 
       const now = Date.now();
-      const suppress = routeSuppressesSetup(pathname);
+      const suppress = routeSuppressesSetup(currentPathname);
 
       if (suppress) {
         setCurrentStep('none');
@@ -161,7 +180,7 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       if (!mpOk) {
-        const dismissedStr = localStorage.getItem(`${MP_DISMISS_KEY}${user.$id}`);
+        const dismissedStr = localStorage.getItem(`${MP_DISMISS_KEY}${currentUser.$id}`);
         const dismissedUntil = dismissedStr ? parseInt(dismissedStr, 10) : 0;
         if (now > dismissedUntil) {
           setCurrentStep('masterpass');
@@ -173,7 +192,7 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (handle.length < 3) {
         const silenced = await silentPublishUsername();
         if (!silenced) {
-          const dismissedStr = localStorage.getItem(`${USERNAME_DISMISS_KEY}${user.$id}`);
+          const dismissedStr = localStorage.getItem(`${USERNAME_DISMISS_KEY}${currentUser.$id}`);
           const dismissedUntil = dismissedStr ? parseInt(dismissedStr, 10) : 0;
           if (now > dismissedUntil) {
             setCurrentStep('username');
@@ -183,7 +202,7 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       if (mpOk && !passkeyOk) {
-        const dismissedStr = localStorage.getItem(`${PASSKEY_DISMISS_KEY}${user.$id}`);
+        const dismissedStr = localStorage.getItem(`${PASSKEY_DISMISS_KEY}${currentUser.$id}`);
         const dismissedUntil = dismissedStr ? parseInt(dismissedStr, 10) : 0;
         if (now > dismissedUntil) {
           setCurrentStep('passkey');
@@ -195,12 +214,13 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const hasPubKey = prof?.publicKey && prof.publicKey.length > 5;
         if (!hasPubKey) {
           try {
-            const pub = await ecosystemSecurity.ensureE2EIdentity(user.$id);
+            const pub = await ecosystemSecurity.ensureE2EIdentity(currentUser.$id);
             if (pub) {
-              await UsersService.updateProfile(user.$id, {
-                publicKey: pub});
-              invalidateUsersProfileRowCache(user.$id);
-              const updated = await UsersService.getProfileById(user.$id);
+              await UsersService.updateProfile(currentUser.$id, {
+                publicKey: pub,
+              });
+              invalidateUsersProfileRowCache(currentUser.$id);
+              const updated = await UsersService.getProfileById(currentUser.$id);
               setProfile(updated);
               toast.success('Secure identity successfully published');
             }
@@ -217,7 +237,7 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsLoading(false);
       checkInflight.current = false;
     }
-  }, [user, pathname, silentPublishUsername, activeContent]);
+  }, [silentPublishUsername]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -233,25 +253,44 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void triggerCheck();
   }, [user?.$id, authLoading, pathname, triggerCheck]);
 
+  const lastSecuritySnapshotRef = useRef<string>('');
   useEffect(() => {
-    const unsub = ecosystemSecurity.onStatusChange(() => {
+    if (!user?.$id) return;
+
+    const unsub = ecosystemSecurity.onStatusChange((status) => {
+      const snapshot = `${status.isUnlocked}:${status.hasIdentity}:${status.hasMasterpass}:${status.hasPasskey}`;
+      if (snapshot === lastSecuritySnapshotRef.current) return;
+      lastSecuritySnapshotRef.current = snapshot;
       void triggerCheck();
     });
     return unsub;
-  }, [triggerCheck]);
+  }, [user?.$id, triggerCheck]);
+
+  const contextValue = React.useMemo<SetupContextType>(
+    () => ({
+      currentStep,
+      isLoading,
+      profile,
+      hasMasterpass,
+      hasPasskey,
+      triggerCheck,
+      dismissStep,
+      silentPublishUsername,
+    }),
+    [
+      currentStep,
+      isLoading,
+      profile,
+      hasMasterpass,
+      hasPasskey,
+      triggerCheck,
+      dismissStep,
+      silentPublishUsername,
+    ]
+  );
 
   return (
-    <SetupContext.Provider
-      value={{
-        currentStep,
-        isLoading,
-        profile,
-        hasMasterpass,
-        hasPasskey,
-        triggerCheck,
-        dismissStep,
-        silentPublishUsername}}
-    >
+    <SetupContext.Provider value={contextValue}>
       {children}
     </SetupContext.Provider>
   );
