@@ -31,10 +31,14 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3005/api/dev/logs',
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  ...(process.env.PLAYWRIGHT_TEST_BASE_URL
+    ? {}
+    : {
+        webServer: {
+          command: 'pnpm dev',
+          url: 'http://localhost:3005/api/dev/logs',
+          reuseExistingServer: true,
+          timeout: 120_000,
+        },
+      }),
 });

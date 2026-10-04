@@ -13,7 +13,7 @@ import {
  */
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
-  const [isDesktop, setIsDesktop] = React.useState(() => typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : false);
+  const [isDesktop, setIsDesktop] = React.useState(false);
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const m = window.matchMedia('(min-width: 768px)');

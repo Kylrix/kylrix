@@ -93,9 +93,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 d.avatarBase64 = storage ? storage.getItem('kylrix_avatar_pulse_v2_' + d.$id) : null;
                 window.__KYLRIX_PULSE__ = d;
                 document.documentElement.setAttribute('data-kylrix-pulse', 'true');
-                var s = document.createElement('style');
-                s.innerHTML = '[data-kylrix-pulse="true"] #navbar-connect-btn { display: none !important; }';
-                document.head.appendChild(s);
               }
             } catch(e) {}
           })();
@@ -107,7 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           crossOrigin="anonymous"
         />
       </head>
-      <body className={mono.className}>
+      <body className={mono.className} suppressHydrationWarning>
         <AuthErrorBoundary>
           <AuthProvider>
               <ThemeRegistry>

@@ -5,6 +5,10 @@
   border-color: rgba(255, 255, 255, 0.08);
 }
 
+[data-kylrix-pulse="true"] #navbar-connect-btn {
+  display: none !important;
+}
+
 @media (max-width: 899px) {
   .kylrix-sidebar {
     display: none !important;

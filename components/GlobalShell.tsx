@@ -58,9 +58,7 @@ const AppDynamicSidebarPortal = dynamic(
 );
 
 function useIsDesktopShell() {
-  const [isDesktop, setIsDesktop] = React.useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth >= 768 : false,
-  );
+  const [isDesktop, setIsDesktop] = React.useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const media = window.matchMedia('(min-width: 768px)');

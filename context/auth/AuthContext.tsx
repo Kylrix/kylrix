@@ -33,25 +33,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // 1. Instant Synchronous Load — pulse, then last known local user (local-first).
-  // Network account.verify runs in the background; UI must not wait on it.
-  const [user, setUser] = useState<User | null>(() => {
-    const pulse = getKylrixPulse();
-    if (pulse) {
-        return { $id: pulse.$id, name: pulse.name, isPulse: true, email: null, profilePicId: pulse.profilePicId };
-    }
-    const snap = getCurrentUserSnapshot();
-    if (snap?.$id) {
-        return {
-            ...snap,
-            $id: snap.$id,
-            name: snap.name ?? null,
-            email: snap.email ?? null,
-            isPulse: true,
-        };
-    }
-    return null;
-  });
+  // 1. Safe Hydration Load: user starts as null to match SSR output identically.
+  // Local pulse/snapshot is hydrated immediately on mount inside useEffect.
+  const [user, setUser] = useState<User | null>(null);
   
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -63,7 +47,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshUserRef = useRef<() => Promise<User | null>>(async () => null);
   const attemptSilentAuthRef = useRef<() => Promise<boolean>>(async () => false);
   const sessionVerifySeq = useRef(0);
-  const lastSeenUserIdRef = useRef<string | null>(user?.$id || null);
+  const lastSeenUserIdRef = useRef<string | null>(null);
+
+  // Mount-time local pulse/snapshot hydration
+  useEffect(() => {
+    const pulse = getKylrixPulse();
+    if (pulse) {
+      setUser({ $id: pulse.$id, name: pulse.name, isPulse: true, email: null, profilePicId: pulse.profilePicId });
+      return;
+    }
+    const snap = getCurrentUserSnapshot();
+    if (snap?.$id) {
+      setUser({
+        ...snap,
+        $id: snap.$id,
+        name: snap.name ?? null,
+        email: snap.email ?? null,
+        isPulse: true,
+      });
+    }
+  }, []);
 
   // 2. Background Revalidation (Mandatory account.get)
   const attemptSilentAuth = useCallback(async (): Promise<boolean> => {
