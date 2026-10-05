@@ -14,7 +14,6 @@ import {
   onCurrentUserChanged,
   resetMasterpassAndWipe,
   logoutAppwrite} from '@/lib/appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getAuthOrigin, openAuthPopup } from '@/lib/authUrl';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { logDebug, logWarn } from '@/lib/logger';
@@ -153,22 +152,6 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
       // No session, proceed to silent check
     }
 
-    // Try silent auth before opening popup
-    await attemptSilentAuth();
-    try {
-        const account = getCurrentUserSnapshot() ?? await getCurrentUser();
-        if (account) {
-          setUser(account);
-          setIsAuthenticating(false);
-          if (pathname === "/" || pathname === "/landing") {
-            router.replace("/vault");
-          }
-          return;
-      }
-    } catch (_e: unknown) {
-      // Still no session
-    }
-
     if (idmWindowRef.current && !idmWindowRef.current.closed) {
       idmWindowRef.current.focus();
       return;
@@ -186,7 +169,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
       console.error("Failed to open IDM window:", error);
       setIsAuthenticating(false);
     }
-  }, [pathname, router, isAuthenticating, attemptSilentAuth]);
+  }, [pathname, router, isAuthenticating]);
 
   const closeIDMWindow = useCallback(() => {
     if (idmWindowRef.current && !idmWindowRef.current.closed) {
@@ -246,11 +229,8 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     const initAuth = async () => {
       try {
         await fetchUser(false);
-      } catch (err: unknown) {
-        const e = err as AppwriteError;
-        if (e.code === 401) {
-          await attemptSilentAuth();
-        }
+      } catch (_err: unknown) {
+        // No active session
       } finally {
         setLoading(false);
         setIsAuthReady(true);
@@ -291,7 +271,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("storage", handleStorageChange);
       unsubscribe();
     };
-  }, [fetchUser, attemptSilentAuth]);
+  }, [fetchUser]);
 
   const refresh = useCallback(async () => {
     await fetchUser(true);

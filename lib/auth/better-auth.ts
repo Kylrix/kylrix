@@ -1,7 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
-import { emailOTP } from 'better-auth/plugins/email-otp';
-import { apiKey } from 'better-auth/plugins/apiKey';
+import { emailOTP, bearer } from 'better-auth/plugins';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 
@@ -42,8 +41,6 @@ export const auth = betterAuth({
         console.log(`[BetterAuth OTP] ${type.toUpperCase()} for ${email}: ${otp}`);
       },
     }),
-    apiKey({
-      prefix: 'kylrix_pat_',
-    }),
+    bearer(),
   ],
 });

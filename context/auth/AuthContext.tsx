@@ -60,6 +60,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const initAuthStarted = useRef(false);
   const router = useRouter();
   const pathname = usePathname();
+  const sessionVerifySeq = useRef(0);
+  const lastSeenUserIdRef = useRef<string | null>(user?.$id || null);
+  const refreshUserRef = useRef<() => Promise<User | null>>(async () => null);
   const refreshUser = useCallback(async (forceRefresh = false): Promise<User | null> => {
     try {
       const isOAuthSuccess = typeof window !== 'undefined' && window.location.search.includes('auth=success');
