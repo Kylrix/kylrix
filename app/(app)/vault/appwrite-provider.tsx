@@ -47,7 +47,6 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     ((isRetry?: boolean, retryCount?: number) => Promise<Models.User<Models.Preferences> | null | undefined>) | undefined
   >(undefined);
 
-  const attemptSilentAuthRef = useRef<() => Promise<void>>(async () => undefined);
   const idmWindowRef = useRef<Window | null>(null);
 
   // ... (existing state)
@@ -101,20 +100,10 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
           setNeedsMasterPassword(!unlocked);
         }
       } else {
-        if (!isRetry) {
-          await attemptSilentAuthRef.current?.();
-          const retryAccount = getCurrentUserSnapshot() ?? await getCurrentUser(true);
-          if (retryAccount) {
-            setUser(retryAccount);
-            const isLanding = pathname === '/' || pathname === '/landing';
-            setNeedsMasterPassword(isLanding ? false : !masterPassCrypto.isVaultUnlocked());
-            return retryAccount;
-          }
-        }
-
         // Explicitly clear everything on failure
         setUser(null);
         setNeedsMasterPassword(false);
+        return null;
       }
       return account;
     } catch (err: unknown) {
@@ -142,55 +131,6 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
   }, [verbose, pathname]);
 
   fetchUserRef.current = fetchUser;
-
-  const attemptSilentAuth = useCallback(async () => {
-    if (typeof window === "undefined") return;
-
-    const authSubdomain = APPWRITE_CONFIG.SYSTEM.AUTH_SUBDOMAIN;
-    const domain = APPWRITE_CONFIG.SYSTEM.DOMAIN;
-    if (!authSubdomain || !domain) return;
-
-    return new Promise<void>((resolve) => {
-      const iframe = document.createElement("iframe");
-      iframe.src = `https://${authSubdomain}.${domain}/silent-check`;
-      iframe.style.display = "none";
-
-      const timeout = setTimeout(() => {
-        cleanup();
-        resolve();
-      }, 5000);
-
-      const handleIframeMessage = (event: MessageEvent) => {
-        if (event.origin !== `https://${authSubdomain}.${domain}`) return;
-
-        if (
-          event.data?.type === "idm:auth-status" &&
-          event.data.status === "authenticated"
-        ) {
-          logDebug("[auth] Silent auth discovered session");
-          void fetchUserRef.current?.(false); // retry fetch using cache-first flow
-          cleanup();
-          resolve();
-        } else if (event.data?.type === "idm:auth-status") {
-          cleanup();
-          resolve();
-        }
-      };
-
-      const cleanup = () => {
-        clearTimeout(timeout);
-        window.removeEventListener("message", handleIframeMessage);
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      };
-
-      window.addEventListener("message", handleIframeMessage);
-      document.body.appendChild(iframe);
-    });
-  }, []);
-
-  attemptSilentAuthRef.current = attemptSilentAuth;
 
   const openIDMWindow = useCallback(async () => {
     if (typeof window === "undefined" || isAuthenticating) return;

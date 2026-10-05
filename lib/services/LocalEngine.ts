@@ -42,6 +42,9 @@ const inflightQueries = new Map<string, Promise<any>>();
 /** Cooldown registry for background revalidations (cooldown: 2 minutes) */
 const backgroundRevalidationCooldowns = new Map<string, number>();
 
+/** In-memory snapshot registry to deduplicate identical cache writes and prevent microtask saturation */
+const inMemoryCacheSnapshots = new Map<string, string>();
+
 /** Local deleted tombstones registry */
 const inMemoryDeletedIds = new Set<string>();
 
@@ -195,12 +198,29 @@ export const LocalEngine = {
   async cacheSet<T = any>(id: string, data: T): Promise<void> {
     if (typeof window === 'undefined') return;
     try {
-      const db = await getRxDB().catch(() => null);
-      if (!db) return;
-      await db.cache.upsert({
-        id,
-        data: data as any,
-        timestamp: Date.now()}).catch(() => {});
+      const serialized = typeof data === 'string' ? data : JSON.stringify(data);
+      if (inMemoryCacheSnapshots.get(id) === serialized) {
+        return;
+      }
+      inMemoryCacheSnapshots.set(id, serialized);
+
+      const writeToDb = async () => {
+        try {
+          const db = await getRxDB().catch(() => null);
+          if (!db) return;
+          await db.cache.upsert({
+            id,
+            data: data as any,
+            timestamp: Date.now()
+          }).catch(() => {});
+        } catch {}
+      };
+
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(writeToDb, { timeout: 2000 });
+      } else {
+        setTimeout(writeToDb, 0);
+      }
     } catch (_err) {
       // Non-blocking storage
     }
@@ -209,6 +229,7 @@ export const LocalEngine = {
   /** Remove cached payload by key */
   async cacheDelete(id: string): Promise<void> {
     if (typeof window === 'undefined') return;
+    inMemoryCacheSnapshots.delete(id);
     try {
       const db = await getRxDB().catch(() => null);
       if (!db) return;

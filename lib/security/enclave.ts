@@ -105,7 +105,7 @@ export const SecurityEnclave = {
   metaKey,
 
   async getKeychain(userId: string): Promise<any[]> {
-    if (!userId) return [];
+    if (!userId || userId.startsWith('guest')) return [];
     const primary = await LocalEngine.cacheGet<any[]>(keychainKey(userId));
     if (Array.isArray(primary) && primary.length > 0) return primary;
 
@@ -244,7 +244,7 @@ export const SecurityEnclave = {
    * Does nothing destructive when offline.
    */
   async hydrateFromRemote(userId: string, opts?: { force?: boolean }): Promise<EnclaveMeta | null> {
-    if (!userId || typeof window === 'undefined') return null;
+    if (!userId || userId.startsWith('guest') || typeof window === 'undefined') return null;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       return this.getMeta(userId);
     }

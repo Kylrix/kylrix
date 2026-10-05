@@ -60,62 +60,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const initAuthStarted = useRef(false);
   const router = useRouter();
   const pathname = usePathname();
-  const refreshUserRef = useRef<() => Promise<User | null>>(async () => null);
-  const attemptSilentAuthRef = useRef<() => Promise<boolean>>(async () => false);
-  const sessionVerifySeq = useRef(0);
-  const lastSeenUserIdRef = useRef<string | null>(user?.$id || null);
-
-  // 2. Background Revalidation (Mandatory account.get)
-  const attemptSilentAuth = useCallback(async (): Promise<boolean> => {
-    if (typeof window === 'undefined') return false;
-
-    // Use config to get auth subdomain and domain
-    // We import it dynamically to avoid circular issues
-    const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
-    const authSubdomain = APPWRITE_CONFIG.SYSTEM.AUTH_SUBDOMAIN;
-    const domain = APPWRITE_CONFIG.SYSTEM.DOMAIN;
-    if (!authSubdomain || !domain) return false;
-
-    return new Promise<boolean>((resolve) => {
-      const iframe = document.createElement('iframe');
-      iframe.src = `https://${authSubdomain}.${domain}/silent-check`;
-      iframe.style.display = 'none';
-
-      const timeout = setTimeout(() => {
-        cleanup();
-        resolve(false);
-      }, 2500);
-
-      const handleIframeMessage = (event: MessageEvent) => {
-        if (event.origin !== `https://${authSubdomain}.${domain}`) return;
-
-        if (
-          event.data?.type === 'idm:auth-status' &&
-          event.data.status === 'authenticated'
-        ) {
-          cleanup();
-          resolve(true);
-        } else if (event.data?.type === 'idm:auth-status') {
-          cleanup();
-          resolve(false);
-        }
-      };
-
-      const cleanup = () => {
-        clearTimeout(timeout);
-        window.removeEventListener('message', handleIframeMessage);
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      };
-
-      window.addEventListener('message', handleIframeMessage);
-      document.body.appendChild(iframe);
-    });
-  }, []);
-
-  attemptSilentAuthRef.current = attemptSilentAuth;
-
   const refreshUser = useCallback(async (forceRefresh = false): Promise<User | null> => {
     try {
       const isOAuthSuccess = typeof window !== 'undefined' && window.location.search.includes('auth=success');

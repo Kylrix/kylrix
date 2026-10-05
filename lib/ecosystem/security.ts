@@ -95,7 +95,7 @@ class EcosystemSecurity {
 
   async fetchSecuritySnapshot(userId: string, forceRefresh = false) {
     const resolvedUserId = String(userId || '').trim();
-    if (!resolvedUserId) return this.status;
+    if (!resolvedUserId || resolvedUserId.startsWith('guest')) return this.status;
     this.currentUserId = resolvedUserId;
 
     if (this.snapshotInflight && !forceRefresh) {

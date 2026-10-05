@@ -72,7 +72,8 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     const { isUnlocked, hasMasterpass, hasPasskey } = securityStatus;
 
     useEffect(() => {
-        const actorId = user?.$id || 'guest_local_user';
+        if (!user?.$id) return;
+        const actorId = user.$id;
         ecosystemSecurity.fetchSecuritySnapshot(actorId);
         void import('@/lib/security/enclave').then(({ SecurityEnclave }) => {
             void SecurityEnclave.hydrateFromRemote(actorId).catch(() => {});

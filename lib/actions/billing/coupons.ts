@@ -187,7 +187,7 @@ export async function createCouponAction(input: {
               subject: 'You received a Kylrix Coupon!',
               couponId: row.$id,
               discountPercent: Number(input.discountPercent),
-              couponUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.space'}/billing/coupon/${row.$id}`
+              couponUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space'}/billing/coupon/${row.$id}`
             }
           });
         }

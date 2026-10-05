@@ -69,3 +69,7 @@ functions/**/.env.*
 .repo/
 
 .env*
+
+# ephemeral scratch and test results
+.ignore/
+test-results/
