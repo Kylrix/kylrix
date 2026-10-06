@@ -5,16 +5,22 @@ import * as schema from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
-function getAppwriteMigrationTablesDB() {
+function getAppwriteMigrationTablesDB(jwt?: string) {
   const apiKey = process.env.APPWRITE_API;
-  if (!apiKey) return null;
   try {
     const { Client, TablesDB } = require('node-appwrite');
     const client = new Client()
       .setEndpoint(process.env.APPWRITE_ENDPOINT || APPWRITE_CONFIG.SERVER_ENDPOINT)
-      .setProject(process.env.APPWRITE_PROJECT_ID || APPWRITE_CONFIG.PROJECT_ID)
-      .setKey(apiKey);
-    return new TablesDB(client);
+      .setProject(process.env.APPWRITE_PROJECT_ID || APPWRITE_CONFIG.PROJECT_ID);
+
+    if (apiKey) {
+      client.setKey(apiKey);
+      return new TablesDB(client);
+    } else if (jwt && jwt.length > 32) {
+      client.setJWT(jwt);
+      return new TablesDB(client);
+    }
+    return null;
   } catch (err) {
     console.warn('[turso-ops] Could not initialize Appwrite migration client:', err);
     return null;
@@ -471,7 +477,7 @@ export async function deleteGoalTurso(goalId: string) {
  * Aggressively migrates Tier 1 critical data (keychain, vault secrets, TOTPs, workspaces, project objects)
  * from Appwrite into Turso for existing accounts. Idempotent and marks tier1_synced = 1.
  */
-export async function syncTier1FromAppwriteTurso(userId: string, force = false) {
+export async function syncTier1FromAppwriteTurso(userId: string, force = false, jwt?: string) {
   if (!userId) return { success: false, error: 'No user ID' };
 
   try {
@@ -480,7 +486,7 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false) 
       return { success: true, alreadySynced: true };
     }
 
-    const tablesDB = getAppwriteMigrationTablesDB();
+    const tablesDB = getAppwriteMigrationTablesDB(jwt);
     if (!tablesDB) {
       return { success: true, skipped: true, reason: 'Appwrite not configured on server' };
     }

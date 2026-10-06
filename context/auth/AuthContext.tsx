@@ -180,7 +180,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             emailVerified: Boolean(user.emailVerification),
           });
           // Aggressive Tier 1 sync: keychain, encryption keys, vault secrets, totps, workspaces, notes, goals
-          void syncTier1FromAppwriteTurso(user.$id, true).catch((e) => {
+          let userJwt: string | undefined;
+          try {
+            const { account } = await import('@/lib/appwrite/client');
+            const jwtRes = await account.createJWT();
+            userJwt = jwtRes.jwt;
+          } catch {}
+          void syncTier1FromAppwriteTurso(user.$id, true, userJwt).catch((e) => {
             console.warn('[AuthContext] Background aggressive sync warning:', e);
           });
         } catch (tursoErr) {

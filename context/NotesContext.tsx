@@ -155,6 +155,35 @@ function normalizeVisibility(note: Notes): Notes {
   } as Notes;
 }
 
+export function pushNotesBatchTurso(notes: Notes[], userId: string) {
+  if (!userId || userId === 'guest' || !Array.isArray(notes) || notes.length === 0) return;
+  void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
+    for (const n of notes) {
+      const nId = n.$id || (n as any).id;
+      if (!nId) continue;
+      const nowIso = new Date().toISOString();
+      void upsertNoteTurso({
+        id: nId,
+        userId,
+        title: n.title || '',
+        content: n.content || '',
+        summary: (n as any).summary || null,
+        isLocked: Boolean((n as any).isLocked),
+        isPublished: Boolean((n as any).isPublished),
+        isPinned: Boolean((n as any).isPinned),
+        isTrashed: Boolean((n as any).isTrash || (n as any).isTrashed),
+        isWorkspace: Boolean((n as any).isWorkspace),
+        projectId: (n as any).projectId || (n as any).workspaceId || null,
+        workspaceId: (n as any).workspaceId || (n as any).projectId || null,
+        category: (n as any).category || null,
+        tags: Array.isArray(n.tags) ? JSON.stringify(n.tags) : ((n.tags as any) || null),
+        createdAt: n.createdAt || n.$createdAt || nowIso,
+        updatedAt: n.updatedAt || n.$updatedAt || nowIso,
+      }).catch(() => {});
+    }
+  }).catch(() => {});
+}
+
 
 async function getthreadNotes(): Promise<Notes[]> {
   if (typeof window === 'undefined') return [];
@@ -300,6 +329,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         setCursor(local.cursor ?? null);
         setHasMore(local.hasMore ?? true);
         void warmNotesLocalCopy(userId, local.notes);
+        pushNotesBatchTurso(local.notes, userId);
         console.log('[NotesContext] Instant cold start via local copy cascade.');
       }
       hydratedUserIdRef.current = userId;
@@ -422,7 +452,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         withthreads.forEach(note => {
           if (note?.$id) setCachedData(`note_${note.$id}`, note);
         });
-        if (user?.$id) void warmNotesLocalCopy(user.$id, withthreads);
+        if (user?.$id) {
+          void warmNotesLocalCopy(user.$id, withthreads);
+          pushNotesBatchTurso(withthreads, user.$id);
+        }
 
         // Trigger background revalidation so newly created notes from other devices/sync sweeps load immediately
         refreshInBackground(INITIAL_NOTES_CACHE_KEY, fetcher, 15_000, ({ data }) => {
@@ -445,6 +478,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
             setTotalNotes((data as any).total || 0);
             setHasMore(!!(data as any).hasMore);
             setCursor((data as any).nextCursor || null);
+            if (user?.$id) pushNotesBatchTurso(revalidatedAll, user.$id);
           }
         });
 
@@ -491,6 +525,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
                 hasMore: !!res?.hasMore
             });
             if (user?.$id) void warmNotesLocalCopy(user.$id, fetchedRows);
+        }
+        if (user?.$id && fetchedRows.length > 0) {
+          pushNotesBatchTurso(fetchedRows, user.$id);
         }
       }
     } catch (err: any) {
@@ -629,7 +666,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       setTotalNotes((prev) => prev + 1);
     }
     setCachedData(`note_${normalized.$id}`, normalized);
-  }, [setCachedData, INITIAL_NOTES_CACHE_KEY]);
+    if (activeUserId && activeUserId !== 'guest') {
+      pushNotesBatchTurso([normalized], activeUserId);
+    }
+  }, [setCachedData, INITIAL_NOTES_CACHE_KEY, activeUserId]);
 
   const pushLiveNote = useCallback((note: Notes, options?: { pending?: boolean }) => {
     if (!note?.$id) return;

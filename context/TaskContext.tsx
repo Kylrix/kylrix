@@ -150,6 +150,29 @@ async function persistGoalsLocalCopy(userId: string | null | undefined, tasks: T
         ),
       );
     }
+    if (userId && userId !== 'guest' && list.length > 0) {
+      void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
+        for (const t of list) {
+          if (!t.id) continue;
+          void upsertGoalTurso({
+            id: t.id,
+            userId,
+            title: t.title || 'Untitled Goal',
+            description: t.description || '',
+            status: t.status || 'todo',
+            priority: t.priority || 'medium',
+            dueDate: t.dueDate instanceof Date ? t.dueDate.toISOString() : (t.dueDate || null),
+            completedAt: t.completedAt instanceof Date ? t.completedAt.toISOString() : (t.completedAt || null),
+            isWorkspace: Boolean(t.isWorkspace),
+            projectId: t.projectId || null,
+            workspaceId: t.projectId || null,
+            tags: Array.isArray(t.labels) ? JSON.stringify(t.labels) : null,
+            createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : (t.createdAt || new Date().toISOString()),
+            updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : (t.updatedAt || new Date().toISOString()),
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
   } catch (err) {
     console.warn('[TaskContext] Failed to persist goals local copy:', err);
   }
