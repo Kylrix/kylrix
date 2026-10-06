@@ -24,6 +24,7 @@
 - **Always Run `git pull` First (STRICT)**: The agent MUST always execute `git pull` at the start of every session or before beginning any work, task execution, or file modifications. This ensures the working tree is cleanly aligned with the remote upstream repository and prevents diverged branches or merge conflicts.
 - **Git Operations Permitted**: The agent is permitted and expected to perform Git operations. After implementing any fix or feature, the agent must consolidate the modifications, perform a commit with a descriptive message, and push the changes immediately. **Do not wait for the user to ask** — commit + push is part of finishing the task (see also `shipping-mode`).
 - **Pure Commit Messages (STRICT)**: When committing, NEVER add any co-author metadata (e.g., `Co-authored-by:` headers, names, or emails). Commit messages must contain only the pure commit message description. Leave author identification entirely to the automatic system git configuration.
+- **No Automatic Fork Syncing (STRICT)**: NEVER run fork synchronization commands (such as `gh repo sync` or syncing `nathfavour/kylrix`) automatically upon pushing changes. Only push to `origin` (`Kylrix/kylrix`). Fork synchronization must only be executed when the user explicitly requests it in their prompt.
 
 ### ⚡ Development Standards
 - **Canonical App**: Only implement against **`kylrix/`**. Legacy trees at repo root are for reference only.
