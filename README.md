@@ -26,7 +26,7 @@
 
 ## TL;DR
 
-- **Kylrix** — open-source, local-first workspace for notes, goals, workspaces, chat, vault, and agents.
+- **Kylrix** — open-source, local-first workspace for notes, goals, workspaces, agent inbox, vault, and agents.
 - **CLI & MCP Bridge** — `npm i -g @kylrix/cli` · [CLI Docs](docs/cli.md)
 - **Use the cloud** — [kylrix.space](https://www.kylrix.space)
 - **Self-host** — `curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash` → app on `:5003`
@@ -34,61 +34,45 @@
 
 ---
 
-## ❤️ Sponsor & Back Development
-
-Kylrix is an independently bootstrapped, open-source engineering ecosystem built for decade-scale durability. Maintaining core runtimes, offline-first sync engines, zero-knowledge vault primitives, and sovereign agent toolchains requires continuous development and dedicated engineering bandwidth.
-
-If Kylrix powers your daily workflow or team infrastructure, consider sponsoring development to accelerate roadmap velocity and sustain active maintenance.
-
-<p align="center">
-  <a href="https://www.kylrix.space/sponsor" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/Sponsor_Kylrix-%E2%9D%A4-EC4899?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor Kylrix" />
-  </a>
-</p>
-
----
-
-## 📱 Mobile, Desktop & Custom Clients
-
-You can build custom mobile apps (iOS/Android), desktop wrappers (Tauri/Electron), or menu bar companions for Kylrix.
-
-### Recommendations:
-- **Personal Tools & Wrappers:** Mint a [Personal Access Token (PAT)](https://www.kylrix.space/settings?tab=developers) to connect directly to the [HTTP REST API (`/api/v1`)](https://www.kylrix.space/docs/api) or isomorphic SDK.
-- **Distributed / Third-Party Apps:** Register an [OAuth 2.1 Client](https://www.kylrix.space/settings?tab=developers) with PKCE flow so users can authorize your app securely without exposing private credentials.
-
-> [!CAUTION]
-> **Strict Branding Policy & Termination Warning:**
-> The primary requirement for building on Kylrix infrastructure is to **never use the name "Kylrix" or any confusingly similar branding** in your application name, domain, package, or public listing. Failure to adhere will result in immediate termination of the OAuth2 client and suspension of associated developer accounts.
->
-> *Notice to Users:* The **only** official clients provided and maintained by the Kylrix team are the web app ([kylrix.space](https://www.kylrix.space)) and the official CLI (`@kylrix/cli`). Consciously using third-party clients that mimic the Kylrix brand risks credential theft and account suspension.
-
----
-
-## ⚡ CLI & Agent Bridge (`@kylrix/cli`)
+## ⚡ CLI & Local Agent Bridge (`@kylrix/cli`)
 
 Install once for sovereign offline local-first execution (powered by embedded SQLite):
 
 ```bash
 npm install -g @kylrix/cli
+# or: pnpm add -g @kylrix/cli
 ```
 
-*(or via pnpm)*
+### Local Quickstart
+
+Manage local notes, unlock zero-knowledge encrypted vaults, and run the native Model Context Protocol (MCP) server directly:
+
 ```bash
-pnpm add -g @kylrix/cli
+# Manage local sovereign ideas & notes
+kylrix ideas list
+
+# Unlock encrypted vault
+kylrix vault unlock
+
+# Start local MCP server for Cursor, Claude Code, Windsurf
+kylrix mcp
 ```
 
-### Quick Commands
+*(Zero-install alternative: run with `npx @kylrix/cli <command>`)*
 
-**1-Click Web Login (Cloud or Custom Base URI):**
+### 🌐 Cloud & Multi-Instance Sync
+
+Connect your local CLI to Kylrix Cloud or any self-hosted instance:
+
 ```bash
 # Connect to Kylrix Cloud (default)
 kylrix login
 
-# Connect to self-hosted instance or custom backend base URI
+# Connect to a self-hosted instance or custom backend base URI
 kylrix login --url http://localhost:3005
 ```
 
-**Multi-Account Profiles & Base URI Silos:**
+**Multi-Account Profiles & Base URI Routing:**
 ```bash
 # List accounts partitioned under the active base URI
 kylrix accounts list
@@ -101,24 +85,54 @@ kylrix server list
 kylrix server switch http://localhost:3005
 ```
 
-**Manage Sovereign Ideas & Notes:**
-```bash
-kylrix ideas list
-```
-
-**Unlock Encrypted Vault:**
-```bash
-kylrix vault unlock
-```
-
-**Start MCP Server for Cursor, Claude Code, Windsurf:**
-```bash
-kylrix mcp
-```
-
-*(Zero-install alternative: run with `npx @kylrix/cli <command>`)*
-
 > 📖 See [**`docs/cli.md`**](docs/cli.md) for the complete command reference and SDK documentation.
+
+---
+
+## Humans & agents
+
+Humans and agents share the same workspace. MCP for IDE tool loops; REST for scripts, mobile, and CI.
+
+**Choose auth**
+
+| Token | Use when |
+|---|---|
+| **PAT** (`kyl_pat_…`) | The agent acts in **your** workspace (IDE tools, scripts, MCP on your behalf). [Settings → Developers](https://www.kylrix.space/settings?tab=developers) |
+| **Agent key** (`kyl_apk_…`) | The agent gets **its own** workspace — it provisions itself and mints its own PAT. [Settings → Smart Agents](https://www.kylrix.space/settings?tab=agents) |
+
+| Surface | Use when |
+|---|---|
+| **WebMCP** (`navigator.modelContext`) | In-browser agents (Chrome, ChatGPT browser) with zero-config live session tools |
+| **MCP** | IDE agents (Cursor, Claude, Windsurf, Codex, …) |
+| **REST API** (`/api/v1`) | Scripts, mobile apps, CI, custom backends |
+
+**Steps**
+
+1. **Mint a token** — [PAT](https://www.kylrix.space/settings?tab=developers) (your workspace) or [agent key](https://www.kylrix.space/settings?tab=agents) (agent workspace)
+2. **Install skills**
+   ```bash
+   npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
+   ```
+3. **Connect MCP** (IDE only — uses your PAT; Smithery wires the official endpoint)
+   ```bash
+   npx -y @smithery/cli install kylrix/kylrix --client cursor
+   ```
+
+### In-Browser Agent Bridge (WebMCP)
+
+Expose workspace memory directly to browser-driven AI agents (e.g., ChatGPT browser runner, Chrome AI) via standard `navigator.modelContext` without browser extensions:
+
+```javascript
+await navigator.modelContext.executeTool('kylrix_create_note', {
+  title: 'Agent Note',
+  content: 'Created via in-browser modelContext',
+  tags: ['webmcp']
+});
+```
+
+*Test:* Enable `chrome://flags/#enable-webmcp-testing` in Chrome, browse via ChatGPT, or click the **WebMCP** badge in [Settings → Developers](https://www.kylrix.space/settings?tab=developers).
+
+Wiring reference: [docs/integrations.md](docs/integrations.md) · [docs/webmcp.md](docs/webmcp.md)
 
 ---
 
@@ -178,48 +192,6 @@ Contract: `ota.yaml` · schema: `appwrite.config.json`
 
 ---
 
-## Humans & agents
-
-Humans and agents share the same workspace. MCP for IDE tool loops; REST for scripts, mobile, and CI.
-
-**Choose auth**
-
-| Token | Use when |
-|---|---|
-| **PAT** (`kyl_pat_…`) | The agent acts in **your** workspace (IDE tools, scripts, MCP on your behalf). [Settings → Developers](https://www.kylrix.space/settings?tab=developers) |
-| **Agent key** (`kyl_apk_…`) | The agent gets **its own** workspace — it provisions itself and mints its own PAT. [Settings → Smart Agents](https://www.kylrix.space/settings?tab=agents) |
-
-| Surface | Use when |
-|---|---|
-| **WebMCP** (`navigator.modelContext`) | In-browser agents (Chrome, ChatGPT browser) with zero-config live session tools |
-| **MCP** | IDE agents (Cursor, Claude, Windsurf, Codex, …) |
-| **REST API** (`/api/v1`) | Scripts, mobile apps, CI, custom backends |
-
-**Steps**
-
-1. **Mint a token** — [PAT](https://www.kylrix.space/settings?tab=developers) (your workspace) or [agent key](https://www.kylrix.space/settings?tab=agents) (agent workspace)
-2. **Install skills**
-   ```bash
-   npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
-   ```
-3. **Connect MCP** (IDE only — uses your PAT; Smithery wires the official endpoint)
-   ```bash
-   npx -y @smithery/cli install kylrix/kylrix --client cursor
-   ```
-4. **Browser Agents (WebMCP)** — Auto-exposed via `navigator.modelContext` with zero config in your live session:
-   ```javascript
-   await navigator.modelContext.executeTool('kylrix_create_note', {
-     title: 'Agent Note',
-     content: 'Created via in-browser modelContext',
-     tags: ['webmcp']
-   });
-   ```
-   *Test:* Enable `chrome://flags/#enable-webmcp-testing` in Chrome, browse via ChatGPT, or click the **WebMCP** badge in [Settings → Developers](https://www.kylrix.space/settings?tab=developers).
-
-Wiring reference: [docs/integrations.md](docs/integrations.md) · [docs/webmcp.md](docs/webmcp.md)
-
----
-
 ## Integrations
 
 | | Link |
@@ -239,11 +211,10 @@ Wiring reference: [docs/integrations.md](docs/integrations.md) · [docs/webmcp.m
 |---|---|
 | **Notes & ideas** | Linked notes, tags, sharing |
 | **Goals** | Goal tracking and focus sessions |
-| **Events** | Calendar and scheduling |
-| **Forms** | Build forms and collect responses |
+| **Forms** | Structured data and input collection |
 | **Flows** | Installable workflow plugins ([kylrix.space/flows](https://www.kylrix.space/flows)) |
 | **Workspaces** | Projects, collaborators, permissions |
-| **Connect** | Chats, moments, group hangouts |
+| **Agent Inbox** | Inbound agent logs, messages, and collaborative sessions |
 | **Vault** | Client-encrypted credentials (optional) |
 | **Agents** | In-workspace sessions with tool parity to users |
 
@@ -251,6 +222,30 @@ Local copy is the default source of truth; sync confirms in the background.
 
 ---
 
+## 📱 Mobile, Desktop & Custom Clients
+
+You can build custom mobile apps (iOS/Android), desktop wrappers (Tauri/Electron), or menu bar companions for Kylrix.
+
+### Recommendations:
+- **Personal Tools & Wrappers:** Mint a [Personal Access Token (PAT)](https://www.kylrix.space/settings?tab=developers) to connect directly to the [HTTP REST API (`/api/v1`)](https://www.kylrix.space/docs/api) or isomorphic SDK.
+- **Distributed / Third-Party Apps:** Register an [OAuth 2.1 Client](https://www.kylrix.space/settings?tab=developers) with PKCE flow so users can authorize your app securely without exposing private credentials. Review [TRADEMARK.md](TRADEMARK.md) for brand and naming guidelines.
+
+---
+
+## ❤️ Sponsor & Back Development
+
+Kylrix is an independently bootstrapped, open-source engineering ecosystem built for decade-scale durability. Maintaining core runtimes, offline-first sync engines, zero-knowledge vault primitives, and sovereign agent toolchains requires continuous development and dedicated engineering bandwidth.
+
+If Kylrix powers your daily workflow or team infrastructure, consider sponsoring development to accelerate roadmap velocity and sustain active maintenance.
+
+<p align="center">
+  <a href="https://www.kylrix.space/sponsor" target="_blank" rel="noopener noreferrer">
+    <img src="https://img.shields.io/badge/Sponsor_Kylrix-%E2%9D%A4-EC4899?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor Kylrix" />
+  </a>
+</p>
+
+---
+
 ## Feedback & security
 
-[Bug report form](https://www.kylrix.space/form/6a2a653f002b0f296958) · [ARCHITECTURE.md](ARCHITECTURE.md)
+[Bug report form](https://www.kylrix.space/form/6a2a653f002b0f296958) · [ARCHITECTURE.md](ARCHITECTURE.md) · [TRADEMARK.md](TRADEMARK.md)

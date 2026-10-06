@@ -146,14 +146,14 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
                         <Box sx={{ p: 1, borderRadius: '12px', bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B' }}>
                             <Users size={20} />
                         </Box>
-                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>New Hangout</Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>New Group</Typography>
                     </Stack>
                     <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)' }}><X size={20} /></IconButton>
                 </Box>
 
                 <Stack spacing={3}>
                     <Box>
-                        <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block', fontSize: '0.7rem' }}>Hangout name</Typography>
+                        <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block', fontSize: '0.7rem' }}>Group name</Typography>
                         <TextField
                             fullWidth
                             variant="outlined"
@@ -220,7 +220,7 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
                             '&.Mui-disabled': { bgcolor: 'rgba(245,158,11,0.2)', color: 'rgba(0,0,0,0.4)' }
                         }}
                     >
-                        {creating ? <CircularProgress size={22} sx={{ color: '#000' }} /> : 'Create hangout'}
+                        {creating ? <CircularProgress size={22} sx={{ color: '#000' }} /> : 'Create group'}
                     </Button>
                 </Stack>
             </Box>

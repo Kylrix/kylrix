@@ -113,8 +113,8 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
         trashedHangouts.forEach((h: any) => {
           results.push({
             id: h.id,
-            title: h.title || 'Untitled Hangout',
-            type: 'Hangout',
+            title: h.title || 'Untitled Conversation',
+            type: 'Inbox',
             deletedAt: h.deletedAt || new Date().toISOString(),
             databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
             tableId: h.kind === 'secure' ? 'conversations' : 'threads',
@@ -157,7 +157,7 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
       if (activeTab === 'Notes') return it.type === 'Note';
       if (activeTab === 'Goals') return it.type === 'Goal';
       if (activeTab === 'Forms') return it.type === 'Form';
-      if (activeTab === 'Hangouts') return it.type === 'Hangout';
+      if (activeTab === 'Inbox' || activeTab === 'Hangouts') return it.type === 'Inbox' || it.type === 'Hangout';
       if (activeTab === 'Vault') return it.type === 'Credential' || it.type === 'TOTP Secret';
       if (activeTab === 'Workspaces') return it.type === 'Project';
       return it.type === activeTab;
@@ -335,7 +335,7 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
 
       {/* Filter Tabs */}
       <div className="p-3 border-b border-white/4 flex items-center gap-1.5 overflow-x-auto scrollbar-none bg-[#161412]">
-        {['All', 'Notes', 'Goals', 'Forms', 'Hangouts', 'Vault', 'Workspaces'].map((tab) => (
+        {['All', 'Notes', 'Goals', 'Forms', 'Inbox', 'Vault', 'Workspaces'].map((tab) => (
           <button
             key={tab}
             type="button"

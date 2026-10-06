@@ -117,7 +117,7 @@ export function ChatSettingsPanel({ conversation, conversationId, isSelf, messag
             </span>
             <span className="min-w-0 flex-1">
               <span className="text-xs font-extrabold text-[#ff4d4d] block">Nuclear Wipe</span>
-              <span className="text-[11px] text-white/40 block">Permanently delete hangout & all data</span>
+              <span className="text-[11px] text-white/40 block">Permanently delete conversation & all data</span>
             </span>
           </button>
 
@@ -157,7 +157,7 @@ export function ChatSettingsPanel({ conversation, conversationId, isSelf, messag
         {/* Details Card */}
         <div className="rounded-2xl bg-[#181614] border border-white/8 p-3.5 space-y-2">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/50 flex items-center gap-1.5 font-clash">
-            <Info size={13} /> Hangout Metadata
+            <Info size={13} /> Conversation Metadata
           </h3>
           <div className="space-y-1.5 text-xs font-mono text-white/60">
             <div className="flex items-center justify-between gap-2">
@@ -168,10 +168,10 @@ export function ChatSettingsPanel({ conversation, conversationId, isSelf, messag
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(conversationId);
-                    toast.success('Hangout ID copied');
+                    toast.success('Conversation ID copied');
                   }}
                   className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
-                  title="Copy Hangout ID"
+                  title="Copy Conversation ID"
                 >
                   <Copy size={11} />
                 </button>

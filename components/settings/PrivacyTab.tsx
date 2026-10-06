@@ -86,8 +86,8 @@ export function PrivacyTab() {
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 border-2 border-[#6366F1]/30 text-[#6366F1] flex items-center justify-center"><ShieldCheck size={18} /></div>
           <div>
-            <h3 className="text-white font-black text-sm">Connect — Direct Chats & Rich Media</h3>
-            <p className="text-white/40 text-xs">Applies to 1:1 hangouts and messages. Custom previews for Kylrix ecosystem links remain enabled.</p>
+            <h3 className="text-white font-black text-sm">Agent Inbox — Direct Chats & Rich Media</h3>
+            <p className="text-white/40 text-xs">Applies to 1:1 sessions and messages. Custom previews for Kylrix ecosystem links remain enabled.</p>
           </div>
         </div>
 

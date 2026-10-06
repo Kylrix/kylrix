@@ -797,7 +797,7 @@ export function HangoutsDrawer({
       {/* Slim top controls */}
       <div className="flex shrink-0 items-center justify-between border-b-2 border-white/20 bg-[#161412] px-4 sm:px-6 py-3">
         <span className="truncate text-xs font-mono font-bold uppercase tracking-wider text-[#A855F7]">
-          {mode === 'share' ? 'Share to Hangout' : 'Hangouts'}
+          {mode === 'share' ? 'Share to Agent Inbox' : 'Agent Inbox'}
         </span>
         <div className="flex shrink-0 items-center gap-1.5">
           {mode === 'browse' && (
@@ -805,7 +805,7 @@ export function HangoutsDrawer({
               type="button"
               onClick={() => setShowCreateChat(true)}
               className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#000000] border-2 border-white/20 text-white/70 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
-              title="New hangout"
+              title="New message"
             >
               <Plus size={15} />
             </button>
@@ -915,7 +915,7 @@ export function HangoutsDrawer({
                 className="inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl bg-[#A855F7] px-4 py-2.5 text-xs font-extrabold text-white transition-all hover:bg-[#9333ea]"
               >
                 <Plus size={14} />
-                <span>Start a hangout</span>
+                <span>Start a conversation</span>
               </button>
             )}
           </div>

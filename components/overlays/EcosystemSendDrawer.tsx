@@ -187,7 +187,7 @@ export function EcosystemSendDrawer({
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-mono m-0 flex items-center gap-1.5">
             <Sparkles size={11} className="text-[#F59E0B]" />
-            <span>Send to Hangout / Chat</span>
+            <span>Send to Agent Inbox / Chat</span>
           </p>
           <h2 className="text-sm font-black font-clash text-white m-0 mt-1 truncate max-w-[260px]">
             {displayTitle}
@@ -211,7 +211,7 @@ export function EcosystemSendDrawer({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search chats & hangouts..."
+            placeholder="Search conversations..."
             className="w-full h-9 pl-9 pr-3 rounded-xl bg-[#0A0908] border border-white/[0.06] text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#F59E0B]/50 transition-colors"
           />
         </div>
@@ -221,7 +221,7 @@ export function EcosystemSendDrawer({
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1.5 min-h-0">
         {filteredTargets.length === 0 ? (
           <div className="py-12 text-center text-xs text-white/40 font-satoshi">
-            {searchQuery ? 'No chats match your search.' : 'No hangouts found. Start a chat in Connect first.'}
+            {searchQuery ? 'No chats match your search.' : 'No conversations found. Start a conversation in Agent Inbox first.'}
           </div>
         ) : (
           filteredTargets.map((target) => {

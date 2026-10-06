@@ -97,7 +97,7 @@ export function DeleteAccountFlow({ onClose }: { onClose?: () => void }) {
               <ul className="text-xs text-white/70 space-y-1 list-disc pl-4">
                 <li>Vault secrets, TOTP, keychain identities, encrypted rows</li>
                 <li>Notes, goals, tasks, projects, events, forms, threads, comments</li>
-                <li>Hangouts — messages, reactions, epochs, call links, app_activity</li>
+                <li>Agent Inbox — messages, reactions, epochs, call links, app_activity</li>
                 <li>Storage files — attachments, voice notes, avatars (all buckets)</li>
                 <li>Profiles, preferences, sessions, security logs</li>
                 <li><b className="text-white">Auth account deleted last</b> — if purge halts, you can still retry (no half-deleted lockout).</li>

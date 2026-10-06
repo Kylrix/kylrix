@@ -235,7 +235,7 @@ export function CreateChatComposer({
             <MessageSquare className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-lg font-black font-clash text-white tracking-tight truncate m-0">New hangout</h3>
+            <h3 className="text-lg font-black font-clash text-white tracking-tight truncate m-0">New conversation</h3>
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/35 m-0 mt-0.5 flex items-center gap-1">
               <Users size={10} className="text-white/30" />
               {isGroup ? `${selectedUsers.length + 1} people` : selectedUsers.length === 1 ? '1 person' : 'Add people to start'}
@@ -275,7 +275,7 @@ export function CreateChatComposer({
               <div className="min-w-0">
                 <p className="text-xs font-extrabold text-white m-0">End-to-end encrypted</p>
                 <p className="text-[10px] font-semibold text-white/35 m-0 leading-tight">
-                  {checkingKeys ? 'Checking keys…' : isImpossibleDirect ? 'Cannot create — standard chat exists and participant lacks encryption' : hasMissingKeys ? 'Off — someone lacks secure setup' : encryptedEnabled ? 'Messages stay private to participants' : 'Off — will create standard hangout'}
+                  {checkingKeys ? 'Checking keys…' : isImpossibleDirect ? 'Cannot create — standard chat exists and participant lacks encryption' : hasMissingKeys ? 'Off — someone lacks secure setup' : encryptedEnabled ? 'Messages stay private to participants' : 'Off — will create standard chat'}
                 </p>
               </div>
             </div>
@@ -311,12 +311,12 @@ export function CreateChatComposer({
         {isGroup ? (
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-wider text-white/45 font-mono block">
-              Hangout name {encryptedEnabled ? '' : '(unencrypted)'}
+              Group name {encryptedEnabled ? '' : '(unencrypted)'}
             </label>
             <input
               value={hangoutName}
               onChange={(e) => setHangoutName(e.target.value)}
-              placeholder={encryptedEnabled ? 'e.g. Weekend crew' : 'e.g. Project sync'}
+              placeholder={encryptedEnabled ? 'e.g. Core team' : 'e.g. Project sync'}
               className="w-full rounded-xl bg-[#0A0908] border border-[#34322F] px-4 py-3 text-sm font-semibold text-white placeholder:text-white/30 outline-none focus:border-[#F59E0B]/50"
             />
           </div>
@@ -343,7 +343,7 @@ export function CreateChatComposer({
 
         {selectedUsers.length === 0 ? (
           <p className="text-center text-xs text-white/35 py-6 font-semibold">
-            Add a collaborator by username or email to start a hangout.
+            Add a collaborator by username or email to start a conversation.
           </p>
         ) : null}
       </div>
@@ -363,7 +363,7 @@ export function CreateChatComposer({
           onClick={() => void handleCreate()}
           className="flex-1 h-12 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm disabled:opacity-40 hover:bg-amber-500 transition-colors"
         >
-          {busy ? 'Creating…' : isImpossibleDirect ? 'Chat exists' : hasBothDirects ? 'Both exist' : isGroup ? 'Create hangout' : 'Start hangout'}
+          {busy ? 'Creating…' : isImpossibleDirect ? 'Chat exists' : hasBothDirects ? 'Both exist' : isGroup ? 'Create group' : 'Start chat'}
         </button>
       </div>
     </div>
