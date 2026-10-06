@@ -926,12 +926,82 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       Query.limit(100),
     ];
 
+    // 1. Primary substrate: query Turso for user's goals
+    let tursoGoals: Task[] = [];
+    if (uid && uid !== 'guest') {
+      try {
+        const { listGoalsTurso } = await import('@/lib/actions/turso-ops');
+        const res = await listGoalsTurso(uid);
+        if (res.success && Array.isArray(res.rows) && res.rows.length > 0) {
+          tursoGoals = res.rows.map((row: any) => ({
+            id: row.id,
+            title: row.title || 'Untitled Goal',
+            description: row.description || '',
+            status: (row.status as TaskStatus) || 'todo',
+            priority: (row.priority as Priority) || 'medium',
+            dueDate: parseSafeOptionalDate(row.dueDate),
+            completedAt: parseSafeOptionalDate(row.completedAt),
+            isWorkspace: Boolean(row.isWorkspace),
+            projectId: row.projectId || row.workspaceId || 'inbox',
+            labels: row.tags ? (typeof row.tags === 'string' && row.tags.startsWith('[') ? JSON.parse(row.tags) : [row.tags]) : [],
+            linkedNotes: [],
+            subtasks: [],
+            comments: [],
+            attachments: [],
+            reminders: [],
+            timeEntries: [],
+            assigneeIds: [uid],
+            creatorId: uid,
+            userId: uid,
+            parentTaskId: null,
+            createdAt: parseSafeDate(row.createdAt),
+            updatedAt: parseSafeDate(row.updatedAt),
+            position: 0,
+            isArchived: false,
+            isPinned: false,
+            isPublic: false,
+            isGuest: false,
+            scheduled: false,
+            isAgentic: false,
+            dek: null,
+          } as Task));
+        }
+      } catch (tursoErr) {
+        console.warn('[TaskContext] Turso primary goals fetch failed, falling back to secondary:', tursoErr);
+      }
+    }
+
     const [tList, cList] = await Promise.all([
-      fetchOptimized(tasksKey, () => taskApi.list(taskQueries), force ? 0 : FLOW_WARM_TTL),
+      tursoGoals.length > 0 ? Promise.resolve({ rows: [] }) : fetchOptimized(tasksKey, () => taskApi.list(taskQueries), force ? 0 : FLOW_WARM_TTL),
       fetchOptimized(calsKey, () => calendarApi.list(calQueries), force ? 0 : FLOW_WARM_TTL)]);
 
+    // Opportunistic Turso migration: persist fetched goals to Turso so Turso becomes permanent primary
+    if (tursoGoals.length === 0 && Array.isArray(tList?.rows) && tList.rows.length > 0 && uid && uid !== 'guest') {
+      void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
+        for (const row of tList.rows) {
+          const m = mapAppwriteTaskToTask(row);
+          void upsertGoalTurso({
+            id: m.id,
+            userId: uid,
+            title: m.title || 'Untitled Goal',
+            description: m.description || '',
+            status: m.status || 'todo',
+            priority: m.priority || 'medium',
+            dueDate: m.dueDate ? m.dueDate.toISOString() : null,
+            completedAt: m.completedAt ? m.completedAt.toISOString() : null,
+            isWorkspace: Boolean(m.isWorkspace),
+            projectId: m.projectId || null,
+            workspaceId: m.projectId || null,
+            tags: Array.isArray(m.labels) ? JSON.stringify(m.labels) : null,
+            createdAt: m.createdAt ? m.createdAt.toISOString() : new Date().toISOString(),
+            updatedAt: m.updatedAt ? m.updatedAt.toISOString() : new Date().toISOString(),
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
     return { 
-      tasks: (tList?.rows || []).map(mapAppwriteTaskToTask), 
+      tasks: tursoGoals.length > 0 ? tursoGoals : (tList?.rows || []).map(mapAppwriteTaskToTask), 
       projects: (cList?.rows || []).map(mapAppwriteCalendarToProject) 
     };
 
@@ -1364,6 +1434,29 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         void setCachedData(tasksKey, { rows: updatedList, total: updatedList.length });
       }
       void persistGoalsLocalCopy(state.userId, updatedList);
+
+      // Primary write to Turso substrate
+      if (ownerId && ownerId !== 'guest') {
+        void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
+          upsertGoalTurso({
+            id: mergedGoal.id,
+            userId: ownerId,
+            title: mergedGoal.title || 'Untitled Goal',
+            description: mergedGoal.description || '',
+            status: mergedGoal.status || 'todo',
+            priority: mergedGoal.priority || 'medium',
+            dueDate: mergedGoal.dueDate ? mergedGoal.dueDate.toISOString() : null,
+            completedAt: mergedGoal.completedAt ? mergedGoal.completedAt.toISOString() : null,
+            isWorkspace: Boolean(mergedGoal.isWorkspace),
+            projectId: mergedGoal.projectId || null,
+            workspaceId: mergedGoal.projectId || null,
+            tags: Array.isArray(mergedGoal.labels) ? JSON.stringify(mergedGoal.labels) : null,
+            createdAt: mergedGoal.createdAt ? mergedGoal.createdAt.toISOString() : new Date().toISOString(),
+            updatedAt: mergedGoal.updatedAt ? mergedGoal.updatedAt.toISOString() : new Date().toISOString(),
+          }).catch((err) => console.warn('[TaskContext] Turso upsertGoalTurso failed:', err));
+        }).catch(() => {});
+      }
+
       if (isPending) {
         // markPending schedules demand flush; nudge(true) forces microtask discrete flush
         autonomicSyncEngine.markPending(goalPendingKey(mergedGoal.id), mergedGoal.updatedAt.toISOString(), mergedGoal);
@@ -1679,6 +1772,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const currentCollaborators = await taskCollaborators.list(id).catch(() => []);
       await Promise.all(currentCollaborators.map((collaborator) => taskCollaborators.delete(collaborator.id).catch(() => {})));
       await taskApi.delete(id).catch(() => {});
+      void import('@/lib/actions/turso-ops').then(({ deleteGoalTurso }) => {
+        void deleteGoalTurso(id);
+      }).catch(() => {});
       invalidateTasksNexus(state.userId || 'guest');
       dispatch({ type: 'DELETE_TASK', payload: id });
     } catch (error: unknown) {

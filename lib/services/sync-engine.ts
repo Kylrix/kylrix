@@ -780,6 +780,8 @@ async function flushNotePending(
 
   const dataPayload = {
     ...pickNoteAutosavePayload(payload),
+    userId: activeUserId,
+    creatorId: activeUserId,
     isPublic: getNotePublicState(payload),
     isGuest: !!payload.isGuest};
 

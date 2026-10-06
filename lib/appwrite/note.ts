@@ -1632,17 +1632,25 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     includeStories = false,
     includeThreads = false} = options;
 
+  let effectiveUserId = userId;
+  if (!effectiveUserId && typeof window !== 'undefined') {
+    try {
+      const { getKylrixPulse } = await import('@/lib/appwrite/client');
+      const pulse = getKylrixPulse();
+      if (pulse?.$id) effectiveUserId = pulse.$id;
+    } catch {}
+  }
+  if (!effectiveUserId) {
+    try {
+      const user = await getCurrentUser();
+      effectiveUserId = user?.$id;
+    } catch {}
+  }
+
   let baseQueries: any[] = [];
   if (Array.isArray(queries) && queries.length) {
     baseQueries = [...queries];
   } else {
-    // Optimization: avoid redundant account.get() if userId is provided
-    let effectiveUserId = userId;
-    if (!effectiveUserId) {
-      const user = await getCurrentUser();
-      effectiveUserId = user?.$id;
-    }
-
     if (!effectiveUserId) {
       return { rows: [], total: 0, nextCursor: null, hasMore: false };
     }
@@ -1664,6 +1672,50 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     Query.orderDesc('$updatedAt')];
   if (sinceUpdatedAt) finalQueries.push(Query.greaterThan('$updatedAt', sinceUpdatedAt));
   if (cursor) finalQueries.push(Query.cursorAfter(cursor));
+
+  // 1. Primary substrate: Turso
+  if (effectiveUserId && effectiveUserId !== 'guest') {
+    try {
+      const { listNotesTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await listNotesTurso(effectiveUserId);
+      if (tursoRes.success && Array.isArray(tursoRes.rows) && tursoRes.rows.length > 0) {
+        const rows = tursoRes.rows.map((row: any) => ({
+          $id: row.id,
+          id: row.id,
+          title: row.title || '',
+          content: row.content || '',
+          summary: row.summary || null,
+          isLocked: Boolean(row.isLocked),
+          isPublished: Boolean(row.isPublished),
+          isPinned: Boolean(row.isPinned),
+          isTrash: Boolean(row.isTrashed),
+          isWorkspace: Boolean(row.isWorkspace),
+          projectId: row.projectId || row.workspaceId || null,
+          workspaceId: row.workspaceId || row.projectId || null,
+          category: row.category || null,
+          tags: row.tags ? (typeof row.tags === 'string' && row.tags.startsWith('[') ? JSON.parse(row.tags) : row.tags) : [],
+          createdAt: row.createdAt || new Date().toISOString(),
+          updatedAt: row.updatedAt || new Date().toISOString(),
+          $createdAt: row.createdAt || new Date().toISOString(),
+          $updatedAt: row.updatedAt || new Date().toISOString(),
+          userId: row.userId || effectiveUserId,
+          format: 'text',
+          isGuest: false,
+          isPublic: false,
+          metadata: '{}',
+        })).filter((doc: any) => includeThreads || !isExcludedNote(doc));
+
+        return {
+          rows: rows.slice(0, limit),
+          total: rows.length,
+          nextCursor: null,
+          hasMore: rows.length > limit,
+        };
+      }
+    } catch (tursoErr) {
+      console.warn('[listNotesPaginated] Turso primary list failed, falling back to secondary:', tursoErr);
+    }
+  }
 
   let res: any;
   try {
@@ -1824,6 +1876,34 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
   const batchLength = filteredNotes.length;
   const hasMore = batchLength === limit; // heuristic
   const nextCursor = hasMore && batchLength ? (filteredNotes[batchLength - 1] as any).$id || null : null;
+
+  // Opportunistic Turso migration: persist fetched notes to Turso so Turso becomes the permanent primary
+  if (effectiveUserId && effectiveUserId !== 'guest' && filteredNotes.length > 0) {
+    void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
+      for (const n of filteredNotes) {
+        const nId = n.$id || (n as any).id;
+        if (!nId) continue;
+        void upsertNoteTurso({
+          id: nId,
+          userId: effectiveUserId!,
+          title: n.title || '',
+          content: n.content || '',
+          summary: (n as any).summary || null,
+          isLocked: Boolean(n.isLocked),
+          isPublished: Boolean(n.isPublished),
+          isPinned: Boolean(n.isPinned),
+          isTrashed: Boolean((n as any).isTrash || (n as any).isTrashed),
+          isWorkspace: Boolean((n as any).isWorkspace),
+          projectId: (n as any).projectId || (n as any).workspaceId || null,
+          workspaceId: (n as any).workspaceId || (n as any).projectId || null,
+          category: (n as any).category || null,
+          tags: Array.isArray(n.tags) ? JSON.stringify(n.tags) : ((n.tags as any) || null),
+          createdAt: n.createdAt || n.$createdAt || new Date().toISOString(),
+          updatedAt: n.updatedAt || n.$updatedAt || new Date().toISOString(),
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+  }
 
   return {
     rows: filteredNotes,

@@ -959,6 +959,8 @@ export default function CreateNoteForm({
     };
 
     const payload = {
+      userId: user?.$id,
+      creatorId: user?.$id,
       title: generatedTitle,
       content: source.content || '',
       format: 'text' as const,

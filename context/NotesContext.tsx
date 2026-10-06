@@ -598,7 +598,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         const updated = dedupeNotesById(prev.map((item) => (item.$id === normalized.$id ? { ...item, ...normalized } : item)));
         if (INITIAL_NOTES_CACHE_KEY) {
           setCachedData(INITIAL_NOTES_CACHE_KEY, {
+            rows: updated,
             notes: updated,
+            total: updated.length,
             totalNotes: updated.length,
             cursor: cursorRef.current,
             hasMore: true});
@@ -609,7 +611,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       const updated = dedupeNotesById([normalized, ...prev]);
       if (INITIAL_NOTES_CACHE_KEY) {
         setCachedData(INITIAL_NOTES_CACHE_KEY, {
+          rows: updated,
           notes: updated,
+          total: updated.length,
           totalNotes: updated.length,
           cursor: cursorRef.current,
           hasMore: true});
@@ -773,6 +777,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           db.notes.findOne(noteId).remove().catch(() => {});
           db.cache.findOne(`note_${noteId}`).remove().catch(() => {});
         }).catch(() => {});
+      }).catch(() => {});
+      void import('@/lib/actions/turso-ops').then(({ deleteNoteTurso }) => {
+        void deleteNoteTurso(noteId);
       }).catch(() => {});
     }
   }, [invalidate, INITIAL_NOTES_CACHE_KEY, activeUserId, getCachedData, setCachedData]);

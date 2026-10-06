@@ -358,12 +358,17 @@ export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
       .limit(1);
 
     if (existing.length > 0) {
+      const updateData: any = {
+        updatedAt: data.updatedAt || new Date().toISOString(),
+      };
+      for (const [key, val] of Object.entries(data)) {
+        if (val !== undefined && key !== 'id') {
+          updateData[key] = val;
+        }
+      }
       await db
         .update(schema.notes)
-        .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
-        })
+        .set(updateData)
         .where(eq(schema.notes.id, data.id));
     } else {
       await db.insert(schema.notes).values(data);
@@ -413,12 +418,17 @@ export async function upsertGoalTurso(data: typeof schema.goals.$inferInsert) {
       .limit(1);
 
     if (existing.length > 0) {
+      const updateData: any = {
+        updatedAt: data.updatedAt || new Date().toISOString(),
+      };
+      for (const [key, val] of Object.entries(data)) {
+        if (val !== undefined && key !== 'id') {
+          updateData[key] = val;
+        }
+      }
       await db
         .update(schema.goals)
-        .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
-        })
+        .set(updateData)
         .where(eq(schema.goals.id, data.id));
     } else {
       await db.insert(schema.goals).values(data);
@@ -652,6 +662,7 @@ export async function syncTier2FromAppwriteTurso(userId: string, force = false) 
     const counts = { notes: 0, goals: 0 };
 
     // 1. Notes (Ideas)
+    let notesFailed = false;
     try {
       let offset = 0;
       let hasMore = true;
@@ -659,7 +670,14 @@ export async function syncTier2FromAppwriteTurso(userId: string, force = false) 
         const res = await tablesDB.listRows({
           databaseId: DB,
           tableId: '67ff05f3002502ef239e',
-          queries: [Query.equal('userId', userId), Query.limit(100), Query.offset(offset)],
+          queries: [
+            Query.or([
+              Query.equal('userId', userId),
+              Query.equal('creatorId', userId),
+            ]),
+            Query.limit(100),
+            Query.offset(offset),
+          ],
         });
         if (!res.rows.length) break;
         for (const row of res.rows as any[]) {
@@ -687,10 +705,12 @@ export async function syncTier2FromAppwriteTurso(userId: string, force = false) 
         if (offset >= res.total) hasMore = false;
       }
     } catch (e: any) {
+      notesFailed = true;
       console.warn('[syncTier2FromAppwriteTurso] Notes sync warning:', e.message);
     }
 
     // 2. Goals (Tasks)
+    let goalsFailed = false;
     try {
       let offset = 0;
       let hasMore = true;
@@ -698,7 +718,14 @@ export async function syncTier2FromAppwriteTurso(userId: string, force = false) 
         const res = await tablesDB.listRows({
           databaseId: DB,
           tableId: 'tasks',
-          queries: [Query.equal('userId', userId), Query.limit(100), Query.offset(offset)],
+          queries: [
+            Query.or([
+              Query.equal('userId', userId),
+              Query.equal('creatorId', userId),
+            ]),
+            Query.limit(100),
+            Query.offset(offset),
+          ],
         });
         if (!res.rows.length) break;
         for (const row of res.rows as any[]) {
@@ -724,17 +751,20 @@ export async function syncTier2FromAppwriteTurso(userId: string, force = false) 
         if (offset >= res.total) hasMore = false;
       }
     } catch (e: any) {
+      goalsFailed = true;
       console.warn('[syncTier2FromAppwriteTurso] Goals sync warning:', e.message);
     }
 
-    // Mark Tier 2 Synced on Turso user row
-    await db
-      .update(schema.user)
-      .set({
-        tier2Synced: true,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.user.id, userId));
+    // Mark Tier 2 Synced on Turso user row if at least one category succeeded
+    if (!notesFailed || !goalsFailed) {
+      await db
+        .update(schema.user)
+        .set({
+          tier2Synced: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.user.id, userId));
+    }
 
     console.log(`[syncTier2FromAppwriteTurso] Tier 2 sync completed for user ${userId}:`, counts);
     return { success: true, counts };

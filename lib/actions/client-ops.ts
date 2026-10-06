@@ -70,10 +70,22 @@ async function getJwt(): Promise<string | undefined> {
 // --- Notes CRUD ---
 export async function createNote(data: any) {
   const noteId = data?.$id || data?.id || `note_${Date.now()}`;
-  const userId = data?.userId || data?.creatorId;
+  let userId = data?.userId || data?.creatorId;
+  if (!userId && typeof window !== 'undefined') {
+    try {
+      const { getKylrixPulse, getCurrentUser } = await import('@/lib/appwrite/client');
+      const pulse = getKylrixPulse();
+      if (pulse?.$id) {
+        userId = pulse.$id;
+      } else {
+        const u = await getCurrentUser().catch(() => null);
+        if (u?.$id) userId = u.$id;
+      }
+    } catch {}
+  }
 
   // Primary write to Turso
-  if (userId) {
+  if (userId && userId !== 'guest') {
     try {
       const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
       void upsertNoteTurso({
@@ -109,35 +121,47 @@ export async function createNote(data: any) {
 }
 
 export async function updateNote(noteId: string, data: any) {
-  // 1. Direct Appwrite write (legacy fast-path if user is logged into Appwrite)
-  const { tryOwnerDirectUpdateNote } = await import('@/lib/appwrite/owner-direct-write');
-  const direct = await tryOwnerDirectUpdateNote(noteId, data).catch(() => null);
-  if (direct) return direct;
+  let userId = data?.userId || data?.creatorId;
+  if (!userId && typeof window !== 'undefined') {
+    try {
+      const { getKylrixPulse, getCurrentUser } = await import('@/lib/appwrite/client');
+      const pulse = getKylrixPulse();
+      if (pulse?.$id) {
+        userId = pulse.$id;
+      } else {
+        const u = await getCurrentUser().catch(() => null);
+        if (u?.$id) userId = u.$id;
+      }
+    } catch {}
+  }
 
-  // 2. Primary write to Turso
-  const userId = data?.userId || data?.creatorId;
-  if (userId) {
+  // 1. Primary write to Turso (MUST happen unconditionally so Turso stays in sync)
+  if (userId && userId !== 'guest') {
     try {
       const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
       void upsertNoteTurso({
         id: noteId,
         userId,
-        title: data?.title || '',
-        content: data?.content || '',
-        isLocked: Boolean(data?.isLocked),
-        isPublished: Boolean(data?.isPublished),
-        isPinned: Boolean(data?.isPinned),
-        isTrashed: Boolean(data?.isTrash || data?.isTrashed),
-        isWorkspace: Boolean(data?.isWorkspace),
-        projectId: data?.projectId || null,
-        workspaceId: data?.projectId || null,
-        category: data?.category || null,
-        tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags || null),
-        createdAt: data?.createdAt || new Date().toISOString(),
+        title: data?.title,
+        content: data?.content,
+        isLocked: typeof data?.isLocked === 'boolean' ? data.isLocked : undefined,
+        isPublished: typeof data?.isPublished === 'boolean' ? data.isPublished : undefined,
+        isPinned: typeof data?.isPinned === 'boolean' ? data.isPinned : undefined,
+        isTrashed: typeof (data?.isTrash ?? data?.isTrashed) === 'boolean' ? Boolean(data?.isTrash ?? data?.isTrashed) : undefined,
+        isWorkspace: typeof data?.isWorkspace === 'boolean' ? data.isWorkspace : undefined,
+        projectId: data?.projectId,
+        workspaceId: data?.projectId || data?.workspaceId,
+        category: data?.category,
+        tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags ?? undefined),
         updatedAt: new Date().toISOString(),
-      }).catch((e) => console.warn('[client-ops] Turso updateNote mirror failed:', e));
+      } as any).catch((e) => console.warn('[client-ops] Turso updateNote mirror failed:', e));
     } catch {}
   }
+
+  // 2. Direct Appwrite write (legacy fast-path if user is logged into Appwrite)
+  const { tryOwnerDirectUpdateNote } = await import('@/lib/appwrite/owner-direct-write');
+  const direct = await tryOwnerDirectUpdateNote(noteId, data).catch(() => null);
+  if (direct) return direct;
 
   const jwt = await getJwt();
   if (jwt) {
@@ -166,24 +190,126 @@ export async function deleteNote(noteId: string) {
 
 // --- Goals CRUD ---
 export async function createGoal(data: any) {
+  const goalId = data?.$id || data?.id || `goal_${Date.now()}`;
+  let userId = data?.userId || data?.creatorId;
+  if (!userId && typeof window !== 'undefined') {
+    try {
+      const { getKylrixPulse, getCurrentUser } = await import('@/lib/appwrite/client');
+      const pulse = getKylrixPulse();
+      if (pulse?.$id) {
+        userId = pulse.$id;
+      } else {
+        const u = await getCurrentUser().catch(() => null);
+        if (u?.$id) userId = u.$id;
+      }
+    } catch {}
+  }
+
+  // Primary write to Turso
+  if (userId && userId !== 'guest') {
+    try {
+      const { upsertGoalTurso } = await import('@/lib/actions/turso-ops');
+      void upsertGoalTurso({
+        id: goalId,
+        userId,
+        title: data?.title || 'Untitled Goal',
+        description: data?.description || '',
+        status: data?.status || 'todo',
+        priority: data?.priority || 'medium',
+        dueDate: data?.dueDate || null,
+        completedAt: data?.completedAt || null,
+        isWorkspace: Boolean(data?.isWorkspace),
+        projectId: data?.projectId || null,
+        workspaceId: data?.projectId || null,
+        tags: Array.isArray(data?.tags || data?.labels) ? JSON.stringify(data.tags || data.labels) : (data?.tags || null),
+        createdAt: data?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }).catch((e) => console.warn('[client-ops] Turso createGoal mirror failed:', e));
+    } catch {}
+  }
+
   const jwt = await getJwt();
-  const { createGoalSecure } = await import('./secure-ops');
-  return createGoalSecure(data, jwt);
+  if (jwt) {
+    try {
+      const { createGoalSecure } = await import('./secure-ops');
+      return await createGoalSecure(data, jwt);
+    } catch (err: any) {
+      console.warn('[client-ops] Appwrite createGoalSecure bypassed (saved to Turso):', err?.message);
+      return { $id: goalId, ...data };
+    }
+  }
+  return { $id: goalId, ...data };
 }
 
 export async function updateGoal(goalId: string, data: any) {
+  let userId = data?.userId || data?.creatorId;
+  if (!userId && typeof window !== 'undefined') {
+    try {
+      const { getKylrixPulse, getCurrentUser } = await import('@/lib/appwrite/client');
+      const pulse = getKylrixPulse();
+      if (pulse?.$id) {
+        userId = pulse.$id;
+      } else {
+        const u = await getCurrentUser().catch(() => null);
+        if (u?.$id) userId = u.$id;
+      }
+    } catch {}
+  }
+
+  // 1. Primary write to Turso
+  if (userId && userId !== 'guest') {
+    try {
+      const { upsertGoalTurso } = await import('@/lib/actions/turso-ops');
+      void upsertGoalTurso({
+        id: goalId,
+        userId,
+        title: data?.title,
+        description: data?.description,
+        status: data?.status,
+        priority: data?.priority,
+        dueDate: data?.dueDate,
+        completedAt: data?.completedAt,
+        isWorkspace: typeof data?.isWorkspace === 'boolean' ? data.isWorkspace : undefined,
+        projectId: data?.projectId,
+        workspaceId: data?.projectId,
+        tags: Array.isArray(data?.tags || data?.labels) ? JSON.stringify(data.tags || data.labels) : (data?.tags ?? undefined),
+        updatedAt: new Date().toISOString(),
+      } as any).catch((e) => console.warn('[client-ops] Turso updateGoal mirror failed:', e));
+    } catch {}
+  }
+
+  // 2. Direct Appwrite write
   const { tryOwnerDirectUpdateGoal } = await import('@/lib/appwrite/owner-direct-write');
   const direct = await tryOwnerDirectUpdateGoal(goalId, data).catch(() => null);
   if (direct) return direct;
+
   const jwt = await getJwt();
-  const { updateGoalSecure } = await import('./secure-ops');
-  return updateGoalSecure(goalId, data, jwt);
+  if (jwt) {
+    try {
+      const { updateGoalSecure } = await import('./secure-ops');
+      return await updateGoalSecure(goalId, data, jwt);
+    } catch (err: any) {
+      console.warn('[client-ops] Appwrite updateGoalSecure bypassed (saved to Turso):', err?.message);
+      return { $id: goalId, ...data };
+    }
+  }
+  return { $id: goalId, ...data };
 }
 
 export async function deleteGoal(goalId: string) {
+  try {
+    const { deleteGoalTurso } = await import('@/lib/actions/turso-ops');
+    void deleteGoalTurso(goalId).catch(() => {});
+  } catch {}
+
   const jwt = await getJwt();
-  const { deleteGoalSecure } = await import('./secure-ops');
-  return deleteGoalSecure(goalId, jwt);
+  if (jwt) {
+    try {
+      const { deleteGoalSecure } = await import('./secure-ops');
+      return await deleteGoalSecure(goalId, jwt);
+    } catch {}
+  }
+  return { success: true };
 }
 
 export async function listTags(userId?: string) {
