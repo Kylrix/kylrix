@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest) {
         },
       }
     );
-  } catch (err: any) {
+  } catch (_err: any) {
     return NextResponse.json({ keys: [] }, { status: 200 });
   }
 }

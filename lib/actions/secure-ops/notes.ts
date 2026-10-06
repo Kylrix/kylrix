@@ -990,6 +990,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
         }
       }
     }
+  } catch (e) {
     console.error('dual-write note_tags update error in updateNoteSecure', e);
   }
 

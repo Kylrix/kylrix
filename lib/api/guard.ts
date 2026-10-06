@@ -9,7 +9,7 @@ import {
 } from '@/lib/api/edge-shield';
 import { assertScope, type PatScope } from '@/lib/api/scopes';
 import { getActor } from '@/lib/actions/secure-ops';
-import { looksLikeJwt, verifyOAuthAccessToken } from '@/lib/oauth2/verify-access-token';
+import { verifyOAuthAccessToken } from '@/lib/oauth2/verify-access-token';
 
 export const MAX_API_BODY_BYTES = 256_000;
 
