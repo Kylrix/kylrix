@@ -705,6 +705,24 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
 
   try {
     const note = await noteCreationServiceServer.createNote(noteData);
+    void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
+      upsertNoteTurso({
+        id: note.$id || note.id || reservedRowId,
+        userId: note.userId || actor.$id,
+        title: note.title || '',
+        content: note.content || '',
+        isLocked: Boolean(note.isLocked),
+        isPublished: Boolean(note.isPublished),
+        isPinned: Boolean(note.isPinned),
+        isTrashed: Boolean(note.isTrashed),
+        isWorkspace: Boolean(note.isWorkspace),
+        projectId: note.projectId || null,
+        category: note.category || null,
+        tags: Array.isArray(note.tags) ? JSON.stringify(note.tags) : (note.tags || null),
+        createdAt: note.createdAt || note.$createdAt || new Date().toISOString(),
+        updatedAt: note.updatedAt || note.$updatedAt || new Date().toISOString(),
+      }).catch((err) => console.warn('[turso] Silent note creation mirror error:', err));
+    }).catch(() => {});
     return JSON.parse(JSON.stringify(note));
   } catch (error: any) {
     const message = String(error?.message || '').toLowerCase();
@@ -972,9 +990,27 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
         }
       }
     }
-  } catch (e: any) {
     console.error('dual-write note_tags update error in updateNoteSecure', e);
   }
+
+  void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
+    upsertNoteTurso({
+      id: noteId,
+      userId: noteOwnerId || actor.$id,
+      title: row?.title || patch?.title || '',
+      content: row?.content || patch?.content || '',
+      isLocked: Boolean(row?.isLocked ?? patch?.isLocked),
+      isPublished: Boolean(row?.isPublished ?? patch?.isPublished),
+      isPinned: Boolean(row?.isPinned ?? patch?.isPinned),
+      isTrashed: Boolean(row?.isTrashed ?? patch?.isTrashed),
+      isWorkspace: Boolean(row?.isWorkspace ?? patch?.isWorkspace),
+      projectId: row?.projectId || patch?.projectId || null,
+      category: row?.category || patch?.category || null,
+      tags: Array.isArray(patch?.tags) ? JSON.stringify(patch.tags) : (row?.tags ? JSON.stringify(row.tags) : null),
+      createdAt: row?.createdAt || row?.$createdAt || new Date().toISOString(),
+      updatedAt: updatedAt,
+    }).catch((err) => console.warn('[turso] Silent note update mirror error:', err));
+  }).catch(() => {});
 
   return JSON.parse(JSON.stringify(row));
 }
@@ -1019,6 +1055,11 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
       rowId: noteId,
       data: { isTrash: true }
     });
+
+  void import('@/lib/actions/turso-ops').then(({ deleteNoteTurso }) => {
+    deleteNoteTurso(noteId).catch((err) => console.warn('[turso] Silent note delete mirror error:', err));
+  }).catch(() => {});
+
   return JSON.parse(JSON.stringify(result));
 }
 

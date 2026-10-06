@@ -50,6 +50,19 @@ export async function ensureBetterAuthUserTurso(data: {
   }
 }
 
+export async function deleteNoteTurso(noteId: string) {
+  try {
+    await db
+      .update(schema.notes)
+      .set({ isTrashed: true, updatedAt: new Date().toISOString() })
+      .where(eq(schema.notes.id, noteId));
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] deleteNoteTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 /**
  * Upserts a note record in Turso.
  */

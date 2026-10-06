@@ -149,6 +149,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       void initProfile();
 
+      // Silent Better Auth & Turso user minting (runs once in background)
+      const mintBetterAuthTurso = async () => {
+        try {
+          const { ensureBetterAuthUserTurso } = await import('@/lib/actions/turso-ops');
+          await ensureBetterAuthUserTurso({
+            id: user.$id,
+            name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
+            email: user.email || `${user.$id}@kylrix.local`,
+            emailVerified: Boolean(user.emailVerification),
+          });
+        } catch (tursoErr) {
+          console.warn('[AuthContext] Background Turso user minting failed:', tursoErr);
+        }
+      };
+      void mintBetterAuthTurso();
+
       // 5. Silent Attribution & Referral Claiming (new + existing accounts, once)
       const claimAttribution = async () => {
         try {

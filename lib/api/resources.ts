@@ -567,6 +567,24 @@ export const ApiResources = {
       await linkObjectToWorkspace(tables, wsId, 'note', noteId, actor.userId, { title });
     }
 
+    void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
+      upsertNoteTurso({
+        id: noteId,
+        userId: actor.userId,
+        title,
+        content,
+        isLocked: false,
+        isPublished: isPublic,
+        isPinned: false,
+        isTrashed: false,
+        isWorkspace: Boolean(wsId),
+        projectId: wsId || null,
+        tags: Array.isArray(cleanTags) ? JSON.stringify(cleanTags) : null,
+        createdAt: now,
+        updatedAt: now,
+      }).catch((e) => console.warn('[turso] ApiResources note mirror warning:', e));
+    }).catch(() => {});
+
     return shapeNote(note);
   },
 
@@ -604,6 +622,24 @@ export const ApiResources = {
       });
     }
 
+    void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
+      upsertNoteTurso({
+        id,
+        userId: actor.userId,
+        title: (row as any).title || '',
+        content: (row as any).content || '',
+        isLocked: Boolean((row as any).isLocked),
+        isPublished: Boolean((row as any).isPublic),
+        isPinned: Boolean((row as any).isPinned),
+        isTrashed: Boolean((row as any).isTrash),
+        isWorkspace: Boolean(requestedWs),
+        projectId: requestedWs || (row as any).projectId || null,
+        tags: Array.isArray((row as any).tags) ? JSON.stringify((row as any).tags) : null,
+        createdAt: (row as any).createdAt || (row as any).$createdAt || new Date().toISOString(),
+        updatedAt: (patch.updatedAt as string) || new Date().toISOString(),
+      }).catch((e) => console.warn('[turso] ApiResources updateNote mirror warning:', e));
+    }).catch(() => {});
+
     return shapeNote(row);
   },
 
@@ -622,6 +658,11 @@ export const ApiResources = {
       },
     });
     await unlinkObjectFromWorkspace(tables, 'note', id);
+
+    void import('@/lib/actions/turso-ops').then(({ deleteNoteTurso }) => {
+      deleteNoteTurso(id).catch((e) => console.warn('[turso] ApiResources deleteNote mirror warning:', e));
+    }).catch(() => {});
+
     return { id, deleted: true, trashed: true };
   },
 
