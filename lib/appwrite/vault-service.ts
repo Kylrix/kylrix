@@ -594,9 +594,9 @@ export class VaultService {
         id: rowId,
         userId: String(data.userId),
         title: data.name || (data as any).title || 'Encrypted Secret',
-        type: encryptedData.itemType || 'login',
-        encryptedData: (encryptedData as any).password || (encryptedData as any).encryptedData || JSON.stringify(encryptedData),
-        iv: (encryptedData as any).iv || null,
+        type: String((encryptedData as any).itemType || 'login'),
+        encryptedData: String((encryptedData as any).password || (encryptedData as any).encryptedData || JSON.stringify(encryptedData)),
+        iv: (encryptedData as any).iv ? String((encryptedData as any).iv) : null,
         metadata: JSON.stringify(encryptedData),
         isTrashed: false,
         createdAt: now,
@@ -796,8 +796,8 @@ export class VaultService {
       upsertTotpSecretTurso({
         id: rowId,
         userId: String(data.userId),
-        account: data.account || (data as any).issuer || 'totp',
-        encryptedSecret: (encryptedData as any).secret || (encryptedData as any).encryptedSecret || '',
+        account: (data as any).account || data.accountName || data.issuer || 'totp',
+        encryptedSecret: String((encryptedData as any).secret || (encryptedData as any).encryptedSecret || ''),
         metadata: JSON.stringify(encryptedData),
         createdAt: now,
       }).catch((e) => console.warn('[turso] TOTP mirror failed:', e));
