@@ -80,26 +80,27 @@ export function UnifiedBottomBar() {
   }, []);
 
   const currentTab = useMemo(() => {
-    if (pathname?.startsWith('/app')) return 'note';
-    if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
-    if (pathname?.startsWith('/vault')) return 'vault';
+    if (pathname?.startsWith('/app') || pathname?.startsWith('/idea') || pathname?.startsWith('/notes')) return 'note';
+    if (pathname?.startsWith('/goals') || pathname?.startsWith('/goal') || pathname?.startsWith('/events') || pathname?.startsWith('/event')) return 'goal';
+    if (pathname?.startsWith('/forms') || pathname?.startsWith('/form')) return 'goal';
+    if (pathname?.startsWith('/vault') || pathname?.startsWith('/totp') || pathname?.startsWith('/credentials')) return 'vault';
     if (pathname?.startsWith('/settings')) return 'settings';
     return null;
   }, [pathname]);
 
   const primarySurfaceColor = useMemo(() => {
     if (config.mainColor) return config.mainColor;
-    if (pathname?.startsWith('/app')) return '#EC4899';
+    if (pathname?.startsWith('/app') || pathname?.startsWith('/idea') || pathname?.startsWith('/notes')) return '#EC4899';
     if (pathname?.startsWith('/goals') || pathname?.startsWith('/goal')) return '#A855F7';
-    if (pathname?.startsWith('/events')) return '#6366F1';
+    if (pathname?.startsWith('/events') || pathname?.startsWith('/event')) return '#6366F1';
     if (pathname?.startsWith('/forms') || pathname?.startsWith('/form')) return '#6366F1';
-    if (pathname?.startsWith('/vault')) return '#10B981';
+    if (pathname?.startsWith('/vault') || pathname?.startsWith('/totp') || pathname?.startsWith('/credentials')) return '#10B981';
     if (pathname?.startsWith('/settings')) return '#6366F1';
     return '#EC4899';
   }, [pathname, config.mainColor]);
 
   const defaultMainClick = useCallback(() => {
-    if (pathname?.startsWith('/app')) {
+    if (pathname?.startsWith('/app') || pathname?.startsWith('/idea') || pathname?.startsWith('/notes')) {
       openUnified('note', { isPublic: false, isGuest: false });
     } else {
       window.dispatchEvent(new CustomEvent('kylrix:open-agentic-drawer'));
@@ -126,47 +127,72 @@ export function UnifiedBottomBar() {
     { key: 'settings', route: '/settings', icon: SettingsIcon, label: 'Settings' },
   ];
 
-
-  const isNoteFullPageDetail = Boolean(pathname?.match(/^\/app\/notes\/[^/]+$/));
-  const isSpecificPostPage = Boolean(
-    pathname?.match(/^\/connect\/post\/[^/]+$/) || pathname?.startsWith('/moment/')
-  );
-  const isSpecificProjectPage = Boolean(pathname?.match(/^\/workspace\/[^/]+$/));
-  const isPublicFormPage = Boolean(pathname?.match(/^\/form\/[^/]+$/));
-  // Public shared idea pages only (/idea/:id) — do not match app routes
-  const isPublicIdeaPage = Boolean(pathname?.match(/^\/idea\/[^/]+$/));
-
-  // The bottom navigation bar only belongs on: idea (/app), goals (/goals), and secrets (/vault).
-  // Other pages (e.g. settings, forms, totp, events) rely on top tabs or back buttons.
+  // Fixed persistent bottom navbar for the six core surfaces:
+  // 1. idea (/app, /notes, /idea)
+  // 2. form (/forms, /form)
+  // 3. goals (/goals, /goal)
+  // 4. events (/events, /event)
+  // 5. secrets (/vault, /credentials)
+  // 6. totp (/vault/totp, /totp)
   const isIdeaRoute = Boolean(
-    (pathname === '/app' || pathname?.startsWith('/app/') || pathname === '/idea') &&
-    !isNoteFullPageDetail &&
-    !isPublicIdeaPage
+    pathname === '/app' ||
+    pathname?.startsWith('/app/') ||
+    pathname === '/idea' ||
+    pathname?.startsWith('/idea/') ||
+    pathname === '/notes' ||
+    pathname?.startsWith('/notes/')
+  );
+
+  const isFormRoute = Boolean(
+    pathname === '/forms' ||
+    pathname?.startsWith('/forms/') ||
+    pathname === '/form' ||
+    pathname?.startsWith('/form/')
   );
 
   const isGoalsRoute = Boolean(
     pathname === '/goals' ||
     pathname?.startsWith('/goals/') ||
+    pathname === '/goal' ||
     pathname?.startsWith('/goal/')
   );
 
+  const isEventsRoute = Boolean(
+    pathname === '/events' ||
+    pathname?.startsWith('/events/') ||
+    pathname === '/event' ||
+    pathname?.startsWith('/event/')
+  );
+
   const isSecretsRoute = Boolean(
-    (pathname === '/vault' || pathname?.startsWith('/vault/')) &&
-    !pathname?.startsWith('/vault/totp') &&
+    (pathname === '/vault' || pathname?.startsWith('/vault/') || pathname === '/credentials' || pathname?.startsWith('/credentials/')) &&
     !pathname?.startsWith('/vault/reset')
   );
 
-  const isAllowedSurface = isIdeaRoute || isGoalsRoute || isSecretsRoute;
+  const isTotpRoute = Boolean(
+    pathname === '/vault/totp' ||
+    pathname?.startsWith('/vault/totp/') ||
+    pathname === '/totp' ||
+    pathname?.startsWith('/totp/')
+  );
+
+  const isAllowedSurface =
+    isIdeaRoute ||
+    isFormRoute ||
+    isGoalsRoute ||
+    isEventsRoute ||
+    isSecretsRoute ||
+    isTotpRoute;
+
+  const isSpecificPostPage = Boolean(
+    pathname?.match(/^\/connect\/post\/[^/]+$/) || pathname?.startsWith('/moment/')
+  );
+  const isSpecificProjectPage = Boolean(pathname?.match(/^\/workspace\/[^/]+$/));
 
   if (
     !isAllowedSurface ||
     isSpecificProjectPage ||
-    isPublicFormPage ||
-    isSpecificPostPage ||
-    isPublicIdeaPage ||
-    activeContent !== 'navbar' ||
-    mode === 'compact' ||
-    isNoteFullPageDetail
+    isSpecificPostPage
   ) {
     return null;
   }

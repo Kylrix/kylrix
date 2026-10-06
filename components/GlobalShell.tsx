@@ -91,9 +91,21 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       pathname.startsWith('/flows/') ||
       pathname === '/goals' ||
       pathname.startsWith('/goals/') ||
+      pathname === '/goal' ||
+      pathname.startsWith('/goal/') ||
       pathname.startsWith('/forms') ||
+      pathname === '/form' ||
+      pathname.startsWith('/form/') ||
       pathname.startsWith('/events') ||
+      pathname === '/event' ||
+      pathname.startsWith('/event/') ||
+      pathname === '/idea' ||
+      pathname.startsWith('/idea/') ||
+      pathname === '/notes' ||
+      pathname.startsWith('/notes/') ||
       pathname.startsWith('/vault') ||
+      pathname.startsWith('/totp') ||
+      pathname.startsWith('/credentials') ||
       pathname.startsWith('/workspaces') ||
       pathname.startsWith('/connect') ||
       pathname.startsWith('/accounts') ||
