@@ -621,18 +621,112 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false) 
       }
     }
 
-    // Mark Tier 1 Synced on Turso user row
+    // 6. Notes & Ideas (Promoted to Tier 1 Aggressive Sync)
+    let notesCount = 0;
+    try {
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore && offset < 1000) {
+        const res = await tablesDB.listRows({
+          databaseId: DB,
+          tableId: '67ff05f3002502ef239e',
+          queries: [
+            Query.or([
+              Query.equal('userId', userId),
+              Query.equal('creatorId', userId),
+            ]),
+            Query.limit(100),
+            Query.offset(offset),
+          ],
+        });
+        if (!res.rows.length) break;
+        for (const row of res.rows as any[]) {
+          await upsertNoteTurso({
+            id: row.$id,
+            userId,
+            title: row.title || '',
+            content: row.content || '',
+            summary: row.summary || null,
+            isLocked: Boolean(row.isLocked),
+            isPublished: Boolean(row.isPublished),
+            isPinned: Boolean(row.isPinned),
+            isTrashed: Boolean(row.isTrash || row.isTrashed),
+            isWorkspace: Boolean(row.isWorkspace),
+            workspaceId: row.projectId || null,
+            projectId: row.projectId || null,
+            category: row.category || null,
+            tags: Array.isArray(row.tags) ? JSON.stringify(row.tags) : (row.tags || null),
+            createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
+            updatedAt: row.updatedAt || row.$updatedAt || new Date().toISOString(),
+          });
+          notesCount++;
+        }
+        offset += res.rows.length;
+        if (offset >= res.total) hasMore = false;
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Notes sync warning:', e.message);
+    }
+
+    // 7. Goals & Tasks (Promoted to Tier 1 Aggressive Sync)
+    let goalsCount = 0;
+    try {
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore && offset < 1000) {
+        const res = await tablesDB.listRows({
+          databaseId: DB,
+          tableId: 'tasks',
+          queries: [
+            Query.or([
+              Query.equal('userId', userId),
+              Query.equal('creatorId', userId),
+            ]),
+            Query.limit(100),
+            Query.offset(offset),
+          ],
+        });
+        if (!res.rows.length) break;
+        for (const row of res.rows as any[]) {
+          await upsertGoalTurso({
+            id: row.$id,
+            userId,
+            title: row.title || row.name || 'Untitled Goal',
+            description: row.description || row.content || '',
+            status: row.status || 'todo',
+            priority: row.priority || 'medium',
+            dueDate: row.dueDate || null,
+            completedAt: row.completedAt || null,
+            isWorkspace: Boolean(row.isWorkspace),
+            workspaceId: row.projectId || null,
+            projectId: row.projectId || null,
+            tags: Array.isArray(row.tags) ? JSON.stringify(row.tags) : (row.tags || null),
+            createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
+            updatedAt: row.updatedAt || row.$updatedAt || new Date().toISOString(),
+          });
+          goalsCount++;
+        }
+        offset += res.rows.length;
+        if (offset >= res.total) hasMore = false;
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Goals sync warning:', e.message);
+    }
+
+    // Mark Tier 1 and Tier 2 Synced on Turso user row
     await db
       .update(schema.user)
       .set({
         tier1Synced: true,
+        tier2Synced: true,
         appwriteSyncedAt: new Date().toISOString(),
         updatedAt: new Date(),
       })
       .where(eq(schema.user.id, userId));
 
-    console.log(`[syncTier1FromAppwriteTurso] Tier 1 sync completed for user ${userId}:`, counts);
-    return { success: true, counts };
+    const totalCounts = { ...counts, notes: notesCount, goals: goalsCount };
+    console.log(`[syncTier1FromAppwriteTurso] All Tier 1 data sync completed for user ${userId}:`, totalCounts);
+    return { success: true, counts: totalCounts };
   } catch (err: any) {
     console.error('[syncTier1FromAppwriteTurso] Critical failure during Tier 1 sync:', err);
     return { success: false, error: err.message };

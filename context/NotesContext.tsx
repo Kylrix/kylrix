@@ -462,7 +462,12 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         setNotes(prev => {
           const safePrev = Array.isArray(prev) ? prev : [];
           if (reset) {
-            return fetchedRows;
+            return mergeFetchedNotesWithLocalDrafts(
+              fetchedRows,
+              notesRef.current,
+              liveEditGuardsRef.current,
+              deletedIds,
+            );
           }
           const existingIds = new Set(safePrev.map(n => n.$id));
           const newOnes = fetchedRows.filter((n: any) => !existingIds.has(n.$id));
@@ -650,6 +655,28 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       updatedAt: isPending ? nowIso : (note.updatedAt || note.$updatedAt || nowIso),
     };
     upsertNote(stamped);
+    // Aggressive Tier 1: Mirror directly to Turso so ideas are never lost
+    if (activeUserId && activeUserId !== 'guest') {
+      void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
+        upsertNoteTurso({
+          id: stamped.$id,
+          userId: activeUserId,
+          title: stamped.title || '',
+          content: stamped.content || '',
+          isLocked: Boolean((stamped as any).isLocked),
+          isPublished: Boolean((stamped as any).isPublished),
+          isPinned: Boolean((stamped as any).isPinned),
+          isTrashed: Boolean((stamped as any).isTrash || (stamped as any).isTrashed),
+          isWorkspace: Boolean((stamped as any).isWorkspace),
+          projectId: (stamped as any).projectId || null,
+          workspaceId: (stamped as any).workspaceId || (stamped as any).projectId || null,
+          category: (stamped as any).category || null,
+          tags: Array.isArray(stamped.tags) ? JSON.stringify(stamped.tags) : ((stamped.tags as any) || null),
+          createdAt: stamped.createdAt || stamped.$createdAt || nowIso,
+          updatedAt: stamped.updatedAt || stamped.$updatedAt || nowIso,
+        }).catch((err) => console.warn('[NotesContext] Turso upsertNoteTurso failed:', err));
+      }).catch(() => {});
+    }
     // Sync engine is SoT for amber — enqueue live revision (never an Appwrite field).
     if (isPending) {
       autonomicSyncEngine.markPending(stamped.$id, stamped.updatedAt, stamped);
@@ -659,7 +686,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     } else {
       autonomicSyncEngine.markConfirmed(stamped.$id);
     }
-  }, [upsertNote]);
+  }, [upsertNote, activeUserId]);
 
   /** Compose-lifecycle only. Dot green/amber is engine.ack / markPending — never here. */
   const registerComposeSession = useCallback((noteId: string) => {

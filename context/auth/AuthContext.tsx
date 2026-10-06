@@ -179,10 +179,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             email: user.email || `${user.$id}@kylrix.local`,
             emailVerified: Boolean(user.emailVerification),
           });
-          // Aggressive Tier 1 sync: keychain, encryption keys, vault secrets, totps, workspaces
-          void syncTier1FromAppwriteTurso(user.$id).then(() => {
-            // Opportunistic Tier 2 sync: notes, goals, tasks
-            void syncTier2FromAppwriteTurso(user.$id);
+          // Aggressive Tier 1 sync: keychain, encryption keys, vault secrets, totps, workspaces, notes, goals
+          void syncTier1FromAppwriteTurso(user.$id, true).catch((e) => {
+            console.warn('[AuthContext] Background aggressive sync warning:', e);
           });
         } catch (tursoErr) {
           console.warn('[AuthContext] Background Turso user minting failed:', tursoErr);
