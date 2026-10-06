@@ -26,7 +26,7 @@
 - **Pure Commit Messages (STRICT)**: When committing, NEVER add any co-author metadata (e.g., `Co-authored-by:` headers, names, or emails). Commit messages must contain only the pure commit message description. Leave author identification entirely to the automatic system git configuration.
 - **Conditional Fork Syncing (STRICT)**: Routine pushes go to `origin` (`Kylrix/kylrix`). Pushing to the fork (`nathfavour/kylrix`) triggers automated Vercel deployments where build minute quotas are limited. Therefore:
   - Do NOT sync the fork on routine commits when build/lint have not been executed.
-  - Whenever local `pnpm lint` and `next build` ARE run and both PASS, sync that verified commit to the fork immediately (`env -u GITHUB_TOKEN gh repo sync nathfavour/kylrix --source Kylrix/kylrix` or `env -u GITHUB_TOKEN gh api -X POST /repos/nathfavour/kylrix/merge-upstream -f branch=master`) to keep production/preview deployments aligned with verified builds.
+  - Whenever `pnpm lint` and build / type check verification are run and pass with zero errors, autonomously sync that verified commit to the fork immediately (`env -u GITHUB_TOKEN gh repo sync nathfavour/kylrix --source Kylrix/kylrix` or `env -u GITHUB_TOKEN gh api -X POST /repos/nathfavour/kylrix/merge-upstream -f branch=master`) without waiting for or asking manual permission.
 
 ### ⚡ Development Standards
 - **Canonical App**: Only implement against **`kylrix/`**. Legacy trees at repo root are for reference only.
