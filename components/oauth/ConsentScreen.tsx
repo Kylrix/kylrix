@@ -79,6 +79,42 @@ export function ConsentScreen() {
     setError(null);
     setNeedsSignIn(false);
     try {
+      if (searchParams.has('sig') || (searchParams.has('client_id') && !grantIdParam && !searchParams.has('response_type'))) {
+        // Better Auth OAuth2 consent request
+        const clientId = searchParams.get('client_id') || 'OAuth Client';
+        const rawScopes = searchParams.get('scope') || 'openid profile email';
+        const parsedScopes = rawScopes.split(/\s+/).filter(Boolean);
+
+        let clientMeta = { name: clientId, tagline: 'OAuth 2.1 Application', logoUri: '' };
+        try {
+          const clientRes = await fetch(`/api/auth/oauth2/public-client?client_id=${encodeURIComponent(clientId)}`);
+          if (clientRes.ok) {
+            const data = await clientRes.json();
+            if (data?.name) clientMeta.name = data.name;
+            if (data?.icon) clientMeta.logoUri = data.icon;
+            if (data?.uri) clientMeta.tagline = data.uri;
+          }
+        } catch {}
+
+        setApp(clientMeta);
+        setGrant({
+          $id: 'better_auth',
+          userId: '',
+          appId: clientId,
+          scopes: parsedScopes,
+          resources: [],
+          authorizationDetails: '',
+          prompt: 'consent',
+          redirectUri: searchParams.get('redirect_uri') || '',
+          authTime: Date.now(),
+          expire: '',
+          $createdAt: new Date().toISOString(),
+          $updatedAt: new Date().toISOString(),
+        });
+        setSelected(parsedScopes);
+        return;
+      }
+
       if (grantIdParam) {
         await account.get();
         await hydrateGrant(grantIdParam);
@@ -156,10 +192,29 @@ export function ConsentScreen() {
     setActing(true);
     setError(null);
     try {
-      // Always retain locked OIDC scopes from the grant
       const locked = grant.scopes.filter(isLockedOidcScope);
       const optional = selected.filter((s) => !isLockedOidcScope(s));
       const finalScopes = Array.from(new Set([...locked, ...optional]));
+
+      if (grant.$id === 'better_auth' || searchParams.has('sig')) {
+        const res = await fetch('/api/auth/oauth2/consent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accept: true,
+            scope: finalScopes.join(' '),
+            oauth_query: window.location.search,
+          }),
+        });
+        const data = await res.json();
+        const redirect = data?.redirect_uri || data?.redirectUrl;
+        if (redirect) {
+          window.location.assign(redirect);
+          return;
+        }
+        throw new Error(data?.message || data?.error_description || 'Consent processing failed');
+      }
+
       const res = await approveGrant({
         grantId: grant.$id,
         scope: finalScopes.join(' '),
@@ -176,6 +231,24 @@ export function ConsentScreen() {
     setActing(true);
     setError(null);
     try {
+      if (grant.$id === 'better_auth' || searchParams.has('sig')) {
+        const res = await fetch('/api/auth/oauth2/consent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accept: false,
+            oauth_query: window.location.search,
+          }),
+        });
+        const data = await res.json();
+        const redirect = data?.redirect_uri || data?.redirectUrl;
+        if (redirect) {
+          window.location.assign(redirect);
+          return;
+        }
+        throw new Error(data?.message || data?.error_description || 'Denial processing failed');
+      }
+
       const res = await rejectGrant(grant.$id);
       window.location.assign(res.redirectUrl);
     } catch (err: any) {

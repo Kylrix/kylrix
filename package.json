@@ -20,6 +20,7 @@
     "@ai-sdk/google": "^4.0.56",
     "@ai-sdk/openai": "^4.0.50",
     "@better-auth/drizzle-adapter": "^1.7.7",
+    "@better-auth/oauth-provider": "^1.7.7",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.11.0",
     "@codemirror/lang-markdown": "^6.5.2",

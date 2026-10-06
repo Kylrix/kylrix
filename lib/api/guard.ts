@@ -99,24 +99,22 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
     };
   }
 
-  // Appwrite OAuth2 access token (Sign in with Kylrix)
-  if (looksLikeJwt(bearer)) {
-    const oauth = await verifyOAuthAccessToken(bearer);
-    if (oauth) {
-      const oauthPatKey = `oauth_${(oauth.clientId || 'client').slice(0, 28)}`;
-      assertShieldAllowed(enforcePatBurstShield(oauthPatKey));
-      const { limits } = await enforceApiRateLimits({
-        userId: oauth.userId,
-        patId: oauthPatKey,
-      });
-      return {
-        userId: oauth.userId,
-        kind: 'oauth',
-        clientId: oauth.clientId,
-        scopes: oauth.scopes,
-        rateLimits: limits,
-      };
-    }
+  // OAuth2 access token (Sign in with Kylrix - Better Auth or Appwrite)
+  const oauth = await verifyOAuthAccessToken(bearer).catch(() => null);
+  if (oauth) {
+    const oauthPatKey = `oauth_${(oauth.clientId || 'client').slice(0, 28)}`;
+    assertShieldAllowed(enforcePatBurstShield(oauthPatKey));
+    const { limits } = await enforceApiRateLimits({
+      userId: oauth.userId,
+      patId: oauthPatKey,
+    });
+    return {
+      userId: oauth.userId,
+      kind: 'oauth',
+      clientId: oauth.clientId,
+      scopes: oauth.scopes,
+      rateLimits: limits,
+    };
   }
 
   // Session JWT path (for future clients) — still rate-limited via synthetic pat bucket id
