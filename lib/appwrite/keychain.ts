@@ -14,6 +14,25 @@ export const KeychainService = {
       return local;
     }
 
+    // 1. Primary: query Turso keychain
+    try {
+      const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
+      const res = await listKeychainTurso(userId);
+      if (res.success && Array.isArray(res.rows) && res.rows.length > 0) {
+        const mapped = res.rows.map((r: any) => ({
+          ...r,
+          $id: r.id,
+          wrappedKey: r.encryptedPayload,
+          salt: r.nonce,
+        }));
+        await SecurityEnclave.setKeychain(userId, mapped);
+        return mapped;
+      }
+    } catch (tursoErr) {
+      console.warn('[KeychainService] Turso list failed, attempting secondary Appwrite fallback:', tursoErr);
+    }
+
+    // 2. Secondary: fallback to legacy Appwrite and trigger aggressive Tier 1 sync
     const { value, source } = await raceNetworkOrLocal({
       timeoutMs: 2500,
       network: async () => {
@@ -21,7 +40,14 @@ export const KeychainService = {
           databaseId: DB_ID,
           tableId: KEYCHAIN_TABLE,
           queries: [Query.equal('userId', userId)]});
-        return response.rows || [];
+        const rows = response.rows || [];
+        if (rows.length > 0) {
+          // Trigger silent aggressive Tier 1 sync into Turso
+          void import('@/lib/actions/turso-ops').then(({ syncTier1FromAppwriteTurso }) => {
+            syncTier1FromAppwriteTurso(userId, true);
+          }).catch(() => {});
+        }
+        return rows;
       },
       local: async () => local});
 
@@ -52,7 +78,35 @@ export const KeychainService = {
       }
     }
 
-    const created = await tablesDB.createRow(DB_ID, KEYCHAIN_TABLE, ID.unique(), data);
+    const rowId = data.$id || ID.unique();
+    const now = new Date().toISOString();
+
+    // 1. Primary write to Turso
+    try {
+      const { upsertKeychainTurso } = await import('@/lib/actions/turso-ops');
+      await upsertKeychainTurso({
+        id: rowId,
+        userId: data.userId,
+        account: data.account || 'masterpass',
+        type: data.type || 'password',
+        encryptedPayload: data.encryptedPayload || data.wrappedKey || '',
+        nonce: data.nonce || data.salt || null,
+        metadata: data.metadata || (data.params ? JSON.stringify({ params: data.params, isArgon: data.isArgon }) : null),
+        createdAt: data.createdAt || now,
+        updatedAt: now,
+      });
+    } catch (tursoErr) {
+      console.warn('[KeychainService] Turso upsertKeychainTurso warning:', tursoErr);
+    }
+
+    // 2. Secondary write to Appwrite (if Appwrite session is available)
+    let created: any = { ...data, $id: rowId };
+    try {
+      created = await tablesDB.createRow(DB_ID, KEYCHAIN_TABLE, rowId, data);
+    } catch (appwriteErr: any) {
+      console.warn('[KeychainService] Appwrite secondary write bypassed (primary Turso active):', appwriteErr?.message);
+    }
+
     if (data.userId) {
       const existing = await SecurityEnclave.getKeychain(data.userId);
       await SecurityEnclave.setKeychain(data.userId, [created, ...existing.filter((e) => e.$id !== created.$id)]);
@@ -62,5 +116,13 @@ export const KeychainService = {
   },
 
   async deleteKeychainEntry(id: string) {
-    return tablesDB.deleteRow(DB_ID, KEYCHAIN_TABLE, id);
+    try {
+      const { deleteKeychainTurso } = await import('@/lib/actions/turso-ops');
+      await deleteKeychainTurso(id);
+    } catch {}
+
+    try {
+      await tablesDB.deleteRow(DB_ID, KEYCHAIN_TABLE, id);
+    } catch {}
+    return { success: true };
   }};

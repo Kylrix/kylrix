@@ -87,6 +87,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return session as any;
       }
 
+      // 2. If Appwrite session is null, check Better Auth session (primary layer for new users)
+      try {
+        const { authClient } = await import('@/lib/auth/better-auth-client');
+        const betterSession = await authClient.getSession().catch(() => null);
+        if (betterSession?.data?.user) {
+          const bUser = betterSession.data.user;
+          const userObj = {
+            $id: bUser.id,
+            name: bUser.name,
+            email: bUser.email,
+            isPulse: false,
+            authProvider: 'better-auth',
+          };
+          lastSeenUserIdRef.current = bUser.id;
+          setUser(userObj as any);
+          setKylrixPulse(userObj as any);
+          return userObj as any;
+        }
+      } catch {}
+
       // If online and session is genuinely null, clear session
       if (typeof navigator !== 'undefined' && navigator.onLine) {
         lastSeenUserIdRef.current = null;
@@ -149,15 +169,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       void initProfile();
 
-      // Silent Better Auth & Turso user minting (runs once in background)
+      // Silent Better Auth & Turso user minting & aggressive Tier 1/2 sync (runs once in background)
       const mintBetterAuthTurso = async () => {
         try {
-          const { ensureBetterAuthUserTurso } = await import('@/lib/actions/turso-ops');
+          const { ensureBetterAuthUserTurso, syncTier1FromAppwriteTurso, syncTier2FromAppwriteTurso } = await import('@/lib/actions/turso-ops');
           await ensureBetterAuthUserTurso({
             id: user.$id,
             name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
             email: user.email || `${user.$id}@kylrix.local`,
             emailVerified: Boolean(user.emailVerification),
+          });
+          // Aggressive Tier 1 sync: keychain, encryption keys, vault secrets, totps, workspaces
+          void syncTier1FromAppwriteTurso(user.$id).then(() => {
+            // Opportunistic Tier 2 sync: notes, goals, tasks
+            void syncTier2FromAppwriteTurso(user.$id);
           });
         } catch (tursoErr) {
           console.warn('[AuthContext] Background Turso user minting failed:', tursoErr);

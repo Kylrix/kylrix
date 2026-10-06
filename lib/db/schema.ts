@@ -10,6 +10,9 @@ export const user = sqliteTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
   image: text('image'),
+  tier1Synced: integer('tier1_synced', { mode: 'boolean' }).default(false),
+  tier2Synced: integer('tier2_synced', { mode: 'boolean' }).default(false),
+  appwriteSyncedAt: text('appwrite_synced_at'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
@@ -235,28 +238,32 @@ export const oauthClientAssertion = sqliteTable('oauth_client_assertion', {
 // KYLRIX RELATIONAL DOMAIN SCHEMA
 // ========================================================
 
-export const notes = sqliteTable('notes', {
+export const ideas = sqliteTable('ideas', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
   title: text('title').notNull().default(''),
   content: text('content').notNull().default(''),
+  summary: text('summary'),
   isLocked: integer('is_locked', { mode: 'boolean' }).default(false),
   isPublished: integer('is_published', { mode: 'boolean' }).default(false),
   isPinned: integer('is_pinned', { mode: 'boolean' }).default(false),
   isTrashed: integer('is_trashed', { mode: 'boolean' }).default(false),
   isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  workspaceId: text('workspace_id'),
   projectId: text('project_id'),
   category: text('category'),
   tags: text('tags'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+export const notes = ideas;
 
-export const projects = sqliteTable('projects', {
+export const workspaces = sqliteTable('workspaces', {
   id: text('id').primaryKey(),
   creatorId: text('creator_id').notNull(),
   name: text('name').notNull(),
   description: text('description').default(''),
+  slug: text('slug'),
   inviteCode: text('invite_code'),
   isPublic: integer('is_public', { mode: 'boolean' }).default(false),
   isAgentic: integer('is_agentic', { mode: 'boolean' }).default(false),
@@ -266,15 +273,17 @@ export const projects = sqliteTable('projects', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+export const projects = workspaces;
 
-export const projectObjects = sqliteTable('project_objects', {
+export const workspaceObjects = sqliteTable('workspace_objects', {
   id: text('id').primaryKey(),
-  projectId: text('project_id').notNull(),
+  workspaceId: text('workspace_id').notNull(),
   entityKind: text('entity_kind').notNull(),
   entityId: text('entity_id').notNull(),
   userId: text('user_id').notNull(),
   createdAt: text('created_at').notNull(),
 });
+export const projectObjects = workspaceObjects;
 
 export const keychain = sqliteTable('keychain', {
   id: text('id').primaryKey(),
@@ -297,19 +306,23 @@ export const totpSecrets = sqliteTable('totp_secrets', {
   createdAt: text('created_at').notNull(),
 });
 
-export const tasks = sqliteTable('tasks', {
+export const goals = sqliteTable('goals', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
   title: text('title').notNull(),
   description: text('description').default(''),
-  status: text('status').notNull().default('pending'),
+  status: text('status').notNull().default('todo'),
   priority: text('priority').default('medium'),
   dueDate: text('due_date'),
+  completedAt: text('completed_at'),
   isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  workspaceId: text('workspace_id'),
   projectId: text('project_id'),
+  tags: text('tags'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+export const tasks = goals;
 
 export const vaultItems = sqliteTable('vault_items', {
   id: text('id').primaryKey(),
@@ -320,6 +333,38 @@ export const vaultItems = sqliteTable('vault_items', {
   iv: text('iv'),
   metadata: text('metadata'),
   isTrashed: integer('is_trashed', { mode: 'boolean' }).default(false),
+  isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  workspaceId: text('workspace_id'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const userSettings = sqliteTable('user_settings', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().unique(),
+  preferences: text('preferences'),
+  securityFlags: text('security_flags'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const subscriptions = sqliteTable('subscriptions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  tier: text('tier').notNull().default('free'),
+  status: text('status').notNull().default('active'),
+  referralCode: text('referral_code'),
+  metadata: text('metadata'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const tokenRegistry = sqliteTable('token_registry', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  mintAddress: text('mint_address'),
+  balance: text('balance').default('0'),
+  ledger: text('ledger'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

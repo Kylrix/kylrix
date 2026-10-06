@@ -509,15 +509,36 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
-  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
-  }
-
   const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
   const reservedRowId = [data?.$id, data?.id].find(
     (id) => typeof id === 'string' && isValidAppwriteRowId(id),
-  ) as string | undefined;
+  ) as string | undefined || (data?.$id || data?.id || ID.unique());
+
+  // Primary write to Turso (decoupled from Appwrite plan limits)
+  void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
+    upsertNoteTurso({
+      id: reservedRowId,
+      userId: actor.$id,
+      title: data?.title || '',
+      content: data?.content || '',
+      isLocked: Boolean(data?.isLocked),
+      isPublished: Boolean(data?.isPublished),
+      isPinned: Boolean(data?.isPinned),
+      isTrashed: Boolean(data?.isTrash || data?.isTrashed),
+      isWorkspace: Boolean(data?.isWorkspace),
+      projectId: data?.projectId || null,
+      workspaceId: data?.projectId || null,
+      category: data?.category || null,
+      tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags || null),
+      createdAt: data?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }).catch(() => {});
+  }).catch(() => {});
+
+  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
+  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
+    return { $id: reservedRowId, ...data, userId: actor.$id };
+  }
 
   // Idempotent compose: if the reserved ID already exists for this actor, update instead of create.
   if (reservedRowId) {
@@ -740,6 +761,27 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  // Primary write to Turso (decoupled from Appwrite plan limits)
+  void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
+    upsertNoteTurso({
+      id: noteId,
+      userId: actor.$id,
+      title: data?.title || '',
+      content: data?.content || '',
+      isLocked: Boolean(data?.isLocked),
+      isPublished: Boolean(data?.isPublished),
+      isPinned: Boolean(data?.isPinned),
+      isTrashed: Boolean(data?.isTrash || data?.isTrashed),
+      isWorkspace: Boolean(data?.isWorkspace),
+      projectId: data?.projectId || null,
+      workspaceId: data?.projectId || null,
+      category: data?.category || null,
+      tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags || null),
+      createdAt: data?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }).catch(() => {});
+  }).catch(() => {});
+
   const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
   const isActorPaid = await hasPaidKylrixPlanServer(actor.$id);
 
@@ -757,7 +799,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
     const isOwnerPaid = Boolean(ownerId && ownerId !== actor.$id && (await hasPaidKylrixPlanServer(ownerId)));
 
     if (!isOwnerPaid) {
-      throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
+      return { $id: noteId, ...data, userId: actor.$id };
     }
   }
 

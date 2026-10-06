@@ -109,13 +109,35 @@ export async function tryOwnerDirectUpdateNote(noteId: string, data: any): Promi
     const filtered = filterNoteData(stripSystemKeys(patch as any));
     const tables = await sessionTablesDB();
     const isPublic = filtered.isPublic === true;
-    return await tables.updateRow({
+    const updated = await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
       tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
       rowId: noteId,
       data: filtered as any,
       permissions: getNotePermissions(actorId, isPublic),
     });
+
+    void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
+      upsertNoteTurso({
+        id: noteId,
+        userId: actorId,
+        title: (filtered as any).title || '',
+        content: (filtered as any).content || '',
+        isLocked: Boolean((filtered as any).isLocked),
+        isPublished: Boolean((filtered as any).isPublished),
+        isPinned: Boolean((filtered as any).isPinned),
+        isTrashed: Boolean((filtered as any).isTrash || (filtered as any).isTrashed),
+        isWorkspace: Boolean((filtered as any).isWorkspace),
+        projectId: (filtered as any).projectId || null,
+        workspaceId: (filtered as any).projectId || null,
+        category: (filtered as any).category || null,
+        tags: Array.isArray((filtered as any).tags) ? JSON.stringify((filtered as any).tags) : ((filtered as any).tags || null),
+        createdAt: (filtered as any).createdAt || (filtered as any).$createdAt || new Date().toISOString(),
+        updatedAt: (filtered as any).updatedAt || (filtered as any).$updatedAt || new Date().toISOString(),
+      }).catch((e) => console.warn('[turso] Note mirror from direct write failed:', e));
+    }).catch(() => {});
+
+    return updated;
   } catch (err: any) {
     if (isAclMiss(err)) return null;
     throw err;
@@ -134,13 +156,34 @@ export async function tryOwnerDirectUpdateGoal(goalId: string, data: any): Promi
       creatorId: actorId,
     });
     const tables = await sessionTablesDB();
-    return await tables.updateRow({
+    const updated = await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
       rowId: goalId,
       data: stripSystemKeys(payload as any) as any,
       permissions: ownerRowPermissions(actorId, { isPublic: !!(data as any)?.isPublic }),
     });
+
+    void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
+      upsertGoalTurso({
+        id: goalId,
+        userId: actorId,
+        title: (payload as any).title || (payload as any).name || 'Untitled Goal',
+        description: (payload as any).description || (payload as any).content || '',
+        status: (payload as any).status || 'todo',
+        priority: (payload as any).priority || 'medium',
+        dueDate: (payload as any).dueDate || null,
+        completedAt: (payload as any).completedAt || null,
+        isWorkspace: Boolean((payload as any).isWorkspace),
+        workspaceId: (payload as any).projectId || null,
+        projectId: (payload as any).projectId || null,
+        tags: Array.isArray((payload as any).tags) ? JSON.stringify((payload as any).tags) : ((payload as any).tags || null),
+        createdAt: (payload as any).createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }).catch((e) => console.warn('[turso] Goal mirror from direct write failed:', e));
+    }).catch(() => {});
+
+    return updated;
   } catch (err: any) {
     if (isAclMiss(err)) return null;
     throw err;
@@ -192,13 +235,33 @@ export async function tryOwnerDirectUpdateProject(projectId: string, data: any):
 
   try {
     const tables = await sessionTablesDB();
-    return await tables.updateRow({
+    const updated = await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'projects',
       rowId: projectId,
       data: stripSystemKeys(data) as any,
       permissions: ownerRowPermissions(actorId, { isPublic: !!(data as any)?.isPublic }),
     });
+
+    void import('@/lib/actions/turso-ops').then(({ upsertProjectTurso }) => {
+      upsertProjectTurso({
+        id: projectId,
+        creatorId: actorId,
+        name: (data as any).title || (data as any).name || 'Workspace',
+        description: (data as any).description || (data as any).summary || '',
+        slug: (data as any).slug || null,
+        inviteCode: (data as any).inviteCode || null,
+        isPublic: Boolean((data as any).isPublic),
+        isAgentic: Boolean((data as any).isAgentic),
+        isLocked: Boolean((data as any).isLocked),
+        privacyMode: Boolean((data as any).privacyMode),
+        metadata: (data as any).metadata || null,
+        createdAt: (data as any).createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }).catch((e) => console.warn('[turso] Project mirror from direct write failed:', e));
+    }).catch(() => {});
+
+    return updated;
   } catch (err: any) {
     if (isAclMiss(err)) return null;
     throw err;
