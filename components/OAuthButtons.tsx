@@ -83,6 +83,24 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
     setError(null);
     localStorage.setItem('kylrix_last_auth_method', provider);
 
+    const providerKey = String(provider).toLowerCase() as 'google' | 'github';
+
+    // 1. Primary authentication via Better Auth
+    try {
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      const res = await authClient.signIn.social({
+        provider: providerKey,
+        callbackURL: `${window.location.origin}/?auth=success`,
+      });
+      if ((res as any)?.error) {
+        throw new Error((res as any).error.message || 'Better Auth social login failed');
+      }
+      return;
+    } catch (betterAuthErr) {
+      console.warn('[OAuthButtons] Better Auth social sign-in fallback to Appwrite:', betterAuthErr);
+    }
+
+    // 2. Secondary fallback via Appwrite
     try {
       const success = `${window.location.origin}/?auth=success`;
       const failure = `${window.location.origin}/?error=oauth_failed`;

@@ -186,6 +186,25 @@ export function LoginDrawer() {
       await account.deleteSession('current').catch(() => {});
       invalidateCurrentUserCache();
 
+      // Opportunistically authenticate with Better Auth
+      try {
+        const { authClient } = await import('@/lib/auth/better-auth-client');
+        await authClient.signIn.email({
+          email: emailTrimmed,
+          password,
+        }).catch(async () => {
+          if (authPolicy.emailPasswordSignup) {
+            await authClient.signUp.email({
+              email: emailTrimmed,
+              password,
+              name: emailTrimmed.split('@')[0],
+            }).catch(() => {});
+          }
+        });
+      } catch (betterAuthErr) {
+        console.warn('[LoginDrawer] Better Auth password sync failed:', betterAuthErr);
+      }
+
       let session: { userId: string };
       let createdAccount = false;
 
@@ -341,6 +360,18 @@ export function LoginDrawer() {
     setLastUsedMethod('email');
 
     try {
+      // 1. Send OTP via Better Auth (best-effort / primary)
+      try {
+        const { authClient } = await import('@/lib/auth/better-auth-client');
+        await authClient.emailOtp.sendVerificationOtp({
+          email: email.trim(),
+          type: 'sign-in',
+        });
+      } catch (betterAuthOtpErr) {
+        console.warn('[LoginDrawer] Better Auth email OTP send fallback to Appwrite:', betterAuthOtpErr);
+      }
+
+      // 2. Send OTP via Appwrite (for session continuity)
       const id = await loginWithEmailOTP(email);
       setUserId(id as any);
       setStep('otp');
@@ -360,6 +391,18 @@ export function LoginDrawer() {
     if (!code || code.length < 6) return;
     setLoading(true);
     try {
+      // 1. Verify OTP with Better Auth
+      try {
+        const { authClient } = await import('@/lib/auth/better-auth-client');
+        await authClient.signIn.emailOtp({
+          email: email.trim(),
+          otp: code.trim(),
+        });
+      } catch (betterAuthVerifyErr) {
+        console.warn('[LoginDrawer] Better Auth OTP verify fallback to Appwrite:', betterAuthVerifyErr);
+      }
+
+      // 2. Verify OTP with Appwrite
       await verifyEmailOTP(email, userId, code);
       navigateToAppAfterAuth();
     } catch (err: unknown) {
