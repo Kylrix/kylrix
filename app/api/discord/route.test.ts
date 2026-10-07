@@ -475,6 +475,75 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     assert.ok(ApiResources.createNote.mock.calls.length > 0);
   });
 
+  it('should handle slash command /save referencing a replied message', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          name: 'save',
+          options: [],
+        },
+        message: {
+          referenced_message: {
+            content: 'Check out this new Turso edge replication architecture',
+            author: { username: 'charlie' },
+          },
+        },
+        user: { username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Idea Saved'));
+    assert.ok(json.data.embeds[0].fields.some((f: any) => f.name === 'Source' && f.value.includes('charlie')));
+  });
+
+  it('should handle slash command /save without arguments by fetching previous message in channel', async () => {
+    const originalFetch = globalThis.fetch;
+    process.env.DISCORD_BOT_TOKEN = 'mock_bot_token';
+    globalThis.fetch = vi.fn().mockImplementation(async (url: any) => {
+      if (typeof url === 'string' && url.includes('/channels/channel_777/messages')) {
+        return {
+          ok: true,
+          json: async () => [
+            { id: 'msg_recent', content: 'Our team agreed to use SQLite Turso sync', author: { id: 'user_david', username: 'david' } },
+          ],
+        } as any;
+      }
+      return originalFetch(url);
+    });
+
+    try {
+      const req = new NextRequest('http://localhost:3005/api/discord', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 2,
+          channel_id: 'channel_777',
+          data: {
+            name: 'save',
+            options: [],
+          },
+          user: { username: 'alice' },
+        }),
+      });
+
+      const res = await POST(req);
+      assert.equal(res.status, 200);
+      const json = await res.json();
+      assert.equal(json.type, 4);
+      assert.ok(json.data.embeds[0].title.includes('Idea Saved'));
+      assert.ok(json.data.embeds[0].fields.some((f: any) => f.name === 'Author' && f.value.includes('david')));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('should handle message context menu action "Save as Idea"', async () => {
     const req = new NextRequest('http://localhost:3005/api/discord', {
       method: 'POST',

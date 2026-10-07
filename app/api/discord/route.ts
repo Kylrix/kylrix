@@ -106,14 +106,14 @@ export const DISCORD_SLASH_COMMANDS = [
   },
   {
     name: 'save',
-    description: 'Quickly save a message as an idea (auto-generates title from snippet)',
+    description: 'Save previous message, tagged message, or text as an idea',
     ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
-        name: 'content',
-        description: 'The message text or thought to save as an idea',
+        name: 'message',
+        description: 'Optional text or message link (defaults to previous message in channel)',
         type: 3, // STRING
-        required: true,
+        required: false,
       },
       {
         name: 'title',
@@ -720,6 +720,108 @@ export async function searchAndRankWorkspaceItems(
   return {
     topMatches: candidates.slice(0, 3),
   };
+}
+
+export async function resolveMessageForSave(
+  payload: any,
+  inputArg?: string
+): Promise<{ content: string; authorName?: string; sourceDesc: string } | null> {
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  const channelId = payload?.channel_id;
+
+  // 1. Message link: https://discord.com/channels/<guildId>/<channelId>/<messageId>
+  if (inputArg && /https?:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)/.test(inputArg)) {
+    const match = inputArg.match(/channels\/(\d+)\/(\d+)\/(\d+)/);
+    if (match && match[2] && match[3] && botToken) {
+      const linkChannelId = match[2];
+      const linkMessageId = match[3];
+      try {
+        const res = await fetch(`https://discord.com/api/v10/channels/${linkChannelId}/messages/${linkMessageId}`, {
+          headers: { Authorization: `Bot ${botToken}` },
+        });
+        if (res.ok) {
+          const msg = await res.json();
+          const text = msg.content || msg.attachments?.[0]?.url || '';
+          if (text) {
+            return {
+              content: text,
+              authorName: msg.author?.username || 'user',
+              sourceDesc: `Linked message (<#${linkChannelId}>)`,
+            };
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // 2. Direct message ID (17-20 digits)
+  if (inputArg && /^\d{17,20}$/.test(inputArg.trim()) && channelId && botToken) {
+    try {
+      const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${inputArg.trim()}`, {
+        headers: { Authorization: `Bot ${botToken}` },
+      });
+      if (res.ok) {
+        const msg = await res.json();
+        const text = msg.content || msg.attachments?.[0]?.url || '';
+        if (text) {
+          return {
+            content: text,
+            authorName: msg.author?.username || 'user',
+            sourceDesc: `Message by ${msg.author?.username || 'user'}`,
+          };
+        }
+      }
+    } catch {}
+  }
+
+  // 3. User passed raw text that is not a link or ID
+  if (inputArg && inputArg.trim()) {
+    return {
+      content: inputArg.trim(),
+      sourceDesc: 'Direct text input',
+    };
+  }
+
+  // 4. Command was invoked as a reply to a message
+  if (payload?.message?.referenced_message) {
+    const ref = payload.message.referenced_message;
+    const text = ref.content || ref.attachments?.[0]?.url || '';
+    if (text) {
+      return {
+        content: text,
+        authorName: ref.author?.username || 'user',
+        sourceDesc: `Replied message by ${ref.author?.username || 'user'}`,
+      };
+    }
+  }
+
+  // 5. Fetch previous message right before this interaction in the channel
+  if (channelId && botToken) {
+    try {
+      const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=6`, {
+        headers: { Authorization: `Bot ${botToken}` },
+      });
+      if (res.ok) {
+        const messages: any[] = await res.json();
+        const botId = process.env.DISCORD_APPLICATION_ID || '1553752726070886412';
+        const prev = messages.find(
+          (m) => m.author?.id !== botId && (m.content || (m.attachments && m.attachments.length > 0))
+        );
+        if (prev) {
+          const text = prev.content || prev.attachments?.[0]?.url || '';
+          if (text) {
+            return {
+              content: text,
+              authorName: prev.author?.username || 'user',
+              sourceDesc: `Previous message by @${prev.author?.username || 'user'}`,
+            };
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return null;
 }
 
 function buildDiscordSelectMenu() {
@@ -1763,14 +1865,21 @@ export async function POST(req: NextRequest) {
       }
 
       case 'save': {
-        const rawContent = String(getOption('content') || getOption('text') || getOption('message') || '').trim();
-        if (!rawContent) {
+        const inputArg = String(getOption('message') || getOption('content') || getOption('text') || '').trim();
+        const customTitle = String(getOption('title') || '').trim();
+
+        const resolved = await resolveMessageForSave(payload, inputArg);
+        if (!resolved || !resolved.content) {
           return NextResponse.json({
             type: 4,
-            data: { content: '❌ Message content is required to save an idea: `/save content: <text>`' },
+            data: {
+              content:
+                '❌ Could not find a message to save as an idea.\n\n**How to use `/save`:**\n• Run `/save` directly after a message in the channel\n• Reply to a message and invoke `/save`\n• Pass text or a message link: `/save message: <text or link>`\n• Right-click any message → **Apps** → **Save as Idea**',
+            },
           });
         }
-        const customTitle = String(getOption('title') || '').trim();
+
+        const rawContent = resolved.content;
         const title = customTitle || extractTitleSnippet(rawContent);
         try {
           const newNote = await ApiResources.createNote(actor, { title, content: rawContent });
@@ -1783,9 +1892,9 @@ export async function POST(req: NextRequest) {
                   description: rawContent.length > 500 ? `${rawContent.slice(0, 500)}...` : `> ${rawContent}`,
                   color: 0x10b981,
                   fields: [
-                    { name: 'Author', value: callerName, inline: true },
+                    { name: 'Author', value: resolved.authorName ? `@${resolved.authorName}` : callerName, inline: true },
                     { name: 'Idea ID', value: `\`${newNote.id}\``, inline: true },
-                    { name: 'Auto Title', value: customTitle ? 'Custom' : 'Extracted from snippet', inline: true },
+                    { name: 'Source', value: resolved.sourceDesc, inline: true },
                   ],
                   footer: { text: isLinked ? 'Kylrix Ideas • Sovereign & Synced' : 'Kylrix Ideas • Sandbox Mode' },
                 },
