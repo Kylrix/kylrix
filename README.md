@@ -2,7 +2,7 @@
   <img src="public/logo.svg" width="120" alt="Kylrix Logo">
 </p>
 
-<h1 align="center">Zero-knowledge secrets and persistent memory for AI agents.</h1>
+<h1 align="center">Persistent memory and zero-knowledge secrets for AI agents.</h1>
 
 <p align="center">
   <strong>Let Claude Code, Cursor, and local agents use credentials and carry context without ever seeing plaintext secrets.</strong><br>
