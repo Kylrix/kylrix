@@ -74,32 +74,66 @@ export async function getPublicFormDataSecure(formId: string) {
   }));
 }
 
-export async function getPublicGoalDataSecure(goalId: string) {
-  const tables = createSystemTablesDB();
-  const row = await tables.getRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-    tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
-    rowId: goalId}).catch(() => null);
+export async function getPublicGoalDataSecure(goalId: string, jwt?: string) {
+  let row: any = null;
+
+  // 1. Try Appwrite first
+  try {
+    const tables = createSystemTablesDB();
+    row = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+      rowId: goalId,
+    });
+  } catch {}
+
+  // 2. Turso fallback if row not found in Appwrite
+  if (!row) {
+    try {
+      const { getGoalTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await getGoalTurso(goalId);
+      if (tursoRes.success && tursoRes.row) {
+        const tr = tursoRes.row;
+        row = {
+          $id: tr.id,
+          title: tr.title,
+          description: tr.description,
+          status: tr.status,
+          priority: tr.priority,
+          dueDate: tr.dueDate,
+          userId: tr.userId,
+          isPublic: (tr as any).isPublic ?? true,
+          isGuest: (tr as any).isGuest ?? false,
+          dek: (tr as any).dek || null,
+          $updatedAt: tr.updatedAt,
+        };
+      }
+    } catch (tursoErr) {
+      console.warn('[getPublicGoalDataSecure] Turso lookup warning:', tursoErr);
+    }
+  }
 
   if (!row) return null;
 
   const isGuest = row.isGuest === true;
   const isPublic = row.isPublic === true;
-  if (!isGuest && !isPublic) return null;
 
-  return JSON.parse(JSON.stringify({
-    id: row.$id,
-    title: row.title || 'Untitled goal',
-    description: row.description || null,
-    status: row.status || 'todo',
-    priority: row.priority || 'medium',
-    dueDate: row.dueDate || null,
-    userId: row.userId || null,
-    isPublic,
-    isGuest,
-    // Locked when dek is non-empty (do not expose wrapped dek to guests)
-    locked: typeof row.dek === 'string' && row.dek.trim().length > 0,
-    updatedAt: row.$updatedAt}));
+  return JSON.parse(
+    JSON.stringify({
+      id: row.$id,
+      title: row.title || 'Untitled goal',
+      description: row.description || null,
+      status: row.status || 'todo',
+      priority: row.priority || 'medium',
+      dueDate: row.dueDate || null,
+      userId: row.userId || null,
+      isPublic,
+      isGuest,
+      // Locked when dek is non-empty (do not expose wrapped dek to guests)
+      locked: typeof row.dek === 'string' && row.dek.trim().length > 0,
+      updatedAt: row.$updatedAt,
+    })
+  );
 }
 
 export async function createAccountEventSecure(params: any, jwt?: string) {

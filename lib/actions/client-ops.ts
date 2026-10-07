@@ -323,6 +323,12 @@ export async function getSharedNoteData(noteId: string) {
   return getSharedNoteDataSecure(noteId, jwt);
 }
 
+export async function getSharedGoalData(goalId: string) {
+  const jwt = await getJwt();
+  const { getPublicGoalDataSecure } = await import('./secure-ops');
+  return getPublicGoalDataSecure(goalId, jwt);
+}
+
 export async function getPublicFormData(formId: string) {
   const { getPublicFormDataSecure } = await import('./secure-ops');
   return getPublicFormDataSecure(formId);

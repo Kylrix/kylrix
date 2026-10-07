@@ -772,6 +772,22 @@ export const ApiResources = {
       await linkObjectToWorkspace(tables, wsId, 'goal', goalId, actor.userId, { title });
     }
 
+    void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
+      upsertGoalTurso({
+        id: goalId,
+        userId: actor.userId,
+        title,
+        description: String(body?.description || ''),
+        status: String(body?.status || 'todo'),
+        priority: String(body?.priority || 'medium'),
+        dueDate: (body?.dueDate as string) || null,
+        isWorkspace: Boolean(wsId),
+        projectId: wsId || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }).catch((e) => console.warn('[turso] ApiResources goal mirror warning:', e));
+
     return shapeGoal(row);
   },
 
@@ -802,6 +818,19 @@ export const ApiResources = {
       });
     }
 
+    void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
+      upsertGoalTurso({
+        id,
+        userId: actor.userId,
+        title: (patch.title as string) || (row as any).title,
+        description: patch.description !== undefined ? String(patch.description) : (row as any).description,
+        status: (patch.status as string) || (row as any).status,
+        priority: (patch.priority as string) || (row as any).priority,
+        dueDate: patch.dueDate !== undefined ? (patch.dueDate as string) : (row as any).dueDate,
+        updatedAt: new Date().toISOString(),
+      });
+    }).catch((e) => console.warn('[turso] ApiResources updateGoal mirror warning:', e));
+
     return shapeGoal(row);
   },
 
@@ -821,6 +850,11 @@ export const ApiResources = {
       },
     });
     await unlinkObjectFromWorkspace(tables, 'goal', id);
+
+    void import('@/lib/actions/turso-ops').then(({ deleteGoalTurso }) => {
+      deleteGoalTurso(id).catch((e) => console.warn('[turso] ApiResources deleteGoal mirror warning:', e));
+    });
+
     return { id, deleted: true, trashed: true };
   },
 

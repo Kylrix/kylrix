@@ -74,7 +74,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
       setLoading(true);
       setError(null);
       const jwt = await getJWT();
-      const res = await listAccountLogsSecure(jwt || undefined);
+      const res: any = await listAccountLogsSecure(jwt || undefined);
       if (!res.success && res.error) {
         setError(res.error);
         setLogs([]);

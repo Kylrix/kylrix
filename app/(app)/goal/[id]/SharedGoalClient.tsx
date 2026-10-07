@@ -114,8 +114,8 @@ export default function SharedGoalClient({
             }
           },
           fetchRemote: async () => {
-            const { getPublicGoalDataSecure } = await import('@/lib/actions/secure-ops');
-            return (await getPublicGoalDataSecure(goalId)) as PublicGoal;
+            const { getSharedGoalData } = await import('@/lib/actions/client-ops');
+            return (await getSharedGoalData(goalId)) as PublicGoal;
           },
           onRemoteSuccess: (freshGoal) => {
             if (active) {

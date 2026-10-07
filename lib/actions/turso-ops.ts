@@ -609,6 +609,23 @@ export async function listNotesTurso(userId: string) {
   }
 }
 
+export async function getNoteTurso(noteId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(schema.notes)
+      .where(eq(schema.notes.id, noteId))
+      .limit(1);
+    if (rows.length > 0) {
+      return { success: true, row: rows[0] };
+    }
+    return { success: false, row: null };
+  } catch (err: any) {
+    console.error('[turso-ops] getNoteTurso failed:', err);
+    return { success: false, row: null, error: err.message };
+  }
+}
+
 /**
  * Upserts a goal/task record in Turso.
  */
@@ -653,6 +670,23 @@ export async function listGoalsTurso(userId: string) {
   } catch (err: any) {
     console.error('[turso-ops] listGoalsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
+  }
+}
+
+export async function getGoalTurso(goalId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(schema.goals)
+      .where(eq(schema.goals.id, goalId))
+      .limit(1);
+    if (rows.length > 0) {
+      return { success: true, row: rows[0] };
+    }
+    return { success: false, row: null };
+  } catch (err: any) {
+    console.error('[turso-ops] getGoalTurso failed:', err);
+    return { success: false, row: null, error: err.message };
   }
 }
 
