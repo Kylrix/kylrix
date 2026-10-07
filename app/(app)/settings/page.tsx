@@ -141,13 +141,32 @@ function SettingsPageInner() {
             setActiveTab('agents');
             return;
         }
+        const drawer = (searchParams.get('drawer') || '').toLowerCase();
+        if (drawer === 'telegram' || tab === 'telegram' || searchParams.get('telegram') === 'true') {
+            setActiveTab('general');
+            if (user?.$id) {
+                setTgDrawerOpen(true);
+            } else {
+                openDrawer('login');
+            }
+            return;
+        }
+        if (tab === 'sync' || section === 'sync' || tab === 'selfhosted' || section === 'selfhosted') {
+            setActiveTab('developers');
+            if (typeof window !== 'undefined') {
+                setTimeout(() => {
+                    document.getElementById('cloud-sync')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            }
+            return;
+        }
         if (tab && allowed.has(tab)) {
             setActiveTab(tab as typeof activeTab);
         }
         if (typeof window !== 'undefined' && window.location.hash === '#mfa') {
             setActiveTab('security');
         }
-    }, [searchParams]);
+    }, [searchParams, user?.$id, openDrawer]);
 
     const refreshMfaFactors = useCallback(async () => {
         if (!user?.$id) return;

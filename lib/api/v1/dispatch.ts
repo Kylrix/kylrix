@@ -76,15 +76,15 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     }
   }
 
-  // Notes
-  if (a === S.notes && !b) {
+  // Ideas / Notes
+  if ((a === S.notes || a === 'ideas') && !b) {
     if (method === 'GET') {
       const workspaceId = workspaceIdParam(params);
       return jsonOk(await ApiResources.listNotes(actor, limit(), { workspaceId: workspaceId || null }));
     }
     if (method === 'POST') return jsonOk(await ApiResources.createNote(actor, await readBody()));
   }
-  if (a === S.notes && b && !c) {
+  if ((a === S.notes || a === 'ideas') && b && !c) {
     if (method === 'GET') return jsonOk(await ApiResources.getNote(actor, b));
     if (method === 'PATCH' || method === 'PUT') {
       return jsonOk(await ApiResources.updateNote(actor, b, await readBody()));

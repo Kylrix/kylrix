@@ -235,7 +235,7 @@ export function CloudSyncSection() {
   const isConnected = Boolean(config?.enabled && config?.cloudAccount);
 
   return (
-    <div className="space-y-6">
+    <div id="cloud-sync" className="space-y-6 scroll-mt-20">
       {/* Overview & Self-Hosted Context Banner */}
       <section className="rounded-[24px] bg-[#000000] border-2 border-white/20 p-5 md:p-6 space-y-4 shadow-xl">
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -519,8 +519,8 @@ export function CloudSyncSection() {
           <div className="space-y-2">
             <label className="flex items-center justify-between p-3.5 rounded-xl bg-[#161412] border-2 border-white/15 hover:border-white/30 cursor-pointer transition-colors">
               <div>
-                <span className="text-xs font-bold text-white block">Notes & Ideas</span>
-                <span className="text-[10px] text-white/50">Includes tags, contents, and public visibility states</span>
+                <span className="text-xs font-bold text-white block">Sovereign Ideas</span>
+                <span className="text-[10px] text-white/50">Includes tags, encrypted body, and workspace attachments</span>
               </div>
               <input
                 type="checkbox"
