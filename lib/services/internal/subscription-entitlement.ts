@@ -140,6 +140,22 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
     return cached.data;
   }
 
+  // Check dynamic rolling GitHub contributor status in Turso/GitHub
+  try {
+    const { verifyAndApplyContributorStatus } = await import('@/lib/actions/contributor-ops');
+    const contrib = await verifyAndApplyContributorStatus(userId).catch(() => null);
+    if (contrib?.isContributor) {
+      const res = {
+        active: true,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        source: 'prefs_sync' as SubscriptionEntitlementSource,
+        uiTier: 'CONTRIBUTOR' as BillingUiTier,
+      };
+      entitlementCache.set(userId, { data: res, ts: Date.now(), ttlMs: 1000 * 60 * 60 });
+      return res;
+    }
+  } catch {}
+
   const { databases, users } = createSystemClient();
   const now = new Date();
 

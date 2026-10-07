@@ -241,6 +241,7 @@ export function UnifiedProfileView({
   const [badges, setBadges] = useState<any[]>([]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isContributor, setIsContributor] = useState(false);
 
   // Instant 0ms LocalEngine hydration & lookup profile info
   useEffect(() => {
@@ -269,10 +270,14 @@ export function UnifiedProfileView({
           }
         }
 
+        let handleForContributor = username || initialProfile?.username || null;
         if (targetUid) {
           const { UsersService } = await import('@/lib/services/users');
           const prof = await UsersService.getProfileById(targetUid).catch(() => null);
           if (cancelled || !prof) return;
+          if (prof.username && isCleanUsername(prof.username)) {
+            handleForContributor = prof.username.trim().replace(/^@/, '');
+          }
 
           let prefs: any = {};
           try {
@@ -297,6 +302,9 @@ export function UnifiedProfileView({
           const { UsersService } = await import('@/lib/services/users');
           const prof = await UsersService.getProfile(username).catch(() => null);
           if (cancelled || !prof) return;
+          if (prof.username && isCleanUsername(prof.username)) {
+            handleForContributor = prof.username.trim().replace(/^@/, '');
+          }
 
           let prefs: any = {};
           try {
@@ -319,10 +327,21 @@ export function UnifiedProfileView({
           }));
         }
       } catch {}
+
+      // Dynamically resolve rolling contributor status
+      if (handleForContributor && !cancelled) {
+        try {
+          const { getContributorStatusByUsernameAction } = await import('@/lib/actions/contributor-ops');
+          const res = await getContributorStatusByUsernameAction(handleForContributor);
+          if (res?.isContributor && !cancelled) {
+            setIsContributor(true);
+          }
+        } catch {}
+      }
     };
     void lookup();
     return () => { cancelled = true; };
-  }, [targetUid, username]);
+  }, [targetUid, username, initialProfile?.username]);
 
   // Resolve Avatar Preview
   useEffect(() => {
@@ -635,17 +654,27 @@ export function UnifiedProfileView({
                   <h1 className="text-lg sm:text-xl font-black font-clash text-white tracking-tight truncate m-0">
                     {activeDisplayName}
                   </h1>
-                  {isOwnProfile && currentUserTier && (
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase font-mono border ${
-                      currentUserTier === 'TEAMS' || currentUserTier === 'ORG'
-                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                        : currentUserTier === 'PRO' || currentUserTier === 'LIFETIME'
-                        ? 'bg-[#6366F1]/15 text-[#818CF8] border-[#6366F1]/30'
-                        : 'bg-white/10 text-white/60 border-white/20'
-                    }`}>
-                      <Crown size={11} className={currentUserTier === 'FREE' ? 'text-white/40' : 'text-amber-400'} />
-                      <span>{currentUserTier} PLAN</span>
+                  {isContributor || (isOwnProfile && currentUserTier === 'CONTRIBUTOR') ? (
+                    <span
+                      title="Kylrix Contributor · Active merged contribution in the last 30 days"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase font-mono border bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-sm"
+                    >
+                      <Crown size={11} className="text-emerald-400" />
+                      <span>CONTRIBUTOR</span>
                     </span>
+                  ) : (
+                    isOwnProfile && currentUserTier && (
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase font-mono border ${
+                        currentUserTier === 'TEAMS' || currentUserTier === 'ORG'
+                          ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                          : currentUserTier === 'PRO' || currentUserTier === 'LIFETIME'
+                          ? 'bg-[#6366F1]/15 text-[#818CF8] border-[#6366F1]/30'
+                          : 'bg-white/10 text-white/60 border-white/20'
+                      }`}>
+                        <Crown size={11} className={currentUserTier === 'FREE' ? 'text-white/40' : 'text-amber-400'} />
+                        <span>{currentUserTier} PLAN</span>
+                      </span>
+                    )
                   )}
                 </div>
 

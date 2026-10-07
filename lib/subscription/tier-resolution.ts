@@ -1,6 +1,4 @@
-/** Normalized tiers used for paywalls, badges, and billing gates. */
-
-export type BillingUiTier = 'FREE' | 'PRO' | 'TEAMS' | 'ORG' | 'LIFETIME';
+export type BillingUiTier = 'FREE' | 'CONTRIBUTOR' | 'PRO' | 'TEAMS' | 'ORG' | 'LIFETIME';
 
 export function normalizeBillingPrefsTier(prefs: Record<string, unknown> | null | undefined): BillingUiTier {
   if (!prefs) return 'FREE';
@@ -12,6 +10,10 @@ export function normalizeBillingPrefsTier(prefs: Record<string, unknown> | null 
   const expiryValid = () => Number.isFinite(expMs) && expMs > Date.now();
 
   if (tier === 'LIFETIME') return 'LIFETIME';
+  if (tier === 'CONTRIBUTOR') {
+    if (expiryValid()) return 'CONTRIBUTOR';
+    return 'FREE';
+  }
   if (tier === 'TEAMS') {
     if (expiryValid()) return 'TEAMS';
     return 'FREE';
@@ -27,18 +29,19 @@ export function normalizeBillingPrefsTier(prefs: Record<string, unknown> | null 
   return 'FREE';
 }
 
-/** PRO, TEAMS, ORG, and LIFETIME unlock Pro-gated UX. */
+/** CONTRIBUTOR, PRO, TEAMS, ORG, and LIFETIME unlock Pro-gated UX. */
 export function billingTierHasPaidAccess(tier: BillingUiTier | string): boolean {
   const t = String(tier || 'FREE').toUpperCase();
-  return t === 'PRO' || t === 'TEAMS' || t === 'ORG' || t === 'LIFETIME';
+  return t === 'CONTRIBUTOR' || t === 'PRO' || t === 'TEAMS' || t === 'ORG' || t === 'LIFETIME';
 }
 
 const TIER_RANK: Record<BillingUiTier, number> = {
   FREE: 0,
-  PRO: 1,
-  TEAMS: 2,
-  ORG: 3,
-  LIFETIME: 4};
+  CONTRIBUTOR: 1,
+  PRO: 2,
+  TEAMS: 3,
+  ORG: 4,
+  LIFETIME: 5};
 
 /** Map subscription ledger plan labels to a normalized UI tier. */
 export function planLabelToUiTier(plan: string | null | undefined): BillingUiTier {
@@ -47,6 +50,7 @@ export function planLabelToUiTier(plan: string | null | undefined): BillingUiTie
   if (p.includes('LIFETIME')) return 'LIFETIME';
   if (p === 'ORG' || p.includes('ORG')) return 'ORG';
   if (p.includes('TEAMS') || p === 'TEAM') return 'TEAMS';
+  if (p.includes('CONTRIBUTOR')) return 'CONTRIBUTOR';
   if (p.includes('PRO')) return 'PRO';
   return 'PRO';
 }

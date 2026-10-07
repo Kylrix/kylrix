@@ -175,3 +175,61 @@ export async function verifyAndApplyContributorStatus(userId: string): Promise<C
     };
   }
 }
+
+/**
+ * Dynamically resolves whether a public profile username is a recognized contributor.
+ */
+export async function getContributorStatusByUsernameAction(username: string): Promise<{ isContributor: boolean; prCount?: number }> {
+  try {
+    const cleanUsername = String(username || '').replace(/^@/, '').trim().toLowerCase();
+    if (!cleanUsername) return { isContributor: false };
+
+    // 1. Try finding user in Turso by username/name
+    const matchedUsers = await db
+      .select({
+        id: schema.user.id,
+        isContributor: schema.user.isContributor,
+        contributorLastCheckedAt: schema.user.contributorLastCheckedAt,
+        contributorPrCount: schema.user.contributorPrCount,
+      })
+      .from(schema.user)
+      .where(eq(schema.user.name, cleanUsername))
+      .limit(1);
+
+    if (matchedUsers.length > 0) {
+      const u = matchedUsers[0];
+      if (u.isContributor && u.contributorLastCheckedAt) {
+        const lastChecked = new Date(u.contributorLastCheckedAt).getTime();
+        // If checked in the last 24h, return cached true
+        if (Date.now() - lastChecked < 24 * 60 * 60 * 1000) {
+          return { isContributor: true, prCount: u.contributorPrCount || 1 };
+        }
+      }
+      const verified = await verifyAndApplyContributorStatus(u.id);
+      return { isContributor: verified.isContributor, prCount: verified.prCount };
+    }
+
+    // 2. Direct GitHub query for username in case user's profile handle is their GitHub username
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const query = encodeURIComponent(`repo:Kylrix/kylrix is:pr is:merged author:${cleanUsername} merged:>=${thirtyDaysAgo}`);
+    const searchUrl = `https://api.github.com/search/issues?q=${query}`;
+    const searchRes = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'Kylrix-Contributor-Verification',
+        Accept: 'application/vnd.github.v3+json',
+      },
+      next: { revalidate: 3600 },
+    });
+
+    if (searchRes.ok) {
+      const searchData = await searchRes.json();
+      const count = Number(searchData.total_count || 0);
+      return { isContributor: count > 0, prCount: count };
+    }
+
+    return { isContributor: false };
+  } catch {
+    return { isContributor: false };
+  }
+}
+

@@ -96,10 +96,12 @@ export function BillingContent() {
     }
   }, [giftUsername, openUnified]);
 
-  const isPro = currentTier === 'PRO' || currentTier === 'LIFETIME' || currentTier === 'ORG';
+  const isContributor = currentTier === 'CONTRIBUTOR';
+  const isPro = currentTier === 'PRO' || currentTier === 'LIFETIME' || currentTier === 'ORG' || isContributor;
   const isTeams = currentTier === 'TEAMS';
 
   const tierBadgeColor =
+    isContributor ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' :
     isTeams ? 'text-amber-400 bg-amber-500/10' :
     isPro ? 'text-[#6366F1] bg-[#6366F1]/10' :
     'text-white/40 bg-white/5';
@@ -113,7 +115,7 @@ export function BillingContent() {
           <div className="bg-[#000000] border-2 border-white/20 rounded-2xl p-5 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <CreditCard size={16} className="text-[#6366F1]" />
+                <CreditCard size={16} className={isContributor ? "text-emerald-400" : "text-[#6366F1]"} />
                 <div>
                   <h4 className="font-extrabold text-sm text-white">Your Plan</h4>
                   <p className="text-[10px] text-white/40">Active subscription privileges</p>
@@ -121,7 +123,7 @@ export function BillingContent() {
               </div>
               <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 border border-white/10 ${tierBadgeColor}`}>
                 <Sparkles size={9} />
-                {planLoading ? '…' : currentTier}
+                {planLoading ? '…' : isContributor ? 'CONTRIBUTOR' : currentTier}
               </span>
             </div>
 
@@ -129,16 +131,21 @@ export function BillingContent() {
               <div>
                 <span className="text-[9px] text-white/40 font-black tracking-widest uppercase block">Active Plan</span>
                 <span className="text-2xl font-black text-white">
-                  {planLoading ? 'Resolving…' : `${currentTier} PLAN`}
+                  {planLoading ? 'Resolving…' : isContributor ? 'CONTRIBUTOR PLAN' : `${currentTier} PLAN`}
                 </span>
-                {!planLoading && (isPro || isTeams) && (
+                {!planLoading && isContributor && (
+                  <span className="text-[11px] text-emerald-400 font-mono block mt-0.5 font-bold">
+                    100% Free Forever · Merged PR in past 30 days
+                  </span>
+                )}
+                {!planLoading && !isContributor && (isPro || isTeams) && (
                   <span className="text-[10px] text-white/40 font-mono block mt-0.5">
                     {isTeams ? '$50/mo' : '$10/mo'}
                   </span>
                 )}
                 {expiresAt && (isPro || isTeams) && (
                   <span className="text-[10px] text-white/40 font-mono block mt-0.5">
-                    Active until {new Date(expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {isContributor ? 'Active via rolling contributions · Re-evaluates every 30 days' : `Active until ${new Date(expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`}
                   </span>
                 )}
               </div>
