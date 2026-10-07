@@ -51,7 +51,15 @@ export const KeychainService = {
       console.warn('[KeychainService] Turso list failed, attempting secondary Appwrite fallback:', tursoErr);
     }
 
-    // 2. Secondary: fallback to legacy Appwrite and trigger aggressive Tier 1 sync
+    // 2. Secondary: fallback to legacy Appwrite and trigger aggressive Tier 1 sync only if not skipped
+    try {
+      const { resolveUserAppwriteMigrationGate } = await import('@/lib/actions/turso-ops');
+      const gate = await resolveUserAppwriteMigrationGate({ userId });
+      if (gate.shouldSkipAppwrite) {
+        return local;
+      }
+    } catch {}
+
     const { value, source } = await raceNetworkOrLocal({
       timeoutMs: 2500,
       network: async () => {

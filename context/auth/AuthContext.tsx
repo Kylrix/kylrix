@@ -67,27 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const isOAuthSuccess = typeof window !== 'undefined' && window.location.search.includes('auth=success');
 
-      // 1. Get from cache or query Appwrite
-      const session = await getCurrentUser(forceRefresh || isOAuthSuccess);
-      if (session && session.$id) {
-        if (lastSeenUserIdRef.current && lastSeenUserIdRef.current !== session.$id) {
-          const { purgeAllClientStorageOnLogout } = await import('@/lib/services/wipe-client-storage');
-          await purgeAllClientStorageOnLogout();
-        }
-        lastSeenUserIdRef.current = session.$id;
-        setUser(session as any);
-        setKylrixPulse(session);
-
-        if (typeof window !== 'undefined' && window.location.search.includes('auth=success')) {
-          const url = new URL(window.location.href);
-          url.searchParams.delete('auth');
-          window.history.replaceState({}, '', url.toString());
-        }
-
-        return session as any;
-      }
-
-      // 2. If Appwrite session is null, check Better Auth session (primary layer for new users)
+      // 1. Better Auth session check (Sole primary authority for authentication)
       try {
         const { authClient } = await import('@/lib/auth/better-auth-client');
         const betterSession = await authClient.getSession().catch(() => null);
@@ -100,14 +80,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isPulse: false,
             authProvider: 'better-auth',
           };
+          if (lastSeenUserIdRef.current && lastSeenUserIdRef.current !== bUser.id) {
+            const { purgeAllClientStorageOnLogout } = await import('@/lib/services/wipe-client-storage');
+            await purgeAllClientStorageOnLogout();
+          }
           lastSeenUserIdRef.current = bUser.id;
           setUser(userObj as any);
           setKylrixPulse(userObj as any);
+
+          if (typeof window !== 'undefined' && window.location.search.includes('auth=success')) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('auth');
+            window.history.replaceState({}, '', url.toString());
+          }
+
           return userObj as any;
         }
-      } catch {}
+      } catch (betterAuthErr) {
+        console.warn('[AuthContext] Better Auth session check warning:', betterAuthErr);
+      }
 
-      // If online and session is genuinely null, clear session
+      // If online and Better Auth session is null, clear session (never fall back to Appwrite auth)
       if (typeof navigator !== 'undefined' && navigator.onLine) {
         lastSeenUserIdRef.current = null;
         setUser(null);
@@ -172,14 +165,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Silent Better Auth & Turso user minting & aggressive Tier 1/2 sync (runs once in background)
       const mintBetterAuthTurso = async () => {
         try {
-          const { ensureBetterAuthUserTurso, syncTier1FromAppwriteTurso } = await import('@/lib/actions/turso-ops');
+          const { ensureBetterAuthUserTurso, syncTier1FromAppwriteTurso, resolveUserAppwriteMigrationGate } = await import('@/lib/actions/turso-ops');
           await ensureBetterAuthUserTurso({
             id: user.$id,
             name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
             email: user.email || `${user.$id}@kylrix.local`,
             emailVerified: Boolean(user.emailVerification),
           });
-          // Aggressive Tier 1 sync: keychain, encryption keys, vault secrets, totps, workspaces, notes, goals
+
+          // Check migration gate: if user has no Appwrite account or has already fully synced, completely skip Appwrite!
+          const gate = await resolveUserAppwriteMigrationGate({
+            userId: user.$id,
+            email: user.email || undefined,
+          });
+
+          if (gate.shouldSkipAppwrite) {
+            return;
+          }
+
+          // Aggressive Tier 1 sync: keychain, encryption keys, vault secrets, totps, workspaces, notes, goals, conversations
           let userJwt: string | undefined;
           try {
             const { account } = await import('@/lib/appwrite/client');
@@ -306,7 +310,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     sessionVerifySeq.current += 1;
     lastSeenUserIdRef.current = null;
     try {
-      await account.deleteSession('current');
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      await authClient.signOut().catch(() => {});
+    } catch {}
+    try {
+      await account.deleteSession('current').catch(() => {});
     } catch {
     } finally {
       const { purgeAllClientStorageOnLogout } = await import('@/lib/services/wipe-client-storage');

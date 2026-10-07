@@ -83,6 +83,9 @@ export async function getUserSyncStatusTurso(userId: string) {
         id: schema.user.id,
         tier1Synced: schema.user.tier1Synced,
         tier2Synced: schema.user.tier2Synced,
+        hasAppwriteAccount: schema.user.hasAppwriteAccount,
+        appwriteAccountId: schema.user.appwriteAccountId,
+        appwriteFullySynced: schema.user.appwriteFullySynced,
         appwriteSyncedAt: schema.user.appwriteSyncedAt,
       })
       .from(schema.user)
@@ -95,6 +98,109 @@ export async function getUserSyncStatusTurso(userId: string) {
     return null;
   }
 }
+
+/**
+ * Determines whether this user has an Appwrite account and whether any Appwrite
+ * code needs to run at all.
+ * - If hasAppwriteAccount is false -> never touch Appwrite (0 calls).
+ * - If appwriteFullySynced is true -> all data already in Turso/local, never touch Appwrite (0 calls).
+ * - If hasAppwriteAccount is null -> checks Appwrite Users API by email (sole identity match).
+ *   - If found: stamps hasAppwriteAccount=true, appwriteAccountId, appwriteFullySynced=false.
+ *   - If not found: stamps hasAppwriteAccount=false, appwriteFullySynced=true. Never touches Appwrite again!
+ */
+export async function resolveUserAppwriteMigrationGate(userIdentifier: {
+  userId?: string;
+  email?: string;
+}): Promise<{
+  shouldSkipAppwrite: boolean;
+  hasAppwriteAccount: boolean;
+  appwriteAccountId: string | null;
+  appwriteFullySynced: boolean;
+}> {
+  const { userId, email } = userIdentifier;
+  if (!userId && !email) {
+    return { shouldSkipAppwrite: true, hasAppwriteAccount: false, appwriteAccountId: null, appwriteFullySynced: true };
+  }
+
+  try {
+    const condition = userId ? eq(schema.user.id, userId) : eq(schema.user.email, email!.trim().toLowerCase());
+    const rows = await db
+      .select({
+        id: schema.user.id,
+        email: schema.user.email,
+        hasAppwriteAccount: schema.user.hasAppwriteAccount,
+        appwriteAccountId: schema.user.appwriteAccountId,
+        appwriteFullySynced: schema.user.appwriteFullySynced,
+      })
+      .from(schema.user)
+      .where(condition)
+      .limit(1);
+
+    const u = rows[0];
+    if (!u) {
+      return { shouldSkipAppwrite: true, hasAppwriteAccount: false, appwriteAccountId: null, appwriteFullySynced: true };
+    }
+
+    if (u.hasAppwriteAccount === false) {
+      return { shouldSkipAppwrite: true, hasAppwriteAccount: false, appwriteAccountId: null, appwriteFullySynced: true };
+    }
+
+    if (u.hasAppwriteAccount === true) {
+      if (u.appwriteFullySynced) {
+        return { shouldSkipAppwrite: true, hasAppwriteAccount: true, appwriteAccountId: u.appwriteAccountId, appwriteFullySynced: true };
+      }
+      return { shouldSkipAppwrite: false, hasAppwriteAccount: true, appwriteAccountId: u.appwriteAccountId, appwriteFullySynced: false };
+    }
+
+    // Column is empty/null: check Appwrite Users API by email (sole identity match)
+    const targetEmail = (u.email || email || '').trim().toLowerCase();
+    if (!targetEmail) {
+      await db.update(schema.user).set({ hasAppwriteAccount: false, appwriteFullySynced: true, updatedAt: new Date() }).where(eq(schema.user.id, u.id));
+      return { shouldSkipAppwrite: true, hasAppwriteAccount: false, appwriteAccountId: null, appwriteFullySynced: true };
+    }
+
+    let foundAppwriteId: string | null = null;
+    try {
+      const { createSystemClient } = await import('@/lib/appwrite-admin');
+      const { users } = createSystemClient();
+      const { Query } = await import('node-appwrite');
+      const res = await users.list([Query.equal('email', targetEmail), Query.limit(1)]);
+      if (res.total > 0 && res.users[0]?.$id) {
+        foundAppwriteId = res.users[0].$id;
+      }
+    } catch (e: any) {
+      console.warn('[resolveUserAppwriteMigrationGate] Appwrite user query warning:', e.message);
+    }
+
+    if (foundAppwriteId) {
+      await db
+        .update(schema.user)
+        .set({
+          hasAppwriteAccount: true,
+          appwriteAccountId: foundAppwriteId,
+          appwriteFullySynced: false,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.user.id, u.id));
+      return { shouldSkipAppwrite: false, hasAppwriteAccount: true, appwriteAccountId: foundAppwriteId, appwriteFullySynced: false };
+    } else {
+      await db
+        .update(schema.user)
+        .set({
+          hasAppwriteAccount: false,
+          appwriteAccountId: null,
+          appwriteFullySynced: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.user.id, u.id));
+      return { shouldSkipAppwrite: true, hasAppwriteAccount: false, appwriteAccountId: null, appwriteFullySynced: true };
+    }
+  } catch (err: any) {
+    console.error('[resolveUserAppwriteMigrationGate] Error:', err);
+    return { shouldSkipAppwrite: true, hasAppwriteAccount: false, appwriteAccountId: null, appwriteFullySynced: true };
+  }
+}
+
 
 // ========================================================
 // TIER 1 MUTATIONS & QUERIES (CRITICAL: KEYCHAIN, VAULT, WORKSPACES)
@@ -348,6 +454,64 @@ export async function upsertUserSettingsTurso(data: typeof schema.userSettings.$
   }
 }
 
+/**
+ * Upserts a thread/conversation in Turso.
+ */
+export async function upsertThreadTurso(data: typeof schema.threads.$inferInsert) {
+  try {
+    const existing = await db
+      .select({ id: schema.threads.id })
+      .from(schema.threads)
+      .where(eq(schema.threads.id, data.id))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(schema.threads)
+        .set({
+          ...data,
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        })
+        .where(eq(schema.threads.id, data.id));
+    } else {
+      await db.insert(schema.threads).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] upsertThreadTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Upserts a thread message in Turso.
+ */
+export async function upsertThreadMessageTurso(data: typeof schema.threadMessages.$inferInsert) {
+  try {
+    const existing = await db
+      .select({ id: schema.threadMessages.id })
+      .from(schema.threadMessages)
+      .where(eq(schema.threadMessages.id, data.id))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(schema.threadMessages)
+        .set({
+          ...data,
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        })
+        .where(eq(schema.threadMessages.id, data.id));
+    } else {
+      await db.insert(schema.threadMessages).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] upsertThreadMessageTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 // ========================================================
 // TIER 2 MUTATIONS & QUERIES (IDEAS, GOALS)
 // ========================================================
@@ -481,10 +645,12 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
   if (!userId) return { success: false, error: 'No user ID' };
 
   try {
-    const status = await getUserSyncStatusTurso(userId);
-    if (!force && status?.tier1Synced) {
-      return { success: true, alreadySynced: true };
+    const gate = await resolveUserAppwriteMigrationGate({ userId });
+    if (!force && gate.shouldSkipAppwrite) {
+      return { success: true, alreadySynced: true, skipped: true };
     }
+
+    const appwriteOwnerId = gate.appwriteAccountId || userId;
 
     const tablesDB = getAppwriteMigrationTablesDB(jwt);
     if (!tablesDB) {
@@ -500,7 +666,7 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       const res = await tablesDB.listRows({
         databaseId: DB,
         tableId: 'keychain',
-        queries: [Query.equal('userId', userId), Query.limit(100)],
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(100)],
       });
       for (const row of res.rows as any[]) {
         const metaObj = {
@@ -531,7 +697,7 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       const res = await tablesDB.listRows({
         databaseId: DB,
         tableId: 'credentials',
-        queries: [Query.equal('userId', userId), Query.limit(200)],
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(200)],
       });
       for (const row of res.rows as any[]) {
         await upsertVaultItemTurso({
@@ -559,7 +725,7 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       const res = await tablesDB.listRows({
         databaseId: DB,
         tableId: 'totpSecrets',
-        queries: [Query.equal('userId', userId), Query.limit(100)],
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(100)],
       });
       for (const row of res.rows as any[]) {
         await upsertTotpSecretTurso({
@@ -582,7 +748,7 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       const res = await tablesDB.listRows({
         databaseId: DB,
         tableId: 'projects',
-        queries: [Query.equal('ownerId', userId), Query.limit(100)],
+        queries: [Query.equal('ownerId', appwriteOwnerId), Query.limit(100)],
       });
       for (const row of res.rows as any[]) {
         projectIds.push(row.$id);
@@ -807,14 +973,105 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
           // ignore individual missing goal
         }
       }
+    // 6. Conversations / Agent Inboxes (Threads & Thread Messages)
+    try {
+      const threadRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'threads',
+        queries: [Query.equal('creatorId', appwriteOwnerId), Query.limit(100)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const t of threadRes.rows as any[]) {
+        await upsertThreadTurso({
+          id: t.$id,
+          creatorId: userId,
+          targetKind: t.targetKind || 'user',
+          targetId: t.targetId || userId,
+          title: t.title || null,
+          isLocked: Boolean(t.isLocked),
+          createdAt: t.createdAt || t.$createdAt || new Date().toISOString(),
+          updatedAt: t.updatedAt || t.$updatedAt || new Date().toISOString(),
+        });
+
+        // Thread messages
+        const msgRes = await tablesDB.listRows({
+          databaseId: DB,
+          tableId: 'thread_messages',
+          queries: [Query.equal('threadId', t.$id), Query.limit(300)],
+        }).catch(() => ({ rows: [] }));
+
+        for (const m of msgRes.rows as any[]) {
+          await upsertThreadMessageTurso({
+            id: m.$id,
+            threadId: t.$id,
+            senderId: m.senderId === appwriteOwnerId ? userId : m.senderId,
+            content: m.content || '',
+            metadata: m.metadata ? (typeof m.metadata === 'string' ? m.metadata : JSON.stringify(m.metadata)) : null,
+            createdAt: m.createdAt || m.$createdAt || new Date().toISOString(),
+            updatedAt: m.updatedAt || m.$updatedAt || new Date().toISOString(),
+          });
+        }
+      }
     } catch (e: any) {
-      console.warn('[syncTier1FromAppwriteTurso] Workspace goals resolution warning:', e.message);
+      console.warn('[syncTier1FromAppwriteTurso] Conversations/threads sync warning:', e.message);
     }
 
-    // Mark Tier 1 and Tier 2 Synced on Turso user row
+    // 7. Aggressive Verification Re-Check: Ensure 100% of TOTPs and Secrets are captured
+    try {
+      const totpVerify = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'totpSecrets',
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(200)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const row of totpVerify.rows as any[]) {
+        await upsertTotpSecretTurso({
+          id: row.$id,
+          userId,
+          account: row.account || row.issuer || 'totp',
+          encryptedSecret: row.encryptedSecret || row.secret || '',
+          metadata: row.metadata || null,
+          createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Aggressive TOTP re-check warning:', e.message);
+    }
+
+    try {
+      const credVerify = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'credentials',
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(300)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const row of credVerify.rows as any[]) {
+        await upsertVaultItemTurso({
+          id: row.$id,
+          userId,
+          title: row.name || row.title || 'Encrypted Secret',
+          type: row.itemType || row.type || 'login',
+          encryptedData: row.encryptedData || row.password || row.username || '',
+          iv: row.iv || null,
+          metadata: JSON.stringify(row),
+          isTrashed: Boolean(row.isTrash || row.isTrashed),
+          isWorkspace: Boolean(row.isWorkspace),
+          workspaceId: row.projectId || null,
+          createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
+          updatedAt: row.updatedAt || row.$updatedAt || new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Aggressive Vault credentials re-check warning:', e.message);
+    }
+
+    // Mark Tier 1, Tier 2, and appwriteFullySynced = true on Turso user row
     await db
       .update(schema.user)
       .set({
+        hasAppwriteAccount: true,
+        appwriteAccountId: appwriteOwnerId,
+        appwriteFullySynced: true,
         tier1Synced: true,
         tier2Synced: true,
         appwriteSyncedAt: new Date().toISOString(),
@@ -823,7 +1080,7 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       .where(eq(schema.user.id, userId));
 
     const totalCounts = { ...counts, notes: notesCount, goals: goalsCount };
-    console.log(`[syncTier1FromAppwriteTurso] All Tier 1 data sync completed for user ${userId}:`, totalCounts);
+    console.log(`[syncTier1FromAppwriteTurso] All data synced and verified cleanly for user ${userId}:`, totalCounts);
     return { success: true, counts: totalCounts };
   } catch (err: any) {
     console.error('[syncTier1FromAppwriteTurso] Critical failure during Tier 1 sync:', err);

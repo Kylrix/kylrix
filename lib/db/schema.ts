@@ -12,6 +12,9 @@ export const user = sqliteTable('user', {
   image: text('image'),
   tier1Synced: integer('tier1_synced', { mode: 'boolean' }).default(false),
   tier2Synced: integer('tier2_synced', { mode: 'boolean' }).default(false),
+  hasAppwriteAccount: integer('has_appwrite_account', { mode: 'boolean' }),
+  appwriteAccountId: text('appwrite_account_id'),
+  appwriteFullySynced: integer('appwrite_fully_synced', { mode: 'boolean' }).default(false),
   appwriteSyncedAt: text('appwrite_synced_at'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
@@ -374,3 +377,25 @@ export const tokenRegistry = sqliteTable('token_registry', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+export const threads = sqliteTable('threads', {
+  id: text('id').primaryKey(),
+  creatorId: text('creator_id').notNull(),
+  targetKind: text('target_kind').notNull(),
+  targetId: text('target_id').notNull(),
+  title: text('title'),
+  isLocked: integer('is_locked', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const threadMessages = sqliteTable('thread_messages', {
+  id: text('id').primaryKey(),
+  threadId: text('thread_id').notNull(),
+  senderId: text('sender_id').notNull(),
+  content: text('content').notNull(),
+  metadata: text('metadata'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+

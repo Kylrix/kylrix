@@ -1706,6 +1706,20 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     } catch (tursoErr) {
       console.warn('[listNotesPaginated] Turso fetch warning:', tursoErr);
     }
+  // If user has no Appwrite account or is already fully synced, return Turso notes directly
+  if (effectiveUserId && effectiveUserId !== 'guest') {
+    try {
+      const { resolveUserAppwriteMigrationGate } = await import('@/lib/actions/turso-ops');
+      const gate = await resolveUserAppwriteMigrationGate({ userId: effectiveUserId });
+      if (gate.shouldSkipAppwrite) {
+        return {
+          rows: tursoNotes.slice(0, limit),
+          total: tursoNotes.length,
+          nextCursor: null,
+          hasMore: tursoNotes.length > limit,
+        };
+      }
+    } catch {}
   }
 
   let res: any;
