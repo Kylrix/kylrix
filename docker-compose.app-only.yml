@@ -15,7 +15,7 @@ services:
         - NEXT_PUBLIC_APPWRITE_ENDPOINT=${NEXT_PUBLIC_APPWRITE_ENDPOINT:?Set NEXT_PUBLIC_APPWRITE_ENDPOINT in .env}
         - NEXT_PUBLIC_APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID:?Set APPWRITE_PROJECT_ID in .env}
         - NEXT_PUBLIC_DOMAIN=${DOMAIN:-localhost}
-    depends_on: {}
+    depends_on: !reset []
     ports:
       - "${APP_PORT:-5003}:3000"
 
