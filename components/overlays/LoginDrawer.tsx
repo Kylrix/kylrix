@@ -186,60 +186,87 @@ export function LoginDrawer() {
       await account.deleteSession('current').catch(() => {});
       invalidateCurrentUserCache();
 
-      // Opportunistically authenticate with Better Auth
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      let betterAuthLoggedIn = false;
+
+      // 1. Check if password works for Better Auth first
       try {
-        const { authClient } = await import('@/lib/auth/better-auth-client');
-        await authClient.signIn.email({
+        const betterRes = await authClient.signIn.email({
           email: emailTrimmed,
           password,
-        }).catch(async () => {
-          if (authPolicy.emailPasswordSignup) {
-            await authClient.signUp.email({
-              email: emailTrimmed,
-              password,
-              name: emailTrimmed.split('@')[0],
-            }).catch(() => {});
-          }
         });
-      } catch (betterAuthErr) {
-        console.warn('[LoginDrawer] Better Auth password sync failed:', betterAuthErr);
-      }
+        if (betterRes?.data?.user) {
+          betterAuthLoggedIn = true;
+        }
+      } catch {}
 
-      let session: { userId: string };
+      let session: { userId: string } | null = null;
       let createdAccount = false;
 
-      try {
-        session = await account.createEmailPasswordSession(emailTrimmed, password);
-      } catch (loginErr) {
-        if (isMfaRequiredError(loginErr)) {
-          setMfaLoginMethod('password');
-          setMfaDrawerOpen(true);
-          return;
-        }
-        if (!authPolicy.emailPasswordSignup) {
-          throw loginErr;
-        }
-        if (!isInvalidCredentialsError(loginErr)) {
-          throw loginErr;
-        }
-        if (password.length < 8) {
-          throw new Error('Password must be at least 8 characters to create an account.');
+      // 2. If Better Auth fails, intercept and check if the password works for Appwrite
+      if (!betterAuthLoggedIn) {
+        try {
+          session = await account.createEmailPasswordSession(emailTrimmed, password);
+        } catch (loginErr) {
+          if (isMfaRequiredError(loginErr)) {
+            setMfaLoginMethod('password');
+            setMfaDrawerOpen(true);
+            return;
+          }
+          if (!authPolicy.emailPasswordSignup) {
+            throw loginErr;
+          }
+          if (!isInvalidCredentialsError(loginErr)) {
+            throw loginErr;
+          }
+          if (password.length < 8) {
+            throw new Error('Password must be at least 8 characters to create an account.');
+          }
+
+          const signUpRes = await selfHostedSignUpAction({
+            email: emailTrimmed,
+            password,
+            name: emailTrimmed.split('@')[0],
+          });
+          if (!signUpRes.success || !signUpRes.userId) {
+            throw new Error(signUpRes.error || 'Failed to create account');
+          }
+          createdAccount = true;
+          session = await account.createEmailPasswordSession(emailTrimmed, password);
         }
 
-        const signUpRes = await selfHostedSignUpAction({
-          email: emailTrimmed,
-          password,
-          name: emailTrimmed.split('@')[0],
-        });
-        if (!signUpRes.success || !signUpRes.userId) {
-          throw new Error(signUpRes.error || 'Failed to create account');
+        // Appwrite password worked! Sync password to Better Auth ONLY IF user does not already have a Better Auth password
+        if (session?.userId) {
+          try {
+            const { checkAndSyncAppwritePasswordToBetterAuth } = await import('@/lib/actions/turso-ops');
+            const syncRes = await checkAndSyncAppwritePasswordToBetterAuth({
+              email: emailTrimmed,
+              password,
+              appwriteUserId: session.userId,
+            });
+
+            // Sign into Better Auth with the newly set password
+            if (syncRes.synced) {
+              await authClient.signIn.email({
+                email: emailTrimmed,
+                password,
+              }).catch(() => {});
+            }
+          } catch (syncErr) {
+            console.warn('[LoginDrawer] Password sync to Better Auth warning:', syncErr);
+          }
         }
-        createdAccount = true;
-        session = await account.createEmailPasswordSession(emailTrimmed, password);
+      } else {
+        // Already authenticated with Better Auth; opportunistically maintain Appwrite session if possible
+        try {
+          session = await account.createEmailPasswordSession(emailTrimmed, password);
+        } catch {}
       }
 
+      const activeUserId = session?.userId || (await authClient.getSession().then((s: any) => s?.data?.user?.id).catch(() => null)) || emailTrimmed;
+
       const vaultInput = {
-        userId: session.userId,
+        userId: activeUserId,
         email: emailTrimmed,
         masterPassword: password,
         name: emailTrimmed.split('@')[0],

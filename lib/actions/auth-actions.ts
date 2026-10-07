@@ -184,21 +184,61 @@ export async function verifyPasskeyLoginAction(
     const systemClient = createSystemClient();
     const db = systemClient.databases;
 
-    // 1. Find the credential entry in DB
-    const res = await db.listRows(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_COLLECTION_KEYCHAIN_ID,
-      [
-        Query.equal('credentialId', authResp.id),
-        Query.limit(1),
-      ]
-    );
+    let row: any = null;
 
-    if (res.total === 0) {
-      return { success: false, error: 'Credential not found' };
+    // 1. Primary: Find credential in Turso master keychain synced entries
+    try {
+      const { db: tursoDb } = await import('@/lib/db');
+      const tursoSchema = await import('@/lib/db/schema');
+      const { eq: eqDrizzle } = await import('drizzle-orm');
+      const keychainRows = await tursoDb
+        .select()
+        .from(tursoSchema.keychain)
+        .where(eqDrizzle(tursoSchema.keychain.type, 'passkey'));
+
+      for (const k of keychainRows) {
+        let meta: any = {};
+        try {
+          meta = typeof k.metadata === 'string' ? JSON.parse(k.metadata) : (k.metadata || {});
+        } catch {}
+        const credId = meta.credentialId || (k.account !== 'passkey' && k.account !== 'masterpass' ? k.account : null);
+        if (credId === authResp.id) {
+          row = {
+            $id: k.id,
+            userId: k.userId,
+            credentialId: credId,
+            publicKey: meta.publicKey,
+            params: k.nonce || meta.params || null,
+            authPasskey: meta.authPasskey !== false,
+            wrappedKey: k.encryptedPayload,
+            fromTurso: true,
+          };
+          break;
+        }
+      }
+    } catch (tursoErr) {
+      console.warn('[verifyPasskeyLoginAction] Turso keychain lookup warning:', tursoErr);
     }
 
-    const row = res.rows[0];
+    // Secondary fallback: Appwrite database
+    if (!row) {
+      const res = await db.listRows(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_COLLECTION_KEYCHAIN_ID,
+        [
+          Query.equal('credentialId', authResp.id),
+          Query.limit(1),
+        ]
+      );
+
+      if (res.total > 0) {
+        row = res.rows[0];
+      }
+    }
+
+    if (!row) {
+      return { success: false, error: 'Credential not found' };
+    }
 
     if (row.authPasskey === false) {
       return { success: false, error: 'This passkey is not authorized for login' };
@@ -233,18 +273,85 @@ export async function verifyPasskeyLoginAction(
         try {
           const paramsObj = JSON.parse(row.params);
           paramsObj.counter = authenticationInfo.newCounter;
-          await db.updateRow(
-            APPWRITE_DATABASE_ID,
-            APPWRITE_COLLECTION_KEYCHAIN_ID,
-            row.$id,
-            { params: JSON.stringify(paramsObj) }
-          );
+          if (row.fromTurso) {
+            const { db: tursoDb } = await import('@/lib/db');
+            const tursoSchema = await import('@/lib/db/schema');
+            const { eq: eqDrizzle } = await import('drizzle-orm');
+            await tursoDb
+              .update(tursoSchema.keychain)
+              .set({ nonce: JSON.stringify(paramsObj), updatedAt: new Date().toISOString() })
+              .where(eqDrizzle(tursoSchema.keychain.id, row.$id));
+          } else {
+            await db.updateRow(
+              APPWRITE_DATABASE_ID,
+              APPWRITE_COLLECTION_KEYCHAIN_ID,
+              row.$id,
+              { params: JSON.stringify(paramsObj) }
+            );
+          }
         } catch (e) {
           console.warn('Failed to update passkey counter:', e);
         }
       }
 
-      // 3. Mint Appwrite Custom Token
+      // 3. Mint Better Auth session for seamless authenticated recognition
+      try {
+        const { cookies } = await import('next/headers');
+        const { db: tursoDb } = await import('@/lib/db');
+        const tursoSchema = await import('@/lib/db/schema');
+        const { eq: eqDrizzle } = await import('drizzle-orm');
+
+        const userRows = await tursoDb
+          .select()
+          .from(tursoSchema.user)
+          .where(eqDrizzle(tursoSchema.user.id, row.userId))
+          .limit(1);
+
+        if (userRows.length === 0) {
+          const appwriteUser = await systemClient.users.get(row.userId).catch(() => null);
+          const email = appwriteUser?.email || `${row.userId}@kylrix.local`;
+          const name = appwriteUser?.name || 'User';
+          await tursoDb.insert(tursoSchema.user).values({
+            id: row.userId,
+            name,
+            email,
+            emailVerified: true,
+            hasAppwriteAccount: true,
+            appwriteAccountId: row.userId,
+            appwriteFullySynced: false,
+            tier1Synced: false,
+            tier2Synced: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+
+        const sessionToken = crypto.randomUUID();
+        const sessionId = crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+        await tursoDb.insert(tursoSchema.session).values({
+          id: sessionId,
+          userId: row.userId,
+          token: sessionToken,
+          expiresAt,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        const cookieStore = await cookies();
+        cookieStore.set('better-auth.session_token', sessionToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          expires: expiresAt,
+        });
+      } catch (sessionErr) {
+        console.warn('[verifyPasskeyLoginAction] Better Auth session creation warning:', sessionErr);
+      }
+
+      // 4. Mint Appwrite Custom Token
       const token = await systemClient.users.createToken(row.userId);
 
       // Generate secure HMAC fallback seed for clients lacking WebAuthn PRF

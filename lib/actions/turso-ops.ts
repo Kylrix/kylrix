@@ -1220,3 +1220,138 @@ export async function syncTier2FromAppwriteTurso(userId: string, force = false) 
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Intercepts a successful Appwrite password authentication to sync the user's password
+ * to Better Auth ONLY IF the user does not already have a Better Auth password.
+ */
+export async function checkAndSyncAppwritePasswordToBetterAuth(params: {
+  email: string;
+  password: string;
+  appwriteUserId?: string;
+}): Promise<{
+  synced: boolean;
+  hasExistingBetterAuthPassword: boolean;
+  userId?: string;
+  error?: string;
+}> {
+  const { email, password, appwriteUserId } = params;
+  if (!email || !password) {
+    return { synced: false, hasExistingBetterAuthPassword: false, error: 'Missing email or password' };
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try {
+    // 1. Check if user already exists in Turso / Better Auth
+    const userRows = await db
+      .select()
+      .from(schema.user)
+      .where(eq(schema.user.email, normalizedEmail))
+      .limit(1);
+
+    const targetUser = userRows[0];
+
+    if (targetUser) {
+      // 2. Check if user already has a credential account with a password
+      const credAccounts = await db
+        .select()
+        .from(schema.account)
+        .where(
+          and(
+            eq(schema.account.userId, targetUser.id),
+            eq(schema.account.providerId, 'credential')
+          )
+        )
+        .limit(1);
+
+      if (credAccounts.length > 0 && credAccounts[0].password) {
+        // User ALREADY has a Better Auth password! Do NOT overwrite it.
+        return {
+          synced: false,
+          hasExistingBetterAuthPassword: true,
+          userId: targetUser.id,
+        };
+      }
+
+      // User does NOT have a Better Auth password yet. Hash and set it!
+      const { hashPassword } = await import('better-auth/crypto');
+      const hashedPassword = await hashPassword(password);
+
+      if (credAccounts.length > 0) {
+        await db
+          .update(schema.account)
+          .set({
+            password: hashedPassword,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.account.id, credAccounts[0].id));
+      } else {
+        await db.insert(schema.account).values({
+          id: crypto.randomUUID(),
+          userId: targetUser.id,
+          providerId: 'credential',
+          accountId: targetUser.id,
+          password: hashedPassword,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      // Stamp Appwrite migration markers on user row
+      await db
+        .update(schema.user)
+        .set({
+          hasAppwriteAccount: true,
+          appwriteAccountId: appwriteUserId || targetUser.appwriteAccountId || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.user.id, targetUser.id));
+
+      return {
+        synced: true,
+        hasExistingBetterAuthPassword: false,
+        userId: targetUser.id,
+      };
+    } else {
+      // User does not exist in Turso yet. Create user and credential account row.
+      const { hashPassword } = await import('better-auth/crypto');
+      const hashedPassword = await hashPassword(password);
+      const newUserId = appwriteUserId || crypto.randomUUID();
+
+      await db.insert(schema.user).values({
+        id: newUserId,
+        name: normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        emailVerified: true,
+        hasAppwriteAccount: true,
+        appwriteAccountId: appwriteUserId || null,
+        appwriteFullySynced: false,
+        tier1Synced: false,
+        tier2Synced: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await db.insert(schema.account).values({
+        id: crypto.randomUUID(),
+        userId: newUserId,
+        providerId: 'credential',
+        accountId: newUserId,
+        password: hashedPassword,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return {
+        synced: true,
+        hasExistingBetterAuthPassword: false,
+        userId: newUserId,
+      };
+    }
+  } catch (err: any) {
+    console.error('[checkAndSyncAppwritePasswordToBetterAuth] Error:', err);
+    return { synced: false, hasExistingBetterAuthPassword: false, error: err.message };
+  }
+}
+
