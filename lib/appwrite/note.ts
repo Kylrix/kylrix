@@ -1656,10 +1656,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     }
     
     baseQueries = [
-      Query.or([
-        Query.equal('userId', effectiveUserId),
-        Query.equal('creatorId', effectiveUserId),
-      ])
+      Query.equal('userId', effectiveUserId),
     ];
   }
 

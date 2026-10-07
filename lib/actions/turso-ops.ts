@@ -635,6 +635,7 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
 
     // 6. Notes & Ideas (Promoted to Tier 1 Aggressive Sync)
     let notesCount = 0;
+    const syncedNoteIds = new Set<string>();
     try {
       let offset = 0;
       let hasMore = true;
@@ -643,16 +644,14 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
           databaseId: DB,
           tableId: '67ff05f3002502ef239e',
           queries: [
-            Query.or([
-              Query.equal('userId', userId),
-              Query.equal('creatorId', userId),
-            ]),
+            Query.equal('userId', userId),
             Query.limit(100),
             Query.offset(offset),
           ],
         });
         if (!res.rows.length) break;
         for (const row of res.rows as any[]) {
+          syncedNoteIds.add(row.$id);
           await upsertNoteTurso({
             id: row.$id,
             userId,
@@ -680,8 +679,54 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       console.warn('[syncTier1FromAppwriteTurso] Notes sync warning:', e.message);
     }
 
+    // Also fetch any notes referenced in workspace_objects that might have different userId or were missed
+    try {
+      const wsNotes = await db
+        .select({ entityId: schema.workspaceObjects.entityId, workspaceId: schema.workspaceObjects.workspaceId })
+        .from(schema.workspaceObjects)
+        .where(eq(schema.workspaceObjects.entityKind, 'note'));
+
+      for (const item of wsNotes) {
+        if (!item.entityId || syncedNoteIds.has(item.entityId)) continue;
+        try {
+          const row = await tablesDB.getRow({
+            databaseId: DB,
+            tableId: '67ff05f3002502ef239e',
+            rowId: item.entityId,
+          });
+          if (row) {
+            syncedNoteIds.add(row.$id);
+            await upsertNoteTurso({
+              id: row.$id,
+              userId: row.userId || userId,
+              title: row.title || '',
+              content: row.content || '',
+              summary: row.summary || null,
+              isLocked: Boolean(row.isLocked),
+              isPublished: Boolean(row.isPublished),
+              isPinned: Boolean(row.isPinned),
+              isTrashed: Boolean(row.isTrash || row.isTrashed),
+              isWorkspace: true,
+              workspaceId: row.projectId || item.workspaceId || null,
+              projectId: row.projectId || item.workspaceId || null,
+              category: row.category || null,
+              tags: Array.isArray(row.tags) ? JSON.stringify(row.tags) : (row.tags || null),
+              createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
+              updatedAt: row.updatedAt || row.$updatedAt || new Date().toISOString(),
+            });
+            notesCount++;
+          }
+        } catch {
+          // ignore individual missing note
+        }
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Workspace notes resolution warning:', e.message);
+    }
+
     // 7. Goals & Tasks (Promoted to Tier 1 Aggressive Sync)
     let goalsCount = 0;
+    const syncedGoalIds = new Set<string>();
     try {
       let offset = 0;
       let hasMore = true;
@@ -690,16 +735,14 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
           databaseId: DB,
           tableId: 'tasks',
           queries: [
-            Query.or([
-              Query.equal('userId', userId),
-              Query.equal('creatorId', userId),
-            ]),
+            Query.equal('userId', userId),
             Query.limit(100),
             Query.offset(offset),
           ],
         });
         if (!res.rows.length) break;
         for (const row of res.rows as any[]) {
+          syncedGoalIds.add(row.$id);
           await upsertGoalTurso({
             id: row.$id,
             userId,
@@ -723,6 +766,49 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       }
     } catch (e: any) {
       console.warn('[syncTier1FromAppwriteTurso] Goals sync warning:', e.message);
+    }
+
+    // Also fetch any goals referenced in workspace_objects that might have different userId or were missed
+    try {
+      const wsGoals = await db
+        .select({ entityId: schema.workspaceObjects.entityId, workspaceId: schema.workspaceObjects.workspaceId })
+        .from(schema.workspaceObjects)
+        .where(eq(schema.workspaceObjects.entityKind, 'goal'));
+
+      for (const item of wsGoals) {
+        if (!item.entityId || syncedGoalIds.has(item.entityId)) continue;
+        try {
+          const row = await tablesDB.getRow({
+            databaseId: DB,
+            tableId: 'tasks',
+            rowId: item.entityId,
+          });
+          if (row) {
+            syncedGoalIds.add(row.$id);
+            await upsertGoalTurso({
+              id: row.$id,
+              userId: row.userId || userId,
+              title: row.title || row.name || 'Untitled Goal',
+              description: row.description || row.content || '',
+              status: row.status || 'todo',
+              priority: row.priority || 'medium',
+              dueDate: row.dueDate || null,
+              completedAt: row.completedAt || null,
+              isWorkspace: true,
+              workspaceId: row.projectId || item.workspaceId || null,
+              projectId: row.projectId || item.workspaceId || null,
+              tags: Array.isArray(row.tags) ? JSON.stringify(row.tags) : (row.tags || null),
+              createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
+              updatedAt: row.updatedAt || row.$updatedAt || new Date().toISOString(),
+            });
+            goalsCount++;
+          }
+        } catch {
+          // ignore individual missing goal
+        }
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Workspace goals resolution warning:', e.message);
     }
 
     // Mark Tier 1 and Tier 2 Synced on Turso user row
@@ -777,10 +863,7 @@ export async function syncTier2FromAppwriteTurso(userId: string, force = false) 
           databaseId: DB,
           tableId: '67ff05f3002502ef239e',
           queries: [
-            Query.or([
-              Query.equal('userId', userId),
-              Query.equal('creatorId', userId),
-            ]),
+            Query.equal('userId', userId),
             Query.limit(100),
             Query.offset(offset),
           ],
@@ -825,10 +908,7 @@ export async function syncTier2FromAppwriteTurso(userId: string, force = false) 
           databaseId: DB,
           tableId: 'tasks',
           queries: [
-            Query.or([
-              Query.equal('userId', userId),
-              Query.equal('creatorId', userId),
-            ]),
+            Query.equal('userId', userId),
             Query.limit(100),
             Query.offset(offset),
           ],
