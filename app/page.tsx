@@ -172,7 +172,7 @@ export default function LandingPage() {
           >
             <span className="flex h-2 w-2 rounded-full bg-[#10B981] animate-pulse" />
             <span className="text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider text-white">
-              Agentic Living Workspace
+              Agent Security & Memory
             </span>
           </motion.div>
 
@@ -182,9 +182,9 @@ export default function LandingPage() {
             transition={{ duration: 0.35, delay: 0.05 }}
             className="font-clash text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.08] [text-shadow:_0_2px_12px_rgba(0,0,0,0.9)]"
           >
-            The sovereign workspace for <br className="hidden sm:inline" />
+            Zero-knowledge secrets & <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-[#818CF8] via-[#EC4899] to-[#10B981] bg-clip-text text-transparent">
-              developers who run local AI agents.
+              persistent memory for AI agents.
             </span>
           </motion.h1>
 
@@ -194,7 +194,7 @@ export default function LandingPage() {
             transition={{ duration: 0.35, delay: 0.1 }}
             className="text-base sm:text-lg text-white/90 max-w-2xl font-normal leading-relaxed drop-shadow-md"
           >
-            Your projects, secrets, and agents stay connected—so every session builds on the last.
+            Let Claude Code, Cursor, and local agents use real credentials and carry workspace context—without ever seeing plaintext secrets in their prompt context.
           </motion.p>
 
           <motion.div
@@ -204,7 +204,7 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-xs sm:text-sm text-white/90 font-mono"
           >
             <span className="flex h-1.5 w-1.5 rounded-full bg-[#10B981]" />
-            <span>Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.</span>
+            <span>Client-side Argon2id + AES-256-GCM vault · Sovereign SQLite · Native MCP bridge</span>
           </motion.div>
 
           <motion.div
@@ -224,7 +224,7 @@ export default function LandingPage() {
 
             <button
               type="button"
-              onClick={() => openAgenticDrawer({ prompt: 'Show me around the workspace tools' })}
+              onClick={() => openAgenticDrawer({ prompt: 'How do agents access vault credentials safely?' })}
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#161412] text-white font-bold text-sm sm:text-base border border-white/20 hover:border-[#EC4899]/60 hover:bg-[#1C1A18] active:scale-[0.98] transition-all cursor-pointer"
             >
               <Bot size={18} className="text-[#EC4899]" />
@@ -245,40 +245,40 @@ export default function LandingPage() {
           <div className="p-3.5 sm:p-4 rounded-2xl bg-[#161412]/80 border border-white/20 backdrop-blur-md hover:border-[#10B981]/50 transition-all space-y-1.5 shadow-lg">
             <div className="flex items-center gap-2 text-[#10B981]">
               <ShieldCheck size={18} />
-              <span className="font-clash font-bold text-xs sm:text-sm text-white">Local & Encrypted</span>
+              <span className="font-clash font-bold text-xs sm:text-sm text-white">Zero-Leak Vault</span>
             </div>
             <p className="text-[11px] sm:text-xs text-white/70 leading-normal">
-              AES-256 client vault & offline local database.
+              Argon2id + AES-GCM encryption. LLMs never touch raw keys.
+            </p>
+          </div>
+
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#161412]/80 border border-white/20 backdrop-blur-md hover:border-[#6366F1]/50 transition-all space-y-1.5 shadow-lg">
+            <div className="flex items-center gap-2 text-[#818CF8]">
+              <Cpu size={18} />
+              <span className="font-clash font-bold text-xs sm:text-sm text-white">Native MCP Bridge</span>
+            </div>
+            <p className="text-[11px] sm:text-xs text-white/70 leading-normal">
+              One-click setup for Cursor, Claude Code & Windsurf.
             </p>
           </div>
 
           <div className="p-3.5 sm:p-4 rounded-2xl bg-[#161412]/80 border border-white/20 backdrop-blur-md hover:border-[#EC4899]/50 transition-all space-y-1.5 shadow-lg">
             <div className="flex items-center gap-2 text-[#EC4899]">
-              <Bot size={18} />
-              <span className="font-clash font-bold text-xs sm:text-sm text-white">Kylie AI Copilot</span>
+              <FileText size={18} />
+              <span className="font-clash font-bold text-xs sm:text-sm text-white">Persistent Memory</span>
             </div>
             <p className="text-[11px] sm:text-xs text-white/70 leading-normal">
-              WebMCP browser tools & autonomous task execution.
-            </p>
-          </div>
-
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#161412]/80 border border-white/20 backdrop-blur-md hover:border-[#3B82F6]/50 transition-all space-y-1.5 shadow-lg">
-            <div className="flex items-center gap-2 text-[#3B82F6]">
-              <MessageSquare size={18} />
-              <span className="font-clash font-bold text-xs sm:text-sm text-white">P2P Messaging</span>
-            </div>
-            <p className="text-[11px] sm:text-xs text-white/70 leading-normal">
-              Direct discussions and encrypted sovereign chats.
+              Local SQLite memory. Every session builds on the last.
             </p>
           </div>
 
           <div className="p-3.5 sm:p-4 rounded-2xl bg-[#161412]/80 border border-white/20 backdrop-blur-md hover:border-[#A855F7]/50 transition-all space-y-1.5 shadow-lg">
             <div className="flex items-center gap-2 text-[#A855F7]">
               <Server size={18} />
-              <span className="font-clash font-bold text-xs sm:text-sm text-white">1-Command Self Host</span>
+              <span className="font-clash font-bold text-xs sm:text-sm text-white">Sovereign Docker</span>
             </div>
             <p className="text-[11px] sm:text-xs text-white/70 leading-normal">
-              Zero cloud lock-in. AGPL-3.0 open source.
+              1-line run from GHCR. 100% free bare-metal self-host.
             </p>
           </div>
         </motion.div>
@@ -762,26 +762,26 @@ export default function LandingPage() {
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs font-mono font-bold">
                 <Server size={14} />
-                <span>One-Command Self Host</span>
+                <span>One-Command Docker Run</span>
               </div>
               <h3 className="font-clash text-2xl sm:text-3xl font-black text-white">
-                Run Kylrix locally in 60s.
+                Run Kylrix locally in seconds.
               </h3>
               <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
-                Bundled local Appwrite + Kylrix backend. Zero cloud dependencies required.
+                Direct from GitHub Container Registry. 100% offline-ready embedded SQLite & vault.
               </p>
             </div>
 
             {/* Terminal Command Box (Responsive flex layout, non-overflowing) */}
             <div className="p-3.5 rounded-2xl bg-[#000000] border border-white/20 font-mono text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 min-w-0">
               <span className="break-all select-all text-white/90 font-mono text-[11px] sm:text-xs leading-relaxed flex-1 min-w-0">
-                curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
+                docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest
               </span>
               <button
                 type="button"
                 onClick={() =>
                   handleCopyText(
-                    'curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash',
+                    'docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest',
                     'selfhost'
                   )
                 }
@@ -803,12 +803,12 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-mono text-white/70">
               <div className="p-3 rounded-xl bg-white/5 border border-white/10 min-w-0">
-                <span className="block text-white font-bold truncate">App Server</span>
+                <span className="block text-white font-bold truncate">App Port</span>
                 <span className="text-[#818CF8] truncate block">http://localhost:5003</span>
               </div>
               <div className="p-3 rounded-xl bg-white/5 border border-white/10 min-w-0">
-                <span className="block text-white font-bold truncate">Local API</span>
-                <span className="text-[#10B981] truncate block">http://localhost:8080</span>
+                <span className="block text-white font-bold truncate">Registry</span>
+                <span className="text-[#10B981] truncate block">ghcr.io/kylrix</span>
               </div>
               <div className="p-3 rounded-xl bg-white/5 border border-white/10 col-span-2 sm:col-span-1 min-w-0">
                 <span className="block text-white font-bold truncate">License</span>
@@ -1017,15 +1017,170 @@ export default function LandingPage() {
       </section>
 
       {/* ─────────────────────────────────────────────────────────────
-          5. BOTTOM CALL TO ACTION
+          5. PRICING SECTION (CONVERT VISITOR TO SUBSCRIBER)
+         ───────────────────────────────────────────────────────────── */}
+      <section className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16 border-t border-white/10">
+        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs font-mono font-bold mb-3">
+            <Lock size={13} />
+            <span>Transparent Pricing</span>
+          </div>
+          <h2 className="font-clash text-3xl sm:text-5xl font-black text-white tracking-tight">
+            Simple, honest pricing.
+          </h2>
+          <p className="mt-3 text-sm sm:text-base text-white/80">
+            100% free for self-hosters and contributors. Upgrade to Pro for cloud sync and agent memory backups.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
+          {/* Card 1: Community / Self-Host */}
+          <div className="p-6 rounded-3xl bg-[#141418] border-2 border-white/20 flex flex-col justify-between space-y-6">
+            <div className="space-y-4">
+              <div>
+                <span className="text-xs font-mono font-bold text-white/60 uppercase tracking-wider">Self-Host</span>
+                <h3 className="font-clash text-2xl font-bold text-white mt-1">Community</h3>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="font-clash text-4xl font-black text-white">$0</span>
+                  <span className="text-xs text-white/60">/ forever</span>
+                </div>
+              </div>
+              <p className="text-xs text-white/70 leading-relaxed">
+                Run fully sovereign on your own machine or private VPS with zero telemetry.
+              </p>
+              <div className="space-y-2.5 pt-3 border-t border-white/10 text-xs">
+                <div className="flex items-center gap-2 text-white/90">
+                  <CheckCircle2 size={14} className="text-[#10B981] shrink-0" />
+                  <span>100% offline embedded SQLite</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/90">
+                  <CheckCircle2 size={14} className="text-[#10B981] shrink-0" />
+                  <span>Argon2id + AES-256-GCM vault</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/90">
+                  <CheckCircle2 size={14} className="text-[#10B981] shrink-0" />
+                  <span>Native MCP bridge & CLI</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/90">
+                  <CheckCircle2 size={14} className="text-[#10B981] shrink-0" />
+                  <span>Unlimited local ideas & goals</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleCopyText('docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest', 'selfhost')}
+              className="w-full py-3 rounded-2xl bg-[#161412] hover:bg-[#1C1A18] text-white font-bold text-xs border border-white/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Server size={14} />
+              <span>Copy Docker Command</span>
+            </button>
+          </div>
+
+          {/* Card 2: Pro (HIGHLIGHTED) */}
+          <div className="p-6 rounded-3xl bg-[#000000] border-2 border-[#6366F1] shadow-[0_0_40px_rgba(99,102,241,0.25)] flex flex-col justify-between space-y-6 relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#6366F1] text-white text-[10px] font-mono font-bold uppercase tracking-wider shadow-md">
+              Most Popular
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <span className="text-xs font-mono font-bold text-[#818CF8] uppercase tracking-wider">Individuals</span>
+                <h3 className="font-clash text-2xl font-bold text-white mt-1">Kylrix Pro</h3>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="font-clash text-4xl font-black text-white">$10</span>
+                  <span className="text-xs text-white/60">/ month</span>
+                </div>
+              </div>
+              <p className="text-xs text-white/80 leading-relaxed">
+                Full private suite with encrypted sync across devices and persistent cloud agent backups.
+              </p>
+              <div className="space-y-2.5 pt-3 border-t border-white/10 text-xs">
+                <div className="flex items-center gap-2 text-white">
+                  <CheckCircle2 size={14} className="text-[#6366F1] shrink-0" />
+                  <span className="font-semibold">Encrypted multi-device sync</span>
+                </div>
+                <div className="flex items-center gap-2 text-white">
+                  <CheckCircle2 size={14} className="text-[#6366F1] shrink-0" />
+                  <span className="font-semibold">Zero-leak cloud vault backup</span>
+                </div>
+                <div className="flex items-center gap-2 text-white">
+                  <CheckCircle2 size={14} className="text-[#6366F1] shrink-0" />
+                  <span>Kylie AI copilot & agent runner</span>
+                </div>
+                <div className="flex items-center gap-2 text-white">
+                  <CheckCircle2 size={14} className="text-[#6366F1] shrink-0" />
+                  <span>Free forever for active PR contributors</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePrimaryAction}
+              className="w-full py-3.5 rounded-2xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-sm shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Get Started</span>
+              <ChevronRight size={16} strokeWidth={2.5} />
+            </button>
+          </div>
+
+          {/* Card 3: Teams */}
+          <div className="p-6 rounded-3xl bg-[#141418] border-2 border-white/20 flex flex-col justify-between space-y-6">
+            <div className="space-y-4">
+              <div>
+                <span className="text-xs font-mono font-bold text-[#A855F7] uppercase tracking-wider">Organizations</span>
+                <h3 className="font-clash text-2xl font-bold text-white mt-1">Teams</h3>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="font-clash text-4xl font-black text-white">$50</span>
+                  <span className="text-xs text-white/60">/ month</span>
+                </div>
+              </div>
+              <p className="text-xs text-white/70 leading-relaxed">
+                Shared workspaces, nested projects, and higher API limits for team-wide agent orchestration.
+              </p>
+              <div className="space-y-2.5 pt-3 border-t border-white/10 text-xs">
+                <div className="flex items-center gap-2 text-white/90">
+                  <CheckCircle2 size={14} className="text-[#A855F7] shrink-0" />
+                  <span>Everything in Pro</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/90">
+                  <CheckCircle2 size={14} className="text-[#A855F7] shrink-0" />
+                  <span>Multi-user workspaces & RBAC</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/90">
+                  <CheckCircle2 size={14} className="text-[#A855F7] shrink-0" />
+                  <span>High-frequency MCP & REST limits</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/90">
+                  <CheckCircle2 size={14} className="text-[#A855F7] shrink-0" />
+                  <span>Group channels & team discussions</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePrimaryAction}
+              className="w-full py-3 rounded-2xl bg-[#161412] hover:bg-[#1C1A18] text-white font-bold text-xs border border-white/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Create Team Workspace</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          6. BOTTOM CALL TO ACTION
          ───────────────────────────────────────────────────────────── */}
       <section className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16 text-center">
         <div className="p-8 sm:p-12 rounded-[32px] bg-[#141418] border-2 border-white/20 shadow-2xl relative overflow-hidden">
           <h2 className="font-clash text-3xl sm:text-5xl font-black text-white tracking-tight">
-            Ready to build in one living workspace?
+            Protect your keys. Carry your context.
           </h2>
           <p className="mt-3 text-sm sm:text-base text-white/80 max-w-lg mx-auto">
-            Get started right now on the cloud or run locally in one command.
+            Connect Claude Code, Cursor, or your local agent in under two minutes.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto px-4 sm:px-0">
             <button

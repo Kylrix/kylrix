@@ -12,13 +12,13 @@ export default async function Image() {
   return new ImageResponse(
     renderKylrixShareCard({
       productLabel: productName,
-      eyebrow: 'Sovereign AI Workspace',
-      title: 'The sovereign workspace for developers who run local AI agents.',
-      description: 'Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.',
+      eyebrow: 'AI Agent Security & Memory',
+      title: 'Zero-knowledge secrets and persistent memory for AI agents.',
+      description: 'Let Claude Code, Cursor, and local agents use credentials without ever seeing plaintext secrets.',
       accent: 'indigo',
-      ownerLabel: 'Philosophy',
-      ownerName: 'Every object → tool call → more context',
-      chips: ['MCP', 'Cursor', 'Claude Code', 'Vault', 'Notes', 'Agents']}),
+      ownerLabel: 'Architecture',
+      ownerName: 'Argon2id + AES-256-GCM Vault & Local MCP',
+      chips: ['Zero Leaks', 'Claude Code', 'Cursor', 'Argon2id', 'MCP Bridge', 'Local SQLite']}),
     size
   );
 }
