@@ -1625,3 +1625,223 @@ export async function getUserPasswordSyncStatusTurso(userIdentifier: {
   }
 }
 
+/**
+ * Upserts a conversation in Turso.
+ */
+export async function upsertConversationTurso(
+  data: Partial<typeof schema.conversations.$inferInsert> & { id: string; creatorId: string }
+) {
+  try {
+    const existing = await db
+      .select({ id: schema.conversations.id })
+      .from(schema.conversations)
+      .where(eq(schema.conversations.id, data.id))
+      .limit(1);
+
+    const now = new Date().toISOString();
+    if (existing.length > 0) {
+      const updateData: any = {
+        updatedAt: data.updatedAt || now,
+      };
+      for (const [key, val] of Object.entries(data)) {
+        if (val !== undefined && key !== 'id') {
+          updateData[key] = val;
+        }
+      }
+      await db
+        .update(schema.conversations)
+        .set(updateData)
+        .where(eq(schema.conversations.id, data.id));
+    } else {
+      await db.insert(schema.conversations).values({
+        ...data,
+        createdAt: data.createdAt || now,
+        updatedAt: data.updatedAt || now,
+      } as any);
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] upsertConversationTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function getConversationTurso(conversationId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(schema.conversations)
+      .where(eq(schema.conversations.id, conversationId))
+      .limit(1);
+    if (rows.length > 0) {
+      return { success: true, row: rows[0] };
+    }
+    return { success: false, row: null };
+  } catch (err: any) {
+    console.error('[turso-ops] getConversationTurso failed:', err);
+    return { success: false, row: null, error: err.message };
+  }
+}
+
+export async function listConversationsTurso(userId: string) {
+  try {
+    // 1. Get conversations where user is a member
+    const memberRows = await db
+      .select({ conversationId: schema.conversationMembers.conversationId })
+      .from(schema.conversationMembers)
+      .where(eq(schema.conversationMembers.userId, userId));
+    const memberConvIds = memberRows.map((r) => r.conversationId);
+
+    // 2. Also get conversations created by user
+    const createdRows = await db
+      .select()
+      .from(schema.conversations)
+      .where(eq(schema.conversations.creatorId, userId));
+
+    const combinedMap = new Map<string, any>();
+    for (const c of createdRows) {
+      combinedMap.set(c.id, c);
+    }
+
+    if (memberConvIds.length > 0) {
+      const { inArray } = await import('drizzle-orm');
+      const convs = await db
+        .select()
+        .from(schema.conversations)
+        .where(inArray(schema.conversations.id, memberConvIds));
+      for (const c of convs) {
+        combinedMap.set(c.id, c);
+      }
+    }
+
+    // Also check participants column if JSON/comma-separated contains userId
+    const { like } = await import('drizzle-orm');
+    const participantMatches = await db
+      .select()
+      .from(schema.conversations)
+      .where(like(schema.conversations.participants, `%${userId}%`))
+      .limit(100);
+    for (const c of participantMatches) {
+      combinedMap.set(c.id, c);
+    }
+
+    const rows = Array.from(combinedMap.values());
+    rows.sort((a, b) => {
+      const timeA = new Date(a.lastMessageAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.lastMessageAt || b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
+
+    return { success: true, rows };
+  } catch (err: any) {
+    console.error('[turso-ops] listConversationsTurso failed:', err);
+    return { success: false, rows: [], error: err.message };
+  }
+}
+
+export async function deleteConversationTurso(conversationId: string) {
+  try {
+    await db.delete(schema.conversations).where(eq(schema.conversations.id, conversationId));
+    await db.delete(schema.conversationMembers).where(eq(schema.conversationMembers.conversationId, conversationId));
+    await db.delete(schema.messages).where(eq(schema.messages.conversationId, conversationId));
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] deleteConversationTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function upsertMessageTurso(
+  data: Partial<typeof schema.messages.$inferInsert> & { id: string; conversationId: string; senderId: string; content?: string }
+) {
+  try {
+    const existing = await db
+      .select({ id: schema.messages.id })
+      .from(schema.messages)
+      .where(eq(schema.messages.id, data.id))
+      .limit(1);
+
+    const now = new Date().toISOString();
+    if (existing.length > 0) {
+      const updateData: any = {
+        updatedAt: data.updatedAt || now,
+      };
+      for (const [key, val] of Object.entries(data)) {
+        if (val !== undefined && key !== 'id') {
+          updateData[key] = val;
+        }
+      }
+      await db
+        .update(schema.messages)
+        .set(updateData)
+        .where(eq(schema.messages.id, data.id));
+    } else {
+      await db.insert(schema.messages).values({
+        ...data,
+        createdAt: data.createdAt || now,
+        updatedAt: data.updatedAt || now,
+      } as any);
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] upsertMessageTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function listMessagesTurso(conversationId: string, limit = 50) {
+  try {
+    const { desc } = await import('drizzle-orm');
+    const rows = await db
+      .select()
+      .from(schema.messages)
+      .where(eq(schema.messages.conversationId, conversationId))
+      .orderBy(desc(schema.messages.createdAt))
+      .limit(limit);
+    return { success: true, rows };
+  } catch (err: any) {
+    console.error('[turso-ops] listMessagesTurso failed:', err);
+    return { success: false, rows: [], error: err.message };
+  }
+}
+
+export async function deleteMessageTurso(messageId: string) {
+  try {
+    await db.delete(schema.messages).where(eq(schema.messages.id, messageId));
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] deleteMessageTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function upsertConversationMemberTurso(
+  data: { id: string; conversationId: string; userId: string; role?: string }
+) {
+  try {
+    const existing = await db
+      .select({ id: schema.conversationMembers.id })
+      .from(schema.conversationMembers)
+      .where(eq(schema.conversationMembers.id, data.id))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(schema.conversationMembers)
+        .set({ role: data.role || 'member' })
+        .where(eq(schema.conversationMembers.id, data.id));
+    } else {
+      await db.insert(schema.conversationMembers).values({
+        id: data.id,
+        conversationId: data.conversationId,
+        userId: data.userId,
+        role: data.role || 'member',
+      });
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] upsertConversationMemberTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+

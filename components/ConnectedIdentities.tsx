@@ -1,21 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { OAuthProvider } from 'appwrite';
 import { AppWindow } from 'lucide-react';
-import { account } from '@/lib/appwrite/client';
 import { getApp, type OauthApp } from '@/lib/oauth2/apps';
 import { clearStatelessSessions } from '@/lib/utils';
 import { CloudSyncSection } from '@/components/settings/CloudSyncSection';
+import { listUserIdentitiesAction, unlinkUserIdentityAction } from '@/lib/actions/user-settings';
+import { authClient } from '@/lib/auth/better-auth-client';
 
 /** Project-level Auth OAuth providers enabled for Kylrix sign-in (not Sign in with Kylrix). */
 export const PROJECT_SIGN_IN_PROVIDERS: {
-  id: OAuthProvider;
-  key: string;
+  key: 'google' | 'github';
   name: string;
 }[] = [
-  { id: OAuthProvider.Google, key: 'google', name: 'Google' },
-  { id: OAuthProvider.Github, key: 'github', name: 'GitHub' },
+  { key: 'google', name: 'Google' },
+  { key: 'github', name: 'GitHub' },
 ];
 
 const OAUTH2_PREFIX = 'oauth2:';
@@ -70,17 +69,8 @@ export default function ConnectedIdentities() {
     setLoading(true);
     setError(null);
     try {
-      let all: Identity[] = [];
-      try {
-        const list = await account.listIdentities();
-        all = (list.identities || []) as Identity[];
-      } catch {
-        const { listUserIdentitiesAction } = await import('@/lib/actions/user-settings');
-        const res = await listUserIdentitiesAction().catch(() => null);
-        if (res?.identities) {
-          all = res.identities as Identity[];
-        }
-      }
+      const res = await listUserIdentitiesAction().catch(() => null);
+      const all: Identity[] = (res?.identities || []) as Identity[];
       const signIn = all.filter((i) => !i.provider?.startsWith(OAUTH2_PREFIX));
       const grants = all.filter((i) => i.provider?.startsWith(OAUTH2_PREFIX));
       setIdentities(signIn);
@@ -114,14 +104,15 @@ export default function ConnectedIdentities() {
   const identityFor = (key: string) =>
     identities.find((i) => i.provider?.toLowerCase() === key.toLowerCase());
 
-  const linkProvider = async (provider: OAuthProvider) => {
-    setBusyId(provider);
+  const linkProvider = async (providerKey: 'google' | 'github') => {
+    setBusyId(providerKey);
     setError(null);
     try {
       clearStatelessSessions();
-      const success = `${window.location.origin}/settings?tab=identities`;
-      const failure = `${window.location.origin}/settings?tab=identities&error=oauth_failed`;
-      await account.createOAuth2Session(provider, success, failure);
+      await authClient.signIn.social({
+        provider: providerKey,
+        callbackURL: `${window.location.origin}/settings?tab=identities`,
+      });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Link failed');
       setBusyId(null);
@@ -132,7 +123,7 @@ export default function ConnectedIdentities() {
     setBusyId(identityId);
     setError(null);
     try {
-      await account.deleteIdentity(identityId);
+      await unlinkUserIdentityAction(identityId);
       setIdentities((prev) => prev.filter((i) => i.$id !== identityId));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unlink failed');
@@ -145,7 +136,7 @@ export default function ConnectedIdentities() {
     setBusyId(identityId);
     setError(null);
     try {
-      await account.deleteIdentity(identityId);
+      await unlinkUserIdentityAction(identityId);
       setExternals((prev) => prev.filter((r) => r.identity.$id !== identityId));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Revoke failed');
@@ -153,6 +144,7 @@ export default function ConnectedIdentities() {
       setBusyId(null);
     }
   };
+
 
   if (loading) {
     return <p className="text-sm text-white/40 font-satoshi py-6">Loading…</p>;
@@ -179,7 +171,7 @@ export default function ConnectedIdentities() {
         <div className="space-y-2.5">
           {PROJECT_SIGN_IN_PROVIDERS.map((p) => {
             const linked = identityFor(p.key);
-            const busy = busyId === p.id || busyId === linked?.$id;
+            const busy = busyId === p.key || busyId === linked?.$id;
             return (
               <div
                 key={p.key}
@@ -209,7 +201,7 @@ export default function ConnectedIdentities() {
                   <button
                     type="button"
                     disabled={!!busy}
-                    onClick={() => void linkProvider(p.id)}
+                    onClick={() => void linkProvider(p.key)}
                     className="px-3.5 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#6366F1] hover:bg-[#5254E8] text-white cursor-pointer disabled:opacity-40 border-2 border-[#6366F1] transition-all shadow-md"
                   >
                     {busy ? '…' : 'Connect'}

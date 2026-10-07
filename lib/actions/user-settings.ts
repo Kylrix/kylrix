@@ -148,7 +148,7 @@ export async function listUserIdentitiesAction(jwt?: string) {
 
   const identities: any[] = [];
 
-  // 1. Try Turso SQLite account table (Better Auth linked accounts)
+  // Strictly query Turso SQLite account table (Better Auth linked accounts)
   try {
     const { db } = await import('@/lib/db');
     const { account: accountTable } = await import('@/lib/db/schema');
@@ -168,19 +168,24 @@ export async function listUserIdentitiesAction(jwt?: string) {
     console.warn('[listUserIdentitiesAction] Turso accounts query warning:', err.message);
   }
 
-  // 2. Try Appwrite identities
-  try {
-    const { createServerClient } = await import('@/lib/appwrite/server');
-    const { account } = await createServerClient(jwt);
-    const appwriteList = await account.listIdentities().catch(() => null);
-    if (appwriteList?.identities) {
-      for (const id of appwriteList.identities) {
-        if (!identities.some((x) => x.provider === id.provider)) {
-          identities.push(id);
-        }
-      }
-    }
-  } catch {}
-
   return { identities, externals: [] };
+}
+
+export async function unlinkUserIdentityAction(identityId: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor) throw new Error('Unauthorized');
+
+  try {
+    const { db } = await import('@/lib/db');
+    const { account: accountTable } = await import('@/lib/db/schema');
+    const { eq, and } = await import('drizzle-orm');
+
+    await db
+      .delete(accountTable)
+      .where(and(eq(accountTable.id, identityId), eq(accountTable.userId, actor.$id)));
+    return { success: true };
+  } catch (err: any) {
+    console.error('[unlinkUserIdentityAction] Error:', err);
+    throw new Error(err.message || 'Failed to unlink identity');
+  }
 }

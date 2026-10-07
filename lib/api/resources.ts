@@ -1745,6 +1745,33 @@ export const ApiResources = {
           Permission.update(Role.user(participantId)),
         ],
       });
+
+      void import('@/lib/actions/turso-ops').then(({ upsertConversationTurso, upsertConversationMemberTurso }) => {
+        upsertConversationTurso({
+          id: (conv as any).$id,
+          creatorId: actor.userId,
+          type: 'direct',
+          name: body.name ? String(body.name).slice(0, 100) : null,
+          participants: JSON.stringify([actor.userId, participantId]),
+          participantCount: 2,
+          isEncrypted,
+          lastMessageAt: now,
+          createdAt: now,
+          updatedAt: now,
+        });
+        upsertConversationMemberTurso({
+          id: `cm-${(conv as any).$id}-${actor.userId}`,
+          conversationId: (conv as any).$id,
+          userId: actor.userId,
+          role: 'owner',
+        });
+        upsertConversationMemberTurso({
+          id: `cm-${(conv as any).$id}-${participantId}`,
+          conversationId: (conv as any).$id,
+          userId: participantId,
+          role: 'member',
+        });
+      }).catch((e) => console.warn('[turso] ApiResources createChat mirror warning:', e));
     }
 
     // 3. Send initial message if provided
@@ -1764,21 +1791,57 @@ export const ApiResources = {
 
   async listChats(actor: ApiActor, limit = 25) {
     requireScope(actor, 'chats:read');
-    const tables = systemTables();
-    const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
-    const convTable =
-      APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS ||
-      APPWRITE_CONFIG.TABLES.CHAT?.CONVERSATIONS ||
-      'conversations';
-    const res = await tables.listRows({
-      databaseId: chatDb,
-      tableId: convTable,
-      queries: [
-        Query.contains('participants', actor.userId),
-        Query.limit(Math.min(100, Math.max(1, limit))),
-      ],
-    });
-    return res.rows.map((r: any) => shapeChatListItem(r));
+    const chatMap = new Map<string, any>();
+
+    // 1. Try Turso SQLite
+    try {
+      const { listConversationsTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await listConversationsTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows?.length) {
+        for (const r of tursoRes.rows) {
+          let parts = [];
+          try {
+            parts = typeof r.participants === 'string' ? JSON.parse(r.participants) : (r.participants || []);
+          } catch {
+            parts = [];
+          }
+          chatMap.set(r.id, shapeChatListItem({
+            $id: r.id,
+            id: r.id,
+            type: r.type,
+            name: r.name,
+            participants: parts,
+            lastMessageAt: r.lastMessageAt,
+            isEncrypted: Boolean(r.isEncrypted),
+          }));
+        }
+      }
+    } catch {}
+
+    // 2. Query Appwrite and merge
+    try {
+      const tables = systemTables();
+      const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
+      const convTable =
+        APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS ||
+        APPWRITE_CONFIG.TABLES.CHAT?.CONVERSATIONS ||
+        'conversations';
+      const res = await tables.listRows({
+        databaseId: chatDb,
+        tableId: convTable,
+        queries: [
+          Query.contains('participants', actor.userId),
+          Query.limit(Math.min(100, Math.max(1, limit))),
+        ],
+      });
+      for (const r of res.rows) {
+        if (!chatMap.has(r.$id)) {
+          chatMap.set(r.$id, shapeChatListItem(r));
+        }
+      }
+    } catch {}
+
+    return Array.from(chatMap.values()).slice(0, limit);
   },
 
   async getChat(actor: ApiActor, id: string) {
@@ -1786,9 +1849,38 @@ export const ApiResources = {
     const tables = systemTables();
     const convTable =
       APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS || 'conversations';
-    const row = (await tables
+    let row = (await tables
       .getRow({ databaseId: APPWRITE_CONFIG.DATABASES.CHAT, tableId: convTable, rowId: id })
       .catch(() => null)) as any;
+
+    if (!row) {
+      // Turso fallback
+      try {
+        const { getConversationTurso } = await import('@/lib/actions/turso-ops');
+        const tursoRes = await getConversationTurso(id);
+        if (tursoRes.success && tursoRes.row) {
+          const r = tursoRes.row;
+          let parts = [];
+          try {
+            parts = typeof r.participants === 'string' ? JSON.parse(r.participants) : (r.participants || []);
+          } catch {
+            parts = [];
+          }
+          row = {
+            $id: r.id,
+            id: r.id,
+            type: r.type,
+            name: r.name,
+            participants: parts,
+            isEncrypted: Boolean(r.isEncrypted),
+            lastMessageAt: r.lastMessageAt,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          };
+        }
+      } catch {}
+    }
+
     if (!row) notFound('Chat not found');
     const parts = Array.isArray(row.participants) ? row.participants : [];
     if (!parts.includes(actor.userId)) notFound('Chat not found');
@@ -1800,17 +1892,41 @@ export const ApiResources = {
     const chat = await this.getChat(actor, conversationId);
     const tables = systemTables();
     const msgTable = APPWRITE_CONFIG.TABLES.CONNECT?.MESSAGES || 'messages';
-    const res = await tables.listRows({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: msgTable,
-      queries: [
-        Query.equal('conversationId', conversationId),
-        Query.orderDesc('$createdAt'),
-        Query.limit(Math.min(200, Math.max(1, limit))),
-      ],
-    });
+    let rows: any[] = [];
+    try {
+      const res = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+        tableId: msgTable,
+        queries: [
+          Query.equal('conversationId', conversationId),
+          Query.orderDesc('$createdAt'),
+          Query.limit(Math.min(200, Math.max(1, limit))),
+        ],
+      });
+      rows = res.rows || [];
+    } catch {}
+
+    if (rows.length === 0) {
+      // Fallback to Turso SQLite
+      try {
+        const { listMessagesTurso } = await import('@/lib/actions/turso-ops');
+        const tursoRes = await listMessagesTurso(conversationId, limit);
+        if (tursoRes.success && tursoRes.rows?.length) {
+          rows = tursoRes.rows.map((m: any) => ({
+            $id: m.id,
+            id: m.id,
+            conversationId: m.conversationId,
+            senderId: m.senderId,
+            content: m.content,
+            type: m.type,
+            createdAt: m.createdAt,
+          }));
+        }
+      } catch {}
+    }
+
     // E2EE: metadata only. Unencrypted / thread-style: full plaintext.
-    return res.rows.map((r: any) => shapeChatMessage(r, chat.isEncrypted));
+    return rows.map((r: any) => shapeChatMessage(r, chat.isEncrypted));
   },
 
   async sendChatMessage(actor: ApiActor, conversationId: string, body: Record<string, unknown>) {
@@ -1846,7 +1962,7 @@ export const ApiResources = {
       ],
     });
 
-    // Update conversation lastMessageAt
+    // Update conversation lastMessageAt in Appwrite
     await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS || 'conversations',
@@ -1856,6 +1972,28 @@ export const ApiResources = {
         updatedAt: now,
       },
     }).catch(() => null);
+
+    // Mirror to Turso SQLite
+    void import('@/lib/actions/turso-ops').then(({ upsertMessageTurso, upsertConversationTurso }) => {
+      upsertMessageTurso({
+        id: (row as any).$id,
+        conversationId,
+        senderId: actor.userId,
+        content,
+        type: 'text',
+        createdAt: now,
+        updatedAt: now,
+      });
+      upsertConversationTurso({
+        id: conversationId,
+        creatorId: actor.userId,
+        lastMessageId: (row as any).$id,
+        lastMessageAt: now,
+        lastMessageText: content.slice(0, 200),
+        lastMessageSenderId: actor.userId,
+        updatedAt: now,
+      });
+    }).catch((e) => console.warn('[turso] ApiResources sendChatMessage mirror warning:', e));
 
     return {
       id: (row as any).$id,

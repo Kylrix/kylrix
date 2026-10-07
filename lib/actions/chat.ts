@@ -214,80 +214,257 @@ export async function getConversationsAction(payload: {
     throw new Error('UNAUTHORIZED_CONVERSATIONS_LIST');
   }
 
-  const tables = createSystemTablesDB();
-  const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-  const CONV_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
-  const CONV_MEMBERS_TABLE = 'conversationMembers';
+  const combinedMap = new Map<string, any>();
 
+  // 1. Fetch from Turso SQLite
   try {
-    // 1. Fetch conversations from standard conversationMembers table
-    let memberQueryOk = true;
-    const memberRows = await tables.listRows({
-      databaseId: DB_ID,
-      tableId: CONV_MEMBERS_TABLE,
-      queries: [Query.equal('userId', validatedUserId), Query.limit(1000)]
-    }).catch((err) => {
-      memberQueryOk = false;
-      console.warn('[getConversationsAction] conversationMembers query failed:', err?.message || err);
-      return { total: 0, rows: [] as any[] };
-    });
+    const { listConversationsTurso } = await import('./turso-ops');
+    const tursoRes = await listConversationsTurso(validatedUserId);
+    if (tursoRes.success && tursoRes.rows) {
+      for (const row of tursoRes.rows) {
+        let parts = [];
+        try {
+          parts = typeof row.participants === 'string' ? JSON.parse(row.participants) : (row.participants || []);
+        } catch {
+          parts = [];
+        }
+        let admins = [];
+        try {
+          admins = typeof row.admins === 'string' ? JSON.parse(row.admins) : (row.admins || []);
+        } catch {
+          admins = [];
+        }
+        combinedMap.set(row.id, {
+          $id: row.id,
+          id: row.id,
+          creatorId: row.creatorId,
+          type: row.type || 'direct',
+          name: row.name,
+          lastMessageId: row.lastMessageId,
+          lastMessageAt: row.lastMessageAt,
+          lastMessageText: row.lastMessageText,
+          lastMessageSenderId: row.lastMessageSenderId,
+          unreadCount: row.unreadCount || '0',
+          participants: parts,
+          admins,
+          description: row.description,
+          avatarUrl: row.avatarUrl,
+          avatarFileId: row.avatarFileId,
+          avatar: row.avatar,
+          participantCount: row.participantCount || parts.length || 1,
+          maxParticipants: row.maxParticipants || 100,
+          isEncrypted: Boolean(row.isEncrypted),
+          encryptionVersion: row.encryptionVersion,
+          encryptionKey: row.encryptionKey,
+          isPinned: row.isPinned || '',
+          isMuted: row.isMuted || '',
+          isArchived: row.isArchived || '',
+          settings: row.settings,
+          isPublic: Boolean(row.isPublic),
+          inviteLink: row.inviteLink,
+          category: row.category,
+          tags: row.tags || '',
+          contextType: row.contextType,
+          contextId: row.contextId,
+          isWorkspace: Boolean(row.isWorkspace),
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+        });
+      }
+    }
+  } catch (tursoErr) {
+    console.warn('[getConversationsAction] Turso query warning:', tursoErr);
+  }
 
-    const conversationIds = Array.from(new Set(
-      (memberRows.rows || [])
-          .map((row: any) => row.conversationId)
-          .filter(Boolean)
-    ));
+  // 2. Fetch from Appwrite (best-effort merge & mirror to Turso)
+  try {
+    const tables = createSystemTablesDB();
+    const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
+    const CONV_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
+    const CONV_MEMBERS_TABLE = 'conversationMembers';
+
+    let memberRows: any = { rows: [] };
+    try {
+      memberRows = await tables.listRows({
+        databaseId: DB_ID,
+        tableId: CONV_MEMBERS_TABLE,
+        queries: [Query.equal('userId', validatedUserId), Query.limit(1000)],
+      });
+    } catch {}
+
+    const conversationIds = Array.from(
+      new Set((memberRows.rows || []).map((row: any) => row.conversationId).filter(Boolean))
+    );
 
     let standardConversations: any[] = [];
     if (conversationIds.length > 0) {
-      const standardRes = await tables.listRows({
+      try {
+        const standardRes = await tables.listRows({
           databaseId: DB_ID,
           tableId: CONV_TABLE,
-          queries: [Query.equal('$id', conversationIds), Query.limit(Math.min(100, conversationIds.length))]
-      });
-      standardConversations = standardRes.rows || [];
+          queries: [Query.equal('$id', conversationIds), Query.limit(Math.min(100, conversationIds.length))],
+        });
+        standardConversations = standardRes.rows || [];
+      } catch {}
     }
 
-    // 2. Participants query is authoritative for existence (incl. personal chat).
-    // Do not swallow failures into an empty list.
-    const legacyRes = await tables.listRows({
-      databaseId: DB_ID,
-      tableId: CONV_TABLE,
-      queries: [
-        Query.contains('participants', validatedUserId),
-        Query.limit(100)
-      ]
-    });
-    const legacyConversations = legacyRes.rows || [];
+    let legacyConversations: any[] = [];
+    try {
+      const legacyRes = await tables.listRows({
+        databaseId: DB_ID,
+        tableId: CONV_TABLE,
+        queries: [Query.contains('participants', validatedUserId), Query.limit(100)],
+      });
+      legacyConversations = legacyRes.rows || [];
+    } catch {}
 
-    // If members failed and we somehow got no legacy rows either, still return legacy success
-    // (participants probe succeeded — empty can be real).
-    void memberQueryOk;
-
-    // 3. Combine and deduplicate
-    const combinedMap = new Map<string, any>();
+    const { upsertConversationTurso, upsertConversationMemberTurso } = await import('./turso-ops');
     for (const conv of [...standardConversations, ...legacyConversations]) {
       if (conv && conv.$id) {
-        combinedMap.set(conv.$id, conv);
+        if (!combinedMap.has(conv.$id)) {
+          combinedMap.set(conv.$id, conv);
+          // Mirror legacy Appwrite conversation to Turso SQLite
+          void upsertConversationTurso({
+            id: conv.$id,
+            creatorId: conv.creatorId || validatedUserId,
+            type: conv.type || 'direct',
+            name: conv.name,
+            lastMessageId: conv.lastMessageId,
+            lastMessageAt: conv.lastMessageAt,
+            lastMessageText: conv.lastMessageText,
+            lastMessageSenderId: conv.lastMessageSenderId,
+            participants: JSON.stringify(conv.participants || []),
+            participantCount: Array.isArray(conv.participants) ? conv.participants.length : 1,
+            admins: JSON.stringify(conv.admins || []),
+            isEncrypted: Boolean(conv.isEncrypted),
+            encryptionVersion: conv.encryptionVersion,
+            isWorkspace: Boolean(conv.isWorkspace),
+            contextType: conv.contextType,
+            contextId: conv.contextId,
+            isPublic: Boolean(conv.isPublic),
+            createdAt: conv.createdAt || conv.$createdAt,
+            updatedAt: conv.updatedAt || conv.$updatedAt,
+          });
+          const parts = Array.isArray(conv.participants) ? conv.participants : [];
+          for (const pid of parts) {
+            void upsertConversationMemberTurso({
+              id: `cm-${conv.$id}-${pid}`,
+              conversationId: conv.$id,
+              userId: pid,
+              role: pid === conv.creatorId ? 'owner' : 'member',
+            });
+          }
+        }
       }
     }
+  } catch (appwriteErr: any) {
+    console.warn('[getConversationsAction] Appwrite query warning:', appwriteErr?.message);
+  }
 
-    const uniqueConversations = Array.from(combinedMap.values());
+  // 3. Sort by active timestamp descending
+  const uniqueConversations = Array.from(combinedMap.values());
+  uniqueConversations.sort((a: any, b: any) => {
+    const timeA = new Date(a.lastMessageAt || a.createdAt || 0).getTime();
+    const timeB = new Date(b.lastMessageAt || b.createdAt || 0).getTime();
+    return timeB - timeA;
+  });
 
-    // 4. Sort by active timestamp descending
-    uniqueConversations.sort((a: any, b: any) => {
-      const timeA = new Date(a.lastMessageAt || a.createdAt || 0).getTime();
-      const timeB = new Date(b.lastMessageAt || b.createdAt || 0).getTime();
-      return timeB - timeA;
+  return JSON.parse(
+    JSON.stringify({
+      total: uniqueConversations.length,
+      rows: uniqueConversations,
+    })
+  );
+}
+
+export async function getMessagesAction(payload: {
+  conversationId: string;
+  limit?: number;
+  jwt?: string;
+}) {
+  const validatedConversationId = IDSchema.parse(payload.conversationId);
+  const validatedJwt = JWTSchema.parse(payload.jwt ?? undefined);
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(validatedJwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  // 1. Fetch from Turso SQLite
+  const { listMessagesTurso, upsertMessageTurso } = await import('./turso-ops');
+  const tursoRes = await listMessagesTurso(validatedConversationId, payload.limit || 50);
+  const rows = (tursoRes.rows || []).map((m: any) => {
+    let attachments = [];
+    try {
+      attachments = typeof m.attachments === 'string' ? JSON.parse(m.attachments) : (m.attachments || []);
+    } catch {
+      attachments = [];
+    }
+    let readBy = [];
+    try {
+      readBy = typeof m.readBy === 'string' ? JSON.parse(m.readBy) : (m.readBy || []);
+    } catch {
+      readBy = [];
+    }
+    return {
+      $id: m.id,
+      id: m.id,
+      conversationId: m.conversationId,
+      senderId: m.senderId,
+      type: m.type,
+      content: m.content,
+      attachments,
+      replyTo: m.replyTo,
+      readBy,
+      isPinned: Boolean(m.isPinned),
+      isVoice: Boolean(m.isVoice),
+      metadata: m.metadata,
+      isBookmark: Boolean(m.isBookmark),
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+    };
+  });
+
+  if (rows.length > 0) {
+    return { total: rows.length, rows };
+  }
+
+  // 2. Fallback to Appwrite if available
+  try {
+    const tables = createSystemTablesDB();
+    const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
+    const MSG_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
+    const res = await tables.listRows({
+      databaseId: DB_ID,
+      tableId: MSG_TABLE,
+      queries: [
+        Query.equal('conversationId', validatedConversationId),
+        Query.orderDesc('createdAt'),
+        Query.limit(payload.limit || 50),
+      ],
     });
-
-    return JSON.parse(JSON.stringify({
-        total: uniqueConversations.length,
-        rows: uniqueConversations
-    }));
-  } catch (error: any) {
-    console.error('[getConversationsAction] Failed:', error?.message);
-    throw error;
+    // Mirror to Turso SQLite
+    if (res.rows?.length) {
+      for (const msg of res.rows) {
+        void upsertMessageTurso({
+          id: msg.$id,
+          conversationId: msg.conversationId,
+          senderId: msg.senderId,
+          type: msg.type || 'text',
+          content: msg.content || '',
+          attachments: JSON.stringify(msg.attachments || []),
+          replyTo: msg.replyTo,
+          readBy: JSON.stringify(msg.readBy || []),
+          isPinned: Boolean(msg.isPinned),
+          isVoice: Boolean(msg.isVoice),
+          metadata: msg.metadata,
+          isBookmark: Boolean(msg.isBookmark),
+          createdAt: msg.createdAt || msg.$createdAt,
+          updatedAt: msg.updatedAt || msg.$updatedAt,
+        });
+      }
+    }
+    return { total: res.rows?.length || 0, rows: res.rows || [] };
+  } catch {
+    return { total: 0, rows: [] };
   }
 }
 

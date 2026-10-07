@@ -327,6 +327,35 @@ export async function createMessageInternal(payload: {
         console.warn('[streakNotification] Background streak check failed:', err);
       }
     })();
+  // Mirror message and conversation update to Turso SQLite
+  try {
+    const { upsertMessageTurso, upsertConversationTurso } = await import('@/lib/actions/turso-ops');
+    await upsertMessageTurso({
+      id: (message as any)?.$id || `msg-${Date.now()}`,
+      conversationId: payload.conversationId,
+      senderId: payload.senderId,
+      type: payload.type || 'text',
+      content: payload.content || '',
+      attachments: JSON.stringify(payload.attachments || []),
+      replyTo: payload.replyTo || null,
+      readBy: JSON.stringify([payload.senderId]),
+      isPinned: false,
+      isVoice: payload.type === 'voice' || payload.content?.startsWith('__voice_note__:'),
+      isBookmark: Boolean(payload.isBookmark),
+      createdAt: now,
+      updatedAt: now,
+    });
+    await upsertConversationTurso({
+      id: payload.conversationId,
+      creatorId: conversation?.creatorId || payload.senderId,
+      lastMessageId: (message as any)?.$id,
+      lastMessageAt: now,
+      lastMessageText: payload.content ? payload.content.slice(0, 200) : '',
+      lastMessageSenderId: payload.senderId,
+      updatedAt: now,
+    });
+  } catch (tursoErr) {
+    console.warn('[createMessageInternal] Turso sync error:', tursoErr);
   }
 
   return JSON.parse(JSON.stringify(message));
@@ -488,6 +517,14 @@ export async function deleteConversationFullyInternal(payload: {
     } catch {
       await deleteRowsInBatches(databases, APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, keyMappingIds);
     }
+  }
+
+  // Delete conversation, members, and messages from Turso SQLite
+  try {
+    const { deleteConversationTurso } = await import('@/lib/actions/turso-ops');
+    await deleteConversationTurso(payload.conversationId);
+  } catch (tursoErr) {
+    console.warn('[deleteConversationFullyInternal] Turso delete error:', tursoErr);
   }
 
   return {
@@ -1174,5 +1211,38 @@ export async function createConversationTransactionalInternal(payload: {
   // Fetch back via system to return canonical row
   const { databases } = createSystemClient();
   const fresh = await databases.getRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, convId).catch(() => result);
+
+  // Mirror conversation and members to Turso SQLite
+  try {
+    const { upsertConversationTurso, upsertConversationMemberTurso } = await import('@/lib/actions/turso-ops');
+    await upsertConversationTurso({
+      id: convId,
+      creatorId: verifiedActorId!,
+      type: payload.type || 'direct',
+      name: payload.name || 'Direct Chat',
+      participants: JSON.stringify(uniqueParticipants),
+      participantCount: uniqueParticipants.length,
+      admins: JSON.stringify(payload.type === 'group' ? [verifiedActorId!] : uniqueParticipants),
+      isEncrypted: payload.isEncrypted,
+      encryptionVersion: payload.encryptionVersion,
+      isWorkspace: !!payload.isWorkspace,
+      contextType: payload.contextType || null,
+      contextId: payload.contextId || null,
+      isPublic: !!payload.isPublic,
+      createdAt: now,
+      updatedAt: now,
+    });
+    for (const pid of uniqueParticipants) {
+      await upsertConversationMemberTurso({
+        id: `cm-${convId}-${pid}`,
+        conversationId: convId,
+        userId: pid,
+        role: pid === verifiedActorId ? 'owner' : 'member',
+      });
+    }
+  } catch (tursoErr) {
+    console.warn('[createConversationTransactionalInternal] Turso sync error:', tursoErr);
+  }
+
   return JSON.parse(JSON.stringify(fresh));
 }
