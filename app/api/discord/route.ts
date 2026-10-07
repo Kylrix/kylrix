@@ -227,7 +227,7 @@ export const DISCORD_SLASH_COMMANDS = [
   },
   {
     name: 'search',
-    description: 'Quickly search notes, deliverables, and workspace items',
+    description: 'Quickly search ideas, deliverables, and workspace items',
     ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
@@ -467,7 +467,7 @@ function buildDiscordSelectMenu() {
         options: [
           {
             label: 'Ideas Management',
-            value: 'val_notes',
+            value: 'val_ideas',
             description: 'Inspect, view, and create sovereign ideas',
             emoji: { name: '💡' },
           },
@@ -511,7 +511,7 @@ function buildDiscordButtonRow(isLinked = false) {
   return {
     type: 1, // ACTION_ROW
     components: [
-      { type: 2, style: 1, label: 'Notes', custom_id: 'btn_notes', emoji: { name: '📝' } },
+      { type: 2, style: 1, label: 'Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
       { type: 2, style: 1, label: 'Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
       { type: 2, style: 1, label: 'Workspaces', custom_id: 'btn_workspaces', emoji: { name: '📂' } },
       { type: 2, style: 2, label: 'Settings', custom_id: 'btn_settings', emoji: { name: '⚙️' } },
@@ -530,7 +530,7 @@ function buildMainDashboardEmbed(callerName: string, isLinked = false) {
         description:
           `Welcome, **${callerName}**!\n\n` +
           'Access and manage your sovereign data directly from Discord.\n\n' +
-          '• **📝 Notes:** Encrypted notes (`/notes`, `/note`, `/note_read`, `/note_delete`)\n' +
+          '• **💡 Ideas:** Sovereign ideas (`/ideas`, `/idea`, `/idea_read`, `/idea_delete`)\n' +
           '• **🎯 Goals:** Milestones & tasks (`/goals`, `/goal`, `/goal_done`, `/goal_delete`)\n' +
           '• **📂 Workspaces:** Project spaces & teams (`/workspaces`)\n' +
           '• **🤖 Autonomous Agent:** Dispatch tasks (`/agent <prompt>`)\n' +
@@ -551,7 +551,7 @@ function buildMainDashboardEmbed(callerName: string, isLinked = false) {
   };
 }
 
-function buildNotesEmbed(notes: any[], isLinked = true) {
+function buildIdeasEmbed(notes: any[], isLinked = true) {
   const fields =
     notes.length > 0
       ? notes.map((n, idx) => ({
@@ -561,17 +561,17 @@ function buildNotesEmbed(notes: any[], isLinked = true) {
         }))
       : [
           {
-            name: 'No Notes Found',
+            name: 'No Ideas Found',
             value: isLinked
-              ? 'Create your first note using `/note title: ... content: ...`'
-              : 'Create a note with `/note` or connect your Kylrix account using `/pair` to view your notes.',
+              ? 'Create your first idea using `/idea title: ... content: ...`'
+              : 'Create an idea with `/idea` or connect your Kylrix account using `/pair` to view your ideas.',
             inline: false,
           },
         ];
 
   const components: any[] = [buildDiscordSelectMenu()];
 
-  // Interactive buttons for first 2 notes
+  // Interactive buttons for first 2 ideas
   if (notes.length > 0) {
     const actionRowComponents: any[] = [];
     notes.slice(0, 2).forEach((n, idx) => {
@@ -579,14 +579,14 @@ function buildNotesEmbed(notes: any[], isLinked = true) {
         type: 2,
         style: 2,
         label: `Read #${idx + 1}`,
-        custom_id: `read_note:${n.id}`,
+        custom_id: `read_idea:${n.id}`,
         emoji: { name: '📖' },
       });
       actionRowComponents.push({
         type: 2,
         style: 4,
         label: `Delete #${idx + 1}`,
-        custom_id: `del_note:${n.id}`,
+        custom_id: `del_idea:${n.id}`,
         emoji: { name: '🗑️' },
       });
     });
@@ -601,9 +601,9 @@ function buildNotesEmbed(notes: any[], isLinked = true) {
   components.push({
     type: 1,
     components: [
-      { type: 2, style: 1, label: 'Refresh Ideas', custom_id: 'btn_notes', emoji: { name: '🔄' } },
+      { type: 2, style: 1, label: 'Refresh Ideas', custom_id: 'btn_ideas', emoji: { name: '🔄' } },
       { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
-      { type: 2, style: 5, label: 'Open in App', url: 'https://www.kylrix.space/note' },
+      { type: 2, style: 5, label: 'Open in App', url: 'https://www.kylrix.space/idea' },
     ],
   });
 
@@ -622,6 +622,7 @@ function buildNotesEmbed(notes: any[], isLinked = true) {
     components,
   };
 }
+const buildNotesEmbed = buildIdeasEmbed;
 
 function buildGoalsEmbed(goals: any[], isLinked = true) {
   const fields =
@@ -720,7 +721,7 @@ function buildWorkspacesEmbed(workspaces: any[]) {
     embeds: [
       {
         title: '📂 Sovereign Workspaces',
-        description: 'Workspaces isolate your project tasks, notes, and agentic workflows:',
+        description: 'Workspaces isolate your project tasks, ideas, and agentic workflows:',
         color: 0x6366f1, // Indigo #6366F1
         fields,
         footer: { text: 'Kylrix Workspaces • www.kylrix.space' },
@@ -997,9 +998,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ type: 7, data });
     }
 
-    // H. Read Note Callback
-    if (customId.startsWith('read_note:')) {
-      const noteId = customId.replace('read_note:', '');
+    // H. Read Idea Callback
+    if (customId.startsWith('read_idea:') || customId.startsWith('read_note:')) {
+      const noteId = customId.replace(/^(read_idea:|read_note:)/, '');
       try {
         const note = await ApiResources.getNote(actor, noteId);
         return NextResponse.json({
@@ -1007,22 +1008,22 @@ export async function POST(req: NextRequest) {
           data: {
             embeds: [
               {
-                title: `📝 ${note.title || 'Untitled Note'}`,
+                title: `💡 ${note.title || 'Untitled Idea'}`,
                 description: note.content ? `${note.content}` : '*(Empty body)*',
                 color: 0xec4899,
                 fields: [
-                  { name: 'Note ID', value: `\`${note.id}\``, inline: true },
+                  { name: 'Idea ID', value: `\`${note.id}\``, inline: true },
                   { name: 'Status', value: '🟢 Decrypted', inline: true },
                 ],
-                footer: { text: 'Kylrix Sovereign Notes' },
+                footer: { text: 'Kylrix Sovereign Ideas' },
               },
             ],
             components: [
               {
                 type: 1,
                 components: [
-                  { type: 2, style: 4, label: 'Delete Note', custom_id: `del_note:${note.id}`, emoji: { name: '🗑️' } },
-                  { type: 2, style: 1, label: 'All Notes', custom_id: 'btn_notes', emoji: { name: '📋' } },
+                  { type: 2, style: 4, label: 'Delete Idea', custom_id: `del_idea:${note.id}`, emoji: { name: '🗑️' } },
+                  { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
                   { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                 ],
               },
@@ -1032,14 +1033,14 @@ export async function POST(req: NextRequest) {
       } catch (err: any) {
         return NextResponse.json({
           type: 7,
-          data: { content: `❌ Could not read note: ${err?.message || 'Note not found'}` },
+          data: { content: `❌ Could not read idea: ${err?.message || 'Idea not found'}` },
         });
       }
     }
 
-    // I. Delete Note Callback
-    if (customId.startsWith('del_note:')) {
-      const noteId = customId.replace('del_note:', '');
+    // I. Delete Idea Callback
+    if (customId.startsWith('del_idea:') || customId.startsWith('del_note:')) {
+      const noteId = customId.replace(/^(del_idea:|del_note:)/, '');
       try {
         await ApiResources.deleteNote(actor, noteId);
         return NextResponse.json({
@@ -1047,17 +1048,17 @@ export async function POST(req: NextRequest) {
           data: {
             embeds: [
               {
-                title: '🗑️ Note Deleted',
-                description: `Note with ID \`${noteId}\` was removed.`,
+                title: '🗑️ Idea Deleted',
+                description: `Idea with ID \`${noteId}\` was removed.`,
                 color: 0xef4444,
-                footer: { text: 'Kylrix Sovereign Notes' },
+                footer: { text: 'Kylrix Sovereign Ideas' },
               },
             ],
             components: [
               {
                 type: 1,
                 components: [
-                  { type: 2, style: 1, label: 'Back to Notes', custom_id: 'btn_notes', emoji: { name: '📋' } },
+                  { type: 2, style: 1, label: 'Back to Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
                   { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                 ],
               },
@@ -1067,7 +1068,7 @@ export async function POST(req: NextRequest) {
       } catch (err: any) {
         return NextResponse.json({
           type: 7,
-          data: { content: `❌ Note deletion failed: ${err?.message || 'Error'}` },
+          data: { content: `❌ Idea deletion failed: ${err?.message || 'Error'}` },
         });
       }
     }
@@ -1149,8 +1150,8 @@ export async function POST(req: NextRequest) {
     // L. Search Select Menu Pick Callback
     if (customId === 'kylrix_search_select' || selectedValue.startsWith('search_pick_')) {
       const val = selectedValue || '';
-      if (val.startsWith('search_pick_note:')) {
-        const noteId = val.replace('search_pick_note:', '');
+      if (val.startsWith('search_pick_idea:') || val.startsWith('search_pick_note:')) {
+        const noteId = val.replace(/^(search_pick_idea:|search_pick_note:)/, '');
         try {
           const note = await ApiResources.getNote(actor, noteId);
           return NextResponse.json({
@@ -1158,14 +1159,14 @@ export async function POST(req: NextRequest) {
             data: {
               embeds: [
                 {
-                  title: `📝 ${note.title || 'Untitled Note'}`,
+                  title: `💡 ${note.title || 'Untitled Idea'}`,
                   description: note.content ? `${note.content}` : '*(Empty body)*',
                   color: 0xec4899,
                   fields: [
-                    { name: 'Note ID', value: `\`${note.id}\``, inline: true },
+                    { name: 'Idea ID', value: `\`${note.id}\``, inline: true },
                     { name: 'Status', value: '🟢 Decrypted', inline: true },
                   ],
-                  footer: { text: 'Kylrix Sovereign Notes' },
+                  footer: { text: 'Kylrix Sovereign Ideas' },
                 },
               ],
               components: [
@@ -1173,8 +1174,8 @@ export async function POST(req: NextRequest) {
                   type: 1,
                   components: [
                     { type: 2, style: 5, label: 'Open in Web', url: `https://www.kylrix.space/idea/${note.id}` },
-                    { type: 2, style: 4, label: 'Delete Note', custom_id: `del_note:${note.id}`, emoji: { name: '🗑️' } },
-                    { type: 2, style: 1, label: 'All Notes', custom_id: 'btn_notes', emoji: { name: '📋' } },
+                    { type: 2, style: 4, label: 'Delete Idea', custom_id: `del_idea:${note.id}`, emoji: { name: '🗑️' } },
+                    { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
                     { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                   ],
                 },
@@ -1184,7 +1185,7 @@ export async function POST(req: NextRequest) {
         } catch (err: any) {
           return NextResponse.json({
             type: 7,
-            data: { content: `❌ Note not found or inaccessible: ${err?.message || 'Error'}` },
+            data: { content: `❌ Idea not found or inaccessible: ${err?.message || 'Error'}` },
           });
         }
       }
@@ -1248,7 +1249,7 @@ export async function POST(req: NextRequest) {
                   title: '🎉 Account Successfully Paired!',
                   description:
                     `Your Discord account is now securely linked to Kylrix account **\`${exchange.userId}\`**.\n\n` +
-                    `All your sovereign notes, deliverables, and workspaces are now accessible right here in Discord!`,
+                    `All your sovereign ideas, deliverables, and workspaces are now accessible right here in Discord!`,
                   color: 0x10b981,
                   fields: [
                     { name: 'Kylrix User ID', value: `\`${exchange.userId}\``, inline: true },
@@ -1261,7 +1262,7 @@ export async function POST(req: NextRequest) {
                 {
                   type: 1,
                   components: [
-                    { type: 2, style: 1, label: 'View Notes', custom_id: 'btn_notes', emoji: { name: '📝' } },
+                    { type: 2, style: 1, label: 'View Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
                     { type: 2, style: 1, label: 'View Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
                     { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                   ],
@@ -1343,12 +1344,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ type: 4, data }); // Type 4: CHANNEL_MESSAGE_WITH_SOURCE
       }
 
+      case 'notes':
       case 'ideas': {
         const notesRes = await ApiResources.listNotes(actor, 5).catch(() => []);
-        const data = buildNotesEmbed(extractItems(notesRes), isLinked);
+        const data = buildIdeasEmbed(extractItems(notesRes), isLinked);
         return NextResponse.json({ type: 4, data });
       }
 
+      case 'note':
       case 'idea': {
         const title = getOption('title') || 'Quick Idea';
         const content = getOption('content') || '';
@@ -1373,8 +1376,8 @@ export async function POST(req: NextRequest) {
                 {
                   type: 1,
                   components: [
-                    { type: 2, style: 2, label: 'Read Idea', custom_id: `read_note:${newNote.id}`, emoji: { name: '📖' } },
-                    { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_notes', emoji: { name: '📋' } },
+                    { type: 2, style: 2, label: 'Read Idea', custom_id: `read_idea:${newNote.id}`, emoji: { name: '📖' } },
+                    { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
                     { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                   ],
                 },
@@ -1389,6 +1392,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      case 'note_read':
       case 'idea_read': {
         const id = String(getOption('id') || '').trim();
         if (!id) {
@@ -1418,8 +1422,8 @@ export async function POST(req: NextRequest) {
                 {
                   type: 1,
                   components: [
-                    { type: 2, style: 4, label: 'Delete Idea', custom_id: `del_note:${note.id}`, emoji: { name: '🗑️' } },
-                    { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_notes', emoji: { name: '📋' } },
+                    { type: 2, style: 4, label: 'Delete Idea', custom_id: `del_idea:${note.id}`, emoji: { name: '🗑️' } },
+                    { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
                     { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                   ],
                 },
@@ -1434,6 +1438,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      case 'note_delete':
       case 'idea_delete': {
         const id = String(getOption('id') || '').trim();
         if (!id) {
@@ -1449,17 +1454,17 @@ export async function POST(req: NextRequest) {
             data: {
               embeds: [
                 {
-                  title: '🗑️ Note Deleted',
-                  description: `Note with ID \`${id}\` was permanently removed.`,
+                  title: '🗑️ Idea Deleted',
+                  description: `Idea with ID \`${id}\` was permanently removed.`,
                   color: 0xef4444,
-                  footer: { text: 'Kylrix Sovereign Notes' },
+                  footer: { text: 'Kylrix Sovereign Ideas' },
                 },
               ],
               components: [
                 {
                   type: 1,
                   components: [
-                    { type: 2, style: 1, label: 'Back to Notes', custom_id: 'btn_notes', emoji: { name: '📋' } },
+                    { type: 2, style: 1, label: 'Back to Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
                     { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                   ],
                 },
@@ -1469,7 +1474,7 @@ export async function POST(req: NextRequest) {
         } catch (err: any) {
           return NextResponse.json({
             type: 4,
-            data: { content: `❌ Note deletion failed: ${err?.message || 'Error'}` },
+            data: { content: `❌ Idea deletion failed: ${err?.message || 'Error'}` },
           });
         }
       }
@@ -1652,7 +1657,7 @@ export async function POST(req: NextRequest) {
                   title: '🎉 Kylrix Account Linked!',
                   description:
                     `Your Discord user **${callerName}** is now securely linked to Kylrix account **\`${verified.userId}\`**.\n\n` +
-                    `You can now view, create, and manage your real sovereign notes, goals, and workspaces directly from Discord!`,
+                    `You can now view, create, and manage your real sovereign ideas, goals, and workspaces directly from Discord!`,
                   color: 0x10b981,
                   fields: [
                     { name: 'Kylrix User ID', value: `\`${verified.userId}\``, inline: true },
@@ -1665,7 +1670,7 @@ export async function POST(req: NextRequest) {
                 {
                   type: 1,
                   components: [
-                    { type: 2, style: 1, label: 'View Notes', custom_id: 'btn_notes', emoji: { name: '📝' } },
+                    { type: 2, style: 1, label: 'View Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
                     { type: 2, style: 1, label: 'View Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
                     { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                   ],
@@ -1832,7 +1837,7 @@ export async function POST(req: NextRequest) {
                 embeds: [
                   {
                     title: `🔍 No Results for "${query}"`,
-                    description: `No notes or deliverables matched your search keyword in ${isLinked ? 'your linked workspace' : 'the sandbox workspace'}.`,
+                    description: `No ideas or deliverables matched your search keyword in ${isLinked ? 'your linked workspace' : 'the sandbox workspace'}.`,
                     color: 0x6b7280,
                     footer: { text: 'Kylrix Workspace Search' },
                   },
@@ -1842,7 +1847,7 @@ export async function POST(req: NextRequest) {
                     type: 1,
                     components: [
                       { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
-                      { type: 2, style: 5, label: 'Search in Web App', url: `https://www.kylrix.space/note?search=${encodeURIComponent(query)}` },
+                      { type: 2, style: 5, label: 'Search in Web App', url: `https://www.kylrix.space/idea?search=${encodeURIComponent(query)}` },
                     ],
                   },
                 ],
@@ -1855,7 +1860,7 @@ export async function POST(req: NextRequest) {
 
           if (matchedNotes.length > 0) {
             fields.push({
-              name: `📝 Notes (${matchedNotes.length})`,
+              name: `💡 Ideas (${matchedNotes.length})`,
               value: matchedNotes
                 .slice(0, 4)
                 .map((n: any) => `• **${n.title || 'Untitled'}** (\`${n.id}\`)`)
@@ -1864,10 +1869,10 @@ export async function POST(req: NextRequest) {
             });
             matchedNotes.slice(0, 10).forEach((n: any) => {
               selectOptions.push({
-                label: `Note: ${((n.title || 'Untitled Note') as string).slice(0, 80)}`,
-                value: `search_pick_note:${n.id}`,
+                label: `Idea: ${((n.title || 'Untitled Idea') as string).slice(0, 80)}`,
+                value: `search_pick_idea:${n.id}`,
                 description: `ID: ${n.id}`.slice(0, 100),
-                emoji: { name: '📝' },
+                emoji: { name: '💡' },
               });
             });
           }
@@ -1954,9 +1959,10 @@ export async function POST(req: NextRequest) {
         let kindTitle = 'Item';
 
         switch (kind) {
+          case 'idea':
           case 'note':
             sharePath = `/idea/${encodeURIComponent(id)}`;
-            kindTitle = 'Note';
+            kindTitle = 'Idea';
             break;
           case 'goal':
             sharePath = `/goal/${encodeURIComponent(id)}`;

@@ -112,7 +112,7 @@ function DiscordConnectContent() {
               Connect Kylrix to Discord
             </h1>
             <p className="text-xs text-white/60 font-sans mt-1">
-              Add the official Kylrix bot to your Discord servers or user account to manage notes, goals, and agent workflows.
+              Add the official Kylrix bot to your Discord servers or user account to manage ideas, goals, and agent workflows.
             </p>
           </div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-mono text-emerald-400">
@@ -215,8 +215,8 @@ function DiscordConnectContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
             {[
               { cmd: '/pair', desc: 'Link Discord user to your workspace', icon: KeyRound },
-              { cmd: '/notes', desc: 'Browse your recent notes', icon: FileText },
-              { cmd: '/note', desc: 'Quick capture note directly into Kylrix', icon: FileText },
+              { cmd: '/ideas', desc: 'Browse your recent sovereign ideas', icon: FileText },
+              { cmd: '/idea', desc: 'Quick capture idea directly into Kylrix', icon: FileText },
               { cmd: '/goals', desc: 'List active priorities and milestones', icon: CheckSquare },
               { cmd: '/goal_done', desc: 'Complete a goal by title or ID', icon: CheckCircle2 },
               { cmd: '/menu', desc: 'Open interactive bot control card', icon: Compass },
