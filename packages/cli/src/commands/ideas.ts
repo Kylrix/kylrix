@@ -10,16 +10,17 @@ export async function listIdeasCommand(opts: {
   workspace?: string;
   json?: boolean;
   limit?: string;
+  all?: boolean;
 }) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
+    const limit = opts.all || opts.limit === '0' ? 0 : (opts.limit ? parseInt(opts.limit, 10) : 50);
 
     // 1. If authed, pull latest ideas from cloud into local SQLite in background
     if (isAuthed) {
       try {
         const client = getClient(opts);
-        const cloudRes = await client.ideas.list({ limit, workspaceId: opts.workspace });
+        const cloudRes = await client.ideas.list({ limit: limit || 100, workspaceId: opts.workspace });
         const items = extractItems(cloudRes);
         for (const item of items) {
           LocalStore.upsertIdeaFromCloud(item);
@@ -37,7 +38,9 @@ export async function listIdeasCommand(opts: {
       return;
     }
 
-    const rows = (res.items || []).slice(0, limit).map((n: any) => {
+    const allItems = res.items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
+    const rows = sliced.map((n: any) => {
       let syncBadge = pc.yellow('○ unsynced');
       if (n.syncStatus === 'synced') {
         syncBadge = pc.green('● synced');
@@ -54,6 +57,9 @@ export async function listIdeasCommand(opts: {
     });
 
     printTable(rows, ['id', 'title', 'category', 'sync', 'updated']);
+    if (allItems.length > rows.length) {
+      console.log(pc.dim(`\nShowing ${rows.length} of ${allItems.length} ideas. Use --limit <number> or --all to view more.`));
+    }
     if (!isAuthed) {
       console.log(pc.dim('💡 Local-first mode. Run `kylrix login` to sync ideas with cloud.'));
     }

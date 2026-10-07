@@ -3,12 +3,18 @@ import { getClient, hasAuth } from '../client';
 import { printError, printJson, printSuccess, printTable } from '../formatter';
 import { LocalStore } from '../local/store';
 
-export async function listFlowsCommand(opts: { url?: string; token?: string; json?: boolean; limit?: string }) {
+export async function listFlowsCommand(opts: {
+  url?: string;
+  token?: string;
+  json?: boolean;
+  limit?: string;
+  all?: boolean;
+}) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
+    const limit = opts.all || opts.limit === '0' ? 0 : (opts.limit ? parseInt(opts.limit, 10) : 50);
     const res = isAuthed
-      ? await getClient(opts).flows.list(limit)
+      ? await getClient(opts).flows.list(limit || 100)
       : LocalStore.listFlows();
 
     if (opts.json) {
@@ -16,7 +22,9 @@ export async function listFlowsCommand(opts: { url?: string; token?: string; jso
       return;
     }
 
-    const rows = (res.items || []).map((f: any) => ({
+    const allItems = res.items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
+    const rows = sliced.map((f: any) => ({
       id: f.id,
       title: f.title || '(Untitled Flow)',
       status: f.status || 'draft',
@@ -25,6 +33,9 @@ export async function listFlowsCommand(opts: { url?: string; token?: string; jso
     }));
 
     printTable(rows, ['id', 'title', 'status', 'description', 'mode']);
+    if (allItems.length > rows.length) {
+      console.log(pc.dim(`\nShowing ${rows.length} of ${allItems.length} flows. Use --limit <number> or --all to view more.`));
+    }
   } catch (err: any) {
     printError('Failed to list flows', err);
     process.exit(1);
@@ -68,9 +79,25 @@ export async function createFlowCommand(
       status: 'draft',
     };
 
-    const item = isAuthed
-      ? await getClient(opts).flows.create(payload)
-      : LocalStore.createFlow(payload);
+    let syncStatus = isAuthed ? 'unsynced' : 'local';
+
+    // 1. Create locally first
+    const item = LocalStore.createFlow({
+      ...payload,
+      syncStatus,
+    });
+
+    // 2. If authed, push to cloud immediately
+    if (isAuthed) {
+      try {
+        const client = getClient(opts);
+        const cloudItem = await client.flows.create(payload);
+        LocalStore.markFlowSynced(item.id, cloudItem.id);
+        item.syncStatus = 'synced';
+        item.cloudId = cloudItem.id;
+        syncStatus = 'synced';
+      } catch {}
+    }
 
     if (opts.json) {
       printJson(item);

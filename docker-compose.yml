@@ -57,6 +57,8 @@ services:
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:5003}
       - NEXT_PUBLIC_APP_URI=${NEXT_PUBLIC_APP_URI:-http://localhost:5003}
       - NEXT_PUBLIC_ORIGIN=${NEXT_PUBLIC_APP_URI:-http://localhost:5003}
+      - TURSO_DATABASE_URL=${TURSO_DATABASE_URL:-file:kylrix.db}
+      - TURSO_AUTH_TOKEN=${TURSO_AUTH_TOKEN:-}
     healthcheck:
       test: ["CMD", "node", "-e", "const http=require('http');const r=http.request({hostname:'127.0.0.1',port:3000,path:'/api/health',timeout:3000},res=>{process.exit(res.statusCode===200?0:1)});r.on('error',()=>process.exit(1));r.end()"]
       interval: 15s

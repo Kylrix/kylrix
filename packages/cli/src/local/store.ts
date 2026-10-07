@@ -617,6 +617,30 @@ export const LocalStore = {
     return { items: store.events || [], count: store.events?.length || 0 };
   },
 
+  getEvent(id: string): any {
+    const db = getDatabase();
+    if (db) {
+      const stmt = db.prepare('SELECT * FROM events WHERE id = ? OR cloud_id = ?');
+      const r = stmt.get(id, id) as any;
+      if (!r) throw new Error(`Event not found: ${id}`);
+      return {
+        id: r.id,
+        title: r.title,
+        startTime: r.start_time,
+        endTime: r.end_time,
+        description: r.description,
+        isLocal: Boolean(r.is_local),
+        syncStatus: r.sync_status || (r.cloud_id ? 'synced' : 'unsynced'),
+        cloudId: r.cloud_id || null,
+        createdAt: r.created_at,
+      };
+    }
+    const store = loadFallback();
+    const item = (store.events || []).find((e: any) => e.id === id || e.cloudId === id);
+    if (!item) throw new Error(`Event not found: ${id}`);
+    return item;
+  },
+
   createEvent(data: any): any {
     const id = data.id || generateLocalId('evt');
     const now = new Date().toISOString();
@@ -667,6 +691,20 @@ export const LocalStore = {
     }
     saveFallback(store);
     return enriched;
+  },
+
+  markEventSynced(localId: string, cloudId: string): void {
+    const db = getDatabase();
+    if (db) {
+      db.prepare(`UPDATE events SET sync_status = 'synced', cloud_id = ? WHERE id = ?`).run(cloudId, localId);
+    }
+    const store = loadFallback();
+    const item = (store.events || []).find((e: any) => e.id === localId);
+    if (item) {
+      item.syncStatus = 'synced';
+      item.cloudId = cloudId;
+      saveFallback(store);
+    }
   },
 
   deleteEvent(id: string): { success: boolean } {
@@ -778,6 +816,20 @@ export const LocalStore = {
     return enriched;
   },
 
+  markFormSynced(localId: string, cloudId: string): void {
+    const db = getDatabase();
+    if (db) {
+      db.prepare(`UPDATE forms SET sync_status = 'synced', cloud_id = ? WHERE id = ?`).run(cloudId, localId);
+    }
+    const store = loadFallback();
+    const item = (store.forms || []).find((f: any) => f.id === localId);
+    if (item) {
+      item.syncStatus = 'synced';
+      item.cloudId = cloudId;
+      saveFallback(store);
+    }
+  },
+
   deleteForm(id: string): { success: boolean } {
     const db = getDatabase();
     if (db) {
@@ -884,6 +936,20 @@ export const LocalStore = {
     }
     saveFallback(store);
     return enriched;
+  },
+
+  markFlowSynced(localId: string, cloudId: string): void {
+    const db = getDatabase();
+    if (db) {
+      db.prepare(`UPDATE flows SET sync_status = 'synced', cloud_id = ? WHERE id = ?`).run(cloudId, localId);
+    }
+    const store = loadFallback();
+    const item = (store.flows || []).find((fl: any) => fl.id === localId);
+    if (item) {
+      item.syncStatus = 'synced';
+      item.cloudId = cloudId;
+      saveFallback(store);
+    }
   },
 
   deleteFlow(id: string): { success: boolean } {

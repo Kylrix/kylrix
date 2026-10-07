@@ -40,6 +40,8 @@ capture_env_override PRICING_TIERS_ENABLED
 capture_env_override PRODUCT_NAME
 capture_env_override APPWRITE_UNSTABLE
 capture_env_override NEXT_PUBLIC_LOGGING_VERBOSE
+capture_env_override TURSO_DATABASE_URL
+capture_env_override TURSO_AUTH_TOKEN
 capture_env_override SMTP_HOST
 capture_env_override SMTP_PORT
 capture_env_override SMTP_SECURE
@@ -111,6 +113,12 @@ upsert_env "PRODUCT_NAME" "$PRODUCT_NAME"
 
 if has_env_override NEXT_PUBLIC_LOGGING_VERBOSE; then
   upsert_env "NEXT_PUBLIC_LOGGING_VERBOSE" "$(apply_env_override NEXT_PUBLIC_LOGGING_VERBOSE "")"
+fi
+
+TURSO_DATABASE_URL="$(apply_env_override TURSO_DATABASE_URL "${TURSO_DATABASE_URL:-file:kylrix.db}")"
+upsert_env "TURSO_DATABASE_URL" "$TURSO_DATABASE_URL"
+if has_env_override TURSO_AUTH_TOKEN; then
+  upsert_env "TURSO_AUTH_TOKEN" "$(apply_env_override TURSO_AUTH_TOKEN "")"
 fi
 
 APPWRITE_UNSTABLE="$(apply_env_override APPWRITE_UNSTABLE false)"

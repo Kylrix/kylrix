@@ -400,12 +400,15 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
 
   let pushedIdeas = 0;
   let pushedGoals = 0;
+  let pushedEvents = 0;
+  let pushedForms = 0;
+  let pushedFlows = 0;
 
   if (db) {
-    // Push ideas where sync_status = 'unsynced'
+    // Push ideas where sync_status = 'unsynced' or 'local'
     try {
       const ideas = db
-        .prepare("SELECT * FROM ideas WHERE sync_status = 'unsynced' OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))")
+        .prepare("SELECT * FROM ideas WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))")
         .all() as any[];
       for (const item of ideas) {
         try {
@@ -428,10 +431,10 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
       }
     } catch {}
 
-    // Push goals where sync_status = 'unsynced'
+    // Push goals where sync_status = 'unsynced' or 'local'
     try {
       const goals = db
-        .prepare("SELECT * FROM goals WHERE sync_status = 'unsynced' OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))")
+        .prepare("SELECT * FROM goals WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))")
         .all() as any[];
       for (const item of goals) {
         try {
@@ -448,6 +451,73 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
         }
       }
     } catch {}
+
+    // Push events where sync_status = 'unsynced' or 'local'
+    try {
+      const events = db
+        .prepare("SELECT * FROM events WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))")
+        .all() as any[];
+      for (const item of events) {
+        try {
+          const created = await client.events.create({
+            title: item.title,
+            startTime: item.start_time,
+            endTime: item.end_time,
+            description: item.description,
+            workspaceId: opts.workspace,
+          });
+          db.prepare("UPDATE events SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedEvents++;
+        } catch (err: any) {
+          console.warn(pc.yellow(`⚠ [sync] Failed to push local event "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {}
+
+    // Push forms where sync_status = 'unsynced' or 'local'
+    try {
+      const forms = db
+        .prepare("SELECT * FROM forms WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))")
+        .all() as any[];
+      for (const item of forms) {
+        try {
+          let schemaObj = [];
+          try {
+            schemaObj = typeof item.schema === 'string' ? JSON.parse(item.schema) : (item.schema || []);
+          } catch {}
+          const created = await client.forms.create({
+            title: item.title,
+            description: item.description,
+            schema: schemaObj,
+            workspaceId: opts.workspace,
+          });
+          db.prepare("UPDATE forms SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedForms++;
+        } catch (err: any) {
+          console.warn(pc.yellow(`⚠ [sync] Failed to push local form "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {}
+
+    // Push flows where sync_status = 'unsynced' or 'local'
+    try {
+      const flows = db
+        .prepare("SELECT * FROM flows WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))")
+        .all() as any[];
+      for (const item of flows) {
+        try {
+          const created = await client.flows.create({
+            title: item.title,
+            description: item.description,
+            status: item.status || 'draft',
+          });
+          db.prepare("UPDATE flows SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedFlows++;
+        } catch (err: any) {
+          console.warn(pc.yellow(`⚠ [sync] Failed to push local flow "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {}
   } else {
     // Fallback store push (when SQLite is unavailable)
     const fallbackPath = env.siloFallbackPath;
@@ -457,7 +527,7 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
         let changed = false;
         if (Array.isArray(store.ideas)) {
           for (const item of store.ideas) {
-            if (item.syncStatus === 'unsynced' || (!item.syncStatus && !item.cloudId)) {
+            if (item.syncStatus === 'unsynced' || item.syncStatus === 'local' || (!item.syncStatus && !item.cloudId)) {
               try {
                 const created = await client.ideas.create({
                   title: item.title,
@@ -477,7 +547,7 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
         }
         if (Array.isArray(store.goals)) {
           for (const item of store.goals) {
-            if (item.syncStatus === 'unsynced' || (!item.syncStatus && !item.cloudId)) {
+            if (item.syncStatus === 'unsynced' || item.syncStatus === 'local' || (!item.syncStatus && !item.cloudId)) {
               try {
                 const created = await client.goals.create({
                   title: item.title,
@@ -495,6 +565,66 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
             }
           }
         }
+        if (Array.isArray(store.events)) {
+          for (const item of store.events) {
+            if (item.syncStatus === 'unsynced' || item.syncStatus === 'local' || (!item.syncStatus && !item.cloudId)) {
+              try {
+                const created = await client.events.create({
+                  title: item.title,
+                  startTime: item.startTime,
+                  endTime: item.endTime,
+                  description: item.description,
+                  workspaceId: opts.workspace,
+                });
+                item.syncStatus = 'synced';
+                item.cloudId = created.id;
+                pushedEvents++;
+                changed = true;
+              } catch (err: any) {
+                console.warn(pc.yellow(`⚠ [sync] Failed to push local event "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (Array.isArray(store.forms)) {
+          for (const item of store.forms) {
+            if (item.syncStatus === 'unsynced' || item.syncStatus === 'local' || (!item.syncStatus && !item.cloudId)) {
+              try {
+                const created = await client.forms.create({
+                  title: item.title,
+                  description: item.description,
+                  schema: Array.isArray(item.schema) ? item.schema : [],
+                  workspaceId: opts.workspace,
+                });
+                item.syncStatus = 'synced';
+                item.cloudId = created.id;
+                pushedForms++;
+                changed = true;
+              } catch (err: any) {
+                console.warn(pc.yellow(`⚠ [sync] Failed to push local form "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (Array.isArray(store.flows)) {
+          for (const item of store.flows) {
+            if (item.syncStatus === 'unsynced' || item.syncStatus === 'local' || (!item.syncStatus && !item.cloudId)) {
+              try {
+                const created = await client.flows.create({
+                  title: item.title,
+                  description: item.description,
+                  status: item.status || 'draft',
+                });
+                item.syncStatus = 'synced';
+                item.cloudId = created.id;
+                pushedFlows++;
+                changed = true;
+              } catch (err: any) {
+                console.warn(pc.yellow(`⚠ [sync] Failed to push local flow "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
         if (changed) {
           fs.writeFileSync(fallbackPath, JSON.stringify(store, null, 2), { encoding: 'utf-8', mode: 0o600 });
         }
@@ -502,7 +632,8 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
     }
   }
 
-  return { pushedIdeas, pushedGoals };
+  const total = pushedIdeas + pushedGoals + pushedEvents + pushedForms + pushedFlows;
+  return { pushedIdeas, pushedGoals, pushedEvents, pushedForms, pushedFlows, total };
 }
 
 /**

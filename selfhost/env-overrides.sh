@@ -37,6 +37,8 @@ capture_env_override PRICING_TIERS_ENABLED
 capture_env_override PRODUCT_NAME
 capture_env_override APPWRITE_UNSTABLE
 capture_env_override NEXT_PUBLIC_LOGGING_VERBOSE
+capture_env_override TURSO_DATABASE_URL
+capture_env_override TURSO_AUTH_TOKEN
 
 # Optional SMTP (local mail)
 capture_env_override SMTP_HOST

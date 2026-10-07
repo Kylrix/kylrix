@@ -1891,6 +1891,29 @@ var init_store = __esm({
         const store = loadFallback();
         return { items: store.events || [], count: store.events?.length || 0 };
       },
+      getEvent(id) {
+        const db = getDatabase();
+        if (db) {
+          const stmt = db.prepare("SELECT * FROM events WHERE id = ? OR cloud_id = ?");
+          const r2 = stmt.get(id, id);
+          if (!r2) throw new Error(`Event not found: ${id}`);
+          return {
+            id: r2.id,
+            title: r2.title,
+            startTime: r2.start_time,
+            endTime: r2.end_time,
+            description: r2.description,
+            isLocal: Boolean(r2.is_local),
+            syncStatus: r2.sync_status || (r2.cloud_id ? "synced" : "unsynced"),
+            cloudId: r2.cloud_id || null,
+            createdAt: r2.created_at
+          };
+        }
+        const store = loadFallback();
+        const item = (store.events || []).find((e2) => e2.id === id || e2.cloudId === id);
+        if (!item) throw new Error(`Event not found: ${id}`);
+        return item;
+      },
       createEvent(data) {
         const id = data.id || generateLocalId("evt");
         const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -1940,6 +1963,19 @@ var init_store = __esm({
         }
         saveFallback(store);
         return enriched;
+      },
+      markEventSynced(localId, cloudId) {
+        const db = getDatabase();
+        if (db) {
+          db.prepare(`UPDATE events SET sync_status = 'synced', cloud_id = ? WHERE id = ?`).run(cloudId, localId);
+        }
+        const store = loadFallback();
+        const item = (store.events || []).find((e2) => e2.id === localId);
+        if (item) {
+          item.syncStatus = "synced";
+          item.cloudId = cloudId;
+          saveFallback(store);
+        }
       },
       deleteEvent(id) {
         const db = getDatabase();
@@ -2045,6 +2081,19 @@ var init_store = __esm({
         saveFallback(store);
         return enriched;
       },
+      markFormSynced(localId, cloudId) {
+        const db = getDatabase();
+        if (db) {
+          db.prepare(`UPDATE forms SET sync_status = 'synced', cloud_id = ? WHERE id = ?`).run(cloudId, localId);
+        }
+        const store = loadFallback();
+        const item = (store.forms || []).find((f2) => f2.id === localId);
+        if (item) {
+          item.syncStatus = "synced";
+          item.cloudId = cloudId;
+          saveFallback(store);
+        }
+      },
       deleteForm(id) {
         const db = getDatabase();
         if (db) {
@@ -2147,6 +2196,19 @@ var init_store = __esm({
         }
         saveFallback(store);
         return enriched;
+      },
+      markFlowSynced(localId, cloudId) {
+        const db = getDatabase();
+        if (db) {
+          db.prepare(`UPDATE flows SET sync_status = 'synced', cloud_id = ? WHERE id = ?`).run(cloudId, localId);
+        }
+        const store = loadFallback();
+        const item = (store.flows || []).find((fl) => fl.id === localId);
+        if (item) {
+          item.syncStatus = "synced";
+          item.cloudId = cloudId;
+          saveFallback(store);
+        }
       },
       deleteFlow(id) {
         const db = getDatabase();
@@ -2705,9 +2767,12 @@ async function pushLocalItemsToCloud(opts = {}) {
   const db = DatabaseSync ? getDatabase(env.siloDbPath) : null;
   let pushedIdeas = 0;
   let pushedGoals = 0;
+  let pushedEvents = 0;
+  let pushedForms = 0;
+  let pushedFlows = 0;
   if (db) {
     try {
-      const ideas2 = db.prepare("SELECT * FROM ideas WHERE sync_status = 'unsynced' OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
+      const ideas2 = db.prepare("SELECT * FROM ideas WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
       for (const item of ideas2) {
         try {
           const rawTags = item.tags ? typeof item.tags === "string" ? JSON.parse(item.tags) : item.tags : [];
@@ -2730,7 +2795,7 @@ async function pushLocalItemsToCloud(opts = {}) {
     } catch {
     }
     try {
-      const goals2 = db.prepare("SELECT * FROM goals WHERE sync_status = 'unsynced' OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
+      const goals2 = db.prepare("SELECT * FROM goals WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
       for (const item of goals2) {
         try {
           const created = await client.goals.create({
@@ -2747,6 +2812,65 @@ async function pushLocalItemsToCloud(opts = {}) {
       }
     } catch {
     }
+    try {
+      const events2 = db.prepare("SELECT * FROM events WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
+      for (const item of events2) {
+        try {
+          const created = await client.events.create({
+            title: item.title,
+            startTime: item.start_time,
+            endTime: item.end_time,
+            description: item.description,
+            workspaceId: opts.workspace
+          });
+          db.prepare("UPDATE events SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedEvents++;
+        } catch (err) {
+          console.warn(pc2.yellow(`\u26A0 [sync] Failed to push local event "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {
+    }
+    try {
+      const forms2 = db.prepare("SELECT * FROM forms WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
+      for (const item of forms2) {
+        try {
+          let schemaObj = [];
+          try {
+            schemaObj = typeof item.schema === "string" ? JSON.parse(item.schema) : item.schema || [];
+          } catch {
+          }
+          const created = await client.forms.create({
+            title: item.title,
+            description: item.description,
+            schema: schemaObj,
+            workspaceId: opts.workspace
+          });
+          db.prepare("UPDATE forms SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedForms++;
+        } catch (err) {
+          console.warn(pc2.yellow(`\u26A0 [sync] Failed to push local form "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {
+    }
+    try {
+      const flows2 = db.prepare("SELECT * FROM flows WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
+      for (const item of flows2) {
+        try {
+          const created = await client.flows.create({
+            title: item.title,
+            description: item.description,
+            status: item.status || "draft"
+          });
+          db.prepare("UPDATE flows SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedFlows++;
+        } catch (err) {
+          console.warn(pc2.yellow(`\u26A0 [sync] Failed to push local flow "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {
+    }
   } else {
     const fallbackPath = env.siloFallbackPath;
     if (fs4.existsSync(fallbackPath)) {
@@ -2755,7 +2879,7 @@ async function pushLocalItemsToCloud(opts = {}) {
         let changed = false;
         if (Array.isArray(store.ideas)) {
           for (const item of store.ideas) {
-            if (item.syncStatus === "unsynced" || !item.syncStatus && !item.cloudId) {
+            if (item.syncStatus === "unsynced" || item.syncStatus === "local" || !item.syncStatus && !item.cloudId) {
               try {
                 const created = await client.ideas.create({
                   title: item.title,
@@ -2775,7 +2899,7 @@ async function pushLocalItemsToCloud(opts = {}) {
         }
         if (Array.isArray(store.goals)) {
           for (const item of store.goals) {
-            if (item.syncStatus === "unsynced" || !item.syncStatus && !item.cloudId) {
+            if (item.syncStatus === "unsynced" || item.syncStatus === "local" || !item.syncStatus && !item.cloudId) {
               try {
                 const created = await client.goals.create({
                   title: item.title,
@@ -2793,6 +2917,66 @@ async function pushLocalItemsToCloud(opts = {}) {
             }
           }
         }
+        if (Array.isArray(store.events)) {
+          for (const item of store.events) {
+            if (item.syncStatus === "unsynced" || item.syncStatus === "local" || !item.syncStatus && !item.cloudId) {
+              try {
+                const created = await client.events.create({
+                  title: item.title,
+                  startTime: item.startTime,
+                  endTime: item.endTime,
+                  description: item.description,
+                  workspaceId: opts.workspace
+                });
+                item.syncStatus = "synced";
+                item.cloudId = created.id;
+                pushedEvents++;
+                changed = true;
+              } catch (err) {
+                console.warn(pc2.yellow(`\u26A0 [sync] Failed to push local event "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (Array.isArray(store.forms)) {
+          for (const item of store.forms) {
+            if (item.syncStatus === "unsynced" || item.syncStatus === "local" || !item.syncStatus && !item.cloudId) {
+              try {
+                const created = await client.forms.create({
+                  title: item.title,
+                  description: item.description,
+                  schema: Array.isArray(item.schema) ? item.schema : [],
+                  workspaceId: opts.workspace
+                });
+                item.syncStatus = "synced";
+                item.cloudId = created.id;
+                pushedForms++;
+                changed = true;
+              } catch (err) {
+                console.warn(pc2.yellow(`\u26A0 [sync] Failed to push local form "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (Array.isArray(store.flows)) {
+          for (const item of store.flows) {
+            if (item.syncStatus === "unsynced" || item.syncStatus === "local" || !item.syncStatus && !item.cloudId) {
+              try {
+                const created = await client.flows.create({
+                  title: item.title,
+                  description: item.description,
+                  status: item.status || "draft"
+                });
+                item.syncStatus = "synced";
+                item.cloudId = created.id;
+                pushedFlows++;
+                changed = true;
+              } catch (err) {
+                console.warn(pc2.yellow(`\u26A0 [sync] Failed to push local flow "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
         if (changed) {
           fs4.writeFileSync(fallbackPath, JSON.stringify(store, null, 2), { encoding: "utf-8", mode: 384 });
         }
@@ -2800,7 +2984,8 @@ async function pushLocalItemsToCloud(opts = {}) {
       }
     }
   }
-  return { pushedIdeas, pushedGoals };
+  const total = pushedIdeas + pushedGoals + pushedEvents + pushedForms + pushedFlows;
+  return { pushedIdeas, pushedGoals, pushedEvents, pushedForms, pushedFlows, total };
 }
 async function pullCloudItemsToLocal(opts = {}) {
   const client = getClient(opts);
@@ -3616,11 +3801,11 @@ import pc7 from "picocolors";
 async function listIdeasCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
+    const limit = opts.all || opts.limit === "0" ? 0 : opts.limit ? parseInt(opts.limit, 10) : 50;
     if (isAuthed) {
       try {
         const client = getClient(opts);
-        const cloudRes = await client.ideas.list({ limit, workspaceId: opts.workspace });
+        const cloudRes = await client.ideas.list({ limit: limit || 100, workspaceId: opts.workspace });
         const items = extractItems(cloudRes);
         for (const item of items) {
           LocalStore.upsertIdeaFromCloud(item);
@@ -3633,7 +3818,9 @@ async function listIdeasCommand(opts) {
       printJson(res);
       return;
     }
-    const rows = (res.items || []).slice(0, limit).map((n) => {
+    const allItems = res.items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
+    const rows = sliced.map((n) => {
       let syncBadge = pc7.yellow("\u25CB unsynced");
       if (n.syncStatus === "synced") {
         syncBadge = pc7.green("\u25CF synced");
@@ -3649,6 +3836,10 @@ async function listIdeasCommand(opts) {
       };
     });
     printTable(rows, ["id", "title", "category", "sync", "updated"]);
+    if (allItems.length > rows.length) {
+      console.log(pc7.dim(`
+Showing ${rows.length} of ${allItems.length} ideas. Use --limit <number> or --all to view more.`));
+    }
     if (!isAuthed) {
       console.log(pc7.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync ideas with cloud."));
     }
@@ -3843,11 +4034,11 @@ import pc8 from "picocolors";
 async function listGoalsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
+    const limit = opts.all || opts.limit === "0" ? 0 : opts.limit ? parseInt(opts.limit, 10) : 50;
     if (isAuthed) {
       try {
         const client = getClient(opts);
-        const cloudRes = await client.goals.list({ limit, workspaceId: opts.workspace, status: opts.status });
+        const cloudRes = await client.goals.list({ limit: limit || 100, workspaceId: opts.workspace, status: opts.status });
         const items2 = extractItems(cloudRes);
         for (const item of items2) {
           LocalStore.upsertGoalFromCloud(item);
@@ -3859,11 +4050,13 @@ async function listGoalsCommand(opts) {
     if (opts.status) {
       items = items.filter((g2) => g2.status === opts.status);
     }
+    const allItems = items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
     if (opts.json) {
-      printJson({ items: items.slice(0, limit), count: items.length });
+      printJson({ items: sliced, count: allItems.length });
       return;
     }
-    const rows = items.slice(0, limit).map((g2) => {
+    const rows = sliced.map((g2) => {
       let syncBadge = pc8.yellow("\u25CB unsynced");
       if (g2.syncStatus === "synced") {
         syncBadge = pc8.green("\u25CF synced");
@@ -3879,6 +4072,10 @@ async function listGoalsCommand(opts) {
       };
     });
     printTable(rows, ["id", "title", "status", "progress", "sync"]);
+    if (allItems.length > rows.length) {
+      console.log(pc8.dim(`
+Showing ${rows.length} of ${allItems.length} goals. Use --limit <number> or --all to view more.`));
+    }
     if (!isAuthed) {
       console.log(pc8.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync goals with cloud."));
     }
@@ -4035,13 +4232,15 @@ import pc9 from "picocolors";
 async function listEventsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = isAuthed ? await getClient(opts).events.list({ limit, workspaceId: opts.workspace }) : LocalStore.listEvents();
+    const limit = opts.all || opts.limit === "0" ? 0 : opts.limit ? parseInt(opts.limit, 10) : 50;
+    const res = isAuthed ? await getClient(opts).events.list({ limit: limit || 100, workspaceId: opts.workspace }) : LocalStore.listEvents();
     if (opts.json) {
       printJson(res);
       return;
     }
-    const rows = (res.items || []).map((e2) => ({
+    const allItems = res.items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
+    const rows = sliced.map((e2) => ({
       id: e2.id,
       title: e2.title,
       startTime: e2.startTime || "",
@@ -4049,6 +4248,10 @@ async function listEventsCommand(opts) {
       mode: isAuthed ? e2.workspaceId || "cloud" : pc9.dim("local")
     }));
     printTable(rows, ["id", "title", "startTime", "endTime", "mode"]);
+    if (allItems.length > rows.length) {
+      console.log(pc9.dim(`
+Showing ${rows.length} of ${allItems.length} events. Use --limit <number> or --all to view more.`));
+    }
     if (!isAuthed) {
       console.log(pc9.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync calendar events with cloud."));
     }
@@ -4067,7 +4270,22 @@ async function createEventCommand(title, opts) {
       description: opts.description,
       workspaceId: opts.workspace
     };
-    const item = isAuthed ? await getClient(opts).events.create(payload) : LocalStore.createEvent(payload);
+    let syncStatus = isAuthed ? "unsynced" : "local";
+    const item = LocalStore.createEvent({
+      ...payload,
+      syncStatus
+    });
+    if (isAuthed) {
+      try {
+        const client = getClient(opts);
+        const cloudItem = await client.events.create(payload);
+        LocalStore.markEventSynced(item.id, cloudItem.id);
+        item.syncStatus = "synced";
+        item.cloudId = cloudItem.id;
+        syncStatus = "synced";
+      } catch {
+      }
+    }
     if (opts.json) {
       printJson(item);
       return;
@@ -4105,13 +4323,15 @@ import pc10 from "picocolors";
 async function listFormsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = isAuthed ? await getClient(opts).forms.list({ limit, workspaceId: opts.workspace }) : LocalStore.listForms();
+    const limit = opts.all || opts.limit === "0" ? 0 : opts.limit ? parseInt(opts.limit, 10) : 50;
+    const res = isAuthed ? await getClient(opts).forms.list({ limit: limit || 100, workspaceId: opts.workspace }) : LocalStore.listForms();
     if (opts.json) {
       printJson(res);
       return;
     }
-    const rows = (res.items || []).map((f2) => ({
+    const allItems = res.items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
+    const rows = sliced.map((f2) => ({
       id: f2.id,
       title: f2.title || "(Untitled Form)",
       status: f2.status || "active",
@@ -4119,6 +4339,10 @@ async function listFormsCommand(opts) {
       mode: isAuthed ? f2.workspaceId || "cloud" : pc10.dim("local")
     }));
     printTable(rows, ["id", "title", "status", "fields", "mode"]);
+    if (allItems.length > rows.length) {
+      console.log(pc10.dim(`
+Showing ${rows.length} of ${allItems.length} forms. Use --limit <number> or --all to view more.`));
+    }
   } catch (err) {
     printError("Failed to list forms", err);
     process.exit(1);
@@ -4153,7 +4377,22 @@ async function createFormCommand(title, opts) {
       workspaceId: opts.workspace,
       schema: []
     };
-    const item = isAuthed ? await getClient(opts).forms.create(payload) : LocalStore.createForm(payload);
+    let syncStatus = isAuthed ? "unsynced" : "local";
+    const item = LocalStore.createForm({
+      ...payload,
+      syncStatus
+    });
+    if (isAuthed) {
+      try {
+        const client = getClient(opts);
+        const cloudItem = await client.forms.create(payload);
+        LocalStore.markFormSynced(item.id, cloudItem.id);
+        item.syncStatus = "synced";
+        item.cloudId = cloudItem.id;
+        syncStatus = "synced";
+      } catch {
+      }
+    }
     if (opts.json) {
       printJson(item);
       return;
@@ -4191,13 +4430,15 @@ import pc11 from "picocolors";
 async function listFlowsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
-    const res = isAuthed ? await getClient(opts).flows.list(limit) : LocalStore.listFlows();
+    const limit = opts.all || opts.limit === "0" ? 0 : opts.limit ? parseInt(opts.limit, 10) : 50;
+    const res = isAuthed ? await getClient(opts).flows.list(limit || 100) : LocalStore.listFlows();
     if (opts.json) {
       printJson(res);
       return;
     }
-    const rows = (res.items || []).map((f2) => ({
+    const allItems = res.items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
+    const rows = sliced.map((f2) => ({
       id: f2.id,
       title: f2.title || "(Untitled Flow)",
       status: f2.status || "draft",
@@ -4205,6 +4446,10 @@ async function listFlowsCommand(opts) {
       mode: isAuthed ? "cloud" : pc11.dim("local")
     }));
     printTable(rows, ["id", "title", "status", "description", "mode"]);
+    if (allItems.length > rows.length) {
+      console.log(pc11.dim(`
+Showing ${rows.length} of ${allItems.length} flows. Use --limit <number> or --all to view more.`));
+    }
   } catch (err) {
     printError("Failed to list flows", err);
     process.exit(1);
@@ -4238,7 +4483,22 @@ async function createFlowCommand(title, opts) {
       description: opts.description,
       status: "draft"
     };
-    const item = isAuthed ? await getClient(opts).flows.create(payload) : LocalStore.createFlow(payload);
+    let syncStatus = isAuthed ? "unsynced" : "local";
+    const item = LocalStore.createFlow({
+      ...payload,
+      syncStatus
+    });
+    if (isAuthed) {
+      try {
+        const client = getClient(opts);
+        const cloudItem = await client.flows.create(payload);
+        LocalStore.markFlowSynced(item.id, cloudItem.id);
+        item.syncStatus = "synced";
+        item.cloudId = cloudItem.id;
+        syncStatus = "synced";
+      } catch {
+      }
+    }
     if (opts.json) {
       printJson(item);
       return;
@@ -5008,21 +5268,23 @@ function statusVaultCommand(opts = {}) {
 async function listVaultCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 50;
+    const limit = opts.all || opts.limit === "0" ? 0 : opts.limit ? parseInt(opts.limit, 10) : 50;
     const session = opts.decrypt ? getVaultSession() : null;
     if (opts.decrypt && !session && isAuthed) {
       printWarning("Vault is locked. Run `kylrix vault unlock` first or run without `--decrypt`.");
     }
     const items = isAuthed ? await getClient(opts).vault.list({
-      limit,
+      limit: limit || 100,
       workspaceId: opts.workspace,
       mek: session?.mekHex
     }) : LocalStore.listVault();
+    const allItems = items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
     if (opts.json) {
-      printJson(items);
+      printJson(sliced);
       return;
     }
-    const rows = (items || []).map((v2) => ({
+    const rows = sliced.map((v2) => ({
       id: v2.id,
       name: v2.name,
       type: v2.itemType || (v2.isEnv ? "env" : "login"),
@@ -5031,6 +5293,10 @@ async function listVaultCommand(opts) {
       updatedAt: v2.updatedAt?.substring(0, 10) || ""
     }));
     printTable(rows, ["id", "name", "type", "username", "mode", "updatedAt"]);
+    if (allItems.length > rows.length) {
+      console.log(pc14.dim(`
+Showing ${rows.length} of ${allItems.length} vault items. Use --limit <number> or --all to view more.`));
+    }
     if (!isAuthed) {
       console.log(pc14.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync secrets with cloud."));
     }
@@ -5385,14 +5651,14 @@ import pc17 from "picocolors";
 async function searchCommand(query, opts) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
+    const limit = opts.all || opts.limit === "0" ? 0 : opts.limit ? parseInt(opts.limit, 10) : 50;
     const localResults = LocalStore.search(query);
     const allResults = [...localResults];
     if (isAuthed) {
       try {
         const cloudResults = await getClient(opts).search.query(query, {
           workspaceId: opts.workspace,
-          limit
+          limit: limit || 100
         });
         const existingIds = new Set(allResults.map((r2) => r2.id));
         const existingCloudIds = new Set(allResults.map((r2) => r2.cloudId).filter(Boolean));
@@ -5412,8 +5678,9 @@ async function searchCommand(query, opts) {
       } catch {
       }
     }
+    const sliced = limit > 0 ? allResults.slice(0, limit) : allResults;
     if (opts.json) {
-      printJson(allResults.slice(0, limit));
+      printJson(sliced);
       return;
     }
     if (!allResults || allResults.length === 0) {
@@ -5424,7 +5691,7 @@ No items matching "${pc17.bold(query)}" found.`);
     console.log(`
 Search results for "${pc17.bold(query)}":
 `);
-    const rows = allResults.slice(0, limit).map((r2) => {
+    const rows = sliced.map((r2) => {
       let syncBadge = pc17.yellow("\u25CB unsynced");
       if (r2.syncStatus === "synced" || !r2.isLocal && isAuthed) {
         syncBadge = pc17.green("\u25CF synced");
@@ -5440,6 +5707,10 @@ Search results for "${pc17.bold(query)}":
       };
     });
     printTable(rows, ["kind", "id", "title", "snippet", "sync"]);
+    if (allResults.length > rows.length) {
+      console.log(pc17.dim(`
+Showing ${rows.length} of ${allResults.length} results. Use --limit <number> or --all to view more.`));
+    }
   } catch (err) {
     printError("Search query failed", err);
     process.exit(1);
@@ -5732,7 +6003,7 @@ import * as os3 from "os";
 import { spawn } from "child_process";
 import pc22 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.11";
+var CURRENT_VERSION = "1.0.12";
 var CACHE_DIR = path6.join(os3.homedir(), ".kylrix");
 var CACHE_FILE = path6.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
@@ -5951,10 +6222,14 @@ async function syncCommand(opts) {
       return;
     }
     const { pushed, pulled } = syncRes;
-    const pushedTotal = pushed.pushedIdeas + pushed.pushedGoals;
+    const pushedTotal = pushed.total ?? pushed.pushedIdeas + pushed.pushedGoals;
     console.log();
     printSuccess("Synchronized with Kylrix Cloud:");
-    console.log(pc24.cyan(`  \u2191 Pushed to cloud: ${pushedTotal} items (${pushed.pushedIdeas} ideas, ${pushed.pushedGoals} goals)`));
+    console.log(
+      pc24.cyan(
+        `  \u2191 Pushed to cloud: ${pushedTotal} items (${pushed.pushedIdeas} ideas, ${pushed.pushedGoals} goals, ${pushed.pushedEvents || 0} events, ${pushed.pushedForms || 0} forms, ${pushed.pushedFlows || 0} flows)`
+      )
+    );
     console.log(pc24.green(`  \u2193 Pulled to local: ${pulled.total} items (${pulled.pulledIdeas} ideas, ${pulled.pulledGoals} goals, ${pulled.pulledEvents} events, ${pulled.pulledForms} forms, ${pulled.pulledFlows} flows)`));
     console.log(pc24.dim("  \u26A1 Local SQLite database is up to date.\n"));
   } catch (err) {
@@ -20810,6 +21085,8 @@ var WORKSPACE_RECORD_JSON_SCHEMA = {
     isAgentic: { type: "boolean" },
     isShared: { type: "boolean" },
     role: { type: "string" },
+    inviteCode: { type: "string", nullable: true },
+    privacyMode: { type: "boolean" },
     updatedAt: { type: "string", nullable: true },
     createdAt: { type: "string", nullable: true }
   }
@@ -21451,7 +21728,7 @@ var MCP_VAULT_MEK_UNLOCK_INPUT = {
 // ../../sdk/contracts/pairing.ts
 var pairingRequestInputZod = external_exports.object({
   clientName: external_exports.string().min(1).max(128).default("Kylrix Client"),
-  clientType: external_exports.enum(["cli", "self_hosted_sync", "mobile", "daemon"]).default("cli"),
+  clientType: external_exports.enum(["cli", "self_hosted_sync", "mobile", "daemon", "discord", "telegram", "bot"]).default("cli"),
   requestedScopes: external_exports.array(external_exports.string()).default([
     "profile:read",
     "notes:read",
@@ -22214,14 +22491,14 @@ workspaces.command("switch <id>").alias("use").description("Set the default acti
 workspaces.command("current").description("Show the currently active workspace").action((cmdOpts) => currentWorkspaceCommand(cmdOpts));
 workspaces.command("clear").alias("unuse").description("Reset active workspace back to Personal Virtual Workspace").action((cmdOpts) => clearWorkspaceCommand(cmdOpts));
 var ideas = program.command("ideas").alias("idea").alias("notes").alias("n").description("Manage sovereign ideas and notes");
-ideas.command("list").description("List ideas in active workspace or personal store").option("-l, --limit <number>", "Number of records", "25").action((cmdOpts) => listIdeasCommand({ ...program.opts(), ...cmdOpts }));
+ideas.command("list").description("List ideas in active workspace or personal store").option("-l, --limit <number>", "Number of records (default: 50, 0 for all)", "50").option("-a, --all", "List all records without limit").action((cmdOpts) => listIdeasCommand({ ...program.opts(), ...cmdOpts }));
 ideas.command("get <id>").description("Get full idea content and metadata").action((id, cmdOpts) => getIdeaCommand(id, { ...program.opts(), ...cmdOpts }));
 ideas.command("create <title>").description("Create a new idea").option("-c, --content <text>", "Idea body content").option("--category <category>", "Idea category", "general").option("--tags <tags>", "Comma-separated tag list").action((title, cmdOpts) => createIdeaCommand(title, { ...program.opts(), ...cmdOpts }));
 ideas.command("update <id>").description("Update an existing idea").option("--title <title>", "New idea title").option("-c, --content <text>", "New content").option("--category <category>", "New category").action((id, cmdOpts) => updateIdeaCommand(id, { ...program.opts(), ...cmdOpts }));
 ideas.command("delete <id>").description("Delete an idea by ID").action((id, cmdOpts) => deleteIdeaCommand(id, { ...program.opts(), ...cmdOpts }));
 ideas.command("articles").description("List long-form articles").action((cmdOpts) => listArticlesCommand({ ...program.opts(), ...cmdOpts }));
 var goals = program.command("goals").alias("g").description("Track goals, objectives, and habits");
-goals.command("list").description("List goals").option("-s, --status <status>", "Filter by status (not_started, in_progress, completed, paused)").option("-l, --limit <number>", "Limit count", "25").action((cmdOpts) => listGoalsCommand({ ...program.opts(), ...cmdOpts }));
+goals.command("list").description("List goals").option("-s, --status <status>", "Filter by status (not_started, in_progress, completed, paused)").option("-l, --limit <number>", "Limit count (default: 50, 0 for all)", "50").option("-a, --all", "List all records without limit").action((cmdOpts) => listGoalsCommand({ ...program.opts(), ...cmdOpts }));
 goals.command("get <id>").description("Get goal details").action((id, cmdOpts) => getGoalCommand(id, { ...program.opts(), ...cmdOpts }));
 goals.command("create <title>").description("Create a new goal").option("-d, --description <text>", "Description").option("--target <value>", "Target numeric value", "100").option("--unit <unit>", "Unit (%, days, hours, etc.)", "%").option("--status <status>", "Status", "not_started").action((title, cmdOpts) => createGoalCommand(title, { ...program.opts(), ...cmdOpts }));
 goals.command("update <id>").description("Update goal status or numeric progress").option("--title <title>", "New goal title").option("--status <status>", "New status").option("--progress <currentValue>", "Current numeric progress").action(
@@ -22232,7 +22509,7 @@ var vault = program.command("vault").alias("secrets").description("Secure encryp
 vault.command("unlock").description("Unlock vault Master Encryption Key (MEK) for temporary session").option("-p, --password <password>", "Master Password").option("--expiry <minutes>", "Session expiry in minutes", "60").action((cmdOpts) => unlockVaultCommand({ ...program.opts(), ...cmdOpts }));
 vault.command("lock").description("Lock vault and immediately purge in-memory / session encryption keys").action((cmdOpts) => lockVaultCommand({ ...program.opts(), ...cmdOpts }));
 vault.command("status").description("Check whether the vault is locked or unlocked").action((cmdOpts) => statusVaultCommand({ ...program.opts(), ...cmdOpts }));
-vault.command("list").description("List credentials and project environment variables").option("--decrypt", "Decrypt items using unlocked vault session").action((cmdOpts) => listVaultCommand({ ...program.opts(), ...cmdOpts }));
+vault.command("list").description("List credentials and project environment variables").option("-l, --limit <number>", "Number of records (default: 50, 0 for all)", "50").option("-a, --all", "List all records without limit").option("--decrypt", "Decrypt items using unlocked vault session").action((cmdOpts) => listVaultCommand({ ...program.opts(), ...cmdOpts }));
 vault.command("get <id>").description("Get a secret or environment variable set").option("--decrypt", "Decrypt payload").option("--format <format>", "Output format (json, env)").option("--pure", "Output pure dotenv plaintext without headers").action((id, cmdOpts) => getVaultCommand(id, { ...program.opts(), ...cmdOpts }));
 vault.command("create <name>").description("Create an encrypted secret or project .env").option("-u, --username <username>", "Username / login identifier").option("-p, --password <password>", "Password or secret token").option("--service-url <url>", "Service URL").option("--env-file <filepath>", "Import environment variables directly from a file").option("--is-env", "Mark as project environment variables set").option("--notes <notes>", "Secret notes").action((name, cmdOpts) => createVaultCommand(name, { ...program.opts(), ...cmdOpts }));
 vault.command("delete <id>").description("Delete a secret by ID").action((id, cmdOpts) => deleteVaultCommand(id, { ...program.opts(), ...cmdOpts }));
@@ -22246,10 +22523,10 @@ agents.command("list").alias("sessions").description("List agent execution sessi
 agents.command("get <id>").description("Get agent session execution logs and status").action((id, cmdOpts) => getAgentSessionCommand(id, { ...program.opts(), ...cmdOpts }));
 agents.command("start <title>").description("Start a new autonomous agent session").option("-p, --prompt <prompt>", "Initial task prompt").option("--harness <harness>", "Harness runner", "gemini").action((title, cmdOpts) => startAgentSessionCommand(title, { ...program.opts(), ...cmdOpts }));
 agents.command("delete <id>").description("Delete an agent session").action((id, cmdOpts) => deleteAgentSessionCommand(id, { ...program.opts(), ...cmdOpts }));
-program.command("search <query>").alias("s").description("Unified search across ideas, goals, events, forms, flows, and secrets").action((query, cmdOpts) => searchCommand(query, { ...program.opts(), ...cmdOpts }));
+program.command("search <query>").alias("s").description("Unified search across ideas, goals, events, forms, flows, and secrets").option("-l, --limit <number>", "Number of results (default: 50, 0 for all)", "50").option("-a, --all", "Return all results without limit").action((query, cmdOpts) => searchCommand(query, { ...program.opts(), ...cmdOpts }));
 program.command("share <kind> <id>").description("Generate a share link for a resource (idea, goal, vault, form, flow)").action((kind, id, cmdOpts) => shareCommand(kind, id, { ...program.opts(), ...cmdOpts }));
 var events = program.command("events").description("Manage calendar events and schedules");
-events.command("list").description("List calendar events").action((cmdOpts) => listEventsCommand({ ...program.opts(), ...cmdOpts }));
+events.command("list").description("List calendar events").option("-l, --limit <number>", "Number of records (default: 50, 0 for all)", "50").option("-a, --all", "List all records without limit").action((cmdOpts) => listEventsCommand({ ...program.opts(), ...cmdOpts }));
 events.command("create <title>").description("Create a calendar event").requiredOption("--start <time>", "ISO start time (e.g. 2026-09-25T14:00:00Z)").requiredOption("--end <time>", "ISO end time").option("-d, --description <text>", "Event description").action(
   (title, cmdOpts) => createEventCommand(title, {
     ...program.opts(),
@@ -22260,12 +22537,12 @@ events.command("create <title>").description("Create a calendar event").required
 );
 events.command("delete <id>").description("Delete an event").action((id, cmdOpts) => deleteEventCommand(id, { ...program.opts(), ...cmdOpts }));
 var forms = program.command("forms").description("Manage interactive forms");
-forms.command("list").description("List forms").action((cmdOpts) => listFormsCommand({ ...program.opts(), ...cmdOpts }));
+forms.command("list").description("List forms").option("-l, --limit <number>", "Number of records (default: 50, 0 for all)", "50").option("-a, --all", "List all records without limit").action((cmdOpts) => listFormsCommand({ ...program.opts(), ...cmdOpts }));
 forms.command("get <id>").description("Get form details and schema").action((id, cmdOpts) => getFormCommand(id, { ...program.opts(), ...cmdOpts }));
 forms.command("create <title>").description("Create a form").option("-d, --description <text>", "Form description").action((title, cmdOpts) => createFormCommand(title, { ...program.opts(), ...cmdOpts }));
 forms.command("delete <id>").description("Delete a form").action((id, cmdOpts) => deleteFormCommand(id, { ...program.opts(), ...cmdOpts }));
 var flows = program.command("flows").description("Manage automations and workflow pipelines");
-flows.command("list").description("List workflow automations").action((cmdOpts) => listFlowsCommand({ ...program.opts(), ...cmdOpts }));
+flows.command("list").description("List workflow automations").option("-l, --limit <number>", "Number of records (default: 50, 0 for all)", "50").option("-a, --all", "List all records without limit").action((cmdOpts) => listFlowsCommand({ ...program.opts(), ...cmdOpts }));
 flows.command("get <id>").description("Get flow specification").action((id, cmdOpts) => getFlowCommand(id, { ...program.opts(), ...cmdOpts }));
 flows.command("create <title>").description("Create a workflow automation").option("-d, --description <text>", "Workflow description").action((title, cmdOpts) => createFlowCommand(title, { ...program.opts(), ...cmdOpts }));
 flows.command("delete <id>").description("Delete a workflow").action((id, cmdOpts) => deleteFlowCommand(id, { ...program.opts(), ...cmdOpts }));

@@ -11,16 +11,17 @@ export async function listGoalsCommand(opts: {
   status?: string;
   json?: boolean;
   limit?: string;
+  all?: boolean;
 }) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
+    const limit = opts.all || opts.limit === '0' ? 0 : (opts.limit ? parseInt(opts.limit, 10) : 50);
 
     // 1. If authed, pull latest goals from cloud into local SQLite in background
     if (isAuthed) {
       try {
         const client = getClient(opts);
-        const cloudRes = await client.goals.list({ limit, workspaceId: opts.workspace, status: opts.status });
+        const cloudRes = await client.goals.list({ limit: limit || 100, workspaceId: opts.workspace, status: opts.status });
         const items = extractItems(cloudRes);
         for (const item of items) {
           LocalStore.upsertGoalFromCloud(item);
@@ -36,12 +37,15 @@ export async function listGoalsCommand(opts: {
       items = items.filter((g: any) => g.status === opts.status);
     }
 
+    const allItems = items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
+
     if (opts.json) {
-      printJson({ items: items.slice(0, limit), count: items.length });
+      printJson({ items: sliced, count: allItems.length });
       return;
     }
 
-    const rows = items.slice(0, limit).map((g: any) => {
+    const rows = sliced.map((g: any) => {
       let syncBadge = pc.yellow('○ unsynced');
       if (g.syncStatus === 'synced') {
         syncBadge = pc.green('● synced');
@@ -58,6 +62,9 @@ export async function listGoalsCommand(opts: {
     });
 
     printTable(rows, ['id', 'title', 'status', 'progress', 'sync']);
+    if (allItems.length > rows.length) {
+      console.log(pc.dim(`\nShowing ${rows.length} of ${allItems.length} goals. Use --limit <number> or --all to view more.`));
+    }
     if (!isAuthed) {
       console.log(pc.dim('💡 Local-first mode. Run `kylrix login` to sync goals with cloud.'));
     }

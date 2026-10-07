@@ -274,7 +274,8 @@ const ideas = program.command('ideas').alias('idea').alias('notes').alias('n').d
 ideas
   .command('list')
   .description('List ideas in active workspace or personal store')
-  .option('-l, --limit <number>', 'Number of records', '25')
+  .option('-l, --limit <number>', 'Number of records (default: 50, 0 for all)', '50')
+  .option('-a, --all', 'List all records without limit')
   .action((cmdOpts) => listIdeasCommand({ ...program.opts(), ...cmdOpts }));
 
 ideas
@@ -315,7 +316,8 @@ goals
   .command('list')
   .description('List goals')
   .option('-s, --status <status>', 'Filter by status (not_started, in_progress, completed, paused)')
-  .option('-l, --limit <number>', 'Limit count', '25')
+  .option('-l, --limit <number>', 'Limit count (default: 50, 0 for all)', '50')
+  .option('-a, --all', 'List all records without limit')
   .action((cmdOpts) => listGoalsCommand({ ...program.opts(), ...cmdOpts }));
 
 goals
@@ -370,6 +372,8 @@ vault
 vault
   .command('list')
   .description('List credentials and project environment variables')
+  .option('-l, --limit <number>', 'Number of records (default: 50, 0 for all)', '50')
+  .option('-a, --all', 'List all records without limit')
   .option('--decrypt', 'Decrypt items using unlocked vault session')
   .action((cmdOpts) => listVaultCommand({ ...program.opts(), ...cmdOpts }));
 
@@ -456,6 +460,8 @@ program
   .command('search <query>')
   .alias('s')
   .description('Unified search across ideas, goals, events, forms, flows, and secrets')
+  .option('-l, --limit <number>', 'Number of results (default: 50, 0 for all)', '50')
+  .option('-a, --all', 'Return all results without limit')
   .action((query, cmdOpts) => searchCommand(query, { ...program.opts(), ...cmdOpts }));
 
 // ── 9. Share Links ──
@@ -470,6 +476,8 @@ const events = program.command('events').description('Manage calendar events and
 events
   .command('list')
   .description('List calendar events')
+  .option('-l, --limit <number>', 'Number of records (default: 50, 0 for all)', '50')
+  .option('-a, --all', 'List all records without limit')
   .action((cmdOpts) => listEventsCommand({ ...program.opts(), ...cmdOpts }));
 
 events
@@ -498,6 +506,8 @@ const forms = program.command('forms').description('Manage interactive forms');
 forms
   .command('list')
   .description('List forms')
+  .option('-l, --limit <number>', 'Number of records (default: 50, 0 for all)', '50')
+  .option('-a, --all', 'List all records without limit')
   .action((cmdOpts) => listFormsCommand({ ...program.opts(), ...cmdOpts }));
 
 forms
@@ -522,6 +532,8 @@ const flows = program.command('flows').description('Manage automations and workf
 flows
   .command('list')
   .description('List workflow automations')
+  .option('-l, --limit <number>', 'Number of records (default: 50, 0 for all)', '50')
+  .option('-a, --all', 'List all records without limit')
   .action((cmdOpts) => listFlowsCommand({ ...program.opts(), ...cmdOpts }));
 
 flows

@@ -57,10 +57,14 @@ export async function syncCommand(opts: { url?: string; token?: string; workspac
     }
 
     const { pushed, pulled } = syncRes;
-    const pushedTotal = pushed.pushedIdeas + pushed.pushedGoals;
+    const pushedTotal = (pushed as any).total ?? (pushed.pushedIdeas + pushed.pushedGoals);
     console.log();
     printSuccess('Synchronized with Kylrix Cloud:');
-    console.log(pc.cyan(`  ↑ Pushed to cloud: ${pushedTotal} items (${pushed.pushedIdeas} ideas, ${pushed.pushedGoals} goals)`));
+    console.log(
+      pc.cyan(
+        `  ↑ Pushed to cloud: ${pushedTotal} items (${pushed.pushedIdeas} ideas, ${pushed.pushedGoals} goals, ${(pushed as any).pushedEvents || 0} events, ${(pushed as any).pushedForms || 0} forms, ${(pushed as any).pushedFlows || 0} flows)`
+      )
+    );
     console.log(pc.green(`  ↓ Pulled to local: ${pulled.total} items (${pulled.pulledIdeas} ideas, ${pulled.pulledGoals} goals, ${pulled.pulledEvents} events, ${pulled.pulledForms} forms, ${pulled.pulledFlows} flows)`));
     console.log(pc.dim('  ⚡ Local SQLite database is up to date.\n'));
   } catch (err: any) {

@@ -9,12 +9,13 @@ export async function listFormsCommand(opts: {
   workspace?: string;
   json?: boolean;
   limit?: string;
+  all?: boolean;
 }) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 25;
+    const limit = opts.all || opts.limit === '0' ? 0 : (opts.limit ? parseInt(opts.limit, 10) : 50);
     const res = isAuthed
-      ? await getClient(opts).forms.list({ limit, workspaceId: opts.workspace })
+      ? await getClient(opts).forms.list({ limit: limit || 100, workspaceId: opts.workspace })
       : LocalStore.listForms();
 
     if (opts.json) {
@@ -22,7 +23,9 @@ export async function listFormsCommand(opts: {
       return;
     }
 
-    const rows = (res.items || []).map((f: any) => ({
+    const allItems = res.items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
+    const rows = sliced.map((f: any) => ({
       id: f.id,
       title: f.title || '(Untitled Form)',
       status: f.status || 'active',
@@ -31,6 +34,9 @@ export async function listFormsCommand(opts: {
     }));
 
     printTable(rows, ['id', 'title', 'status', 'fields', 'mode']);
+    if (allItems.length > rows.length) {
+      console.log(pc.dim(`\nShowing ${rows.length} of ${allItems.length} forms. Use --limit <number> or --all to view more.`));
+    }
   } catch (err: any) {
     printError('Failed to list forms', err);
     process.exit(1);
@@ -81,9 +87,25 @@ export async function createFormCommand(
       schema: [],
     };
 
-    const item = isAuthed
-      ? await getClient(opts).forms.create(payload)
-      : LocalStore.createForm(payload);
+    let syncStatus = isAuthed ? 'unsynced' : 'local';
+
+    // 1. Create locally first
+    const item = LocalStore.createForm({
+      ...payload,
+      syncStatus,
+    });
+
+    // 2. If authed, push to cloud immediately
+    if (isAuthed) {
+      try {
+        const client = getClient(opts);
+        const cloudItem = await client.forms.create(payload);
+        LocalStore.markFormSynced(item.id, cloudItem.id);
+        item.syncStatus = 'synced';
+        item.cloudId = cloudItem.id;
+        syncStatus = 'synced';
+      } catch {}
+    }
 
     if (opts.json) {
       printJson(item);

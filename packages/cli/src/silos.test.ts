@@ -326,6 +326,42 @@ describe('CLI Base URI Partitioning and Multi-Account Silos', () => {
       // extractItems compatibility
       expect(extractItems(res)).toEqual(raw);
     });
+
+    it('marks local events, forms, and flows synced with cloud IDs', () => {
+      const evt = LocalStore.createEvent({
+        title: 'Team Sync Meeting',
+        startTime: '2026-10-08T10:00:00Z',
+        endTime: '2026-10-08T11:00:00Z',
+        syncStatus: 'local',
+      });
+      expect(evt.syncStatus).toBe('local');
+      LocalStore.markEventSynced(evt.id, 'cloud_evt_999');
+      const retrievedEvt = LocalStore.getEvent(evt.id);
+      expect(retrievedEvt.syncStatus).toBe('synced');
+      expect(retrievedEvt.cloudId).toBe('cloud_evt_999');
+
+      const form = LocalStore.createForm({
+        title: 'Customer Feedback',
+        description: 'Feedback collection form',
+        syncStatus: 'local',
+      });
+      expect(form.syncStatus).toBe('local');
+      LocalStore.markFormSynced(form.id, 'cloud_form_888');
+      const retrievedForm = LocalStore.getForm(form.id);
+      expect(retrievedForm.syncStatus).toBe('synced');
+      expect(retrievedForm.cloudId).toBe('cloud_form_888');
+
+      const flow = LocalStore.createFlow({
+        title: 'Deploy Pipeline',
+        description: 'CI/CD pipeline workflow',
+        syncStatus: 'local',
+      });
+      expect(flow.syncStatus).toBe('local');
+      LocalStore.markFlowSynced(flow.id, 'cloud_flow_777');
+      const retrievedFlow = LocalStore.getFlow(flow.id);
+      expect(retrievedFlow.syncStatus).toBe('synced');
+      expect(retrievedFlow.cloudId).toBe('cloud_flow_777');
+    });
   });
 });
 

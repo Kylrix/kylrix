@@ -104,7 +104,7 @@ export async function listVaultCommand(opts: {
 }) {
   try {
     const isAuthed = hasAuth(opts);
-    const limit = opts.limit ? parseInt(opts.limit, 10) : 50;
+    const limit = (opts as any).all || opts.limit === '0' ? 0 : (opts.limit ? parseInt(opts.limit, 10) : 50);
     const session = opts.decrypt ? getVaultSession() : null;
 
     if (opts.decrypt && !session && isAuthed) {
@@ -113,18 +113,21 @@ export async function listVaultCommand(opts: {
 
     const items = isAuthed
       ? await getClient(opts).vault.list({
-          limit,
+          limit: limit || 100,
           workspaceId: opts.workspace,
           mek: session?.mekHex,
         })
       : LocalStore.listVault();
 
+    const allItems = items || [];
+    const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
+
     if (opts.json) {
-      printJson(items);
+      printJson(sliced);
       return;
     }
 
-    const rows = (items || []).map((v: any) => ({
+    const rows = sliced.map((v: any) => ({
       id: v.id,
       name: v.name,
       type: v.itemType || (v.isEnv ? 'env' : 'login'),
@@ -134,6 +137,9 @@ export async function listVaultCommand(opts: {
     }));
 
     printTable(rows, ['id', 'name', 'type', 'username', 'mode', 'updatedAt']);
+    if (allItems.length > rows.length) {
+      console.log(pc.dim(`\nShowing ${rows.length} of ${allItems.length} vault items. Use --limit <number> or --all to view more.`));
+    }
     if (!isAuthed) {
       console.log(pc.dim('💡 Local-first mode. Run `kylrix login` to sync secrets with cloud.'));
     }

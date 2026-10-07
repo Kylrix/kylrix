@@ -111,12 +111,17 @@ for arg in "$@"; do
   fi
 done
 
+# shellcheck source=selfhost/env-overrides.sh
+source "${INSTALL_DIR}/selfhost/env-overrides.sh"
+
 capture_env_override BACKEND
 capture_env_override KYLRIX_BACKEND
 capture_env_override SELFHOST_ADMIN_EMAIL
 capture_env_override SELFHOST_ADMIN_PASSWORD
 capture_env_override SELFHOST_ADMIN_NAME
 capture_env_override NEXT_PUBLIC_LOGGING_VERBOSE
+capture_env_override TURSO_DATABASE_URL
+capture_env_override TURSO_AUTH_TOKEN
 USER_SET_ADMIN_PASSWORD=0
 has_env_override SELFHOST_ADMIN_PASSWORD && USER_SET_ADMIN_PASSWORD=1
 
