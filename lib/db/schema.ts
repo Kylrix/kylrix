@@ -81,6 +81,12 @@ export const apikey = sqliteTable('apikey', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   permissions: text('permissions'),
   metadata: text('metadata'),
+  category: text('category').default('user_pat'),
+  workspaceId: text('workspace_id'),
+  isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  displayInSessions: integer('display_in_sessions', { mode: 'boolean' }).default(false),
+  clientName: text('client_name'),
+  lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
 });
 
 export const jwks = sqliteTable('jwks', {

@@ -158,10 +158,10 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
   it('should export all 1:1 slash commands specification', () => {
     const commandNames = DISCORD_SLASH_COMMANDS.map((c) => c.name);
     assert.ok(commandNames.includes('menu'));
-    assert.ok(commandNames.includes('notes'));
-    assert.ok(commandNames.includes('note'));
-    assert.ok(commandNames.includes('note_read'));
-    assert.ok(commandNames.includes('note_delete'));
+    assert.ok(commandNames.includes('ideas'));
+    assert.ok(commandNames.includes('idea'));
+    assert.ok(commandNames.includes('idea_read'));
+    assert.ok(commandNames.includes('idea_delete'));
     assert.ok(commandNames.includes('goals'));
     assert.ok(commandNames.includes('goal'));
     assert.ok(commandNames.includes('goal_done'));
@@ -208,7 +208,7 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     assert.equal(json.data.components[0].components[0].custom_id, 'kylrix_main_select');
   });
 
-  it('should handle message component interaction (type 3) updating message with notes submenu', async () => {
+  it('should handle message component interaction (type 3) updating message with ideas submenu', async () => {
     const req = new NextRequest('http://localhost:3005/api/discord', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -216,7 +216,7 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
         type: 3,
         data: {
           custom_id: 'kylrix_main_select',
-          values: ['val_notes'],
+          values: ['val_ideas'],
         },
         user: { username: 'alice' },
       }),
@@ -226,18 +226,18 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     assert.equal(res.status, 200);
     const json = await res.json();
     assert.equal(json.type, 7); // UPDATE_MESSAGE
-    assert.ok(json.data.embeds[0].title.includes('Notes'));
+    assert.ok(json.data.embeds[0].title.includes('Ideas'));
     assert.ok(ApiResources.listNotes.mock.calls.length > 0);
   });
 
-  it('should handle slash command /note and create note via ApiResources', async () => {
+  it('should handle slash command /idea and create idea via ApiResources', async () => {
     const req = new NextRequest('http://localhost:3005/api/discord', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 2,
         data: {
-          name: 'note',
+          name: 'idea',
           options: [
             { name: 'title', value: 'Project Roadmap' },
             { name: 'content', value: 'Ship decentralized sync engine' },
@@ -255,14 +255,14 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     assert.ok(ApiResources.createNote.mock.calls.length > 0);
   });
 
-  it('should handle slash command /note_read to fetch and read a note', async () => {
+  it('should handle slash command /idea_read to fetch and read an idea', async () => {
     const req = new NextRequest('http://localhost:3005/api/discord', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 2,
         data: {
-          name: 'note_read',
+          name: 'idea_read',
           options: [{ name: 'id', value: 'note_123' }],
         },
         user: { username: 'alice' },
@@ -277,14 +277,14 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     assert.ok(json.data.embeds[0].description.includes('Decentralized sync'));
   });
 
-  it('should handle slash command /note_delete to delete a note', async () => {
+  it('should handle slash command /idea_delete to delete an idea', async () => {
     const req = new NextRequest('http://localhost:3005/api/discord', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 2,
         data: {
-          name: 'note_delete',
+          name: 'idea_delete',
           options: [{ name: 'id', value: 'note_123' }],
         },
         user: { username: 'alice' },
@@ -405,7 +405,7 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     const json = await res.json();
     assert.equal(json.ok, true);
     assert.equal(json.service, 'kylrix-discord-bot');
-    assert.ok(json.commands.includes('/notes'));
+    assert.ok(json.commands.includes('/ideas'));
     assert.ok(json.commands.includes('/pair'));
     assert.ok(json.commands.includes('/goals'));
   });

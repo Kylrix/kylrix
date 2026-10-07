@@ -946,8 +946,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ type: 7, data }); // Type 7: UPDATE_MESSAGE
     }
 
-    // B. Notes Menu
-    if (customId === 'btn_notes' || selectedValue === 'val_notes') {
+    // B. Ideas Menu
+    if (customId === 'btn_notes' || customId === 'btn_ideas' || selectedValue === 'val_notes' || selectedValue === 'val_ideas') {
       const notesRes = await ApiResources.listNotes(actor, 5).catch(() => []);
       const data = buildNotesEmbed(extractItems(notesRes), isLinked);
       return NextResponse.json({ type: 7, data });

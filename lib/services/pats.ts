@@ -1,16 +1,14 @@
 import { createHash, randomBytes } from 'crypto';
-import { ID, Permission, Query, Role } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, and, or, desc, count } from 'drizzle-orm';
 import { normalizeScopes, type PatScope } from '@/lib/api/scopes';
-
-const DB = APPWRITE_CONFIG.DATABASES.FLOW;
-const TABLE = 'pats';
 
 export type PatCategory = 'user_pat' | 'agent_provisioning_key' | 'agentic_pat' | 'workspace_pat' | 'punch_token';
 
 export type PatRow = {
   $id: string;
+  id?: string;
   userId: string;
   name: string;
   tokenPrefix: string;
@@ -23,6 +21,8 @@ export type PatRow = {
   workspaceId?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  category?: PatCategory;
+  agentId?: string | null;
 };
 
 export type PatPublic = {
@@ -103,11 +103,21 @@ export function parsePatToken(raw: string): { prefix: string; token: string; cat
   return { prefix, token, category };
 }
 
-function inferCategory(row: PatRow): { category: PatCategory; agentId: string | null } {
-  const isWs = row.isWorkspace === true || String(row.isWorkspace) === 'true';
+function inferCategory(row: any): { category: PatCategory; agentId: string | null } {
+  if (row.category) {
+    let agentId = null;
+    if (row.metadata) {
+      try {
+        const meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+        agentId = meta?.agentId || null;
+      } catch {}
+    }
+    return { category: row.category as PatCategory, agentId: agentId || row.workspaceId || null };
+  }
+  const isWs = row.isWorkspace === true || String(row.isWorkspace) === 'true' || row.isWorkspace === 1;
   if (isWs) return { category: 'workspace_pat', agentId: null };
 
-  const scopes = normalizeScopes(row.scopes);
+  const scopes = normalizeScopes(row.scopes || row.permissions);
   const name = row.name || '';
   
   if (name.includes('(Agentic PAT)') || name.toLowerCase().startsWith('agent:') || name.toLowerCase().includes('agentic')) {
@@ -125,22 +135,22 @@ function inferCategory(row: PatRow): { category: PatCategory; agentId: string | 
   return { category: 'user_pat', agentId: null };
 }
 
-function toPublic(row: PatRow): PatPublic {
-  const isWs = row.isWorkspace === true || String(row.isWorkspace) === 'true';
+function toPublic(row: any): PatPublic {
+  const isWs = row.isWorkspace === true || String(row.isWorkspace) === 'true' || row.isWorkspace === 1;
   const { category, agentId } = inferCategory(row);
   return {
-    id: row.$id,
-    name: row.name,
-    tokenPrefix: row.tokenPrefix,
-    scopes: normalizeScopes(row.scopes),
-    status: row.status,
-    expiresAt: row.expiresAt || null,
-    lastUsedAt: row.lastUsedAt || null,
+    id: row.id || row.$id,
+    name: row.name || '',
+    tokenPrefix: row.prefix || row.start || row.tokenPrefix || '',
+    scopes: normalizeScopes(row.permissions || row.scopes),
+    status: (row.enabled === true || row.enabled === 1 || row.status === 'active') ? 'active' : 'revoked',
+    expiresAt: row.expiresAt ? (row.expiresAt instanceof Date ? row.expiresAt.toISOString() : String(row.expiresAt)) : null,
+    lastUsedAt: row.lastUsedAt ? (row.lastUsedAt instanceof Date ? row.lastUsedAt.toISOString() : String(row.lastUsedAt)) : null,
     isWorkspace: isWs,
     workspaceId: row.workspaceId || null,
     category,
-    agentId,
-    createdAt: row.createdAt || row.$id ? (row as any).$createdAt || row.createdAt || null : null,
+    agentId: agentId || row.agentId || null,
+    createdAt: row.createdAt ? (row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt)) : null,
   };
 }
 
@@ -152,7 +162,7 @@ export const PatService = {
   invalidateVerificationCache(patId?: string) {
     if (patId) {
       for (const [key, val] of verifiedPatCache.entries()) {
-        if (val.data.pat.$id === patId) {
+        if (val.data.pat.$id === patId || (val.data.pat as any).id === patId) {
           verifiedPatCache.delete(key);
         }
       }
@@ -184,83 +194,76 @@ export const PatService = {
       else if (scopes.length === 1 && scopes.includes('agents:provision')) category = 'agent_provisioning_key';
     }
 
-    const rowId = ID.unique();
+    const id = 'pat_' + randomBytes(12).toString('hex');
     const tokenPrefix = randomBytes(6).toString('base64url').slice(0, 8);
     const secret = makeSecret();
     const token = formatPatToken(tokenPrefix, secret, category);
     const tokenHash = hashToken(token);
-    const now = new Date().toISOString();
-    const tables = createSystemTablesDB();
+    const now = new Date();
+    const expiresAt = params.expiresAt ? new Date(params.expiresAt) : null;
 
     // Enforce active PAT ceiling to prevent unbounded database rows
-    const existingPats = await tables.listRows({
-      databaseId: DB,
-      tableId: TABLE,
-      queries: [
-        Query.equal('userId', params.userId),
-        Query.equal('status', 'active'),
-        Query.limit(30),
-      ],
-    }).catch(() => ({ total: 0, rows: [] as any[] }));
+    const existingActive = await db
+      .select({ count: count() })
+      .from(schema.apikey)
+      .where(and(eq(schema.apikey.userId, params.userId), eq(schema.apikey.enabled, true)));
 
     const MAX_ACTIVE_PATS = 25;
-    if (existingPats.rows.length >= MAX_ACTIVE_PATS) {
+    if ((existingActive[0]?.count ?? 0) >= MAX_ACTIVE_PATS) {
       throw new Error(`Active access token limit reached (maximum ${MAX_ACTIVE_PATS} active tokens). Please revoke unused tokens.`);
     }
 
     const isWs = params.isWorkspace === true;
 
-    const row = await tables.createRow({
-      databaseId: DB,
-      tableId: TABLE,
-      rowId,
-      data: {
-        userId: params.userId,
-        name,
-        tokenPrefix,
-        tokenHash,
-        scopes: JSON.stringify(scopes),
-        status: 'active',
-        expiresAt: params.expiresAt || null,
-        lastUsedAt: null,
-        isWorkspace: isWs ? 'true' : 'false',
-        workspaceId: params.workspaceId || params.agentId || null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      permissions: [
-        Permission.read(Role.user(params.userId)),
-      ],
+    await db.insert(schema.apikey).values({
+      id,
+      name,
+      start: tokenPrefix,
+      prefix: tokenPrefix,
+      key: tokenHash,
+      userId: params.userId,
+      enabled: true,
+      expiresAt,
+      createdAt: now,
+      updatedAt: now,
+      permissions: JSON.stringify(scopes),
+      metadata: JSON.stringify({ agentId: params.agentId || null }),
+      category,
+      workspaceId: params.workspaceId || params.agentId || null,
+      isWorkspace: isWs,
     });
 
-    // Universal object graph: user → pat
-    try {
-      await tables.createRow({
-        databaseId: DB,
-        tableId: APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects',
-        rowId: ID.unique(),
-        data: {
-          parentId: isWs && params.workspaceId ? params.workspaceId : params.userId,
-          parentKind: isWs ? 'workspace' : 'user',
-          childId: row.$id,
-          childKind: 'pat',
+    if (isWs && params.workspaceId) {
+      try {
+        await db.insert(schema.workspaceObjects).values({
+          id: 'wo_' + randomBytes(10).toString('hex'),
+          workspaceId: params.workspaceId,
+          entityKind: 'pat',
+          entityId: id,
           userId: params.userId,
-          metadata: JSON.stringify({ tokenPrefix: rowId, name, isWorkspace: isWs, workspaceId: params.workspaceId }),
-          createdAt: now,
-          updatedAt: now,
-          isPublic: false,
-          isGuest: false,
-          isGeneral: false,
-        },
-        permissions: [
-          Permission.read(Role.user(params.userId)),
-        ],
-      });
-    } catch {
-      /* non-fatal */
+          createdAt: now.toISOString(),
+        });
+      } catch {
+        /* non-fatal */
+      }
     }
 
-    return { pat: toPublic(row as unknown as PatRow), token };
+    const publicPat: PatPublic = {
+      id,
+      name,
+      tokenPrefix,
+      scopes,
+      status: 'active',
+      expiresAt: expiresAt ? expiresAt.toISOString() : null,
+      lastUsedAt: null,
+      isWorkspace: isWs,
+      workspaceId: params.workspaceId || params.agentId || null,
+      category,
+      agentId: params.agentId || null,
+      createdAt: now.toISOString(),
+    };
+
+    return { pat: publicPat, token };
   },
 
   async listForUser(
@@ -272,18 +275,14 @@ export const PatService = {
       agentId?: string;
     }
   ): Promise<PatPublic[]> {
-    const tables = createSystemTablesDB();
-    const queries = [
-      Query.equal('userId', userId),
-      Query.orderDesc('$createdAt'),
-      Query.limit(100),
-    ];
-    const res = await tables.listRows({
-      databaseId: DB,
-      tableId: TABLE,
-      queries,
-    });
-    const all = (res.rows as unknown as PatRow[]).map(toPublic);
+    const rows = await db
+      .select()
+      .from(schema.apikey)
+      .where(eq(schema.apikey.userId, userId))
+      .orderBy(desc(schema.apikey.createdAt))
+      .limit(100);
+
+    const all = rows.map(toPublic);
     return all.filter((p) => {
       if (opts?.isWorkspace !== undefined && p.isWorkspace !== opts.isWorkspace) return false;
       if (opts?.workspaceId && p.workspaceId !== opts.workspaceId) return false;
@@ -294,20 +293,20 @@ export const PatService = {
   },
 
   async revoke(params: { patId: string; userId: string }) {
-    const tables = createSystemTablesDB();
-    const row = (await tables.getRow({
-      databaseId: DB,
-      tableId: TABLE,
-      rowId: params.patId,
-    }).catch(() => null)) as PatRow | null;
+    const rows = await db
+      .select()
+      .from(schema.apikey)
+      .where(eq(schema.apikey.id, params.patId))
+      .limit(1);
+    const row = rows[0];
     if (!row) throw new Error('Token not found');
     if (row.userId !== params.userId) throw new Error('Forbidden');
-    await tables.updateRow({
-      databaseId: DB,
-      tableId: TABLE,
-      rowId: params.patId,
-      data: { status: 'revoked', updatedAt: new Date().toISOString() },
-    });
+
+    await db
+      .update(schema.apikey)
+      .set({ enabled: false, updatedAt: new Date() })
+      .where(eq(schema.apikey.id, params.patId));
+
     this.invalidateVerificationCache(params.patId);
     return { success: true };
   },
@@ -322,12 +321,12 @@ export const PatService = {
     scopes: unknown;
     mode?: 'replace' | 'grant';
   }): Promise<PatPublic> {
-    const tables = createSystemTablesDB();
-    const row = (await tables.getRow({
-      databaseId: DB,
-      tableId: TABLE,
-      rowId: params.patId,
-    }).catch(() => null)) as PatRow | null;
+    const rows = await db
+      .select()
+      .from(schema.apikey)
+      .where(eq(schema.apikey.id, params.patId))
+      .limit(1);
+    const row = rows[0];
     if (!row) {
       const err = new Error('Token not found');
       (err as any).status = 404;
@@ -338,7 +337,7 @@ export const PatService = {
       (err as any).status = 403;
       throw err;
     }
-    if (row.status !== 'active') {
+    if (!row.enabled) {
       const err = new Error('Token is revoked');
       (err as any).status = 400;
       throw err;
@@ -351,34 +350,37 @@ export const PatService = {
       throw err;
     }
 
+    const currentScopes = normalizeScopes(row.permissions);
     const next =
       params.mode === 'grant'
-        ? normalizeScopes([...normalizeScopes(row.scopes), ...incoming])
+        ? normalizeScopes([...currentScopes, ...incoming])
         : incoming;
 
-    const updated = (await tables.updateRow({
-      databaseId: DB,
-      tableId: TABLE,
-      rowId: params.patId,
-      data: {
-        scopes: JSON.stringify(next),
-        updatedAt: new Date().toISOString(),
-      },
-    })) as unknown as PatRow;
+    const now = new Date();
+    await db
+      .update(schema.apikey)
+      .set({
+        permissions: JSON.stringify(next),
+        updatedAt: now,
+      })
+      .where(eq(schema.apikey.id, params.patId));
 
     this.invalidateVerificationCache(params.patId);
-    return toPublic(updated);
+    return toPublic({
+      ...row,
+      permissions: JSON.stringify(next),
+      updatedAt: now,
+    });
   },
 
   async getOwned(params: { patId: string; userId: string }): Promise<PatPublic | null> {
-    const tables = createSystemTablesDB();
-    const row = (await tables.getRow({
-      databaseId: DB,
-      tableId: TABLE,
-      rowId: params.patId,
-    }).catch(() => null)) as PatRow | null;
-    if (!row || row.userId !== params.userId) return null;
-    return toPublic(row);
+    const rows = await db
+      .select()
+      .from(schema.apikey)
+      .where(and(eq(schema.apikey.id, params.patId), eq(schema.apikey.userId, params.userId)))
+      .limit(1);
+    if (!rows[0]) return null;
+    return toPublic(rows[0]);
   },
 
   async verifyBearer(rawToken: string): Promise<{
@@ -397,41 +399,67 @@ export const PatService = {
       return cached.data;
     }
 
-    const tables = createSystemTablesDB();
-    const res = await tables.listRows({
-      databaseId: DB,
-      tableId: TABLE,
-      queries: [
-        Query.equal('tokenPrefix', parsed.prefix),
-        Query.equal('status', 'active'),
-        Query.limit(1),
-      ],
-    });
-    const row = res.rows[0] as unknown as PatRow | undefined;
+    // 2. Query Turso by prefix and enabled
+    const rows = await db
+      .select()
+      .from(schema.apikey)
+      .where(
+        and(
+          or(eq(schema.apikey.prefix, parsed.prefix), eq(schema.apikey.start, parsed.prefix)),
+          eq(schema.apikey.enabled, true)
+        )
+      )
+      .limit(1);
+
+    const row = rows[0];
     if (!row) return null;
 
-    if (hash !== row.tokenHash) return null;
+    if (hash !== row.key) return null;
 
-    if (row.expiresAt && new Date(row.expiresAt).getTime() < Date.now()) {
+    if (row.expiresAt && row.expiresAt.getTime() < Date.now()) {
       return null;
     }
 
     // Fire-and-forget lastUsedAt (best effort, throttled)
-    const lastUsed = row.lastUsedAt ? new Date(row.lastUsedAt).getTime() : 0;
+    const lastUsed = row.lastUsedAt ? row.lastUsedAt.getTime() : 0;
     if (Date.now() - lastUsed > 1000 * 60 * 5) {
-      void tables
-        .updateRow({
-          databaseId: DB,
-          tableId: TABLE,
-          rowId: row.$id,
-          data: { lastUsedAt: new Date().toISOString() },
-        })
+      void db
+        .update(schema.apikey)
+        .set({ lastUsedAt: new Date() })
+        .where(eq(schema.apikey.id, row.id))
         .catch(() => null);
     }
 
+    let agentId: string | null = null;
+    if (row.metadata) {
+      try {
+        const meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+        agentId = meta?.agentId || null;
+      } catch {}
+    }
+
+    const patRow: PatRow = {
+      $id: row.id,
+      id: row.id,
+      userId: row.userId,
+      name: row.name || '',
+      tokenPrefix: row.prefix || row.start || parsed.prefix,
+      tokenHash: row.key,
+      scopes: row.permissions || '[]',
+      status: row.enabled ? 'active' : 'revoked',
+      expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
+      lastUsedAt: row.lastUsedAt ? row.lastUsedAt.toISOString() : null,
+      isWorkspace: Boolean(row.isWorkspace),
+      workspaceId: row.workspaceId || null,
+      createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+      updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
+      category: (row.category as PatCategory) || 'user_pat',
+      agentId: agentId || row.workspaceId || null,
+    };
+
     const result = {
-      pat: row,
-      scopes: normalizeScopes(row.scopes),
+      pat: patRow,
+      scopes: normalizeScopes(row.permissions),
       userId: row.userId,
     };
 
