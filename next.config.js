@@ -57,6 +57,10 @@ const nextConfig = {
         fs: false,
         path: false,
         stream: false,
+        'stream/web': false,
+        child_process: false,
+        net: false,
+        tls: false,
       };
       // Strip 'node:' prefix from imports to prevent UnhandledSchemeError
       config.plugins.push(

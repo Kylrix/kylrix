@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useFAB } from '@/context/FABContext';
 
 /**
@@ -22,8 +21,7 @@ import { useFAB } from '@/context/FABContext';
  */
 export function UnifiedBottomBar() {
   const pathname = usePathname();
-  const { activeContent, open: openUnified } = useUnifiedDrawer();
-  const { mode } = useAppChrome();
+  const { open: openUnified } = useUnifiedDrawer();
   const { config } = useFAB();
 
   const [isScrolling, setIsScrolling] = useState(false);

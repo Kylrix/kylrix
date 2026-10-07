@@ -172,7 +172,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Silent Better Auth & Turso user minting & aggressive Tier 1/2 sync (runs once in background)
       const mintBetterAuthTurso = async () => {
         try {
-          const { ensureBetterAuthUserTurso, syncTier1FromAppwriteTurso, syncTier2FromAppwriteTurso } = await import('@/lib/actions/turso-ops');
+          const { ensureBetterAuthUserTurso, syncTier1FromAppwriteTurso } = await import('@/lib/actions/turso-ops');
           await ensureBetterAuthUserTurso({
             id: user.$id,
             name: user.name || (user.email ? user.email.split('@')[0] : 'User'),

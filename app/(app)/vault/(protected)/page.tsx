@@ -19,7 +19,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw, Lock, KeyRound } from 'lucide-react';
 
 import { useFAB } from '@/context/FABContext';
-import { TOTPPageContent } from './totp/page';
+import { TOTPPageContent } from './totp/TOTPContent';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';

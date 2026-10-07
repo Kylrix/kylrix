@@ -19,8 +19,8 @@ function sanitizeHtml(html: string): string {
   }
   if (!serverPurify) {
     // Dynamic require happy-dom on Node server-side only so it won't be bundled into client browser bundles
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Window } = require('happy-dom');
+    const req = (globalThis as any).__non_webpack_require__ ?? eval('require');
+    const { Window } = req('happy-dom');
     const win = new Window();
     serverPurify = DOMPurify(win as unknown as Window & typeof globalThis);
   }

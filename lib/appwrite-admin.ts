@@ -1,9 +1,18 @@
 import { Client, Account, Databases, Messaging, Storage, Users, TablesDB, Teams, Functions } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { configureInternalAppwriteClient } from '@/lib/appwrite/internal-headers';
-import {
-  experimental_taintUniqueValue,
-  experimental_taintObjectReference} from 'react';
+import * as React from 'react';
+
+const experimental_taintUniqueValue: (
+  message: string,
+  lifetime: any,
+  value: any
+) => void = (React as any).experimental_taintUniqueValue || (() => {});
+
+const experimental_taintObjectReference: (
+  message: string,
+  object: any
+) => void = (React as any).experimental_taintObjectReference || (() => {});
 
 // Setup Next.js React Taint security boundaries for all sensitive credentials on module load
 try {
