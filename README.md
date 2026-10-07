@@ -46,7 +46,7 @@ Get up and running across your favorite interfaces, ordered from least friction 
 | **🎮 Discord Bot** | Interactive server bot (`/ideas`, `/goals`, `/search`, `/pair`) | [**Install Discord Bot**](https://www.kylrix.space/connect/discord) | **1 click** (Server invite) |
 | **⚡ CLI & Local Bridge** | Sovereign terminal tool & local agent execution engine | `npm i -g @kylrix/cli` && `kylrix login` | **Minimal** (Node 18+) |
 | **📡 REST API** | Programmatic CRUD for ideas, goals, vaults & agents (`/api/v1`) | [**Modular Samples (`samples/REST/`)**](samples/REST/) · `python3 samples/REST/create_idea.py` or `./samples/REST/create_idea.sh` | **Low** (Bearer PAT) |
-| **🔌 MCP Server** | Native tool server for Claude Desktop, Cursor, and Windsurf | `npx -y @smithery/cli install @kylrix/mcp --client claude` or `kylrix mcp` | **1 click** (Smithery) |
+| **🔌 MCP Server** | Native tool server for Cursor, Claude, Windsurf & AI IDEs | `npx -y @smithery/cli install kylrix/kylrix` or `kylrix mcp` | **1 click** (Smithery prompts client) |
 | **🔐 Sign in with Kylrix** | OAuth 2.1 / OIDC identity provider with PKCE | [Discovery Doc](https://www.kylrix.space/.well-known/openid-configuration) · [OAuth Guide](.agents/skills/oauth2/SKILL.md) | **Standard** (OAuth 2.1) |
 | **🔄 Self-Hosted Sync** | Bi-directional replication between private nodes and Cloud | [**Settings → Cloud Sync**](https://www.kylrix.space/settings?tab=sync#cloud-sync) | **Low** (1-click punch) |
 | **🐳 Docker Self-Host** | Bundled bare-metal container stack on port `:5003` | `curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh \| bash` | **Moderate** (Docker) |
@@ -132,9 +132,10 @@ Humans and agents share the same workspace. MCP for IDE tool loops; REST for scr
    ```bash
    npx skills add kylrix/kylrix --skill mcp --skill api --skill agents
    ```
-3. **Connect MCP** (IDE only — uses your PAT; Smithery wires the official endpoint)
+3. **Connect MCP** (IDE only — uses your PAT; Smithery wires the official endpoint interactively for your IDE)
    ```bash
-   npx -y @smithery/cli install kylrix/kylrix --client cursor
+   npx -y @smithery/cli install kylrix/kylrix
+   # or specify directly: --client cursor / --client claude / --client windsurf
    ```
 
 ### In-Browser Agent Bridge (WebMCP)
