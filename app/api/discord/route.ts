@@ -129,6 +129,11 @@ export const DISCORD_SLASH_COMMANDS = [
     ...DEFAULT_COMMAND_SETTINGS,
   },
   {
+    name: 'Save & Share',
+    type: 3, // MESSAGE context menu command
+    ...DEFAULT_COMMAND_SETTINGS,
+  },
+  {
     name: 'idea_read',
     description: 'Read an idea by ID or title snippet',
     ...DEFAULT_COMMAND_SETTINGS,
@@ -264,14 +269,14 @@ export const DISCORD_SLASH_COMMANDS = [
   },
   {
     name: 'share',
-    description: 'Generate an expiring web link for an item with smart title search',
+    description: 'Generate web link for an item, or save & share tagged message',
     ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'item',
-        description: 'Item ID or title snippet (e.g. "migration logs" or "note_123")',
+        description: 'Item ID, title query, or text (optional: defaults to tagged/previous message)',
         type: 3, // STRING
-        required: true,
+        required: false,
       },
       {
         name: 'kind',
@@ -767,14 +772,14 @@ export async function resolveMessageForSave(
           return {
             content: text,
             authorName: msg.author?.username || 'user',
-            sourceDesc: `Message by ${msg.author?.username || 'user'}`,
+            sourceDesc: `Message by @${msg.author?.username || 'user'}`,
           };
         }
       }
     } catch {}
   }
 
-  // 3. User passed raw text that is not a link or ID
+  // 3. User passed raw text that is not a link or ID (only if explicit input was provided)
   if (inputArg && inputArg.trim()) {
     return {
       content: inputArg.trim(),
@@ -782,7 +787,34 @@ export async function resolveMessageForSave(
     };
   }
 
-  // 4. Command was invoked as a reply to a message
+  // 4. Command was invoked with resolved messages (Message Context Menu or Interaction Resolved)
+  if (payload?.data?.target_id && payload?.data?.resolved?.messages?.[payload.data.target_id]) {
+    const msg = payload.data.resolved.messages[payload.data.target_id];
+    const text = msg.content || msg.attachments?.[0]?.url || '';
+    if (text) {
+      return {
+        content: text,
+        authorName: msg.author?.username || 'user',
+        sourceDesc: `Target message by @${msg.author?.username || 'user'}`,
+      };
+    }
+  }
+  if (payload?.data?.resolved?.messages) {
+    const msgs = Object.values(payload.data.resolved.messages) as any[];
+    if (msgs.length > 0) {
+      const msg = msgs[0];
+      const text = msg.content || msg.attachments?.[0]?.url || '';
+      if (text) {
+        return {
+          content: text,
+          authorName: msg.author?.username || 'user',
+          sourceDesc: `Referenced message by @${msg.author?.username || 'user'}`,
+        };
+      }
+    }
+  }
+
+  // 5. Command was invoked as a reply to a message in Discord
   if (payload?.message?.referenced_message) {
     const ref = payload.message.referenced_message;
     const text = ref.content || ref.attachments?.[0]?.url || '';
@@ -790,30 +822,50 @@ export async function resolveMessageForSave(
       return {
         content: text,
         authorName: ref.author?.username || 'user',
-        sourceDesc: `Replied message by ${ref.author?.username || 'user'}`,
+        sourceDesc: `Replied message by @${ref.author?.username || 'user'}`,
       };
     }
   }
 
-  // 5. Fetch previous message right before this interaction in the channel
+  // 6. Fetch recent messages in channel to capture tagged message or previous non-bot message
   if (channelId && botToken) {
     try {
-      const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=6`, {
+      const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=10`, {
         headers: { Authorization: `Bot ${botToken}` },
       });
       if (res.ok) {
         const messages: any[] = await res.json();
         const botId = process.env.DISCORD_APPLICATION_ID || '1553752726070886412';
+
+        // Find latest message not authored by a bot
+        const nonBot = messages.find((m) => !m.author?.bot && m.author?.id !== botId);
+        if (nonBot) {
+          // If that message is a reply to another message, the replied-to message is what the user tagged!
+          const target = nonBot.referenced_message || nonBot;
+          const text = target.content || target.attachments?.[0]?.url || '';
+          if (text) {
+            return {
+              content: text,
+              authorName: target.author?.username || 'user',
+              sourceDesc: nonBot.referenced_message
+                ? `Replied message by @${target.author?.username || 'user'}`
+                : `Previous message by @${target.author?.username || 'user'}`,
+            };
+          }
+        }
+
+        // Fallback: any message with text/attachments not authored by our bot
         const prev = messages.find(
           (m) => m.author?.id !== botId && (m.content || (m.attachments && m.attachments.length > 0))
         );
         if (prev) {
-          const text = prev.content || prev.attachments?.[0]?.url || '';
+          const target = prev.referenced_message || prev;
+          const text = target.content || target.attachments?.[0]?.url || '';
           if (text) {
             return {
               content: text,
-              authorName: prev.author?.username || 'user',
-              sourceDesc: `Previous message by @${prev.author?.username || 'user'}`,
+              authorName: target.author?.username || 'user',
+              sourceDesc: `Previous message by @${target.author?.username || 'user'}`,
             };
           }
         }
@@ -1761,8 +1813,15 @@ export async function POST(req: NextRequest) {
     const options: any[] = payload.data?.options || [];
     const getOption = (name: string) => options.find((o) => o.name === name)?.value;
 
-    // A. Handle Discord Message Context Menu Action ("Save as Idea")
-    if (commandType === 3 || commandName === 'Save as Idea' || commandName === 'save_as_idea') {
+    // A. Handle Discord Message Context Menu Actions ("Save as Idea" or "Save & Share")
+    if (
+      commandType === 3 ||
+      commandName === 'Save as Idea' ||
+      commandName === 'save_as_idea' ||
+      commandName === 'Save & Share' ||
+      commandName === 'save_and_share'
+    ) {
+      const isShareMode = commandName === 'Save & Share' || commandName === 'save_and_share';
       const targetId = payload.data?.target_id;
       const targetMsg = payload.data?.resolved?.messages?.[targetId];
       const rawContent = targetMsg?.content || targetMsg?.attachments?.[0]?.url || '';
@@ -1775,17 +1834,24 @@ export async function POST(req: NextRequest) {
       const title = extractTitleSnippet(rawContent);
       try {
         const newNote = await ApiResources.createNote(actor, { title, content: rawContent });
+        const domainUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
+        const shareUrl = `${domainUrl}/idea/${encodeURIComponent(newNote.id)}`;
+
         return NextResponse.json({
           type: 4,
           data: {
             embeds: [
               {
-                title: `💡 Idea Saved from Message: ${newNote.title}`,
-                description: rawContent.length > 500 ? `${rawContent.slice(0, 500)}...` : `> ${rawContent}`,
-                color: 0x10b981,
+                title: isShareMode ? `🔗 Idea Saved & Shared: ${newNote.title}` : `💡 Idea Saved from Message: ${newNote.title}`,
+                description: isShareMode
+                  ? `Here is your secure share link for this saved idea:\n\n👉 **[${shareUrl}](${shareUrl})**\n\n` +
+                    (rawContent.length > 400 ? `> ${rawContent.slice(0, 400)}...` : `> ${rawContent}`)
+                  : rawContent.length > 500 ? `${rawContent.slice(0, 500)}...` : `> ${rawContent}`,
+                color: isShareMode ? 0x06b6d4 : 0x10b981,
                 fields: [
                   { name: 'Saved By', value: callerName, inline: true },
                   { name: 'Idea ID', value: `\`${newNote.id}\``, inline: true },
+                  ...(isShareMode ? [{ name: 'Share Link', value: `[Open Link](${shareUrl})`, inline: true }] : []),
                 ],
                 footer: { text: isLinked ? 'Kylrix Ideas • Sovereign & Synced' : 'Kylrix Ideas • Sandbox Mode' },
               },
@@ -1794,9 +1860,10 @@ export async function POST(req: NextRequest) {
               {
                 type: 1,
                 components: [
+                  { type: 2, style: 5, label: 'Open in Web', url: shareUrl },
                   { type: 2, style: 2, label: 'Read Idea', custom_id: `read_idea:${newNote.id}`, emoji: { name: '📖' } },
-                  { type: 2, style: 5, label: 'Open in Web', url: `https://www.kylrix.space/idea/${newNote.id}` },
                   { type: 2, style: 1, label: 'Share Link', custom_id: `share_pick:idea:${newNote.id}`, emoji: { name: '🔗' } },
+                  { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                 ],
               },
             ],
@@ -2667,11 +2734,67 @@ export async function POST(req: NextRequest) {
       case 'share': {
         const kind = String(getOption('kind') || '').trim().toLowerCase();
         const rawTarget = String(getOption('item') || getOption('id') || getOption('query') || '').trim();
+        const domainUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
 
+        // A. If no item argument was provided, resolve tagged or previous channel message, save it as an idea, and print out share URI!
         if (!rawTarget) {
+          const resolved = await resolveMessageForSave(payload);
+          if (resolved && resolved.content) {
+            const rawContent = resolved.content;
+            const title = extractTitleSnippet(rawContent);
+            try {
+              const newNote = await ApiResources.createNote(actor, { title, content: rawContent });
+              const shareUrl = `${domainUrl}/idea/${encodeURIComponent(newNote.id)}`;
+              return NextResponse.json({
+                type: 4,
+                data: {
+                  embeds: [
+                    {
+                      title: `🔗 Idea Saved & Shared: ${newNote.title}`,
+                      description:
+                        `Here is your secure share link for this saved idea:\n\n` +
+                        `👉 **[${shareUrl}](${shareUrl})**\n\n` +
+                        (rawContent.length > 300 ? `> ${rawContent.slice(0, 300)}...` : `> ${rawContent}`),
+                      color: 0x06b6d4, // Cyan
+                      fields: [
+                        { name: 'Author', value: resolved.authorName ? `@${resolved.authorName}` : callerName, inline: true },
+                        { name: 'Idea ID', value: `\`${newNote.id}\``, inline: true },
+                        { name: 'Source', value: resolved.sourceDesc, inline: true },
+                      ],
+                      footer: { text: isLinked ? 'Kylrix Ideas • Sovereign & Synced' : 'Kylrix Ideas • Sandbox Mode' },
+                    },
+                  ],
+                  components: [
+                    {
+                      type: 1,
+                      components: [
+                        { type: 2, style: 5, label: 'Open Link', url: shareUrl },
+                        { type: 2, style: 2, label: 'Read Idea', custom_id: `read_idea:${newNote.id}`, emoji: { name: '📖' } },
+                        { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                      ],
+                    },
+                  ],
+                },
+              });
+            } catch (err: any) {
+              return NextResponse.json({
+                type: 4,
+                data: { content: `❌ Failed to save & share idea: ${err?.message || 'Error'}` },
+              });
+            }
+          }
+
           return NextResponse.json({
             type: 4,
-            data: { content: '❌ Item ID or title query is required: `/share item: <title or ID>`' },
+            data: {
+              content:
+                '❌ Could not find a message to save & share.\n\n' +
+                '**How to use `/share`:**\n' +
+                '• Tag / reply to a message and run `/share` to save it and get a share link\n' +
+                '• Run `/share` directly after a message in the channel\n' +
+                '• Share existing item: `/share item: <title or ID>`\n' +
+                '• Right-click any message → **Apps** → **Save & Share**',
+            },
           });
         }
 

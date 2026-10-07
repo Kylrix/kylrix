@@ -640,4 +640,64 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     assert.ok(json.data.embeds[0].title.includes('Share Link: Idea'));
     assert.ok(json.data.embeds[0].description.includes('/idea/note_123'));
   });
+
+  it('should handle slash command /share with no arguments by saving replied message and outputting share URI', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          name: 'share',
+          options: [],
+        },
+        message: {
+          referenced_message: {
+            content: 'Decentralized local-first sync with SQLite Turso replication',
+            author: { username: 'eve' },
+          },
+        },
+        user: { username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Idea Saved & Shared'));
+    assert.ok(json.data.embeds[0].description.includes('/idea/note_created'));
+    assert.ok(json.data.components[0].components.some((c: any) => c.label === 'Open Link'));
+  });
+
+  it('should handle message context menu action "Save & Share"', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          type: 3,
+          name: 'Save & Share',
+          target_id: 'msg_888',
+          resolved: {
+            messages: {
+              msg_888: {
+                content: 'Key architecture decision: store encrypted blob on Turso',
+                author: { username: 'frank' },
+              },
+            },
+          },
+        },
+        user: { username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Idea Saved & Shared'));
+    assert.ok(json.data.embeds[0].description.includes('/idea/note_created'));
+  });
 });
