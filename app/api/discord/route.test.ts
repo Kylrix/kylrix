@@ -8,6 +8,9 @@ import {
   POST,
   GET,
   DISCORD_SLASH_COMMANDS,
+  extractTitleSnippet,
+  computeFuzzyMatchScore,
+  searchAndRankWorkspaceItems,
 } from './route';
 import { ApiResources } from '@/lib/api/resources';
 import { PairingService } from '@/lib/services/pairing';
@@ -406,7 +409,166 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     assert.equal(json.ok, true);
     assert.equal(json.service, 'kylrix-discord-bot');
     assert.ok(json.commands.includes('/ideas'));
+    assert.ok(json.commands.includes('/save'));
+    assert.ok(json.commands.includes('/share'));
     assert.ok(json.commands.includes('/pair'));
     assert.ok(json.commands.includes('/goals'));
+  });
+
+  describe('extractTitleSnippet helper', () => {
+    it('should extract clean title from markdown first line', () => {
+      const title = extractTitleSnippet('# Migration notes for SQLite\nDetailed body here');
+      assert.equal(title, 'Migration notes for SQLite');
+    });
+
+    it('should truncate titles longer than maxLen with ellipsis', () => {
+      const longText = 'This is an exceedingly long sentence that definitely exceeds sixty characters in total length';
+      const title = extractTitleSnippet(longText, 40);
+      assert.ok(title.endsWith('...'));
+      assert.ok(title.length <= 43);
+    });
+
+    it('should fallback to Quick Idea for empty input', () => {
+      assert.equal(extractTitleSnippet(''), 'Quick Idea');
+      assert.equal(extractTitleSnippet('   '), 'Quick Idea');
+    });
+  });
+
+  describe('computeFuzzyMatchScore helper', () => {
+    it('should give highest score to exact ID match', () => {
+      const score = computeFuzzyMatchScore('Some Title', 'Some Body', 'note_123', 'note_123');
+      assert.equal(score, 1000);
+    });
+
+    it('should give high score to exact title match', () => {
+      const score = computeFuzzyMatchScore('Migration logs', 'Some Body', 'migration logs', 'note_99');
+      assert.ok(score >= 600);
+    });
+
+    it('should match multi-word tokens in title', () => {
+      const score = computeFuzzyMatchScore('Project Migration Logs 2026', 'Body', 'migration logs', 'note_99');
+      assert.ok(score > 100);
+    });
+  });
+
+  it('should handle slash command /save and auto-generate title snippet', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          name: 'save',
+          options: [
+            { name: 'content', value: 'We need to migrate Turso SQLite replica to production this weekend.' },
+          ],
+        },
+        user: { username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Idea Saved'));
+    assert.ok(ApiResources.createNote.mock.calls.length > 0);
+  });
+
+  it('should handle message context menu action "Save as Idea"', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          type: 3,
+          name: 'Save as Idea',
+          target_id: 'msg_999',
+          resolved: {
+            messages: {
+              msg_999: {
+                content: 'Important meeting notes: launch zero-knowledge secrets gateway on Monday',
+                author: { username: 'bob' },
+              },
+            },
+          },
+        },
+        user: { username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Idea Saved from Message'));
+    assert.ok(ApiResources.createNote.mock.calls.length > 0);
+  });
+
+  it('should handle slash command /share with exact object ID and give share link instantly', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          name: 'share',
+          options: [{ name: 'item', value: 'note_123' }],
+        },
+        user: { username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    assert.ok(json.data.embeds[0].title.includes('Share Link'));
+    assert.ok(json.data.embeds[0].description.includes('/idea/note_123'));
+  });
+
+  it('should handle slash command /share with title query and return close matches with buttons', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 2,
+        data: {
+          name: 'share',
+          options: [{ name: 'item', value: 'Roadmap' }],
+        },
+        user: { username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 4);
+    // Either exact single match found or close matches returned
+    assert.ok(
+      json.data.embeds[0].title.includes('Share Link') ||
+      json.data.embeds[0].title.includes('Close Matches')
+    );
+  });
+
+  it('should handle message component share_pick button callback', async () => {
+    const req = new NextRequest('http://localhost:3005/api/discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 3,
+        data: { custom_id: 'share_pick:idea:note_123' },
+        user: { id: 'discord_user_88', username: 'alice' },
+      }),
+    });
+
+    const res = await POST(req);
+    assert.equal(res.status, 200);
+    const json = await res.json();
+    assert.equal(json.type, 7); // UPDATE_MESSAGE
+    assert.ok(json.data.embeds[0].title.includes('Share Link: Idea'));
+    assert.ok(json.data.embeds[0].description.includes('/idea/note_123'));
   });
 });

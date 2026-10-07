@@ -17,6 +17,8 @@ import {
   Copy,
   Check,
   Loader2,
+  Bookmark,
+  Share2,
 } from 'lucide-react';
 
 const DEFAULT_PERMISSIONS = '277025778752';
@@ -217,6 +219,8 @@ function DiscordConnectContent() {
               { cmd: '/pair', desc: 'Link Discord user to your workspace', icon: KeyRound },
               { cmd: '/ideas', desc: 'Browse your recent sovereign ideas', icon: FileText },
               { cmd: '/idea', desc: 'Quick capture idea directly into Kylrix', icon: FileText },
+              { cmd: '/save', desc: 'Save message with auto-generated title', icon: Bookmark },
+              { cmd: '/share', desc: 'Share an item with smart title search', icon: Share2 },
               { cmd: '/goals', desc: 'List active priorities and milestones', icon: CheckSquare },
               { cmd: '/goal_done', desc: 'Complete a goal by title or ID', icon: CheckCircle2 },
               { cmd: '/menu', desc: 'Open interactive bot control card', icon: Compass },

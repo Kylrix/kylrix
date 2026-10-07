@@ -105,13 +105,37 @@ export const DISCORD_SLASH_COMMANDS = [
     ],
   },
   {
+    name: 'save',
+    description: 'Quickly save a message as an idea (auto-generates title from snippet)',
+    ...DEFAULT_COMMAND_SETTINGS,
+    options: [
+      {
+        name: 'content',
+        description: 'The message text or thought to save as an idea',
+        type: 3, // STRING
+        required: true,
+      },
+      {
+        name: 'title',
+        description: 'Optional custom title (defaults to snippet of content)',
+        type: 3, // STRING
+        required: false,
+      },
+    ],
+  },
+  {
+    name: 'Save as Idea',
+    type: 3, // MESSAGE context menu command
+    ...DEFAULT_COMMAND_SETTINGS,
+  },
+  {
     name: 'idea_read',
-    description: 'Read the full contents of a specific idea',
+    description: 'Read an idea by ID or title snippet',
     ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'id',
-        description: 'The ID of the idea to read',
+        description: 'The ID or title snippet of the idea to read',
         type: 3, // STRING
         required: true,
       },
@@ -119,12 +143,12 @@ export const DISCORD_SLASH_COMMANDS = [
   },
   {
     name: 'idea_delete',
-    description: 'Delete an idea from your workspace',
+    description: 'Delete an idea by ID or title snippet',
     ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'id',
-        description: 'The ID of the idea to delete',
+        description: 'The ID or title snippet of the idea to delete',
         type: 3, // STRING
         required: true,
       },
@@ -150,12 +174,12 @@ export const DISCORD_SLASH_COMMANDS = [
   },
   {
     name: 'goal_done',
-    description: 'Mark a goal as completed',
+    description: 'Mark a goal completed by ID or title snippet',
     ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'id',
-        description: 'The ID of the goal to mark completed',
+        description: 'The ID or title snippet of the goal to mark completed',
         type: 3, // STRING
         required: true,
       },
@@ -163,12 +187,12 @@ export const DISCORD_SLASH_COMMANDS = [
   },
   {
     name: 'goal_delete',
-    description: 'Delete a goal from your workspace',
+    description: 'Delete a goal by ID or title snippet',
     ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'id',
-        description: 'The ID of the goal to delete',
+        description: 'The ID or title snippet of the goal to delete',
         type: 3, // STRING
         required: true,
       },
@@ -240,26 +264,26 @@ export const DISCORD_SLASH_COMMANDS = [
   },
   {
     name: 'share',
-    description: 'Generate an expiring web link for an idea, goal, or workspace item',
+    description: 'Generate an expiring web link for an item with smart title search',
     ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
-        name: 'kind',
-        description: 'Type of item to share (idea, goal, workspace, vault)',
+        name: 'item',
+        description: 'Item ID or title snippet (e.g. "migration logs" or "note_123")',
         type: 3, // STRING
         required: true,
+      },
+      {
+        name: 'kind',
+        description: 'Optional filter by type (idea, goal, workspace, vault)',
+        type: 3, // STRING
+        required: false,
         choices: [
           { name: 'Idea', value: 'idea' },
           { name: 'Goal', value: 'goal' },
           { name: 'Workspace', value: 'workspace' },
           { name: 'Vault Secret (Link)', value: 'vault' },
         ],
-      },
-      {
-        name: 'id',
-        description: 'The unique ID of the item',
-        type: 3, // STRING
-        required: true,
       },
     ],
   },
@@ -454,6 +478,248 @@ function extractItems(res: any): any[] {
   if (Array.isArray(res?.items)) return res.items;
   if (Array.isArray(res?.rows)) return res.rows;
   return [];
+}
+
+export function extractTitleSnippet(content: string, maxLen = 60): string {
+  if (!content || !content.trim()) return 'Quick Idea';
+  const lines = content.trim().split('\n');
+  const firstNonEmpty = lines.find((l) => l.trim().length > 0) || content;
+  let cleaned = firstNonEmpty
+    .replace(/^```[a-z0-9_-]*\s*/i, '')
+    .replace(/^[#>\-\*\d\.\s]+/, '')
+    .replace(/[`*_~[\]()]/g, '')
+    .trim();
+
+  if (!cleaned) cleaned = 'Quick Idea';
+  if (cleaned.length <= maxLen) return cleaned;
+  return cleaned.slice(0, maxLen).trim() + '...';
+}
+
+export interface WorkspaceItemMatch {
+  id: string;
+  title: string;
+  kind: 'idea' | 'goal' | 'workspace' | 'vault';
+  kindTitle: string;
+  kindKey: string;
+  emoji: { name: string };
+  emojiChar: string;
+  shareUrl: string;
+  preview?: string;
+  score: number;
+}
+
+export function computeFuzzyMatchScore(
+  itemTitle: string,
+  itemContent: string,
+  query: string,
+  itemId: string
+): number {
+  const q = query.trim().toLowerCase();
+  if (!q) return 0;
+  const title = (itemTitle || '').trim().toLowerCase();
+  const content = (itemContent || '').trim().toLowerCase();
+  const idLower = (itemId || '').toLowerCase();
+
+  // 1. Exact ID match
+  if (idLower === q) return 1000;
+  if (idLower.includes(q) && q.length >= 4) return 800;
+
+  // 2. Exact Title
+  if (title === q) return 600;
+
+  // 3. Title starts with query
+  if (title.startsWith(q)) return 400;
+
+  // 4. Title contains whole query
+  if (title.includes(q)) return 300;
+
+  // 5. Query tokens in title / content
+  const tokens = q.split(/[\s_\-\/]+/).filter((t) => t.length > 1);
+  if (tokens.length === 0) return 0;
+
+  let score = 0;
+  let allInTitle = true;
+  let matchedTokens = 0;
+
+  for (const token of tokens) {
+    if (title.includes(token)) {
+      matchedTokens++;
+      score += 50;
+    } else {
+      allInTitle = false;
+      if (content.includes(token)) {
+        matchedTokens++;
+        score += 15;
+      }
+    }
+  }
+
+  if (matchedTokens === 0) return 0;
+  if (allInTitle && tokens.length > 1) {
+    score += 100;
+  }
+
+  return score;
+}
+
+export async function searchAndRankWorkspaceItems(
+  actor: any,
+  queryOrId: string,
+  kindFilter?: string
+): Promise<{
+  exact?: WorkspaceItemMatch;
+  topMatches: WorkspaceItemMatch[];
+}> {
+  const domainUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
+  const q = queryOrId.trim();
+  if (!q) return { topMatches: [] };
+
+  const isQueryWithSpaces = /\s/.test(q);
+
+  // 1. Direct ID check (only if single token / no spaces)
+  if (!isQueryWithSpaces) {
+    if (!kindFilter || kindFilter === 'idea' || kindFilter === 'note') {
+      try {
+        const note = await ApiResources.getNote(actor, q);
+        if (note && note.id) {
+          return {
+            exact: {
+              id: note.id,
+              title: note.title || 'Untitled Idea',
+              kind: 'idea',
+              kindTitle: 'Idea',
+              kindKey: 'idea',
+              emoji: { name: '💡' },
+              emojiChar: '💡',
+              shareUrl: `${domainUrl}/idea/${encodeURIComponent(note.id)}`,
+              preview: note.content ? String(note.content).slice(0, 100) : undefined,
+              score: 1000,
+            },
+            topMatches: [],
+          };
+        }
+      } catch {}
+    }
+
+    if (!kindFilter || kindFilter === 'goal') {
+      try {
+        const goal = await ApiResources.getGoal(actor, q);
+        if (goal && goal.id) {
+          return {
+            exact: {
+              id: goal.id,
+              title: goal.title || 'Goal',
+              kind: 'goal',
+              kindTitle: 'Goal',
+              kindKey: 'goal',
+              emoji: { name: '🎯' },
+              emojiChar: '🎯',
+              shareUrl: `${domainUrl}/goal/${encodeURIComponent(goal.id)}`,
+              preview: goal.description ? String(goal.description).slice(0, 100) : undefined,
+              score: 1000,
+            },
+            topMatches: [],
+          };
+        }
+      } catch {}
+    }
+
+    if (kindFilter === 'vault' || kindFilter === 'secret') {
+      return {
+        exact: {
+          id: q,
+          title: 'Vault Secret',
+          kind: 'vault',
+          kindTitle: 'Vault Secret',
+          kindKey: 'vault',
+          emoji: { name: '🔐' },
+          emojiChar: '🔐',
+          shareUrl: `${domainUrl}/vault/${encodeURIComponent(q)}`,
+          score: 1000,
+        },
+        topMatches: [],
+      };
+    }
+  }
+
+  // 2. Fetch candidates from ideas, goals, workspaces
+  const fetchIdeas = !kindFilter || kindFilter === 'idea' || kindFilter === 'note';
+  const fetchGoals = !kindFilter || kindFilter === 'goal';
+  const fetchWs = kindFilter === 'workspace';
+
+  const [notesRes, goalsRes, wsRes] = await Promise.all([
+    fetchIdeas ? ApiResources.listNotes(actor, 40).catch(() => []) : Promise.resolve([]),
+    fetchGoals ? ApiResources.listGoals(actor, 40).catch(() => []) : Promise.resolve([]),
+    fetchWs ? ApiResources.listWorkspaces(actor, 20).catch(() => []) : Promise.resolve([]),
+  ]);
+
+  const candidates: WorkspaceItemMatch[] = [];
+
+  for (const n of extractItems(notesRes)) {
+    const score = computeFuzzyMatchScore(n.title, n.content, q, n.id);
+    if (score > 0) {
+      candidates.push({
+        id: n.id,
+        title: n.title || 'Untitled Idea',
+        kind: 'idea',
+        kindTitle: 'Idea',
+        kindKey: 'idea',
+        emoji: { name: '💡' },
+        emojiChar: '💡',
+        shareUrl: `${domainUrl}/idea/${encodeURIComponent(n.id)}`,
+        preview: n.content ? String(n.content).slice(0, 100) : undefined,
+        score,
+      });
+    }
+  }
+
+  for (const g of extractItems(goalsRes)) {
+    const score = computeFuzzyMatchScore(g.title, g.description, q, g.id);
+    if (score > 0) {
+      candidates.push({
+        id: g.id,
+        title: g.title || 'Goal',
+        kind: 'goal',
+        kindTitle: 'Goal',
+        kindKey: 'goal',
+        emoji: { name: g.status === 'completed' ? '✅' : '🎯' },
+        emojiChar: g.status === 'completed' ? '✅' : '🎯',
+        shareUrl: `${domainUrl}/goal/${encodeURIComponent(g.id)}`,
+        preview: g.description ? String(g.description).slice(0, 100) : undefined,
+        score,
+      });
+    }
+  }
+
+  for (const w of extractItems(wsRes)) {
+    const score = computeFuzzyMatchScore(w.name || w.title, '', q, w.id);
+    if (score > 0) {
+      candidates.push({
+        id: w.id,
+        title: w.name || w.title || 'Workspace',
+        kind: 'workspace',
+        kindTitle: 'Workspace',
+        kindKey: 'workspace',
+        emoji: { name: '📂' },
+        emojiChar: '📂',
+        shareUrl: `${domainUrl}/workspace/${encodeURIComponent(w.id)}`,
+        score,
+      });
+    }
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+
+  if (candidates.length === 1) {
+    return { exact: candidates[0], topMatches: candidates };
+  }
+  if (candidates.length > 0 && candidates[0].score >= 600 && candidates[0].score > (candidates[1]?.score || 0) + 150) {
+    return { exact: candidates[0], topMatches: candidates.slice(0, 3) };
+  }
+
+  return {
+    topMatches: candidates.slice(0, 3),
+  };
 }
 
 function buildDiscordSelectMenu() {
@@ -1328,15 +1594,119 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // N. Share Pick Callback
+    if (customId.startsWith('share_pick:')) {
+      const parts = customId.split(':');
+      const pickKind = parts[1] || 'idea';
+      const pickId = parts[2] || '';
+      const domainUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
+      let sharePath = `/idea/${encodeURIComponent(pickId)}`;
+      let kindTitle = 'Idea';
+
+      if (pickKind === 'goal') {
+        sharePath = `/goal/${encodeURIComponent(pickId)}`;
+        kindTitle = 'Goal';
+      } else if (pickKind === 'workspace') {
+        sharePath = `/workspace/${encodeURIComponent(pickId)}`;
+        kindTitle = 'Workspace';
+      } else if (pickKind === 'vault') {
+        sharePath = `/vault/${encodeURIComponent(pickId)}`;
+        kindTitle = 'Vault Secret';
+      }
+
+      const shareUrl = `${domainUrl}${sharePath}`;
+      return NextResponse.json({
+        type: 7, // UPDATE_MESSAGE
+        data: {
+          embeds: [
+            {
+              title: `🔗 Share Link: ${kindTitle}`,
+              description:
+                `Here is the secure direct web link for your **${kindTitle}**:\n\n` +
+                `👉 **[${shareUrl}](${shareUrl})**\n\n` +
+                `*(Only users with permission or invite access will be able to unlock this resource in accordance with zero-knowledge policies).*`,
+              color: 0x06b6d4, // Cyan
+              fields: [
+                { name: 'Resource Type', value: kindTitle, inline: true },
+                { name: 'Resource ID', value: `\`${pickId}\``, inline: true },
+                { name: 'Privacy Mode', value: '🔒 Zero-Knowledge Gated', inline: true },
+              ],
+              footer: { text: 'Kylrix Resource Sharing • www.kylrix.space' },
+            },
+          ],
+          components: [
+            {
+              type: 1,
+              components: [
+                { type: 2, style: 5, label: 'Open Link', url: shareUrl },
+                { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
+                { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+              ],
+            },
+          ],
+        },
+      });
+    }
+
     // Fallback acknowledge
     return NextResponse.json({ type: 7, data: buildMainDashboardEmbed(callerName, isLinked) });
   }
 
-  // ── 4. TYPE 2: APPLICATION_COMMAND (Slash Commands) ──
+  // ── 4. TYPE 2: APPLICATION_COMMAND (Slash Commands & Message Context Actions) ──
   if (payload.type === 2) {
     const commandName = payload.data?.name || '';
+    const commandType = payload.data?.type || 1; // 1 = CHAT_INPUT, 3 = MESSAGE
     const options: any[] = payload.data?.options || [];
     const getOption = (name: string) => options.find((o) => o.name === name)?.value;
+
+    // A. Handle Discord Message Context Menu Action ("Save as Idea")
+    if (commandType === 3 || commandName === 'Save as Idea' || commandName === 'save_as_idea') {
+      const targetId = payload.data?.target_id;
+      const targetMsg = payload.data?.resolved?.messages?.[targetId];
+      const rawContent = targetMsg?.content || targetMsg?.attachments?.[0]?.url || '';
+      if (!rawContent) {
+        return NextResponse.json({
+          type: 4,
+          data: { content: '❌ Target message contains no text or attachments to save.' },
+        });
+      }
+      const title = extractTitleSnippet(rawContent);
+      try {
+        const newNote = await ApiResources.createNote(actor, { title, content: rawContent });
+        return NextResponse.json({
+          type: 4,
+          data: {
+            embeds: [
+              {
+                title: `💡 Idea Saved from Message: ${newNote.title}`,
+                description: rawContent.length > 500 ? `${rawContent.slice(0, 500)}...` : `> ${rawContent}`,
+                color: 0x10b981,
+                fields: [
+                  { name: 'Saved By', value: callerName, inline: true },
+                  { name: 'Idea ID', value: `\`${newNote.id}\``, inline: true },
+                ],
+                footer: { text: isLinked ? 'Kylrix Ideas • Sovereign & Synced' : 'Kylrix Ideas • Sandbox Mode' },
+              },
+            ],
+            components: [
+              {
+                type: 1,
+                components: [
+                  { type: 2, style: 2, label: 'Read Idea', custom_id: `read_idea:${newNote.id}`, emoji: { name: '📖' } },
+                  { type: 2, style: 5, label: 'Open in Web', url: `https://www.kylrix.space/idea/${newNote.id}` },
+                  { type: 2, style: 1, label: 'Share Link', custom_id: `share_pick:idea:${newNote.id}`, emoji: { name: '🔗' } },
+                ],
+              },
+            ],
+          },
+        });
+      } catch (err: any) {
+        return NextResponse.json({
+          type: 4,
+          data: { content: `❌ Could not save message as idea: ${err?.message || 'Error'}` },
+        });
+      }
+    }
 
     switch (commandName) {
       case 'menu': {
@@ -1392,43 +1762,141 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      case 'note_read':
-      case 'idea_read': {
-        const id = String(getOption('id') || '').trim();
-        if (!id) {
+      case 'save': {
+        const rawContent = String(getOption('content') || getOption('text') || getOption('message') || '').trim();
+        if (!rawContent) {
           return NextResponse.json({
             type: 4,
-            data: { content: '❌ Idea ID is required: `/idea_read id: <id>`' },
+            data: { content: '❌ Message content is required to save an idea: `/save content: <text>`' },
           });
         }
+        const customTitle = String(getOption('title') || '').trim();
+        const title = customTitle || extractTitleSnippet(rawContent);
         try {
-          const note = await ApiResources.getNote(actor, id);
+          const newNote = await ApiResources.createNote(actor, { title, content: rawContent });
           return NextResponse.json({
             type: 4,
             data: {
               embeds: [
                 {
-                  title: `💡 ${note.title || 'Untitled Idea'}`,
-                  description: note.content ? `${note.content}` : '*(Empty body)*',
-                  color: 0xec4899,
+                  title: `💡 Idea Saved: ${newNote.title}`,
+                  description: rawContent.length > 500 ? `${rawContent.slice(0, 500)}...` : `> ${rawContent}`,
+                  color: 0x10b981,
                   fields: [
-                    { name: 'Idea ID', value: `\`${note.id}\``, inline: true },
-                    { name: 'Status', value: '🟢 Decrypted', inline: true },
+                    { name: 'Author', value: callerName, inline: true },
+                    { name: 'Idea ID', value: `\`${newNote.id}\``, inline: true },
+                    { name: 'Auto Title', value: customTitle ? 'Custom' : 'Extracted from snippet', inline: true },
                   ],
-                  footer: { text: 'Kylrix Sovereign Ideas' },
+                  footer: { text: isLinked ? 'Kylrix Ideas • Sovereign & Synced' : 'Kylrix Ideas • Sandbox Mode' },
                 },
               ],
               components: [
                 {
                   type: 1,
                   components: [
-                    { type: 2, style: 4, label: 'Delete Idea', custom_id: `del_idea:${note.id}`, emoji: { name: '🗑️' } },
-                    { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
+                    { type: 2, style: 2, label: 'Read Idea', custom_id: `read_idea:${newNote.id}`, emoji: { name: '📖' } },
+                    { type: 2, style: 5, label: 'Open in Web', url: `https://www.kylrix.space/idea/${newNote.id}` },
+                    { type: 2, style: 1, label: 'Share Link', custom_id: `share_pick:idea:${newNote.id}`, emoji: { name: '🔗' } },
                     { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                   ],
                 },
               ],
             },
+          });
+        } catch (err: any) {
+          return NextResponse.json({
+            type: 4,
+            data: { content: `❌ Idea save failed: ${err?.message || 'Error'}` },
+          });
+        }
+      }
+
+      case 'note_read':
+      case 'idea_read': {
+        const id = String(getOption('id') || '').trim();
+        if (!id) {
+          return NextResponse.json({
+            type: 4,
+            data: { content: '❌ Idea ID or title snippet is required: `/idea_read id: <id or title>`' },
+          });
+        }
+        try {
+          const resolved = await searchAndRankWorkspaceItems(actor, id, 'idea');
+          if (resolved.exact) {
+            const note = await ApiResources.getNote(actor, resolved.exact.id);
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: `💡 ${note.title || 'Untitled Idea'}`,
+                    description: note.content ? `${note.content}` : '*(Empty body)*',
+                    color: 0xec4899,
+                    fields: [
+                      { name: 'Idea ID', value: `\`${note.id}\``, inline: true },
+                      { name: 'Status', value: '🟢 Decrypted', inline: true },
+                    ],
+                    footer: { text: 'Kylrix Sovereign Ideas' },
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 4, label: 'Delete Idea', custom_id: `del_idea:${note.id}`, emoji: { name: '🗑️' } },
+                      { type: 2, style: 1, label: 'Share Link', custom_id: `share_pick:idea:${note.id}`, emoji: { name: '🔗' } },
+                      { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
+          if (resolved.topMatches.length > 0) {
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: `🔍 Close Matches for "${id}"`,
+                    description: `Multiple ideas matched your query. Select which idea to open:`,
+                    color: 0xec4899,
+                    fields: resolved.topMatches.map((m, idx) => ({
+                      name: `${idx + 1}. 💡 ${m.title}`,
+                      value: `ID: \`${m.id}\`${m.preview ? `\n> ${m.preview}` : ''}`,
+                      inline: false,
+                    })),
+                    footer: { text: 'Kylrix Ideas • Tap a button below to read' },
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: resolved.topMatches.map((m) => ({
+                      type: 2,
+                      style: 1,
+                      label: m.title.length > 25 ? m.title.slice(0, 22) + '...' : m.title,
+                      custom_id: `read_idea:${m.id}`,
+                      emoji: { name: '📖' },
+                    })),
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
+          return NextResponse.json({
+            type: 4,
+            data: { content: `❌ No ideas found matching "${id}". Use \`/ideas\` to see recent ideas.` },
           });
         } catch (err: any) {
           return NextResponse.json({
@@ -1444,32 +1912,80 @@ export async function POST(req: NextRequest) {
         if (!id) {
           return NextResponse.json({
             type: 4,
-            data: { content: '❌ Idea ID is required: `/idea_delete id: <id>`' },
+            data: { content: '❌ Idea ID or title snippet is required: `/idea_delete id: <id or title>`' },
           });
         }
         try {
-          await ApiResources.deleteNote(actor, id);
+          const resolved = await searchAndRankWorkspaceItems(actor, id, 'idea');
+          if (resolved.exact) {
+            await ApiResources.deleteNote(actor, resolved.exact.id);
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: '🗑️ Idea Deleted',
+                    description: `**${resolved.exact.title}** (\`${resolved.exact.id}\`) was permanently removed.`,
+                    color: 0xef4444,
+                    footer: { text: 'Kylrix Sovereign Ideas' },
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 1, label: 'Back to Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
+          if (resolved.topMatches.length > 0) {
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: `🔍 Close Matches to Delete for "${id}"`,
+                    description: `Multiple ideas matched your query. Select which idea to permanently remove:`,
+                    color: 0xef4444,
+                    fields: resolved.topMatches.map((m, idx) => ({
+                      name: `${idx + 1}. 💡 ${m.title}`,
+                      value: `ID: \`${m.id}\`${m.preview ? `\n> ${m.preview}` : ''}`,
+                      inline: false,
+                    })),
+                    footer: { text: 'Kylrix Ideas • Tap a button below to delete' },
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: resolved.topMatches.map((m) => ({
+                      type: 2,
+                      style: 4,
+                      label: m.title.length > 25 ? m.title.slice(0, 22) + '...' : m.title,
+                      custom_id: `del_idea:${m.id}`,
+                      emoji: { name: '🗑️' },
+                    })),
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 1, label: 'Back to Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
           return NextResponse.json({
             type: 4,
-            data: {
-              embeds: [
-                {
-                  title: '🗑️ Idea Deleted',
-                  description: `Idea with ID \`${id}\` was permanently removed.`,
-                  color: 0xef4444,
-                  footer: { text: 'Kylrix Sovereign Ideas' },
-                },
-              ],
-              components: [
-                {
-                  type: 1,
-                  components: [
-                    { type: 2, style: 1, label: 'Back to Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
-                    { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
-                  ],
-                },
-              ],
-            },
+            data: { content: `❌ No ideas found matching "${id}" to delete.` },
           });
         } catch (err: any) {
           return NextResponse.json({
@@ -1529,36 +2045,84 @@ export async function POST(req: NextRequest) {
         if (!id) {
           return NextResponse.json({
             type: 4,
-            data: { content: '❌ Goal ID is required: `/goal_done id: <id>`' },
+            data: { content: '❌ Goal ID or title snippet is required: `/goal_done id: <id or title>`' },
           });
         }
         try {
-          const updated = await ApiResources.updateGoal(actor, id, { status: 'completed' });
+          const resolved = await searchAndRankWorkspaceItems(actor, id, 'goal');
+          if (resolved.exact) {
+            const updated = await ApiResources.updateGoal(actor, resolved.exact.id, { status: 'completed' });
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: '✅ Goal Completed!',
+                    description: `**${updated.title || 'Goal'}** is marked completed. Great job!`,
+                    color: 0x10b981,
+                    fields: [
+                      { name: 'Goal ID', value: `\`${updated.id}\``, inline: true },
+                      { name: 'Status', value: 'Completed', inline: true },
+                    ],
+                    footer: { text: 'Kylrix Goals' },
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 1, label: 'Back to Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
+          if (resolved.topMatches.length > 0) {
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: `🔍 Close Matches for "${id}"`,
+                    description: `Multiple goals matched your query. Select which goal to mark completed:`,
+                    color: 0x10b981,
+                    fields: resolved.topMatches.map((m, idx) => ({
+                      name: `${idx + 1}. 🎯 ${m.title}`,
+                      value: `ID: \`${m.id}\`${m.preview ? `\n> ${m.preview}` : ''}`,
+                      inline: false,
+                    })),
+                    footer: { text: 'Kylrix Goals • Tap a button below to complete' },
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: resolved.topMatches.map((m) => ({
+                      type: 2,
+                      style: 3,
+                      label: m.title.length > 25 ? m.title.slice(0, 22) + '...' : m.title,
+                      custom_id: `done_goal:${m.id}`,
+                      emoji: { name: '✅' },
+                    })),
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 1, label: 'Back to Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
           return NextResponse.json({
             type: 4,
-            data: {
-              embeds: [
-                {
-                  title: '✅ Goal Completed!',
-                  description: `**${updated.title || 'Goal'}** is marked completed. Great job!`,
-                  color: 0x10b981,
-                  fields: [
-                    { name: 'Goal ID', value: `\`${updated.id}\``, inline: true },
-                    { name: 'Status', value: 'Completed', inline: true },
-                  ],
-                  footer: { text: 'Kylrix Goals' },
-                },
-              ],
-              components: [
-                {
-                  type: 1,
-                  components: [
-                    { type: 2, style: 1, label: 'Back to Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
-                    { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
-                  ],
-                },
-              ],
-            },
+            data: { content: `❌ No goals found matching "${id}". Use \`/goals\` to see active deliverables.` },
           });
         } catch (err: any) {
           return NextResponse.json({
@@ -1573,32 +2137,80 @@ export async function POST(req: NextRequest) {
         if (!id) {
           return NextResponse.json({
             type: 4,
-            data: { content: '❌ Goal ID is required: `/goal_delete id: <id>`' },
+            data: { content: '❌ Goal ID or title snippet is required: `/goal_delete id: <id or title>`' },
           });
         }
         try {
-          await ApiResources.deleteGoal(actor, id);
+          const resolved = await searchAndRankWorkspaceItems(actor, id, 'goal');
+          if (resolved.exact) {
+            await ApiResources.deleteGoal(actor, resolved.exact.id);
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: '🗑️ Goal Deleted',
+                    description: `**${resolved.exact.title}** (\`${resolved.exact.id}\`) was permanently removed.`,
+                    color: 0xef4444,
+                    footer: { text: 'Kylrix Goals' },
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 1, label: 'Back to Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
+          if (resolved.topMatches.length > 0) {
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: `🔍 Close Matches to Delete for "${id}"`,
+                    description: `Multiple goals matched your query. Select which goal to delete:`,
+                    color: 0xef4444,
+                    fields: resolved.topMatches.map((m, idx) => ({
+                      name: `${idx + 1}. 🎯 ${m.title}`,
+                      value: `ID: \`${m.id}\`${m.preview ? `\n> ${m.preview}` : ''}`,
+                      inline: false,
+                    })),
+                    footer: { text: 'Kylrix Goals • Tap a button below to delete' },
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: resolved.topMatches.map((m) => ({
+                      type: 2,
+                      style: 4,
+                      label: m.title.length > 25 ? m.title.slice(0, 22) + '...' : m.title,
+                      custom_id: `del_goal:${m.id}`,
+                      emoji: { name: '🗑️' },
+                    })),
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 1, label: 'Back to Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
           return NextResponse.json({
             type: 4,
-            data: {
-              embeds: [
-                {
-                  title: '🗑️ Goal Deleted',
-                  description: `Goal with ID \`${id}\` was permanently removed.`,
-                  color: 0xef4444,
-                  footer: { text: 'Kylrix Goals' },
-                },
-              ],
-              components: [
-                {
-                  type: 1,
-                  components: [
-                    { type: 2, style: 1, label: 'Back to Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
-                    { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
-                  ],
-                },
-              ],
-            },
+            data: { content: `❌ No goals found matching "${id}" to delete.` },
           });
         } catch (err: any) {
           return NextResponse.json({
@@ -1944,76 +2556,125 @@ export async function POST(req: NextRequest) {
       }
 
       case 'share': {
-        const kind = String(getOption('kind') || 'note').trim().toLowerCase();
-        const id = String(getOption('id') || '').trim();
+        const kind = String(getOption('kind') || '').trim().toLowerCase();
+        const rawTarget = String(getOption('item') || getOption('id') || getOption('query') || '').trim();
 
-        if (!id) {
+        if (!rawTarget) {
           return NextResponse.json({
             type: 4,
-            data: { content: '❌ Item ID is required: `/share kind: <type> id: <id>`' },
+            data: { content: '❌ Item ID or title query is required: `/share item: <title or ID>`' },
           });
         }
 
-        const domainUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
-        let sharePath = '';
-        let kindTitle = 'Item';
+        try {
+          const resolved = await searchAndRankWorkspaceItems(actor, rawTarget, kind);
+          const domainUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
 
-        switch (kind) {
-          case 'idea':
-          case 'note':
-            sharePath = `/idea/${encodeURIComponent(id)}`;
-            kindTitle = 'Idea';
-            break;
-          case 'goal':
-            sharePath = `/goal/${encodeURIComponent(id)}`;
-            kindTitle = 'Goal';
-            break;
-          case 'workspace':
-            sharePath = `/workspace/${encodeURIComponent(id)}`;
-            kindTitle = 'Workspace';
-            break;
-          case 'vault':
-          case 'secret':
-            sharePath = `/vault/${encodeURIComponent(id)}`;
-            kindTitle = 'Vault Secret';
-            break;
-          default:
-            sharePath = `/idea/${encodeURIComponent(id)}`;
-            kindTitle = 'Resource';
-        }
-
-        const shareUrl = `${domainUrl}${sharePath}`;
-
-        return NextResponse.json({
-          type: 4,
-          data: {
-            embeds: [
-              {
-                title: `🔗 Share Link: ${kindTitle}`,
-                description:
-                  `Here is the secure direct web link for your **${kindTitle}**:\n\n` +
-                  `👉 **[${shareUrl}](${shareUrl})**\n\n` +
-                  `*(Only users with permission or invite access will be able to unlock this resource in accordance with zero-knowledge policies).*`,
-                color: 0x06b6d4, // Cyan
-                fields: [
-                  { name: 'Resource Type', value: kindTitle, inline: true },
-                  { name: 'Resource ID', value: `\`${id}\``, inline: true },
-                  { name: 'Privacy Mode', value: '🔒 Zero-Knowledge Gated', inline: true },
+          if (resolved.exact) {
+            const { id, title, kindTitle, shareUrl } = resolved.exact;
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: `🔗 Share Link: ${title}`,
+                    description:
+                      `Here is the secure direct web link for **${title}**:\n\n` +
+                      `👉 **[${shareUrl}](${shareUrl})**\n\n` +
+                      `*(Only users with permission or invite access will be able to unlock this resource in accordance with zero-knowledge policies).*`,
+                    color: 0x06b6d4, // Cyan
+                    fields: [
+                      { name: 'Resource Type', value: kindTitle, inline: true },
+                      { name: 'Resource ID', value: `\`${id}\``, inline: true },
+                      { name: 'Privacy Mode', value: '🔒 Zero-Knowledge Gated', inline: true },
+                    ],
+                    footer: { text: 'Kylrix Resource Sharing • www.kylrix.space' },
+                  },
                 ],
-                footer: { text: 'Kylrix Resource Sharing • www.kylrix.space' },
-              },
-            ],
-            components: [
-              {
-                type: 1,
                 components: [
-                  { type: 2, style: 5, label: 'Open Link', url: shareUrl },
-                  { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 5, label: 'Open Link', url: shareUrl },
+                      { type: 2, style: 1, label: 'All Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
                 ],
               },
-            ],
-          },
-        });
+            });
+          }
+
+          if (resolved.topMatches.length > 0) {
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: `🔍 Close Matches for "${rawTarget}"`,
+                    description: `Found multiple matching items in your workspace. Select which one to share:`,
+                    color: 0x3b82f6,
+                    fields: resolved.topMatches.map((m, idx) => ({
+                      name: `${m.emojiChar} ${idx + 1}. ${m.title}`,
+                      value: `Type: **${m.kindTitle}** • ID: \`${m.id}\`${m.preview ? `\n> ${m.preview}` : ''}`,
+                      inline: false,
+                    })),
+                    footer: { text: 'Kylrix Smart Finding • Tap a button below to generate share link' },
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: resolved.topMatches.map((m) => ({
+                      type: 2,
+                      style: 1,
+                      label: m.title.length > 25 ? m.title.slice(0, 22) + '...' : m.title,
+                      custom_id: `share_pick:${m.kindKey}:${m.id}`,
+                      emoji: { name: m.emojiChar },
+                    })),
+                  },
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
+          return NextResponse.json({
+            type: 4,
+            data: {
+              embeds: [
+                {
+                  title: `🔍 No Matches for "${rawTarget}"`,
+                  description:
+                    `Could not find any items matching "${rawTarget}" in your workspace.\n\n` +
+                    `• Try searching keywords with \`/search query: <keyword>\`\n` +
+                    `• Or list recent ideas with \`/ideas\` or goals with \`/goals\``,
+                  color: 0xef4444,
+                },
+              ],
+              components: [
+                {
+                  type: 1,
+                  components: [
+                    { type: 2, style: 1, label: 'View Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
+                    { type: 2, style: 1, label: 'View Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
+                    { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                  ],
+                },
+              ],
+            },
+          });
+        } catch (err: any) {
+          return NextResponse.json({
+            type: 4,
+            data: { content: `❌ Share lookup failed: ${err?.message || 'Error'}` },
+          });
+        }
       }
 
       case 'help':
