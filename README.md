@@ -39,6 +39,8 @@
 **Kylrix Pro is free forever for developers who contribute to Kylrix**, as long as you have at least one merged pull request in the codebase in the past 30 days.
 
 - **Zero Bureaucracy & 100% Automated**: You do not need to do anything or sign contributor agreements. Simply contribute, and as long as you have **Sign in with GitHub** added as an authentication method on your account, we automatically detect your merged PRs and grant Pro tier without any human review.
+- **Priority Feature Requests & Direct Escalation**: Feature requests submitted by Contributor-enabled accounts via **Settings → General → Feature Request & Bug Report** (or the [Feature Request Portal](https://www.kylrix.space/form/6aae3dab003a7247b90a)) are automatically tagged as **High Priority** and directly evaluated for inclusion in [**`TODO.md`**](TODO.md) and [**`ROADMAP.md`**](ROADMAP.md).
+- **Public Contributor Crown**: Display the verified emerald Contributor Crown badge on your public `/u/username` profile and billing status.
 - **What to Build**: Pick from prioritized pain points in [**`TODO.md`**](TODO.md) or explore systemic architectural pillars in [**`ROADMAP.md`**](ROADMAP.md).
 - **Guidelines**: Read [**`CONTRIBUTING.md`**](CONTRIBUTING.md) to get started.
 
@@ -264,4 +266,4 @@ If Kylrix powers your daily workflow or team infrastructure, consider sponsoring
 
 ## Feedback & security
 
-[Bug report form](https://www.kylrix.space/form/6a2a653f002b0f296958) · [ARCHITECTURE.md](ARCHITECTURE.md) · [TRADEMARK.md](TRADEMARK.md)
+[Bug report form](https://www.kylrix.space/form/6aae3dab003a7247b90a) · [ARCHITECTURE.md](ARCHITECTURE.md) · [TRADEMARK.md](TRADEMARK.md)

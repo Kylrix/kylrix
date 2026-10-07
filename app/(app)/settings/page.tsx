@@ -332,7 +332,8 @@ function SettingsPageInner() {
         return () => { mounted = false; };
     }, [profilePicId]);
 
-    const isPro = currentTier === 'PRO' || currentTier === 'LIFETIME' || currentTier === 'ORG';
+    const isContributor = currentTier === 'CONTRIBUTOR';
+    const isPro = currentTier === 'PRO' || currentTier === 'LIFETIME' || currentTier === 'ORG' || currentTier === 'CONTRIBUTOR';
 
     // Initialize with optimistic default based on client-side tier
     useEffect(() => {
@@ -810,11 +811,24 @@ function SettingsPageInner() {
                                 <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl hover:border-white/40 transition-all duration-300">
                                     <div className="flex items-center justify-between gap-4 flex-wrap">
                                         <div className="min-w-0">
-                                            <h4 className="text-white font-extrabold text-sm truncate">
-                                                Feature Request & Bug Report
-                                            </h4>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h4 className="text-white font-extrabold text-sm truncate m-0">
+                                                    Feature Request & Bug Report
+                                                </h4>
+                                                {isContributor && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-black uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                                        <Crown size={10} className="text-emerald-400" />
+                                                        High Priority
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-white/60 text-xs font-semibold font-sans mt-0.5 leading-relaxed">
                                                 Help us improve the Kylrix ecosystem by reporting issues or suggesting new features.
+                                                {isContributor && (
+                                                    <span className="block mt-1 text-emerald-400 font-bold">
+                                                        ★ Contributor Perk: Requests from your account are tagged as high priority and evaluated directly for TODO.md & ROADMAP.md.
+                                                    </span>
+                                                )}
                                             </p>
                                         </div>
                                         <button

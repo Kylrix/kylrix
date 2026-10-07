@@ -11,7 +11,8 @@ import {
     ArrowUpRight,
     Maximize2,
     Minimize2,
-    Send
+    Send,
+    Crown
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
@@ -40,6 +41,42 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
     const [currentStep, setCurrentStep] = useState(0);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isContributor, setIsContributor] = useState(false);
+
+    const isFeatureRequestForm = formId === '6aae3dab003a7247b90a' || formId === process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID;
+
+    useEffect(() => {
+        let cancelled = false;
+        const checkContrib = async () => {
+            if (!currentUser) return;
+            const prefs = currentUser.prefs || {};
+            if (prefs.currentTier === 'CONTRIBUTOR' || prefs.tier === 'CONTRIBUTOR' || currentUser.isContributor) {
+                if (!cancelled) setIsContributor(true);
+                return;
+            }
+            try {
+                const uid = currentUser.$id || currentUser.id;
+                if (uid) {
+                    const { verifyAndApplyContributorStatus } = await import('@/lib/actions/contributor-ops');
+                    const res = await verifyAndApplyContributorStatus(uid).catch(() => null);
+                    if (res?.isContributor && !cancelled) {
+                        setIsContributor(true);
+                        return;
+                    }
+                }
+                const name = currentUser.name || currentUser.username || prefs.username;
+                if (name) {
+                    const { getContributorStatusByUsernameAction } = await import('@/lib/actions/contributor-ops');
+                    const res = await getContributorStatusByUsernameAction(name).catch(() => null);
+                    if (res?.isContributor && !cancelled) {
+                        setIsContributor(true);
+                    }
+                }
+            } catch {}
+        };
+        void checkContrib();
+        return () => { cancelled = true; };
+    }, [currentUser]);
 
     const handlePopOut = () => {
         onClose();
@@ -187,9 +224,22 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
 
         try {
             const enabledGhost = getEnabledGhostFields(form?.settings);
+            const effectiveGhostKeys = isFeatureRequestForm
+                ? Array.from(new Set([...enabledGhost, 'subscription_tier', 'contributor_status', 'identity_id']))
+                : enabledGhost;
+
             let submissionPayload = { ...formData };
-            if (enabledGhost.length > 0) {
-                const ghostData = await resolveGhostFields(enabledGhost, currentUser);
+            if (effectiveGhostKeys.length > 0) {
+                const ghostData = await resolveGhostFields(effectiveGhostKeys, currentUser);
+                if (isFeatureRequestForm) {
+                    const tierStr = String(ghostData.subscription_tier || '').toUpperCase();
+                    if (tierStr === 'CONTRIBUTOR' || isContributor || String(ghostData.contributor_status || '').includes('Contributor')) {
+                        ghostData.priority = 'HIGH';
+                        ghostData.isContributor = true;
+                        ghostData.contributorPriority = true;
+                        ghostData.routing = 'ROADMAP_TODO_REVIEW';
+                    }
+                }
                 submissionPayload._ghost = ghostData;
             }
 
@@ -508,6 +558,17 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                                     </p>
                                 )}
                                 <GhostFieldsNotice ghostFields={getEnabledGhostFields(form.settings)} />
+                                {isFeatureRequestForm && isContributor && (
+                                    <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5 mt-1">
+                                        <Crown size={15} className="text-emerald-400 shrink-0" />
+                                        <div className="text-xs">
+                                            <span className="font-bold text-emerald-400 font-mono block">Contributor Priority Routing Active</span>
+                                            <span className="text-white/80 text-[11px] block mt-0.5 leading-relaxed">
+                                                Your submission is tagged as High Priority and will be directly evaluated for inclusion in <strong className="text-emerald-300 font-mono">TODO.md</strong> & <strong className="text-emerald-300 font-mono">ROADMAP.md</strong>.
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 

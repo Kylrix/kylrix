@@ -44,6 +44,20 @@ describe('Modular Ghost Fields Registry & Telemetry Resolver', () => {
     expect(resolved.identity_id).toBe('user_123');
   });
 
+  it('resolves CONTRIBUTOR tier and priority for contributor users', async () => {
+    const contributorUser = {
+      $id: 'contrib_1',
+      isContributor: true,
+      prefs: { currentTier: 'CONTRIBUTOR' },
+    };
+
+    const enabledKeys = ['subscription_tier', 'contributor_status'];
+    const resolved = await resolveGhostFields(enabledKeys, contributorUser);
+
+    expect(resolved.subscription_tier).toBe('CONTRIBUTOR');
+    expect(resolved.contributor_status).toContain('Active Contributor');
+  });
+
   it('handles guest submitters gracefully', async () => {
     const enabledKeys = ['subscription_tier', 'mfa_status', 'identity_id'];
     const resolved = await resolveGhostFields(enabledKeys, null);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Filter, Send, Sparkles, X, ShieldCheck } from 'lucide-react';
+import { Filter, Send, Sparkles, X, ShieldCheck, Crown } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { sanitizePromptInput } from '@/lib/workflows/object-workflows';
 import { FormsService } from '@/lib/services/forms';
@@ -34,6 +34,7 @@ export function FormResponsesWorkflowDrawer({
   const [liveFilterVal, setLiveFilterVal] = useState<string>('');
 
   const [ghostProOnly, setGhostProOnly] = useState<boolean>(false);
+  const [ghostContributorOnly, setGhostContributorOnly] = useState<boolean>(false);
   const [ghostAuthOnly, setGhostAuthOnly] = useState<boolean>(false);
 
   const [customPrompt, setCustomPrompt] = useState<string>('');
@@ -81,9 +82,22 @@ export function FormResponsesWorkflowDrawer({
         }
       }
 
-      // Ghost field filter: Pro Tier
-      if (ghostProOnly && ghost.planTier !== 'pro' && !ghost.isPro) {
-        return false;
+      // Ghost field filter: Pro / Contributor Tier
+      if (ghostProOnly) {
+        const tier = String(ghost.subscription_tier || ghost.planTier || '').toLowerCase();
+        const isProEligible = tier === 'pro' || tier === 'contributor' || ghost.isPro || ghost.isContributor || tier === 'lifetime' || tier === 'teams' || tier === 'org';
+        if (!isProEligible) {
+          return false;
+        }
+      }
+
+      // Ghost field filter: Contributor Tier
+      if (ghostContributorOnly) {
+        const tier = String(ghost.subscription_tier || ghost.planTier || ghost.contributorTier || '').toLowerCase();
+        const isContrib = tier === 'contributor' || ghost.isContributor || ghost.contributorPriority || String(ghost.contributor_status || '').toLowerCase().includes('contributor');
+        if (!isContrib) {
+          return false;
+        }
       }
 
       // Ghost field filter: Authenticated Identity
@@ -93,7 +107,7 @@ export function FormResponsesWorkflowDrawer({
 
       return true;
     });
-  }, [effectiveSubmissions, selectedLiveField, liveFilterOp, liveFilterVal, ghostProOnly, ghostAuthOnly]);
+  }, [effectiveSubmissions, selectedLiveField, liveFilterOp, liveFilterVal, ghostProOnly, ghostContributorOnly, ghostAuthOnly]);
 
   if (!isOpen) return null;
 
@@ -262,7 +276,20 @@ Return ONLY a JSON array of goal objects:
                   onChange={(e) => setGhostProOnly(e.target.checked)}
                   className="rounded border-white/20 bg-[#161412] text-[#10B981] focus:ring-0"
                 />
-                <span className="text-xs text-white/90 font-medium">Only responses from Pro users</span>
+                <span className="text-xs text-white/90 font-medium">Only responses from Pro & Contributor users</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={ghostContributorOnly}
+                  onChange={(e) => setGhostContributorOnly(e.target.checked)}
+                  className="rounded border-white/20 bg-[#161412] text-emerald-400 focus:ring-0"
+                />
+                <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+                  <Crown size={12} className="text-emerald-400 shrink-0" />
+                  <span>Only responses from Contributors (High Priority)</span>
+                </span>
               </label>
 
               <label className="flex items-center gap-3 cursor-pointer">

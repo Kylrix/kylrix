@@ -20,6 +20,11 @@ You never need to sign contributor license agreements (CLAs), fill out paperwork
 3. Your account is immediately upgraded to **Pro** with full quotas, cloud sync, team collaboration, and priority agent execution.
 4. Keep contributing at least once every 30 days to keep Pro active permanently. Zero manual steps.
 
+### 🌟 Contributor Perks
+- **Free Pro Forever**: Complete access to Pro features with zero cost as long as your rolling 30-day activity remains active.
+- **Priority Feature Requests & Direct Escalation**: When you submit feature requests or bug reports via **Settings → General → Feature Request & Bug Report** (or the [Kylrix Feedback Portal](https://www.kylrix.space/form/6aae3dab003a7247b90a)), our ghost telemetry automatically detects your active Contributor status, tags your submission as **High Priority**, and routes it directly for consideration into [**`TODO.md`**](TODO.md) and [**`ROADMAP.md`**](ROADMAP.md).
+- **Public Profile Contributor Crown**: Display the verified emerald Contributor Crown badge on your public `/u/username` profile and billing status.
+
 ---
 
 ## 🎯 What to Work On

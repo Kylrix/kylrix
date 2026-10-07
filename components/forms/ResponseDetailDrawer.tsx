@@ -130,16 +130,33 @@ export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }:
                   const gfDef = GHOST_FIELDS_REGISTRY[gKey];
                   const label = gfDef?.label || gKey;
                   const displayVal = typeof gVal === 'object' ? JSON.stringify(gVal) : String(gVal);
-                  const isPro = gKey === 'subscription_tier' && ['PRO', 'TEAM', 'LIFETIME', 'ORG'].includes(String(gVal).toUpperCase());
+                  const valUpper = String(gVal).toUpperCase();
+                  const isContrib = valUpper.includes('CONTRIBUTOR') || gKey === 'contributor_status' || payloadData._ghost?.isContributor;
+                  const isPro = !isContrib && gKey === 'subscription_tier' && ['PRO', 'TEAM', 'LIFETIME', 'ORG'].includes(valUpper);
 
                   return (
-                    <div key={gKey} className="p-3 rounded-xl bg-[#000000] border border-white/10 flex flex-col justify-between">
-                      <span className="text-[9px] font-mono font-bold uppercase text-[#9B9691] truncate block">
-                        {label}
-                      </span>
+                    <div key={gKey} className={`p-3 rounded-xl bg-[#000000] border flex flex-col justify-between ${
+                      isContrib ? 'border-emerald-500/40 bg-emerald-500/[0.03]' : 'border-white/10'
+                    }`}>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[9px] font-mono font-bold uppercase text-[#9B9691] truncate block">
+                          {label}
+                        </span>
+                        {isContrib && (
+                          <span className="text-[8px] font-mono font-black uppercase text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1 py-0.2 rounded">
+                            HIGH PRIORITY
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 mt-1">
-                        {isPro && <Crown size={12} className="text-amber-400 shrink-0" />}
-                        <span className={`text-xs font-bold font-mono truncate ${isPro ? 'text-amber-300' : 'text-white'}`}>
+                        {isContrib ? (
+                          <Crown size={12} className="text-emerald-400 shrink-0" />
+                        ) : isPro ? (
+                          <Crown size={12} className="text-amber-400 shrink-0" />
+                        ) : null}
+                        <span className={`text-xs font-bold font-mono truncate ${
+                          isContrib ? 'text-emerald-400 font-extrabold' : isPro ? 'text-amber-300' : 'text-white'
+                        }`}>
                           {displayVal}
                         </span>
                       </div>

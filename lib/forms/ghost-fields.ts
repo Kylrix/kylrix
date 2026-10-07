@@ -22,13 +22,76 @@ export const GHOST_FIELDS_REGISTRY: Record<string, GhostFieldDefinition> = {
   subscription_tier: {
     id: 'subscription_tier',
     label: 'Account Subscription Status',
-    description: 'Current subscription plan tier (e.g. Free, Pro, Team, Lifetime) to help prioritize support/bug triage.',
+    description: 'Current subscription plan tier (e.g. Free, Contributor, Pro, Team, Lifetime) to help prioritize support/bug triage.',
     category: 'account',
-    resolve: (user: any) => {
+    resolve: async (user: any) => {
       if (!user) return 'Anonymous / Guest';
       const prefs = user.prefs || {};
-      const tier = prefs.currentTier || prefs.tier || (user.isPro ? 'Pro' : 'Free');
+      const directTier = prefs.currentTier || prefs.tier;
+      if (directTier && String(directTier).toUpperCase() === 'CONTRIBUTOR') {
+        return 'CONTRIBUTOR';
+      }
+
+      if (user.isContributor || user.contributorStatus) {
+        return 'CONTRIBUTOR';
+      }
+
+      // Dynamically resolve rolling contributor status if free or unspecified
+      if (!directTier || String(directTier).toUpperCase() === 'FREE') {
+        try {
+          const uid = user.$id || user.id;
+          if (uid) {
+            const { verifyAndApplyContributorStatus } = await import('@/lib/actions/contributor-ops');
+            const contrib = await verifyAndApplyContributorStatus(uid).catch(() => null);
+            if (contrib?.isContributor) {
+              return 'CONTRIBUTOR';
+            }
+          }
+          const username = user.name || user.username || prefs.username;
+          if (username) {
+            const { getContributorStatusByUsernameAction } = await import('@/lib/actions/contributor-ops');
+            const res = await getContributorStatusByUsernameAction(username).catch(() => null);
+            if (res?.isContributor) {
+              return 'CONTRIBUTOR';
+            }
+          }
+        } catch {}
+      }
+
+      const tier = directTier || (user.isPro ? 'Pro' : 'Free');
       return String(tier).toUpperCase();
+    },
+  },
+  contributor_status: {
+    id: 'contributor_status',
+    label: 'Contributor Tier & Priority',
+    description: 'Dynamic detection of active contributor tier (merged PR in last 30 days) to escalate issues to high priority and consider for roadmap/todo.',
+    category: 'account',
+    resolve: async (user: any) => {
+      if (!user) return 'Not a contributor';
+      const prefs = user.prefs || {};
+      if (prefs.currentTier === 'CONTRIBUTOR' || prefs.tier === 'CONTRIBUTOR' || user.isContributor) {
+        return 'Active Contributor (High Priority)';
+      }
+      try {
+        const uid = user.$id || user.id;
+        if (uid) {
+          const { verifyAndApplyContributorStatus } = await import('@/lib/actions/contributor-ops');
+          const contrib = await verifyAndApplyContributorStatus(uid).catch(() => null);
+          if (contrib?.isContributor) {
+            return `Active Contributor (${contrib.prCount} merged PRs · High Priority)`;
+          }
+        }
+        const username = user.name || user.username || prefs.username;
+        if (username) {
+          const { getContributorStatusByUsernameAction } = await import('@/lib/actions/contributor-ops');
+          const res = await getContributorStatusByUsernameAction(username).catch(() => null);
+          if (res?.isContributor) {
+            return `Active Contributor (${res.prCount || 1} merged PRs · High Priority)`;
+          }
+        }
+      } catch {}
+      return 'Regular User';
     },
   },
   mfa_status: {
