@@ -9,16 +9,16 @@ Welcome to the Kylrix engineering community! We believe the developers who build
 > **Kylrix Pro is completely free forever for any developer who contributes to Kylrix.**  
 > As long as you have at least **one merged pull request in the Kylrix codebase in the past 30 days**, your account automatically receives full **Kylrix Pro** features.
 
-### ⚡ 100% Automated Verification (Zero Manual Review)
+### ⚡ 100% Automated Verification (Zero Bureaucracy, No CLA)
 
-You never need to ask an admin or file a support ticket to verify your contributions:
+You never need to sign contributor license agreements (CLAs), fill out paperwork, or ask an admin for review:
 1. Connect or sign in with your **GitHub account** on [kylrix.space](https://www.kylrix.space) (or in **Settings → Accounts**).
 2. The verification engine automatically inspects GitHub for merged pull requests authored by you on [`Kylrix/kylrix`](https://github.com/Kylrix/kylrix) within the last 30 days:
    ```text
    repo:Kylrix/kylrix is:pr is:merged author:{your-github-username} merged:>={now-30d}
    ```
 3. Your account is immediately upgraded to **Pro** with full quotas, cloud sync, team collaboration, and priority agent execution.
-4. Keep contributing at least once every 30 days to keep Pro active permanently.
+4. Keep contributing at least once every 30 days to keep Pro active permanently. Zero manual steps.
 
 ---
 

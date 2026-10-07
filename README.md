@@ -38,7 +38,7 @@
 
 **Kylrix Pro is free forever for developers who contribute to Kylrix**, as long as you have at least one merged pull request in the codebase in the past 30 days.
 
-- **100% Automated**: Sign in with GitHub on [kylrix.space](https://www.kylrix.space)—our verification engine automatically traces merged PRs on `Kylrix/kylrix` in the last 30 days and upgrades your account with zero manual review.
+- **Zero Bureaucracy & 100% Automated**: You do not need to do anything or sign contributor agreements. Simply contribute, and as long as you have **Sign in with GitHub** added as an authentication method on your account, we automatically detect your merged PRs and grant Pro tier without any human review.
 - **What to Build**: Pick from prioritized pain points in [**`TODO.md`**](TODO.md) or explore systemic architectural pillars in [**`ROADMAP.md`**](ROADMAP.md).
 - **Guidelines**: Read [**`CONTRIBUTING.md`**](CONTRIBUTING.md) to get started.
 
@@ -166,31 +166,19 @@ Wiring reference: [docs/integrations.md](docs/integrations.md) · [docs/webmcp.m
 
 ## Self-host
 
-**Agent skill:**
+Run a fully sovereign Kylrix instance on your own infrastructure:
 
 ```bash
-npx skills add kylrix/kylrix --skill selfhost
-```
-
-**Configure** (optional — omit to auto-mint admin credentials into `.env`):
-
-```bash
-export SELFHOST_ADMIN_EMAIL=you@example.com
-export SELFHOST_ADMIN_PASSWORD='your-secure-password'
-```
-
-**Install** (bundled Appwrite + Kylrix, no cloud backend):
-
-```bash
+# 1-Command Self-Host
 curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
 ```
 
-| | Default |
-|---|---|
-| App | `http://localhost:5003` |
-| Appwrite API | `http://localhost:8080/v1` |
+| Component | Default Endpoint | Mode |
+|---|---|---|
+| **Kylrix App** | `http://localhost:5003` | Standalone Local-First & SQLite / Turso (`BACKEND=false`) |
+| **Integrated Backend** | `http://localhost:8080/v1` | Optional container stack (`BACKEND=true`) |
 
-More: [SELFHOST.md](SELFHOST.md) · re-run `./selfhost.sh` anytime (detects drift, skips healthy steps).
+> 📖 See [**`SELFHOST.md`**](SELFHOST.md) for environment variables, multi-container compose stacks, and backup procedures.
 
 ---
 
