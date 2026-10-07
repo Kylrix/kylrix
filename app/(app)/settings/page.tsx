@@ -29,6 +29,7 @@ import {
     AlertTriangle,
     ArrowUpDown,
     LogOut,
+    Crown,
 } from 'lucide-react';
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
 import { AgentsSettingsTab } from '@/components/settings/AgentsSettingsTab';

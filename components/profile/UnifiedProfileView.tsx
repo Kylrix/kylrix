@@ -247,6 +247,7 @@ export function UnifiedProfileView({
   useEffect(() => {
     let cancelled = false;
     const lookup = async () => {
+      let handleForContributor: string | null = username || initialProfile?.username || null;
       try {
         const key = targetUid ? `profile_${targetUid}` : (username ? `profile_${username.replace(/^@/, '').toLowerCase()}` : null);
         if (key) {
@@ -270,7 +271,6 @@ export function UnifiedProfileView({
           }
         }
 
-        let handleForContributor = username || initialProfile?.username || null;
         if (targetUid) {
           const { UsersService } = await import('@/lib/services/users');
           const prof = await UsersService.getProfileById(targetUid).catch(() => null);
