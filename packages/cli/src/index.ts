@@ -92,7 +92,7 @@ import { listTrashCommand, restoreTrashCommand, purgeTrashCommand } from './comm
 import { updateCommand } from './commands/update';
 import { syncCommand } from './commands/sync';
 import { runStdioMcpServer } from './mcp/stdio';
-import { CURRENT_VERSION, scheduleBackgroundUpdateCheck } from './updater';
+import { CURRENT_VERSION, scheduleBackgroundUpdateCheck, checkAndAutoUpdateOnRun } from './updater';
 
 // Run non-blocking background update check
 scheduleBackgroundUpdateCheck();
@@ -109,6 +109,7 @@ program
   .option('-u, --url <url>', 'Kylrix API base URL (default: https://www.kylrix.space)')
   .option('-t, --token <token>', 'Personal Access Token (PAT) or Agent Key')
   .option('-w, --workspace <id>', 'Active workspace ID filter')
+  .option('--no-auto-update', 'Disable automatic update detection and relaunch')
   .option('--json', 'Output raw JSON for machine parsing');
 
 program.hook('preAction', (_thisCommand, actionCommand) => {
@@ -696,4 +697,13 @@ program
   .description('Start the Model Context Protocol (MCP) server over stdio for AI clients (Claude, Cursor, Windsurf)')
   .action((cmdOpts) => runStdioMcpServer({ ...program.opts(), ...cmdOpts }));
 
-program.parse(process.argv);
+async function main() {
+  const relaunched = await checkAndAutoUpdateOnRun();
+  if (relaunched) return;
+  await program.parseAsync(process.argv);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

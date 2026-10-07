@@ -362,6 +362,20 @@ describe('CLI Base URI Partitioning and Multi-Account Silos', () => {
       expect(retrievedFlow.syncStatus).toBe('synced');
       expect(retrievedFlow.cloudId).toBe('cloud_flow_777');
     });
+
+    it('checkAndAutoUpdateOnRun avoids re-running if relaunched, in CI, or under mcp', async () => {
+      const { checkAndAutoUpdateOnRun } = await import('./updater');
+
+      // 1. Relaunched guard
+      process.env.KYLRIX_RELAUNCHED = '1';
+      expect(await checkAndAutoUpdateOnRun()).toBe(false);
+      delete process.env.KYLRIX_RELAUNCHED;
+
+      // 2. Opt-out flag
+      process.env.KYLRIX_NO_AUTO_UPDATE = '1';
+      expect(await checkAndAutoUpdateOnRun()).toBe(false);
+      delete process.env.KYLRIX_NO_AUTO_UPDATE;
+    });
   });
 });
 

@@ -6003,7 +6003,7 @@ import * as os3 from "os";
 import { spawn } from "child_process";
 import pc22 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.12";
+var CURRENT_VERSION = "1.0.13";
 var CACHE_DIR = path6.join(os3.homedir(), ".kylrix");
 var CACHE_FILE = path6.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
@@ -6065,10 +6065,12 @@ function detectPackageManager() {
   if (execPath.includes("bun")) return "bun";
   return "npm";
 }
-async function executeUpgrade(targetVersion = "latest") {
+async function executeUpgrade(targetVersion = "latest", opts = {}) {
   const pm = detectPackageManager();
-  const spinner = L2();
-  spinner.start(`Upgrading ${PACKAGE_NAME} to ${targetVersion} via ${pm}...`);
+  const spinner = opts.silent ? null : L2();
+  if (spinner) {
+    spinner.start(`Upgrading ${PACKAGE_NAME} to ${targetVersion} via ${pm}...`);
+  }
   const installArgs = {
     npm: ["install", "-g", `${PACKAGE_NAME}@${targetVersion}`],
     pnpm: ["add", "-g", `${PACKAGE_NAME}@${targetVersion}`],
@@ -6077,26 +6079,65 @@ async function executeUpgrade(targetVersion = "latest") {
   };
   const args = installArgs[pm] || installArgs.npm;
   return new Promise((resolve, reject) => {
-    const child = spawn(pm, args, { stdio: "pipe" });
+    const child = spawn(pm, args, { stdio: opts.silent ? "ignore" : "pipe" });
     let stderr = "";
-    child.stderr.on("data", (d2) => {
-      stderr += d2.toString();
-    });
+    if (!opts.silent && child.stderr) {
+      child.stderr.on("data", (d2) => {
+        stderr += d2.toString();
+      });
+    }
     child.on("close", (code) => {
       if (code === 0) {
-        spinner.stop(pc22.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
+        if (spinner) {
+          spinner.stop(pc22.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
+        }
         writeCachedUpdate(CURRENT_VERSION);
         resolve();
       } else {
-        spinner.stop(pc22.red(`Upgrade failed (exit code ${code})`));
+        if (spinner) {
+          spinner.stop(pc22.red(`Upgrade failed (exit code ${code})`));
+        }
         reject(new Error(stderr || `Failed to run ${pm} ${args.join(" ")}`));
       }
     });
     child.on("error", (err) => {
-      spinner.stop(pc22.red("Failed to launch package manager process"));
+      if (spinner) {
+        spinner.stop(pc22.red("Failed to launch package manager process"));
+      }
       reject(err);
     });
   });
+}
+async function checkAndAutoUpdateOnRun() {
+  if (process.env.KYLRIX_RELAUNCHED === "1") return false;
+  if (process.env.KYLRIX_NO_AUTO_UPDATE === "1") return false;
+  if (process.env.CI) return false;
+  const argv = process.argv;
+  if (argv.includes("mcp") || argv.includes("--json") || argv.includes("update") || argv.includes("upgrade") || argv.includes("--no-auto-update")) {
+    return false;
+  }
+  try {
+    const latest = await fetchLatestVersion(2e3);
+    if (!latest || compareSemver(latest, CURRENT_VERSION) <= 0) {
+      return false;
+    }
+    console.error(pc22.cyan(`\u26A1 Auto-updating ${PACKAGE_NAME} (${pc22.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc22.green(pc22.bold(`v${latest}`))})...`));
+    await executeUpgrade(latest, { silent: true });
+    writeCachedUpdate(latest);
+    console.error(pc22.green(`\u2714 Upgraded to v${latest}! Relaunching...`));
+    const { spawnSync } = await import("child_process");
+    const child = spawnSync(process.argv[0], process.argv.slice(1), {
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        KYLRIX_RELAUNCHED: "1"
+      }
+    });
+    process.exit(child.status ?? 0);
+    return true;
+  } catch (err) {
+    return false;
+  }
 }
 function printUpdateBanner(latest) {
   const boxWidth = 58;
@@ -22450,7 +22491,7 @@ process.emit = function(name, data, ...args) {
 scheduleBackgroundUpdateCheck();
 var program = new Command();
 program.name("kylrix").description("Official CLI, Model Context Protocol (MCP) bridge, and sovereign client for Kylrix").version(CURRENT_VERSION);
-program.option("-u, --url <url>", "Kylrix API base URL (default: https://www.kylrix.space)").option("-t, --token <token>", "Personal Access Token (PAT) or Agent Key").option("-w, --workspace <id>", "Active workspace ID filter").option("--json", "Output raw JSON for machine parsing");
+program.option("-u, --url <url>", "Kylrix API base URL (default: https://www.kylrix.space)").option("-t, --token <token>", "Personal Access Token (PAT) or Agent Key").option("-w, --workspace <id>", "Active workspace ID filter").option("--no-auto-update", "Disable automatic update detection and relaunch").option("--json", "Output raw JSON for machine parsing");
 program.hook("preAction", (_thisCommand, actionCommand) => {
   if (actionCommand.name() === "mcp" || program.opts().json) return;
   try {
@@ -22583,4 +22624,12 @@ trash.command("purge <kind> <id>").description("Permanently purge a deleted item
 program.command("sync").description("Synchronize sovereign local-first ideas and goals to your Kylrix cloud workspace").action((cmdOpts) => syncCommand({ ...program.opts(), ...cmdOpts }));
 program.command("update").alias("upgrade").description("Check for updates and automatically upgrade the CLI to the latest version").option("--force", "Force re-installation even if already on latest version").action((cmdOpts) => updateCommand({ ...program.opts(), ...cmdOpts }));
 program.command("mcp").description("Start the Model Context Protocol (MCP) server over stdio for AI clients (Claude, Cursor, Windsurf)").action((cmdOpts) => runStdioMcpServer({ ...program.opts(), ...cmdOpts }));
-program.parse(process.argv);
+async function main() {
+  const relaunched = await checkAndAutoUpdateOnRun();
+  if (relaunched) return;
+  await program.parseAsync(process.argv);
+}
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

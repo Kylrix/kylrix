@@ -6,7 +6,7 @@ import pc from 'picocolors';
 import * as clack from '@clack/prompts';
 
 export const PACKAGE_NAME = '@kylrix/cli';
-export const CURRENT_VERSION = '1.0.12';
+export const CURRENT_VERSION = '1.0.13';
 
 const CACHE_DIR = path.join(os.homedir(), '.kylrix');
 const CACHE_FILE = path.join(CACHE_DIR, 'update-cache.json');
@@ -94,10 +94,12 @@ export function detectPackageManager(): 'pnpm' | 'npm' | 'yarn' | 'bun' {
 /**
  * Perform active upgrade command.
  */
-export async function executeUpgrade(targetVersion = 'latest'): Promise<void> {
+export async function executeUpgrade(targetVersion = 'latest', opts: { silent?: boolean } = {}): Promise<void> {
   const pm = detectPackageManager();
-  const spinner = clack.spinner();
-  spinner.start(`Upgrading ${PACKAGE_NAME} to ${targetVersion} via ${pm}...`);
+  const spinner = opts.silent ? null : clack.spinner();
+  if (spinner) {
+    spinner.start(`Upgrading ${PACKAGE_NAME} to ${targetVersion} via ${pm}...`);
+  }
 
   const installArgs: Record<string, string[]> = {
     npm: ['install', '-g', `${PACKAGE_NAME}@${targetVersion}`],
@@ -109,29 +111,86 @@ export async function executeUpgrade(targetVersion = 'latest'): Promise<void> {
   const args = installArgs[pm] || installArgs.npm;
 
   return new Promise((resolve, reject) => {
-    const child = spawn(pm, args, { stdio: 'pipe' });
+    const child = spawn(pm, args, { stdio: opts.silent ? 'ignore' : 'pipe' });
     let stderr = '';
 
-    child.stderr.on('data', (d) => {
-      stderr += d.toString();
-    });
+    if (!opts.silent && child.stderr) {
+      child.stderr.on('data', (d) => {
+        stderr += d.toString();
+      });
+    }
 
     child.on('close', (code) => {
       if (code === 0) {
-        spinner.stop(pc.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
+        if (spinner) {
+          spinner.stop(pc.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
+        }
         writeCachedUpdate(CURRENT_VERSION);
         resolve();
       } else {
-        spinner.stop(pc.red(`Upgrade failed (exit code ${code})`));
+        if (spinner) {
+          spinner.stop(pc.red(`Upgrade failed (exit code ${code})`));
+        }
         reject(new Error(stderr || `Failed to run ${pm} ${args.join(' ')}`));
       }
     });
 
     child.on('error', (err) => {
-      spinner.stop(pc.red('Failed to launch package manager process'));
+      if (spinner) {
+        spinner.stop(pc.red('Failed to launch package manager process'));
+      }
       reject(err);
     });
   });
+}
+
+/**
+ * On each CLI run, attempts to detect a newer published version, installs it instantly,
+ * and relaunches the CLI process with the exact same arguments under the updated version.
+ * Returns true if an update was installed and the process was successfully relaunched.
+ */
+export async function checkAndAutoUpdateOnRun(): Promise<boolean> {
+  // Guard against re-entry loops, CI runs, and explicitly disabled auto-updates
+  if (process.env.KYLRIX_RELAUNCHED === '1') return false;
+  if (process.env.KYLRIX_NO_AUTO_UPDATE === '1') return false;
+  if (process.env.CI) return false;
+
+  const argv = process.argv;
+  if (
+    argv.includes('mcp') ||
+    argv.includes('--json') ||
+    argv.includes('update') ||
+    argv.includes('upgrade') ||
+    argv.includes('--no-auto-update')
+  ) {
+    return false;
+  }
+
+  try {
+    const latest = await fetchLatestVersion(2000);
+    if (!latest || compareSemver(latest, CURRENT_VERSION) <= 0) {
+      return false;
+    }
+
+    console.error(pc.cyan(`⚡ Auto-updating ${PACKAGE_NAME} (${pc.dim(`v${CURRENT_VERSION}`)} → ${pc.green(pc.bold(`v${latest}`))})...`));
+    await executeUpgrade(latest, { silent: true });
+    writeCachedUpdate(latest);
+    console.error(pc.green(`✔ Upgraded to v${latest}! Relaunching...`));
+
+    const { spawnSync } = await import('node:child_process');
+    const child = spawnSync(process.argv[0], process.argv.slice(1), {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        KYLRIX_RELAUNCHED: '1',
+      },
+    });
+    process.exit(child.status ?? 0);
+    return true;
+  } catch (err: any) {
+    // If auto-update fails (e.g. no network, permission issue), continue execution without disruption
+    return false;
+  }
 }
 
 /**
