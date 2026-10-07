@@ -19,6 +19,7 @@ x-common: &common
 services:
   # ── Kylrix — The Next.js application ──────────────────────────────────────
   kylrix:
+    image: ${KYLRIX_IMAGE:-ghcr.io/kylrix/kylrix:latest}
     build:
       context: .
       dockerfile: Dockerfile

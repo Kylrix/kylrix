@@ -6,29 +6,38 @@ Run a **fully isolated** Kylrix instance with bundled Appwrite, MariaDB, and Red
 
 ## Quick Start
 
-**Agent skill:** `npx skills add kylrix/kylrix --skill selfhost`
+### Option 1: 1-Line Docker Run (Instant from GHCR)
 
-**Configure** (shell exports — optional; skip to auto-mint admin credentials):
+Run the standalone local-first Kylrix container directly from the GitHub Container Registry:
+
+```bash
+docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest
+```
+
+App is immediately available at `http://localhost:5003`.
+
+### Option 2: Docker Compose
+
+```bash
+git clone https://github.com/Kylrix/kylrix.git && cd kylrix
+docker compose up -d
+```
+
+### Option 3: Full Stack Script with Bundled Appwrite
+
+To spin up the bundled Appwrite backend (`http://localhost:8080/v1`) alongside MariaDB and Redis:
 
 ```bash
 export SELFHOST_ADMIN_EMAIL=you@example.com
 export SELFHOST_ADMIN_PASSWORD='your-secure-password'
-```
 
-Other overrides use the same pattern (`export KYLRIX_PORT=5003`, `export AUTH_EMAIL_PASSWORD_SIGNUP=true`, SMTP vars, …). See [selfhost/SKILL.md](selfhost/SKILL.md). Bootstrap-minted values (`APPWRITE_API_KEY`, existing project ID) are not overridden.
-
-**Install:**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
+./selfhost.sh --with-backend
 ```
 
 Defaults:
 - **Kylrix app:** `http://localhost:5003`
-- **Backend Mode:** `BACKEND=false` (standalone Next.js application by default, skipping Appwrite infrastructure).
+- **Backend Mode:** `BACKEND=false` (standalone Next.js application by default).
 - **Integrated Backend Mode:** Set `BACKEND=true` (or run `./selfhost.sh --with-backend`) to spin up bundled Appwrite (`http://localhost:8080/v1`) + MariaDB + Redis.
-
-Without exports, admin credentials are written to `.env` as `SELFHOST_ADMIN_EMAIL` / `SELFHOST_ADMIN_PASSWORD`.
 
 ## Authentication policy
 

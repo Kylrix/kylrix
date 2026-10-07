@@ -29,20 +29,18 @@
 - **Kylrix** — open-source, local-first workspace for notes, goals, workspaces, agent inbox, vault, and agents.
 - **CLI & MCP Bridge** — `npm i -g @kylrix/cli` · [CLI Docs](docs/cli.md)
 - **Use the cloud** — [kylrix.space](https://www.kylrix.space)
-- **Self-host** — `curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash` → app on `:5003`
+- **Self-host** — `docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest` → app on `:5003`
 - **Wire an agent** — mint a [PAT](https://www.kylrix.space/settings?tab=developers) (your workspace) or [agent key](https://www.kylrix.space/settings?tab=agents) (the agent's own workspace), then `npx skills add kylrix/kylrix --skill mcp --skill api --skill agents`
 
 ---
 
-## 🎁 Contributor Program (Kylrix Pro Free Forever)
+## 🎁 Contributor Program
 
-**Kylrix Pro is free forever for developers who contribute to Kylrix**, as long as you have at least one merged pull request in the codebase in the past 30 days.
+**Kylrix Pro is free forever for anyone with a merged pull request in the past 30 days.**
 
-- **Zero Bureaucracy & 100% Automated**: You do not need to do anything or sign contributor agreements. Simply contribute, and as long as you have **Sign in with GitHub** added as an authentication method on your account, we automatically detect your merged PRs and grant Pro tier without any human review.
-- **Priority Feature Requests & Direct Escalation**: Feature requests submitted by Contributor-enabled accounts via **Settings → General → Feature Request & Bug Report** (or the [Feature Request Portal](https://www.kylrix.space/form/6aae3dab003a7247b90a)) are automatically tagged as **High Priority** and directly evaluated for inclusion in [**`TODO.md`**](TODO.md) and [**`ROADMAP.md`**](ROADMAP.md).
-- **Public Contributor Crown**: Display the verified emerald Contributor Crown badge on your public `/u/username` profile and billing status.
-- **What to Build**: Pick from prioritized pain points in [**`TODO.md`**](TODO.md) or explore systemic architectural pillars in [**`ROADMAP.md`**](ROADMAP.md).
-- **Guidelines**: Read [**`CONTRIBUTING.md`**](CONTRIBUTING.md) to get started.
+- **Automatic Activation**: Sign in with GitHub on your account. Merged PRs are detected automatically.
+- **Perks**: Free Pro tier, high-priority feature request triage (considered directly for [`TODO.md`](TODO.md) / [`ROADMAP.md`](ROADMAP.md)), and the Contributor Crown badge on your public profile (`/u/username`).
+- **Start Here**: Pick an issue from [**`TODO.md`**](TODO.md) or see [**`CONTRIBUTING.md`**](CONTRIBUTING.md).
 
 ---
 
@@ -61,7 +59,7 @@ Get up and running across your favorite interfaces, ordered from least friction 
 | **🔌 MCP Server** | Native tool server for Cursor, Claude, Windsurf & AI IDEs | **Cloud:** `npx -y @smithery/cli install kylrix/kylrix`<br>**Local:** `kylrix mcp` | **1 click** (Smithery) / **Instant** (Local) |
 | **🔐 Sign in with Kylrix** | OAuth 2.1 / OIDC identity provider with PKCE | [Discovery Doc](https://www.kylrix.space/.well-known/openid-configuration) · [OAuth Guide](.agents/skills/oauth2/SKILL.md) | **Standard** (OAuth 2.1) |
 | **🔄 Self-Hosted Sync** | Bi-directional replication between private nodes and Cloud | [**Settings → Cloud Sync**](https://www.kylrix.space/settings?tab=sync#cloud-sync) | **Low** (1-click punch) |
-| **🐳 Docker Self-Host** | Bundled bare-metal container stack on port `:5003` | `curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh \| bash` | **Moderate** (Docker) |
+| **🐳 Docker Self-Host** | Sovereign container on port `:5003` | `docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest` | **Instant** (Docker) |
 
 ---
 
@@ -171,14 +169,22 @@ Wiring reference: [docs/integrations.md](docs/integrations.md) · [docs/webmcp.m
 Run a fully sovereign Kylrix instance on your own infrastructure:
 
 ```bash
-# 1-Command Self-Host
-curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
+# 1-Command Docker Run (Instant from GHCR)
+docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest
+```
+
+Or run via Docker Compose:
+
+```bash
+# Clone and launch
+git clone https://github.com/Kylrix/kylrix.git && cd kylrix
+docker compose up -d
 ```
 
 | Component | Default Endpoint | Mode |
 |---|---|---|
 | **Kylrix App** | `http://localhost:5003` | Standalone Local-First & SQLite / Turso (`BACKEND=false`) |
-| **Integrated Backend** | `http://localhost:8080/v1` | Optional container stack (`BACKEND=true`) |
+| **Integrated Backend** | `http://localhost:8080/v1` | Optional container stack (`BACKEND=true` via `./selfhost.sh --with-backend`) |
 
 > 📖 See [**`SELFHOST.md`**](SELFHOST.md) for environment variables, multi-container compose stacks, and backup procedures.
 
