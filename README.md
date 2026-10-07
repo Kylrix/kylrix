@@ -59,49 +59,42 @@ Install once for sovereign offline local-first execution (powered by embedded SQ
 
 ```bash
 npm install -g @kylrix/cli
-# or: pnpm add -g @kylrix/cli
 ```
 
-### Local Quickstart
-
-Manage local ideas, unlock zero-knowledge encrypted vaults, and run the native Model Context Protocol (MCP) server directly:
+*(Zero-install alternative: `npx @kylrix/cli <command>`)*
 
 ```bash
-# Manage local sovereign ideas
+# 1. Start local stdio MCP server for Cursor / Claude / Windsurf
+kylrix mcp
+
+# 2. Create and list local sovereign ideas (offline embedded SQLite)
+kylrix ideas create "Local Agent Idea" --content "Zero-cloud memory"
 kylrix ideas list
 
-# Unlock encrypted vault
+# 3. Track personal and project goals
+kylrix goals create "Ship MVP" --target 100 --unit %
+kylrix goals list
+
+# 4. Unlock zero-knowledge encrypted vault and extract secrets (.env)
 kylrix vault unlock
+kylrix vault get <secret-id> --pure > .env
 
-# Start local MCP server for Cursor, Claude Code, Windsurf
-kylrix mcp
-```
+# 5. Generate live 2FA TOTP authentication codes
+kylrix totp list
+kylrix totp code <id>
 
-*(Zero-install alternative: run with `npx @kylrix/cli <command>`)*
+# 6. Global search across local ideas, goals, events, and secrets
+kylrix search "agent"
 
-### 🌐 Cloud & Multi-Instance Sync
+# 7. Start autonomous local AI agent session
+kylrix agents start "Refactor auth" --prompt "Audit login flows"
 
-Connect your local CLI to Kylrix Cloud or any self-hosted instance:
+# 8. Synchronize local offline SQLite silo to cloud/self-hosted workspace
+kylrix sync
 
-```bash
-# Connect to Kylrix Cloud (default)
+# 9. Connect/pair with cloud or self-hosted instance (optional)
 kylrix login
-
-# Connect to a self-hosted instance or custom backend base URI
 kylrix login --url http://localhost:3005
-```
-
-**Multi-Account Profiles & Base URI Routing:**
-```bash
-# List accounts partitioned under the active base URI
-kylrix accounts list
-
-# Switch active account profile seamlessly
-kylrix accounts switch user@example.com
-
-# Manage backend base URIs and partitions
-kylrix server list
-kylrix server switch http://localhost:3005
 ```
 
 > 📖 See [**`docs/cli.md`**](docs/cli.md) for the complete command reference and SDK documentation.
