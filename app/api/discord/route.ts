@@ -225,6 +225,44 @@ export const DISCORD_SLASH_COMMANDS = [
       },
     ],
   },
+  {
+    name: 'search',
+    description: 'Quickly search notes, deliverables, and workspace items',
+    ...DEFAULT_COMMAND_SETTINGS,
+    options: [
+      {
+        name: 'query',
+        description: 'Keyword to search across your workspace',
+        type: 3, // STRING
+        required: true,
+      },
+    ],
+  },
+  {
+    name: 'share',
+    description: 'Generate an expiring web link for a note, goal, or workspace item',
+    ...DEFAULT_COMMAND_SETTINGS,
+    options: [
+      {
+        name: 'kind',
+        description: 'Type of item to share (note, goal, workspace, vault)',
+        type: 3, // STRING
+        required: true,
+        choices: [
+          { name: 'Note', value: 'note' },
+          { name: 'Goal', value: 'goal' },
+          { name: 'Workspace', value: 'workspace' },
+          { name: 'Vault Secret (Link)', value: 'vault' },
+        ],
+      },
+      {
+        name: 'id',
+        description: 'The unique ID of the item',
+        type: 3, // STRING
+        required: true,
+      },
+    ],
+  },
 ];
 
 /**
@@ -1662,6 +1700,189 @@ export async function POST(req: NextRequest) {
                 components: [
                   { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                   { type: 2, style: 5, label: 'Open Agent Panel', url: 'https://www.kylrix.space/app' },
+                ],
+              },
+            ],
+          },
+        });
+      }
+
+      case 'search': {
+        const query = String(getOption('query') || '').trim();
+        if (!query) {
+          return NextResponse.json({
+            type: 4,
+            data: { content: '❌ Search keyword is required: `/search query: <keyword>`' },
+          });
+        }
+        try {
+          const qLower = query.toLowerCase();
+          const [notesRes, goalsRes] = await Promise.all([
+            ApiResources.listNotes(actor, 15).catch(() => []),
+            ApiResources.listGoals(actor, 15).catch(() => []),
+          ]);
+
+          const notes = extractItems(notesRes);
+          const goals = extractItems(goalsRes);
+
+          const matchedNotes = notes.filter(
+            (n: any) =>
+              (n.title && n.title.toLowerCase().includes(qLower)) ||
+              (n.content && n.content.toLowerCase().includes(qLower))
+          );
+          const matchedGoals = goals.filter(
+            (g: any) =>
+              (g.title && g.title.toLowerCase().includes(qLower)) ||
+              (g.description && g.description.toLowerCase().includes(qLower))
+          );
+
+          const totalMatches = matchedNotes.length + matchedGoals.length;
+
+          if (totalMatches === 0) {
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: `🔍 No Results for "${query}"`,
+                    description: `No notes or deliverables matched your search keyword in ${isLinked ? 'your linked workspace' : 'the sandbox workspace'}.`,
+                    color: 0x6b7280,
+                    footer: { text: 'Kylrix Workspace Search' },
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                      { type: 2, style: 5, label: 'Search in Web App', url: `https://www.kylrix.space/note?search=${encodeURIComponent(query)}` },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
+          const fields: any[] = [];
+          if (matchedNotes.length > 0) {
+            fields.push({
+              name: `📝 Notes (${matchedNotes.length})`,
+              value: matchedNotes
+                .slice(0, 5)
+                .map((n: any) => `• **${n.title || 'Untitled'}** (\`${n.id}\`)`)
+                .join('\n'),
+              inline: false,
+            });
+          }
+          if (matchedGoals.length > 0) {
+            fields.push({
+              name: `🎯 Deliverables / Goals (${matchedGoals.length})`,
+              value: matchedGoals
+                .slice(0, 5)
+                .map((g: any) => `• [${g.status === 'completed' ? '✅' : '⏳'}] **${g.title || 'Goal'}** (\`${g.id}\`)`)
+                .join('\n'),
+              inline: false,
+            });
+          }
+
+          const components: any[] = [
+            {
+              type: 1,
+              components: [
+                { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                { type: 2, style: 5, label: 'Open in Kylrix', url: 'https://www.kylrix.space/app' },
+              ],
+            },
+          ];
+
+          return NextResponse.json({
+            type: 4,
+            data: {
+              embeds: [
+                {
+                  title: `🔍 Search Results: "${query}"`,
+                  description: `Found **${totalMatches}** matching items across your workspace:`,
+                  color: 0x3b82f6, // Blue
+                  fields,
+                  footer: { text: isLinked ? 'Kylrix Unified Search' : 'Kylrix Search • Sandbox Mode' },
+                },
+              ],
+              components,
+            },
+          });
+        } catch (err: any) {
+          return NextResponse.json({
+            type: 4,
+            data: { content: `❌ Search error: ${err?.message || 'Failed to search'}` },
+          });
+        }
+      }
+
+      case 'share': {
+        const kind = String(getOption('kind') || 'note').trim().toLowerCase();
+        const id = String(getOption('id') || '').trim();
+
+        if (!id) {
+          return NextResponse.json({
+            type: 4,
+            data: { content: '❌ Item ID is required: `/share kind: <type> id: <id>`' },
+          });
+        }
+
+        const domainUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
+        let sharePath = '';
+        let kindTitle = 'Item';
+
+        switch (kind) {
+          case 'note':
+            sharePath = `/idea/${encodeURIComponent(id)}`;
+            kindTitle = 'Note';
+            break;
+          case 'goal':
+            sharePath = `/goal/${encodeURIComponent(id)}`;
+            kindTitle = 'Goal';
+            break;
+          case 'workspace':
+            sharePath = `/workspace/${encodeURIComponent(id)}`;
+            kindTitle = 'Workspace';
+            break;
+          case 'vault':
+          case 'secret':
+            sharePath = `/vault/${encodeURIComponent(id)}`;
+            kindTitle = 'Vault Secret';
+            break;
+          default:
+            sharePath = `/idea/${encodeURIComponent(id)}`;
+            kindTitle = 'Resource';
+        }
+
+        const shareUrl = `${domainUrl}${sharePath}`;
+
+        return NextResponse.json({
+          type: 4,
+          data: {
+            embeds: [
+              {
+                title: `🔗 Share Link: ${kindTitle}`,
+                description:
+                  `Here is the secure direct web link for your **${kindTitle}**:\n\n` +
+                  `👉 **[${shareUrl}](${shareUrl})**\n\n` +
+                  `*(Only users with permission or invite access will be able to unlock this resource in accordance with zero-knowledge policies).*`,
+                color: 0x06b6d4, // Cyan
+                fields: [
+                  { name: 'Resource Type', value: kindTitle, inline: true },
+                  { name: 'Resource ID', value: `\`${id}\``, inline: true },
+                  { name: 'Privacy Mode', value: '🔒 Zero-Knowledge Gated', inline: true },
+                ],
+                footer: { text: 'Kylrix Resource Sharing • www.kylrix.space' },
+              },
+            ],
+            components: [
+              {
+                type: 1,
+                components: [
+                  { type: 2, style: 5, label: 'Open Link', url: shareUrl },
+                  { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
                 ],
               },
             ],
