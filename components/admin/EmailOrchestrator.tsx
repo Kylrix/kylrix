@@ -69,7 +69,7 @@ export default function EmailOrchestrator() {
         ? await LocalEngine.query(cacheKey, fetcher, { ttl: 5 * 60 * 1000 })
         : await fetcher();
 
-      const batch = data.users || [];
+      const batch = data?.users || [];
       setUsers((prev) => {
         if (!append) {
           return batch;

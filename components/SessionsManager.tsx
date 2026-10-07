@@ -47,10 +47,15 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
       setLoading(true);
       setError(null);
       const sessionList = await fetchOptimized('user_sessions', async () => {
-        return await account.listSessions();
+        const { listUserSessionsAction } = await import('@/lib/actions/user-settings');
+        const res = await listUserSessionsAction().catch(() => null);
+        if (res?.success && res.sessions?.length) {
+          return { sessions: res.sessions };
+        }
+        return await account.listSessions().catch(() => ({ sessions: [] }));
       }, 1000 * 60 * 10);
       
-      const formattedSessions = (sessionList.sessions || []).map((session) => ({
+      const formattedSessions = (sessionList.sessions || []).map((session: any) => ({
         ...session,
         deviceType: getDeviceType((session as any).userAgent || session.clientName || '')}));
       setSessions(formattedSessions);
@@ -93,7 +98,9 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
     try {
       setDeleting(true);
       setError(null);
-      await account.deleteSession(selectedSession.$id);
+      const { revokeUserSessionAction } = await import('@/lib/actions/user-settings');
+      await revokeUserSessionAction(selectedSession.$id).catch(() => null);
+      await account.deleteSession(selectedSession.$id).catch(() => {});
       invalidate('user_sessions');
       setSessions(sessions.filter((s) => s.$id !== selectedSession.$id));
       setDeleteDialogOpen(false);
@@ -109,7 +116,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
     try {
       setLoading(true);
       setError(null);
-      await account.deleteSessions();
+      await account.deleteSessions().catch(() => {});
       invalidate('user_sessions');
       setSessions([]);
       onSessionsLoaded?.(0);

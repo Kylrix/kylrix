@@ -11,10 +11,12 @@ export async function isUserAdmin(jwt?: string): Promise<boolean> {
   if (!actor?.$id || !actor.email) {
     return false;
   }
+  if (actor.isAdmin) return true;
+  if (actor.labels && Array.isArray(actor.labels) && actor.labels.includes('admin')) return true;
   
   // Private environment variable (not exposed to client)
   const ADMINS = process.env.ADMINS || '';
-  const adminList = ADMINS.split(',').map(e => e.trim().toLowerCase());
+  const adminList = ADMINS.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
   
   return adminList.includes(actor.email.toLowerCase());
 }

@@ -55,7 +55,7 @@ export default function UsersManagement() {
         }, jwt || undefined),
         { ttl: 3 * 60 * 1000, force }
       );
-      setUsers(data.users || []);
+      setUsers(data?.users || []);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch users');
     } finally {

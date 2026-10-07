@@ -362,19 +362,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getJWT = useCallback(async () => {
     try {
       if (!user?.$id) return null;
-      const { jwt } = await account.createJWT();
-      return jwt;
+      if ((user as any).authProvider === 'better-auth') return null;
+      const jwtPromise = account.createJWT().then((res) => res.jwt).catch(() => null);
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200));
+      return await Promise.race([jwtPromise, timeoutPromise]);
     } catch {
       return null;
     }
-  }, [user?.$id]);
+  }, [user]);
 
   const updatePreferences = useCallback(async (prefs: Record<string, any>) => {
     try {
-      const res = await account.updatePrefs({
-        ...(user?.prefs || {}),
-        ...prefs
-      });
+      let res: any = null;
+      try {
+        res = await account.updatePrefs({
+          ...(user?.prefs || {}),
+          ...prefs
+        });
+      } catch {
+        const { updateUserPreferencesAction } = await import('@/lib/actions/user-settings');
+        const r = await updateUserPreferencesAction(prefs);
+        res = r.prefs;
+      }
       // Locally update user object preferences without triggering heavy auth re-verification
       setUser((prev: any) => (prev ? { ...prev, prefs: res } : prev));
       return res;

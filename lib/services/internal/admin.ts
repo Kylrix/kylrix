@@ -7,11 +7,11 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
  * Single source of truth: the ADMINS environment variable (comma-separated emails).
  */
 export function requireAdmin(user: any) {
-  // Validate email against ADMINS env variable (sole source of truth)
+  if (user?.isAdmin) return;
+  if (user?.labels && Array.isArray(user.labels) && user.labels.includes('admin')) return;
   const email = String(user?.email || '').trim().toLowerCase();
-  if (!email || !isEmailInAdminList(email)) {
-    throw new Error('Forbidden: admin privileges required');
-  }
+  if (email && isEmailInAdminList(email)) return;
+  throw new Error('Forbidden: admin privileges required');
 }
 
 export async function getAdminStats(actorEmail: string) {

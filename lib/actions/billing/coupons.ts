@@ -132,54 +132,94 @@ export async function deleteCouponsBulkAction(
   if (!user) throw new Error('Unauthorized');
   requireAdmin(user);
 
-  const { databases } = createAdminClient(user.email);
-  let pageOffset = 0;
-  const batchSize = 100;
-  let allRows: any[] = [];
-
-  while (true) {
-    const res = await databases.listRows(NOTE_DB_ID, COUPONS_TABLE_ID, [
-      Query.limit(batchSize),
-      Query.offset(pageOffset)
-    ]);
-    allRows = allRows.concat(res.rows);
-    if (res.rows.length < batchSize) break;
-    pageOffset += batchSize;
-  }
-
-  let toDelete: any[] = [];
-
-  if (filter.mode === 'open') {
-    toDelete = allRows.filter((row: any) => {
-      const meta = parseMetadata(row.metadata);
-      const scope = meta?.coupon?.scope || meta?.scope || (row.targetUserId || row.relatedUserId ? 'targeted' : 'open');
-      return scope === 'open' || (!row.targetUserId && !row.relatedUserId);
-    });
-  } else if (filter.mode === 'active') {
-    toDelete = allRows.filter((row: any) => String(row.status || 'active').toLowerCase() === 'active');
-  } else if (filter.mode === 'used') {
-    toDelete = allRows.filter((row: any) => {
-      const status = String(row.status || '').toLowerCase();
-      const count = Number(row.redemptionCount || 0);
-      const limit = Number(row.redemptionLimit || 1);
-      return status === 'used' || (limit > 0 && count >= limit);
-    });
-  } else if (filter.mode === 'user') {
-    if (!filter.targetUserId) {
-      throw new Error('Target user ID is required to delete coupons by user');
-    }
-    const uid = filter.targetUserId;
-    toDelete = allRows.filter((row: any) => row.targetUserId === uid || row.relatedUserId === uid || row.userId === uid);
-  }
-
   let deletedCount = 0;
-  for (const row of toDelete) {
-    try {
-      await databases.deleteRow(NOTE_DB_ID, COUPONS_TABLE_ID, row.$id);
-      deletedCount++;
-    } catch (err) {
-      console.warn(`[Admin] Failed to delete coupon ${row.$id}:`, err);
+
+  // 1. Appwrite deletion if configured
+  try {
+    if (process.env.APPWRITE_API) {
+      const { databases } = createAdminClient(user.email);
+      let pageOffset = 0;
+      const batchSize = 100;
+      let allRows: any[] = [];
+
+      while (true) {
+        const res = await databases.listRows(NOTE_DB_ID, COUPONS_TABLE_ID, [
+          Query.limit(batchSize),
+          Query.offset(pageOffset),
+        ]);
+        allRows = allRows.concat(res.rows);
+        if (res.rows.length < batchSize) break;
+        pageOffset += batchSize;
+      }
+
+      let toDelete: any[] = [];
+      if (filter.mode === 'open') {
+        toDelete = allRows.filter((row: any) => {
+          const meta = parseMetadata(row.metadata);
+          const scope = meta?.coupon?.scope || meta?.scope || (row.targetUserId || row.relatedUserId ? 'targeted' : 'open');
+          return scope === 'open' || (!row.targetUserId && !row.relatedUserId);
+        });
+      } else if (filter.mode === 'active') {
+        toDelete = allRows.filter((row: any) => String(row.status || 'active').toLowerCase() === 'active');
+      } else if (filter.mode === 'used') {
+        toDelete = allRows.filter((row: any) => {
+          const status = String(row.status || '').toLowerCase();
+          const count = Number(row.redemptionCount || 0);
+          const limit = Number(row.redemptionLimit || 1);
+          return status === 'used' || (limit > 0 && count >= limit);
+        });
+      } else if (filter.mode === 'user') {
+        if (!filter.targetUserId) {
+          throw new Error('Target user ID is required to delete coupons by user');
+        }
+        const uid = filter.targetUserId;
+        toDelete = allRows.filter((row: any) => row.targetUserId === uid || row.relatedUserId === uid || row.userId === uid);
+      }
+
+      for (const row of toDelete) {
+        try {
+          await databases.deleteRow(NOTE_DB_ID, COUPONS_TABLE_ID, row.$id);
+          deletedCount++;
+        } catch (err) {
+          console.warn(`[Admin] Failed to delete coupon ${row.$id}:`, err);
+        }
+      }
     }
+  } catch (err: any) {
+    console.warn('[deleteCouponsBulkAction] Appwrite bulk delete warning:', err.message);
+  }
+
+  // 2. Turso deletion
+  try {
+    const { listCouponsTurso, deleteCouponTurso } = await import('@/lib/actions/turso-ops');
+    const tursoRes = await listCouponsTurso();
+    if (tursoRes.success && tursoRes.rows) {
+      let tursoToDelete: any[] = [];
+      if (filter.mode === 'open') {
+        tursoToDelete = tursoRes.rows.filter((row: any) => !row.targetUserId);
+      } else if (filter.mode === 'active') {
+        tursoToDelete = tursoRes.rows.filter((row: any) => String(row.status || 'active').toLowerCase() === 'active');
+      } else if (filter.mode === 'used') {
+        tursoToDelete = tursoRes.rows.filter((row: any) => {
+          const status = String(row.status || '').toLowerCase();
+          const count = Number(row.redemptionCount || 0);
+          const limit = Number(row.redemptionLimit || 1);
+          return status === 'used' || (limit > 0 && count >= limit);
+        });
+      } else if (filter.mode === 'user') {
+        const uid = filter.targetUserId;
+        tursoToDelete = tursoRes.rows.filter((row: any) => row.targetUserId === uid);
+      }
+
+      for (const row of tursoToDelete) {
+        await deleteCouponTurso(row.id);
+        if (!process.env.APPWRITE_API) {
+          deletedCount++;
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn('[deleteCouponsBulkAction] Turso bulk delete warning:', err.message);
   }
 
   return { success: true, count: deletedCount };

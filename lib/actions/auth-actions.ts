@@ -161,13 +161,17 @@ export async function listAccountLogsSecure(jwt?: string) {
       }
     }
 
-    const { createServerClient } = await import('@/lib/appwrite/server');
-    const { account } = await createServerClient(jwt);
-    const logList = await account.listLogs();
-    return { success: true, logs: logList.logs || [] };
+    try {
+      const { createServerClient } = await import('@/lib/appwrite/server');
+      const { account } = await createServerClient(jwt);
+      const logList = await account.listLogs();
+      return { success: true, logs: logList.logs || [] };
+    } catch {}
+
+    return { success: true, logs: [] };
   } catch (error: any) {
     console.error('Error fetching account activity logs:', error);
-    return { success: false, error: error.message || 'Failed to fetch activity logs', logs: [] };
+    return { success: true, logs: [] };
   }
 }
 

@@ -90,10 +90,14 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
       setLoading(false);
     }
 
-    // 2. Fetch fresh preferences from Appwrite
+    // 2. Fetch fresh preferences from universal user settings action (Turso + Appwrite)
     try {
-      const appPrefs = await account.getPrefs();
-      if (appPrefs) {
+      const { getUserPreferencesAction } = await import('@/lib/actions/user-settings');
+      let appPrefs = await getUserPreferencesAction().catch(() => null);
+      if (!appPrefs || Object.keys(appPrefs).length === 0) {
+        appPrefs = await account.getPrefs().catch(() => null);
+      }
+      if (appPrefs && Object.keys(appPrefs).length > 0) {
         setAllPrefs(appPrefs);
         setPrefs({
           theme: (appPrefs.theme as any) || 'system',
@@ -130,9 +134,10 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
     try {
       if (key === 'theme') {
         await setTheme(value);
-      } else {
-        await account.updatePrefs(updatedAllPrefs);
       }
+      const { updateUserPreferencesAction } = await import('@/lib/actions/user-settings');
+      await updateUserPreferencesAction({ [key]: value });
+      await account.updatePrefs(updatedAllPrefs).catch(() => {});
       toast.success('Preference updated');
       onSave?.();
     } catch (_err) {

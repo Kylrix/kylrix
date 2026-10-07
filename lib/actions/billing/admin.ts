@@ -53,35 +53,69 @@ export async function searchAdminUserByIdAction(userId: string, jwt?: string) {
   if (!user) throw new Error('Unauthorized');
   requireAdmin(user);
 
-  const { users, databases } = createAdminClient(user.email);
-
-  // 1. Try profiles table first
-  let username: string | undefined;
-  let displayName: string | undefined;
+  // 1. Try Appwrite if configured
   try {
-    const profilesDb = APPWRITE_CONFIG.DATABASES.CONNECT;
-    const profilesTable = APPWRITE_CONFIG.TABLES.CONNECT.PROFILES;
-    const res = await databases.listDocuments(profilesDb, profilesTable, [
-      Query.equal('userId', userId),
-      Query.limit(1),
-    ]);
-    if (res.documents.length > 0) {
-      const p = res.documents[0] as any;
-      username = p.username;
-      displayName = p.displayName;
+    if (process.env.APPWRITE_API) {
+      const { users, databases } = createAdminClient(user.email);
+      let username: string | undefined;
+      let displayName: string | undefined;
+      try {
+        const profilesDb = APPWRITE_CONFIG.DATABASES.CONNECT;
+        const profilesTable = APPWRITE_CONFIG.TABLES.CONNECT.PROFILES;
+        const res = await databases.listDocuments(profilesDb, profilesTable, [
+          Query.equal('userId', userId),
+          Query.limit(1),
+        ]);
+        if (res.documents.length > 0) {
+          const p = res.documents[0] as any;
+          username = p.username;
+          displayName = p.displayName;
+        }
+      } catch {}
+
+      const targetUser = await users.get(userId);
+      return {
+        id: targetUser.$id,
+        name: targetUser.name,
+        email: targetUser.email,
+        username,
+        displayName,
+      };
     }
-  } catch {
-    // profiles table miss – not fatal
+  } catch (err: any) {
+    console.warn('[searchAdminUserByIdAction] Appwrite search warning, falling back to Turso:', err.message);
   }
 
-  // 2. Always resolve account details from Appwrite Users API
-  const targetUser = await users.get(userId);
-  return {
-    id: targetUser.$id,
-    name: targetUser.name,
-    email: targetUser.email,
-    username,
-    displayName};
+  // 2. Fallback to Turso / SQLite
+  try {
+    const { db } = await import('@/lib/db');
+    const { user: userTable, profiles: profilesTable } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+
+    const foundUsers = await db.select().from(userTable).where(eq(userTable.id, userId)).limit(1);
+    if (!foundUsers.length) throw new Error('User not found');
+    const u = foundUsers[0];
+
+    let username: string | undefined;
+    let displayName: string | undefined;
+    try {
+      const p = await db.select().from(profilesTable).where(eq(profilesTable.userId, userId)).limit(1);
+      if (p.length > 0) {
+        username = p[0].username || undefined;
+        displayName = p[0].displayName || undefined;
+      }
+    } catch {}
+
+    return {
+      id: u.id,
+      name: u.name || 'User',
+      email: u.email,
+      username,
+      displayName,
+    };
+  } catch (err: any) {
+    throw new Error(err.message || 'User not found');
+  }
 }
 
 /**
@@ -94,37 +128,138 @@ export async function searchAdminUserByEmailAction(email: string, jwt?: string) 
   if (!user) throw new Error('Unauthorized');
   requireAdmin(user);
 
-  const { users, databases } = createAdminClient(user.email);
+  const cleanEmail = email.trim().toLowerCase();
 
-  // 1. Search accounts by email
-  const results = await users.list([Query.equal('email', email.trim().toLowerCase()), Query.limit(1)]);
-  if (!results.users.length) return null;
-
-  const targetUser = results.users[0];
-
-  // 2. Try profiles table for username/displayName
-  let username: string | undefined;
-  let displayName: string | undefined;
+  // 1. Try Appwrite if configured
   try {
-    const profilesDb = APPWRITE_CONFIG.DATABASES.CONNECT;
-    const profilesTable = APPWRITE_CONFIG.TABLES.CONNECT.PROFILES;
-    const res = await databases.listDocuments(profilesDb, profilesTable, [
-      Query.equal('userId', targetUser.$id),
-      Query.limit(1),
-    ]);
-    if (res.documents.length > 0) {
-      const p = res.documents[0] as any;
-      username = p.username;
-      displayName = p.displayName;
+    if (process.env.APPWRITE_API) {
+      const { users, databases } = createAdminClient(user.email);
+      const results = await users.list([Query.equal('email', cleanEmail), Query.limit(1)]);
+      if (results.users.length > 0) {
+        const targetUser = results.users[0];
+        let username: string | undefined;
+        let displayName: string | undefined;
+        try {
+          const profilesDb = APPWRITE_CONFIG.DATABASES.CONNECT;
+          const profilesTable = APPWRITE_CONFIG.TABLES.CONNECT.PROFILES;
+          const res = await databases.listDocuments(profilesDb, profilesTable, [
+            Query.equal('userId', targetUser.$id),
+            Query.limit(1),
+          ]);
+          if (res.documents.length > 0) {
+            const p = res.documents[0] as any;
+            username = p.username;
+            displayName = p.displayName;
+          }
+        } catch {}
+
+        return {
+          id: targetUser.$id,
+          name: targetUser.name,
+          email: targetUser.email,
+          username,
+          displayName,
+        };
+      }
     }
-  } catch {
-    // profiles table miss – not fatal
+  } catch (err: any) {
+    console.warn('[searchAdminUserByEmailAction] Appwrite search warning, falling back to Turso:', err.message);
   }
 
-  return {
-    id: targetUser.$id,
-    name: targetUser.name,
-    email: targetUser.email,
-    username,
-    displayName};
+  // 2. Fallback to Turso / SQLite
+  try {
+    const { db } = await import('@/lib/db');
+    const { user: userTable, profiles: profilesTable } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+
+    const foundUsers = await db.select().from(userTable).where(eq(userTable.email, cleanEmail)).limit(1);
+    if (!foundUsers.length) return null;
+    const u = foundUsers[0];
+
+    let username: string | undefined;
+    let displayName: string | undefined;
+    try {
+      const p = await db.select().from(profilesTable).where(eq(profilesTable.userId, u.id)).limit(1);
+      if (p.length > 0) {
+        username = p[0].username || undefined;
+        displayName = p[0].displayName || undefined;
+      }
+    } catch {}
+
+    return {
+      id: u.id,
+      name: u.name || 'User',
+      email: u.email,
+      username,
+      displayName,
+    };
+  } catch (err: any) {
+    console.warn('[searchAdminUserByEmailAction] Turso fallback warning:', err.message);
+    return null;
+  }
 }
+
+/**
+ * Searches profiles across Appwrite with fallback to Turso profiles & users table.
+ */
+export async function searchGlobalProfilesAction(query: string, limit = 8, jwt?: string) {
+  const user = await getActor(jwt);
+  if (!user) throw new Error('Unauthorized');
+  requireAdmin(user);
+
+  const cleanQuery = query.trim().replace(/^@/, '');
+  if (!cleanQuery) return [];
+
+  // 1. Try Appwrite if configured
+  try {
+    if (process.env.APPWRITE_API) {
+      const { AppwriteService } = await import('@/lib/appwrite');
+      const docs = await AppwriteService.searchGlobalProfiles(cleanQuery, limit);
+      if (docs && docs.length > 0) return docs;
+    }
+  } catch (err: any) {
+    console.warn('[searchGlobalProfilesAction] Appwrite search warning, falling back to Turso:', err.message);
+  }
+
+  // 2. Fallback to Turso / SQLite
+  try {
+    const { db } = await import('@/lib/db');
+    const { user: userTable, profiles: profilesTable } = await import('@/lib/db/schema');
+    const { like, or } = await import('drizzle-orm');
+
+    const searchPattern = `%${cleanQuery.toLowerCase()}%`;
+    const foundProfiles = await db
+      .select()
+      .from(profilesTable)
+      .where(or(like(profilesTable.username, searchPattern), like(profilesTable.displayName, searchPattern)))
+      .limit(limit);
+
+    if (foundProfiles.length > 0) {
+      return foundProfiles.map((p) => ({
+        $id: p.id,
+        userId: p.userId,
+        username: p.username,
+        displayName: p.displayName,
+      }));
+    }
+
+    // Fall back to searching users table
+    const foundUsers = await db
+      .select()
+      .from(userTable)
+      .where(or(like(userTable.name, searchPattern), like(userTable.email, searchPattern)))
+      .limit(limit);
+
+    return foundUsers.map((u) => ({
+      $id: u.id,
+      userId: u.id,
+      username: u.name?.toLowerCase().replace(/\s+/g, '') || u.email.split('@')[0],
+      displayName: u.name || 'User',
+      email: u.email,
+    }));
+  } catch (err: any) {
+    console.warn('[searchGlobalProfilesAction] Turso fallback warning:', err.message);
+    return [];
+  }
+}
+

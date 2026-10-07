@@ -184,7 +184,15 @@ export default function AdminCouponsPage() {
     const t = setTimeout(async () => {
       setSearchingProfiles(true);
       try {
-        const docs = await AppwriteService.searchGlobalProfiles(profileQuery.trim(), 5);
+        let docs: any[] = [];
+        try {
+          docs = await AppwriteService.searchGlobalProfiles(profileQuery.trim(), 5);
+        } catch {}
+        if (!docs || docs.length === 0) {
+          const { searchGlobalProfilesAction } = await import('@/lib/actions/billing/admin');
+          const jwt = await getJWT();
+          docs = await searchGlobalProfilesAction(profileQuery.trim(), 5, jwt || undefined);
+        }
         if (active) setSearchResults(docs || []);
       } catch (err) {
         console.error('Failed to search profiles:', err);

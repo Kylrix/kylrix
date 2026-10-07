@@ -19,8 +19,9 @@ let batchTimer: ReturnType<typeof setTimeout> | null = null;
 async function getFreshJWT(): Promise<string | undefined> {
   try {
     const { account } = await import('@/lib/appwrite/client');
-    const r = await account.createJWT().catch(() => null);
-    return r?.jwt;
+    const jwtPromise = account.createJWT().then((r) => r?.jwt).catch(() => undefined);
+    const timeoutPromise = new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 1200));
+    return await Promise.race([jwtPromise, timeoutPromise]);
   } catch { return undefined; }
 }
 

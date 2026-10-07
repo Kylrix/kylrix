@@ -22,6 +22,25 @@ export class AppwriteAuthAdapter implements AuthPort {
 
     const fetcher = async (): Promise<Actor | null> => {
       try {
+        if (!jwt) {
+          try {
+            const { cookies } = await import('next/headers');
+            const cookieStore = await cookies();
+            const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+            const projectId = APPWRITE_CONFIG.PROJECT_ID;
+            const hasAppwriteCookie = Boolean(
+              cookieStore.get(`a_session_${projectId.toLowerCase()}`) || 
+              cookieStore.get(`a_session_${projectId}`) ||
+              cookieStore.get('a_session') ||
+              cookieStore.get('session')
+            );
+            if (!hasAppwriteCookie) {
+              return null;
+            }
+          } catch {
+            // Non-request context
+          }
+        }
         const { account } = await createServerClient(jwt);
         const user = await account.get().catch(() => null);
         if (!user) {

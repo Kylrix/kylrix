@@ -70,8 +70,17 @@ export default function ConnectedIdentities() {
     setLoading(true);
     setError(null);
     try {
-      const list = await account.listIdentities();
-      const all = (list.identities || []) as Identity[];
+      let all: Identity[] = [];
+      try {
+        const list = await account.listIdentities();
+        all = (list.identities || []) as Identity[];
+      } catch {
+        const { listUserIdentitiesAction } = await import('@/lib/actions/user-settings');
+        const res = await listUserIdentitiesAction().catch(() => null);
+        if (res?.identities) {
+          all = res.identities as Identity[];
+        }
+      }
       const signIn = all.filter((i) => !i.provider?.startsWith(OAUTH2_PREFIX));
       const grants = all.filter((i) => i.provider?.startsWith(OAUTH2_PREFIX));
       setIdentities(signIn);

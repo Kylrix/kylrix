@@ -445,12 +445,44 @@ export async function upsertUserSettingsTurso(data: typeof schema.userSettings.$
           updatedAt: new Date().toISOString(),
         })
         .where(eq(schema.userSettings.userId, data.userId));
-    } else {
-      await db.insert(schema.userSettings).values(data);
     }
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertUserSettingsTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function getUserSettingsTurso(userId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(schema.userSettings)
+      .where(eq(schema.userSettings.userId, userId))
+      .limit(1);
+    return { success: true, settings: rows[0] || null };
+  } catch (err: any) {
+    return { success: false, settings: null, error: err.message };
+  }
+}
+
+export async function listUserSessionsTurso(userId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(schema.session)
+      .where(eq(schema.session.userId, userId));
+    return { success: true, sessions: rows };
+  } catch (err: any) {
+    return { success: false, sessions: [], error: err.message };
+  }
+}
+
+export async function deleteUserSessionTurso(sessionId: string) {
+  try {
+    await db.delete(schema.session).where(eq(schema.session.id, sessionId));
+    return { success: true };
+  } catch (err: any) {
     return { success: false, error: err.message };
   }
 }
