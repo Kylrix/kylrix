@@ -1343,15 +1343,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ type: 4, data }); // Type 4: CHANNEL_MESSAGE_WITH_SOURCE
       }
 
-      case 'ideas':
-      case 'notes': {
+      case 'ideas': {
         const notesRes = await ApiResources.listNotes(actor, 5).catch(() => []);
         const data = buildNotesEmbed(extractItems(notesRes), isLinked);
         return NextResponse.json({ type: 4, data });
       }
 
-      case 'idea':
-      case 'note': {
+      case 'idea': {
         const title = getOption('title') || 'Quick Idea';
         const content = getOption('content') || '';
         try {
@@ -1391,8 +1389,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      case 'idea_read':
-      case 'note_read': {
+      case 'idea_read': {
         const id = String(getOption('id') || '').trim();
         if (!id) {
           return NextResponse.json({
@@ -1437,8 +1434,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      case 'idea_delete':
-      case 'note_delete': {
+      case 'idea_delete': {
         const id = String(getOption('id') || '').trim();
         if (!id) {
           return NextResponse.json({

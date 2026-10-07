@@ -6003,7 +6003,7 @@ import * as os3 from "os";
 import { spawn } from "child_process";
 import pc22 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.13";
+var CURRENT_VERSION = "1.0.14";
 var CACHE_DIR = path6.join(os3.homedir(), ".kylrix");
 var CACHE_FILE = path6.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
@@ -22531,7 +22531,7 @@ workspaces.command("delete <id>").description("Delete a workspace by ID").action
 workspaces.command("switch <id>").alias("use").description("Set the default active workspace for all subsequent CLI commands").action((id, cmdOpts) => switchWorkspaceCommand(id, { ...program.opts(), ...cmdOpts }));
 workspaces.command("current").description("Show the currently active workspace").action((cmdOpts) => currentWorkspaceCommand(cmdOpts));
 workspaces.command("clear").alias("unuse").description("Reset active workspace back to Personal Virtual Workspace").action((cmdOpts) => clearWorkspaceCommand(cmdOpts));
-var ideas = program.command("ideas").alias("idea").alias("notes").alias("n").description("Manage sovereign ideas and notes");
+var ideas = program.command("ideas").alias("idea").description("Manage sovereign ideas");
 ideas.command("list").description("List ideas in active workspace or personal store").option("-l, --limit <number>", "Number of records (default: 50, 0 for all)", "50").option("-a, --all", "List all records without limit").action((cmdOpts) => listIdeasCommand({ ...program.opts(), ...cmdOpts }));
 ideas.command("get <id>").description("Get full idea content and metadata").action((id, cmdOpts) => getIdeaCommand(id, { ...program.opts(), ...cmdOpts }));
 ideas.command("create <title>").description("Create a new idea").option("-c, --content <text>", "Idea body content").option("--category <category>", "Idea category", "general").option("--tags <tags>", "Comma-separated tag list").action((title, cmdOpts) => createIdeaCommand(title, { ...program.opts(), ...cmdOpts }));

@@ -269,8 +269,8 @@ workspaces
   .description('Reset active workspace back to Personal Virtual Workspace')
   .action((cmdOpts) => clearWorkspaceCommand(cmdOpts));
 
-// ── 3. Ideas (aliased to notes) ──
-const ideas = program.command('ideas').alias('idea').alias('notes').alias('n').description('Manage sovereign ideas and notes');
+// ── 3. Ideas ──
+const ideas = program.command('ideas').alias('idea').description('Manage sovereign ideas');
 
 ideas
   .command('list')
