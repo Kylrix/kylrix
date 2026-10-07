@@ -1706,6 +1706,8 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     } catch (tursoErr) {
       console.warn('[listNotesPaginated] Turso fetch warning:', tursoErr);
     }
+  }
+
   // If user has no Appwrite account or is already fully synced, return Turso notes directly
   if (effectiveUserId && effectiveUserId !== 'guest') {
     try {

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { formatPatToken, parsePatToken, PatService } from './pats';
+import { describe, it, expect } from 'vitest';
+import { formatPatToken, parsePatToken } from './pats';
 
 describe('PatService and Token Utilities', () => {
   it('correctly formats and parses user PAT tokens', () => {

@@ -6,8 +6,6 @@ import {
   Check, 
   ArrowLeft,
   ArrowUpRight, 
-  Mic, 
-  Square, 
   FileText, 
   Lock, 
   Globe, 
@@ -149,14 +147,6 @@ export default function CreateNoteForm({
   const isPastedRef = useRef(false);
   const pasteTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [_isUploadingVoice, setIsUploadingVoice] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
   const [isMobile, setIsMobile] = useState(false);
   const [localIsExpanded, setLocalIsExpanded] = useState(true);
   const isExpanded = controlledIsExpanded !== undefined ? controlledIsExpanded : localIsExpanded;
@@ -192,82 +182,6 @@ export default function CreateNoteForm({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, [controlledIsExpanded]);
-
-  useEffect(() => {
-    return () => {
-      if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
-      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-    };
-  }, []);
-
-  const toggleRecording = async () => {
-    if (isRecording) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      setIsRecording(false);
-    } else {
-      if (!hasPaidKylrixPlan(user)) {
-        openProUpgrade('Voice recording');
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        let options = { audioBitsPerSecond: 16000 };
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          (options as any).mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-          (options as any).mimeType = 'audio/ogg;codecs=opus';
-        }
-
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            audioChunksRef.current.push(e.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
-          if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
-          if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
-
-          stream.getTracks().forEach(track => track.stop());
-
-          try {
-            setIsUploadingVoice(true);
-            const uploaded = await StorageService.uploadFile(audioFile, 'voice');
-            insertTextAtCursor(` [voice:${uploaded.$id}] `);
-            showSuccess('Voice note recorded', 'Inserted into your note content.');
-          } catch (error) {
-            console.error('Failed to upload voice note:', error);
-            showError('Recording failed', 'Could not save voice note.');
-          } finally {
-            setIsUploadingVoice(false);
-          }
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-        setRecordingDuration(0);
-
-        durationIntervalRef.current = setInterval(() => {
-          setRecordingDuration(prev => prev + 1);
-        }, 1000);
-
-        // Audio length limit removed for Pro/Teams users.
-
-      } catch (err) {
-        console.error("Failed to start recording:", err);
-        showError('Permission denied', 'Microphone access is required to record voice notes.');
-      }
-    }
-  };
 
   // Insert [[kylrix-object:...]] block into textarea at cursor with surrounding blank lines
   const insertObjectBlock = useCallback((block: string) => {
@@ -486,21 +400,7 @@ export default function CreateNoteForm({
     }
   }, [createWithAgent, agentSuggestion, acceptSuggestion, inlineSuffix, applyContentDraft, content]);
 
-  const insertTextAtCursor = (text: string) => {
-    const textarea = contentRef.current;
-    if (textarea) {
-      const start = textarea.selectionStart || 0;
-      const end = textarea.selectionEnd || 0;
-      const nextContent = content.substring(0, start) + text + content.substring(end);
-      handleContentChange(nextContent);
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start + text.length, start + text.length);
-      }, 50);
-    } else {
-      handleContentChange(content + text);
-    }
-  };
+
 
   const existingTags = useMemo(() => {
     const tagSet = new Set<string>();

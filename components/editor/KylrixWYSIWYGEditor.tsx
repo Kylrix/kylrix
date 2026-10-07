@@ -17,7 +17,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting, syntaxTree, ensureSyntaxTree } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { parseObjectBlocks, serializeObjectBlock, type SecondaryObjectPayload } from '@/lib/note-object-secondary';
-import { Mic, Paperclip, Loader2 } from 'lucide-react';
+import { Paperclip, Loader2 } from 'lucide-react';
 import { StorageService } from '@/lib/services/storage';
 import { attachObject, detachObjectByRelation } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -303,13 +303,7 @@ export function KylrixWYSIWYGEditor({
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const durationIntervalRef = useRef<any>(null);
 
   const handleRemoveObject = useCallback(
     async (payload: SecondaryObjectPayload, rawBlock: string) => {
@@ -499,98 +493,7 @@ export function KylrixWYSIWYGEditor({
     viewRef.current.focus();
   }, []);
 
-  // Voice recording flow
-  const toggleRecording = async () => {
-    if (isRecording) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      setIsRecording(false);
-    } else {
-      if (!hasPaidKylrixPlan(user)) {
-        openProUpgrade('Voice recording');
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        let options = { audioBitsPerSecond: 16000 };
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          (options as any).mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-          (options as any).mimeType = 'audio/ogg;codecs=opus';
-        }
 
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunksRef.current.push(e.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-          if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
-          stream.getTracks().forEach((track) => track.stop());
-
-          try {
-            setIsUploading(true);
-            const uploaded = await StorageService.uploadFile(audioFile, 'voice');
-
-            // Attach object relation if parentId exists
-            let objectId: string | undefined;
-            if (parentId) {
-              try {
-                const relation = await attachObject({
-                  parentId,
-                  parentKind,
-                  childId: uploaded.$id,
-                  childKind: 'voice',
-                  metadata: {
-                    isSecondary: true,
-                    filename: audioFile.name,
-                    mimeType: audioFile.type,
-                    size: audioFile.size,
-                    duration: recordingDuration,
-                  },
-                });
-                objectId = relation?.$id;
-              } catch {}
-            }
-
-            const block = serializeObjectBlock({
-              objectId,
-              childId: uploaded.$id,
-              childKind: 'voice',
-              bucketId: 'voice',
-              label: `Voice note (${recordingDuration}s)`,
-              isSecondary: true,
-              metadata: { duration: recordingDuration },
-            });
-
-            insertTextAtCursor(`\n\n${block}\n\n`);
-            toast.success('Voice note recorded and attached');
-          } catch (err: any) {
-            console.error('Failed to upload voice note:', err);
-            toast.error('Could not save voice note');
-          } finally {
-            setIsUploading(false);
-          }
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-        setRecordingDuration(0);
-        durationIntervalRef.current = setInterval(() => {
-          setRecordingDuration((prev) => prev + 1);
-        }, 1000);
-      } catch (err) {
-        console.error('Microphone error:', err);
-        toast.error('Microphone access is required to record voice notes');
-      }
-    }
-  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

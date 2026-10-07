@@ -30,6 +30,8 @@ yarn-error.log*
 .selfhost-config-stamp
 *.env*
 sqlite.json
+*.db
+*.db-journal
 .ota/state/
 .ota/contracts/
 .ota/receipts/

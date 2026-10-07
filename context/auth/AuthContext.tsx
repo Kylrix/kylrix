@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCurrentUserCache, onCurrentUserChanged, getCurrentUserSnapshot } from '@/lib/appwrite/client';
+import { account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCurrentUserCache, onCurrentUserChanged, getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 import { assertAuthenticatedAccount, completeMfaChallenge, isMfaRequiredError } from '@/lib/mfa';
 
@@ -63,9 +63,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const sessionVerifySeq = useRef(0);
   const lastSeenUserIdRef = useRef<string | null>(user?.$id || null);
   const refreshUserRef = useRef<() => Promise<User | null>>(async () => null);
-  const refreshUser = useCallback(async (forceRefresh = false): Promise<User | null> => {
+  const refreshUser = useCallback(async (_forceRefresh = false): Promise<User | null> => {
     try {
-      const isOAuthSuccess = typeof window !== 'undefined' && window.location.search.includes('auth=success');
 
       // 1. Better Auth session check (Sole primary authority for authentication)
       try {

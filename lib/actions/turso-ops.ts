@@ -973,6 +973,10 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
           // ignore individual missing goal
         }
       }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Workspace goals resolution warning:', e.message);
+    }
+
     // 6. Conversations / Agent Inboxes (Threads & Thread Messages)
     try {
       const threadRes = await tablesDB.listRows({

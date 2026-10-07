@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { Loader2, Send, ExternalLink, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Loader2, Send, ShieldCheck, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TelegramConnectPage() {
@@ -23,7 +23,6 @@ export default function TelegramConnectPage() {
 
 function TelegramConnectContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user, isLoading } = useAuth();
   const { open: openDrawer } = useUnifiedDrawer();
 

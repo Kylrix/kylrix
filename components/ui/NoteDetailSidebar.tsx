@@ -7,8 +7,6 @@ import { AgenticDiffViewer } from '@/components/agentic/AgenticDiffViewer';
 import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 
 import {
-  Mic,
-  Square,
   Trash2 as TrashIcon,
   ExternalLink as OpenIcon,
   Pin as PinIcon,
@@ -51,7 +49,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { exportToMarkdown, exportToPDF, exportToDOCX } from '@/lib/utils/export';
 import { useAuth } from '@/lib/auth';
-import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
+import { getUserSubscriptionTier } from '@/lib/utils';
 import { userCanUseProjects } from '@/lib/projects/feature-gate-client';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
@@ -366,20 +364,6 @@ export function NoteDetailSidebar({
   const [_isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isLocallyDecrypted, setIsLocallyDecrypted] = useState(false);
   const [_attachedObjects, setAttachedObjects] = useState<any[]>([]);
-
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
-      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-    };
-  }, []);
 
   // ENCRYPTION LOGIC
   const isT4Encrypted = useMemo(
@@ -947,95 +931,7 @@ export function NoteDetailSidebar({
   const displayTags = useMemo(() => tags.split(',').map((t: string) => t.trim()).filter(Boolean), [tags]);
 
 
-  const toggleRecording = useCallback(async () => {
-    if (isRecording) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      setIsRecording(false);
-    } else {
-      if (!hasPaidKylrixPlan(user)) {
-        openProUpgrade('Voice recording');
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        let options = { audioBitsPerSecond: 16000 };
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          (options as any).mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-          (options as any).mimeType = 'audio/ogg;codecs=opus';
-        }
 
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            audioChunksRef.current.push(e.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
-          if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
-          if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
-
-          stream.getTracks().forEach(track => track.stop());
-
-          try {
-            const uploaded = await StorageService.uploadFile(audioFile, 'voice');
-            
-            // AUTHORITATIVE SYNC: Wire into objects table to prevent zombie attachments
-            try {
-              const line = getCursorLineNumber();
-              await attachObject({
-                parentId: liveNote.$id,
-                parentKind: 'note',
-                childId: uploaded.$id,
-                childKind: 'voice',
-                metadata: {
-                  filename: audioFile.name,
-                  mimeType: audioFile.type,
-                  size: audioFile.size,
-                  duration: recordingDuration,
-                  insertLine: line
-                }
-              });
-              // Refresh local objects list
-              const { getObjectsByParent } = await import('@/lib/actions/client-ops');
-              const rows = await getObjectsByParent(liveNote.$id, 'note');
-              setAttachedObjects(rows);
-              showSuccess('Voice note recorded', 'Attached to this note.');
-            } catch (attachErr: any) {
-              console.warn('[NoteDetailSidebar] Failed to register attachment in objects table:', attachErr);
-              showError('Recording limit reached', attachErr.message || 'Could not attach voice note.');
-            }
-          } catch (error) {
-            console.error('Failed to upload voice note:', error);
-            showError('Recording failed', 'Could not save voice note.');
-          }
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-        setRecordingDuration(0);
-
-        durationIntervalRef.current = setInterval(() => {
-          setRecordingDuration(prev => prev + 1);
-        }, 1000);
-
-        // Audio length limit removed for Pro/Teams users.
-
-      } catch (err) {
-        console.error("Failed to start recording:", err);
-        showError('Permission denied', 'Microphone access is required to record voice notes.');
-      }
-    }
-  }, [isRecording, showSuccess, showError]);
 
 
   const replaceContentWithSave = useCallback(async (nextContent: string) => {
