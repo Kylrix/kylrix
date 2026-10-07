@@ -15,12 +15,48 @@ export async function listCouponsAction(jwt?: string) {
     throw new Error('Unauthorized');
   }
   requireAdmin(user);
-  const { databases } = createAdminClient(user.email);
-  const result = await databases.listRows(NOTE_DB_ID, COUPONS_TABLE_ID, [
-    Query.orderDesc('$createdAt'),
-    Query.limit(100)
-  ]);
-  return result.rows;
+
+  // 1. Try Appwrite if configured
+  try {
+    if (process.env.APPWRITE_API) {
+      const { databases } = createAdminClient(user.email);
+      const result = await databases.listRows(NOTE_DB_ID, COUPONS_TABLE_ID, [
+        Query.orderDesc('$createdAt'),
+        Query.limit(100)
+      ]);
+      return result.rows;
+    }
+  } catch (err: any) {
+    console.warn('[listCouponsAction] Appwrite query failed, falling back to Turso:', err.message);
+  }
+
+  // 2. Fallback to Turso / SQLite
+  try {
+    const { listCouponsTurso } = await import('@/lib/actions/turso-ops');
+    const res = await listCouponsTurso();
+    if (res.success && res.rows) {
+      return res.rows.map((r: any) => ({
+        $id: r.id,
+        $createdAt: r.createdAt || new Date().toISOString(),
+        discountPercent: r.discountPercent,
+        discountPercentage: r.discountPercentage,
+        status: r.status,
+        expiresAt: r.expiresAt,
+        redemptionLimit: r.redemptionLimit,
+        redemptionCount: r.redemptionCount,
+        seats: r.seats,
+        targetUserId: r.targetUserId,
+        createdBy: r.createdBy,
+        title: r.title,
+        note: r.note,
+        metadata: r.metadata,
+      }));
+    }
+  } catch (err: any) {
+    console.warn('[listCouponsAction] Turso query warning:', err.message);
+  }
+
+  return [];
 }
 
 function parseMetadata(value: unknown): Record<string, any> {
@@ -39,10 +75,27 @@ export async function invalidateCouponAction(couponId: string, jwt?: string) {
   if (!user) throw new Error('Unauthorized');
   requireAdmin(user);
   
-  const { databases } = createAdminClient(user.email);
-  await databases.updateRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId, {
-    status: 'revoked'
-  });
+  try {
+    if (process.env.APPWRITE_API) {
+      const { databases } = createAdminClient(user.email);
+      await databases.updateRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId, {
+        status: 'revoked'
+      });
+    }
+  } catch (e: any) {
+    console.warn('[invalidateCouponAction] Appwrite warning:', e.message);
+  }
+
+  try {
+    const { upsertCouponTurso } = await import('@/lib/actions/turso-ops');
+    await upsertCouponTurso({
+      id: couponId,
+      createdBy: user.$id,
+      status: 'revoked',
+      updatedAt: new Date().toISOString(),
+    });
+  } catch {}
+
   return { success: true };
 }
 
@@ -51,8 +104,20 @@ export async function deleteCouponByIdAction(couponId: string, jwt?: string) {
   if (!user) throw new Error('Unauthorized');
   requireAdmin(user);
 
-  const { databases } = createAdminClient(user.email);
-  await databases.deleteRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId);
+  try {
+    if (process.env.APPWRITE_API) {
+      const { databases } = createAdminClient(user.email);
+      await databases.deleteRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId);
+    }
+  } catch (err: any) {
+    console.warn('[deleteCouponByIdAction] Appwrite deleteRow warning:', err.message);
+  }
+
+  try {
+    const { deleteCouponTurso } = await import('@/lib/actions/turso-ops');
+    await deleteCouponTurso(couponId);
+  } catch {}
+
   return { success: true, deletedId: couponId };
 }
 
@@ -137,36 +202,79 @@ export async function createCouponAction(input: {
     throw new Error('Unauthorized');
   }
   requireAdmin(user);
-  const { databases } = createAdminClient(user.email);
-  const systemClient = createSystemClient();
   const recipients = (input.userIds || []).map((id: any) => String(id || '').trim()).filter(Boolean);
   const scope = recipients.length > 0 ? 'targeted' : 'open';
   const targets = recipients.length > 0 ? recipients : [null];
   const created: any[] = [];
   
   for (const targetUserId of targets) {
-    const row = await databases.createRow(
-      NOTE_DB_ID,
-      COUPONS_TABLE_ID,
-      ID.unique(),
-      {
-        discountPercent: Number(input.discountPercent),
-        discountPercentage: Number(input.discountPercent),
-        status: String(input.status || 'active').toLowerCase(),
-        expiresAt: input.expiresAt || null,
-        redemptionLimit: targetUserId ? 1 : Math.max(1, Number(input.redemptionLimit || 1)),
-        redemptionCount: 0,
-        targetUserId: targetUserId || null,
+    const couponId = ID.unique();
+    const couponData = {
+      discountPercent: Number(input.discountPercent),
+      discountPercentage: Number(input.discountPercent),
+      status: String(input.status || 'active').toLowerCase(),
+      expiresAt: input.expiresAt || null,
+      redemptionLimit: targetUserId ? 1 : Math.max(1, Number(input.redemptionLimit || 1)),
+      redemptionCount: 0,
+      targetUserId: targetUserId || null,
+      createdBy: user.$id,
+      title: input.title || null,
+      note: input.note || null,
+      metadata: JSON.stringify({
+        ...(input.metadata || {}),
+        scope,
+        source: 'admin.coupons.action',
+        months: input.months ? Number(input.months) : 1,
+        planId: input.planId || 'PRO_MONTH',
+      }),
+    };
+
+    let row: any = null;
+    try {
+      if (process.env.APPWRITE_API) {
+        const { databases } = createAdminClient(user.email);
+        row = await databases.createRow(
+          NOTE_DB_ID,
+          COUPONS_TABLE_ID,
+          couponId,
+          couponData,
+          targetUserId ? [Permission.read(Role.user(targetUserId))] : [Permission.read(Role.user(user.$id))]
+        );
+      }
+    } catch (err: any) {
+      console.warn('[createCouponAction] Appwrite createRow warning:', err.message);
+    }
+
+    if (!row) {
+      row = {
+        $id: couponId,
+        $createdAt: new Date().toISOString(),
+        ...couponData,
+      };
+    }
+
+    try {
+      const { upsertCouponTurso } = await import('@/lib/actions/turso-ops');
+      await upsertCouponTurso({
+        id: couponId,
         createdBy: user.$id,
-        title: input.title || null,
-        note: input.note || null,
-        metadata: JSON.stringify({
-          ...(input.metadata || {}),
-          scope,
-          source: 'admin.coupons.action',
-          months: input.months ? Number(input.months) : 1,
-          planId: input.planId || 'PRO_MONTH'})},
-      targetUserId ? [Permission.read(Role.user(targetUserId))] : [Permission.read(Role.user(user.$id))]);
+        title: couponData.title,
+        note: couponData.note,
+        targetUserId: couponData.targetUserId,
+        status: couponData.status,
+        discountPercent: couponData.discountPercent,
+        discountPercentage: couponData.discountPercentage,
+        redemptionLimit: couponData.redemptionLimit,
+        redemptionCount: couponData.redemptionCount,
+        expiresAt: couponData.expiresAt,
+        metadata: couponData.metadata,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (tursoErr: any) {
+      console.warn('[createCouponAction] Turso upsert warning:', tursoErr.message);
+    }
+
     created.push(row);
 
     // Dispatch email if targeted

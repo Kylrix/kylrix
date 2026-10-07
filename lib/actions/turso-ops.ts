@@ -634,6 +634,141 @@ export async function deleteGoalTurso(goalId: string) {
   }
 }
 
+// --------------------------------------------------------
+// Forms & Events Turso CRUD
+// --------------------------------------------------------
+export async function upsertFormTurso(data: typeof schema.forms.$inferInsert) {
+  try {
+    const existing = await db.select({ id: schema.forms.id }).from(schema.forms).where(eq(schema.forms.id, data.id)).limit(1);
+    if (existing.length > 0) {
+      await db.update(schema.forms).set(data).where(eq(schema.forms.id, data.id));
+    } else {
+      await db.insert(schema.forms).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function listFormsTurso(userId: string) {
+  try {
+    const rows = await db.select().from(schema.forms).where(eq(schema.forms.userId, userId));
+    return { success: true, rows };
+  } catch (err: any) {
+    return { success: false, rows: [], error: err.message };
+  }
+}
+
+export async function upsertEventTurso(data: typeof schema.events.$inferInsert) {
+  try {
+    const existing = await db.select({ id: schema.events.id }).from(schema.events).where(eq(schema.events.id, data.id)).limit(1);
+    if (existing.length > 0) {
+      await db.update(schema.events).set(data).where(eq(schema.events.id, data.id));
+    } else {
+      await db.insert(schema.events).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function listEventsTurso(userId: string) {
+  try {
+    const rows = await db.select().from(schema.events).where(eq(schema.events.userId, userId));
+    return { success: true, rows };
+  } catch (err: any) {
+    return { success: false, rows: [], error: err.message };
+  }
+}
+
+// --------------------------------------------------------
+// Agentic Sessions & Workflows Turso CRUD
+// --------------------------------------------------------
+export async function upsertAgenticSessionTurso(data: typeof schema.agenticSessions.$inferInsert) {
+  try {
+    const existing = await db.select({ id: schema.agenticSessions.id }).from(schema.agenticSessions).where(eq(schema.agenticSessions.id, data.id)).limit(1);
+    if (existing.length > 0) {
+      await db.update(schema.agenticSessions).set(data).where(eq(schema.agenticSessions.id, data.id));
+    } else {
+      await db.insert(schema.agenticSessions).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function listAgenticSessionsTurso(userId: string) {
+  try {
+    const rows = await db.select().from(schema.agenticSessions).where(eq(schema.agenticSessions.userId, userId));
+    return { success: true, rows };
+  } catch (err: any) {
+    return { success: false, rows: [], error: err.message };
+  }
+}
+
+export async function upsertWorkflowTurso(data: typeof schema.workflows.$inferInsert) {
+  try {
+    const existing = await db.select({ id: schema.workflows.id }).from(schema.workflows).where(eq(schema.workflows.id, data.id)).limit(1);
+    if (existing.length > 0) {
+      await db.update(schema.workflows).set(data).where(eq(schema.workflows.id, data.id));
+    } else {
+      await db.insert(schema.workflows).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function listWorkflowsTurso(ownerId?: string) {
+  try {
+    const rows = ownerId
+      ? await db.select().from(schema.workflows).where(eq(schema.workflows.ownerId, ownerId))
+      : await db.select().from(schema.workflows);
+    return { success: true, rows };
+  } catch (err: any) {
+    return { success: false, rows: [], error: err.message };
+  }
+}
+
+// --------------------------------------------------------
+// Coupons Turso CRUD (Admin & Billing)
+// --------------------------------------------------------
+export async function upsertCouponTurso(data: typeof schema.coupons.$inferInsert) {
+  try {
+    const existing = await db.select({ id: schema.coupons.id }).from(schema.coupons).where(eq(schema.coupons.id, data.id)).limit(1);
+    if (existing.length > 0) {
+      await db.update(schema.coupons).set(data).where(eq(schema.coupons.id, data.id));
+    } else {
+      await db.insert(schema.coupons).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function listCouponsTurso() {
+  try {
+    const rows = await db.select().from(schema.coupons);
+    return { success: true, rows };
+  } catch (err: any) {
+    return { success: false, rows: [], error: err.message };
+  }
+}
+
+export async function deleteCouponTurso(id: string) {
+  try {
+    await db.delete(schema.coupons).where(eq(schema.coupons.id, id));
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 // ========================================================
 // AGGRESSIVE TIER 1 & TIER 2 MIGRATION PIPELINE
 // ========================================================

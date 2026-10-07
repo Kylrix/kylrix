@@ -419,3 +419,473 @@ export const threadMessages = sqliteTable('thread_messages', {
   updatedAt: text('updated_at').notNull(),
 });
 
+// ========================================================
+// 1:1 REPLICATED ECOSYSTEM TABLES (TURSO / SQLITE)
+// ========================================================
+
+// 1. Forms & Form Submissions
+export const forms = sqliteTable('forms', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  title: text('title').notNull().default(''),
+  description: text('description').default(''),
+  schema: text('schema').notNull().default('[]'),
+  settings: text('settings').default('{}'),
+  status: text('status').default('active'),
+  visibility: text('visibility').default('private'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  isPinned: integer('is_pinned', { mode: 'boolean' }).default(false),
+  source: text('source'),
+  keepPermission: integer('keep_permission', { mode: 'boolean' }).default(false),
+  isTrash: integer('is_trash', { mode: 'boolean' }).default(false),
+  isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  isAgentic: integer('is_agentic', { mode: 'boolean' }).default(false),
+  dek: text('dek'),
+  isMultiple: integer('is_multiple', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const formSubmissions = sqliteTable('form_submissions', {
+  id: text('id').primaryKey(),
+  formId: text('form_id').notNull(),
+  submitterId: text('submitter_id'),
+  payload: text('payload').notNull().default('{}'),
+  status: text('status').default('submitted'),
+  metadata: text('metadata'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  source: text('source'),
+  isTrash: integer('is_trash', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at'),
+});
+
+// 2. Events & Calendars
+export const events = sqliteTable('events', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  calendarId: text('calendar_id').notNull().default('default'),
+  title: text('title').notNull().default(''),
+  description: text('description').default(''),
+  startTime: text('start_time').notNull(),
+  endTime: text('end_time').notNull(),
+  location: text('location'),
+  meetingUrl: text('meeting_url'),
+  visibility: text('visibility').default('private'),
+  status: text('status').default('confirmed'),
+  coverImageId: text('cover_image_id'),
+  recurrenceRule: text('recurrence_rule'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  isPinned: integer('is_pinned', { mode: 'boolean' }).default(false),
+  source: text('source'),
+  keepPermission: integer('keep_permission', { mode: 'boolean' }).default(false),
+  isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false),
+  isTrash: integer('is_trash', { mode: 'boolean' }).default(false),
+  isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  attendeeCount: integer('attendee_count').default(0),
+  isAgentic: integer('is_agentic', { mode: 'boolean' }).default(false),
+  dek: text('dek'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const calendars = sqliteTable('calendars', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull().default('Personal'),
+  color: text('color').default('#6366F1'),
+  isDefault: integer('is_default', { mode: 'boolean' }).default(true),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  isPinned: integer('is_pinned', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at'),
+});
+
+export const eventGuests = sqliteTable('event_guests', {
+  id: text('id').primaryKey(),
+  eventId: text('event_id').notNull(),
+  userId: text('user_id'),
+  email: text('email'),
+  status: text('status').default('pending'),
+  role: text('role').default('attendee'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+});
+
+// 3. Agentic Sessions, Tool Calls & Telemetry
+export const agenticSessions = sqliteTable('agentic_sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  context: text('context'),
+  seen: integer('seen', { mode: 'boolean' }).default(false),
+  chatHistory: text('chat_history'),
+  isMemory: integer('is_memory', { mode: 'boolean' }).default(false),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  isPinned: integer('is_pinned', { mode: 'boolean' }).default(false),
+  harness: text('harness'),
+  targetType: text('target_type'),
+  targetId: text('target_id'),
+  isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  projectId: text('project_id'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const toolCalls = sqliteTable('tool_calls', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  sessionId: text('session_id').notNull(),
+  conversationId: text('conversation_id').notNull(),
+  toolKey: text('tool_key').notNull(),
+  specifier: text('specifier'),
+  args: text('args'),
+  status: text('status').default('success'),
+  resultSummary: text('result_summary'),
+  createdAt: text('created_at'),
+});
+
+export const agenticTelemetry = sqliteTable('agentic_telemetry', {
+  id: text('id').primaryKey(),
+  userId: text('user_id'),
+  action: text('action').notNull(),
+  zone: text('zone'),
+  pointers: text('pointers'),
+  metadata: text('metadata'),
+  timestamp: text('timestamp').notNull(),
+});
+
+export const sessionObjects = sqliteTable('session_objects', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  sessionId: text('session_id').notNull(),
+  objectId: text('object_id').notNull(),
+  objectType: text('object_type').notNull(),
+  title: text('title'),
+  toolKey: text('tool_key'),
+  createdAt: text('created_at'),
+});
+
+// 4. Conversations, Messages, Hangouts & P2P Call Signals
+export const conversations = sqliteTable('conversations', {
+  id: text('id').primaryKey(),
+  creatorId: text('creator_id').notNull(),
+  type: text('type').notNull().default('direct'),
+  name: text('name'),
+  lastMessageId: text('last_message_id'),
+  lastMessageAt: text('last_message_at'),
+  lastMessageText: text('last_message_text'),
+  lastMessageSenderId: text('last_message_sender_id'),
+  unreadCount: text('unread_count').default('0'),
+  participants: text('participants'),
+  admins: text('admins'),
+  description: text('description'),
+  avatarUrl: text('avatar_url'),
+  avatarFileId: text('avatar_file_id'),
+  avatar: text('avatar'),
+  participantCount: integer('participant_count').default(1),
+  maxParticipants: integer('max_participants').default(100),
+  isEncrypted: integer('is_encrypted', { mode: 'boolean' }).default(false),
+  encryptionVersion: text('encryption_version'),
+  encryptionKey: text('encryption_key'),
+  isPinned: text('is_pinned').default(''),
+  isMuted: text('is_muted').default(''),
+  isArchived: text('is_archived').default(''),
+  settings: text('settings'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  inviteLink: text('invite_link'),
+  inviteLinkExpiry: text('invite_link_expiry'),
+  category: text('category'),
+  tags: text('tags').default(''),
+  contextType: text('context_type'),
+  contextId: text('context_id'),
+  inviteMeta: text('invite_meta'),
+  isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const conversationMembers = sqliteTable('conversation_members', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id').notNull(),
+  userId: text('user_id').notNull(),
+  role: text('role').default('member'),
+});
+
+export const messages = sqliteTable('messages', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id').notNull(),
+  senderId: text('sender_id').notNull(),
+  type: text('type').notNull().default('text'),
+  content: text('content').default(''),
+  attachments: text('attachments'),
+  replyTo: text('reply_to'),
+  readBy: text('read_by'),
+  isPinned: integer('is_pinned', { mode: 'boolean' }).default(false),
+  isVoice: integer('is_voice', { mode: 'boolean' }).default(false),
+  metadata: text('metadata'),
+  isBookmark: integer('is_bookmark', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const callSignals = sqliteTable('call_signals', {
+  id: text('id').primaryKey(),
+  callId: text('call_id').notNull(),
+  senderId: text('sender_id').notNull(),
+  type: text('type').notNull(),
+  payload: text('payload').notNull(),
+  createdAt: text('created_at'),
+});
+
+// 5. Workflows (Flows), Installs & Reviews
+export const workflows = sqliteTable('workflows', {
+  id: text('id').primaryKey(),
+  workflowId: text('workflow_id').notNull(),
+  name: text('name').notNull(),
+  description: text('description').default(''),
+  niche: text('niche').notNull().default('general'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isAnonymized: integer('is_anonymized', { mode: 'boolean' }).default(false),
+  steps: text('steps').notNull().default('[]'),
+  metadata: text('metadata'),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  ownerId: text('owner_id'),
+  installCount: integer('install_count').default(0),
+  flowKind: text('flow_kind').default('automation'),
+  toolTierMax: text('tool_tier_max'),
+  reviewStatus: text('review_status').default('approved'),
+  publisherHandle: text('publisher_handle'),
+  verifiedKind: text('verified_kind'),
+  version: integer('version').default(1),
+  contentHash: text('content_hash'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const flowInstalls = sqliteTable('flow_installs', {
+  id: text('id').primaryKey(),
+  flowId: text('flow_id').notNull(),
+  installerId: text('installer_id').notNull(),
+  scopeKey: text('scope_key').notNull(),
+  scopeType: text('scope_type').notNull(),
+  grants: text('grants'),
+  status: text('status').default('installed'),
+  pinnedVersion: integer('pinned_version').default(1),
+  autoUpdate: integer('auto_update', { mode: 'boolean' }).default(true),
+  installedHash: text('installed_hash'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const flowReviews = sqliteTable('flow_reviews', {
+  id: text('id').primaryKey(),
+  flowId: text('flow_id').notNull(),
+  actorId: text('actor_id').notNull(),
+  sessionId: text('session_id'),
+  verdict: text('verdict').default('pass'),
+  toolTierMax: text('tool_tier_max'),
+  findings: text('findings'),
+  piiSummary: text('pii_summary'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+// 6. Profiles, User Badges, Referrals & Sponsorships
+export const profiles = sqliteTable('profiles', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().unique(),
+  username: text('username').notNull(),
+  displayName: text('display_name'),
+  bio: text('bio'),
+  avatar: text('avatar'),
+  walletAddress: text('wallet_address'),
+  publicKey: text('public_key'),
+  status: text('status').default('active'),
+  preferences: text('preferences'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(true),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  isAvatar: integer('is_avatar', { mode: 'boolean' }).default(false),
+  isContact: integer('is_contact', { mode: 'boolean' }).default(false),
+  isOnlineVisible: integer('is_online_visible', { mode: 'boolean' }).default(true),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const userBadges = sqliteTable('user_badges', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  badgeId: text('badge_id').notNull(),
+  badgeType: text('badge_type'),
+  tier: text('tier'),
+  name: text('name').notNull(),
+  description: text('description'),
+  icon: text('icon'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(true),
+  awardedAt: text('awarded_at'),
+  sponsorshipId: text('sponsorship_id'),
+  metadata: text('metadata'),
+});
+
+export const referrals = sqliteTable('referrals', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  referrerId: text('referrer_id').notNull(),
+  refCode: text('ref_code'),
+  src: text('src'),
+  origin: text('origin'),
+  status: text('status').default('completed'),
+  tokensRewarded: integer('tokens_rewarded', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at'),
+});
+
+export const sponsorships = sqliteTable('sponsorships', {
+  id: text('id').primaryKey(),
+  userId: text('user_id'),
+  sponsorName: text('sponsor_name'),
+  sponsorUrl: text('sponsor_url'),
+  sponsorEmail: text('sponsor_email'),
+  sponsorMessage: text('sponsor_message'),
+  amount: text('amount').notNull().default('0'),
+  currency: text('currency').default('USD'),
+  provider: text('provider').default('crypto'),
+  tier: text('tier').notNull().default('supporter'),
+  status: text('status').default('completed'),
+  txHash: text('tx_hash'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(true),
+  isAnonymous: integer('is_anonymous', { mode: 'boolean' }).default(false),
+  badgeAwarded: integer('badge_award', { mode: 'boolean' }).default(false),
+  metadata: text('metadata'),
+  createdAt: text('created_at'),
+});
+
+// 7. Wallets, Web3 Transactions & Compute Ledger
+export const wallets = sqliteTable('wallets', {
+  id: text('id').primaryKey(),
+  ownerId: text('owner_id').notNull(),
+  address: text('address').notNull(),
+  chain: text('chain').notNull().default('evm'),
+  encryptedSecret: text('encrypted_secret').notNull(),
+  type: text('type').notNull().default('embedded'),
+  metadata: text('metadata'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const web3Transactions = sqliteTable('web3_transactions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  chain: text('chain').notNull(),
+  hash: text('hash').notNull(),
+  from: text('from').notNull(),
+  to: text('to').notNull(),
+  value: text('value').notNull().default('0'),
+  symbol: text('symbol').notNull().default('ETH'),
+  timestamp: integer('timestamp').notNull(),
+});
+
+export const computeLedger = sqliteTable('compute_ledger', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  tokensConsumed: integer('tokens_consumed').notNull().default(0),
+  timestamp: text('timestamp').notNull(),
+});
+
+// 8. Coupons, Billing Transactions & Account Attention Ledger
+export const coupons = sqliteTable('coupons', {
+  id: text('id').primaryKey(),
+  createdBy: text('created_by').notNull(),
+  title: text('title'),
+  note: text('note'),
+  targetUserId: text('target_user_id'),
+  status: text('status').default('active'),
+  discountPercent: integer('discount_percent').default(0),
+  discountPercentage: integer('discount_percentage').default(0),
+  redemptionLimit: integer('redemption_limit').default(1),
+  redemptionCount: integer('redemption_count').default(0),
+  seats: integer('seats').default(1),
+  expiresAt: text('expires_at'),
+  metadata: text('metadata'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const billingTransactions = sqliteTable('billing_transactions', {
+  id: text('id').primaryKey(),
+  paymentId: text('payment_id').notNull(),
+  userId: text('user_id').notNull(),
+  plan: text('plan').notNull(),
+  amountUsd: text('amount_usd').notNull(),
+  status: text('status').default('completed'),
+  provider: text('provider').default('crypto'),
+  couponId: text('coupon_id'),
+  metadata: text('metadata'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+});
+
+export const billingWebhookLogs = sqliteTable('billing_webhook_logs', {
+  id: text('id').primaryKey(),
+  paymentId: text('payment_id'),
+  provider: text('provider').default('blockbee'),
+  payload: text('payload').notNull(),
+  headers: text('headers'),
+  status: text('status').default('processed'),
+  errorMessage: text('error_message'),
+  metadata: text('metadata'),
+  createdAt: text('created_at'),
+});
+
+export const accountLedger = sqliteTable('account_ledger', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().unique(),
+  attentionBalance: text('attention_balance').default('0'),
+  successTaxRate: text('success_tax_rate').default('0'),
+  reputationScore: text('reputation_score').default('0'),
+  lastPeakVelocity: text('last_peak_velocity').default('0'),
+  thermalCacheScore: text('thermal_cache_score').default('0'),
+  updatedAt: text('updated_at'),
+});
+
+// 9. Telegram Connections
+export const telegramConnections = sqliteTable('telegram_connections', {
+  id: text('id').primaryKey(),
+  pairCode: text('pair_code'),
+  tgChatId: text('tg_chat_id'),
+  tgUsername: text('tg_username'),
+  isVerified: integer('is_verified', { mode: 'boolean' }).notNull().default(false),
+  createdAt: text('created_at'),
+});
+
+// 10. Tags & Resource Tags
+export const tags = sqliteTable('tags', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  nameLower: text('name_lower').notNull(),
+  userId: text('user_id'),
+  metadata: text('metadata'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  usageCount: integer('usage_count').default(0),
+  isTrash: integer('is_trash', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at'),
+});
+
+export const resourceTags = sqliteTable('resource_tags', {
+  id: text('id').primaryKey(),
+  tagId: text('tag_id').notNull(),
+  tag: text('tag').notNull(),
+  resourceId: text('resource_id').notNull(),
+  resourceType: text('resource_type').notNull(),
+  userId: text('user_id'),
+  metadata: text('metadata'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  isPinned: integer('is_pinned', { mode: 'boolean' }).default(false),
+  isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at'),
+});
+
+
