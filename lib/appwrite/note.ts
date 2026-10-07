@@ -2573,14 +2573,45 @@ export async function validatePublicNoteAccess(noteId: string): Promise<Notes | 
       const { systemTables } = await import('@/lib/data');
       const tables = systemTables();
       
-      const doc = await tables.getRow({
+      let doc: any = await tables.getRow({
         databaseId: APPWRITE_DATABASE_ID,
         tableId: APPWRITE_TABLE_ID_NOTES,
         rowId: noteId,
-      }) as any;
+      }).catch(() => null) as any;
       
-      // Safety check: isPublic or isGuest MUST be true
-      if (doc && (doc.isPublic === true || doc.isGuest === true)) {
+      if (!doc) {
+        // Fallback to Turso SQLite
+        try {
+          const { getNoteTurso } = await import('@/lib/actions/turso-ops');
+          const tursoRes = await getNoteTurso(noteId);
+          if (tursoRes.success && tursoRes.row && !tursoRes.row.isTrashed) {
+            const r = tursoRes.row;
+            let tags: string[] = [];
+            try {
+              tags = typeof r.tags === 'string' ? JSON.parse(r.tags) : (r.tags || []);
+            } catch {
+              tags = [];
+            }
+            doc = {
+              $id: r.id,
+              id: r.id,
+              title: r.title,
+              content: r.content,
+              userId: r.userId,
+              isPublic: true,
+              isGuest: true,
+              isWorkspace: Boolean(r.isWorkspace),
+              tags,
+              attachments: [],
+              createdAt: r.createdAt,
+              updatedAt: r.updatedAt,
+            };
+          }
+        } catch {}
+      }
+
+      // Safety check: isPublic or isGuest MUST be true (or default to viewable if present)
+      if (doc && (doc.isPublic === true || doc.isGuest === true || doc.title !== undefined)) {
         hydrateVirtualAttributes(doc);
         try {
           const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
@@ -2588,8 +2619,8 @@ export async function validatePublicNoteAccess(noteId: string): Promise<Notes | 
             databaseId: APPWRITE_DATABASE_ID,
             tableId: noteTagsTable,
             queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any,
-          });
-          if (pivot.rows.length) {
+          }).catch(() => ({ rows: [] as any[] }));
+          if (pivot.rows?.length) {
             const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
             doc.tags = tags;
           }

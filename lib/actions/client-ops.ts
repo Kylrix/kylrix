@@ -60,7 +60,9 @@ async function getJwt(): Promise<string | undefined> {
     return undefined;
   }
   try {
-    const res = await account.createJWT().catch(() => null);
+    const jwtPromise = account.createJWT().catch(() => null);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+    const res = await Promise.race([jwtPromise, timeoutPromise]);
     return res?.jwt;
   } catch (_e) {
     return undefined;

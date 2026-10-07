@@ -1,5 +1,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
+import { getSharedNoteDataSecure } from '@/lib/actions/secure-ops';
 import SharedNoteClient from '../SharedNoteClient';
 
 /**
@@ -17,5 +18,12 @@ export default async function SharedNotePage({
   if (first.startsWith('opengraph-image') || first.startsWith('twitter-image')) {
     notFound();
   }
-  return <SharedNoteClient noteId={id} initialKey={key?.join('/') || undefined} />;
+  const initialNote = await getSharedNoteDataSecure(id).catch(() => null);
+  return (
+    <SharedNoteClient
+      noteId={id}
+      initialKey={key?.join('/') || undefined}
+      initialNote={initialNote}
+    />
+  );
 }

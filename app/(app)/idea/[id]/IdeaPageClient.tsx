@@ -33,6 +33,7 @@ import { Lock, ArrowLeft, LogIn, Globe, AlertTriangle } from 'lucide-react';
 interface IdeaPageClientProps {
   noteId: string;
   decryptionKey?: string;
+  initialNote?: Notes | null;
 }
 
 type AccessResult =
@@ -117,22 +118,73 @@ function resolveCollaboratorRole(note: Notes, userId: string): 'write-collab' | 
   return null;
 }
 
+function computeRole(note: Notes, userId?: string): NoteAccessRole | 'none' {
+  const ownerId = resolveResourceOwnerId(note as Record<string, unknown>);
+
+  // Owner
+  if (userId && ownerId && userId === ownerId) return 'owner';
+
+  // Collaborator
+  if (userId) {
+    const collabRole = resolveCollaboratorRole(note, userId);
+    if (collabRole) return collabRole;
+  }
+
+  // Legacy editableByAnyone → treat as write-collab if authenticated
+  if (userId && isNoteEditableByAnyone(note)) return 'write-collab';
+
+  // Guest access (any authenticated user allowed if isGuest=true)
+  if ((note as any).isGuest === true) return 'guest';
+
+  // Public access
+  if (note.isPublic === true) return 'public';
+
+  return 'none';
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClientProps) {
+export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: IdeaPageClientProps) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { setCachedData, invalidate } = useDataNexus();
 
-  const [access, setAccess] = useState<AccessResult>({ role: 'loading' });
+  const [access, setAccess] = useState<AccessResult>(() => {
+    if (initialNote) {
+      const role = computeRole(initialNote, user?.$id);
+      if (role !== 'none') {
+        return { role: role as any, note: initialNote };
+      }
+    }
+    return { role: 'loading' };
+  });
   const [_isRefreshing, _setIsRefreshing] = useState(false);
 
   const CACHE_KEY = useMemo(() => `idea_page_note_${noteId}`, [noteId]);
 
+  // Decrypt initialNote on mount if key is available
+  useEffect(() => {
+    let cancelled = false;
+    if (initialNote && decryptionKey) {
+      void (async () => {
+        try {
+          const decrypted = await decryptNoteIfNeeded(initialNote, decryptionKey);
+          if (!cancelled) {
+            const role = computeRole(decrypted, user?.$id);
+            if (role !== 'none') {
+              setAccess({ role: role as any, note: decrypted });
+            }
+          }
+        } catch {}
+      })();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [initialNote, decryptionKey, user?.$id]);
+
   // ── Permission Resolution ─────────────────────────────────────────────────
   const resolveAccess = useCallback(async (_forceRefresh = false): Promise<void> => {
-    if (authLoading) return;
-
     try {
       const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
 
@@ -150,6 +202,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
           } catch {}
         },
         fetchRemote: async () => {
+          if (initialNote && !_forceRefresh) return initialNote;
           const { getSharedNoteData } = await import('@/lib/actions/client-ops');
           return await getSharedNoteData(noteId);
         },
@@ -189,31 +242,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
         setAccess({ role: 'none', reason: 'no-access' });
       }
     }
-  }, [authLoading, user?.$id, noteId, decryptionKey, CACHE_KEY, setCachedData]);
-
-  function computeRole(note: Notes, userId?: string): NoteAccessRole | 'none' {
-    const ownerId = resolveResourceOwnerId(note as Record<string, unknown>);
-
-    // Owner
-    if (userId && ownerId && userId === ownerId) return 'owner';
-
-    // Collaborator
-    if (userId) {
-      const collabRole = resolveCollaboratorRole(note, userId);
-      if (collabRole) return collabRole;
-    }
-
-    // Legacy editableByAnyone → treat as write-collab if authenticated
-    if (userId && isNoteEditableByAnyone(note)) return 'write-collab';
-
-    // Guest access (any authenticated user allowed if isGuest=true)
-    if ((note as any).isGuest === true) return 'guest';
-
-    // Public access
-    if (note.isPublic === true) return 'public';
-
-    return 'none';
-  }
+  }, [user?.$id, noteId, decryptionKey, CACHE_KEY, setCachedData, initialNote]);
 
   useEffect(() => {
     resolveAccess();
@@ -290,7 +319,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
   // ── Render states ─────────────────────────────────────────────────────────
 
   // Loading
-  if (access.role === 'loading' || authLoading) {
+  if (access.role === 'loading') {
     return (
       <div className="min-h-screen bg-[#161412] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

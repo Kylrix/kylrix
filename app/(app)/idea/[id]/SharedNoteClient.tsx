@@ -13,8 +13,10 @@ import IdeaPageClient from '@/app/(app)/idea/[id]/IdeaPageClient';
 interface SharedNoteClientProps {
   noteId: string;
   initialKey?: string;
+  initialNote?: any;
 }
 
-export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClientProps) {
-  return <IdeaPageClient noteId={noteId} decryptionKey={initialKey} />;
+export default function SharedNoteClient({ noteId, initialKey, initialNote }: SharedNoteClientProps) {
+  return <IdeaPageClient noteId={noteId} decryptionKey={initialKey} initialNote={initialNote} />;
 }
+

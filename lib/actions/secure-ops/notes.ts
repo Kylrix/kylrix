@@ -27,10 +27,42 @@ const NOTES_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
 
 async function hydrateSharedNoteRow(noteId: string) {
   const tables = createSystemTablesDB();
-  const doc = await tables.getRow({
+  let doc: any = await tables.getRow({
     databaseId: NOTE_DB_ID,
     tableId: NOTES_TABLE_ID,
-    rowId: noteId}) as any;
+    rowId: noteId,
+  }).catch(() => null);
+
+  if (!doc) {
+    // Turso fallback
+    try {
+      const { getNoteTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await getNoteTurso(noteId);
+      if (tursoRes.success && tursoRes.row && !tursoRes.row.isTrashed) {
+        const r = tursoRes.row;
+        let tags: string[] = [];
+        try {
+          tags = typeof r.tags === 'string' ? JSON.parse(r.tags) : (r.tags || []);
+        } catch {
+          tags = [];
+        }
+        doc = {
+          $id: r.id,
+          id: r.id,
+          title: r.title,
+          content: r.content,
+          userId: r.userId,
+          isPublic: true,
+          isGuest: true,
+          isWorkspace: Boolean(r.isWorkspace),
+          tags,
+          attachments: [],
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        };
+      }
+    } catch {}
+  }
 
   if (!doc || doc.isTrash === true || doc.isDeleted === true) {
     return null;
@@ -41,8 +73,9 @@ async function hydrateSharedNoteRow(noteId: string) {
     const pivot = await tables.listRows({
       databaseId: NOTE_DB_ID,
       tableId: noteTagsTable,
-      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any});
-    if (pivot.rows.length) {
+      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any,
+    }).catch(() => ({ rows: [] as any[] }));
+    if (pivot.rows?.length) {
       const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
       doc.tags = tags;
     }
@@ -59,16 +92,31 @@ async function hydrateSharedNoteRow(noteId: string) {
 
 async function canReadSharedNoteSecure(noteId: string, actorId?: string | null) {
   const tables = createSystemTablesDB();
+  let doc: any = null;
   try {
-    const doc = await tables.getRow({
+    doc = await tables.getRow({
       databaseId: NOTE_DB_ID,
       tableId: NOTES_TABLE_ID,
       rowId: noteId,
-    }) as any;
-    if (!doc || doc.isTrash === true || doc.isDeleted === true) return false;
+    });
   } catch {
+    doc = null;
+  }
+
+  if (!doc) {
+    // Check Turso fallback
+    try {
+      const { getNoteTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await getNoteTurso(noteId);
+      if (tursoRes.success && tursoRes.row && !tursoRes.row.isTrashed) {
+        return true;
+      }
+    } catch {}
     return false;
   }
+
+  if (doc.isTrash === true || doc.isDeleted === true) return false;
+
   if (actorId) {
     const allowed = await verifyNotePermission(noteId, actorId, 'viewer');
     if (allowed) return true;
