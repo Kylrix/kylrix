@@ -15,9 +15,10 @@ function escapeHtml(str: string | null | undefined): string {
 
 const PERSISTENT_REPLY_KEYBOARD = {
   keyboard: [
-    [{ text: '📝 Notes' }, { text: '🎯 Goals' }],
+    [{ text: '💡 Ideas' }, { text: '🎯 Goals' }],
+    [{ text: '🔍 Search' }, { text: '⚡ Quick Capture' }],
     [{ text: '📂 Workspaces' }, { text: '⚙️ Settings' }],
-    [{ text: '⚡ Quick Capture' }, { text: '❓ Help' }],
+    [{ text: '❓ Menu' }],
   ],
   resize_keyboard: true,
   is_persistent: true,
@@ -107,15 +108,18 @@ function buildMainMenuMarkup() {
   return {
     inline_keyboard: [
       [
-        { text: '📝 Notes', callback_data: 'menu_notes' },
+        { text: '💡 Ideas', callback_data: 'menu_notes' },
         { text: '🎯 Goals', callback_data: 'menu_goals' },
+      ],
+      [
+        { text: '🔍 Search', callback_data: 'search_hint' },
+        { text: '⚡ Quick Capture', callback_data: 'notes_new_hint' },
       ],
       [
         { text: '📂 Workspaces', callback_data: 'menu_workspaces' },
         { text: '⚙️ Settings', callback_data: 'menu_settings' },
       ],
       [
-        { text: '⚡ Quick Capture', callback_data: 'notes_new_hint' },
         { text: '🔄 Refresh', callback_data: 'menu_main' },
       ],
     ],
@@ -292,11 +296,13 @@ async function renderSettingsMenu(actor: ApiActor) {
 }
 
 export const TELEGRAM_BOT_COMMANDS = [
-  { command: 'notes', description: 'View and manage your notes' },
+  { command: 'menu', description: 'Open interactive workspace menu' },
+  { command: 'ideas', description: 'View and manage your ideas' },
+  { command: 'idea', description: 'Create idea: /idea Title | Content' },
   { command: 'goals', description: 'View and track your goals' },
-  { command: 'workspaces', description: 'List and switch workspaces' },
-  { command: 'note', description: 'Create note: /note Title | Content' },
   { command: 'goal', description: 'Create goal: /goal Title' },
+  { command: 'search', description: 'Search items: /search <keyword>' },
+  { command: 'workspaces', description: 'List and switch workspaces' },
   { command: 'settings', description: 'Notification settings and status' },
   { command: 'help', description: 'Open dashboard and quick menu' },
 ];
@@ -443,12 +449,20 @@ export async function handleTelegramUpdate(body: any): Promise<{
         return { success: true };
       }
 
+      if (callbackData === 'search_hint') {
+        await sendTelegramMessage(
+          chatId,
+          '🔍 <b>Search Workspace</b>\n\nType: <code>/search &lt;keyword&gt;</code> to find matching ideas and goals.'
+        );
+        return { success: true };
+      }
+
       if (callbackData === 'notes_new_hint') {
         await sendTelegramMessage(
           chatId,
-          '💡 <b>Create Note</b>\n\n' +
+          '💡 <b>Create Idea</b>\n\n' +
             '• Simply type any message to <b>Quick-Capture</b>\n' +
-            '• Or use <code>/note Title | Detailed content</code>'
+            '• Or use <code>/idea Title | Detailed content</code>'
         );
         return { success: true };
       }
@@ -710,13 +724,88 @@ export async function handleTelegramUpdate(body: any): Promise<{
       return { success: true };
     }
 
-    if (rawText === '❓ Help' || rawText === '/help' || rawText === '/start' || rawText === '/menu') {
+    if (rawText === '❓ Help' || rawText === '❓ Menu' || rawText === '/help' || rawText === '/start' || rawText === '/menu') {
       await sendTelegramMessage(
         chatId,
         '⚡ <b>Kylrix Workspace Dashboard</b>\n\n' +
           'Tap any menu below to manage your decentralized workspace:',
         buildMainMenuMarkup()
       );
+      return { success: true };
+    }
+
+    // Search command or keyboard tap
+    if (rawText === '🔍 Search' || rawText === '/search') {
+      await sendTelegramMessage(
+        chatId,
+        '🔍 <b>Search Workspace</b>\n\nType <code>/search &lt;keyword&gt;</code> to find any idea, goal, or deliverable.'
+      );
+      return { success: true };
+    }
+
+    if (rawText.startsWith('/search ')) {
+      const query = rawText.replace(/^\/search\s+/, '').trim();
+      if (!query) {
+        await sendTelegramMessage(chatId, '🔍 Type <code>/search &lt;keyword&gt;</code> to search.');
+        return { success: true };
+      }
+
+      try {
+        const qLower = query.toLowerCase();
+        const [notesRes, goalsRes] = await Promise.all([
+          ApiResources.listNotes(actor, 15).catch(() => []),
+          ApiResources.listGoals(actor, 15).catch(() => []),
+        ]);
+
+        const notes = extractItems(notesRes);
+        const goals = extractItems(goalsRes);
+
+        const matchedNotes = notes.filter(
+          (n: any) =>
+            (n.title && n.title.toLowerCase().includes(qLower)) ||
+            (n.content && n.content.toLowerCase().includes(qLower))
+        );
+        const matchedGoals = goals.filter(
+          (g: any) =>
+            (g.title && g.title.toLowerCase().includes(qLower)) ||
+            (g.description && g.description.toLowerCase().includes(qLower))
+        );
+
+        const totalMatches = matchedNotes.length + matchedGoals.length;
+        if (totalMatches === 0) {
+          await sendTelegramMessage(chatId, `🔍 <b>No Results Found</b>\n\nNo items matching "<b>${escapeHtml(query)}</b>".`);
+          return { success: true };
+        }
+
+        let resultText = `🔍 <b>Search Results for "${escapeHtml(query)}"</b> (${totalMatches} found)\n\n`;
+        const inlineKeyboard: any[][] = [];
+
+        if (matchedNotes.length > 0) {
+          resultText += '<b>💡 Ideas:</b>\n';
+          matchedNotes.slice(0, 5).forEach((n: any, idx: number) => {
+            resultText += `${idx + 1}. <b>${escapeHtml(n.title || 'Untitled')}</b>\n   <code>${n.id}</code>\n`;
+            inlineKeyboard.push([{ text: `📖 Read: ${escapeHtml(n.title || 'Idea').slice(0, 30)}`, callback_data: `read_note:${n.id}` }]);
+          });
+          resultText += '\n';
+        }
+
+        if (matchedGoals.length > 0) {
+          resultText += '<b>🎯 Goals:</b>\n';
+          matchedGoals.slice(0, 5).forEach((g: any, idx: number) => {
+            const statusIcon = g.status === 'completed' ? '✅' : '⏳';
+            resultText += `${statusIcon} ${idx + 1}. <b>${escapeHtml(g.title || 'Goal')}</b> (${g.status || 'todo'})\n   <code>${g.id}</code>\n`;
+            if (g.status !== 'completed') {
+              inlineKeyboard.push([{ text: `✅ Done: ${escapeHtml(g.title || 'Goal').slice(0, 30)}`, callback_data: `done_goal:${g.id}` }]);
+            }
+          });
+        }
+
+        inlineKeyboard.push([{ text: '🔙 Main Menu', callback_data: 'menu_main' }]);
+
+        await sendTelegramMessage(chatId, resultText, { inline_keyboard: inlineKeyboard });
+      } catch (err: any) {
+        await sendTelegramMessage(chatId, `❌ Search error: ${escapeHtml(err?.message)}`);
+      }
       return { success: true };
     }
 
