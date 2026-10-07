@@ -2,15 +2,15 @@
   <img src="public/logo.svg" width="120" alt="Kylrix Logo">
 </p>
 
-<h1 align="center">The sovereign workspace for developers who run local AI agents.</h1>
+<h1 align="center">Zero-knowledge secrets and persistent memory for AI agents.</h1>
 
 <p align="center">
-  <strong>Your projects, secrets, and agents stay connected—so every session builds on the last.</strong><br>
-  <em>Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.</em>
+  <strong>Let Claude Code, Cursor, and local agents use credentials and carry context without ever seeing plaintext secrets.</strong><br>
+  <em>Client-side encrypted vault (Argon2id + AES-256-GCM), sovereign SQLite memory, and native MCP bridge.</em>
 </p>
 
 <p align="center">
-  Open source · Self-hostable · Local-first · Argon2id + AES-256-GCM
+  Open source · Self-hostable · Local-first · Zero plaintext exposure
 </p>
 
 <p align="center">
@@ -25,12 +25,11 @@
 </p>
 
 ## TL;DR
-
-- **Kylrix** — open-source, local-first workspace for notes, goals, workspaces, agent inbox, vault, and agents.
-- **CLI & MCP Bridge** — `npm i -g @kylrix/cli` · [CLI Docs](docs/cli.md)
-- **Use the cloud** — [kylrix.space](https://www.kylrix.space)
-- **Self-host** — `docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest` → app on `:5003`
-- **Wire an agent** — mint a [PAT](https://www.kylrix.space/settings?tab=developers) (your workspace) or [agent key](https://www.kylrix.space/settings?tab=agents) (the agent's own workspace), then `npx skills add kylrix/kylrix --skill mcp --skill api --skill agents`
+- **The Core Wedge**: AI agents need credentials and past context to do useful work, but pasting raw API keys into agent prompts leaks secrets to LLM providers. Kylrix bridges agents to an Argon2id/AES-256-GCM encrypted vault where credentials are resolved safely, while preserving session memory across restarts.
+- **Connect in 10s**: `npx -y @smithery/cli install kylrix/kylrix` (Cursor / Claude Code) or `kylrix mcp` locally.
+- **CLI & Local Bridge**: `npm i -g @kylrix/cli` · [CLI Docs](docs/cli.md)
+- **Self-Host**: `docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest`
+- **Hosted Cloud**: [kylrix.space](https://www.kylrix.space)
 
 ---
 
@@ -48,18 +47,16 @@
 
 Get up and running across your favorite interfaces, ordered from least friction to full self-hosting:
 
-| Platform / Client | Description | Quick Start Command / Link | Friction |
+| Surface / Tool | Description | Quick Start Command / Link | Friction |
 |---|---|---|---|
-| **🌐 Web App** | Zero-install local-first workspace with offline storage | [**Launch kylrix.space**](https://www.kylrix.space) | **Zero friction** (Instant browser) |
-| **🤖 WebMCP** | W3C Model Context Protocol in browser for visiting AI agents | [**Explore WebMCP**](docs/webmcp.md) · Enable `chrome://flags/#enable-webmcp-testing` | **Zero friction** (In-session) |
-| **💬 Telegram Bot** | Instant alerts, idea capture, goal tracking & search in Telegram | [**1-Click Connect Telegram**](https://www.kylrix.space/connect/telegram) | **1 click** (Deep link) |
-| **🎮 Discord Bot** | Interactive server bot (`/ideas`, `/goals`, `/search`, `/pair`) | [**Install Discord Bot**](https://www.kylrix.space/connect/discord) | **1 click** (Server invite) |
-| **⚡ CLI & Local Bridge** | Sovereign terminal tool & local agent execution engine | `npm i -g @kylrix/cli` *(100% offline & local)* | **Minimal** (Node 18+) |
-| **📡 REST API** | Programmatic CRUD for ideas, goals, vaults & agents (`/api/v1`) | [**Modular Samples (`samples/REST/`)**](samples/REST/) · `python3 samples/REST/create_idea.py` or `./samples/REST/create_idea.sh` | **Low** (Bearer PAT) |
-| **🔌 MCP Server** | Native tool server for Cursor, Claude, Windsurf & AI IDEs | **Cloud:** `npx -y @smithery/cli install kylrix/kylrix`<br>**Local:** `kylrix mcp` | **1 click** (Smithery) / **Instant** (Local) |
-| **🔐 Sign in with Kylrix** | OAuth 2.1 / OIDC identity provider with PKCE | [Discovery Doc](https://www.kylrix.space/.well-known/openid-configuration) · [OAuth Guide](.agents/skills/oauth2/SKILL.md) | **Standard** (OAuth 2.1) |
-| **🔄 Self-Hosted Sync** | Bi-directional replication between private nodes and Cloud | [**Settings → Cloud Sync**](https://www.kylrix.space/settings?tab=sync#cloud-sync) | **Low** (1-click punch) |
+| **🔌 MCP Server** | Native tool server for Cursor, Claude Code, Windsurf & AI IDEs | **Cloud:** `npx -y @smithery/cli install kylrix/kylrix`<br>**Local:** `kylrix mcp` | **1 click** (Smithery) / **Instant** (Local) |
+| **⚡ CLI & Local Agent Bridge** | Sovereign terminal tool & local agent execution engine | `npm i -g @kylrix/cli` *(100% offline embedded SQLite)* | **Minimal** (Node 18+) |
+| **🔐 Sovereign Vault** | Argon2id + AES-256-GCM zero-knowledge agent secrets & keys | [**Explore Vault Architecture**](docs/vault.md) · `kylrix vault unlock` | **Instant** |
+| **🌐 Web App** | Local-first workspace with offline storage & browser agents | [**Launch kylrix.space**](https://www.kylrix.space) | **Zero friction** (Instant browser) |
 | **🐳 Docker Self-Host** | Sovereign container on port `:5003` | `docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest` | **Instant** (Docker) |
+| **📡 REST API** | Programmatic CRUD for ideas, goals, vaults & agents (`/api/v1`) | [**API Documentation (`/docs/api`)**](docs/api.md) · Bearer PAT token | **Low** (Bearer PAT) |
+
+> 💬 *Also included: [Telegram Bot](https://www.kylrix.space/connect/telegram), [Discord Bot](https://www.kylrix.space/connect/discord), and [WebMCP](docs/webmcp.md) browser runner.*
 
 ---
 
@@ -74,42 +71,27 @@ npm install -g @kylrix/cli
 *(Zero-install alternative: `npx @kylrix/cli <command>`)*
 
 ```bash
-# 1. Start local stdio MCP server for Cursor / Claude / Windsurf
+# 1. Start local stdio MCP server for Cursor / Claude Code / Windsurf
 kylrix mcp
 
-# 2. Create and list local sovereign ideas (offline embedded SQLite)
-kylrix ideas create "Local Agent Idea" --content "Zero-cloud memory"
-kylrix ideas list
-
-# 3. Track personal and project goals
-kylrix goals create "Ship MVP" --target 100 --unit %
-kylrix goals list
-
-# 4. Unlock zero-knowledge encrypted vault and extract secrets (.env)
+# 2. Unlock zero-knowledge encrypted vault & pass secrets to agents without leaks
 kylrix vault unlock
 kylrix vault get <secret-id> --pure > .env
 
-# 5. Generate live 2FA TOTP authentication codes
-kylrix totp list
-kylrix totp code <id>
-
-# 6. Global search across local ideas, goals, events, and secrets
-kylrix search "agent"
-
-# 7. Start autonomous local AI agent session
-kylrix agents start "Refactor auth" --prompt "Audit login flows"
-
-# 8. Autonomously detect and connect coding tools (Claude, Cursor, Antigravity, Kiro) & synthesize context
+# 3. Seamlessly auto-connect IDE agents (Claude Code, Cursor, Antigravity) to workspace context
 kylrix connect
 kylrix connect --client claude --directory ./my-project
-kylrix connect-status
 
-# 9. Synchronize local offline SQLite silo to cloud/self-hosted workspace
+# 4. Local-first sovereign memory (embedded SQLite — carries across reboots)
+kylrix ideas create "Auth refactor design" --content "Zero-cloud agent memory"
+kylrix goals create "Ship agent v1" --target 100 --unit %
+
+# 5. Local agent execution session
+kylrix agents start "Audit auth flow" --prompt "Inspect login handlers"
+
+# 6. Synchronize local offline SQLite silo to cloud or self-hosted instance (optional)
 kylrix sync
-
-# 10. Connect/pair with cloud or self-hosted instance (optional)
-kylrix login
-kylrix login --url http://localhost:3005
+kylrix login --url http://localhost:5003
 ```
 
 > 📖 See [**`docs/cli.md`**](docs/cli.md) for the complete command reference and SDK documentation.
@@ -253,6 +235,21 @@ You can build custom mobile apps (iOS/Android), desktop wrappers (Tauri/Electron
 ### Recommendations:
 - **Personal Tools & Wrappers:** Mint a [Personal Access Token (PAT)](https://www.kylrix.space/settings?tab=developers) to connect directly to the [HTTP REST API (`/api/v1`)](https://www.kylrix.space/docs/api) or isomorphic SDK.
 - **Distributed / Third-Party Apps:** Register an [OAuth 2.1 Client](https://www.kylrix.space/settings?tab=developers) with PKCE flow so users can authorize your app securely without exposing private credentials. Review [TRADEMARK.md](TRADEMARK.md) for brand and naming guidelines.
+
+---
+
+## 💳 Pricing
+
+Kylrix is local-first, self-hostable, and open source under AGPLv3. Cloud sync, multi-agent workspaces, and encrypted cloud backups are available on hosted tiers:
+
+| Tier | Price | Highlights | Target Audience |
+|---|---|---|---|
+| **Community / Self-Host** | **Free forever** | 100% offline local SQLite, zero-knowledge vault, local MCP server, unlimited local ideas & goals | Solo developers, hackers, self-hosters |
+| **Contributor** | **Free Pro forever** | Automatically unlocked with any merged PR to Kylrix within the last 30 days | Open-source contributors |
+| **Pro** | **$10 / month** | Encrypted cloud sync across machines, zero-leak cloud vault backup, AI sidekick & agent execution, audio notes, priority support | Developers using Cursor / Claude Code daily |
+| **Teams** | **$50 / month** | Shared team workspaces, nested projects, higher API & MCP rate limits, group channels | Teams coordinating multi-agent workflows |
+
+> 🔒 *Payments are processed securely via Stripe or non-custodial crypto. Self-hosting with your own infrastructure is 100% free with no artificial feature locks.*
 
 ---
 
