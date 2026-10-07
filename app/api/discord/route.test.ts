@@ -10,7 +10,6 @@ import {
   DISCORD_SLASH_COMMANDS,
   extractTitleSnippet,
   computeFuzzyMatchScore,
-  searchAndRankWorkspaceItems,
 } from './route';
 import { ApiResources } from '@/lib/api/resources';
 import { PairingService } from '@/lib/services/pairing';

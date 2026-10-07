@@ -74,7 +74,7 @@ export async function getPublicFormDataSecure(formId: string) {
   }));
 }
 
-export async function getPublicGoalDataSecure(goalId: string, jwt?: string) {
+export async function getPublicGoalDataSecure(goalId: string, _jwt?: string) {
   let row: any = null;
 
   // 1. Try Appwrite first

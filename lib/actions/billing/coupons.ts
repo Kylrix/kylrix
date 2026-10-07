@@ -320,6 +320,7 @@ export async function createCouponAction(input: {
     // Dispatch email if targeted
     if (targetUserId) {
       try {
+        const systemClient = createSystemClient();
         const { users: systemUsers } = systemClient;
         const targetAccount = await systemUsers.get(targetUserId);
         if (targetAccount && targetAccount.email) {

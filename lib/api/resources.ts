@@ -827,6 +827,7 @@ export const ApiResources = {
         status: (patch.status as string) || (row as any).status,
         priority: (patch.priority as string) || (row as any).priority,
         dueDate: patch.dueDate !== undefined ? (patch.dueDate as string) : (row as any).dueDate,
+        createdAt: (row as any).$createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
     }).catch((e) => console.warn('[turso] ApiResources updateGoal mirror warning:', e));

@@ -2800,7 +2800,6 @@ export async function POST(req: NextRequest) {
 
         try {
           const resolved = await searchAndRankWorkspaceItems(actor, rawTarget, kind);
-          const domainUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
 
           if (resolved.exact) {
             const { id, title, kindTitle, shareUrl } = resolved.exact;

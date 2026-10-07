@@ -629,7 +629,9 @@ export async function getNoteTurso(noteId: string) {
 /**
  * Upserts a goal/task record in Turso.
  */
-export async function upsertGoalTurso(data: typeof schema.goals.$inferInsert) {
+export async function upsertGoalTurso(
+  data: Partial<typeof schema.goals.$inferInsert> & { id: string; userId: string; title: string }
+) {
   try {
     const existing = await db
       .select({ id: schema.goals.id })
@@ -651,7 +653,11 @@ export async function upsertGoalTurso(data: typeof schema.goals.$inferInsert) {
         .set(updateData)
         .where(eq(schema.goals.id, data.id));
     } else {
-      await db.insert(schema.goals).values(data);
+      await db.insert(schema.goals).values({
+        ...data,
+        createdAt: data.createdAt || new Date().toISOString(),
+        updatedAt: data.updatedAt || new Date().toISOString(),
+      } as any);
     }
     return { success: true };
   } catch (err: any) {
