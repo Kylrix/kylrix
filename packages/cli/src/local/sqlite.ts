@@ -201,8 +201,38 @@ function initSqliteSchema(db: any) {
       deleted_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS external_contexts (
+      id TEXT PRIMARY KEY,
+      client TEXT NOT NULL,
+      directory TEXT,
+      workspace_id TEXT,
+      title TEXT NOT NULL,
+      summary TEXT,
+      payload TEXT,
+      status TEXT DEFAULT 'connected',
+      is_local INTEGER DEFAULT 1,
+      sync_status TEXT DEFAULT 'unsynced',
+      cloud_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS connected_tools (
+      id TEXT PRIMARY KEY,
+      client TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      directory TEXT,
+      workspace_id TEXT,
+      connected_at TEXT NOT NULL,
+      last_active_at TEXT NOT NULL,
+      status TEXT DEFAULT 'connected',
+      metadata TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_ideas_updated ON ideas(updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(status);
+    CREATE INDEX IF NOT EXISTS idx_ext_ctx_client ON external_contexts(client);
+    CREATE INDEX IF NOT EXISTS idx_ext_ctx_dir ON external_contexts(directory);
   `);
 
   // Migrate existing tables if sync_status or cloud_id columns are missing
@@ -220,4 +250,6 @@ function initSqliteSchema(db: any) {
   try { db.exec("ALTER TABLE forms ADD COLUMN cloud_id TEXT"); } catch {}
   try { db.exec("ALTER TABLE flows ADD COLUMN sync_status TEXT DEFAULT 'unsynced'"); } catch {}
   try { db.exec("ALTER TABLE flows ADD COLUMN cloud_id TEXT"); } catch {}
+  try { db.exec("ALTER TABLE external_contexts ADD COLUMN sync_status TEXT DEFAULT 'unsynced'"); } catch {}
+  try { db.exec("ALTER TABLE external_contexts ADD COLUMN cloud_id TEXT"); } catch {}
 }

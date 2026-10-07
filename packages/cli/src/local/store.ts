@@ -1190,4 +1190,137 @@ export const LocalStore = {
     }
     return results;
   },
+
+  // ── Connected Tools & External Workspaces / Contexts ──
+  connectTool(data: { client: string; name?: string; directory?: string; workspaceId?: string; metadata?: any }): any {
+    const id = generateLocalId('tool');
+    const now = new Date().toISOString();
+    const client = data.client.toLowerCase();
+    const name = data.name || data.client;
+    const directory = data.directory || process.cwd();
+    const workspaceId = data.workspaceId || null;
+    const metadataStr = data.metadata ? JSON.stringify(data.metadata) : null;
+
+    const db = getDatabase();
+    if (db) {
+      try {
+        const stmt = db.prepare(`
+          INSERT INTO connected_tools (id, client, name, directory, workspace_id, connected_at, last_active_at, status, metadata)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'connected', ?)
+          ON CONFLICT(client) DO UPDATE SET
+            name = excluded.name,
+            directory = excluded.directory,
+            workspace_id = COALESCE(excluded.workspace_id, connected_tools.workspace_id),
+            last_active_at = excluded.last_active_at,
+            status = 'connected',
+            metadata = excluded.metadata
+        `);
+        stmt.run(id, client, name, directory, workspaceId, now, now, metadataStr);
+      } catch {}
+      return { id, client, name, directory, workspaceId, connectedAt: now, status: 'connected' };
+    }
+    const store = loadFallback();
+    store.connectedTools = store.connectedTools || [];
+    const existingIndex = store.connectedTools.findIndex((t: any) => t.client === client);
+    const item = { id, client, name, directory, workspaceId, connectedAt: now, lastActiveAt: now, status: 'connected', metadata: data.metadata };
+    if (existingIndex >= 0) {
+      store.connectedTools[existingIndex] = { ...store.connectedTools[existingIndex], ...item };
+    } else {
+      store.connectedTools.push(item);
+    }
+    saveFallback(store);
+    return item;
+  },
+
+  listConnectedTools(): any[] {
+    const db = getDatabase();
+    if (db) {
+      try {
+        return db.prepare('SELECT * FROM connected_tools ORDER BY last_active_at DESC').all();
+      } catch {
+        return [];
+      }
+    }
+    const store = loadFallback();
+    return store.connectedTools || [];
+  },
+
+  saveExternalContext(data: {
+    id?: string;
+    client: string;
+    directory?: string;
+    workspaceId?: string;
+    title: string;
+    summary?: string;
+    payload?: any;
+    status?: string;
+  }): any {
+    const id = data.id || generateLocalId('ctx');
+    const now = new Date().toISOString();
+    const payloadStr = typeof data.payload === 'string' ? data.payload : data.payload ? JSON.stringify(data.payload) : null;
+    const directory = data.directory || process.cwd();
+    const status = data.status || 'connected';
+
+    const db = getDatabase();
+    if (db) {
+      try {
+        const stmt = db.prepare(`
+          INSERT INTO external_contexts (id, client, directory, workspace_id, title, summary, payload, status, is_local, sync_status, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'unsynced', ?, ?)
+        `);
+        stmt.run(id, data.client.toLowerCase(), directory, data.workspaceId || null, data.title, data.summary || null, payloadStr, status, now, now);
+      } catch {}
+      return { id, ...data, directory, status, createdAt: now, updatedAt: now };
+    }
+    const store = loadFallback();
+    store.externalContexts = store.externalContexts || [];
+    const item = { id, ...data, directory, status, createdAt: now, updatedAt: now };
+    store.externalContexts.unshift(item);
+    saveFallback(store);
+    return item;
+  },
+
+  listExternalContexts(filter?: { client?: string; directory?: string; workspaceId?: string }): any[] {
+    const db = getDatabase();
+    if (db) {
+      try {
+        let sql = 'SELECT * FROM external_contexts WHERE 1=1';
+        const params: any[] = [];
+        if (filter?.client) {
+          sql += ' AND client = ?';
+          params.push(filter.client.toLowerCase());
+        }
+        if (filter?.directory) {
+          sql += ' AND directory = ?';
+          params.push(filter.directory);
+        }
+        if (filter?.workspaceId) {
+          sql += ' AND workspace_id = ?';
+          params.push(filter.workspaceId);
+        }
+        sql += ' ORDER BY updated_at DESC';
+        return db.prepare(sql).all(...params);
+      } catch {
+        return [];
+      }
+    }
+    const store = loadFallback();
+    let items = store.externalContexts || [];
+    if (filter?.client) items = items.filter((i: any) => i.client === filter.client?.toLowerCase());
+    if (filter?.directory) items = items.filter((i: any) => i.directory === filter.directory);
+    if (filter?.workspaceId) items = items.filter((i: any) => i.workspaceId === filter.workspaceId);
+    return items;
+  },
+
+  synthesizeContexts(targetDirectory?: string): { clients: string[]; contexts: any[]; synthesizedSummary: string } {
+    const dir = targetDirectory || process.cwd();
+    const contexts = this.listExternalContexts({ directory: dir });
+    const uniqueClients = Array.from(new Set(contexts.map((c: any) => c.client)));
+    const summaries = contexts.map((c: any) => `[${c.client}] ${c.title}: ${c.summary || 'Context snapshot'}`).join('\n');
+    return {
+      clients: uniqueClients,
+      contexts,
+      synthesizedSummary: summaries || 'No cross-tool context recorded yet for this directory.',
+    };
+  },
 };

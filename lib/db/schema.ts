@@ -277,6 +277,8 @@ export const workspaces = sqliteTable('workspaces', {
   inviteCode: text('invite_code'),
   isPublic: integer('is_public', { mode: 'boolean' }).default(false),
   isAgentic: integer('is_agentic', { mode: 'boolean' }).default(false),
+  isExternal: integer('is_external', { mode: 'boolean' }).default(false),
+  externalClient: text('external_client'),
   isLocked: integer('is_locked', { mode: 'boolean' }).default(false),
   privacyMode: integer('privacy_mode', { mode: 'boolean' }).default(false),
   metadata: text('metadata'),
@@ -284,6 +286,20 @@ export const workspaces = sqliteTable('workspaces', {
   updatedAt: text('updated_at').notNull(),
 });
 export const projects = workspaces;
+
+export const externalContexts = sqliteTable('external_contexts', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  client: text('client').notNull(), // 'claude', 'cursor', 'antigravity', 'codex', 'kiro', 'windsurf', etc.
+  directory: text('directory'), // standalone project directory
+  workspaceId: text('workspace_id'), // linked workspace if associated
+  title: text('title').notNull().default(''),
+  summary: text('summary'),
+  payload: text('payload'), // JSON serialized context / conversation / sessions / memories
+  status: text('status').default('connected'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
 
 export const workspaceObjects = sqliteTable('workspace_objects', {
   id: text('id').primaryKey(),

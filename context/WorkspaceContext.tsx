@@ -20,6 +20,8 @@ export interface WorkspaceItem {
   isShared?: boolean;
   isPublic?: boolean;
   isAgentic?: boolean;
+  isExternal?: boolean;
+  externalClient?: string | null;
   agentId?: string | null;
   role?: string;
   inviteCode?: string | null;
@@ -33,6 +35,7 @@ interface WorkspaceContextType {
   ownedWorkspaces: WorkspaceItem[];
   sharedWorkspaces: WorkspaceItem[];
   agentWorkspaces: WorkspaceItem[];
+  externalWorkspaces: WorkspaceItem[];
   loadingWorkspaces: boolean;
   setActiveWorkspaceId: (id: string) => void;
   registerSharedWorkspace: (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean; role?: string }) => Promise<void>;
@@ -104,10 +107,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           const id = String(p.$id || p.id || '').trim();
           const ownerId = p.ownerId || p.userId || '';
           const isAgentic = p.isAgentic === true || String(p.isAgentic) === 'true';
+          const isExternal = p.isExternal === true || String(p.isExternal) === 'true';
+          const externalClient = p.externalClient || null;
           const isOwned = !ownerId || ownerId === userId || userId === 'guest';
           const isShared =
             Boolean(p.isShared === true && !isOwned) ||
-            Boolean(!isOwned && !isAgentic) ||
+            Boolean(!isOwned && !isAgentic && !isExternal) ||
             Boolean(p.collabStatus && p.collabStatus !== 'owner' && !isOwned);
           let privacyMode = false;
           try {
@@ -123,8 +128,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             title: p.title || p.name || 'Untitled Workspace',
             ownerId: ownerId || userId,
             isPersonal: false as const,
-            isShared: Boolean(isShared && !isAgentic),
+            isShared: Boolean(isShared && !isAgentic && !isExternal),
             isAgentic,
+            isExternal,
+            externalClient,
             agentId: p.agentId || null,
             isPublic: !!p.isPublic,
             role: p.role || (isOwned ? 'owner' : 'viewer'),
@@ -753,13 +760,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     [sortedWorkspaces]
   );
 
+  const externalWorkspaces = useMemo(
+    () => sortedWorkspaces.filter((w) => !w.isPersonal && w.isExternal === true),
+    [sortedWorkspaces]
+  );
+
   const ownedWorkspaces = useMemo(
-    () => sortedWorkspaces.filter((w) => !w.isPersonal && !w.isAgentic && (!w.isShared || w.ownerId === userId || !w.ownerId)),
+    () => sortedWorkspaces.filter((w) => !w.isPersonal && !w.isAgentic && !w.isExternal && (!w.isShared || w.ownerId === userId || !w.ownerId)),
     [sortedWorkspaces, userId]
   );
 
   const sharedWorkspaces = useMemo(
-    () => sortedWorkspaces.filter((w) => !w.isPersonal && !w.isAgentic && w.isShared && w.ownerId && w.ownerId !== userId),
+    () => sortedWorkspaces.filter((w) => !w.isPersonal && !w.isAgentic && !w.isExternal && w.isShared && w.ownerId && w.ownerId !== userId),
     [sortedWorkspaces, userId]
   );
 
@@ -1033,6 +1045,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       ownedWorkspaces,
       sharedWorkspaces,
       agentWorkspaces,
+      externalWorkspaces,
       loadingWorkspaces,
       setActiveWorkspaceId,
       registerSharedWorkspace,
@@ -1052,6 +1065,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       ownedWorkspaces,
       sharedWorkspaces,
       agentWorkspaces,
+      externalWorkspaces,
       loadingWorkspaces,
       setActiveWorkspaceId,
       registerSharedWorkspace,
@@ -1085,6 +1099,7 @@ const fallbackWorkspaceContext: WorkspaceContextType = {
   ownedWorkspaces: [],
   sharedWorkspaces: [],
   agentWorkspaces: [],
+  externalWorkspaces: [],
   loadingWorkspaces: false,
   setActiveWorkspaceId: () => {},
   registerSharedWorkspace: async () => {},

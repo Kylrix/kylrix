@@ -89,10 +89,15 @@ kylrix search "agent"
 # 7. Start autonomous local AI agent session
 kylrix agents start "Refactor auth" --prompt "Audit login flows"
 
-# 8. Synchronize local offline SQLite silo to cloud/self-hosted workspace
+# 8. Autonomously detect and connect coding tools (Claude, Cursor, Antigravity, Kiro) & synthesize context
+kylrix connect
+kylrix connect --client claude --directory ./my-project
+kylrix connect-status
+
+# 9. Synchronize local offline SQLite silo to cloud/self-hosted workspace
 kylrix sync
 
-# 9. Connect/pair with cloud or self-hosted instance (optional)
+# 10. Connect/pair with cloud or self-hosted instance (optional)
 kylrix login
 kylrix login --url http://localhost:3005
 ```

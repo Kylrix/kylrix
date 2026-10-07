@@ -37,6 +37,7 @@ import {
   currentWorkspaceCommand,
   clearWorkspaceCommand,
 } from './commands/workspaces';
+import { connectCommand, connectStatusCommand } from './commands/connect';
 import {
   listIdeasCommand,
   getIdeaCommand,
@@ -268,6 +269,25 @@ workspaces
   .alias('unuse')
   .description('Reset active workspace back to Personal Virtual Workspace')
   .action((cmdOpts) => clearWorkspaceCommand(cmdOpts));
+
+// ── Connect External Coding Tools & Cross-Tool Context ──
+program
+  .command('connect')
+  .description('Autonomously detect or connect external coding tools (Claude, Cursor, Antigravity, Windsurf, Codex, Kiro)')
+  .option('-c, --client <name>', 'Tool client name (claude, cursor, antigravity, windsurf, codex, kiro, vscode)')
+  .option('-d, --directory <dir>', 'Target project directory (defaults to current working directory)')
+  .option('-w, --workspace <id>', 'Optionally link connected tool to a specific workspace ID')
+  .option('-p, --project <id>', 'Alias for --workspace')
+  .option('--context <text>', 'Initial contextual memory or notes to seed for this directory')
+  .option('--detect', 'Force scan and display installed coding tools')
+  .action((cmdOpts) => connectCommand({ ...program.opts(), ...cmdOpts }));
+
+program
+  .command('connect-status')
+  .alias('tools')
+  .description('Inspect connected coding tools, directory contexts, and cross-tool synthesized knowledge')
+  .option('-d, --directory <dir>', 'Target directory filter')
+  .action((cmdOpts) => connectStatusCommand({ ...program.opts(), ...cmdOpts }));
 
 // ── 3. Ideas ──
 const ideas = program.command('ideas').alias('idea').description('Manage sovereign ideas');

@@ -87,18 +87,18 @@ var init_pairing_client = __esm({
             };
           }
           if (res.status === 428 || json2?.error?.code === "authorization_pending") {
-            await new Promise((resolve) => setTimeout(resolve, interval));
+            await new Promise((resolve2) => setTimeout(resolve2, interval));
             continue;
           }
           if (res.status === 429 || json2?.error?.code === "slow_down" || json2?.error === "edge_rate_limited" || json2?.error === "rate_limit_exceeded") {
             const retryHeader = res.headers?.get?.("retry-after");
             const retrySec = Number(retryHeader || json2?.retry_after || 5);
             const delay = Math.max(retrySec * 1e3, interval + 2e3);
-            await new Promise((resolve) => setTimeout(resolve, delay));
+            await new Promise((resolve2) => setTimeout(resolve2, delay));
             continue;
           }
           if (res.status >= 500 && res.status < 600) {
-            await new Promise((resolve) => setTimeout(resolve, interval));
+            await new Promise((resolve2) => setTimeout(resolve2, interval));
             continue;
           }
           throw new Error(json2?.error?.message || `Pairing rejected or failed: HTTP ${res.status}`);
@@ -171,8 +171,8 @@ var init_client = __esm({
       getBaseUrl() {
         return this.baseUrl;
       }
-      async request(method, path7, options = {}) {
-        const cleanPath = path7.startsWith("/") ? path7 : `/${path7}`;
+      async request(method, path8, options = {}) {
+        const cleanPath = path8.startsWith("/") ? path8 : `/${path8}`;
         const url2 = new URL(`${this.baseUrl}${cleanPath}`);
         if (options.query) {
           for (const [key, val] of Object.entries(options.query)) {
@@ -1223,8 +1223,38 @@ function initSqliteSchema(db) {
       deleted_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS external_contexts (
+      id TEXT PRIMARY KEY,
+      client TEXT NOT NULL,
+      directory TEXT,
+      workspace_id TEXT,
+      title TEXT NOT NULL,
+      summary TEXT,
+      payload TEXT,
+      status TEXT DEFAULT 'connected',
+      is_local INTEGER DEFAULT 1,
+      sync_status TEXT DEFAULT 'unsynced',
+      cloud_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS connected_tools (
+      id TEXT PRIMARY KEY,
+      client TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      directory TEXT,
+      workspace_id TEXT,
+      connected_at TEXT NOT NULL,
+      last_active_at TEXT NOT NULL,
+      status TEXT DEFAULT 'connected',
+      metadata TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_ideas_updated ON ideas(updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(status);
+    CREATE INDEX IF NOT EXISTS idx_ext_ctx_client ON external_contexts(client);
+    CREATE INDEX IF NOT EXISTS idx_ext_ctx_dir ON external_contexts(directory);
   `);
   try {
     db.exec("ALTER TABLE ideas ADD COLUMN sync_status TEXT DEFAULT 'unsynced'");
@@ -1280,6 +1310,14 @@ function initSqliteSchema(db) {
   }
   try {
     db.exec("ALTER TABLE flows ADD COLUMN cloud_id TEXT");
+  } catch {
+  }
+  try {
+    db.exec("ALTER TABLE external_contexts ADD COLUMN sync_status TEXT DEFAULT 'unsynced'");
+  } catch {
+  }
+  try {
+    db.exec("ALTER TABLE external_contexts ADD COLUMN cloud_id TEXT");
   } catch {
   }
 }
@@ -2439,6 +2477,125 @@ var init_store = __esm({
           }
         }
         return results;
+      },
+      // ── Connected Tools & External Workspaces / Contexts ──
+      connectTool(data) {
+        const id = generateLocalId("tool");
+        const now = (/* @__PURE__ */ new Date()).toISOString();
+        const client = data.client.toLowerCase();
+        const name = data.name || data.client;
+        const directory = data.directory || process.cwd();
+        const workspaceId = data.workspaceId || null;
+        const metadataStr = data.metadata ? JSON.stringify(data.metadata) : null;
+        const db = getDatabase();
+        if (db) {
+          try {
+            const stmt = db.prepare(`
+          INSERT INTO connected_tools (id, client, name, directory, workspace_id, connected_at, last_active_at, status, metadata)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'connected', ?)
+          ON CONFLICT(client) DO UPDATE SET
+            name = excluded.name,
+            directory = excluded.directory,
+            workspace_id = COALESCE(excluded.workspace_id, connected_tools.workspace_id),
+            last_active_at = excluded.last_active_at,
+            status = 'connected',
+            metadata = excluded.metadata
+        `);
+            stmt.run(id, client, name, directory, workspaceId, now, now, metadataStr);
+          } catch {
+          }
+          return { id, client, name, directory, workspaceId, connectedAt: now, status: "connected" };
+        }
+        const store = loadFallback();
+        store.connectedTools = store.connectedTools || [];
+        const existingIndex = store.connectedTools.findIndex((t) => t.client === client);
+        const item = { id, client, name, directory, workspaceId, connectedAt: now, lastActiveAt: now, status: "connected", metadata: data.metadata };
+        if (existingIndex >= 0) {
+          store.connectedTools[existingIndex] = { ...store.connectedTools[existingIndex], ...item };
+        } else {
+          store.connectedTools.push(item);
+        }
+        saveFallback(store);
+        return item;
+      },
+      listConnectedTools() {
+        const db = getDatabase();
+        if (db) {
+          try {
+            return db.prepare("SELECT * FROM connected_tools ORDER BY last_active_at DESC").all();
+          } catch {
+            return [];
+          }
+        }
+        const store = loadFallback();
+        return store.connectedTools || [];
+      },
+      saveExternalContext(data) {
+        const id = data.id || generateLocalId("ctx");
+        const now = (/* @__PURE__ */ new Date()).toISOString();
+        const payloadStr = typeof data.payload === "string" ? data.payload : data.payload ? JSON.stringify(data.payload) : null;
+        const directory = data.directory || process.cwd();
+        const status = data.status || "connected";
+        const db = getDatabase();
+        if (db) {
+          try {
+            const stmt = db.prepare(`
+          INSERT INTO external_contexts (id, client, directory, workspace_id, title, summary, payload, status, is_local, sync_status, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'unsynced', ?, ?)
+        `);
+            stmt.run(id, data.client.toLowerCase(), directory, data.workspaceId || null, data.title, data.summary || null, payloadStr, status, now, now);
+          } catch {
+          }
+          return { id, ...data, directory, status, createdAt: now, updatedAt: now };
+        }
+        const store = loadFallback();
+        store.externalContexts = store.externalContexts || [];
+        const item = { id, ...data, directory, status, createdAt: now, updatedAt: now };
+        store.externalContexts.unshift(item);
+        saveFallback(store);
+        return item;
+      },
+      listExternalContexts(filter) {
+        const db = getDatabase();
+        if (db) {
+          try {
+            let sql = "SELECT * FROM external_contexts WHERE 1=1";
+            const params = [];
+            if (filter?.client) {
+              sql += " AND client = ?";
+              params.push(filter.client.toLowerCase());
+            }
+            if (filter?.directory) {
+              sql += " AND directory = ?";
+              params.push(filter.directory);
+            }
+            if (filter?.workspaceId) {
+              sql += " AND workspace_id = ?";
+              params.push(filter.workspaceId);
+            }
+            sql += " ORDER BY updated_at DESC";
+            return db.prepare(sql).all(...params);
+          } catch {
+            return [];
+          }
+        }
+        const store = loadFallback();
+        let items = store.externalContexts || [];
+        if (filter?.client) items = items.filter((i) => i.client === filter.client?.toLowerCase());
+        if (filter?.directory) items = items.filter((i) => i.directory === filter.directory);
+        if (filter?.workspaceId) items = items.filter((i) => i.workspaceId === filter.workspaceId);
+        return items;
+      },
+      synthesizeContexts(targetDirectory) {
+        const dir = targetDirectory || process.cwd();
+        const contexts = this.listExternalContexts({ directory: dir });
+        const uniqueClients = Array.from(new Set(contexts.map((c2) => c2.client)));
+        const summaries = contexts.map((c2) => `[${c2.client}] ${c2.title}: ${c2.summary || "Context snapshot"}`).join("\n");
+        return {
+          clients: uniqueClients,
+          contexts,
+          synthesizedSummary: summaries || "No cross-tool context recorded yet for this directory."
+        };
       }
     };
   }
@@ -2467,7 +2624,7 @@ function countLocalContainerItems(dbPath, fallbackPath) {
       const DatabaseSync = getNativeSqlite();
       if (DatabaseSync) {
         const db = new DatabaseSync(dbPath);
-        const tables = ["ideas", "goals", "vault", "totp", "events", "forms", "flows"];
+        const tables = ["ideas", "goals", "vault", "totp", "events", "forms", "flows", "external_contexts"];
         for (const tbl of tables) {
           try {
             const row = db.prepare(`SELECT count(*) as c FROM ${tbl} WHERE sync_status != 'migrated' OR sync_status IS NULL`).get();
@@ -3792,12 +3949,257 @@ function clearWorkspaceCommand(opts = {}) {
   printSuccess("Reset active workspace to Personal Virtual Workspace.");
 }
 
+// src/commands/connect.ts
+init_store();
+init_formatter();
+init_client2();
+init_config();
+import * as fs5 from "fs";
+import * as path5 from "path";
+import * as os2 from "os";
+import pc7 from "picocolors";
+function detectCodingTools(targetDir = process.cwd()) {
+  const home = os2.homedir();
+  const results = [];
+  const claudePaths = [
+    path5.join(home, ".claude"),
+    path5.join(home, ".config", "claude"),
+    path5.join(home, ".claude.json"),
+    path5.join(home, "Library", "Application Support", "Claude")
+  ];
+  const detectedClaude = claudePaths.filter((p2) => fs5.existsSync(p2));
+  results.push({
+    client: "claude",
+    name: "Claude (Claude Code / Desktop)",
+    installed: detectedClaude.length > 0,
+    detectedPaths: detectedClaude
+  });
+  const cursorPaths = [
+    path5.join(home, ".cursor"),
+    path5.join(home, ".cursor-server"),
+    path5.join(targetDir, ".cursor"),
+    path5.join(home, "Library", "Application Support", "Cursor"),
+    path5.join(home, ".config", "Cursor")
+  ];
+  const detectedCursor = cursorPaths.filter((p2) => fs5.existsSync(p2));
+  results.push({
+    client: "cursor",
+    name: "Cursor AI IDE",
+    installed: detectedCursor.length > 0,
+    detectedPaths: detectedCursor
+  });
+  const agyPaths = [
+    path5.join(home, ".gemini", "antigravity-cli"),
+    path5.join(home, ".antigravity"),
+    path5.join(targetDir, ".agents")
+  ];
+  const detectedAgy = agyPaths.filter((p2) => fs5.existsSync(p2));
+  results.push({
+    client: "antigravity",
+    name: "Antigravity (AGY)",
+    installed: detectedAgy.length > 0,
+    detectedPaths: detectedAgy
+  });
+  const codexPaths = [
+    path5.join(home, ".codex"),
+    path5.join(home, ".openai")
+  ];
+  const detectedCodex = codexPaths.filter((p2) => fs5.existsSync(p2));
+  results.push({
+    client: "codex",
+    name: "Codex AI Runner",
+    installed: detectedCodex.length > 0,
+    detectedPaths: detectedCodex
+  });
+  const windsurfPaths = [
+    path5.join(home, ".codeium", "windsurf"),
+    path5.join(home, ".windsurf"),
+    path5.join(home, "Library", "Application Support", "Windsurf"),
+    path5.join(home, ".config", "Windsurf")
+  ];
+  const detectedWindsurf = windsurfPaths.filter((p2) => fs5.existsSync(p2));
+  results.push({
+    client: "windsurf",
+    name: "Windsurf AI Editor",
+    installed: detectedWindsurf.length > 0,
+    detectedPaths: detectedWindsurf
+  });
+  const vscodePaths = [
+    path5.join(home, ".vscode"),
+    path5.join(targetDir, ".vscode")
+  ];
+  const detectedVSCode = vscodePaths.filter((p2) => fs5.existsSync(p2));
+  results.push({
+    client: "vscode",
+    name: "VS Code",
+    installed: detectedVSCode.length > 0,
+    detectedPaths: detectedVSCode
+  });
+  const kiroPaths = [
+    path5.join(home, ".kiro"),
+    path5.join(targetDir, ".kiro")
+  ];
+  const detectedKiro = kiroPaths.filter((p2) => fs5.existsSync(p2));
+  results.push({
+    client: "kiro",
+    name: "Kiro AI Client",
+    installed: detectedKiro.length > 0,
+    detectedPaths: detectedKiro
+  });
+  return results;
+}
+async function connectCommand(opts) {
+  try {
+    const targetDir = opts.directory ? path5.resolve(opts.directory) : process.cwd();
+    const config2 = loadConfig();
+    const activeWs = opts.workspace || opts.project || config2.workspaceId;
+    if (!opts.client || opts.detect) {
+      const detected = detectCodingTools(targetDir);
+      const installedOnly = detected.filter((d2) => d2.installed);
+      if (opts.json) {
+        printJson({ targetDirectory: targetDir, detected, activeWorkspace: activeWs || null });
+        return;
+      }
+      console.log("\n" + pc7.bold(pc7.cyan("\u{1F50D} Autonomous Coding Tools Detection:")));
+      console.log(pc7.dim(`   Directory: ${targetDir}
+`));
+      const rows = detected.map((d2) => ({
+        client: d2.client,
+        name: d2.name,
+        status: d2.installed ? pc7.green("Installed") : pc7.dim("Not detected"),
+        path: d2.detectedPaths[0] || pc7.dim("N/A")
+      }));
+      printTable(rows, ["client", "name", "status", "path"]);
+      if (!opts.client) {
+        if (installedOnly.length === 0) {
+          console.log(pc7.yellow("\n\u26A0 No supported coding tools auto-detected in standard locations."));
+          console.log(`Specify manually with: ${pc7.cyan("kylrix connect --client <tool>")}
+`);
+          return;
+        }
+        console.log(pc7.dim("\nAuto-connecting detected tools to this local sovereign environment...\n"));
+        for (const tool of installedOnly) {
+          await connectSingleClient(tool.client, targetDir, activeWs, opts);
+        }
+        return;
+      }
+    }
+    const clientName = opts.client.toLowerCase().trim();
+    await connectSingleClient(clientName, targetDir, activeWs, opts);
+  } catch (err) {
+    printError("Failed to execute connect command", err);
+    process.exit(1);
+  }
+}
+async function connectSingleClient(clientName, targetDir, activeWs, opts) {
+  const connected = LocalStore.connectTool({
+    client: clientName,
+    name: clientName.toUpperCase(),
+    directory: targetDir,
+    workspaceId: activeWs,
+    metadata: {
+      connectedFrom: "cli",
+      os: process.platform,
+      arch: process.arch,
+      nodeVersion: process.version
+    }
+  });
+  const contextTitle = `Directory Context (${path5.basename(targetDir)})`;
+  const contextSummary = opts.context || `Connected via ${clientName} in ${targetDir}`;
+  const contextRecord = LocalStore.saveExternalContext({
+    client: clientName,
+    directory: targetDir,
+    workspaceId: activeWs,
+    title: contextTitle,
+    summary: contextSummary,
+    payload: {
+      connectedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      directory: targetDir,
+      client: clientName,
+      customContext: opts.context || null
+    }
+  });
+  const synthesis = LocalStore.synthesizeContexts(targetDir);
+  let cloudWorkspace = null;
+  if (hasAuth(opts)) {
+    try {
+      const client = getClient(opts);
+      const wsName = `${clientName.toUpperCase()} \xB7 ${path5.basename(targetDir)}`;
+      cloudWorkspace = await client.workspaces.create({
+        title: wsName,
+        summary: `External workspace connected from ${clientName} on directory ${targetDir}`,
+        isAgentic: false
+      }).catch(() => null);
+    } catch {
+    }
+  }
+  if (opts.json) {
+    printJson({
+      status: "connected",
+      client: clientName,
+      directory: targetDir,
+      workspaceId: activeWs || cloudWorkspace?.id || null,
+      context: contextRecord,
+      synthesis
+    });
+    return;
+  }
+  printSuccess(`Connected ${pc7.bold(pc7.green(clientName))} locally!`);
+  console.log(`  ${pc7.dim("Client:")}    ${pc7.bold(clientName)}`);
+  console.log(`  ${pc7.dim("Directory:")} ${targetDir}`);
+  if (activeWs) {
+    console.log(`  ${pc7.dim("Linked Workspace:")} ${pc7.cyan(activeWs)}`);
+  }
+  console.log(`  ${pc7.dim("Cross-tool Clients:")} ${synthesis.clients.join(", ") || clientName}`);
+  console.log(`  ${pc7.dim("Context Snapshot:")} ${contextTitle} saved locally
+`);
+}
+function connectStatusCommand(opts = {}) {
+  try {
+    const targetDir = opts.directory ? path5.resolve(opts.directory) : process.cwd();
+    const tools = LocalStore.listConnectedTools();
+    const contexts = LocalStore.listExternalContexts({ directory: targetDir });
+    const synthesis = LocalStore.synthesizeContexts(targetDir);
+    if (opts.json) {
+      printJson({ targetDirectory: targetDir, tools, contexts, synthesis });
+      return;
+    }
+    console.log("\n" + pc7.bold(pc7.cyan("\u26A1 Connected Coding Tools & Context:")));
+    console.log(pc7.dim(`   Directory: ${targetDir}
+`));
+    if (tools.length === 0) {
+      console.log(pc7.dim("  No coding tools connected yet. Run `kylrix connect` to auto-detect.\n"));
+      return;
+    }
+    const toolRows = tools.map((t) => ({
+      client: t.client,
+      name: t.name || t.client,
+      status: pc7.green(t.status || "connected"),
+      directory: t.directory || pc7.dim("N/A"),
+      lastActive: t.last_active_at?.substring(0, 19) || t.lastActiveAt?.substring(0, 19) || pc7.dim("N/A")
+    }));
+    printTable(toolRows, ["client", "name", "status", "directory", "lastActive"]);
+    console.log(pc7.bold("\n\u{1F9E0} Synthesized Cross-Tool Knowledge for Directory:"));
+    if (contexts.length === 0) {
+      console.log(pc7.dim("  No contextual snapshots recorded for this directory yet."));
+    } else {
+      for (const ctx of contexts) {
+        console.log(`  \u2022 [${pc7.cyan(ctx.client)}] ${pc7.bold(ctx.title)} - ${pc7.dim(ctx.summary || "")}`);
+      }
+    }
+    console.log("");
+  } catch (err) {
+    printError("Failed to display connect status", err);
+    process.exit(1);
+  }
+}
+
 // src/commands/ideas.ts
 init_client2();
 init_formatter();
 init_store();
 init_sync_resolver();
-import pc7 from "picocolors";
+import pc8 from "picocolors";
 async function listIdeasCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -3821,11 +4223,11 @@ async function listIdeasCommand(opts) {
     const allItems = res.items || [];
     const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
     const rows = sliced.map((n) => {
-      let syncBadge = pc7.yellow("\u25CB unsynced");
+      let syncBadge = pc8.yellow("\u25CB unsynced");
       if (n.syncStatus === "synced") {
-        syncBadge = pc7.green("\u25CF synced");
+        syncBadge = pc8.green("\u25CF synced");
       } else if (!isAuthed) {
-        syncBadge = pc7.dim("\u{1F4BB} local");
+        syncBadge = pc8.dim("\u{1F4BB} local");
       }
       return {
         id: n.id,
@@ -3837,11 +4239,11 @@ async function listIdeasCommand(opts) {
     });
     printTable(rows, ["id", "title", "category", "sync", "updated"]);
     if (allItems.length > rows.length) {
-      console.log(pc7.dim(`
+      console.log(pc8.dim(`
 Showing ${rows.length} of ${allItems.length} ideas. Use --limit <number> or --all to view more.`));
     }
     if (!isAuthed) {
-      console.log(pc7.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync ideas with cloud."));
+      console.log(pc8.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync ideas with cloud."));
     }
   } catch (err) {
     printError("Failed to list ideas", err);
@@ -3869,20 +4271,20 @@ async function getIdeaCommand(id, opts) {
       printJson(item);
       return;
     }
-    let syncBadge = pc7.yellow("\u25CB unsynced");
+    let syncBadge = pc8.yellow("\u25CB unsynced");
     if (item.syncStatus === "synced") {
-      syncBadge = pc7.green("\u25CF synced");
+      syncBadge = pc8.green("\u25CF synced");
     } else if (!isAuthed) {
-      syncBadge = pc7.dim("\u{1F4BB} local");
+      syncBadge = pc8.dim("\u{1F4BB} local");
     }
-    console.log("\n" + pc7.bold(item.title || "(Untitled Idea)"));
-    console.log(pc7.dim("\u2500".repeat(40)));
+    console.log("\n" + pc8.bold(item.title || "(Untitled Idea)"));
+    console.log(pc8.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Sync:      ${syncBadge}`);
     console.log(`Category:  ${item.category || "general"}`);
     console.log(`Updated:   ${item.updatedAt || item.createdAt || "N/A"}`);
-    console.log(pc7.dim("\u2500".repeat(40)));
-    console.log(item.content || pc7.dim("(Empty idea content)"));
+    console.log(pc8.dim("\u2500".repeat(40)));
+    console.log(item.content || pc8.dim("(Empty idea content)"));
     console.log();
   } catch (err) {
     printError(`Failed to get idea "${id}"`, err);
@@ -3924,8 +4326,8 @@ async function createIdeaCommand(title, opts) {
       printJson(item);
       return;
     }
-    const badge = syncStatus === "synced" ? pc7.green("\u25CF synced") : syncStatus === "unsynced" ? pc7.yellow("\u25CB unsynced") : pc7.dim("\u{1F4BB} local");
-    printSuccess(`Created idea "${pc7.bold(item.title || item.id)}" (ID: ${item.id}) [${badge}]`);
+    const badge = syncStatus === "synced" ? pc8.green("\u25CF synced") : syncStatus === "unsynced" ? pc8.yellow("\u25CB unsynced") : pc8.dim("\u{1F4BB} local");
+    printSuccess(`Created idea "${pc8.bold(item.title || item.id)}" (ID: ${item.id}) [${badge}]`);
   } catch (err) {
     printError("Failed to create idea", err);
     process.exit(1);
@@ -3954,7 +4356,7 @@ async function updateIdeaCommand(id, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Updated idea "${pc7.bold(item.title || item.id)}"`);
+    printSuccess(`Updated idea "${pc8.bold(item.title || item.id)}"`);
   } catch (err) {
     printError(`Failed to update idea "${id}"`, err);
     process.exit(1);
@@ -4005,11 +4407,11 @@ async function listArticlesCommand(opts) {
       return;
     }
     const rows = all.slice(0, limit).map((n) => {
-      let syncBadge = pc7.yellow("\u25CB unsynced");
+      let syncBadge = pc8.yellow("\u25CB unsynced");
       if (n.syncStatus === "synced") {
-        syncBadge = pc7.green("\u25CF synced");
+        syncBadge = pc8.green("\u25CF synced");
       } else if (!isAuthed) {
-        syncBadge = pc7.dim("\u{1F4BB} local");
+        syncBadge = pc8.dim("\u{1F4BB} local");
       }
       return {
         id: n.id,
@@ -4030,7 +4432,7 @@ init_client2();
 init_formatter();
 init_store();
 init_sync_resolver();
-import pc8 from "picocolors";
+import pc9 from "picocolors";
 async function listGoalsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -4057,11 +4459,11 @@ async function listGoalsCommand(opts) {
       return;
     }
     const rows = sliced.map((g2) => {
-      let syncBadge = pc8.yellow("\u25CB unsynced");
+      let syncBadge = pc9.yellow("\u25CB unsynced");
       if (g2.syncStatus === "synced") {
-        syncBadge = pc8.green("\u25CF synced");
+        syncBadge = pc9.green("\u25CF synced");
       } else if (!isAuthed) {
-        syncBadge = pc8.dim("\u{1F4BB} local");
+        syncBadge = pc9.dim("\u{1F4BB} local");
       }
       return {
         id: g2.id,
@@ -4073,11 +4475,11 @@ async function listGoalsCommand(opts) {
     });
     printTable(rows, ["id", "title", "status", "progress", "sync"]);
     if (allItems.length > rows.length) {
-      console.log(pc8.dim(`
+      console.log(pc9.dim(`
 Showing ${rows.length} of ${allItems.length} goals. Use --limit <number> or --all to view more.`));
     }
     if (!isAuthed) {
-      console.log(pc8.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync goals with cloud."));
+      console.log(pc9.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync goals with cloud."));
     }
   } catch (err) {
     printError("Failed to list goals", err);
@@ -4105,20 +4507,20 @@ async function getGoalCommand(id, opts) {
       printJson(item);
       return;
     }
-    let syncBadge = pc8.yellow("\u25CB unsynced");
+    let syncBadge = pc9.yellow("\u25CB unsynced");
     if (item.syncStatus === "synced") {
-      syncBadge = pc8.green("\u25CF synced");
+      syncBadge = pc9.green("\u25CF synced");
     } else if (!isAuthed) {
-      syncBadge = pc8.dim("\u{1F4BB} local");
+      syncBadge = pc9.dim("\u{1F4BB} local");
     }
-    console.log("\n" + pc8.bold(item.title || "(Untitled Goal)"));
-    console.log(pc8.dim("\u2500".repeat(40)));
+    console.log("\n" + pc9.bold(item.title || "(Untitled Goal)"));
+    console.log(pc9.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Sync:      ${syncBadge}`);
     console.log(`Status:    ${item.status || "not_started"}`);
     console.log(`Progress:  ${item.currentValue ?? 0}/${item.targetValue ?? 100} ${item.unit || ""}`);
     if (item.description) {
-      console.log(pc8.dim("\u2500".repeat(40)));
+      console.log(pc9.dim("\u2500".repeat(40)));
       console.log(item.description);
     }
     console.log();
@@ -4160,8 +4562,8 @@ async function createGoalCommand(title, opts) {
       printJson(item);
       return;
     }
-    const badge = syncStatus === "synced" ? pc8.green("\u25CF synced") : syncStatus === "unsynced" ? pc8.yellow("\u25CB unsynced") : pc8.dim("\u{1F4BB} local");
-    printSuccess(`Created goal "${pc8.bold(item.title || item.id)}" (ID: ${item.id}) [${badge}]`);
+    const badge = syncStatus === "synced" ? pc9.green("\u25CF synced") : syncStatus === "unsynced" ? pc9.yellow("\u25CB unsynced") : pc9.dim("\u{1F4BB} local");
+    printSuccess(`Created goal "${pc9.bold(item.title || item.id)}" (ID: ${item.id}) [${badge}]`);
   } catch (err) {
     printError("Failed to create goal", err);
     process.exit(1);
@@ -4191,7 +4593,7 @@ async function updateGoalCommand(id, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Updated goal "${pc8.bold(item.title || item.id)}"`);
+    printSuccess(`Updated goal "${pc9.bold(item.title || item.id)}"`);
   } catch (err) {
     printError(`Failed to update goal "${id}"`, err);
     process.exit(1);
@@ -4228,7 +4630,7 @@ async function deleteGoalCommand(id, opts) {
 init_client2();
 init_formatter();
 init_store();
-import pc9 from "picocolors";
+import pc10 from "picocolors";
 async function listEventsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -4245,15 +4647,15 @@ async function listEventsCommand(opts) {
       title: e2.title,
       startTime: e2.startTime || "",
       endTime: e2.endTime || "",
-      mode: isAuthed ? e2.workspaceId || "cloud" : pc9.dim("local")
+      mode: isAuthed ? e2.workspaceId || "cloud" : pc10.dim("local")
     }));
     printTable(rows, ["id", "title", "startTime", "endTime", "mode"]);
     if (allItems.length > rows.length) {
-      console.log(pc9.dim(`
+      console.log(pc10.dim(`
 Showing ${rows.length} of ${allItems.length} events. Use --limit <number> or --all to view more.`));
     }
     if (!isAuthed) {
-      console.log(pc9.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync calendar events with cloud."));
+      console.log(pc10.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync calendar events with cloud."));
     }
   } catch (err) {
     printError("Failed to list events", err);
@@ -4290,7 +4692,7 @@ async function createEventCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created event "${pc9.bold(item.title)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created event "${pc10.bold(item.title)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create event", err);
     process.exit(1);
@@ -4319,7 +4721,7 @@ async function deleteEventCommand(id, opts) {
 init_client2();
 init_formatter();
 init_store();
-import pc10 from "picocolors";
+import pc11 from "picocolors";
 async function listFormsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -4336,11 +4738,11 @@ async function listFormsCommand(opts) {
       title: f2.title || "(Untitled Form)",
       status: f2.status || "active",
       fields: Array.isArray(f2.schema) ? f2.schema.length : 0,
-      mode: isAuthed ? f2.workspaceId || "cloud" : pc10.dim("local")
+      mode: isAuthed ? f2.workspaceId || "cloud" : pc11.dim("local")
     }));
     printTable(rows, ["id", "title", "status", "fields", "mode"]);
     if (allItems.length > rows.length) {
-      console.log(pc10.dim(`
+      console.log(pc11.dim(`
 Showing ${rows.length} of ${allItems.length} forms. Use --limit <number> or --all to view more.`));
     }
   } catch (err) {
@@ -4356,8 +4758,8 @@ async function getFormCommand(id, opts) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc10.bold(item.title || "(Untitled Form)"));
-    console.log(pc10.dim("\u2500".repeat(40)));
+    console.log("\n" + pc11.bold(item.title || "(Untitled Form)"));
+    console.log(pc11.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Status:    ${item.status || "active"}`);
     console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
@@ -4397,7 +4799,7 @@ async function createFormCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created form "${pc10.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created form "${pc11.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create form", err);
     process.exit(1);
@@ -4426,7 +4828,7 @@ async function deleteFormCommand(id, opts) {
 init_client2();
 init_formatter();
 init_store();
-import pc11 from "picocolors";
+import pc12 from "picocolors";
 async function listFlowsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -4443,11 +4845,11 @@ async function listFlowsCommand(opts) {
       title: f2.title || "(Untitled Flow)",
       status: f2.status || "draft",
       description: f2.description || "",
-      mode: isAuthed ? "cloud" : pc11.dim("local")
+      mode: isAuthed ? "cloud" : pc12.dim("local")
     }));
     printTable(rows, ["id", "title", "status", "description", "mode"]);
     if (allItems.length > rows.length) {
-      console.log(pc11.dim(`
+      console.log(pc12.dim(`
 Showing ${rows.length} of ${allItems.length} flows. Use --limit <number> or --all to view more.`));
     }
   } catch (err) {
@@ -4463,8 +4865,8 @@ async function getFlowCommand(id, opts) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc11.bold(item.title || "(Untitled Flow)"));
-    console.log(pc11.dim("\u2500".repeat(40)));
+    console.log("\n" + pc12.bold(item.title || "(Untitled Flow)"));
+    console.log(pc12.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Status:    ${item.status || "draft"}`);
     console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
@@ -4503,7 +4905,7 @@ async function createFlowCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created flow "${pc11.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created flow "${pc12.bold(item.title || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create flow", err);
     process.exit(1);
@@ -4531,7 +4933,7 @@ async function deleteFlowCommand(id, opts) {
 // src/commands/chats.ts
 init_client2();
 init_formatter();
-import pc12 from "picocolors";
+import pc13 from "picocolors";
 async function listChatsCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -4563,8 +4965,8 @@ async function listChatMessagesCommand(conversationId, opts) {
       return;
     }
     for (const msg of res.items || []) {
-      const sender = pc12.bold(msg.senderId || "user");
-      const time3 = pc12.dim(msg.createdAt?.substring(11, 16) || "");
+      const sender = pc13.bold(msg.senderId || "user");
+      const time3 = pc13.dim(msg.createdAt?.substring(11, 16) || "");
       console.log(`[${time3}] ${sender}: ${msg.content}`);
     }
   } catch (err) {
@@ -4594,7 +4996,7 @@ async function sendChatMessageCommand(content, opts) {
 // src/commands/threads.ts
 init_client2();
 init_formatter();
-import pc13 from "picocolors";
+import pc14 from "picocolors";
 async function listThreadsCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -4631,8 +5033,8 @@ async function listThreadMessagesCommand(threadId, opts) {
       return;
     }
     for (const msg of res.items || []) {
-      const sender = pc13.bold(msg.userId || "user");
-      const time3 = pc13.dim(msg.createdAt?.substring(11, 16) || "");
+      const sender = pc14.bold(msg.userId || "user");
+      const time3 = pc14.dim(msg.createdAt?.substring(11, 16) || "");
       console.log(`[${time3}] ${sender}: ${msg.content}`);
     }
   } catch (err) {
@@ -5131,15 +5533,15 @@ var L2 = () => {
 // src/commands/vault.ts
 init_client2();
 init_formatter();
-import * as fs6 from "fs";
-import pc14 from "picocolors";
+import * as fs7 from "fs";
+import pc15 from "picocolors";
 
 // src/crypto/session.ts
-import * as fs5 from "fs";
-import * as path5 from "path";
-import * as os2 from "os";
-var SESSION_DIR = path5.join(os2.homedir(), ".kylrix");
-var SESSION_FILE = path5.join(SESSION_DIR, "session.json");
+import * as fs6 from "fs";
+import * as path6 from "path";
+import * as os3 from "os";
+var SESSION_DIR = path6.join(os3.homedir(), ".kylrix");
+var SESSION_FILE = path6.join(SESSION_DIR, "session.json");
 function getVaultSession() {
   const envMek = process.env.KYLRIX_MEK_SESSION || process.env.KYLRIX_MEK;
   if (envMek) {
@@ -5150,10 +5552,10 @@ function getVaultSession() {
     };
   }
   try {
-    if (!fs5.existsSync(SESSION_FILE)) {
+    if (!fs6.existsSync(SESSION_FILE)) {
       return null;
     }
-    const raw = fs5.readFileSync(SESSION_FILE, "utf-8");
+    const raw = fs6.readFileSync(SESSION_FILE, "utf-8");
     const session = JSON.parse(raw);
     if (Date.now() > session.expiresAt) {
       clearVaultSession();
@@ -5166,8 +5568,8 @@ function getVaultSession() {
 }
 function setVaultSession(mekHex, expiresInMinutes = 60) {
   try {
-    if (!fs5.existsSync(SESSION_DIR)) {
-      fs5.mkdirSync(SESSION_DIR, { recursive: true });
+    if (!fs6.existsSync(SESSION_DIR)) {
+      fs6.mkdirSync(SESSION_DIR, { recursive: true });
     }
     const now = Date.now();
     const session = {
@@ -5175,7 +5577,7 @@ function setVaultSession(mekHex, expiresInMinutes = 60) {
       unlockedAt: now,
       expiresAt: now + expiresInMinutes * 60 * 1e3
     };
-    fs5.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2), {
+    fs6.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2), {
       encoding: "utf-8",
       mode: 384
     });
@@ -5186,8 +5588,8 @@ function setVaultSession(mekHex, expiresInMinutes = 60) {
 }
 function clearVaultSession() {
   try {
-    if (fs5.existsSync(SESSION_FILE)) {
-      fs5.unlinkSync(SESSION_FILE);
+    if (fs6.existsSync(SESSION_FILE)) {
+      fs6.unlinkSync(SESSION_FILE);
     }
   } catch {
   }
@@ -5216,20 +5618,20 @@ async function unlockVaultCommand(opts) {
     if (isAuthed) {
       const res = await getClient(opts).vault.unlockUserMek(masterPassword);
       if (!res.mek) {
-        spinner.stop(pc14.red("Unlock failed."));
+        spinner.stop(pc15.red("Unlock failed."));
         throw new Error("Could not unwrap Master Encryption Key. Verify your Master Password.");
       }
       mek = res.mek;
     }
     const expiry = opts.expiryMinutes ? parseInt(opts.expiryMinutes, 10) : 60;
     const session = setVaultSession(mek, expiry);
-    spinner.stop(pc14.green("Vault unlocked successfully!"));
+    spinner.stop(pc15.green("Vault unlocked successfully!"));
     if (opts.json) {
       printJson(session);
       return;
     }
     printSuccess(`Vault unlocked for the next ${expiry} minutes.`);
-    console.log(pc14.dim("Tip: Use `kylrix vault lock` anytime to immediately seal your secrets."));
+    console.log(pc15.dim("Tip: Use `kylrix vault lock` anytime to immediately seal your secrets."));
   } catch (err) {
     printError("Failed to unlock vault", err);
     process.exit(1);
@@ -5254,14 +5656,14 @@ function statusVaultCommand(opts = {}) {
     });
     return;
   }
-  console.log("\n" + pc14.bold("Vault Security Status:"));
+  console.log("\n" + pc15.bold("Vault Security Status:"));
   if (unlocked && session) {
     const remaining = Math.max(0, Math.round((session.expiresAt - Date.now()) / 6e4));
-    console.log(`  Status:    ${pc14.green(pc14.bold("UNLOCKED"))}`);
+    console.log(`  Status:    ${pc15.green(pc15.bold("UNLOCKED"))}`);
     console.log(`  Expires:   In ${remaining} minute(s)`);
   } else {
-    console.log(`  Status:    ${pc14.yellow(pc14.bold("LOCKED"))}`);
-    console.log(pc14.dim("  Run `kylrix vault unlock` to decrypt credentials and environment variables."));
+    console.log(`  Status:    ${pc15.yellow(pc15.bold("LOCKED"))}`);
+    console.log(pc15.dim("  Run `kylrix vault unlock` to decrypt credentials and environment variables."));
   }
   console.log();
 }
@@ -5289,16 +5691,16 @@ async function listVaultCommand(opts) {
       name: v2.name,
       type: v2.itemType || (v2.isEnv ? "env" : "login"),
       username: v2.username || v2.identity || (v2.isEnv ? "(env-vars)" : ""),
-      mode: isAuthed ? v2.workspaceId || "cloud" : pc14.dim("local"),
+      mode: isAuthed ? v2.workspaceId || "cloud" : pc15.dim("local"),
       updatedAt: v2.updatedAt?.substring(0, 10) || ""
     }));
     printTable(rows, ["id", "name", "type", "username", "mode", "updatedAt"]);
     if (allItems.length > rows.length) {
-      console.log(pc14.dim(`
+      console.log(pc15.dim(`
 Showing ${rows.length} of ${allItems.length} vault items. Use --limit <number> or --all to view more.`));
     }
     if (!isAuthed) {
-      console.log(pc14.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync secrets with cloud."));
+      console.log(pc15.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync secrets with cloud."));
     }
   } catch (err) {
     printError("Failed to list vault items", err);
@@ -5322,8 +5724,8 @@ async function getVaultCommand(id, opts) {
       console.log(item.envText);
       return;
     }
-    console.log("\n" + pc14.bold(item.name || "(Untitled Secret)"));
-    console.log(pc14.dim("\u2500".repeat(40)));
+    console.log("\n" + pc15.bold(item.name || "(Untitled Secret)"));
+    console.log(pc15.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Type:      ${item.itemType || (item.isEnv ? "env" : "login")}`);
     console.log(`Mode:      ${isAuthed ? "Cloud" : "Local-First"}`);
@@ -5331,12 +5733,12 @@ async function getVaultCommand(id, opts) {
     if (item.password) console.log(`Password:  ${item.password}`);
     if (item.url) console.log(`URL:       ${item.url}`);
     if (item.notes) {
-      console.log(pc14.dim("\u2500".repeat(40)));
+      console.log(pc15.dim("\u2500".repeat(40)));
       console.log(item.notes);
     }
     if (item.customFields) {
-      console.log(pc14.dim("\u2500".repeat(40)));
-      console.log(pc14.bold("Custom Fields / Environment Variables:"));
+      console.log(pc15.dim("\u2500".repeat(40)));
+      console.log(pc15.bold("Custom Fields / Environment Variables:"));
       console.log(typeof item.customFields === "string" ? item.customFields : JSON.stringify(item.customFields, null, 2));
     }
     console.log();
@@ -5351,10 +5753,10 @@ async function createVaultCommand(name, opts) {
     const session = getVaultSession();
     let customFields = void 0;
     if (opts.envFile) {
-      if (!fs6.existsSync(opts.envFile)) {
+      if (!fs7.existsSync(opts.envFile)) {
         throw new Error(`File not found: ${opts.envFile}`);
       }
-      customFields = fs6.readFileSync(opts.envFile, "utf-8");
+      customFields = fs7.readFileSync(opts.envFile, "utf-8");
     }
     const payload = {
       name,
@@ -5374,7 +5776,7 @@ async function createVaultCommand(name, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created secret "${pc14.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created secret "${pc15.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create vault secret", err);
     process.exit(1);
@@ -5402,7 +5804,7 @@ async function deleteVaultCommand(id, opts) {
 // src/commands/totp.ts
 init_client2();
 init_formatter();
-import pc15 from "picocolors";
+import pc16 from "picocolors";
 
 // src/crypto/totp.ts
 import * as crypto from "crypto";
@@ -5456,13 +5858,13 @@ async function listTotpCommand(opts) {
       return;
     }
     const rows = (items || []).map((t) => {
-      let codeDisplay = pc15.dim("locked");
+      let codeDisplay = pc16.dim("locked");
       if (t.secret) {
         try {
           const { code, remainingSeconds } = generateTotp(t.secret);
-          codeDisplay = `${pc15.bold(pc15.green(code))} (${remainingSeconds}s)`;
+          codeDisplay = `${pc16.bold(pc16.green(code))} (${remainingSeconds}s)`;
         } catch {
-          codeDisplay = pc15.red("invalid secret");
+          codeDisplay = pc16.red("invalid secret");
         }
       }
       return {
@@ -5471,12 +5873,12 @@ async function listTotpCommand(opts) {
         issuer: t.issuer || "",
         account: t.account || "",
         code: codeDisplay,
-        mode: isAuthed ? t.workspaceId || "cloud" : pc15.dim("local")
+        mode: isAuthed ? t.workspaceId || "cloud" : pc16.dim("local")
       };
     });
     printTable(rows, ["id", "name", "issuer", "account", "code", "mode"]);
     if (isAuthed && !session) {
-      console.log(pc15.dim("\nTip: Run `kylrix vault unlock` to show live 2FA verification codes."));
+      console.log(pc16.dim("\nTip: Run `kylrix vault unlock` to show live 2FA verification codes."));
     }
   } catch (err) {
     printError("Failed to list TOTP entries", err);
@@ -5497,7 +5899,7 @@ async function getTotpCodeCommand(id, opts) {
       return;
     }
     console.log(`
-  ${pc15.bold(item.name || item.issuer || "2FA Code")}: ${pc15.bold(pc15.green(code))} (${remainingSeconds}s remaining)
+  ${pc16.bold(item.name || item.issuer || "2FA Code")}: ${pc16.bold(pc16.green(code))} (${remainingSeconds}s remaining)
 `);
   } catch (err) {
     printError(`Failed to generate TOTP code for "${id}"`, err);
@@ -5522,7 +5924,7 @@ async function createTotpCommand(name, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created TOTP seed "${pc15.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created TOTP seed "${pc16.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create TOTP entry", err);
     process.exit(1);
@@ -5550,7 +5952,7 @@ async function deleteTotpCommand(id, opts) {
 // src/commands/agents.ts
 init_client2();
 init_formatter();
-import pc16 from "picocolors";
+import pc17 from "picocolors";
 async function listAgentSessionsCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -5586,21 +5988,21 @@ async function getAgentSessionCommand(id, opts) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc16.bold(item.title || "(Untitled Agent Session)"));
-    console.log(pc16.dim("\u2500".repeat(40)));
+    console.log("\n" + pc17.bold(item.title || "(Untitled Agent Session)"));
+    console.log(pc17.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Harness:   ${item.harness || "gemini"}`);
     console.log(`Status:    ${item.status || "idle"}`);
     console.log(`Workspace: ${item.workspaceId || "personal"}`);
     console.log(`Updated:   ${item.updatedAt || item.createdAt || "N/A"}`);
     if (item.prompt) {
-      console.log(pc16.dim("\u2500".repeat(40)));
-      console.log(pc16.bold("Prompt:"));
+      console.log(pc17.dim("\u2500".repeat(40)));
+      console.log(pc17.bold("Prompt:"));
       console.log(item.prompt);
     }
     if (item.transcript) {
-      console.log(pc16.dim("\u2500".repeat(40)));
-      console.log(pc16.bold("Transcript:"));
+      console.log(pc17.dim("\u2500".repeat(40)));
+      console.log(pc17.bold("Transcript:"));
       console.log(typeof item.transcript === "string" ? item.transcript : JSON.stringify(item.transcript, null, 2));
     }
     console.log();
@@ -5622,7 +6024,7 @@ async function startAgentSessionCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Started agent session "${pc16.bold(item.title || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Started agent session "${pc17.bold(item.title || item.id)}" (ID: ${item.id})`);
   } catch (err) {
     printError("Failed to start agent session", err);
     process.exit(1);
@@ -5647,7 +6049,7 @@ async function deleteAgentSessionCommand(id, opts) {
 init_client2();
 init_formatter();
 init_store();
-import pc17 from "picocolors";
+import pc18 from "picocolors";
 async function searchCommand(query, opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -5685,18 +6087,18 @@ async function searchCommand(query, opts) {
     }
     if (!allResults || allResults.length === 0) {
       console.log(`
-No items matching "${pc17.bold(query)}" found.`);
+No items matching "${pc18.bold(query)}" found.`);
       return;
     }
     console.log(`
-Search results for "${pc17.bold(query)}":
+Search results for "${pc18.bold(query)}":
 `);
     const rows = sliced.map((r2) => {
-      let syncBadge = pc17.yellow("\u25CB unsynced");
+      let syncBadge = pc18.yellow("\u25CB unsynced");
       if (r2.syncStatus === "synced" || !r2.isLocal && isAuthed) {
-        syncBadge = pc17.green("\u25CF synced");
+        syncBadge = pc18.green("\u25CF synced");
       } else if (!isAuthed) {
-        syncBadge = pc17.dim("\u{1F4BB} local");
+        syncBadge = pc18.dim("\u{1F4BB} local");
       }
       return {
         kind: r2.kind.toUpperCase(),
@@ -5708,7 +6110,7 @@ Search results for "${pc17.bold(query)}":
     });
     printTable(rows, ["kind", "id", "title", "snippet", "sync"]);
     if (allResults.length > rows.length) {
-      console.log(pc17.dim(`
+      console.log(pc18.dim(`
 Showing ${rows.length} of ${allResults.length} results. Use --limit <number> or --all to view more.`));
     }
   } catch (err) {
@@ -5721,7 +6123,7 @@ Showing ${rows.length} of ${allResults.length} results. Use --limit <number> or 
 init_client2();
 init_config();
 init_formatter();
-import pc18 from "picocolors";
+import pc19 from "picocolors";
 async function shareCommand(kind, id, opts) {
   try {
     const client = requireAuthClient(opts);
@@ -5742,10 +6144,10 @@ async function shareCommand(kind, id, opts) {
       });
       return;
     }
-    console.log("\n" + pc18.bold("Resource Share Link:"));
+    console.log("\n" + pc19.bold("Resource Share Link:"));
     console.log(`  Kind: ${kind}`);
     console.log(`  ID:   ${id}`);
-    console.log(`  URL:  ${pc18.underline(pc18.cyan(shareUrl))}`);
+    console.log(`  URL:  ${pc19.underline(pc19.cyan(shareUrl))}`);
     console.log(`  Collaborator Cap: ${profile.quotas?.maxCollaboratorsPerResource || 8} users`);
     console.log();
   } catch (err) {
@@ -5757,7 +6159,7 @@ async function shareCommand(kind, id, opts) {
 // src/commands/billing.ts
 init_client2();
 init_formatter();
-import pc19 from "picocolors";
+import pc20 from "picocolors";
 async function billingStatusCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -5766,9 +6168,9 @@ async function billingStatusCommand(opts) {
       printJson(status);
       return;
     }
-    console.log("\n" + pc19.bold("Subscription & Billing:"));
-    console.log(`  Tier:             ${pc19.bold(pc19.cyan(status.tier || "FREE"))}`);
-    console.log(`  Pro Active:       ${status.isPro ? pc19.green("Yes") : "No"}`);
+    console.log("\n" + pc20.bold("Subscription & Billing:"));
+    console.log(`  Tier:             ${pc20.bold(pc20.cyan(status.tier || "FREE"))}`);
+    console.log(`  Pro Active:       ${status.isPro ? pc20.green("Yes") : "No"}`);
     if (status.expiresAt) {
       console.log(`  Expires At:       ${status.expiresAt}`);
     }
@@ -5813,13 +6215,13 @@ async function checkoutBillingCommand(planId, opts) {
       return;
     }
     if (res.depositAddress) {
-      console.log("\n" + pc19.bold(pc19.green("Direct On-Chain Crypto Deposit Address Generated:")));
-      console.log(`  Address: ${pc19.bold(res.depositAddress)}`);
+      console.log("\n" + pc20.bold(pc20.green("Direct On-Chain Crypto Deposit Address Generated:")));
+      console.log(`  Address: ${pc20.bold(res.depositAddress)}`);
       console.log(`  Amount:  ${res.cryptoAmount || ""} ${res.ticker || ""}`);
       console.log(`  QR Code: ${res.qrCodeUrl || "N/A"}`);
     } else if (res.checkoutUrl) {
-      console.log("\n" + pc19.bold("Hosted Checkout Session:"));
-      console.log(`  Open: ${pc19.underline(pc19.cyan(res.checkoutUrl))}`);
+      console.log("\n" + pc20.bold("Hosted Checkout Session:"));
+      console.log(`  Open: ${pc20.underline(pc20.cyan(res.checkoutUrl))}`);
     }
     console.log();
   } catch (err) {
@@ -5835,7 +6237,7 @@ async function claimCouponCommand(couponId, opts) {
       printJson(res);
       return;
     }
-    printSuccess(`Redeemed coupon "${pc19.bold(couponId)}" successfully!`);
+    printSuccess(`Redeemed coupon "${pc20.bold(couponId)}" successfully!`);
   } catch (err) {
     printError(`Failed to redeem coupon "${couponId}"`, err);
     process.exit(1);
@@ -5845,7 +6247,7 @@ async function claimCouponCommand(couponId, opts) {
 // src/commands/admin.ts
 init_client2();
 init_formatter();
-import pc20 from "picocolors";
+import pc21 from "picocolors";
 async function adminStatusCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -5863,13 +6265,13 @@ async function adminStatusCommand(opts) {
       });
       return;
     }
-    console.log("\n" + pc20.bold("Kylrix Instance & Admin Verification:"));
-    console.log(`  Admin Status:     ${isAdmin ? pc20.green(pc20.bold("AUTHORIZED ADMIN")) : pc20.yellow("Standard User")}`);
+    console.log("\n" + pc21.bold("Kylrix Instance & Admin Verification:"));
+    console.log(`  Admin Status:     ${isAdmin ? pc21.green(pc21.bold("AUTHORIZED ADMIN")) : pc21.yellow("Standard User")}`);
     console.log(`  Actor User ID:    ${profile.id}`);
     console.log(`  Identity Email:   ${profile.email || "N/A"}`);
     console.log(`  Account Tier:     ${profile.tier}`);
     console.log(`  Token Scopes:     ${profile.scopes?.join(", ") || "*"}`);
-    console.log(`  Edge Shield:      ${pc20.green("Active (Bot & Burst Protected)")}`);
+    console.log(`  Edge Shield:      ${pc21.green("Active (Bot & Burst Protected)")}`);
     console.log();
   } catch (err) {
     printError("Failed to verify admin status", err);
@@ -5881,7 +6283,7 @@ async function adminStatusCommand(opts) {
 init_client2();
 init_formatter();
 init_store();
-import pc21 from "picocolors";
+import pc22 from "picocolors";
 async function listTagsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -5894,7 +6296,7 @@ async function listTagsCommand(opts) {
       id: t.id,
       name: t.name,
       color: t.color || "",
-      mode: isAuthed ? "cloud" : pc21.dim("local")
+      mode: isAuthed ? "cloud" : pc22.dim("local")
     }));
     printTable(rows, ["id", "name", "color", "mode"]);
   } catch (err) {
@@ -5914,7 +6316,7 @@ async function createTagCommand(name, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created tag "${pc21.bold(item.name)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created tag "${pc22.bold(item.name)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create tag", err);
     process.exit(1);
@@ -5994,18 +6396,18 @@ async function purgeTrashCommand(kind, id, opts) {
 }
 
 // src/commands/update.ts
-import pc23 from "picocolors";
+import pc24 from "picocolors";
 
 // src/updater/index.ts
-import * as fs7 from "fs";
-import * as path6 from "path";
-import * as os3 from "os";
+import * as fs8 from "fs";
+import * as path7 from "path";
+import * as os4 from "os";
 import { spawn } from "child_process";
-import pc22 from "picocolors";
+import pc23 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.14";
-var CACHE_DIR = path6.join(os3.homedir(), ".kylrix");
-var CACHE_FILE = path6.join(CACHE_DIR, "update-cache.json");
+var CURRENT_VERSION = "1.0.15";
+var CACHE_DIR = path7.join(os4.homedir(), ".kylrix");
+var CACHE_FILE = path7.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
 function compareSemver(v1, v2) {
   const clean1 = v1.replace(/^v/, "").split("-")[0];
@@ -6038,8 +6440,8 @@ async function fetchLatestVersion(timeoutMs = 2500) {
 }
 function readCachedUpdate() {
   try {
-    if (!fs7.existsSync(CACHE_FILE)) return null;
-    const raw = fs7.readFileSync(CACHE_FILE, "utf-8");
+    if (!fs8.existsSync(CACHE_FILE)) return null;
+    const raw = fs8.readFileSync(CACHE_FILE, "utf-8");
     return JSON.parse(raw);
   } catch {
     return null;
@@ -6047,14 +6449,14 @@ function readCachedUpdate() {
 }
 function writeCachedUpdate(latestVersion) {
   try {
-    if (!fs7.existsSync(CACHE_DIR)) {
-      fs7.mkdirSync(CACHE_DIR, { recursive: true });
+    if (!fs8.existsSync(CACHE_DIR)) {
+      fs8.mkdirSync(CACHE_DIR, { recursive: true });
     }
     const cache = {
       latestVersion,
       lastChecked: Date.now()
     };
-    fs7.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), { encoding: "utf-8", mode: 384 });
+    fs8.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), { encoding: "utf-8", mode: 384 });
   } catch {
   }
 }
@@ -6078,7 +6480,7 @@ async function executeUpgrade(targetVersion = "latest", opts = {}) {
     bun: ["add", "-g", `${PACKAGE_NAME}@${targetVersion}`]
   };
   const args = installArgs[pm] || installArgs.npm;
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     const child = spawn(pm, args, { stdio: opts.silent ? "ignore" : "pipe" });
     let stderr = "";
     if (!opts.silent && child.stderr) {
@@ -6089,20 +6491,20 @@ async function executeUpgrade(targetVersion = "latest", opts = {}) {
     child.on("close", (code) => {
       if (code === 0) {
         if (spinner) {
-          spinner.stop(pc22.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
+          spinner.stop(pc23.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
         }
         writeCachedUpdate(CURRENT_VERSION);
-        resolve();
+        resolve2();
       } else {
         if (spinner) {
-          spinner.stop(pc22.red(`Upgrade failed (exit code ${code})`));
+          spinner.stop(pc23.red(`Upgrade failed (exit code ${code})`));
         }
         reject(new Error(stderr || `Failed to run ${pm} ${args.join(" ")}`));
       }
     });
     child.on("error", (err) => {
       if (spinner) {
-        spinner.stop(pc22.red("Failed to launch package manager process"));
+        spinner.stop(pc23.red("Failed to launch package manager process"));
       }
       reject(err);
     });
@@ -6121,10 +6523,10 @@ async function checkAndAutoUpdateOnRun() {
     if (!latest || compareSemver(latest, CURRENT_VERSION) <= 0) {
       return false;
     }
-    console.error(pc22.cyan(`\u26A1 Auto-updating ${PACKAGE_NAME} (${pc22.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc22.green(pc22.bold(`v${latest}`))})...`));
+    console.error(pc23.cyan(`\u26A1 Auto-updating ${PACKAGE_NAME} (${pc23.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc23.green(pc23.bold(`v${latest}`))})...`));
     await executeUpgrade(latest, { silent: true });
     writeCachedUpdate(latest);
-    console.error(pc22.green(`\u2714 Upgraded to v${latest}! Relaunching...`));
+    console.error(pc23.green(`\u2714 Upgraded to v${latest}! Relaunching...`));
     const { spawnSync } = await import("child_process");
     const child = spawnSync(process.argv[0], process.argv.slice(1), {
       stdio: "inherit",
@@ -6141,14 +6543,14 @@ async function checkAndAutoUpdateOnRun() {
 }
 function printUpdateBanner(latest) {
   const boxWidth = 58;
-  const title = `Update available! ${pc22.dim(CURRENT_VERSION)} \u2192 ${pc22.green(pc22.bold(latest))}`;
+  const title = `Update available! ${pc23.dim(CURRENT_VERSION)} \u2192 ${pc23.green(pc23.bold(latest))}`;
   const pm = detectPackageManager();
   const cmd = pm === "pnpm" ? `pnpm add -g ${PACKAGE_NAME}` : `npm i -g ${PACKAGE_NAME}`;
-  const hint = `Run ${pc22.cyan("kylrix update")} or ${pc22.cyan(cmd)}`;
-  console.error("\n" + pc22.yellow("\u250C" + "\u2500".repeat(boxWidth) + "\u2510"));
-  console.error(pc22.yellow("\u2502") + "  " + title.padEnd(boxWidth + 12) + pc22.yellow("\u2502"));
-  console.error(pc22.yellow("\u2502") + "  " + hint.padEnd(boxWidth + 10) + pc22.yellow("\u2502"));
-  console.error(pc22.yellow("\u2514" + "\u2500".repeat(boxWidth) + "\u2518") + "\n");
+  const hint = `Run ${pc23.cyan("kylrix update")} or ${pc23.cyan(cmd)}`;
+  console.error("\n" + pc23.yellow("\u250C" + "\u2500".repeat(boxWidth) + "\u2510"));
+  console.error(pc23.yellow("\u2502") + "  " + title.padEnd(boxWidth + 12) + pc23.yellow("\u2502"));
+  console.error(pc23.yellow("\u2502") + "  " + hint.padEnd(boxWidth + 10) + pc23.yellow("\u2502"));
+  console.error(pc23.yellow("\u2514" + "\u2500".repeat(boxWidth) + "\u2518") + "\n");
 }
 function scheduleBackgroundUpdateCheck() {
   const isMcp = process.argv.includes("mcp");
@@ -6189,26 +6591,26 @@ async function updateCommand(opts) {
     });
     return;
   }
-  we(pc23.bgCyan(pc23.black(" Kylrix CLI Updater ")));
+  we(pc24.bgCyan(pc24.black(" Kylrix CLI Updater ")));
   const spinner = L2();
   spinner.start("Checking for updates on npm registry...");
   const latest = await fetchLatestVersion(5e3);
   if (!latest) {
-    spinner.stop(pc23.yellow("Could not reach npm registry or version not published yet."));
+    spinner.stop(pc24.yellow("Could not reach npm registry or version not published yet."));
     return;
   }
   const hasUpdate = compareSemver(latest, CURRENT_VERSION) > 0;
   if (!hasUpdate && !opts.force) {
-    spinner.stop(pc23.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
-    fe(pc23.dim("No update required."));
+    spinner.stop(pc24.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
+    fe(pc24.dim("No update required."));
     return;
   }
   spinner.stop(
-    hasUpdate ? pc23.yellow(`New version available: ${pc23.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc23.green(pc23.bold(`v${latest}`))}`) : `Re-installing v${CURRENT_VERSION}...`
+    hasUpdate ? pc24.yellow(`New version available: ${pc24.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc24.green(pc24.bold(`v${latest}`))}`) : `Re-installing v${CURRENT_VERSION}...`
   );
   try {
     await executeUpgrade(latest);
-    fe(pc23.green(`\u2714 ${PACKAGE_NAME} is now up to date (v${latest})!`));
+    fe(pc24.green(`\u2714 ${PACKAGE_NAME} is now up to date (v${latest})!`));
   } catch (err) {
     printError("Update failed", err);
     process.exit(1);
@@ -6216,7 +6618,7 @@ async function updateCommand(opts) {
 }
 
 // src/commands/sync.ts
-import pc24 from "picocolors";
+import pc25 from "picocolors";
 init_client2();
 init_formatter();
 init_config();
@@ -6226,7 +6628,7 @@ async function syncCommand(opts) {
     if (opts.json) {
       printJson({ synced: false, error: "Authentication required to sync local items to cloud" });
     } else {
-      console.log(pc24.yellow("\u26A0 Not logged in. Run `kylrix login` first to sync your local data to cloud."));
+      console.log(pc25.yellow("\u26A0 Not logged in. Run `kylrix login` first to sync your local data to cloud."));
     }
     return;
   }
@@ -6234,11 +6636,11 @@ async function syncCommand(opts) {
   const verdict = evaluateOfflineAutoSync(env.apiUrl, env.userId);
   if (verdict.canAutoSync && verdict.sourceContainer && verdict.itemCount > 0) {
     if (!opts.json) {
-      console.log(pc24.dim(`Migrating ${verdict.itemCount} items from offline container "${verdict.sourceContainer}" to active account...`));
+      console.log(pc25.dim(`Migrating ${verdict.itemCount} items from offline container "${verdict.sourceContainer}" to active account...`));
     }
     migrateOfflineData(verdict.sourceContainer, env.userId, "default");
   } else if (!verdict.canAutoSync && verdict.reason && !opts.json) {
-    console.log(pc24.yellow(`\u26A0 Warning: ${verdict.reason}`));
+    console.log(pc25.yellow(`\u26A0 Warning: ${verdict.reason}`));
   }
   const spinner = L2();
   if (!opts.json) {
@@ -6247,7 +6649,7 @@ async function syncCommand(opts) {
   try {
     const syncRes = await bidirectionalSync(opts);
     if (!opts.json) {
-      spinner.stop(pc24.green("Sync complete!"));
+      spinner.stop(pc25.green("Sync complete!"));
     }
     const config2 = loadConfig();
     if (config2.pendingWarning) {
@@ -6267,15 +6669,15 @@ async function syncCommand(opts) {
     console.log();
     printSuccess("Synchronized with Kylrix Cloud:");
     console.log(
-      pc24.cyan(
+      pc25.cyan(
         `  \u2191 Pushed to cloud: ${pushedTotal} items (${pushed.pushedIdeas} ideas, ${pushed.pushedGoals} goals, ${pushed.pushedEvents || 0} events, ${pushed.pushedForms || 0} forms, ${pushed.pushedFlows || 0} flows)`
       )
     );
-    console.log(pc24.green(`  \u2193 Pulled to local: ${pulled.total} items (${pulled.pulledIdeas} ideas, ${pulled.pulledGoals} goals, ${pulled.pulledEvents} events, ${pulled.pulledForms} forms, ${pulled.pulledFlows} flows)`));
-    console.log(pc24.dim("  \u26A1 Local SQLite database is up to date.\n"));
+    console.log(pc25.green(`  \u2193 Pulled to local: ${pulled.total} items (${pulled.pulledIdeas} ideas, ${pulled.pulledGoals} goals, ${pulled.pulledEvents} events, ${pulled.pulledForms} forms, ${pulled.pulledFlows} flows)`));
+    console.log(pc25.dim("  \u26A1 Local SQLite database is up to date.\n"));
   } catch (err) {
     if (!opts.json) {
-      spinner.stop(pc24.red("Sync interrupted"));
+      spinner.stop(pc25.red("Sync interrupted"));
     }
     printError("Sync failed", err);
     process.exit(1);
@@ -7149,10 +7551,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path7) {
-  if (!path7)
+function getElementAtPath(obj, path8) {
+  if (!path8)
     return obj;
-  return path7.reduce((acc, key) => acc?.[key], obj);
+  return path8.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -7561,11 +7963,11 @@ function explicitlyAborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path7, issues) {
+function prefixIssues(path8, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path7);
+    iss.path.unshift(path8);
     return iss;
   });
 }
@@ -7712,16 +8114,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path7 = []) => {
+  const processError = (error52, path8 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path8, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
       } else {
-        const fullpath = [...path7, ...issue2.path];
+        const fullpath = [...path8, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -7748,17 +8150,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path7 = []) => {
+  const processError = (error52, path8 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path8, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path8, ...issue2.path]);
       } else {
-        const fullpath = [...path7, ...issue2.path];
+        const fullpath = [...path8, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -7790,8 +8192,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path7 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path7) {
+  const path8 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path8) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -20483,13 +20885,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path7 = ref.slice(1).split("/").filter(Boolean);
-  if (path7.length === 0) {
+  const path8 = ref.slice(1).split("/").filter(Boolean);
+  if (path8.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path7[0] === defsKey) {
-    const key = path7[1];
+  if (path8[0] === defsKey) {
+    const key = path8[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -22498,8 +22900,8 @@ program.hook("preAction", (_thisCommand, actionCommand) => {
     const { loadConfig: loadConfig2 } = (init_config(), __toCommonJS(config_exports));
     const config2 = loadConfig2();
     if (config2.pendingWarning) {
-      const pc25 = __require("picocolors");
-      console.warn(pc25.yellow(`
+      const pc26 = __require("picocolors");
+      console.warn(pc26.yellow(`
 \u26A0 Warning: ${config2.pendingWarning}
 `));
     }
@@ -22531,6 +22933,8 @@ workspaces.command("delete <id>").description("Delete a workspace by ID").action
 workspaces.command("switch <id>").alias("use").description("Set the default active workspace for all subsequent CLI commands").action((id, cmdOpts) => switchWorkspaceCommand(id, { ...program.opts(), ...cmdOpts }));
 workspaces.command("current").description("Show the currently active workspace").action((cmdOpts) => currentWorkspaceCommand(cmdOpts));
 workspaces.command("clear").alias("unuse").description("Reset active workspace back to Personal Virtual Workspace").action((cmdOpts) => clearWorkspaceCommand(cmdOpts));
+program.command("connect").description("Autonomously detect or connect external coding tools (Claude, Cursor, Antigravity, Windsurf, Codex, Kiro)").option("-c, --client <name>", "Tool client name (claude, cursor, antigravity, windsurf, codex, kiro, vscode)").option("-d, --directory <dir>", "Target project directory (defaults to current working directory)").option("-w, --workspace <id>", "Optionally link connected tool to a specific workspace ID").option("-p, --project <id>", "Alias for --workspace").option("--context <text>", "Initial contextual memory or notes to seed for this directory").option("--detect", "Force scan and display installed coding tools").action((cmdOpts) => connectCommand({ ...program.opts(), ...cmdOpts }));
+program.command("connect-status").alias("tools").description("Inspect connected coding tools, directory contexts, and cross-tool synthesized knowledge").option("-d, --directory <dir>", "Target directory filter").action((cmdOpts) => connectStatusCommand({ ...program.opts(), ...cmdOpts }));
 var ideas = program.command("ideas").alias("idea").description("Manage sovereign ideas");
 ideas.command("list").description("List ideas in active workspace or personal store").option("-l, --limit <number>", "Number of records (default: 50, 0 for all)", "50").option("-a, --all", "List all records without limit").action((cmdOpts) => listIdeasCommand({ ...program.opts(), ...cmdOpts }));
 ideas.command("get <id>").description("Get full idea content and metadata").action((id, cmdOpts) => getIdeaCommand(id, { ...program.opts(), ...cmdOpts }));

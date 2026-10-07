@@ -298,9 +298,11 @@ export function UnifiedLeftSidebar() {
                     ? 'Default workspace'
                     : w.isAgentic
                       ? 'Agent workspace'
-                      : w.isShared
-                        ? (w.role ? `Shared (${w.role})` : 'Shared with you')
-                        : 'Workspace';
+                      : w.isExternal
+                        ? `External workspace (${w.externalClient || 'CLI'})`
+                        : w.isShared
+                          ? (w.role ? `Shared (${w.role})` : 'Shared with you')
+                          : 'Workspace';
 
                   return (
                     <Box

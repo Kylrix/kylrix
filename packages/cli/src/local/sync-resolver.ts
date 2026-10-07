@@ -45,7 +45,7 @@ export function countLocalContainerItems(dbPath: string, fallbackPath: string): 
       const DatabaseSync = getNativeSqlite();
       if (DatabaseSync) {
         const db = new DatabaseSync(dbPath);
-        const tables = ['ideas', 'goals', 'vault', 'totp', 'events', 'forms', 'flows'];
+        const tables = ['ideas', 'goals', 'vault', 'totp', 'events', 'forms', 'flows', 'external_contexts'];
         for (const tbl of tables) {
           try {
             const row = db.prepare(`SELECT count(*) as c FROM ${tbl} WHERE sync_status != 'migrated' OR sync_status IS NULL`).get() as any;
