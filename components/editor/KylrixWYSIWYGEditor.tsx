@@ -653,19 +653,6 @@ export function KylrixWYSIWYGEditor({
       {showToolbar && !readOnly && (
         <div className="flex items-center justify-between gap-2 px-1 py-1.5 border-b border-white/6 mb-2">
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={toggleRecording}
-              disabled={isUploading}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold font-satoshi flex items-center gap-1.5 transition-all cursor-pointer ${
-                isRecording
-                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse'
-                  : 'bg-white/4 hover:bg-white/8 text-white/70 hover:text-white border border-white/4'
-              }`}
-            >
-              <Mic size={14} className={isRecording ? 'text-rose-400' : 'text-[#6366F1]'} />
-              <span>{isRecording ? `Recording (${recordingDuration}s)` : 'Voice Note'}</span>
-            </button>
 
             <label className="px-2.5 py-1.5 rounded-xl text-xs font-bold font-satoshi flex items-center gap-1.5 bg-white/4 hover:bg-white/8 text-white/70 hover:text-white border border-white/4 transition-all cursor-pointer">
               <Paperclip size={14} className="text-white/50" />

@@ -1327,22 +1327,6 @@ export function NoteDetailSidebar({
             </div>
           ) : null}
 
-          {/* Voice recorder — only for editors */}
-          {!readOnly && !shouldMaskEncrypted && (
-            <button 
-              type="button"
-              onClick={toggleRecording} 
-              className={`p-1.5 rounded-lg transition-all flex items-center justify-center border voice-recorder-btn ${
-                isRecording 
-                  ? 'bg-red-500/15 border-red-500/25 text-red-400 animate-pulse' 
-                  : 'bg-white/5 border-white/5 text-white/60 hover:text-white hover:bg-white/10'
-              }`}
-              title={isRecording ? `Stop (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}) & Insert` : "Record Voice Note"}
-            >
-              {isRecording ? <Square className="w-4 h-4 fill-red-500 text-red-500" /> : <Mic className="w-4 h-4" />}
-            </button>
-          )}
-
           {/* Copy link — available to all (share link reading) */}
           {showExpandButton && isPublic && (
             <button

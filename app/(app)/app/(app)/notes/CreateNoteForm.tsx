@@ -1478,32 +1478,6 @@ export default function CreateNoteForm({
                 {!isMobile && <span>Article</span>}
               </button>
             </div>
-
-            {/* Voice Recorder & Info */}
-            <div className="flex items-center gap-2">
-              <button
-                  type="button"
-                  onClick={toggleRecording}
-                  className={`h-9 px-3 rounded-lg flex items-center justify-center gap-1.5 font-mono text-xs font-bold transition-all select-none border ${
-                    isRecording 
-                      ? 'bg-red-500/20 border-red-500/30 text-red-400 animate-pulse' 
-                      : 'bg-black/40 border-white/5 text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                  title={isRecording ? "Click to Stop & Insert" : "Record Voice Idea"}
-                >
-                  {isRecording ? (
-                    <>
-                      <Square className="w-4 h-4 fill-current" />
-                      <span>{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-5 h-5" />
-                      {!isMobile && <span>Record</span>}
-                    </>
-                  )}
-                </button>
-            </div>
           </div>
 
           {/* Tags section */}
