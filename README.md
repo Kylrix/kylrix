@@ -44,9 +44,9 @@ Get up and running across your favorite interfaces, ordered from least friction 
 | **🤖 WebMCP** | W3C Model Context Protocol in browser for visiting AI agents | [**Explore WebMCP**](docs/webmcp.md) · Enable `chrome://flags/#enable-webmcp-testing` | **Zero friction** (In-session) |
 | **💬 Telegram Bot** | Instant alerts, idea capture, goal tracking & search in Telegram | [**1-Click Connect Telegram**](https://www.kylrix.space/connect/telegram) | **1 click** (Deep link) |
 | **🎮 Discord Bot** | Interactive server bot (`/ideas`, `/goals`, `/search`, `/pair`) | [**Install Discord Bot**](https://www.kylrix.space/connect/discord) | **1 click** (Server invite) |
-| **⚡ CLI & Local Bridge** | Sovereign terminal tool & local agent execution engine | `npm i -g @kylrix/cli` && `kylrix login` | **Minimal** (Node 18+) |
+| **⚡ CLI & Local Bridge** | Sovereign terminal tool & local agent execution engine | `npm i -g @kylrix/cli` *(100% offline & local)* | **Minimal** (Node 18+) |
 | **📡 REST API** | Programmatic CRUD for ideas, goals, vaults & agents (`/api/v1`) | [**Modular Samples (`samples/REST/`)**](samples/REST/) · `python3 samples/REST/create_idea.py` or `./samples/REST/create_idea.sh` | **Low** (Bearer PAT) |
-| **🔌 MCP Server** | Native tool server for Cursor, Claude, Windsurf & AI IDEs | `npx -y @smithery/cli install kylrix/kylrix` or `kylrix mcp` | **1 click** (Smithery prompts client) |
+| **🔌 MCP Server** | Native tool server for Cursor, Claude, Windsurf & AI IDEs | **Cloud:** `npx -y @smithery/cli install kylrix/kylrix`<br>**Local:** `kylrix mcp` | **1 click** (Smithery) / **Instant** (Local) |
 | **🔐 Sign in with Kylrix** | OAuth 2.1 / OIDC identity provider with PKCE | [Discovery Doc](https://www.kylrix.space/.well-known/openid-configuration) · [OAuth Guide](.agents/skills/oauth2/SKILL.md) | **Standard** (OAuth 2.1) |
 | **🔄 Self-Hosted Sync** | Bi-directional replication between private nodes and Cloud | [**Settings → Cloud Sync**](https://www.kylrix.space/settings?tab=sync#cloud-sync) | **Low** (1-click punch) |
 | **🐳 Docker Self-Host** | Bundled bare-metal container stack on port `:5003` | `curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh \| bash` | **Moderate** (Docker) |
