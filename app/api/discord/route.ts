@@ -1146,7 +1146,94 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // L. Check Pairing Status Callback
+    // L. Search Select Menu Pick Callback
+    if (customId === 'kylrix_search_select' || selectedValue.startsWith('search_pick_')) {
+      const val = selectedValue || '';
+      if (val.startsWith('search_pick_note:')) {
+        const noteId = val.replace('search_pick_note:', '');
+        try {
+          const note = await ApiResources.getNote(actor, noteId);
+          return NextResponse.json({
+            type: 7,
+            data: {
+              embeds: [
+                {
+                  title: `📝 ${note.title || 'Untitled Note'}`,
+                  description: note.content ? `${note.content}` : '*(Empty body)*',
+                  color: 0xec4899,
+                  fields: [
+                    { name: 'Note ID', value: `\`${note.id}\``, inline: true },
+                    { name: 'Status', value: '🟢 Decrypted', inline: true },
+                  ],
+                  footer: { text: 'Kylrix Sovereign Notes' },
+                },
+              ],
+              components: [
+                {
+                  type: 1,
+                  components: [
+                    { type: 2, style: 5, label: 'Open in Web', url: `https://www.kylrix.space/idea/${note.id}` },
+                    { type: 2, style: 4, label: 'Delete Note', custom_id: `del_note:${note.id}`, emoji: { name: '🗑️' } },
+                    { type: 2, style: 1, label: 'All Notes', custom_id: 'btn_notes', emoji: { name: '📋' } },
+                    { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                  ],
+                },
+              ],
+            },
+          });
+        } catch (err: any) {
+          return NextResponse.json({
+            type: 7,
+            data: { content: `❌ Note not found or inaccessible: ${err?.message || 'Error'}` },
+          });
+        }
+      }
+
+      if (val.startsWith('search_pick_goal:')) {
+        const goalId = val.replace('search_pick_goal:', '');
+        try {
+          const goal = await ApiResources.getGoal(actor, goalId);
+          const isDone = goal.status === 'completed';
+          return NextResponse.json({
+            type: 7,
+            data: {
+              embeds: [
+                {
+                  title: `${isDone ? '✅' : '🎯'} ${goal.title || 'Goal'}`,
+                  description: goal.description ? `${goal.description}` : '*(No description)*',
+                  color: isDone ? 0x10b981 : 0xa855f7,
+                  fields: [
+                    { name: 'Status', value: `**${goal.status || 'todo'}**`, inline: true },
+                    { name: 'Goal ID', value: `\`${goal.id}\``, inline: true },
+                  ],
+                  footer: { text: 'Kylrix Deliverables & Goals' },
+                },
+              ],
+              components: [
+                {
+                  type: 1,
+                  components: [
+                    !isDone
+                      ? { type: 2, style: 3, label: 'Mark Done', custom_id: `done_goal:${goal.id}`, emoji: { name: '✅' } }
+                      : { type: 2, style: 1, label: 'All Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
+                    { type: 2, style: 5, label: 'Open in Web', url: `https://www.kylrix.space/goal/${goal.id}` },
+                    { type: 2, style: 4, label: 'Delete Goal', custom_id: `del_goal:${goal.id}`, emoji: { name: '🗑️' } },
+                    { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                  ],
+                },
+              ],
+            },
+          });
+        } catch (err: any) {
+          return NextResponse.json({
+            type: 7,
+            data: { content: `❌ Goal not found or inaccessible: ${err?.message || 'Error'}` },
+          });
+        }
+      }
+    }
+
+    // M. Check Pairing Status Callback
     if (customId.startsWith('check_pair:')) {
       const deviceCode = customId.replace('check_pair:', '');
       try {
@@ -1764,36 +1851,69 @@ export async function POST(req: NextRequest) {
           }
 
           const fields: any[] = [];
+          const selectOptions: any[] = [];
+
           if (matchedNotes.length > 0) {
             fields.push({
               name: `📝 Notes (${matchedNotes.length})`,
               value: matchedNotes
-                .slice(0, 5)
+                .slice(0, 4)
                 .map((n: any) => `• **${n.title || 'Untitled'}** (\`${n.id}\`)`)
                 .join('\n'),
               inline: false,
             });
+            matchedNotes.slice(0, 10).forEach((n: any) => {
+              selectOptions.push({
+                label: `Note: ${((n.title || 'Untitled Note') as string).slice(0, 80)}`,
+                value: `search_pick_note:${n.id}`,
+                description: `ID: ${n.id}`.slice(0, 100),
+                emoji: { name: '📝' },
+              });
+            });
           }
+
           if (matchedGoals.length > 0) {
             fields.push({
               name: `🎯 Deliverables / Goals (${matchedGoals.length})`,
               value: matchedGoals
-                .slice(0, 5)
+                .slice(0, 4)
                 .map((g: any) => `• [${g.status === 'completed' ? '✅' : '⏳'}] **${g.title || 'Goal'}** (\`${g.id}\`)`)
                 .join('\n'),
               inline: false,
             });
+            matchedGoals.slice(0, 10).forEach((g: any) => {
+              selectOptions.push({
+                label: `Goal: ${((g.title || 'Untitled Goal') as string).slice(0, 80)}`,
+                value: `search_pick_goal:${g.id}`,
+                description: `Status: ${g.status || 'todo'} • ID: ${g.id}`.slice(0, 100),
+                emoji: { name: g.status === 'completed' ? '✅' : '🎯' },
+              });
+            });
           }
 
-          const components: any[] = [
-            {
+          const components: any[] = [];
+
+          if (selectOptions.length > 0) {
+            components.push({
               type: 1,
               components: [
-                { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
-                { type: 2, style: 5, label: 'Open in Kylrix', url: 'https://www.kylrix.space/app' },
+                {
+                  type: 3,
+                  custom_id: 'kylrix_search_select',
+                  placeholder: '⚡ Select an item to inspect or take action...',
+                  options: selectOptions.slice(0, 25),
+                },
               ],
-            },
-          ];
+            });
+          }
+
+          components.push({
+            type: 1,
+            components: [
+              { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+              { type: 2, style: 5, label: 'Open in Kylrix', url: 'https://www.kylrix.space/app' },
+            ],
+          });
 
           return NextResponse.json({
             type: 4,
@@ -1801,10 +1921,10 @@ export async function POST(req: NextRequest) {
               embeds: [
                 {
                   title: `🔍 Search Results: "${query}"`,
-                  description: `Found **${totalMatches}** matching items across your workspace:`,
+                  description: `Found **${totalMatches}** matching items across your workspace. Use the dropdown below to inspect or manage any item:`,
                   color: 0x3b82f6, // Blue
                   fields,
-                  footer: { text: isLinked ? 'Kylrix Unified Search' : 'Kylrix Search • Sandbox Mode' },
+                  footer: { text: isLinked ? 'Kylrix Unified Search • Select an item below' : 'Kylrix Search • Sandbox Mode' },
                 },
               ],
               components,
