@@ -444,7 +444,7 @@ export default function SudoModal({
               false
             );
 
-            if (success) {
+                if (success) {
                 setHasMasterpass(true);
                 SUDO_DETECT_CACHE.set(user.$id, {
                     hasPass: true,
@@ -452,6 +452,22 @@ export default function SudoModal({
                     passkeyPresent: hasPasskey || false,
                     timestamp: Date.now()
                 });
+
+                // If user has an existing Appwrite account and password is not yet synced to Turso, register it
+                try {
+                    const { getUserPasswordSyncStatusTurso, checkAndSyncAppwritePasswordToBetterAuth } = await import('@/lib/actions/turso-ops');
+                    const pwdStatus = await getUserPasswordSyncStatusTurso({ userId: user.$id, email: user.email || undefined });
+                    if (pwdStatus.needsAppwritePasswordCheck) {
+                        await checkAndSyncAppwritePasswordToBetterAuth({
+                            email: user.email || `${user.$id}@kylrix.local`,
+                            password,
+                            appwriteUserId: user.$id,
+                        });
+                    }
+                } catch (syncErr) {
+                    console.warn('[SudoModal] Password sync to Better Auth warning:', syncErr);
+                }
+
                 // IF MIGRATING: Don't call handleSuccessWithSync yet.
                 if (isMigratingRef.current) {
                     return;

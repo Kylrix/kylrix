@@ -1807,6 +1807,20 @@ export async function syncMasterpassToAccountPasswordAction(payload: {
     console.error('[syncMasterpassToAccountPasswordAction] Failed to update user prefs:', err);
   }
 
+  // 1c. Sync password to Better Auth and Turso, marking appwritePasswordSynced = true
+  try {
+    const { checkAndSyncAppwritePasswordToBetterAuth } = await import('@/lib/actions/turso-ops');
+    if (actor.email) {
+      await checkAndSyncAppwritePasswordToBetterAuth({
+        email: actor.email,
+        password: validatedMasterpass,
+        appwriteUserId: validatedUserId,
+      });
+    }
+  } catch (err) {
+    console.warn('[syncMasterpassToAccountPasswordAction] Failed to sync password to Better Auth:', err);
+  }
+
   // 2. Query the keychain entry for this user and set authPass = true
   const keychainRes = await databases.listRows(
     APPWRITE_CONFIG.DATABASES.VAULT,

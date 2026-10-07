@@ -16,6 +16,7 @@ export const user = sqliteTable('user', {
   appwriteAccountId: text('appwrite_account_id'),
   appwriteFullySynced: integer('appwrite_fully_synced', { mode: 'boolean' }).default(false),
   appwriteSyncedAt: text('appwrite_synced_at'),
+  appwritePasswordSynced: integer('appwrite_password_synced', { mode: 'boolean' }).default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });

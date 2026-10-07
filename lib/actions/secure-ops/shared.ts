@@ -409,7 +409,29 @@ export async function getRowCached(params: { databaseId: string; tableId: string
 
 export async function getActor(jwt?: string) {
   try {
-    const actor = await Registry.getAuth().getActor(jwt);
+    let actor = await Registry.getAuth().getActor(jwt);
+    if (!actor) {
+      try {
+        const { headers } = await import('next/headers');
+        const { auth } = await import('@/lib/auth/better-auth');
+        const h = await headers();
+        const session = await auth.api.getSession({ headers: h });
+        if (session?.user) {
+          const { isEmailInAdminList } = await import('@/lib/appwrite-admin');
+          actor = {
+            $id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.name || '',
+            emailVerification: Boolean((session.user as any).emailVerified),
+            isAdmin: isEmailInAdminList(session.user.email || ''),
+            labels: [],
+            prefs: {},
+          };
+        }
+      } catch (_betterAuthErr) {
+        // Fallback safely ignored
+      }
+    }
     if (!actor) return null;
 
     // Fraud Protection on Kylrix Cloud: Verify paid claim if present

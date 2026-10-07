@@ -366,8 +366,12 @@ function SettingsPageInner() {
         setMinting(true);
         try {
             const { mintDailyLoginSecure } = await import('@/lib/actions/secure-ops');
-            const { account } = await import('@/lib/appwrite');
-            const { jwt } = await account.createJWT();
+            let userJwt: string | undefined;
+            try {
+                const { account } = await import('@/lib/appwrite');
+                const jwtRes = await account.createJWT();
+                userJwt = jwtRes.jwt;
+            } catch {}
 
             const today = new Date();
             today.setUTCHours(0, 0, 0, 0);
@@ -378,7 +382,7 @@ function SettingsPageInner() {
             const response = await mintDailyLoginSecure({
                 userId: user.$id,
                 dateKey: dateKey,
-                jwt: jwt
+                jwt: userJwt
             });
 
           if (response?.accepted) {

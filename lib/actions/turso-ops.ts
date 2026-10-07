@@ -87,6 +87,7 @@ export async function getUserSyncStatusTurso(userId: string) {
         appwriteAccountId: schema.user.appwriteAccountId,
         appwriteFullySynced: schema.user.appwriteFullySynced,
         appwriteSyncedAt: schema.user.appwriteSyncedAt,
+        appwritePasswordSynced: schema.user.appwritePasswordSynced,
       })
       .from(schema.user)
       .where(eq(schema.user.id, userId))
@@ -1266,7 +1267,16 @@ export async function checkAndSyncAppwritePasswordToBetterAuth(params: {
         .limit(1);
 
       if (credAccounts.length > 0 && credAccounts[0].password) {
-        // User ALREADY has a Better Auth password! Do NOT overwrite it.
+        // User ALREADY has a Better Auth password! Ensure appwritePasswordSynced is marked true
+        await db
+          .update(schema.user)
+          .set({
+            appwritePasswordSynced: true,
+            hasAppwriteAccount: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.user.id, targetUser.id));
+
         return {
           synced: false,
           hasExistingBetterAuthPassword: true,
@@ -1298,12 +1308,13 @@ export async function checkAndSyncAppwritePasswordToBetterAuth(params: {
         });
       }
 
-      // Stamp Appwrite migration markers on user row
+      // Stamp Appwrite migration markers on user row, including appwritePasswordSynced: true
       await db
         .update(schema.user)
         .set({
           hasAppwriteAccount: true,
           appwriteAccountId: appwriteUserId || targetUser.appwriteAccountId || null,
+          appwritePasswordSynced: true,
           updatedAt: new Date(),
         })
         .where(eq(schema.user.id, targetUser.id));
@@ -1326,6 +1337,7 @@ export async function checkAndSyncAppwritePasswordToBetterAuth(params: {
         emailVerified: true,
         hasAppwriteAccount: true,
         appwriteAccountId: appwriteUserId || null,
+        appwritePasswordSynced: true,
         appwriteFullySynced: false,
         tier1Synced: false,
         tier2Synced: false,
@@ -1352,6 +1364,57 @@ export async function checkAndSyncAppwritePasswordToBetterAuth(params: {
   } catch (err: any) {
     console.error('[checkAndSyncAppwritePasswordToBetterAuth] Error:', err);
     return { synced: false, hasExistingBetterAuthPassword: false, error: err.message };
+  }
+}
+
+/**
+ * Checks whether a user has an Appwrite account and whether their password has already been synced to Turso.
+ */
+export async function getUserPasswordSyncStatusTurso(userIdentifier: {
+  userId?: string;
+  email?: string;
+}): Promise<{
+  hasAppwriteAccount: boolean;
+  appwritePasswordSynced: boolean;
+  needsAppwritePasswordCheck: boolean;
+  appwriteAccountId: string | null;
+}> {
+  const { userId, email } = userIdentifier;
+  if (!userId && !email) {
+    return { hasAppwriteAccount: false, appwritePasswordSynced: false, needsAppwritePasswordCheck: false, appwriteAccountId: null };
+  }
+
+  try {
+    const condition = userId ? eq(schema.user.id, userId) : eq(schema.user.email, email!.trim().toLowerCase());
+    const rows = await db
+      .select({
+        id: schema.user.id,
+        hasAppwriteAccount: schema.user.hasAppwriteAccount,
+        appwriteAccountId: schema.user.appwriteAccountId,
+        appwritePasswordSynced: schema.user.appwritePasswordSynced,
+      })
+      .from(schema.user)
+      .where(condition)
+      .limit(1);
+
+    const u = rows[0];
+    if (!u) {
+      // User unknown in Turso yet: if we don't know, allow checking Appwrite once
+      return { hasAppwriteAccount: true, appwritePasswordSynced: false, needsAppwritePasswordCheck: true, appwriteAccountId: null };
+    }
+
+    const hasAppwrite = u.hasAppwriteAccount !== false;
+    const isSynced = Boolean(u.appwritePasswordSynced);
+
+    return {
+      hasAppwriteAccount: Boolean(u.hasAppwriteAccount),
+      appwritePasswordSynced: isSynced,
+      needsAppwritePasswordCheck: hasAppwrite && !isSynced,
+      appwriteAccountId: u.appwriteAccountId,
+    };
+  } catch (err) {
+    console.warn('[getUserPasswordSyncStatusTurso] Error:', err);
+    return { hasAppwriteAccount: false, appwritePasswordSynced: false, needsAppwritePasswordCheck: false, appwriteAccountId: null };
   }
 }
 

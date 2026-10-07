@@ -159,16 +159,6 @@ export function LoginDrawer() {
     );
   };
 
-  const isInvalidCredentialsError = (err: unknown) => {
-    const e = err as { code?: number; type?: string; message?: string };
-    const msg = String(e?.message || '').toLowerCase();
-    return (
-      e?.code === 401 ||
-      e?.type === 'user_invalid_credentials' ||
-      msg.includes('invalid credentials')
-    );
-  };
-
   const handlePasswordSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!emailPasswordSigninEnabled) {
@@ -187,24 +177,16 @@ export function LoginDrawer() {
       invalidateCurrentUserCache();
 
       const { authClient } = await import('@/lib/auth/better-auth-client');
+      const { getUserPasswordSyncStatusTurso, checkAndSyncAppwritePasswordToBetterAuth } = await import('@/lib/actions/turso-ops');
       let betterAuthLoggedIn = false;
-
-      // 1. Check if password works for Better Auth first
-      try {
-        const betterRes = await authClient.signIn.email({
-          email: emailTrimmed,
-          password,
-        });
-        if (betterRes?.data?.user) {
-          betterAuthLoggedIn = true;
-        }
-      } catch {}
-
       let session: { userId: string } | null = null;
       let createdAccount = false;
 
-      // 2. If Better Auth fails, intercept and check if the password works for Appwrite
-      if (!betterAuthLoggedIn) {
+      const pwdStatus = await getUserPasswordSyncStatusTurso({ email: emailTrimmed });
+
+      // 1. If user has an existing Appwrite account and password is not yet synced to Turso:
+      // Try FIRST to see if that password works in Appwrite (the first time)
+      if (pwdStatus.needsAppwritePasswordCheck) {
         try {
           session = await account.createEmailPasswordSession(emailTrimmed, password);
         } catch (loginErr) {
@@ -213,54 +195,73 @@ export function LoginDrawer() {
             setMfaDrawerOpen(true);
             return;
           }
-          if (!authPolicy.emailPasswordSignup) {
-            throw loginErr;
-          }
-          if (!isInvalidCredentialsError(loginErr)) {
-            throw loginErr;
-          }
-          if (password.length < 8) {
-            throw new Error('Password must be at least 8 characters to create an account.');
-          }
-
-          const signUpRes = await selfHostedSignUpAction({
-            email: emailTrimmed,
-            password,
-            name: emailTrimmed.split('@')[0],
-          });
-          if (!signUpRes.success || !signUpRes.userId) {
-            throw new Error(signUpRes.error || 'Failed to create account');
-          }
-          createdAccount = true;
-          session = await account.createEmailPasswordSession(emailTrimmed, password);
+          // If Appwrite password fails, proceed to test Better Auth
         }
 
-        // Appwrite password worked! Sync password to Better Auth ONLY IF user does not already have a Better Auth password
+        // If it worked in Appwrite, register it in Better Auth / Turso!
         if (session?.userId) {
           try {
-            const { checkAndSyncAppwritePasswordToBetterAuth } = await import('@/lib/actions/turso-ops');
             const syncRes = await checkAndSyncAppwritePasswordToBetterAuth({
               email: emailTrimmed,
               password,
               appwriteUserId: session.userId,
             });
 
-            // Sign into Better Auth with the newly set password
             if (syncRes.synced) {
               await authClient.signIn.email({
                 email: emailTrimmed,
                 password,
               }).catch(() => {});
+              betterAuthLoggedIn = true;
             }
           } catch (syncErr) {
             console.warn('[LoginDrawer] Password sync to Better Auth warning:', syncErr);
           }
         }
-      } else {
-        // Already authenticated with Better Auth; opportunistically maintain Appwrite session if possible
+      }
+
+      // 2. If not yet logged in with Better Auth, attempt direct Better Auth login
+      if (!betterAuthLoggedIn) {
         try {
-          session = await account.createEmailPasswordSession(emailTrimmed, password);
+          const betterRes = await authClient.signIn.email({
+            email: emailTrimmed,
+            password,
+          });
+          if (betterRes?.data?.user) {
+            betterAuthLoggedIn = true;
+          }
         } catch {}
+      }
+
+      // 3. If still not logged in, handle self-hosted signup or throw invalid credentials
+      if (!betterAuthLoggedIn && !session) {
+        if (!authPolicy.emailPasswordSignup) {
+          throw new Error('Invalid email or password');
+        }
+        if (password.length < 8) {
+          throw new Error('Password must be at least 8 characters to create an account.');
+        }
+
+        const signUpRes = await selfHostedSignUpAction({
+          email: emailTrimmed,
+          password,
+          name: emailTrimmed.split('@')[0],
+        });
+        if (!signUpRes.success || !signUpRes.userId) {
+          throw new Error(signUpRes.error || 'Failed to create account');
+        }
+        createdAccount = true;
+        session = await account.createEmailPasswordSession(emailTrimmed, password);
+        // Register in Better Auth
+        await checkAndSyncAppwritePasswordToBetterAuth({
+          email: emailTrimmed,
+          password,
+          appwriteUserId: session.userId,
+        });
+        await authClient.signIn.email({
+          email: emailTrimmed,
+          password,
+        }).catch(() => {});
       }
 
       const activeUserId = session?.userId || (await authClient.getSession().then((s: any) => s?.data?.user?.id).catch(() => null)) || emailTrimmed;
