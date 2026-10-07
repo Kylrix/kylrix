@@ -34,6 +34,16 @@
 
 ---
 
+## 🎁 Contributor Program (Kylrix Pro Free Forever)
+
+**Kylrix Pro is free forever for developers who contribute to Kylrix**, as long as you have at least one merged pull request in the codebase in the past 30 days.
+
+- **100% Automated**: Sign in with GitHub on [kylrix.space](https://www.kylrix.space)—our verification engine automatically traces merged PRs on `Kylrix/kylrix` in the last 30 days and upgrades your account with zero manual review.
+- **What to Build**: Pick from prioritized pain points in [**`TODO.md`**](TODO.md) or explore systemic architectural pillars in [**`ROADMAP.md`**](ROADMAP.md).
+- **Guidelines**: Read [**`CONTRIBUTING.md`**](CONTRIBUTING.md) to get started.
+
+---
+
 ## 🚀 Quick Start
 
 Get up and running across your favorite interfaces, ordered from least friction to full self-hosting:
