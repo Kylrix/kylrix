@@ -324,11 +324,6 @@ export async function syncNotesDeltaSecure(localManifest: { id: string; updatedA
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
-  }
-
   const { databases } = createSystemClient();
   const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
   const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
@@ -431,11 +426,6 @@ export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-    throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
-  }
-
   const { databases } = createSystemClient();
   const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
   const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
@@ -534,11 +524,6 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
       updatedAt: new Date().toISOString(),
     }).catch(() => {});
   }).catch(() => {});
-
-  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-    return { $id: reservedRowId, ...data, userId: actor.$id };
-  }
 
   // Idempotent compose: if the reserved ID already exists for this actor, update instead of create.
   if (reservedRowId) {
@@ -781,27 +766,6 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
       updatedAt: new Date().toISOString(),
     }).catch(() => {});
   }).catch(() => {});
-
-  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  const isActorPaid = await hasPaidKylrixPlanServer(actor.$id);
-
-  if (!isActorPaid) {
-    const probeTables = createSystemTablesDB();
-    const existing = (await probeTables
-      .getRow({
-        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-        tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-        rowId: noteId,
-      })
-      .catch(() => null)) as { userId?: string | null; creatorId?: string | null } | null;
-
-    const ownerId = String(existing?.creatorId || existing?.userId || '').trim();
-    const isOwnerPaid = Boolean(ownerId && ownerId !== actor.$id && (await hasPaidKylrixPlanServer(ownerId)));
-
-    if (!isOwnerPaid) {
-      return { $id: noteId, ...data, userId: actor.$id };
-    }
-  }
 
   const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
   if (!isValidAppwriteRowId(noteId)) {
@@ -1062,11 +1026,6 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
-  }
-
-  const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-  if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-    return { success: true, offline: true };
   }
 
   const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');

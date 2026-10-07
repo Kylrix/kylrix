@@ -19,13 +19,32 @@ export const KeychainService = {
       const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
       const res = await listKeychainTurso(userId);
       if (res.success && Array.isArray(res.rows) && res.rows.length > 0) {
-        const mapped = res.rows.map((r: any) => ({
-          ...r,
-          $id: r.id,
-          wrappedKey: r.encryptedPayload,
-          salt: r.nonce,
-        }));
-        await SecurityEnclave.setKeychain(userId, mapped);
+        const mapped = res.rows.map((r: any) => {
+          let metaObj: any = {};
+          try {
+            metaObj = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : (r.metadata || {});
+          } catch {}
+          const credId =
+            r.credentialId ||
+            metaObj?.credentialId ||
+            metaObj?.id ||
+            (r.type === 'passkey' && r.account && r.account !== 'passkey' && r.account !== 'masterpass'
+              ? r.account
+              : undefined);
+          return {
+            ...r,
+            $id: r.id,
+            credentialId: credId,
+            wrappedKey: r.encryptedPayload || r.wrappedKey,
+            salt: r.nonce || r.salt,
+            params: r.params || (metaObj?.params ? JSON.stringify(metaObj.params) : (typeof r.metadata === 'string' ? r.metadata : JSON.stringify(metaObj))),
+          };
+        });
+        // Only override local cache if passkeys retain valid credentialIds
+        const hasValidCredIds = mapped.every((m: any) => m.type !== 'passkey' || Boolean(m.credentialId));
+        if (hasValidCredIds) {
+          await SecurityEnclave.setKeychain(userId, mapped);
+        }
         return mapped;
       }
     } catch (tursoErr) {

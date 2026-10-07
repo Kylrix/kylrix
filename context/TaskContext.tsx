@@ -1023,8 +1023,24 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       }).catch(() => {});
     }
 
+    const appwriteTasks = (tList?.rows || []).map(mapAppwriteTaskToTask);
+    const taskMap = new Map<string, Task>();
+    appwriteTasks.forEach((t) => taskMap.set(t.id, t));
+    tursoGoals.forEach((t) => {
+      const existing = taskMap.get(t.id);
+      if (!existing) {
+        taskMap.set(t.id, t);
+      } else {
+        const tTime = t.updatedAt instanceof Date ? t.updatedAt.getTime() : new Date(t.updatedAt || 0).getTime();
+        const aTime = existing.updatedAt instanceof Date ? existing.updatedAt.getTime() : new Date(existing.updatedAt || 0).getTime();
+        if (tTime > aTime) {
+          taskMap.set(t.id, { ...existing, ...t });
+        }
+      }
+    });
+
     return { 
-      tasks: tursoGoals.length > 0 ? tursoGoals : (tList?.rows || []).map(mapAppwriteTaskToTask), 
+      tasks: Array.from(taskMap.values()), 
       projects: (cList?.rows || []).map(mapAppwriteCalendarToProject) 
     };
 

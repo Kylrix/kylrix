@@ -503,14 +503,20 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
         queries: [Query.equal('userId', userId), Query.limit(100)],
       });
       for (const row of res.rows as any[]) {
+        const metaObj = {
+          credentialId: row.credentialId || null,
+          params: row.params || null,
+          isArgon: row.isArgon ?? null,
+          ...(row.metadata ? (typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata) : {}),
+        };
         await upsertKeychainTurso({
           id: row.$id,
           userId,
-          account: row.account || 'masterpass',
+          account: row.credentialId || row.account || (row.type === 'passkey' ? 'passkey' : 'masterpass'),
           type: row.type || 'password',
           encryptedPayload: row.encryptedPayload || row.wrappedKey || '',
           nonce: row.nonce || row.salt || null,
-          metadata: row.metadata || (row.params ? JSON.stringify({ params: row.params, isArgon: row.isArgon }) : null),
+          metadata: JSON.stringify(metaObj),
           createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
           updatedAt: row.updatedAt || row.$updatedAt || new Date().toISOString(),
         });

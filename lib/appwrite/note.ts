@@ -1673,13 +1673,14 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
   if (sinceUpdatedAt) finalQueries.push(Query.greaterThan('$updatedAt', sinceUpdatedAt));
   if (cursor) finalQueries.push(Query.cursorAfter(cursor));
 
-  // 1. Primary substrate: Turso
+  // 1. Primary substrate: Turso (pre-fetch to merge with Appwrite)
+  let tursoNotes: any[] = [];
   if (effectiveUserId && effectiveUserId !== 'guest') {
     try {
       const { listNotesTurso } = await import('@/lib/actions/turso-ops');
       const tursoRes = await listNotesTurso(effectiveUserId);
       if (tursoRes.success && Array.isArray(tursoRes.rows) && tursoRes.rows.length > 0) {
-        const rows = tursoRes.rows.map((row: any) => ({
+        tursoNotes = tursoRes.rows.map((row: any) => ({
           $id: row.id,
           id: row.id,
           title: row.title || '',
@@ -1704,16 +1705,9 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
           isPublic: false,
           metadata: '{}',
         })).filter((doc: any) => includeThreads || !isExcludedNote(doc));
-
-        return {
-          rows: rows.slice(0, limit),
-          total: rows.length,
-          nextCursor: null,
-          hasMore: rows.length > limit,
-        };
       }
     } catch (tursoErr) {
-      console.warn('[listNotesPaginated] Turso primary list failed, falling back to secondary:', tursoErr);
+      console.warn('[listNotesPaginated] Turso fetch warning:', tursoErr);
     }
   }
 
@@ -1725,6 +1719,14 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
       finalQueries
     );
   } catch (err: any) {
+    if (tursoNotes.length > 0) {
+      return {
+        rows: tursoNotes.slice(0, limit),
+        total: tursoNotes.length,
+        nextCursor: null,
+        hasMore: tursoNotes.length > limit,
+      };
+    }
     if (typeof window !== 'undefined') {
       let effectiveUserId = userId;
       if (!effectiveUserId) {
@@ -1790,6 +1792,25 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
   }
 
   let notes = (res?.rows as any[] || []).map((doc: any) => hydrateVirtualAttributes(doc)) as unknown as Notes[];
+
+  // Merge Turso notes by ID so items created on either substrate are fully present
+  if (tursoNotes.length > 0) {
+    const byId = new Map<string, any>();
+    notes.forEach((n: any) => byId.set(n.$id, n));
+    tursoNotes.forEach((tn: any) => {
+      const existing = byId.get(tn.$id);
+      if (!existing) {
+        byId.set(tn.$id, tn);
+      } else {
+        const tTime = new Date(tn.updatedAt || tn.$updatedAt || 0).getTime();
+        const eTime = new Date(existing.updatedAt || existing.$updatedAt || 0).getTime();
+        if (tTime > eTime) {
+          byId.set(tn.$id, { ...existing, ...tn });
+        }
+      }
+    });
+    notes = Array.from(byId.values()) as unknown as Notes[];
+  }
 
   // Merge any local-only / unsynced RxDB notes with remote notes so local creations are never lost
   if (typeof window !== 'undefined') {

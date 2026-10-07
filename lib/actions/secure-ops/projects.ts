@@ -1822,11 +1822,6 @@ export async function createGoalSecure(data: any, jwt?: string): Promise<any> {
       throw new Error('Unauthorized: Session expired or invalid');
     }
 
-    const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-    if (!(await hasPaidKylrixPlanServer(actor.$id))) {
-      throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
-    }
-
     const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
     const { pickGoalAutosavePayload } = await import('@/lib/goals/pick-goal-autosave-payload');
 
@@ -1914,12 +1909,6 @@ export async function updateGoalSecure(goalId: string, data: any, jwt?: string):
     const ownerId = String(existing?.creatorId || existing?.userId || '').trim();
     if (ownerId && ownerId !== actor.$id && ownerId !== 'guest' && ownerId !== 'thread') {
       throw new Error('Forbidden: Insufficient permissions on goal');
-    }
-
-    const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
-    const effectivePaidUserId = (ownerId && ownerId !== 'guest' && ownerId !== 'thread') ? ownerId : actor.$id;
-    if (!(await hasPaidKylrixPlanServer(effectivePaidUserId))) {
-      throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
     }
 
     const merged = {

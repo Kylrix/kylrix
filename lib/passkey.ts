@@ -59,7 +59,35 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
     const { SecurityEnclave } = await import('@/lib/security/enclave');
     let passkeyEntries = await SecurityEnclave.getPasskeyEntries(userId);
 
-    if (passkeyEntries.length === 0) {
+    const extractCredId = (entry: any): string | null => {
+      if (typeof entry?.credentialId === 'string' && entry.credentialId.trim()) {
+        return entry.credentialId.trim();
+      }
+      if (entry?.metadata) {
+        try {
+          const meta = typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata;
+          if (typeof meta?.credentialId === 'string' && meta.credentialId.trim()) return meta.credentialId.trim();
+          if (typeof meta?.id === 'string' && meta.id.trim()) return meta.id.trim();
+        } catch {}
+      }
+      if (entry?.params) {
+        try {
+          const p = typeof entry.params === 'string' ? JSON.parse(entry.params) : entry.params;
+          if (typeof p?.credentialId === 'string' && p.credentialId.trim()) return p.credentialId.trim();
+          if (typeof p?.id === 'string' && p.id.trim()) return p.id.trim();
+        } catch {}
+      }
+      if (entry?.account && entry.account !== 'masterpass' && entry.account !== 'passkey') {
+        return String(entry.account).trim();
+      }
+      return null;
+    };
+
+    let validPasskeyEntries = passkeyEntries
+      .map((e: any) => ({ ...e, credentialId: extractCredId(e) }))
+      .filter((e: any) => Boolean(e.credentialId));
+
+    if (validPasskeyEntries.length === 0) {
       // Soft-timeout remote fill — never hang unlock on a dead socket
       const entries = await withTimeout<any[]>(
         AppwriteService.listKeychainEntries(userId) as Promise<any[]>,
@@ -67,11 +95,16 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
       );
       if (Array.isArray(entries) && entries.length > 0) {
         passkeyEntries = entries.filter((k: any) => k.type === 'passkey');
-        void SecurityEnclave.setKeychain(userId, entries).catch(() => {});
+        validPasskeyEntries = passkeyEntries
+          .map((e: any) => ({ ...e, credentialId: extractCredId(e) }))
+          .filter((e: any) => Boolean(e.credentialId));
+        if (validPasskeyEntries.length > 0) {
+          void SecurityEnclave.setKeychain(userId, entries).catch(() => {});
+        }
       }
     }
 
-    if (passkeyEntries.length === 0) {
+    if (validPasskeyEntries.length === 0) {
       toast.error("No passkeys registered for this account.");
       return false;
     }
@@ -85,14 +118,16 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
     const authOptions: any = {
       challenge: challengeBase64,
       rpId,
-      allowCredentials: passkeyEntries.map((entry: any) => ({
-        id: entry.credentialId!,
+      allowCredentials: validPasskeyEntries.map((entry: any) => ({
+        id: entry.credentialId,
         type: 'public-key' as const,
-        transports: transportsForPasskeyEntry(entry)})),
+        transports: transportsForPasskeyEntry(entry),
+      })),
       userVerification: 'preferred' as UserVerificationRequirement,
-      timeout: 60000};
+      timeout: 60000,
+    };
 
-    const wantsPrf = passkeyEntries.some((entry: any) => {
+    const wantsPrf = validPasskeyEntries.some((entry: any) => {
       if (entry.authPasskey) return true;
       try {
         const paramsObj = typeof entry.params === 'string' ? JSON.parse(entry.params) : entry.params;
@@ -121,7 +156,9 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
       : startAuthentication({ optionsJSON: authOptions } as any));
 
     // 4. Find the matching keychain entry
-    const matchingEntry = passkeyEntries.find((e: any) => e.credentialId === authResp.id);
+    const matchingEntry =
+      validPasskeyEntries.find((e: any) => e.credentialId === authResp.id) ||
+      passkeyEntries.find((e: any) => e.credentialId === authResp.id);
     if (!matchingEntry) {
       toast.error("Authenticated with an unregistered passkey.");
       return false;

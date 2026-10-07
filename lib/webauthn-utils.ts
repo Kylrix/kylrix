@@ -7,7 +7,8 @@ if (typeof window !== 'undefined' && (window as any).PublicKeyCredential && (win
   }
 }
 
-export function bufferToBase64Url(buffer: ArrayBuffer) {
+export function bufferToBase64Url(buffer: ArrayBuffer | null | undefined): string {
+  if (!buffer || !(buffer instanceof ArrayBuffer)) return '';
   const bytes = new Uint8Array(buffer);
   let binary = '';
   for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
@@ -15,7 +16,8 @@ export function bufferToBase64Url(buffer: ArrayBuffer) {
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function base64UrlToBuffer(base64url: string) {
+function base64UrlToBuffer(base64url: string | null | undefined): ArrayBuffer {
+  if (!base64url || typeof base64url !== 'string') return new ArrayBuffer(0);
   const padding = '='.repeat((4 - (base64url.length % 4)) % 4);
   const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/') + padding;
   const binary = atob(base64);
