@@ -12,8 +12,8 @@ export default async function Image() {
   return new ImageResponse(
     renderKylrixShareCard({
       productLabel: productName,
-      eyebrow: 'AI Agent Memory & Security',
-      title: 'Persistent memory and zero-knowledge secrets for AI agents.',
+      eyebrow: 'AI Agent Security & Memory',
+      title: 'Zero-knowledge secrets and persistent memory for AI agents.',
       description: 'Let Claude Code, Cursor, and local agents use credentials without ever seeing plaintext secrets.',
       accent: 'indigo',
       ownerLabel: 'Architecture',

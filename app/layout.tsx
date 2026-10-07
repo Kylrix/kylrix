@@ -35,7 +35,7 @@ const productSiteUrl = getProductSiteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(productSiteUrl),
   title: {
-    default: `${productName} — Persistent memory and zero-knowledge secrets for AI agents.`,
+    default: `${productName} — Zero-knowledge secrets and persistent memory for AI agents.`,
     template: `%s · ${productName}`},
   description: 'Let Claude Code, Cursor, and local agents use credentials and carry context without ever seeing plaintext secrets. Client-side encrypted vault, sovereign SQLite memory, and native MCP bridge.',
   keywords: ['AI agent secrets', 'zero-knowledge vault', 'MCP server', 'Claude Code', 'Cursor', 'local-first', 'persistent agent memory', 'Argon2id', 'AES-256-GCM'],
@@ -47,18 +47,18 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: productSiteUrl,
     siteName: productName,
-    title: `${productName} — Persistent memory and zero-knowledge secrets for AI agents.`,
+    title: `${productName} — Zero-knowledge secrets and persistent memory for AI agents.`,
     description: 'Let Claude Code, Cursor, and local agents use credentials and carry context without ever seeing plaintext secrets. Client-side encrypted vault and native MCP bridge.',
     images: [
       {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: `${productName} — Persistent memory and zero-knowledge secrets for AI agents.`},
+        alt: `${productName} — Zero-knowledge secrets and persistent memory for AI agents.`},
     ]},
   twitter: {
     card: 'summary_large_image',
-    title: `${productName} — Persistent memory and zero-knowledge secrets for AI agents.`,
+    title: `${productName} — Zero-knowledge secrets and persistent memory for AI agents.`,
     description: 'Let Claude Code, Cursor, and local agents use credentials and carry context without ever seeing plaintext secrets. Client-side encrypted vault and native MCP bridge.',
     images: ['/opengraph-image']},
   other: {

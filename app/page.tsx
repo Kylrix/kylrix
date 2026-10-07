@@ -182,9 +182,9 @@ export default function LandingPage() {
             transition={{ duration: 0.35, delay: 0.05 }}
             className="font-clash text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.08] [text-shadow:_0_2px_12px_rgba(0,0,0,0.9)]"
           >
-            Persistent memory & <br className="hidden sm:inline" />
+            Zero-knowledge secrets & <br className="hidden sm:inline" />
             <span className="bg-gradient-to-r from-[#818CF8] via-[#EC4899] to-[#10B981] bg-clip-text text-transparent">
-              zero-knowledge secrets for AI agents.
+              persistent memory for AI agents.
             </span>
           </motion.h1>
 
