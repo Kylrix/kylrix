@@ -62,24 +62,33 @@ export function isValidDiscordWebhookUrl(urlStr: string | null | undefined): boo
   }
 }
 
-// ── DISCORD APPLICATION COMMANDS SPECIFICATION (1:1 PARITY) ──
+// Discord Contexts: 0 = GUILD, 1 = BOT_DM, 2 = PRIVATE_CHANNEL (DMs/Group DMs)
+// Integration Types: 0 = GUILD_INSTALL, 1 = USER_INSTALL
+const DEFAULT_COMMAND_SETTINGS = {
+  integration_types: [0, 1],
+  contexts: [0, 1, 2],
+};
 
 export const DISCORD_SLASH_COMMANDS = [
   {
     name: 'menu',
     description: 'Open the interactive Kylrix workspace dashboard',
+    ...DEFAULT_COMMAND_SETTINGS,
   },
   {
     name: 'help',
     description: 'Display Kylrix Discord bot command guide and instructions',
+    ...DEFAULT_COMMAND_SETTINGS,
   },
   {
     name: 'notes',
     description: 'View and manage your recent sovereign notes',
+    ...DEFAULT_COMMAND_SETTINGS,
   },
   {
     name: 'note',
     description: 'Create a new encrypted note',
+    ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'title',
@@ -98,6 +107,7 @@ export const DISCORD_SLASH_COMMANDS = [
   {
     name: 'note_read',
     description: 'Read the full contents of a specific note',
+    ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'id',
@@ -110,6 +120,7 @@ export const DISCORD_SLASH_COMMANDS = [
   {
     name: 'note_delete',
     description: 'Delete a note from your workspace',
+    ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'id',
@@ -122,10 +133,12 @@ export const DISCORD_SLASH_COMMANDS = [
   {
     name: 'goals',
     description: 'View and track deliverables and goal milestones',
+    ...DEFAULT_COMMAND_SETTINGS,
   },
   {
     name: 'goal',
     description: 'Create a new deliverable or goal',
+    ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'title',
@@ -138,6 +151,7 @@ export const DISCORD_SLASH_COMMANDS = [
   {
     name: 'goal_done',
     description: 'Mark a goal as completed',
+    ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'id',
@@ -150,6 +164,7 @@ export const DISCORD_SLASH_COMMANDS = [
   {
     name: 'goal_delete',
     description: 'Delete a goal from your workspace',
+    ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'id',
@@ -162,14 +177,17 @@ export const DISCORD_SLASH_COMMANDS = [
   {
     name: 'workspaces',
     description: 'List your sovereign workspaces and team projects',
+    ...DEFAULT_COMMAND_SETTINGS,
   },
   {
     name: 'pair',
     description: 'Pair this Discord account with Kylrix via 1-click device authorization',
+    ...DEFAULT_COMMAND_SETTINGS,
   },
   {
     name: 'link',
     description: 'Link your Kylrix account using a Personal Access Token (PAT)',
+    ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'token',
@@ -182,18 +200,22 @@ export const DISCORD_SLASH_COMMANDS = [
   {
     name: 'unlink',
     description: 'Disconnect your Discord account from Kylrix',
+    ...DEFAULT_COMMAND_SETTINGS,
   },
   {
     name: 'whoami',
     description: 'Check current linked Kylrix account, subscription tier, and status',
+    ...DEFAULT_COMMAND_SETTINGS,
   },
   {
     name: 'settings',
     description: 'View subscription plan, token balance, and security settings',
+    ...DEFAULT_COMMAND_SETTINGS,
   },
   {
     name: 'agent',
     description: 'Dispatch an autonomous AI agent task to your workspace',
+    ...DEFAULT_COMMAND_SETTINGS,
     options: [
       {
         name: 'prompt',
