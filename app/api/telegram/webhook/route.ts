@@ -345,6 +345,7 @@ export const TELEGRAM_BOT_COMMANDS = [
   { command: 'idea', description: 'Create idea: /idea Title | Content' },
   { command: 'goals', description: 'View and track your goals' },
   { command: 'goal', description: 'Create goal: /goal Title' },
+  { command: 'agent', description: 'Run agent task: /agent <prompt>' },
   { command: 'search', description: 'Search items: /search <keyword>' },
   { command: 'workspaces', description: 'List and switch workspaces' },
   { command: 'switch', description: 'Switch workspace: /switch <name or id>' },
@@ -1018,6 +1019,46 @@ export async function handleTelegramUpdate(body: any): Promise<{
         );
       } catch (err: any) {
         await sendTelegramMessage(chatId, `❌ Failed to create goal: ${escapeHtml(err?.message)}`);
+      }
+      return { success: true };
+    }
+
+    if (rawText.startsWith('/agent ') || rawText.startsWith('/ask ') || rawText.startsWith('/run ')) {
+      const prompt = rawText.replace(/^\/(agent|ask|run)\s+/, '').trim();
+      if (!prompt) {
+        await sendTelegramMessage(chatId, 'Usage: <code>/agent [task or prompt]</code>');
+        return { success: true };
+      }
+      try {
+        await sendTelegramMessage(chatId, `🤖 <i>Agent executing task: "${escapeHtml(prompt.slice(0, 60))}"...</i>`);
+        const activeWs = getTelegramActiveWorkspace(chatId);
+        const { runAgentTask } = await import('@/lib/ai/agent-scheduler');
+        const taskResult = await runAgentTask({
+          actor,
+          prompt,
+          workspaceId: activeWs?.id,
+          workspaceName: activeWs?.name,
+        });
+
+        let msg = `🤖 <b>Agent Run Completed</b> ${activeWs ? `(📁 ${escapeHtml(activeWs.name)})` : ''}\n\n`;
+        msg += `<b>Task:</b> ${escapeHtml(prompt)}\n\n`;
+        msg += `<b>Output:</b>\n${escapeHtml(taskResult.output.slice(0, 1500))}\n\n`;
+        if (taskResult.createdItems?.ideaId) {
+          msg += `💾 <i>Saved to workspace idea: <code>${taskResult.createdItems.ideaId}</code></i>\n`;
+        }
+        msg += `⚡ <i>Engine: ${taskResult.provider === 'workers-ai' ? 'Cloudflare Workers AI (Edge GPU)' : taskResult.provider}</i>`;
+
+        await sendTelegramMessage(chatId, msg, {
+          inline_keyboard: [
+            [
+              { text: '💡 View Ideas', callback_data: 'menu_notes' },
+              { text: '🎯 View Goals', callback_data: 'menu_goals' },
+            ],
+            [{ text: '🏠 Main Menu', callback_data: 'menu_main' }],
+          ],
+        });
+      } catch (err: any) {
+        await sendTelegramMessage(chatId, `❌ Agent run failed: ${escapeHtml(err?.message)}`);
       }
       return { success: true };
     }

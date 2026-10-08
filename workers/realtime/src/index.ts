@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 
 export interface Env {
   REALTIME_ROOM: DurableObjectNamespace<KylrixRealtimeRoom>;
+  AI?: any;
 }
 
 export class KylrixRealtimeRoom extends DurableObject {
@@ -111,6 +112,7 @@ export default {
           status: "healthy",
           service: "kylrix-realtime",
           version: "1.0.0",
+          features: ["durable_objects", "workers_ai", "agent_runner"],
           timestamp: new Date().toISOString(),
         }),
         {
@@ -120,6 +122,63 @@ export default {
           },
         }
       );
+    }
+
+    // Direct Workers AI agent execution endpoint on Cloudflare
+    if (url.pathname === "/agent/run" || url.pathname === "/ai/chat") {
+      if (request.method !== "POST") {
+        return new Response(JSON.stringify({ error: "Method not allowed" }), {
+          status: 405,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        });
+      }
+      try {
+        const body: any = await request.json();
+        const prompt = body.prompt || body.message;
+        if (!prompt) {
+          return new Response(JSON.stringify({ error: "Missing prompt" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          });
+        }
+        if (!env.AI) {
+          return new Response(JSON.stringify({ error: "Workers AI binding not available" }), {
+            status: 503,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          });
+        }
+
+        const model = body.model || "@cf/meta/llama-3.1-8b-instruct";
+        const systemPrompt =
+          body.systemPrompt ||
+          "You are an autonomous AI assistant operating within the Kylrix sovereign workspace.";
+
+        const aiRes = await env.AI.run(model, {
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt },
+          ],
+          max_tokens: body.max_tokens || 1024,
+        });
+
+        const outputText = aiRes?.response || aiRes?.text || JSON.stringify(aiRes);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            output: outputText,
+            model,
+            timestamp: new Date().toISOString(),
+          }),
+          {
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          }
+        );
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        });
+      }
     }
 
     // Match route: /room/:roomId or /parties/realtime/:roomId or /ws/:roomId or /:roomId

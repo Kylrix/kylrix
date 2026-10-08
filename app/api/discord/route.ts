@@ -2742,28 +2742,65 @@ export async function POST(req: NextRequest) {
       }
 
       case 'agent': {
-        const prompt = getOption('prompt') || '';
-        return NextResponse.json({
-          type: 4,
-          data: {
-            embeds: [
-              {
-                title: '🤖 Agent Task Dispatched',
-                description: `Prompt: **"${prompt.slice(0, 150)}"**\nTask queued for assistant execution.`,
-                color: 0x818cf8,
-              },
-            ],
-            components: [
-              {
-                type: 1,
-                components: [
-                  { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
-                  { type: 2, style: 5, label: 'Open App', url: 'https://www.kylrix.space/app' },
-                ],
-              },
-            ],
-          },
-        });
+        const prompt = String(getOption('prompt') || '').trim();
+        if (!prompt) {
+          return NextResponse.json({
+            type: 4,
+            data: { content: '❌ Please provide a prompt: `/agent prompt: <task>`' },
+          });
+        }
+        const activeWs = getDiscordActiveWorkspace(callerId);
+        try {
+          const { runAgentTask } = await import('@/lib/ai/agent-scheduler');
+          const taskResult = await runAgentTask({
+            actor,
+            prompt,
+            workspaceId: activeWs?.id,
+            workspaceName: activeWs?.name,
+          });
+
+          const description =
+            `**Task:** "${prompt.slice(0, 100)}"\n\n` +
+            `**Output:**\n${taskResult.output.slice(0, 1500)}\n\n` +
+            (taskResult.createdItems?.ideaId ? `💾 *Saved to workspace idea \`${taskResult.createdItems.ideaId}\`*\n` : '') +
+            `⚡ *Engine: ${taskResult.provider === 'workers-ai' ? 'Cloudflare Workers AI (Edge GPU)' : taskResult.provider}*`;
+
+          return NextResponse.json({
+            type: 4,
+            data: {
+              embeds: [
+                {
+                  title: `🤖 Autonomous Agent Run ${activeWs ? `(📁 ${activeWs.name})` : ''}`,
+                  description,
+                  color: 0x10b981,
+                },
+              ],
+              components: [
+                {
+                  type: 1,
+                  components: [
+                    { type: 2, style: 2, label: '💡 View Ideas', custom_id: 'btn_notes', emoji: { name: '💡' } },
+                    { type: 2, style: 2, label: '🎯 View Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
+                    { type: 2, style: 5, label: '🌐 Open App', url: 'https://www.kylrix.space/app' },
+                  ],
+                },
+              ],
+            },
+          });
+        } catch (err: any) {
+          return NextResponse.json({
+            type: 4,
+            data: {
+              embeds: [
+                {
+                  title: '❌ Agent Task Failed',
+                  description: err?.message || 'Execution error',
+                  color: 0xef4444,
+                },
+              ],
+            },
+          });
+        }
       }
 
       case 'search': {

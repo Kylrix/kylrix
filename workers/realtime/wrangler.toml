@@ -12,6 +12,9 @@ bindings = [
   { name = "REALTIME_ROOM", class_name = "KylrixRealtimeRoom" }
 ]
 
+[ai]
+binding = "AI"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["KylrixRealtimeRoom"]
