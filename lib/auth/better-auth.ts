@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { emailOTP, bearer, jwt, multiSession, lastLoginMethod } from 'better-auth/plugins';
+import { passkey } from '@better-auth/passkey';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
@@ -23,6 +24,7 @@ export const auth = betterAuth({
       session: schema.session,
       account: schema.account,
       verification: schema.verification,
+      passkey: schema.passkey,
       apikey: schema.apikey,
       jwks: schema.jwks,
       oauthClient: schema.oauthClient,
@@ -59,6 +61,9 @@ export const auth = betterAuth({
       maximumSessions: 5,
     }),
     lastLoginMethod(),
+    passkey({
+      rpName: 'Kylrix',
+    }),
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
         console.log(`[BetterAuth OTP] ${type.toUpperCase()} for ${email}: ${otp}`);

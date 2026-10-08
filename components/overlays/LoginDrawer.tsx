@@ -301,6 +301,28 @@ export function LoginDrawer() {
   const handlePasskeyLogin = async () => {
     setPasskeyLoading(true);
     try {
+      // 1. Primary: Better Auth Passkey Sign In
+      try {
+        const res = await (authClient as any)?.signIn?.passkey?.({
+          returnWebAuthnResponse: true,
+        });
+        if (res?.data?.session || res?.data?.user) {
+          toast.success('Authenticated via Passkey!');
+          await refreshUser(true);
+          navigateToAppAfterAuth();
+          return;
+        }
+        if (res?.error && res.error.message && !res.error.message.includes('not found') && !res.error.message.includes('No passkey')) {
+          console.warn('[LoginDrawer] Better Auth passkey sign-in failed, checking fallback:', res.error);
+        }
+      } catch (betterAuthErr: any) {
+        if (betterAuthErr.name === 'NotAllowedError') {
+          return;
+        }
+        console.warn('[LoginDrawer] Better Auth passkey sign-in fallback:', betterAuthErr);
+      }
+
+      // 2. Secondary: Fallback to token exchange
       const hostname = window.location.hostname;
       const hostHeader = window.location.host;
       
@@ -316,7 +338,7 @@ export function LoginDrawer() {
         throw new Error(verifyRes.error || 'Passkey verification failed');
       }
 
-      // Complete Appwrite session creation using the minted token
+      // Complete session creation using the minted token
       await account.deleteSession('current').catch(() => {});
       invalidateCurrentUserCache();
       await account.createSession({ userId: verifyRes.userId, secret: verifyRes.token });
