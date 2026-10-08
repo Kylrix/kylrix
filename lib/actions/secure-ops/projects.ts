@@ -32,12 +32,50 @@ const {
   rowCache} = shared;
 
 export async function getPublicFormDataSecure(formId: string) {
-  const tables = createSystemTablesDB();
-  const row = await tables.getRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-    tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-    rowId: formId
-  }).catch(() => null);
+  let row: any = null;
+
+  // 1. Check Turso first
+  try {
+    const { db, schema } = await import('@/lib/db');
+    const { eq } = await import('drizzle-orm');
+    const tursoRows = await db
+      .select()
+      .from(schema.forms)
+      .where(eq(schema.forms.id, formId))
+      .limit(1);
+
+    if (tursoRows.length > 0) {
+      const tr = tursoRows[0];
+      row = {
+        $id: tr.id,
+        id: tr.id,
+        userId: tr.userId,
+        status: tr.isPublished ? 'published' : 'draft',
+        title: tr.title,
+        description: tr.description,
+        schema: tr.fields,
+        settings: tr.settings,
+        isPublic: Boolean(tr.isPublished),
+        isGuest: true,
+        $createdAt: tr.createdAt,
+        $updatedAt: tr.updatedAt,
+      };
+    }
+  } catch {}
+
+  // 2. Fallback to Appwrite
+  if (!row) {
+    try {
+      const tables = createSystemTablesDB();
+      row = await tables.getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+        rowId: formId
+      });
+    } catch {
+      row = null;
+    }
+  }
 
   if (!row || row.isTrash === true || row.isDeleted === true) return null;
 
@@ -51,7 +89,7 @@ export async function getPublicFormDataSecure(formId: string) {
 
   let settings: any = {};
   try {
-    settings = JSON.parse(row.settings || '{}');
+    settings = typeof row.settings === 'string' ? JSON.parse(row.settings || '{}') : (row.settings || {});
   } catch (_e) {}
 
   if (settings.expiresAt && new Date(settings.expiresAt) < new Date()) {
@@ -66,7 +104,7 @@ export async function getPublicFormDataSecure(formId: string) {
     title: row.title,
     description: row.description,
     schema: row.schema,
-    settings: row.settings,
+    settings: typeof row.settings === 'string' ? row.settings : JSON.stringify(row.settings || {}),
     isPublic: row.isPublic,
     isGuest: row.isGuest,
     $createdAt: row.$createdAt,
@@ -77,40 +115,40 @@ export async function getPublicFormDataSecure(formId: string) {
 export async function getPublicGoalDataSecure(goalId: string, _jwt?: string) {
   let row: any = null;
 
-  // 1. Try Appwrite first
+  // 1. Check Turso first
   try {
-    const tables = createSystemTablesDB();
-    row = await tables.getRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
-      rowId: goalId,
-    });
-  } catch {}
+    const { getGoalTurso } = await import('@/lib/actions/turso-ops');
+    const tursoRes = await getGoalTurso(goalId);
+    if (tursoRes.success && tursoRes.row) {
+      const tr = tursoRes.row;
+      row = {
+        $id: tr.id,
+        title: tr.title,
+        description: tr.description,
+        status: tr.status,
+        priority: tr.priority,
+        dueDate: tr.dueDate,
+        userId: tr.userId,
+        isPublic: (tr as any).isPublic ?? true,
+        isGuest: (tr as any).isGuest ?? true,
+        dek: (tr as any).dek || null,
+        $updatedAt: tr.updatedAt,
+      };
+    }
+  } catch (tursoErr) {
+    console.warn('[getPublicGoalDataSecure] Turso lookup warning:', tursoErr);
+  }
 
-  // 2. Turso fallback if row not found in Appwrite
+  // 2. Fallback to Appwrite
   if (!row) {
     try {
-      const { getGoalTurso } = await import('@/lib/actions/turso-ops');
-      const tursoRes = await getGoalTurso(goalId);
-      if (tursoRes.success && tursoRes.row) {
-        const tr = tursoRes.row;
-        row = {
-          $id: tr.id,
-          title: tr.title,
-          description: tr.description,
-          status: tr.status,
-          priority: tr.priority,
-          dueDate: tr.dueDate,
-          userId: tr.userId,
-          isPublic: (tr as any).isPublic ?? true,
-          isGuest: (tr as any).isGuest ?? false,
-          dek: (tr as any).dek || null,
-          $updatedAt: tr.updatedAt,
-        };
-      }
-    } catch (tursoErr) {
-      console.warn('[getPublicGoalDataSecure] Turso lookup warning:', tursoErr);
-    }
+      const tables = createSystemTablesDB();
+      row = await tables.getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+        rowId: goalId,
+      });
+    } catch {}
   }
 
   if (!row) return null;
