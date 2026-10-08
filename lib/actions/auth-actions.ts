@@ -154,8 +154,12 @@ export async function listAccountLogsSecure(jwt?: string) {
     if (actor && actor.$id) {
       try {
         const systemClient = createSystemClient();
-        const logsRes = await systemClient.users.listLogs(actor.$id);
-        return { success: true, logs: logsRes.logs || [] };
+        const logsPromise = systemClient.users.listLogs(actor.$id);
+        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+        const logsRes = await Promise.race([logsPromise, timeoutPromise]);
+        if (logsRes && (logsRes as any).logs) {
+          return { success: true, logs: (logsRes as any).logs || [] };
+        }
       } catch (systemErr) {
         console.warn('[listAccountLogsSecure] System client fetch failed, trying server client:', systemErr);
       }
@@ -164,8 +168,12 @@ export async function listAccountLogsSecure(jwt?: string) {
     try {
       const { createServerClient } = await import('@/lib/appwrite/server');
       const { account } = await createServerClient(jwt);
-      const logList = await account.listLogs();
-      return { success: true, logs: logList.logs || [] };
+      const logPromise = account.listLogs();
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const logList = await Promise.race([logPromise, timeoutPromise]);
+      if (logList && (logList as any).logs) {
+        return { success: true, logs: (logList as any).logs || [] };
+      }
     } catch {}
 
     return { success: true, logs: [] };

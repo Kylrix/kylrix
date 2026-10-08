@@ -50,10 +50,16 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
       const sessionList = await fetchOptimized('user_sessions', async () => {
         const { listUserSessionsAction } = await import('@/lib/actions/user-settings');
         const res = await listUserSessionsAction().catch(() => null);
-        if (res?.success && res.sessions?.length) {
+        if (res?.success && Array.isArray(res.sessions) && res.sessions.length > 0) {
           return { sessions: res.sessions };
         }
-        return await account.listSessions().catch(() => ({ sessions: [] }));
+        try {
+          const clientPromise = account.listSessions().catch(() => ({ sessions: [] }));
+          const timeoutPromise = new Promise<{ sessions: any[] }>((resolve) => setTimeout(() => resolve({ sessions: [] }), 1200));
+          return await Promise.race([clientPromise, timeoutPromise]);
+        } catch {
+          return { sessions: res?.sessions || [] };
+        }
       }, 1000 * 60 * 10);
       
       const formattedSessions = (sessionList.sessions || []).map((session: any) => ({
