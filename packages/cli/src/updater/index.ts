@@ -6,7 +6,7 @@ import pc from 'picocolors';
 import * as clack from '@clack/prompts';
 
 export const PACKAGE_NAME = '@kylrix/cli';
-export const CURRENT_VERSION = '1.0.15';
+export const CURRENT_VERSION = '1.0.16';
 
 const CACHE_DIR = path.join(os.homedir(), '.kylrix');
 const CACHE_FILE = path.join(CACHE_DIR, 'update-cache.json');
@@ -85,9 +85,9 @@ export function writeCachedUpdate(latestVersion: string): void {
  */
 export function detectPackageManager(): 'pnpm' | 'npm' | 'yarn' | 'bun' {
   const execPath = process.argv[1] || '';
-  if (execPath.includes('pnpm')) return 'pnpm';
+  if (execPath.includes('pnpm') || process.env.PNPM_HOME) return 'pnpm';
+  if (execPath.includes('bun') || process.env.BUN_INSTALL) return 'bun';
   if (execPath.includes('yarn')) return 'yarn';
-  if (execPath.includes('bun')) return 'bun';
   return 'npm';
 }
 
@@ -96,9 +96,9 @@ export function detectPackageManager(): 'pnpm' | 'npm' | 'yarn' | 'bun' {
  */
 export async function executeUpgrade(targetVersion = 'latest', opts: { silent?: boolean } = {}): Promise<void> {
   const pm = detectPackageManager();
-  const spinner = opts.silent ? null : clack.spinner();
-  if (spinner) {
-    spinner.start(`Upgrading ${PACKAGE_NAME} to ${targetVersion} via ${pm}...`);
+
+  if (!opts.silent) {
+    clack.log.step(`Installing ${PACKAGE_NAME}@${targetVersion} globally via ${pm}...`);
   }
 
   const installArgs: Record<string, string[]> = {
@@ -111,35 +111,19 @@ export async function executeUpgrade(targetVersion = 'latest', opts: { silent?: 
   const args = installArgs[pm] || installArgs.npm;
 
   return new Promise((resolve, reject) => {
-    const child = spawn(pm, args, { stdio: opts.silent ? 'ignore' : 'pipe' });
-    let stderr = '';
-
-    if (!opts.silent && child.stderr) {
-      child.stderr.on('data', (d) => {
-        stderr += d.toString();
-      });
-    }
+    const child = spawn(pm, args, { stdio: opts.silent ? 'ignore' : 'inherit' });
 
     child.on('close', (code) => {
       if (code === 0) {
-        if (spinner) {
-          spinner.stop(pc.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
-        }
-        writeCachedUpdate(CURRENT_VERSION);
+        writeCachedUpdate(targetVersion === 'latest' ? CURRENT_VERSION : targetVersion);
         resolve();
       } else {
-        if (spinner) {
-          spinner.stop(pc.red(`Upgrade failed (exit code ${code})`));
-        }
-        reject(new Error(stderr || `Failed to run ${pm} ${args.join(' ')}`));
+        reject(new Error(`Command "${pm} ${args.join(' ')}" exited with code ${code}`));
       }
     });
 
     child.on('error', (err) => {
-      if (spinner) {
-        spinner.stop(pc.red('Failed to launch package manager process'));
-      }
-      reject(err);
+      reject(new Error(`Failed to launch "${pm}": ${err.message}`));
     });
   });
 }
@@ -213,17 +197,25 @@ export function printUpdateBanner(latest: string): void {
  * Background update checker hook called on CLI startup.
  */
 export function scheduleBackgroundUpdateCheck(): void {
-  // Never run update check if stdio MCP or JSON output is requested
-  const isMcp = process.argv.includes('mcp');
-  const isJson = process.argv.includes('--json');
-  if (isMcp || isJson) return;
+  // Never run update check if stdio MCP, JSON output, relaunched, or update command is active
+  const argv = process.argv;
+  if (
+    process.env.KYLRIX_RELAUNCHED === '1' ||
+    process.env.KYLRIX_NO_AUTO_UPDATE === '1' ||
+    argv.includes('mcp') ||
+    argv.includes('--json') ||
+    argv.includes('update') ||
+    argv.includes('upgrade')
+  ) {
+    return;
+  }
 
   const cached = readCachedUpdate();
   const now = Date.now();
 
   // If we have recent cache and an update is known, notify on exit
   if (cached && compareSemver(cached.latestVersion, CURRENT_VERSION) > 0) {
-    process.on('exit', () => {
+    process.once('beforeExit', () => {
       printUpdateBanner(cached.latestVersion);
     });
     return;
@@ -235,7 +227,9 @@ export function scheduleBackgroundUpdateCheck(): void {
       if (latest) {
         writeCachedUpdate(latest);
         if (compareSemver(latest, CURRENT_VERSION) > 0) {
-          printUpdateBanner(latest);
+          process.once('beforeExit', () => {
+            printUpdateBanner(latest);
+          });
         }
       }
     }).catch(() => {});

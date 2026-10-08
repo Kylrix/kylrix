@@ -1785,7 +1785,7 @@ var init_store = __esm({
             updatedAt: r2.updated_at
           };
         }
-        const item = (loadFallback().vault || []).find((v2) => v2.id === id);
+        const item = (loadFallback().vault || []).find((v3) => v3.id === id);
         if (!item) throw new Error(`Secret not found: ${id}`);
         return item;
       },
@@ -1835,7 +1835,7 @@ var init_store = __esm({
           return { success: true };
         }
         const store = loadFallback();
-        const idx = store.vault.findIndex((v2) => v2.id === id);
+        const idx = store.vault.findIndex((v3) => v3.id === id);
         if (idx !== -1) {
           const [deleted] = store.vault.splice(idx, 1);
           store.trash.unshift({ id: deleted.id, kind: "vault", title: deleted.name, deletedAt: (/* @__PURE__ */ new Date()).toISOString() });
@@ -5492,6 +5492,29 @@ ${e.gray(m2)}  ${s}
 
 `);
 };
+var v2 = { message: (s = "", { symbol: n = e.gray(a) } = {}) => {
+  const t = [`${e.gray(a)}`];
+  if (s) {
+    const [i, ...r2] = s.split(`
+`);
+    t.push(`${n}  ${i}`, ...r2.map((c2) => `${e.gray(a)}  ${c2}`));
+  }
+  process.stdout.write(`${t.join(`
+`)}
+`);
+}, info: (s) => {
+  v2.message(s, { symbol: e.blue(ae) });
+}, success: (s) => {
+  v2.message(s, { symbol: e.green(oe) });
+}, step: (s) => {
+  v2.message(s, { symbol: e.green(S2) });
+}, warn: (s) => {
+  v2.message(s, { symbol: e.yellow(ce) });
+}, warning: (s) => {
+  v2.warn(s);
+}, error: (s) => {
+  v2.message(s, { symbol: e.red(le) });
+} };
 var L2 = () => {
   const s = E ? ["\u25D2", "\u25D0", "\u25D3", "\u25D1"] : ["\u2022", "o", "O", "0"], n = E ? 80 : 120, t = process.env.CI === "true";
   let i, r2, c2 = false, o = "", l2;
@@ -5686,13 +5709,13 @@ async function listVaultCommand(opts) {
       printJson(sliced);
       return;
     }
-    const rows = sliced.map((v2) => ({
-      id: v2.id,
-      name: v2.name,
-      type: v2.itemType || (v2.isEnv ? "env" : "login"),
-      username: v2.username || v2.identity || (v2.isEnv ? "(env-vars)" : ""),
-      mode: isAuthed ? v2.workspaceId || "cloud" : pc15.dim("local"),
-      updatedAt: v2.updatedAt?.substring(0, 10) || ""
+    const rows = sliced.map((v3) => ({
+      id: v3.id,
+      name: v3.name,
+      type: v3.itemType || (v3.isEnv ? "env" : "login"),
+      username: v3.username || v3.identity || (v3.isEnv ? "(env-vars)" : ""),
+      mode: isAuthed ? v3.workspaceId || "cloud" : pc15.dim("local"),
+      updatedAt: v3.updatedAt?.substring(0, 10) || ""
     }));
     printTable(rows, ["id", "name", "type", "username", "mode", "updatedAt"]);
     if (allItems.length > rows.length) {
@@ -6405,13 +6428,13 @@ import * as os4 from "os";
 import { spawn } from "child_process";
 import pc23 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.15";
+var CURRENT_VERSION = "1.0.16";
 var CACHE_DIR = path7.join(os4.homedir(), ".kylrix");
 var CACHE_FILE = path7.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
-function compareSemver(v1, v2) {
+function compareSemver(v1, v22) {
   const clean1 = v1.replace(/^v/, "").split("-")[0];
-  const clean2 = v2.replace(/^v/, "").split("-")[0];
+  const clean2 = v22.replace(/^v/, "").split("-")[0];
   const p1 = clean1.split(".").map((n) => parseInt(n, 10) || 0);
   const p2 = clean2.split(".").map((n) => parseInt(n, 10) || 0);
   for (let i = 0; i < 3; i++) {
@@ -6462,16 +6485,15 @@ function writeCachedUpdate(latestVersion) {
 }
 function detectPackageManager() {
   const execPath = process.argv[1] || "";
-  if (execPath.includes("pnpm")) return "pnpm";
+  if (execPath.includes("pnpm") || process.env.PNPM_HOME) return "pnpm";
+  if (execPath.includes("bun") || process.env.BUN_INSTALL) return "bun";
   if (execPath.includes("yarn")) return "yarn";
-  if (execPath.includes("bun")) return "bun";
   return "npm";
 }
 async function executeUpgrade(targetVersion = "latest", opts = {}) {
   const pm = detectPackageManager();
-  const spinner = opts.silent ? null : L2();
-  if (spinner) {
-    spinner.start(`Upgrading ${PACKAGE_NAME} to ${targetVersion} via ${pm}...`);
+  if (!opts.silent) {
+    v2.step(`Installing ${PACKAGE_NAME}@${targetVersion} globally via ${pm}...`);
   }
   const installArgs = {
     npm: ["install", "-g", `${PACKAGE_NAME}@${targetVersion}`],
@@ -6481,32 +6503,17 @@ async function executeUpgrade(targetVersion = "latest", opts = {}) {
   };
   const args = installArgs[pm] || installArgs.npm;
   return new Promise((resolve2, reject) => {
-    const child = spawn(pm, args, { stdio: opts.silent ? "ignore" : "pipe" });
-    let stderr = "";
-    if (!opts.silent && child.stderr) {
-      child.stderr.on("data", (d2) => {
-        stderr += d2.toString();
-      });
-    }
+    const child = spawn(pm, args, { stdio: opts.silent ? "ignore" : "inherit" });
     child.on("close", (code) => {
       if (code === 0) {
-        if (spinner) {
-          spinner.stop(pc23.green(`Successfully upgraded ${PACKAGE_NAME} to ${targetVersion}!`));
-        }
-        writeCachedUpdate(CURRENT_VERSION);
+        writeCachedUpdate(targetVersion === "latest" ? CURRENT_VERSION : targetVersion);
         resolve2();
       } else {
-        if (spinner) {
-          spinner.stop(pc23.red(`Upgrade failed (exit code ${code})`));
-        }
-        reject(new Error(stderr || `Failed to run ${pm} ${args.join(" ")}`));
+        reject(new Error(`Command "${pm} ${args.join(" ")}" exited with code ${code}`));
       }
     });
     child.on("error", (err) => {
-      if (spinner) {
-        spinner.stop(pc23.red("Failed to launch package manager process"));
-      }
-      reject(err);
+      reject(new Error(`Failed to launch "${pm}": ${err.message}`));
     });
   });
 }
@@ -6553,13 +6560,14 @@ function printUpdateBanner(latest) {
   console.error(pc23.yellow("\u2514" + "\u2500".repeat(boxWidth) + "\u2518") + "\n");
 }
 function scheduleBackgroundUpdateCheck() {
-  const isMcp = process.argv.includes("mcp");
-  const isJson = process.argv.includes("--json");
-  if (isMcp || isJson) return;
+  const argv = process.argv;
+  if (process.env.KYLRIX_RELAUNCHED === "1" || process.env.KYLRIX_NO_AUTO_UPDATE === "1" || argv.includes("mcp") || argv.includes("--json") || argv.includes("update") || argv.includes("upgrade")) {
+    return;
+  }
   const cached2 = readCachedUpdate();
   const now = Date.now();
   if (cached2 && compareSemver(cached2.latestVersion, CURRENT_VERSION) > 0) {
-    process.on("exit", () => {
+    process.once("beforeExit", () => {
       printUpdateBanner(cached2.latestVersion);
     });
     return;
@@ -6569,7 +6577,9 @@ function scheduleBackgroundUpdateCheck() {
       if (latest) {
         writeCachedUpdate(latest);
         if (compareSemver(latest, CURRENT_VERSION) > 0) {
-          printUpdateBanner(latest);
+          process.once("beforeExit", () => {
+            printUpdateBanner(latest);
+          });
         }
       }
     }).catch(() => {
@@ -6592,24 +6602,26 @@ async function updateCommand(opts) {
     return;
   }
   we(pc24.bgCyan(pc24.black(" Kylrix CLI Updater ")));
-  const spinner = L2();
-  spinner.start("Checking for updates on npm registry...");
+  v2.step("Checking for updates on npm registry...");
   const latest = await fetchLatestVersion(5e3);
   if (!latest) {
-    spinner.stop(pc24.yellow("Could not reach npm registry or version not published yet."));
+    v2.warn("Could not reach npm registry or version not published yet.");
+    fe(pc24.dim("Please check your network connection and try again."));
     return;
   }
   const hasUpdate = compareSemver(latest, CURRENT_VERSION) > 0;
   if (!hasUpdate && !opts.force) {
-    spinner.stop(pc24.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
+    v2.success(pc24.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
+    writeCachedUpdate(CURRENT_VERSION);
     fe(pc24.dim("No update required."));
     return;
   }
-  spinner.stop(
-    hasUpdate ? pc24.yellow(`New version available: ${pc24.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc24.green(pc24.bold(`v${latest}`))}`) : `Re-installing v${CURRENT_VERSION}...`
+  v2.info(
+    hasUpdate ? `New version available: ${pc24.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc24.green(pc24.bold(`v${latest}`))}` : `Re-installing v${CURRENT_VERSION}...`
   );
   try {
     await executeUpgrade(latest);
+    writeCachedUpdate(latest);
     fe(pc24.green(`\u2714 ${PACKAGE_NAME} is now up to date (v${latest})!`));
   } catch (err) {
     printError("Update failed", err);
@@ -7465,8 +7477,8 @@ function assertNever(_x) {
 function assert(_2) {
 }
 function getEnumValues(entries) {
-  const numericValues = Object.values(entries).filter((v2) => typeof v2 === "number");
-  const values = Object.entries(entries).filter(([k2, _2]) => numericValues.indexOf(+k2) === -1).map(([_2, v2]) => v2);
+  const numericValues = Object.values(entries).filter((v3) => typeof v3 === "number");
+  const values = Object.entries(entries).filter(([k2, _2]) => numericValues.indexOf(+k2) === -1).map(([_2, v3]) => v3);
   return values;
 }
 function joinValues(array2, separator = "|") {
@@ -7520,9 +7532,9 @@ function defineLazy(object2, key, getter) {
       }
       return value;
     },
-    set(v2) {
+    set(v3) {
       Object.defineProperty(object2, key, {
-        value: v2
+        value: v3
         // configurable: true,
       });
     },
@@ -9209,10 +9221,10 @@ var $ZodUUID = /* @__PURE__ */ $constructor("$ZodUUID", (inst, def) => {
       v7: 7,
       v8: 8
     };
-    const v2 = versionMap[def.version];
-    if (v2 === void 0)
+    const v3 = versionMap[def.version];
+    if (v3 === void 0)
       throw new Error(`Invalid UUID version: "${def.version}"`);
-    def.pattern ?? (def.pattern = uuid(v2));
+    def.pattern ?? (def.pattern = uuid(v3));
   } else
     def.pattern ?? (def.pattern = uuid());
   $ZodStringFormat.init(inst, def);
@@ -9817,8 +9829,8 @@ var $ZodObject = /* @__PURE__ */ $constructor("$ZodObject", (inst, def) => {
       const field = shape[key]._zod;
       if (field.values) {
         propValues[key] ?? (propValues[key] = /* @__PURE__ */ new Set());
-        for (const v2 of field.values)
-          propValues[key].add(v2);
+        for (const v3 of field.values)
+          propValues[key].add(v3);
       }
     }
     return propValues;
@@ -10113,10 +10125,10 @@ var $ZodDiscriminatedUnion = /* @__PURE__ */ $constructor("$ZodDiscriminatedUnio
       const pv = option._zod.propValues;
       if (!pv || Object.keys(pv).length === 0)
         throw new Error(`Invalid discriminated union option at index "${def.options.indexOf(option)}"`);
-      for (const [k2, v2] of Object.entries(pv)) {
+      for (const [k2, v3] of Object.entries(pv)) {
         if (!propValues[k2])
           propValues[k2] = /* @__PURE__ */ new Set();
-        for (const val of v2) {
+        for (const val of v3) {
           propValues[k2].add(val);
         }
       }
@@ -10130,11 +10142,11 @@ var $ZodDiscriminatedUnion = /* @__PURE__ */ $constructor("$ZodDiscriminatedUnio
       const values = o._zod.propValues?.[def.discriminator];
       if (!values || values.size === 0)
         throw new Error(`Invalid discriminated union option at index "${def.options.indexOf(o)}"`);
-      for (const v2 of values) {
-        if (map2.has(v2)) {
-          throw new Error(`Duplicate discriminator value "${String(v2)}"`);
+      for (const v3 of values) {
+        if (map2.has(v3)) {
+          throw new Error(`Duplicate discriminator value "${String(v3)}"`);
         }
-        map2.set(v2, o);
+        map2.set(v3, o);
       }
     }
     return map2;
@@ -10773,8 +10785,8 @@ var $ZodPrefault = /* @__PURE__ */ $constructor("$ZodPrefault", (inst, def) => {
 var $ZodNonOptional = /* @__PURE__ */ $constructor("$ZodNonOptional", (inst, def) => {
   $ZodType.init(inst, def);
   defineLazy(inst._zod, "values", () => {
-    const v2 = def.innerType._zod.values;
-    return v2 ? new Set([...v2].filter((x2) => x2 !== void 0)) : void 0;
+    const v3 = def.innerType._zod.values;
+    return v3 ? new Set([...v3].filter((x2) => x2 !== void 0)) : void 0;
   });
   inst._zod.parse = (payload, ctx) => {
     const result = def.innerType._zod.run(payload, ctx);
@@ -13171,7 +13183,7 @@ var error17 = () => {
         if (issue2.values.length === 1) {
           return `\u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF: \u05D4\u05E2\u05E8\u05DA \u05D7\u05D9\u05D9\u05D1 \u05DC\u05D4\u05D9\u05D5\u05EA ${stringifyPrimitive(issue2.values[0])}`;
         }
-        const stringified = issue2.values.map((v2) => stringifyPrimitive(v2));
+        const stringified = issue2.values.map((v3) => stringifyPrimitive(v3));
         if (issue2.values.length === 2) {
           return `\u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF: \u05D4\u05D0\u05E4\u05E9\u05E8\u05D5\u05D9\u05D5\u05EA \u05D4\u05DE\u05EA\u05D0\u05D9\u05DE\u05D5\u05EA \u05D4\u05DF ${stringified[0]} \u05D0\u05D5 ${stringified[1]}`;
         }
@@ -17926,7 +17938,7 @@ function _set(Class2, valueType, params) {
 }
 // @__NO_SIDE_EFFECTS__
 function _enum(Class2, values, params) {
-  const entries = Array.isArray(values) ? Object.fromEntries(values.map((v2) => [v2, v2])) : values;
+  const entries = Array.isArray(values) ? Object.fromEntries(values.map((v3) => [v3, v3])) : values;
   return new Class2({
     type: "enum",
     entries,
@@ -18131,8 +18143,8 @@ function _stringbool(Classes, _params) {
   let truthyArray = params.truthy ?? ["true", "1", "yes", "on", "y", "enabled"];
   let falsyArray = params.falsy ?? ["false", "0", "no", "off", "n", "disabled"];
   if (params.case !== "sensitive") {
-    truthyArray = truthyArray.map((v2) => typeof v2 === "string" ? v2.toLowerCase() : v2);
-    falsyArray = falsyArray.map((v2) => typeof v2 === "string" ? v2.toLowerCase() : v2);
+    truthyArray = truthyArray.map((v3) => typeof v3 === "string" ? v3.toLowerCase() : v3);
+    falsyArray = falsyArray.map((v3) => typeof v3 === "string" ? v3.toLowerCase() : v3);
   }
   const truthySet = new Set(truthyArray);
   const falsySet = new Set(falsyArray);
@@ -18674,9 +18686,9 @@ var dateProcessor = (_schema, ctx, _json, _params) => {
 var enumProcessor = (schema, _ctx, json2, _params) => {
   const def = schema._zod.def;
   const values = getEnumValues(def.entries);
-  if (values.every((v2) => typeof v2 === "number"))
+  if (values.every((v3) => typeof v3 === "number"))
     json2.type = "number";
-  if (values.every((v2) => typeof v2 === "string"))
+  if (values.every((v3) => typeof v3 === "string"))
     json2.type = "string";
   json2.enum = values;
 };
@@ -18709,13 +18721,13 @@ var literalProcessor = (schema, ctx, json2, _params) => {
       json2.const = val;
     }
   } else {
-    if (vals.every((v2) => typeof v2 === "number"))
+    if (vals.every((v3) => typeof v3 === "number"))
       json2.type = "number";
-    if (vals.every((v2) => typeof v2 === "string"))
+    if (vals.every((v3) => typeof v3 === "string"))
       json2.type = "string";
-    if (vals.every((v2) => typeof v2 === "boolean"))
+    if (vals.every((v3) => typeof v3 === "boolean"))
       json2.type = "boolean";
-    if (vals.every((v2) => v2 === null))
+    if (vals.every((v3) => v3 === null))
       json2.type = "null";
     json2.enum = vals;
   }
@@ -18813,11 +18825,11 @@ var objectProcessor = (schema, ctx, _json, params) => {
   }
   const allKeys = new Set(Object.keys(shape));
   const requiredKeys = new Set([...allKeys].filter((key) => {
-    const v2 = def.shape[key]._zod;
+    const v3 = def.shape[key]._zod;
     if (ctx.io === "input") {
-      return v2.optin === void 0;
+      return v3.optin === void 0;
     } else {
-      return v2.optout === void 0;
+      return v3.optout === void 0;
     }
   }));
   if (requiredKeys.size > 0) {
@@ -18937,7 +18949,7 @@ var recordProcessor = (schema, ctx, _json, params) => {
   }
   const keyValues = keyType._zod.values;
   if (keyValues) {
-    const validKeyValues = [...keyValues].filter((v2) => typeof v2 === "string" || typeof v2 === "number");
+    const validKeyValues = [...keyValues].filter((v3) => typeof v3 === "string" || typeof v3 === "number");
     if (validKeyValues.length > 0) {
       json2.required = validKeyValues;
     }
@@ -19502,12 +19514,12 @@ function _installLazyMethods(inst, group, methods) {
         });
         return bound;
       },
-      set(v2) {
+      set(v3) {
         Object.defineProperty(this, key, {
           configurable: true,
           writable: true,
           enumerable: true,
-          value: v2
+          value: v3
         });
       }
     });
@@ -20395,7 +20407,7 @@ var ZodEnum = /* @__PURE__ */ $constructor("ZodEnum", (inst, def) => {
   };
 });
 function _enum2(values, params) {
-  const entries = Array.isArray(values) ? Object.fromEntries(values.map((v2) => [v2, v2])) : values;
+  const entries = Array.isArray(values) ? Object.fromEntries(values.map((v3) => [v3, v3])) : values;
   return new ZodEnum({
     type: "enum",
     entries,
@@ -20949,10 +20961,10 @@ function convertBaseSchema(schema, ctx) {
     if (enumValues.length === 1) {
       return z2.literal(enumValues[0]);
     }
-    if (enumValues.every((v2) => typeof v2 === "string")) {
+    if (enumValues.every((v3) => typeof v3 === "string")) {
       return z2.enum(enumValues);
     }
-    const literalSchemas = enumValues.map((v2) => z2.literal(v2));
+    const literalSchemas = enumValues.map((v3) => z2.literal(v3));
     if (literalSchemas.length < 2) {
       return literalSchemas[0];
     }

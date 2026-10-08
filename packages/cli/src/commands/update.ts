@@ -6,6 +6,7 @@ import {
   compareSemver,
   executeUpgrade,
   fetchLatestVersion,
+  writeCachedUpdate,
 } from '../updater';
 import { printError, printJson } from '../formatter';
 
@@ -23,32 +24,33 @@ export async function updateCommand(opts: { json?: boolean; force?: boolean }) {
   }
 
   clack.intro(pc.bgCyan(pc.black(' Kylrix CLI Updater ')));
-
-  const spinner = clack.spinner();
-  spinner.start('Checking for updates on npm registry...');
+  clack.log.step('Checking for updates on npm registry...');
 
   const latest = await fetchLatestVersion(5000);
   if (!latest) {
-    spinner.stop(pc.yellow('Could not reach npm registry or version not published yet.'));
+    clack.log.warn('Could not reach npm registry or version not published yet.');
+    clack.outro(pc.dim('Please check your network connection and try again.'));
     return;
   }
 
   const hasUpdate = compareSemver(latest, CURRENT_VERSION) > 0;
 
   if (!hasUpdate && !opts.force) {
-    spinner.stop(pc.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
+    clack.log.success(pc.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
+    writeCachedUpdate(CURRENT_VERSION);
     clack.outro(pc.dim('No update required.'));
     return;
   }
 
-  spinner.stop(
+  clack.log.info(
     hasUpdate
-      ? pc.yellow(`New version available: ${pc.dim(`v${CURRENT_VERSION}`)} → ${pc.green(pc.bold(`v${latest}`))}`)
+      ? `New version available: ${pc.dim(`v${CURRENT_VERSION}`)} → ${pc.green(pc.bold(`v${latest}`))}`
       : `Re-installing v${CURRENT_VERSION}...`
   );
 
   try {
     await executeUpgrade(latest);
+    writeCachedUpdate(latest);
     clack.outro(pc.green(`✔ ${PACKAGE_NAME} is now up to date (v${latest})!`));
   } catch (err: any) {
     printError('Update failed', err);
