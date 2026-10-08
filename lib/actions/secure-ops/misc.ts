@@ -1026,18 +1026,32 @@ export async function getProfileByUsernameSecure(username: string) {
   const normalized = String(username || '').trim().toLowerCase().replace(/^@/, '');
   if (!normalized) return null;
 
+  // 1. Primary: Query Turso SQLite profiles and Better Auth user
+  try {
+    const { getProfileByUsernameTurso } = await import('@/lib/actions/turso-ops');
+    const res = await getProfileByUsernameTurso(normalized);
+    if (res.success && res.profile) {
+      return JSON.parse(JSON.stringify(res.profile));
+    }
+  } catch (tursoErr: any) {
+    console.warn('[getProfileByUsernameSecure] Turso profile lookup warning:', tursoErr?.message);
+  }
+
+  // 2. Secondary: Fallback to Appwrite with timeout
   const tables = createSystemTablesDB();
   const databaseId = APPWRITE_CONFIG.DATABASES.CHAT;
   const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 
   try {
-    const res = await tables.listRows({
+    const appwritePromise = tables.listRows({
       databaseId,
       tableId,
       queries: [
         Query.equal('username', normalized),
         Query.limit(1)
       ] as any});
+    const timeoutPromise = new Promise<{ rows: any[] }>((resolve) => setTimeout(() => resolve({ rows: [] }), 1500));
+    const res = await Promise.race([appwritePromise, timeoutPromise]);
 
     return JSON.parse(JSON.stringify(res.rows[0] || null));
   } catch (error: any) {

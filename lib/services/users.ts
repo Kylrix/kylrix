@@ -259,19 +259,32 @@ export const UsersService = {
     },
 
     async isUsernameAvailable(username: string): Promise<boolean> {
+        const normalized = username.trim().toLowerCase().replace(/^@/, '');
+        if (!normalized) return false;
+
+        // 1. Primary: check Turso profiles and Better Auth unique usernames
+        try {
+            const { getProfileByUsernameTurso } = await import('@/lib/actions/turso-ops');
+            const res = await getProfileByUsernameTurso(normalized);
+            if (res.success && res.profile) {
+                return false;
+            }
+        } catch {}
+
+        // 2. Secondary: fallback check against Appwrite
         try {
             const { Query } = await import("appwrite");
             const res = await (tablesDB as any).listRows({
                 databaseId: DATABASE_ID,
                 tableId: TABLE_ID,
                 queries: [
-                    Query.equal('username', username.toLowerCase()),
+                    Query.equal('username', normalized),
                     Query.limit(1)
                 ]
             });
             return res.rows.length === 0;
         } catch (_e) {
-            return false;
+            return true;
         }
     },
 

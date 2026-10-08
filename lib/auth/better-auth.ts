@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
-import { emailOTP, bearer, jwt, multiSession, lastLoginMethod, twoFactor } from 'better-auth/plugins';
+import { emailOTP, bearer, jwt, multiSession, lastLoginMethod, twoFactor, username } from 'better-auth/plugins';
 import { passkey } from '@better-auth/passkey';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import { db } from '@/lib/db';
@@ -152,6 +152,10 @@ export const auth = betterAuth({
     }),
     bearer(),
     jwt(),
+    username({
+      minUsernameLength: 3,
+      maxUsernameLength: 32,
+    }),
     oauthProvider({
       loginPage: '/login',
       consentPage: '/oauth/consent',

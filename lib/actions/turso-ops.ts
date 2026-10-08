@@ -2482,13 +2482,96 @@ export async function upsertCommentTurso(data: typeof schema.comments.$inferInse
   }
 }
 
-export async function listCommentsTurso(resourceId: string) {
+// ── User Profiles & Handles ──
+export async function upsertProfileTurso(data: typeof schema.profiles.$inferInsert) {
   try {
-    const rows = await db.select().from(schema.comments).where(and(eq(schema.comments.resourceId, resourceId), eq(schema.comments.isDeleted, false)));
-    return { success: true, rows };
+    const existing = await db
+      .select({ id: schema.profiles.id })
+      .from(schema.profiles)
+      .where(or(eq(schema.profiles.id, data.id), eq(schema.profiles.userId, data.userId)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(schema.profiles)
+        .set({
+          ...data,
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        })
+        .where(eq(schema.profiles.id, existing[0].id));
+    } else {
+      await db.insert(schema.profiles).values(data);
+    }
+    return { success: true };
   } catch (err: any) {
-    return { success: false, rows: [], error: err.message };
+    return { success: false, error: err.message };
   }
 }
+
+export async function getProfileTurso(userId: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(schema.profiles)
+      .where(eq(schema.profiles.userId, userId))
+      .limit(1);
+    return { success: true, profile: rows[0] || null };
+  } catch (err: any) {
+    return { success: false, profile: null, error: err.message };
+  }
+}
+
+export async function getProfileByUsernameTurso(username: string) {
+  const normalized = String(username || '').trim().toLowerCase().replace(/^@/, '');
+  if (!normalized) return { success: true, profile: null };
+
+  try {
+    const rows = await db
+      .select()
+      .from(schema.profiles)
+      .where(eq(schema.profiles.username, normalized))
+      .limit(1);
+
+    if (rows.length > 0) {
+      return { success: true, profile: rows[0] };
+    }
+
+    // Secondary fallback: lookup Better Auth user with matching username
+    const userRows = await db
+      .select()
+      .from(schema.user)
+      .where(eq(schema.user.username, normalized))
+      .limit(1);
+
+    if (userRows.length > 0) {
+      const u = userRows[0];
+      return {
+        success: true,
+        profile: {
+          id: `p-${u.id}`,
+          userId: u.id,
+          username: u.username || normalized,
+          displayName: u.name,
+          bio: null,
+          avatar: u.image || null,
+          isPublic: true,
+          isGuest: false,
+          isAvatar: Boolean(u.image),
+          isContact: false,
+          isOnlineVisible: true,
+          status: 'active',
+          preferences: '{}',
+          createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
+          updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : new Date().toISOString(),
+        },
+      };
+    }
+
+    return { success: true, profile: null };
+  } catch (err: any) {
+    return { success: false, profile: null, error: err.message };
+  }
+}
+
 
 
