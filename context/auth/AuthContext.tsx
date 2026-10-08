@@ -175,6 +175,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const initProfile = async () => {
         try {
+          if (typeof window !== 'undefined' && user?.email) {
+            try {
+              const raw = localStorage.getItem('kylrix_known_accounts');
+              const known = raw ? JSON.parse(raw) : [];
+              const filtered = Array.isArray(known) ? known.filter((k: any) => k.id !== user.$id && k.email?.toLowerCase() !== user.email?.toLowerCase()) : [];
+              filtered.unshift({
+                id: user.$id,
+                email: user.email,
+                name: user.name || user.email.split('@')[0],
+                image: (user as any).image || null,
+                lastSeen: Date.now(),
+              });
+              localStorage.setItem('kylrix_known_accounts', JSON.stringify(filtered.slice(0, 10)));
+            } catch {}
+          }
           const { UsersService } = await import('@/lib/services/users');
           await UsersService.ensureProfileForUser(user);
         } catch (err) {

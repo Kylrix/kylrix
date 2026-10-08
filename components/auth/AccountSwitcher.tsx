@@ -139,6 +139,55 @@ export function AccountSwitcher({
     }
   });
 
+  // Merge remembered accounts from localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('kylrix_known_accounts');
+      if (raw) {
+        const knownAccounts: Array<{ id: string; email: string; name?: string; image?: string }> = JSON.parse(raw);
+        if (Array.isArray(knownAccounts)) {
+          knownAccounts.forEach((k) => {
+            const key = k.id || k.email?.toLowerCase();
+            if (!key) return;
+            const isCurrent = Boolean(
+              (currentId && k.id === currentId) ||
+              (currentEmail && k.email?.toLowerCase() === currentEmail)
+            );
+            if (!accountGroupsMap.has(key) && !accountGroupsMap.has(k.email?.toLowerCase())) {
+              accountGroupsMap.set(key, {
+                userId: k.id,
+                user: {
+                  id: k.id,
+                  name: k.name,
+                  email: k.email,
+                  image: k.image,
+                },
+                sessions: [],
+                isCurrent,
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+  }
+
+  const handleRemoveKnownAccount = (accEmail: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('kylrix_known_accounts');
+      if (raw) {
+        const known = JSON.parse(raw);
+        if (Array.isArray(known)) {
+          const updated = known.filter((k: any) => k.email?.toLowerCase() !== accEmail.toLowerCase());
+          localStorage.setItem('kylrix_known_accounts', JSON.stringify(updated));
+          void fetchSessions();
+        }
+      }
+    } catch {}
+  };
+
   const accountGroups = Array.from(accountGroupsMap.values());
 
   return (
@@ -236,17 +285,35 @@ export function AccountSwitcher({
                         )}
                       </button>
                     </>
-                  ) : null}
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => openUnified('login', { email: acc.user.email, isAddAccount: true, mode: 'add-account' })}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-xl bg-white/10 hover:bg-[#EC4899] hover:text-white text-white/90 border border-white/10 hover:border-transparent transition-all cursor-pointer"
+                      >
+                        <ArrowRightLeft size={11} />
+                        <span>Activate</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        title="Remove remembered account"
+                        onClick={(e) => acc.user.email && handleRemoveKnownAccount(acc.user.email, e)}
+                        className="p-1.5 text-white/30 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl border border-transparent hover:border-rose-500/20 transition-all cursor-pointer"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
               {/* Session Meta Info */}
-              {acc.sessions.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-white/[0.05] flex items-center justify-between text-[10px] font-mono text-white/35 px-0.5">
-                  <span>{acc.sessions.length} device {acc.sessions.length === 1 ? 'session' : 'sessions'}</span>
-                  <span>{isCurrent ? 'Current active session' : 'Ready to activate'}</span>
-                </div>
-              )}
+              <div className="mt-2 pt-2 border-t border-white/[0.05] flex items-center justify-between text-[10px] font-mono text-white/35 px-0.5">
+                <span>{acc.sessions.length > 0 ? `${acc.sessions.length} device session${acc.sessions.length === 1 ? '' : 's'}` : 'Remembered profile'}</span>
+                <span>{isCurrent ? 'Current active session' : primaryToken ? 'Ready to activate' : 'Sign in to switch'}</span>
+              </div>
             </div>
           );
         })}
