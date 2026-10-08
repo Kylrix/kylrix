@@ -605,9 +605,8 @@ async function flushGoalPending(
   if (activeUserId) {
     const payloadAny = payload as any;
     const rawUserId = String(payloadAny.userId || '').trim();
-    const isWorkspaceGoal = !!payloadAny.projectId && !!payloadAny.isWorkspace;
-    if (!rawUserId || rawUserId === 'guest' || rawUserId === 'thread' || isWorkspaceGoal) {
-      if (rawUserId !== activeUserId) payloadAny.userId = activeUserId;
+    if (!rawUserId || rawUserId === 'guest' || rawUserId === 'thread' || rawUserId !== activeUserId) {
+      payloadAny.userId = activeUserId;
       payload.creatorId = activeUserId;
       if (Array.isArray(payload.assigneeIds)) {
         payload.assigneeIds = payload.assigneeIds.map((id: any) => (id === 'guest' || !id ? activeUserId : id));
@@ -619,9 +618,6 @@ async function flushGoalPending(
           timestamp: Date.now()
         }).catch(() => {});
       }
-    } else if (rawUserId !== activeUserId) {
-      console.warn(`[SyncEngine] Skipped goal belonging to different user: ${payloadAny.userId}`);
-      return;
     }
   }
 
@@ -750,26 +746,18 @@ async function flushNotePending(
 
   if (activeUserId) {
     const rawUserId = String((payload as any).userId || '').trim();
-    const isWorkspaceNote = !!(payload as any).projectId && !!(payload as any).isWorkspace;
-    // Workspace notes use isGuest/isGeneral escape hatch + project_objects membership, not strict userId equality (see security.secure-ops-rls-bypass).
-    // For workspace notes we always restamp to activeUserId to avoid Forbidden: Cannot create resource for another user (createRowSecure guest fallback).
-    if (!rawUserId || rawUserId === 'guest' || rawUserId === 'thread' || isWorkspaceNote) {
-      if (rawUserId !== activeUserId) {
-        (payload as any).userId = activeUserId;
-        if ((payload as any).creatorId && (payload as any).creatorId !== activeUserId && ((payload as any).creatorId === 'guest' || (payload as any).creatorId === 'thread')) {
-          (payload as any).creatorId = activeUserId;
-        }
-        if (db) {
-          await db.cache.upsert({
-            id: `note_${noteId}`,
-            data: payload as any,
-            timestamp: Date.now()
-          }).catch(() => {});
-        }
+    if (!rawUserId || rawUserId === 'guest' || rawUserId === 'thread' || rawUserId !== activeUserId) {
+      (payload as any).userId = activeUserId;
+      if (!(payload as any).creatorId || (payload as any).creatorId === 'guest' || (payload as any).creatorId === 'thread') {
+        (payload as any).creatorId = activeUserId;
       }
-    } else if (rawUserId !== activeUserId) {
-      console.warn(`[SyncEngine] Skipped note belonging to different user: ${rawUserId}`);
-      return;
+      if (db) {
+        await db.cache.upsert({
+          id: `note_${noteId}`,
+          data: payload as any,
+          timestamp: Date.now()
+        }).catch(() => {});
+      }
     }
   }
 
@@ -1186,19 +1174,38 @@ export const autonomicSyncEngine = {
 
     if (pendingById.size === 0) return;
 
-    const { hasAuthSessionHint, getCurrentUserSnapshot } = await import('@/lib/appwrite');
+    const { hasAuthSessionHint, getCurrentUserSnapshot, getKylrixPulse, getCurrentUser } = await import('@/lib/appwrite');
     const hasSession = hasAuthSessionHint();
-    const activeUser = getCurrentUserSnapshot();
+    const activeUser = getCurrentUserSnapshot() || getKylrixPulse();
     let activeUserId = activeUser?.$id || (activeUser as any)?.id || null;
 
     if (!activeUserId && typeof window !== 'undefined') {
       try {
-        const { authClient } = await import('@/lib/auth/better-auth-client');
-        const session = (authClient as any)?.useSession?.get?.() || null;
-        if (session?.data?.user?.id) {
-          activeUserId = session.data.user.id;
+        const u = await getCurrentUser().catch(() => null);
+        if (u?.$id) {
+          activeUserId = u.$id;
+        } else {
+          const { authClient } = await import('@/lib/auth/better-auth-client');
+          const sessionRes = await authClient.getSession().catch(() => null);
+          if (sessionRes?.data?.user?.id) {
+            activeUserId = sessionRes.data.user.id;
+          }
         }
       } catch {}
+    }
+
+    const pendingIds = Array.from(pendingById.keys());
+
+    // If activeUserId still unresolved, infer from pending payloads
+    if (!activeUserId && pendingIds.length > 0) {
+      for (const pid of pendingIds) {
+        const p = pendingPayloads.get(pid) || getLiveNoteForSync(pid) || getLiveGoalForSync(pid);
+        const uid = p?.userId || (p as any)?.creatorId;
+        if (uid && uid !== 'guest' && uid !== 'thread') {
+          activeUserId = uid;
+          break;
+        }
+      }
     }
 
     if (!hasSession && !activeUserId) {
@@ -1212,7 +1219,6 @@ export const autonomicSyncEngine = {
     isSyncing = true;
 
     try {
-      const pendingIds = Array.from(pendingById.keys());
       console.log(`[SyncEngine] Demand flush. ${pendingIds.length} pending live row(s).`);
 
       const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
