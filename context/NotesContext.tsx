@@ -640,10 +640,12 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const upsertNote = useCallback((note: Notes) => {
     let added = false;
+    let finalNormalized = note;
     setNotes((prev) => {
       const existingIndex = prev.findIndex((n) => n.$id === note.$id);
       const existing = existingIndex !== -1 ? prev[existingIndex] : undefined;
       const normalized = normalizeVisibility(note, existing);
+      finalNormalized = normalized;
       if (existing) {
         if (
           existing.title === normalized.title &&
@@ -684,9 +686,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     if (added) {
       setTotalNotes((prev) => prev + 1);
     }
-    setCachedData(`note_${normalized.$id}`, normalized);
+    setCachedData(`note_${finalNormalized.$id}`, finalNormalized);
     if (activeUserId && activeUserId !== 'guest') {
-      pushNotesBatchTurso([normalized], activeUserId);
+      pushNotesBatchTurso([finalNormalized], activeUserId);
     }
   }, [setCachedData, INITIAL_NOTES_CACHE_KEY, activeUserId]);
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { UserPlus, Check, Trash2, Loader2, ArrowRightLeft, Shield, Sparkles } from 'lucide-react';
+import { UserPlus, Check, Trash2, Loader2, ArrowRightLeft, Shield } from 'lucide-react';
 
 interface DeviceSession {
   session: {
@@ -119,9 +119,10 @@ export function AccountSwitcher({
 
   // Populate sessions into account groups
   deviceSessions.forEach((ds) => {
-    const isCurrent =
+    const isCurrent = Boolean(
       (currentId && ds.user.id === currentId) ||
-      (currentEmail && ds.user.email?.toLowerCase() === currentEmail);
+      (currentEmail && ds.user.email?.toLowerCase() === currentEmail)
+    );
     const key = ds.user.id || ds.user.email?.toLowerCase() || ds.session.token;
 
     if (!accountGroupsMap.has(key)) {

@@ -225,12 +225,12 @@ export function NoteDetailSidebar({
         (existing as any)?.isWorkspace === true ||
         Boolean(targetProjectId && !isExplicitPersonal)
       );
-      const safeUpdated: Notes = {
+      const safeUpdated = {
         ...existing,
         ...updated,
         projectId: isExplicitPersonal ? undefined : targetProjectId,
         isWorkspace: isExplicitPersonal ? false : isWorkspace,
-      };
+      } as Notes;
       pushLiveNote(safeUpdated, { pending: false });
       void setCachedData(`note_${safeUpdated.$id}`, safeUpdated);
       onUpdate(safeUpdated);

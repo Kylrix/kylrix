@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -9,7 +9,6 @@ import {
   Lock as VaultIcon,
   Settings as SettingsIcon,
   Plus,
-  ChevronUp,
 } from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -23,59 +22,6 @@ export function UnifiedBottomBar() {
   const pathname = usePathname();
   const { open: openUnified } = useUnifiedDrawer();
   const { config } = useFAB();
-
-  const [isScrolling, setIsScrolling] = useState(false);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handleScroll = () => {
-      const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-      let maxScroll = scrollY;
-      const scrollables = document.querySelectorAll('main, [data-scrollable="true"], .overflow-y-auto');
-      scrollables.forEach((el) => {
-        if (el instanceof HTMLElement && el.scrollTop > maxScroll) {
-          maxScroll = el.scrollTop;
-        }
-      });
-      if (maxScroll > 180) {
-        setIsScrolling(true);
-        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = setTimeout(() => {
-          setIsScrolling(false);
-        }, 2500);
-      } else {
-        setIsScrolling(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('scroll', handleScroll, { capture: true });
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    };
-  }, [pathname]);
-
-  const scrollToTop = useCallback(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
-    document.body.scrollTo({ top: 0, behavior: 'smooth' });
-    const scrollables = document.querySelectorAll('main, [data-scrollable="true"], .overflow-y-auto');
-    scrollables.forEach((el) => {
-      if (el instanceof HTMLElement) {
-        el.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    });
-    setIsScrolling(false);
-    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('kylrix:refresh-feed'));
-    }
-  }, []);
 
   const currentTab = useMemo(() => {
     if (pathname?.startsWith('/app') || pathname?.startsWith('/idea') || pathname?.startsWith('/notes')) return 'note';
