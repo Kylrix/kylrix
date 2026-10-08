@@ -41,6 +41,12 @@ export default function TaskList() {
   }, []);
 
   useEffect(() => {
+    const handleOpen = () => setCreateOpen(true);
+    window.addEventListener('kylrix:open-create-goal', handleOpen);
+    return () => window.removeEventListener('kylrix:open-create-goal', handleOpen);
+  }, []);
+
+  useEffect(() => {
     setConfiguration({
       isVisible: true,
       mainColor: '#A855F7',

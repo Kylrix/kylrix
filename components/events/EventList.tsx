@@ -64,6 +64,12 @@ export default function EventList() {
   const committedIdsRef = React.useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    const handleOpen = () => setIsDialogOpen(true);
+    window.addEventListener('kylrix:open-create-event', handleOpen);
+    return () => window.removeEventListener('kylrix:open-create-event', handleOpen);
+  }, []);
+
+  useEffect(() => {
     setConfiguration({
       isVisible: true,
       mainColor: '#6366F1',

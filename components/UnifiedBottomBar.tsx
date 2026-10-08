@@ -98,22 +98,33 @@ export function UnifiedBottomBar() {
   }, [pathname, config.mainColor]);
 
   const defaultMainClick = useCallback(() => {
-    if (pathname?.startsWith('/app') || pathname?.startsWith('/idea') || pathname?.startsWith('/notes')) {
-      openUnified('note', { isPublic: false, isGuest: false });
-    } else {
-      window.dispatchEvent(new CustomEvent('kylrix:open-agentic-drawer'));
+    if (pathname?.startsWith('/goals') || pathname?.startsWith('/goal')) {
+      window.dispatchEvent(new CustomEvent('kylrix:open-create-goal'));
+      return;
     }
+    if (pathname?.startsWith('/events') || pathname?.startsWith('/event')) {
+      window.dispatchEvent(new CustomEvent('kylrix:open-create-event'));
+      return;
+    }
+    if (pathname?.startsWith('/vault') || pathname?.startsWith('/totp') || pathname?.startsWith('/credentials')) {
+      window.dispatchEvent(new CustomEvent('kylrix:vault-add'));
+      return;
+    }
+    // Default: unconditionally open note / object create drawer
+    openUnified('note', { isPublic: false, isGuest: false });
   }, [pathname, openUnified]);
 
   const handleFabClick = useCallback(() => {
-    if (isScrolling) {
-      scrollToTop();
-    } else if (config.onMainClick) {
-      config.onMainClick();
-    } else {
-      defaultMainClick();
+    if (config.onMainClick) {
+      try {
+        config.onMainClick();
+        return;
+      } catch (e) {
+        console.error('Error invoking config.onMainClick:', e);
+      }
     }
-  }, [isScrolling, scrollToTop, config, defaultMainClick]);
+    defaultMainClick();
+  }, [config, defaultMainClick]);
 
   const leftNavItems = [
     { key: 'note', route: '/app', icon: NotesIcon, label: 'Notes' },
@@ -265,19 +276,15 @@ export function UnifiedBottomBar() {
             <button
               type="button"
               onClick={handleFabClick}
-              aria-label={isScrolling ? 'Back to top' : 'Create new item'}
-              title={isScrolling ? 'Back to top' : 'Create new item'}
-              className="flex items-center justify-center w-12 h-12 rounded-2xl text-black shadow-lg transition-all duration-300 active:scale-90 border border-black/20"
+              aria-label="Create new item"
+              title="Create new item"
+              className="flex items-center justify-center w-12 h-12 rounded-2xl text-black shadow-lg transition-all duration-300 active:scale-90 border border-black/20 cursor-pointer"
               style={{
                 backgroundColor: primarySurfaceColor,
                 boxShadow: `0 6px 20px ${primarySurfaceColor}66`,
               }}
             >
-              {isScrolling ? (
-                <ChevronUp size={26} strokeWidth={3} className="text-black transition-transform duration-200" />
-              ) : (
-                config.mainIcon || <Plus size={26} strokeWidth={3} className="text-black transition-transform duration-200" />
-              )}
+              {config.mainIcon || <Plus size={26} strokeWidth={3} className="text-black transition-transform duration-200" />}
             </button>
           </div>
 
