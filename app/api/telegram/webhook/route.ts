@@ -133,19 +133,36 @@ function extractItems(res: any): any[] {
   return [];
 }
 
-async function renderNotesMenu(actor: ApiActor) {
+export const telegramActiveWorkspaceCache = new Map<string, { id: string; name: string }>();
+
+export function getTelegramActiveWorkspace(chatId: string | number): { id: string; name: string } | null {
+  return telegramActiveWorkspaceCache.get(String(chatId)) || null;
+}
+
+export function setTelegramActiveWorkspace(chatId: string | number, workspace: { id: string; name: string } | null) {
+  if (!workspace || workspace.id === 'personal' || workspace.id === 'default') {
+    telegramActiveWorkspaceCache.delete(String(chatId));
+  } else {
+    telegramActiveWorkspaceCache.set(String(chatId), workspace);
+  }
+}
+
+async function renderNotesMenu(actor: ApiActor, chatId?: string | number) {
   try {
-    const res = await ApiResources.listNotes(actor, 5);
-    const notes = extractItems(res);
-    let text = '<b>📝 Kylrix Notes</b>\n\n';
+    const activeWs = chatId ? getTelegramActiveWorkspace(chatId) : null;
+    const res = await ApiResources.listNotes(actor, 6);
+    const allNotes = extractItems(res);
+    const notes = activeWs ? allNotes.filter((n: any) => n.projectId === activeWs.id || n.workspaceId === activeWs.id) : allNotes;
+    
+    let text = `<b>💡 Kylrix Ideas</b> ${activeWs ? `(📁 ${escapeHtml(activeWs.name)})` : ''}\n\n`;
 
     if (notes.length === 0) {
-      text += '<i>No notes found. Create your first note or send any message to quick-capture!</i>\n';
+      text += '<i>No ideas found in this workspace. Send any message to quick-capture, or use /idea [title]!</i>\n';
     } else {
-      text += 'Your latest notes:\n\n';
+      text += 'Your latest ideas:\n\n';
       notes.forEach((n, idx) => {
         const preview = n.content ? n.content.replace(/\n/g, ' ').slice(0, 50) : 'Empty body';
-        text += `${idx + 1}. <b>${escapeHtml(n.title)}</b>\n`;
+        text += `${idx + 1}. <b>${escapeHtml(n.title || 'Untitled Idea')}</b>\n`;
         text += `   <i>"${escapeHtml(preview)}"</i>\n`;
         text += `   <code>${n.id}</code>\n\n`;
       });
@@ -160,7 +177,7 @@ async function renderNotesMenu(actor: ApiActor) {
     });
 
     inline_keyboard.push([
-      { text: '➕ Create Note', callback_data: 'notes_new_hint' },
+      { text: '➕ Create Idea', callback_data: 'notes_new_hint' },
       { text: '🔄 Refresh', callback_data: 'menu_notes' },
     ]);
     inline_keyboard.push([{ text: '🏠 Main Menu', callback_data: 'menu_main' }]);
@@ -168,7 +185,7 @@ async function renderNotesMenu(actor: ApiActor) {
     return { text, replyMarkup: { inline_keyboard } };
   } catch (err: any) {
     return {
-      text: `❌ Error loading notes: ${escapeHtml(err?.message)}`,
+      text: `❌ Error loading ideas: ${escapeHtml(err?.message)}`,
       replyMarkup: {
         inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'menu_main' }]],
       },
@@ -176,11 +193,13 @@ async function renderNotesMenu(actor: ApiActor) {
   }
 }
 
-async function renderGoalsMenu(actor: ApiActor) {
+async function renderGoalsMenu(actor: ApiActor, chatId?: string | number) {
   try {
+    const activeWs = chatId ? getTelegramActiveWorkspace(chatId) : null;
     const res = await ApiResources.listGoals(actor, 6);
-    const goals = extractItems(res);
-    let text = '<b>🎯 Kylrix Goals & Deliverables</b>\n\n';
+    const allGoals = extractItems(res);
+    const goals = activeWs ? allGoals.filter((g: any) => g.projectId === activeWs.id || g.workspaceId === activeWs.id) : allGoals;
+    let text = `<b>🎯 Kylrix Goals & Deliverables</b> ${activeWs ? `(📁 ${escapeHtml(activeWs.name)})` : ''}\n\n`;
 
     if (goals.length === 0) {
       text += '<i>No active goals found. Create one with /goal [title]!</i>\n';
@@ -224,27 +243,52 @@ async function renderGoalsMenu(actor: ApiActor) {
   }
 }
 
-async function renderWorkspacesMenu(actor: ApiActor) {
+async function renderWorkspacesMenu(actor: ApiActor, chatId?: string | number) {
   try {
-    const res = await ApiResources.listWorkspaces(actor, 5);
+    const activeWs = chatId ? getTelegramActiveWorkspace(chatId) : null;
+    const res = await ApiResources.listWorkspaces(actor, 10);
     const workspaces = extractItems(res);
     let text = '<b>📂 Sovereign Workspaces</b>\n\n';
 
+    text += `Active Target: ${activeWs ? `🟢 <b>${escapeHtml(activeWs.name)}</b>` : '🟢 <b>Personal Workspace</b>'}\n\n`;
+
     if (workspaces.length === 0) {
-      text += '<i>No workspaces found. You are currently in your Personal Workspace.</i>\n\n';
+      text += '<i>No custom workspaces found. You are currently in your Personal Workspace.</i>\n\n';
     } else {
-      text += 'Your active workspaces:\n\n';
+      text += 'Tap below to switch active workspace for your Telegram session:\n\n';
       workspaces.forEach((w, idx) => {
-        text += `${idx + 1}. <b>${escapeHtml(w.name)}</b>\n`;
+        const isCurrent = activeWs?.id === w.id;
+        text += `${idx + 1}. ${isCurrent ? '🟢' : '📁'} <b>${escapeHtml(w.name)}</b>\n`;
         text += `   <code>${w.id}</code>\n\n`;
       });
     }
 
-    const inline_keyboard = [
-      [{ text: '🌐 Open Kylrix Web App', url: 'https://www.kylrix.space/app' }],
-      [{ text: '🔄 Refresh', callback_data: 'menu_workspaces' }],
-      [{ text: '🏠 Main Menu', callback_data: 'menu_main' }],
-    ];
+    const inline_keyboard: any[][] = [];
+
+    // Switch buttons for workspaces
+    workspaces.forEach((w) => {
+      const isCurrent = activeWs?.id === w.id;
+      inline_keyboard.push([
+        {
+          text: `${isCurrent ? '🟢 ' : '📁 '} ${escapeHtml(w.name).slice(0, 25)}`,
+          callback_data: `switch_ws:${w.id}`,
+        },
+      ]);
+    });
+
+    // Personal Workspace option
+    inline_keyboard.push([
+      {
+        text: `${!activeWs ? '🟢 ' : '👤 '} Personal Workspace`,
+        callback_data: 'switch_ws:personal',
+      },
+    ]);
+
+    inline_keyboard.push([
+      { text: '🌐 Web App', url: 'https://www.kylrix.space/app' },
+      { text: '🔄 Refresh', callback_data: 'menu_workspaces' },
+    ]);
+    inline_keyboard.push([{ text: '🏠 Main Menu', callback_data: 'menu_main' }]);
 
     return { text, replyMarkup: { inline_keyboard } };
   } catch (err: any) {
@@ -303,6 +347,7 @@ export const TELEGRAM_BOT_COMMANDS = [
   { command: 'goal', description: 'Create goal: /goal Title' },
   { command: 'search', description: 'Search items: /search <keyword>' },
   { command: 'workspaces', description: 'List and switch workspaces' },
+  { command: 'switch', description: 'Switch workspace: /switch <name or id>' },
   { command: 'settings', description: 'Notification settings and status' },
   { command: 'help', description: 'Open dashboard and quick menu' },
 ];
@@ -426,19 +471,38 @@ export async function handleTelegramUpdate(body: any): Promise<{
       }
 
       if (callbackData === 'menu_notes') {
-        const { text, replyMarkup } = await renderNotesMenu(actor);
+        const { text, replyMarkup } = await renderNotesMenu(actor, chatId);
         await editTelegramMessage(chatId, messageId, text, replyMarkup);
         return { success: true };
       }
 
       if (callbackData === 'menu_goals') {
-        const { text, replyMarkup } = await renderGoalsMenu(actor);
+        const { text, replyMarkup } = await renderGoalsMenu(actor, chatId);
         await editTelegramMessage(chatId, messageId, text, replyMarkup);
         return { success: true };
       }
 
       if (callbackData === 'menu_workspaces') {
-        const { text, replyMarkup } = await renderWorkspacesMenu(actor);
+        const { text, replyMarkup } = await renderWorkspacesMenu(actor, chatId);
+        await editTelegramMessage(chatId, messageId, text, replyMarkup);
+        return { success: true };
+      }
+
+      if (callbackData.startsWith('switch_ws:')) {
+        const target = callbackData.replace('switch_ws:', '');
+        if (target === 'personal') {
+          setTelegramActiveWorkspace(chatId, null);
+          await answerCallbackQuery(callbackQuery.id, 'Switched to Personal Workspace');
+        } else {
+          try {
+            const ws = await ApiResources.getWorkspace(actor, target);
+            setTelegramActiveWorkspace(chatId, { id: ws.id, name: ws.name });
+            await answerCallbackQuery(callbackQuery.id, `Switched to ${ws.name}`);
+          } catch (err: any) {
+            await answerCallbackQuery(callbackQuery.id, `Switch failed: ${err?.message || 'Workspace not found'}`);
+          }
+        }
+        const { text, replyMarkup } = await renderWorkspacesMenu(actor, chatId);
         await editTelegramMessage(chatId, messageId, text, replyMarkup);
         return { success: true };
       }
@@ -475,31 +539,31 @@ export async function handleTelegramUpdate(body: any): Promise<{
         return { success: true };
       }
 
-      // Read Note
+      // Read Note / Idea
       if (callbackData.startsWith('read_note:')) {
         const noteId = callbackData.replace('read_note:', '');
         try {
           const note = await ApiResources.getNote(actor, noteId);
           const text =
-            `📝 <b>${escapeHtml(note.title)}</b>\n\n` +
+            `💡 <b>${escapeHtml(note.title)}</b>\n\n` +
             `${escapeHtml(note.content || '(Empty content)')}\n\n` +
             `<code>ID: ${note.id}</code>`;
           const markup = {
             inline_keyboard: [
               [
-                { text: '🗑️ Delete Note', callback_data: `del_note:${note.id}` },
-                { text: '🔙 Back to Notes', callback_data: 'menu_notes' },
+                { text: '🗑️ Delete Idea', callback_data: `del_note:${note.id}` },
+                { text: '🔙 Back to Ideas', callback_data: 'menu_notes' },
               ],
             ],
           };
           await editTelegramMessage(chatId, messageId, text, markup);
         } catch (err: any) {
-          await sendTelegramMessage(chatId, `❌ Could not read note: ${escapeHtml(err?.message)}`);
+          await sendTelegramMessage(chatId, `❌ Could not read idea: ${escapeHtml(err?.message)}`);
         }
         return { success: true };
       }
 
-      // Delete Note
+      // Delete Note / Idea
       if (callbackData.startsWith('del_note:')) {
         const noteId = callbackData.replace('del_note:', '');
         try {
@@ -507,9 +571,9 @@ export async function handleTelegramUpdate(body: any): Promise<{
           await editTelegramMessage(
             chatId,
             messageId,
-            `🗑️ <b>Note Deleted</b>\n\nNote <code>${noteId}</code> was removed.`,
+            `🗑️ <b>Idea Deleted</b>\n\nIdea <code>${noteId}</code> was removed.`,
             {
-              inline_keyboard: [[{ text: '🔙 Back to Notes', callback_data: 'menu_notes' }]],
+              inline_keyboard: [[{ text: '🔙 Back to Ideas', callback_data: 'menu_notes' }]],
             }
           );
         } catch (err: any) {
@@ -677,6 +741,7 @@ export async function handleTelegramUpdate(body: any): Promise<{
 
     // 3. Handle persistent keyboard & commands
     if (
+      rawText === '💡 Ideas' ||
       rawText === '📝 Notes' ||
       rawText === '/notes' ||
       rawText === '/note' ||
@@ -685,7 +750,7 @@ export async function handleTelegramUpdate(body: any): Promise<{
       rawText === '/newnote' ||
       rawText === '/newidea'
     ) {
-      const { text, replyMarkup } = await renderNotesMenu(actor);
+      const { text, replyMarkup } = await renderNotesMenu(actor, chatId);
       await sendTelegramMessage(chatId, text, replyMarkup);
       return { success: true };
     }
@@ -699,14 +764,67 @@ export async function handleTelegramUpdate(body: any): Promise<{
       rawText === '/newgoal' ||
       rawText === '/newtask'
     ) {
-      const { text, replyMarkup } = await renderGoalsMenu(actor);
+      const { text, replyMarkup } = await renderGoalsMenu(actor, chatId);
       await sendTelegramMessage(chatId, text, replyMarkup);
       return { success: true };
     }
 
-    if (rawText === '📂 Workspaces' || rawText === '/workspaces' || rawText === '/workspace') {
-      const { text, replyMarkup } = await renderWorkspacesMenu(actor);
+    if (
+      rawText === '📂 Workspaces' ||
+      rawText === '/workspaces' ||
+      rawText === '/workspace' ||
+      rawText === '/ws'
+    ) {
+      const { text, replyMarkup } = await renderWorkspacesMenu(actor, chatId);
       await sendTelegramMessage(chatId, text, replyMarkup);
+      return { success: true };
+    }
+
+    if (
+      rawText.startsWith('/switch ') ||
+      rawText.startsWith('/workspace switch ') ||
+      rawText.startsWith('/ws switch ') ||
+      rawText.startsWith('/ws ')
+    ) {
+      const query = rawText
+        .replace(/^\/(switch|workspace switch|ws switch|ws)\s+/, '')
+        .trim();
+
+      if (!query || query.toLowerCase() === 'personal' || query.toLowerCase() === 'default') {
+        setTelegramActiveWorkspace(chatId, null);
+        await sendTelegramMessage(
+          chatId,
+          '🟢 <b>Switched to Personal Workspace</b>\n\nAll ideas and goals will now be saved in your personal workspace.'
+        );
+        return { success: true };
+      }
+
+      try {
+        const res = await ApiResources.listWorkspaces(actor, 50);
+        const workspaces = extractItems(res);
+        const qLower = query.toLowerCase();
+        const matched = workspaces.find(
+          (w: any) =>
+            w.id === query ||
+            (w.name && w.name.toLowerCase() === qLower) ||
+            (w.name && w.name.toLowerCase().includes(qLower))
+        );
+
+        if (matched) {
+          setTelegramActiveWorkspace(chatId, { id: matched.id, name: matched.name });
+          await sendTelegramMessage(
+            chatId,
+            `🟢 <b>Switched to Workspace:</b> 📁 <b>${escapeHtml(matched.name)}</b>\n\nAll subsequent ideas and goals will be saved to this workspace.`
+          );
+        } else {
+          await sendTelegramMessage(
+            chatId,
+            `❌ Workspace "<b>${escapeHtml(query)}</b>" not found.\n\nUse /workspaces to see available workspaces.`
+          );
+        }
+      } catch (err: any) {
+        await sendTelegramMessage(chatId, `❌ Failed to switch workspace: ${escapeHtml(err?.message)}`);
+      }
       return { success: true };
     }
 
@@ -717,9 +835,11 @@ export async function handleTelegramUpdate(body: any): Promise<{
     }
 
     if (rawText === '⚡ Quick Capture') {
+      const activeWs = getTelegramActiveWorkspace(chatId);
       await sendTelegramMessage(
         chatId,
-        '⚡ <b>Quick Capture Mode</b>\n\nSimply send any thought, link, or note text and it will immediately save to your Kylrix account!'
+        `⚡ <b>Quick Capture Mode</b> ${activeWs ? `(📁 ${escapeHtml(activeWs.name)})` : ''}\n\n` +
+          'Simply send any thought, link, or note text and it will immediately save to your Kylrix workspace!'
       );
       return { success: true };
     }
@@ -817,23 +937,31 @@ export async function handleTelegramUpdate(body: any): Promise<{
       rawText.startsWith('/newidea ')
     ) {
       const rawParams = rawText.replace(/^\/(note|newnote|idea|newidea)\s+/, '').trim();
-      let title = 'Quick Note';
+      let title = 'Quick Idea';
       let content = '';
 
       if (rawParams.includes('|')) {
         const parts = rawParams.split('|');
-        title = parts[0].trim() || 'Quick Note';
+        title = parts[0].trim() || 'Quick Idea';
         content = parts.slice(1).join('|').trim();
       } else {
         title = rawParams;
       }
 
       try {
-        const newNote = await ApiResources.createNote(actor, { title, content });
+        const activeWs = getTelegramActiveWorkspace(chatId);
+        const payload: any = { title, content };
+        if (activeWs) {
+          payload.projectId = activeWs.id;
+          payload.isWorkspace = true;
+        }
+
+        const newNote = await ApiResources.createNote(actor, payload);
         await sendTelegramMessage(
           chatId,
-          `✅ <b>Note Created!</b>\n\n` +
+          `💡 <b>Idea Created!</b>\n\n` +
             `<b>Title:</b> ${escapeHtml(newNote.title)}\n` +
+            (activeWs ? `<b>Workspace:</b> 📁 ${escapeHtml(activeWs.name)}\n` : '') +
             (content ? `<b>Body:</b> ${escapeHtml(content)}\n` : '') +
             `<code>ID: ${newNote.id}</code>`,
           {
@@ -842,12 +970,12 @@ export async function handleTelegramUpdate(body: any): Promise<{
                 { text: '📖 Read', callback_data: `read_note:${newNote.id}` },
                 { text: '🗑️ Delete', callback_data: `del_note:${newNote.id}` },
               ],
-              [{ text: '📋 View Notes', callback_data: 'menu_notes' }],
+              [{ text: '💡 View Ideas', callback_data: 'menu_notes' }],
             ],
           }
         );
       } catch (err: any) {
-        await sendTelegramMessage(chatId, `❌ Failed to create note: ${escapeHtml(err?.message)}`);
+        await sendTelegramMessage(chatId, `❌ Failed to create idea: ${escapeHtml(err?.message)}`);
       }
       return { success: true };
     }
@@ -864,11 +992,19 @@ export async function handleTelegramUpdate(body: any): Promise<{
         return { success: true };
       }
       try {
-        const newGoal = await ApiResources.createGoal(actor, { title, status: 'todo' });
+        const activeWs = getTelegramActiveWorkspace(chatId);
+        const payload: any = { title, status: 'todo' };
+        if (activeWs) {
+          payload.projectId = activeWs.id;
+          payload.isWorkspace = true;
+        }
+
+        const newGoal = await ApiResources.createGoal(actor, payload);
         await sendTelegramMessage(
           chatId,
           `🎯 <b>Goal Logged!</b>\n\n` +
             `<b>Title:</b> ${escapeHtml(newGoal.title)}\n` +
+            (activeWs ? `<b>Workspace:</b> 📁 ${escapeHtml(activeWs.name)}\n` : '') +
             `<code>ID: ${newGoal.id}</code>`,
           {
             inline_keyboard: [
@@ -891,14 +1027,22 @@ export async function handleTelegramUpdate(body: any): Promise<{
       const firstLine = rawText.split('\n')[0].slice(0, 45).trim();
       const title = firstLine || 'Quick Thought';
       try {
-        const quickNote = await ApiResources.createNote(actor, {
+        const activeWs = getTelegramActiveWorkspace(chatId);
+        const payload: any = {
           title,
           content: rawText,
-        });
+        };
+        if (activeWs) {
+          payload.projectId = activeWs.id;
+          payload.isWorkspace = true;
+        }
+
+        const quickNote = await ApiResources.createNote(actor, payload);
         await sendTelegramMessage(
           chatId,
-          `⚡ <b>Quick Note Captured!</b>\n\n` +
+          `⚡ <b>Quick Idea Captured!</b>\n\n` +
             `<b>Title:</b> ${escapeHtml(quickNote.title)}\n` +
+            (activeWs ? `<b>Workspace:</b> 📁 ${escapeHtml(activeWs.name)}\n` : '') +
             `<i>"${escapeHtml(rawText.slice(0, 80))}${rawText.length > 80 ? '...' : ''}"</i>\n\n` +
             `<code>ID: ${quickNote.id}</code>`,
           {
@@ -907,7 +1051,7 @@ export async function handleTelegramUpdate(body: any): Promise<{
                 { text: '📖 Read', callback_data: `read_note:${quickNote.id}` },
                 { text: '🗑️ Delete', callback_data: `del_note:${quickNote.id}` },
               ],
-              [{ text: '📋 All Notes', callback_data: 'menu_notes' }],
+              [{ text: '💡 All Ideas', callback_data: 'menu_notes' }],
             ],
           }
         );
