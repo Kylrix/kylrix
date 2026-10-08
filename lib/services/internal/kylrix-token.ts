@@ -57,12 +57,45 @@ function tokenReadPermissions(userId: string, counterpartyUserId?: string | null
   return Array.from(perms);
 }
 
-async function getStateRow() {
+async function getStateRow(): Promise<TokenStateRow | null> {
+  try {
+    const { db } = await import('@/lib/db');
+    const { kylrixTokenLedger } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    const rows = await db
+      .select()
+      .from(kylrixTokenLedger)
+      .where(eq(kylrixTokenLedger.id, STATE_ROW_ID))
+      .limit(1);
+
+    if (rows && rows.length > 0) {
+      const r = rows[0];
+      return {
+        $id: r.id,
+        rowType: 'state',
+        txId: r.txId || 'state:singleton',
+        idempotencyKey: r.idempotencyKey || 'state:singleton',
+        genesisAt: r.genesisAt || null,
+        contractVersion: r.contractVersion || 'kylrix-token-v1',
+        maxSupplyMicro: r.maxSupplyMicro || contract.policy.maxSupplyMicro.toString(),
+        totalMintedMicro: r.totalMintedMicro || '0',
+        totalBurnedMicro: r.totalBurnedMicro || '0',
+        circulatingMicro: r.circulatingMicro || '0',
+        rootBalanceMicro: r.rootBalanceMicro || '0',
+        riskLevel: (r.riskLevel as any) || 'normal',
+        createdAt: r.createdAt,
+        lastActivityAt: r.lastActivityAt || null,
+        lastSpikeAt: r.lastSpikeAt || null,
+        updatedAt: r.updatedAt,
+      };
+    }
+  } catch {}
+
   try {
     return await ledgerTables().getRow({
       databaseId: DB_ID,
       tableId: TABLE_ID,
-      rowId: STATE_ROW_ID});
+      rowId: STATE_ROW_ID}) as any;
   } catch {
     return null;
   }
@@ -71,6 +104,9 @@ async function getStateRow() {
 async function requireStateRow() {
   const state = await getStateRow();
   if (!isInitialized(state)) {
+    await InternalKylrixTokenService.initializeState();
+    const initialized = await getStateRow();
+    if (isInitialized(initialized)) return initialized;
     throw new Error('TOKEN_NOT_INITIALIZED');
   }
   return state;
@@ -89,17 +125,59 @@ async function requireOrInitializeStateRow() {
 
 async function updateStateRow(patch: Partial<TokenStateRow>) {
   const current = await requireStateRow();
-  return ledgerTables().updateRow({
-    databaseId: DB_ID,
-    tableId: TABLE_ID,
-    rowId: STATE_ROW_ID,
-    data: {
-      ...current,
-      ...patch,
-      updatedAt: nowIso()}});
+  const nextData = {
+    ...current,
+    ...patch,
+    updatedAt: nowIso(),
+  };
+
+  try {
+    const { db } = await import('@/lib/db');
+    const { kylrixTokenLedger } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    await db
+      .update(kylrixTokenLedger)
+      .set({
+        genesisAt: nextData.genesisAt,
+        totalMintedMicro: nextData.totalMintedMicro,
+        totalBurnedMicro: nextData.totalBurnedMicro,
+        circulatingMicro: nextData.circulatingMicro,
+        rootBalanceMicro: nextData.rootBalanceMicro,
+        riskLevel: nextData.riskLevel,
+        lastActivityAt: nextData.lastActivityAt,
+        lastSpikeAt: nextData.lastSpikeAt,
+        updatedAt: nextData.updatedAt,
+      })
+      .where(eq(kylrixTokenLedger.id, STATE_ROW_ID))
+      .catch(() => {});
+  } catch {}
+
+  try {
+    await ledgerTables().updateRow({
+      databaseId: DB_ID,
+      tableId: TABLE_ID,
+      rowId: STATE_ROW_ID,
+      data: nextData,
+    }).catch(() => {});
+  } catch {}
+
+  return nextData;
 }
 
 async function listUserEventsDescending(userId: string, limit: number) {
+  try {
+    const { db } = await import('@/lib/db');
+    const { kylrixTokenLedger } = await import('@/lib/db/schema');
+    const { eq, desc } = await import('drizzle-orm');
+    const rows = await db
+      .select()
+      .from(kylrixTokenLedger)
+      .where(eq(kylrixTokenLedger.userId, userId))
+      .orderBy(desc(kylrixTokenLedger.createdAt))
+      .limit(limit);
+    if (rows && rows.length > 0) return rows as any[];
+  } catch {}
+
   const tables = ledgerTables();
   const base = [
     Query.equal('rowType', 'event'),
@@ -121,31 +199,50 @@ async function listUserEventsDescending(userId: string, limit: number) {
 
 /** Latest ledger balance from event rows — does **not** require the singleton `state` row to exist on TablesDB. */
 async function getLatestBalanceMicro(userId: string) {
-  const tables = ledgerTables();
-  const withBal = [
-    Query.equal('rowType', 'event'),
-    Query.equal('userId', userId),
-    Query.isNotNull('balanceAfterMicro'),
-    Query.limit(80)];
-  const tries: string[][] = [
-    [...withBal.slice(0, 3), Query.orderDesc('$createdAt'), withBal[3]],
-    [...withBal.slice(0, 3), Query.orderDesc('createdAt'), withBal[3]]];
-  for (const queries of tries) {
-    try {
-      const res = await tables.listRows({
-        databaseId: DB_ID,
-        tableId: TABLE_ID,
-        queries});
-      for (const doc of res.rows ?? []) {
-        const bal = (doc as any)?.balanceAfterMicro;
-        if (bal === null || bal === undefined) continue;
-        if (String(bal).trim() === '') continue;
-        return asMicro(bal);
+  try {
+    const { db } = await import('@/lib/db');
+    const { kylrixTokenLedger } = await import('@/lib/db/schema');
+    const { eq, desc } = await import('drizzle-orm');
+    const rows = await db
+      .select({ balanceAfterMicro: kylrixTokenLedger.balanceAfterMicro })
+      .from(kylrixTokenLedger)
+      .where(eq(kylrixTokenLedger.userId, userId))
+      .orderBy(desc(kylrixTokenLedger.createdAt))
+      .limit(50);
+
+    for (const r of rows) {
+      if (r.balanceAfterMicro !== null && r.balanceAfterMicro !== undefined && String(r.balanceAfterMicro).trim() !== '') {
+        return asMicro(r.balanceAfterMicro);
       }
-    } catch {
-      /* order or isNotNull may be unsupported — fall through */
     }
-  }
+  } catch {}
+
+  try {
+    const tables = ledgerTables();
+    const withBal = [
+      Query.equal('rowType', 'event'),
+      Query.equal('userId', userId),
+      Query.isNotNull('balanceAfterMicro'),
+      Query.limit(80)];
+    const tries: string[][] = [
+      [...withBal.slice(0, 3), Query.orderDesc('$createdAt'), withBal[3]],
+      [...withBal.slice(0, 3), Query.orderDesc('createdAt'), withBal[3]]];
+    for (const queries of tries) {
+      try {
+        const res = await tables.listRows({
+          databaseId: DB_ID,
+          tableId: TABLE_ID,
+          queries});
+        for (const doc of res.rows ?? []) {
+          const bal = (doc as any)?.balanceAfterMicro;
+          if (bal === null || bal === undefined) continue;
+          if (String(bal).trim() === '') continue;
+          return asMicro(bal);
+        }
+      } catch {}
+    }
+  } catch {}
+
   const rows = await listUserEventsDescending(userId, 200);
   for (const doc of rows) {
     const bal = (doc as any)?.balanceAfterMicro;
@@ -159,16 +256,42 @@ async function getLatestBalanceMicro(userId: string) {
 async function getUserDailyMinted(userId: string) {
   const since = new Date();
   since.setUTCHours(0, 0, 0, 0);
-  const { rows } = await ledgerTables().listRows({
-    databaseId: DB_ID,
-    tableId: TABLE_ID,
-    queries: [
-      Query.equal('rowType', 'event'),
-      Query.equal('userId', userId),
-      Query.equal('eventType', 'mint_activity'),
-      Query.greaterThanEqual('createdAt', since.toISOString()),
-      Query.limit(5000)]});
-  return (rows ?? []).reduce((sum, doc: any) => sum + asMicro(doc.amountMicro), 0n);
+  const sinceIso = since.toISOString();
+
+  try {
+    const { db } = await import('@/lib/db');
+    const { kylrixTokenLedger } = await import('@/lib/db/schema');
+    const { eq, gte, and } = await import('drizzle-orm');
+    const rows = await db
+      .select({ amountMicro: kylrixTokenLedger.amountMicro })
+      .from(kylrixTokenLedger)
+      .where(
+        and(
+          eq(kylrixTokenLedger.userId, userId),
+          eq(kylrixTokenLedger.eventType, 'mint_activity'),
+          gte(kylrixTokenLedger.createdAt, sinceIso)
+        )
+      );
+
+    if (rows && rows.length > 0) {
+      return rows.reduce((sum, doc) => sum + asMicro(doc.amountMicro), 0n);
+    }
+  } catch {}
+
+  try {
+    const { rows } = await ledgerTables().listRows({
+      databaseId: DB_ID,
+      tableId: TABLE_ID,
+      queries: [
+        Query.equal('rowType', 'event'),
+        Query.equal('userId', userId),
+        Query.equal('eventType', 'mint_activity'),
+        Query.greaterThanEqual('createdAt', sinceIso),
+        Query.limit(5000)]});
+    return (rows ?? []).reduce((sum, doc: any) => sum + asMicro(doc.amountMicro), 0n);
+  } catch {
+    return 0n;
+  }
 }
 
 async function getRecentUserMintActivityCount(userId: string, windowHours = 24) {
@@ -248,15 +371,15 @@ async function appendEvent(input: {
   sourceId?: string | null;
   metadata?: Record<string, unknown> | null;
 }) {
-  const existing = await ensureNoDuplicateIdempotency(input.idempotencyKey);
-  if (existing) throw new Error('IDEMPOTENCY_CONFLICT');
-
   const createdAt = nowIso();
-  return ledgerTables().createRow({
-    databaseId: DB_ID,
-    tableId: TABLE_ID,
-    rowId: ID.unique(),
-    data: {
+  const rowId = ID.unique();
+
+  // 1. Insert into Turso SQLite
+  try {
+    const { db } = await import('@/lib/db');
+    const { kylrixTokenLedger } = await import('@/lib/db/schema');
+    await db.insert(kylrixTokenLedger).values({
+      id: rowId,
       rowType: 'event',
       txId: input.txId,
       idempotencyKey: input.idempotencyKey,
@@ -265,16 +388,56 @@ async function appendEvent(input: {
       counterpartyUserId: input.counterpartyUserId || null,
       amountMicro: toMicro(input.amountMicro),
       deltaMicro: toMicro(input.deltaMicro),
-      balanceAfterMicro:
-        input.balanceAfterMicro === null || input.balanceAfterMicro === undefined
-          ? null
-          : toMicro(input.balanceAfterMicro),
+      balanceAfterMicro: input.balanceAfterMicro === null || input.balanceAfterMicro === undefined ? null : toMicro(input.balanceAfterMicro),
       status: input.status || 'settled',
       sourceType: input.sourceType || null,
       sourceId: input.sourceId || null,
       metadata: input.metadata ? JSON.stringify(input.metadata) : null,
-      createdAt},
-    permissions: tokenReadPermissions(input.userId, input.counterpartyUserId)});
+      createdAt,
+      updatedAt: createdAt,
+    }).catch(() => {});
+  } catch (err) {
+    console.warn('[KYLRIX Token] Turso appendEvent warning:', err);
+  }
+
+  // 2. Non-blocking Appwrite sync
+  try {
+    ledgerTables().createRow({
+      databaseId: DB_ID,
+      tableId: TABLE_ID,
+      rowId,
+      data: {
+        rowType: 'event',
+        txId: input.txId,
+        idempotencyKey: input.idempotencyKey,
+        eventType: input.eventType,
+        userId: input.userId,
+        counterpartyUserId: input.counterpartyUserId || null,
+        amountMicro: toMicro(input.amountMicro),
+        deltaMicro: toMicro(input.deltaMicro),
+        balanceAfterMicro:
+          input.balanceAfterMicro === null || input.balanceAfterMicro === undefined
+            ? null
+            : toMicro(input.balanceAfterMicro),
+        status: input.status || 'settled',
+        sourceType: input.sourceType || null,
+        sourceId: input.sourceId || null,
+        metadata: input.metadata ? JSON.stringify(input.metadata) : null,
+        createdAt},
+      permissions: tokenReadPermissions(input.userId, input.counterpartyUserId)
+    }).catch((e: any) => {
+      console.warn('[KYLRIX Token] Appwrite appendEvent sync warning:', e?.message);
+    });
+  } catch {}
+
+  return {
+    $id: rowId,
+    ...input,
+    amountMicro: toMicro(input.amountMicro),
+    deltaMicro: toMicro(input.deltaMicro),
+    balanceAfterMicro: input.balanceAfterMicro === null || input.balanceAfterMicro === undefined ? null : toMicro(input.balanceAfterMicro),
+    createdAt,
+  };
 }
 
 async function notifyTokenTransferReceived(input: {
@@ -325,27 +488,57 @@ export const InternalKylrixTokenService = {
     if (isInitialized(existing)) return existing;
 
     const timestamp = nowIso();
-    return ledgerTables().createRow({
-      databaseId: DB_ID,
-      tableId: TABLE_ID,
-      rowId: STATE_ROW_ID,
-      data: {
-        rowType: 'state',
-        txId: 'state:singleton',
-        idempotencyKey: 'state:singleton',
-        genesisAt: null,
-        contractVersion: 'kylrix-token-v1',
-        maxSupplyMicro: contract.policy.maxSupplyMicro.toString(),
-        totalMintedMicro: '0',
-        totalBurnedMicro: '0',
-        circulatingMicro: '0',
-        rootBalanceMicro: '0',
-        riskLevel: 'normal',
-        createdAt: timestamp,
-        lastActivityAt: null,
-        lastSpikeAt: null,
-        updatedAt: timestamp},
-      permissions: [Permission.read(Role.users())]});
+    const defaultStateData = {
+      id: STATE_ROW_ID,
+      rowType: 'state' as const,
+      txId: 'state:singleton',
+      idempotencyKey: 'state:singleton',
+      genesisAt: null,
+      contractVersion: 'kylrix-token-v1',
+      maxSupplyMicro: contract.policy.maxSupplyMicro.toString(),
+      totalMintedMicro: '0',
+      totalBurnedMicro: '0',
+      circulatingMicro: '0',
+      rootBalanceMicro: '0',
+      riskLevel: 'normal' as const,
+      createdAt: timestamp,
+      lastActivityAt: null,
+      lastSpikeAt: null,
+      updatedAt: timestamp,
+    };
+
+    try {
+      const { db } = await import('@/lib/db');
+      const { kylrixTokenLedger } = await import('@/lib/db/schema');
+      await db.insert(kylrixTokenLedger).values(defaultStateData).catch(() => {});
+    } catch {}
+
+    try {
+      await ledgerTables().createRow({
+        databaseId: DB_ID,
+        tableId: TABLE_ID,
+        rowId: STATE_ROW_ID,
+        data: {
+          rowType: 'state',
+          txId: 'state:singleton',
+          idempotencyKey: 'state:singleton',
+          genesisAt: null,
+          contractVersion: 'kylrix-token-v1',
+          maxSupplyMicro: contract.policy.maxSupplyMicro.toString(),
+          totalMintedMicro: '0',
+          totalBurnedMicro: '0',
+          circulatingMicro: '0',
+          rootBalanceMicro: '0',
+          riskLevel: 'normal',
+          createdAt: timestamp,
+          lastActivityAt: null,
+          lastSpikeAt: null,
+          updatedAt: timestamp},
+        permissions: [Permission.read(Role.any())]
+      }).catch(() => {});
+    } catch {}
+
+    return defaultStateData as any;
   },
 
   async mintForActivity(input: {

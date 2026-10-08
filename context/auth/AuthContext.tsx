@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCurrentUserCache, onCurrentUserChanged, getCurrentUserSnapshot } from '@/lib/appwrite/client';
+import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCurrentUserCache, onCurrentUserChanged, getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 import { assertAuthenticatedAccount, completeMfaChallenge, isMfaRequiredError } from '@/lib/mfa';
 
@@ -68,10 +68,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const sessionVerifySeq = useRef(0);
   const lastSeenUserIdRef = useRef<string | null>(user?.$id || null);
   const refreshUserRef = useRef<() => Promise<User | null>>(async () => null);
-  const refreshUser = useCallback(async (_forceRefresh = false): Promise<User | null> => {
+  const refreshUser = useCallback(async (forceRefresh = false): Promise<User | null> => {
     try {
+      const isOAuthSuccess = typeof window !== 'undefined' && window.location.search.includes('auth=success');
 
-      // 1. Better Auth session check (Sole primary authority for authentication)
+      // 1. Better Auth session check (Primary authority)
       try {
         const { authClient } = await import('@/lib/auth/better-auth-client');
         const betterSession = await authClient.getSession().catch(() => null);
@@ -92,7 +93,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setUser(userObj as any);
           setKylrixPulse(userObj as any);
 
-          if (typeof window !== 'undefined' && window.location.search.includes('auth=success')) {
+          if (isOAuthSuccess) {
             const url = new URL(window.location.href);
             url.searchParams.delete('auth');
             window.history.replaceState({}, '', url.toString());
@@ -104,7 +105,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.warn('[AuthContext] Better Auth session check warning:', betterAuthErr);
       }
 
-      // If online and Better Auth session is null, clear session (never fall back to Appwrite auth)
+      // 2. Secondary Appwrite active session check
+      try {
+        const appwriteUser = await getCurrentUser(forceRefresh || isOAuthSuccess).catch(() => null);
+        if (appwriteUser && appwriteUser.$id) {
+          if (lastSeenUserIdRef.current && lastSeenUserIdRef.current !== appwriteUser.$id) {
+            const { purgeAllClientStorageOnLogout } = await import('@/lib/services/wipe-client-storage');
+            await purgeAllClientStorageOnLogout();
+          }
+          lastSeenUserIdRef.current = appwriteUser.$id;
+          setUser(appwriteUser as any);
+          setKylrixPulse(appwriteUser);
+
+          if (isOAuthSuccess) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('auth');
+            window.history.replaceState({}, '', url.toString());
+          }
+
+          return appwriteUser as any;
+        }
+      } catch (appwriteAuthErr) {
+        console.warn('[AuthContext] Appwrite session check warning:', appwriteAuthErr);
+      }
+
+      // If online and BOTH sessions are genuinely null, clear session
       if (typeof navigator !== 'undefined' && navigator.onLine) {
         lastSeenUserIdRef.current = null;
         setUser(null);
@@ -134,7 +159,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   refreshUserRef.current = refreshUser;
 

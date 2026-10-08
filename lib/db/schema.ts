@@ -812,6 +812,35 @@ export const computeLedger = sqliteTable('compute_ledger', {
   timestamp: text('timestamp').notNull(),
 });
 
+export const kylrixTokenLedger = sqliteTable('kylrix_token_ledger', {
+  id: text('id').primaryKey(),
+  rowType: text('row_type').notNull().default('event'), // 'state' | 'event'
+  txId: text('tx_id'),
+  idempotencyKey: text('idempotency_key'),
+  eventType: text('event_type'),
+  userId: text('user_id'),
+  counterpartyUserId: text('counterparty_user_id'),
+  amountMicro: text('amount_micro'),
+  deltaMicro: text('delta_micro'),
+  balanceAfterMicro: text('balance_after_micro'),
+  status: text('status').default('settled'),
+  sourceType: text('source_type'),
+  sourceId: text('source_id'),
+  metadata: text('metadata'),
+  genesisAt: text('genesis_at'),
+  contractVersion: text('contract_version'),
+  maxSupplyMicro: text('max_supply_micro'),
+  totalMintedMicro: text('total_minted_micro'),
+  totalBurnedMicro: text('total_burned_micro'),
+  circulatingMicro: text('circulating_micro'),
+  rootBalanceMicro: text('root_balance_micro'),
+  riskLevel: text('risk_level'),
+  lastActivityAt: text('last_activity_at'),
+  lastSpikeAt: text('last_spike_at'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
 // 8. Coupons, Billing Transactions & Account Attention Ledger
 export const coupons = sqliteTable('coupons', {
   id: text('id').primaryKey(),

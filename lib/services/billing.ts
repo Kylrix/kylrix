@@ -45,16 +45,27 @@ export const BillingCacheService = {
 
         if (balanceInFlight) return balanceInFlight;
 
-        balanceInFlight = KylrixTokenService.getUserBalance(userId)
-            .then(res => {
+        balanceInFlight = (async () => {
+            try {
+                const { getUserTokenBalanceAction } = await import('@/lib/actions/turso-ops');
+                const res = await getUserTokenBalanceAction(userId);
+                if (res && res.amountMicro) {
+                    const data = { amount: res.amount, symbol: res.symbol };
+                    balanceCache = { data, expiresAt: Date.now() + TTL };
+                    lastBalanceFetch = Date.now();
+                    return data;
+                }
+            } catch {}
+
+            return KylrixTokenService.getUserBalance(userId).then(res => {
                 const data = { amount: res.amount, symbol: res.symbol };
                 balanceCache = { data, expiresAt: Date.now() + TTL };
                 lastBalanceFetch = Date.now();
                 return data;
-            })
-            .finally(() => {
-                balanceInFlight = null;
             });
+        })().finally(() => {
+            balanceInFlight = null;
+        });
 
         return balanceInFlight;
     },
@@ -71,15 +82,35 @@ export const BillingCacheService = {
 
         if (walletsInFlight) return walletsInFlight;
 
-        walletsInFlight = WalletService.listMainWallets(userId)
-            .then(data => {
+        walletsInFlight = (async () => {
+            try {
+                const { getUserWalletsAction } = await import('@/lib/actions/turso-ops');
+                const tursoWallets = await getUserWalletsAction(userId);
+                if (tursoWallets && Array.isArray(tursoWallets) && tursoWallets.length > 0) {
+                    const mapped: WalletSummary[] = tursoWallets.map((w: any) => ({
+                        id: w.id,
+                        chain: w.chain,
+                        label: w.chain.toUpperCase(),
+                        symbol: w.chain.toUpperCase(),
+                        family: 'evm',
+                        address: w.address,
+                        type: w.type || 'main',
+                        publicProfile: true,
+                    }));
+                    walletsCache = { data: mapped, expiresAt: Date.now() + TTL };
+                    lastWalletsFetch = Date.now();
+                    return mapped;
+                }
+            } catch {}
+
+            return WalletService.listMainWallets(userId).then(data => {
                 walletsCache = { data, expiresAt: Date.now() + TTL };
                 lastWalletsFetch = Date.now();
                 return data;
-            })
-            .finally(() => {
-                walletsInFlight = null;
             });
+        })().finally(() => {
+            walletsInFlight = null;
+        });
 
         return walletsInFlight;
     },

@@ -132,6 +132,7 @@ export async function resolveUserAppwriteMigrationGate(userIdentifier: {
         hasAppwriteAccount: schema.user.hasAppwriteAccount,
         appwriteAccountId: schema.user.appwriteAccountId,
         appwriteFullySynced: schema.user.appwriteFullySynced,
+        appwriteSyncedAt: schema.user.appwriteSyncedAt,
       })
       .from(schema.user)
       .where(condition)
@@ -148,7 +149,12 @@ export async function resolveUserAppwriteMigrationGate(userIdentifier: {
 
     if (u.hasAppwriteAccount === true) {
       if (u.appwriteFullySynced) {
-        return { shouldSkipAppwrite: true, hasAppwriteAccount: true, appwriteAccountId: u.appwriteAccountId, appwriteFullySynced: true };
+        // Migration version check: Ensure users synced prior to new table schema additions (subscriptions, wallets, token ledger, coupons) receive one incremental sync pass
+        const lastSync = (u as any).appwriteSyncedAt ? new Date((u as any).appwriteSyncedAt).getTime() : 0;
+        const MIGRATION_VERSION_CUTOFF = new Date('2026-10-08T09:40:00Z').getTime();
+        if (lastSync >= MIGRATION_VERSION_CUTOFF) {
+          return { shouldSkipAppwrite: true, hasAppwriteAccount: true, appwriteAccountId: u.appwriteAccountId, appwriteFullySynced: true };
+        }
       }
       return { shouldSkipAppwrite: false, hasAppwriteAccount: true, appwriteAccountId: u.appwriteAccountId, appwriteFullySynced: false };
     }
@@ -841,6 +847,123 @@ export async function deleteCouponTurso(id: string) {
   }
 }
 
+// --------------------------------------------------------
+// Subscriptions, Wallets & Kylrix Token Ledger Turso CRUD
+// --------------------------------------------------------
+export async function upsertSubscriptionTurso(data: typeof schema.subscriptions.$inferInsert) {
+  try {
+    const existing = await db
+      .select({ id: schema.subscriptions.id })
+      .from(schema.subscriptions)
+      .where(eq(schema.subscriptions.id, data.id))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(schema.subscriptions)
+        .set({
+          ...data,
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        })
+        .where(eq(schema.subscriptions.id, data.id));
+    } else {
+      await db.insert(schema.subscriptions).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function upsertWalletTurso(data: typeof schema.wallets.$inferInsert) {
+  try {
+    const existing = await db
+      .select({ id: schema.wallets.id })
+      .from(schema.wallets)
+      .where(eq(schema.wallets.id, data.id))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(schema.wallets)
+        .set({
+          ...data,
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        })
+        .where(eq(schema.wallets.id, data.id));
+    } else {
+      await db.insert(schema.wallets).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function upsertKylrixTokenLedgerTurso(data: typeof schema.kylrixTokenLedger.$inferInsert) {
+  try {
+    const existing = await db
+      .select({ id: schema.kylrixTokenLedger.id })
+      .from(schema.kylrixTokenLedger)
+      .where(eq(schema.kylrixTokenLedger.id, data.id))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(schema.kylrixTokenLedger)
+        .set({
+          ...data,
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        })
+        .where(eq(schema.kylrixTokenLedger.id, data.id));
+    } else {
+      await db.insert(schema.kylrixTokenLedger).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function getUserTokenBalanceAction(userId: string) {
+  try {
+    if (!userId) return null;
+    const { desc } = await import('drizzle-orm');
+    const rows = await db
+      .select({
+        balanceAfterMicro: schema.kylrixTokenLedger.balanceAfterMicro,
+      })
+      .from(schema.kylrixTokenLedger)
+      .where(eq(schema.kylrixTokenLedger.userId, userId))
+      .orderBy(desc(schema.kylrixTokenLedger.createdAt))
+      .limit(50);
+
+    for (const r of rows) {
+      if (r.balanceAfterMicro !== null && r.balanceAfterMicro !== undefined && String(r.balanceAfterMicro).trim() !== '') {
+        const micro = BigInt(String(r.balanceAfterMicro));
+        const amount = (Number(micro) / 1_000_000).toFixed(6).replace(/\.?0+$/, '');
+        return { amountMicro: micro.toString(), amount, symbol: '$KYLRIX' };
+      }
+    }
+    return { amountMicro: '0', amount: '0', symbol: '$KYLRIX' };
+  } catch (_err) {
+    return null;
+  }
+}
+
+export async function getUserWalletsAction(userId: string) {
+  try {
+    if (!userId) return [];
+    const rows = await db
+      .select()
+      .from(schema.wallets)
+      .where(eq(schema.wallets.ownerId, `user:${userId}`));
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
 // ========================================================
 // AGGRESSIVE TIER 1 & TIER 2 MIGRATION PIPELINE
 // ========================================================
@@ -1275,6 +1398,120 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       }
     } catch (e: any) {
       console.warn('[syncTier1FromAppwriteTurso] Aggressive Vault credentials re-check warning:', e.message);
+    }
+
+    // 8. Subscriptions & Billing Status
+    try {
+      const subRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'subscriptions',
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(50)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const row of subRes.rows as any[]) {
+        await upsertSubscriptionTurso({
+          id: row.$id,
+          userId,
+          tier: row.tier || row.plan || 'free',
+          status: row.status || 'active',
+          plan: row.plan || row.tier || 'free',
+          currentPeriodStart: row.currentPeriodStart || null,
+          currentPeriodEnd: row.currentPeriodEnd || null,
+          cancelAtPeriodEnd: Boolean(row.cancelAtPeriodEnd),
+          createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
+          updatedAt: row.updatedAt || row.$updatedAt || new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Subscriptions sync warning:', e.message);
+    }
+
+    // 9. Wallets
+    try {
+      const walletRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'wallets',
+        queries: [Query.equal('ownerId', `user:${appwriteOwnerId}`), Query.limit(50)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const row of walletRes.rows as any[]) {
+        await upsertWalletTurso({
+          id: row.$id,
+          ownerId: `user:${userId}`,
+          address: row.address,
+          chain: row.chain || 'evm',
+          encryptedSecret: row.encryptedSecret || '',
+          type: row.type || 'embedded',
+          metadata: row.metadata || null,
+          createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
+          updatedAt: row.updatedAt || row.$updatedAt || new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Wallets sync warning:', e.message);
+    }
+
+    // 10. Kylrix Token Ledger & Balance Events
+    try {
+      const ledgerRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'kylrix_token_ledger',
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(200)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const row of ledgerRes.rows as any[]) {
+        await upsertKylrixTokenLedgerTurso({
+          id: row.$id,
+          rowType: row.rowType || 'event',
+          txId: row.txId || null,
+          idempotencyKey: row.idempotencyKey || null,
+          eventType: row.eventType || null,
+          userId,
+          counterpartyUserId: row.counterpartyUserId || null,
+          amountMicro: row.amountMicro ? String(row.amountMicro) : null,
+          deltaMicro: row.deltaMicro ? String(row.deltaMicro) : null,
+          balanceAfterMicro: row.balanceAfterMicro ? String(row.balanceAfterMicro) : null,
+          status: row.status || 'settled',
+          sourceType: row.sourceType || null,
+          sourceId: row.sourceId || null,
+          metadata: row.metadata ? (typeof row.metadata === 'string' ? row.metadata : JSON.stringify(row.metadata)) : null,
+          createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
+          updatedAt: row.updatedAt || row.$updatedAt || new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Kylrix token ledger sync warning:', e.message);
+    }
+
+    // 11. Coupons
+    try {
+      const couponRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'coupons',
+        queries: [Query.limit(100)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const row of couponRes.rows as any[]) {
+        await upsertCouponTurso({
+          id: row.$id,
+          createdBy: row.createdBy || 'system',
+          title: row.title || null,
+          note: row.note || null,
+          targetUserId: row.targetUserId || null,
+          status: row.status || 'active',
+          discountPercent: row.discountPercent || 0,
+          discountPercentage: row.discountPercentage || 0,
+          redemptionLimit: row.redemptionLimit || 1,
+          redemptionCount: row.redemptionCount || 0,
+          seats: row.seats || 1,
+          expiresAt: row.expiresAt || null,
+          metadata: row.metadata ? (typeof row.metadata === 'string' ? row.metadata : JSON.stringify(row.metadata)) : null,
+          createdAt: row.createdAt || row.$createdAt || new Date().toISOString(),
+          updatedAt: row.updatedAt || row.$updatedAt || new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Coupons sync warning:', e.message);
     }
 
     // Mark Tier 1, Tier 2, and appwriteFullySynced = true on Turso user row
