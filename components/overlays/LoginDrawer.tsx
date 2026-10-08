@@ -23,6 +23,7 @@ import {
   isEmailPasswordSigninEnabled,
   isPasskeySignupEnabled,
 } from '@/lib/config/auth-methods';
+import { authClient } from '@/lib/auth/better-auth-client';
 
 type LoginStep = 'initial' | 'email' | 'otp' | 'agent';
 
@@ -169,8 +170,6 @@ export function LoginDrawer() {
     if (!emailTrimmed || !password) return;
 
     setLoading(true);
-    localStorage.setItem('kylrix_last_auth_method', 'password');
-    setLastUsedMethod('password');
 
     try {
       await account.deleteSession('current').catch(() => {});
@@ -322,7 +321,6 @@ export function LoginDrawer() {
       invalidateCurrentUserCache();
       await account.createSession({ userId: verifyRes.userId, secret: verifyRes.token });
       
-      localStorage.setItem('kylrix_last_auth_method', 'passkey');
       localStorage.setItem(`kylrix_has_passkey_${verifyRes.userId}`, 'true');
 
       toast.success('Authenticated via Passkey!');
@@ -349,7 +347,12 @@ export function LoginDrawer() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setLastUsedMethod(localStorage.getItem('kylrix_last_auth_method'));
+      try {
+        const last = (authClient as any)?.getLastUsedLoginMethod?.() || null;
+        setLastUsedMethod(last);
+      } catch {
+        setLastUsedMethod(null);
+      }
     }
   }, [isOpen]);
 
@@ -384,8 +387,6 @@ export function LoginDrawer() {
     if (e) e.preventDefault();
     if (!email) return;
     setLoading(true);
-    localStorage.setItem('kylrix_last_auth_method', 'email');
-    setLastUsedMethod('email');
 
     try {
       // 1. Send OTP via Better Auth (best-effort / primary)

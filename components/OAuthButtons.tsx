@@ -81,7 +81,6 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
   const handleLogin = async (provider: OAuthProvider) => {
     setLoading(true);
     setError(null);
-    localStorage.setItem('kylrix_last_auth_method', provider);
 
     const providerKey = String(provider).toLowerCase() as 'google' | 'github';
 
@@ -126,7 +125,7 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
       )}
 
       {availableProviders.map((provider) => {
-        const isLastUsed = lastUsed === provider.id;
+        const isLastUsed = typeof lastUsed === 'string' && lastUsed.toLowerCase() === provider.id.toLowerCase();
         return (
           <button
             key={provider.id}
