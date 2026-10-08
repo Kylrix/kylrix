@@ -249,8 +249,6 @@ Kylrix is local-first, self-hostable, and open source under AGPLv3. Cloud sync, 
 | **Pro** | **$10 / month** | Encrypted cloud sync across machines, zero-leak cloud vault backup, AI sidekick & agent execution, audio notes, priority support | Developers using Cursor / Claude Code daily |
 | **Teams** | **$50 / month** | Shared team workspaces, nested projects, higher API & MCP rate limits, group channels | Teams coordinating multi-agent workflows |
 
-> 🔒 *Payments are processed securely via Stripe or non-custodial crypto. Self-hosting with your own infrastructure is 100% free with no artificial feature locks.*
-
 ---
 
 ## ❤️ Sponsor & Back Development
