@@ -22,16 +22,18 @@ export function verifySubscriptionSig(userId: string, tier: string, expiresAtIso
 export function applyProSubscriptionWindowToPrefs<T extends Record<string, unknown>>(
   prefs: T,
   expiresAtIso: string,
-  tier: 'PRO' | 'TEAMS' | string = 'PRO',
+  tier: 'PRO' | 'TEAMS' | 'LIFETIME' | string = 'PRO',
   userId?: string
 ) {
-  const normTier = String(tier).toUpperCase() === 'TEAMS' ? 'TEAMS' : 'PRO';
+  const rawTier = String(tier).toUpperCase();
+  const normTier = rawTier === 'LIFETIME' ? 'LIFETIME' : rawTier === 'TEAMS' ? 'TEAMS' : rawTier === 'ORG' ? 'ORG' : 'PRO';
   const sig = userId ? computeSubscriptionSig(userId, normTier, expiresAtIso) : undefined;
   return {
     ...prefs,
     tier: normTier,
     subscriptionTier: normTier,
     subscriptionExpiresAt: expiresAtIso,
+    isLifetime: normTier === 'LIFETIME',
     ...(sig ? { subscriptionSig: sig } : {}),
   };
 }

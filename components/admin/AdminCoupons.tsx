@@ -334,6 +334,20 @@ export default function AdminCouponsPage() {
     }
   };
 
+  const presetLifetime = () => {
+    setForm({
+      discountPercent: '100',
+      status: 'active',
+      expiresAt: '',
+      title: 'Kylrix Lifetime Sovereign Pass',
+      note: 'In-house sovereign lifetime access — permanent license',
+      redemptionLimit: '1',
+      months: '1200',
+      planId: 'LIFETIME',
+    });
+    setSuccess('Form populated for Lifetime Sovereign Pass (100% discount, permanent access).');
+  };
+
   const copyLink = async (id: string) => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return;
     await navigator.clipboard.writeText(`${window.location.origin}/billing/coupon/${id}`);
@@ -719,19 +733,30 @@ export default function AdminCouponsPage() {
                 <option value="PRO_YEAR">Pro Yearly</option>
                 <option value="TEAMS_MONTH">Teams Monthly</option>
                 <option value="TEAMS_YEAR">Teams Yearly</option>
+                <option value="LIFETIME">👑 Lifetime Access (In-House)</option>
               </select>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={createCoupon}
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all duration-200 cursor-pointer disabled:opacity-50 border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)] w-fit"
-          >
-            <Ticket size={16} />
-            <span>{saving ? 'Creating...' : 'Create Coupon'}</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={createCoupon}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all duration-200 cursor-pointer disabled:opacity-50 border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]"
+            >
+              <Ticket size={16} />
+              <span>{saving ? 'Creating...' : 'Create Coupon'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={presetLifetime}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-purple-500/20 hover:from-amber-500/30 hover:to-purple-500/30 text-amber-300 font-black text-xs transition-all duration-200 cursor-pointer border-2 border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
+            >
+              <span>👑</span>
+              <span>Preset Lifetime Pass</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between">
@@ -764,6 +789,12 @@ export default function AdminCouponsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     {(coupon.targetUserId || coupon.relatedUserId || (coupon as any).userId) && formatScope(coupon) !== 'open' && (
                       <CouponTargetBadge targetUserId={(coupon.targetUserId || coupon.relatedUserId || (coupon as any).userId)!} />
+                    )}
+                    {String(parseMetadata(coupon.metadata)?.planId || '').toUpperCase().includes('LIFETIME') && (
+                      <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-gradient-to-r from-amber-500/20 to-purple-500/20 border-amber-500/50 text-amber-300 flex items-center gap-1 shadow-sm">
+                        <span>👑</span>
+                        <span>LIFETIME PASS</span>
+                      </span>
                     )}
                     <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-white/10 border-white/20 text-white/70">
                       {(coupon as any).redemptionCount || 0} / {(coupon as any).redemptionLimit || 1} uses

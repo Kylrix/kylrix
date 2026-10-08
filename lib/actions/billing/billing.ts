@@ -420,6 +420,17 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     claimedAt: new Date().toISOString(),
     redemptionIndex: newRedemptionCount};
 
+  const isLifetime = String(planId).toUpperCase().includes('LIFETIME');
+  const effectivePeriodEnd = isLifetime
+    ? new Date('2099-12-31T23:59:59.999Z')
+    : currentPeriodEnd;
+
+  const planTier = isLifetime
+    ? 'LIFETIME'
+    : String(planId).toUpperCase().startsWith('TEAMS')
+      ? 'TEAMS'
+      : 'PRO';
+
   if (checkOnly) {
     return {
       ok: true,
@@ -428,10 +439,12 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       couponId: coupon.$id,
       discountPercent,
       planId,
-      months,
-      currentPeriodEnd: currentPeriodEnd.toISOString(),
+      months: isLifetime ? 1200 : months,
+      currentPeriodEnd: effectivePeriodEnd.toISOString(),
       payerUserId: payerUserId || null,
-      message: `Valid coupon for ${discountPercent}% discount over ${months} month(s).`};
+      message: isLifetime
+        ? 'Valid pass for Sovereign Lifetime Access.'
+        : `Valid coupon for ${discountPercent}% discount over ${months} month(s).`};
   }
 
   if (discountPercent < 100) {
@@ -442,8 +455,8 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       couponId: coupon.$id,
       discountPercent,
       planId,
-      months,
-      currentPeriodEnd: currentPeriodEnd.toISOString(),
+      months: isLifetime ? 1200 : months,
+      currentPeriodEnd: effectivePeriodEnd.toISOString(),
       payerUserId: payerUserId || null};
   }
 
@@ -453,14 +466,30 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     ID.unique(),
     {
       userId: user.$id,
-      plan: 'pro',
+      plan: isLifetime ? 'lifetime' : planTier.toLowerCase(),
       status: 'active',
       currentPeriodStart: currentPeriodStart.toISOString(),
-      currentPeriodEnd: currentPeriodEnd.toISOString(),
+      currentPeriodEnd: effectivePeriodEnd.toISOString(),
       seats: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()},
     [Permission.read(Role.user(user.$id))]);
+
+  // Also sync to Turso subscriptions
+  try {
+    const { upsertSubscriptionTurso } = await import('@/lib/actions/turso-ops');
+    await upsertSubscriptionTurso({
+      id: subscription.$id,
+      userId: user.$id,
+      plan: planTier,
+      tier: planTier,
+      status: 'active',
+      currentPeriodStart: currentPeriodStart.toISOString(),
+      currentPeriodEnd: effectivePeriodEnd.toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  } catch {}
 
   if (coupon.isEventCoupon) {
     await databases.updateRow(
@@ -491,7 +520,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
 
   try {
     const prefs = (await users.getPrefs(user.$id)) as Record<string, unknown>;
-    await users.updatePrefs(user.$id, applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO'));
+    await users.updatePrefs(user.$id, applyProSubscriptionWindowToPrefs(prefs, effectivePeriodEnd.toISOString(), planTier, user.$id));
   } catch {}
 
   await databases.createRow(

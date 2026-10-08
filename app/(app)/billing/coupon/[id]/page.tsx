@@ -135,6 +135,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
   const discountPercent = coupon?.discountPercent ?? 100;
   const months = coupon?.months ?? 1;
   const isFullFree = discountPercent === 100;
+  const isLifetime = String(coupon?.planId || '').toUpperCase().includes('LIFETIME');
 
   return (
     <div className="min-h-screen bg-[#000000] text-[#F5F2ED] flex items-center justify-center p-4 selection:bg-[#6366F1]/30">
@@ -179,14 +180,16 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
             </div>
 
             <div className="space-y-1.5">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-400">
-                Valid Pass
+              <span className={`text-[10px] font-mono font-bold uppercase tracking-widest ${isLifetime ? 'text-amber-400' : 'text-emerald-400'}`}>
+                {isLifetime ? '👑 Sovereign License' : 'Valid Pass'}
               </span>
               <h1 className="font-clash text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                {isFullFree ? 'Pro Access Pass' : `${discountPercent}% Discount`}
+                {isLifetime ? 'Lifetime Access Pass' : isFullFree ? 'Pro Access Pass' : `${discountPercent}% Discount`}
               </h1>
               <p className="font-satoshi text-xs text-white/60">
-                {isFullFree
+                {isLifetime
+                  ? 'Claim permanent sovereign lifetime access with zero renewals or expiration.'
+                  : isFullFree
                   ? `Claim ${months} month${months > 1 ? 's' : ''} of Kylrix Pro subscription for free.`
                   : `Apply a ${discountPercent}% discount to your Pro subscription.`}
               </p>
@@ -202,14 +205,14 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
               </div>
               <div className="flex items-center justify-between py-1 border-b border-white/5">
                 <span className="text-xs text-white/40 font-satoshi">Duration</span>
-                <span className="text-xs font-mono font-bold text-white">
-                  {months} Month{months > 1 ? 's' : ''}
+                <span className={`text-xs font-mono font-bold ${isLifetime ? 'text-amber-300' : 'text-white'}`}>
+                  {isLifetime ? 'Permanent (Lifetime)' : `${months} Month${months > 1 ? 's' : ''}`}
                 </span>
               </div>
               <div className="flex items-center justify-between py-1">
                 <span className="text-xs text-white/40 font-satoshi">Plan</span>
-                <span className="text-xs font-mono font-bold text-[#6366F1]">
-                  {coupon?.planId === 'PRO_YEAR' ? 'Kylrix Pro (Yearly)' : 'Kylrix Pro'}
+                <span className={`text-xs font-mono font-bold ${isLifetime ? 'text-amber-400' : 'text-[#6366F1]'}`}>
+                  {isLifetime ? '👑 Kylrix Lifetime Access' : coupon?.planId === 'PRO_YEAR' ? 'Kylrix Pro (Yearly)' : 'Kylrix Pro'}
                 </span>
               </div>
             </div>
