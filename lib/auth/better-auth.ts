@@ -79,11 +79,11 @@ export const auth = betterAuth({
             await dispatchEmail({
               eventType: 'mfa_challenge',
               sourceApp: 'auth',
-              verificationMode: 'required',
+              verificationMode: 'error',
               actorName: user.name || 'User',
               actorId: user.id,
               recipientIds: [user.id],
-              recipientEmail: user.email,
+              recipientEmails: [user.email],
               resourceId: `otp:${Date.now()}`,
               resourceTitle: 'Two-Factor Authentication Code',
               resourceType: 'auth.mfa',

@@ -234,7 +234,7 @@ export async function createTotpAuthenticator(
       password: password || undefined,
       issuer: 'Kylrix',
     });
-    if (res?.data) {
+    if (res?.data && 'totpURI' in res.data) {
       return {
         secret: res.data.totpURI,
         uri: res.data.totpURI,
