@@ -34,17 +34,7 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
     return { success: false, error: "AI is completely disabled for this workspace because Privacy Mode is active." };
   }
 
-  const activeKey = (typeof payload.byokKey === 'string' ? payload.byokKey.trim() : null) || process.env.GOOGLE_API_KEY;
-  if (!activeKey) {
-    return { success: false, error: "AI Service not configured. Please supply your own private API Key in Settings." };
-  }
-
   let actor: any = null;
-  const isBYOK = Boolean(payload.byokKey);
-  let tables: any = null;
-  let balanceRow: any = null;
-
-  // Resolve actor for logging and gating checks
   try {
     actor = await getActor(payload.jwt);
   } catch (e) {
@@ -53,6 +43,28 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
 
   if (!actor?.$id) {
     return { success: false, error: "Please log in to use AI services." };
+  }
+
+  let activeKey = typeof payload.byokKey === 'string' && payload.byokKey.trim() ? payload.byokKey.trim() : null;
+  let isBYOK = Boolean(activeKey);
+
+  if (!activeKey) {
+    try {
+      const { getDecryptedAgentByokKey } = await import('./secure-ops/byok-convenience');
+      const savedKey = (await getDecryptedAgentByokKey(actor.$id, 'gemini')) || (await getDecryptedAgentByokKey(actor.$id, 'google'));
+      if (savedKey) {
+        activeKey = savedKey;
+        isBYOK = true;
+      }
+    } catch {}
+  }
+
+  if (!activeKey) {
+    activeKey = process.env.GOOGLE_API_KEY || null;
+  }
+
+  if (!activeKey) {
+    return { success: false, error: "AI Service not configured. Please supply your own private API Key in Settings." };
   }
 
   // Pro/Teams required for all AI (ecosystem key and BYOK).

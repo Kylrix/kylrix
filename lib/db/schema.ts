@@ -993,6 +993,7 @@ export const agentByokKeys = sqliteTable('agent_byok_keys', {
   userId: text('user_id').notNull(),
   provider: text('provider').notNull(),
   keyHash: text('key_hash'),
+  keyHint: text('key_hint'),
   encryptedKey: text('encrypted_key').notNull(),
   iv: text('iv'),
   status: text('status').default('active'),

@@ -130,6 +130,8 @@ import {
   listAgentByokKeysAction,
   saveAgentByokKeyAction,
   deleteAgentByokKeyAction,
+  hasAgentByokKeyAction,
+  getDecryptedAgentByokKey,
   enableConvenienceModeAction,
   disableConvenienceModeAction,
   resolveConvenienceMekAction} from './secure-ops/byok-convenience';
@@ -264,6 +266,8 @@ export {
   listAgentByokKeysAction,
   saveAgentByokKeyAction,
   deleteAgentByokKeyAction,
+  hasAgentByokKeyAction,
+  getDecryptedAgentByokKey,
   enableConvenienceModeAction,
   disableConvenienceModeAction,
   resolveConvenienceMekAction};
