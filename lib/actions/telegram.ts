@@ -155,6 +155,26 @@ export async function checkTelegramConnection(jwt?: string) {
     }
     const userId = actor.$id;
 
+    // 1. Primary Check in Turso
+    try {
+      const { db } = await import('@/lib/db');
+      const { schema } = await import('@/lib/db');
+      const { eq } = await import('drizzle-orm');
+      const tursoRows = await db
+        .select()
+        .from(schema.telegramConnections)
+        .where(eq(schema.telegramConnections.id, userId))
+        .limit(1);
+
+      if (tursoRows.length > 0 && tursoRows[0].isVerified) {
+        return {
+          success: true,
+          isVerified: true,
+          tgUsername: tursoRows[0].tgUsername || 'User',
+        };
+      }
+    } catch {}
+
     const databases = createSystemTablesDB();
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_API;
@@ -170,6 +190,18 @@ export async function checkTelegramConnection(jwt?: string) {
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
         userId
       );
+      if (doc?.is_verified) {
+        // Sync to Turso opportunistically
+        const { upsertTelegramConnectionTurso } = await import('@/lib/actions/turso-ops');
+        await upsertTelegramConnectionTurso({
+          id: userId,
+          pairCode: doc.pair_code || null,
+          tgChatId: doc.tg_chat_id || null,
+          tgUsername: doc.tg_username || null,
+          isVerified: true,
+          createdAt: doc.$createdAt || new Date().toISOString(),
+        }).catch(() => {});
+      }
       return {
         success: true,
         isVerified: !!doc?.is_verified,

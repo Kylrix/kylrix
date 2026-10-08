@@ -149,9 +149,9 @@ export async function resolveUserAppwriteMigrationGate(userIdentifier: {
 
     if (u.hasAppwriteAccount === true) {
       if (u.appwriteFullySynced) {
-        // Migration version check: Ensure users synced prior to new table schema additions (subscriptions, wallets, token ledger, coupons) receive one incremental sync pass
+        // Migration version check: Ensure users receive the complete sync pass covering all domains (telegram, forms, events, workflows, tags)
         const lastSync = (u as any).appwriteSyncedAt ? new Date((u as any).appwriteSyncedAt).getTime() : 0;
-        const MIGRATION_VERSION_CUTOFF = new Date('2026-10-08T09:40:00Z').getTime();
+        const MIGRATION_VERSION_CUTOFF = new Date('2026-10-08T21:00:00Z').getTime();
         if (lastSync >= MIGRATION_VERSION_CUTOFF) {
           return { shouldSkipAppwrite: true, hasAppwriteAccount: true, appwriteAccountId: u.appwriteAccountId, appwriteFullySynced: true };
         }
@@ -925,6 +925,42 @@ export async function upsertKylrixTokenLedgerTurso(data: typeof schema.kylrixTok
   }
 }
 
+export async function upsertTelegramConnectionTurso(data: typeof schema.telegramConnections.$inferInsert) {
+  try {
+    if (!data.id) return { success: false, error: 'Missing telegram connection ID' };
+    const existing = await db
+      .select({ id: schema.telegramConnections.id })
+      .from(schema.telegramConnections)
+      .where(eq(schema.telegramConnections.id, data.id))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(schema.telegramConnections)
+        .set({
+          pairCode: data.pairCode || null,
+          tgChatId: data.tgChatId || null,
+          tgUsername: data.tgUsername || null,
+          isVerified: Boolean(data.isVerified),
+        })
+        .where(eq(schema.telegramConnections.id, data.id));
+    } else {
+      await db.insert(schema.telegramConnections).values({
+        id: data.id,
+        pairCode: data.pairCode || null,
+        tgChatId: data.tgChatId || null,
+        tgUsername: data.tgUsername || null,
+        isVerified: Boolean(data.isVerified),
+        createdAt: data.createdAt || new Date().toISOString(),
+      });
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.warn('[upsertTelegramConnectionTurso] Warning:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 export async function getUserTokenBalanceAction(userId: string) {
   try {
     if (!userId) return null;
@@ -1588,6 +1624,183 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       }
     } catch (e: any) {
       console.warn('[syncTier1FromAppwriteTurso] Coupons sync warning:', e.message);
+    }
+
+    // 12. Telegram Integration Connection
+    try {
+      const tgRes = await tablesDB.getRow({
+        databaseId: DB,
+        tableId: 'telegram_connections',
+        rowId: appwriteOwnerId,
+      }).catch(async () => {
+        const q = await tablesDB.listRows({
+          databaseId: DB,
+          tableId: 'telegram_connections',
+          queries: [Query.equal('$id', appwriteOwnerId), Query.limit(1)],
+        }).catch(() => ({ rows: [] }));
+        return q.rows?.[0] || null;
+      });
+
+      if (tgRes) {
+        await upsertTelegramConnectionTurso({
+          id: userId,
+          pairCode: tgRes.pair_code || tgRes.pairCode || null,
+          tgChatId: tgRes.tg_chat_id || tgRes.tgChatId || null,
+          tgUsername: tgRes.tg_username || tgRes.tgUsername || null,
+          isVerified: Boolean(tgRes.is_verified ?? tgRes.isVerified),
+          createdAt: tgRes.$createdAt || tgRes.createdAt || new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Telegram connection sync warning:', e.message);
+    }
+
+    // 13. Forms & Form Submissions
+    try {
+      const formsRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'forms',
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(100)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const f of (formsRes.rows || []) as any[]) {
+        await upsertFormTurso({
+          id: f.$id,
+          userId,
+          title: f.title || 'Untitled Form',
+          description: f.description || '',
+          fields: typeof f.fields === 'string' ? f.fields : JSON.stringify(f.fields || []),
+          settings: typeof f.settings === 'string' ? f.settings : JSON.stringify(f.settings || {}),
+          isPublished: Boolean(f.isPublished),
+          isWorkspace: Boolean(f.isWorkspace),
+          workspaceId: f.projectId || f.workspaceId || null,
+          projectId: f.projectId || f.workspaceId || null,
+          createdAt: f.createdAt || f.$createdAt || new Date().toISOString(),
+          updatedAt: f.updatedAt || f.$updatedAt || new Date().toISOString(),
+        });
+
+        const subsRes = await tablesDB.listRows({
+          databaseId: DB,
+          tableId: 'formSubmissions',
+          queries: [Query.equal('formId', f.$id), Query.limit(200)],
+        }).catch(() => ({ rows: [] }));
+
+        for (const s of (subsRes.rows || []) as any[]) {
+          try {
+            await db
+              .insert(schema.formSubmissions)
+              .values({
+                id: s.$id,
+                formId: f.$id,
+                submitterId: s.submitterId || null,
+                answers: typeof s.answers === 'string' ? s.answers : JSON.stringify(s.answers || {}),
+                metadata: typeof s.metadata === 'string' ? s.metadata : (s.metadata ? JSON.stringify(s.metadata) : null),
+                createdAt: s.createdAt || s.$createdAt || new Date().toISOString(),
+              })
+              .onConflictDoNothing();
+          } catch {}
+        }
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Forms sync warning:', e.message);
+    }
+
+    // 14. Events & Calendars
+    try {
+      const eventsRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'events',
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(200)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const ev of (eventsRes.rows || []) as any[]) {
+        await upsertEventTurso({
+          id: ev.$id,
+          userId,
+          calendarId: ev.calendarId || null,
+          title: ev.title || 'Untitled Event',
+          description: ev.description || '',
+          startTime: ev.startTime || new Date().toISOString(),
+          endTime: ev.endTime || new Date().toISOString(),
+          location: ev.location || null,
+          isAllDay: Boolean(ev.isAllDay),
+          status: ev.status || 'confirmed',
+          color: ev.color || null,
+          recurrenceRule: ev.recurrenceRule || null,
+          isWorkspace: Boolean(ev.isWorkspace),
+          workspaceId: ev.projectId || ev.workspaceId || null,
+          projectId: ev.projectId || ev.workspaceId || null,
+          createdAt: ev.createdAt || ev.$createdAt || new Date().toISOString(),
+          updatedAt: ev.updatedAt || ev.$updatedAt || new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Events sync warning:', e.message);
+    }
+
+    // 15. Workflows (Flows)
+    try {
+      const flowsRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'workflows',
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(100)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const fl of (flowsRes.rows || []) as any[]) {
+        await upsertWorkflowTurso({
+          id: fl.$id,
+          userId,
+          name: fl.name || fl.title || 'Untitled Flow',
+          description: fl.description || '',
+          nodes: typeof fl.nodes === 'string' ? fl.nodes : JSON.stringify(fl.nodes || []),
+          edges: typeof fl.edges === 'string' ? fl.edges : JSON.stringify(fl.edges || []),
+          viewport: typeof fl.viewport === 'string' ? fl.viewport : (fl.viewport ? JSON.stringify(fl.viewport) : null),
+          isPublished: Boolean(fl.isPublished),
+          isWorkspace: Boolean(fl.isWorkspace),
+          workspaceId: fl.projectId || fl.workspaceId || null,
+          projectId: fl.projectId || fl.workspaceId || null,
+          createdAt: fl.createdAt || fl.$createdAt || new Date().toISOString(),
+          updatedAt: fl.updatedAt || fl.$updatedAt || new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Workflows sync warning:', e.message);
+    }
+
+    // 16. User Tags
+    try {
+      const tagsRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: '67ff06280034908cf08a',
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(200)],
+      }).catch(async () => {
+        return await tablesDB.listRows({
+          databaseId: DB,
+          tableId: 'tags',
+          queries: [Query.equal('userId', appwriteOwnerId), Query.limit(200)],
+        }).catch(() => ({ rows: [] }));
+      });
+
+      for (const t of (tagsRes.rows || []) as any[]) {
+        try {
+          await db
+            .insert(schema.tags)
+            .values({
+              id: t.$id,
+              name: t.name || '',
+              nameLower: t.nameLower || (t.name || '').toLowerCase(),
+              userId,
+              metadata: typeof t.metadata === 'string' ? t.metadata : (t.metadata ? JSON.stringify(t.metadata) : null),
+              isPublic: Boolean(t.isPublic),
+              isGuest: Boolean(t.isGuest),
+              usageCount: t.usageCount || 0,
+              isTrash: Boolean(t.isTrash),
+            })
+            .onConflictDoNothing();
+        } catch {}
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Tags sync warning:', e.message);
     }
 
     // Mark Tier 1, Tier 2, and appwriteFullySynced = true on Turso user row
