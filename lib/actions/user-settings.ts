@@ -163,18 +163,45 @@ export async function revokeUserSessionAction(sessionId: string, jwt?: string) {
   return { success: true };
 }
 
+export async function revokeAllUserSessionsAction(jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor) throw new Error('Unauthorized');
+
+  // 1. Delete all sessions in Turso SQLite
+  try {
+    const { db } = await import('@/lib/db');
+    const { session: sessionTable } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+
+    await db.delete(sessionTable).where(eq(sessionTable.userId, actor.$id));
+  } catch (err: any) {
+    console.warn('[revokeAllUserSessionsAction] Turso delete warning:', err.message);
+  }
+
+  // 2. Delete from Appwrite if available
+  try {
+    const { createServerClient } = await import('@/lib/appwrite/server');
+    const { account } = await createServerClient(jwt);
+    await account.deleteSessions().catch(() => null);
+  } catch {}
+
+  return { success: true };
+}
+
 export async function listUserIdentitiesAction(jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor) return { identities: [], externals: [] };
 
   const identities: any[] = [];
+  const externals: any[] = [];
 
-  // Strictly query Turso SQLite account table (Better Auth linked accounts)
+  // Strictly query Turso SQLite account and oauthConsent tables (Better Auth live connected apps)
   try {
     const { db } = await import('@/lib/db');
-    const { account: accountTable } = await import('@/lib/db/schema');
+    const { account: accountTable, oauthConsent, oauthClient } = await import('@/lib/db/schema');
     const { eq } = await import('drizzle-orm');
 
+    // 1. Better Auth linked sign-in methods
     const accounts = await db.select().from(accountTable).where(eq(accountTable.userId, actor.$id));
     for (const a of accounts) {
       identities.push({
@@ -185,11 +212,43 @@ export async function listUserIdentitiesAction(jwt?: string) {
         providerEmail: actor.email,
       });
     }
+
+    // 2. Better Auth live authorized external apps (OAuth consents)
+    const consents = await db
+      .select({
+        id: oauthConsent.id,
+        clientId: oauthConsent.clientId,
+        scopes: oauthConsent.scopes,
+        createdAt: oauthConsent.createdAt,
+        clientName: oauthClient.name,
+        clientUri: oauthClient.uri,
+        clientIcon: oauthClient.icon,
+      })
+      .from(oauthConsent)
+      .leftJoin(oauthClient, eq(oauthConsent.clientId, oauthClient.clientId))
+      .where(eq(oauthConsent.userId, actor.$id));
+
+    for (const c of consents) {
+      externals.push({
+        identity: {
+          $id: c.id,
+          $createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
+          provider: `oauth2:${c.clientId}`,
+        },
+        appId: c.clientId,
+        app: {
+          id: c.clientId,
+          name: c.clientName || c.clientId,
+          logoUri: c.clientIcon || null,
+          homepageUri: c.clientUri || null,
+        },
+      });
+    }
   } catch (err: any) {
     console.warn('[listUserIdentitiesAction] Turso accounts query warning:', err.message);
   }
 
-  return { identities, externals: [] };
+  return { identities, externals };
 }
 
 export async function unlinkUserIdentityAction(identityId: string, jwt?: string) {
@@ -198,12 +257,17 @@ export async function unlinkUserIdentityAction(identityId: string, jwt?: string)
 
   try {
     const { db } = await import('@/lib/db');
-    const { account: accountTable } = await import('@/lib/db/schema');
+    const { account: accountTable, oauthConsent } = await import('@/lib/db/schema');
     const { eq, and } = await import('drizzle-orm');
 
     await db
       .delete(accountTable)
       .where(and(eq(accountTable.id, identityId), eq(accountTable.userId, actor.$id)));
+
+    await db
+      .delete(oauthConsent)
+      .where(and(eq(oauthConsent.id, identityId), eq(oauthConsent.userId, actor.$id)));
+
     return { success: true };
   } catch (err: any) {
     console.error('[unlinkUserIdentityAction] Error:', err);

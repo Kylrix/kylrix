@@ -150,19 +150,87 @@ export async function listAccountLogsSecure(jwt?: string) {
   try {
     const { getActor } = await import('./secure-ops/shared');
     const actor = await getActor(jwt);
+    if (!actor || !actor.$id) {
+      return { success: true, logs: [] };
+    }
 
-    if (actor && actor.$id) {
-      try {
-        const systemClient = createSystemClient();
-        const logsPromise = systemClient.users.listLogs(actor.$id);
-        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
-        const logsRes = await Promise.race([logsPromise, timeoutPromise]);
-        if (logsRes && (logsRes as any).logs) {
-          return { success: true, logs: (logsRes as any).logs || [] };
+    const allLogs: any[] = [];
+
+    // 1. Primary: Query Turso SQLite activityLog table
+    try {
+      const { db } = await import('@/lib/db');
+      const schema = await import('@/lib/db/schema');
+      const { eq, desc } = await import('drizzle-orm');
+
+      const tursoLogs = await db
+        .select()
+        .from(schema.activityLog)
+        .where(eq(schema.activityLog.userId, actor.$id))
+        .orderBy(desc(schema.activityLog.createdAt))
+        .limit(100);
+
+      if (tursoLogs && tursoLogs.length > 0) {
+        for (const l of tursoLogs) {
+          allLogs.push({
+            $id: l.id,
+            event: l.action,
+            eventType: l.action,
+            userId: l.userId,
+            ip: '127.0.0.1',
+            geo: '',
+            clientName: l.resourceType || 'Kylrix System',
+            deviceType: 'desktop',
+            time: l.createdAt,
+            $createdAt: l.createdAt,
+          });
         }
-      } catch (systemErr) {
-        console.warn('[listAccountLogsSecure] System client fetch failed, trying server client:', systemErr);
       }
+
+      // 2. Also synthesize session login logs from Turso sessions table
+      const sessions = await db
+        .select()
+        .from(schema.session)
+        .where(eq(schema.session.userId, actor.$id))
+        .orderBy(desc(schema.session.createdAt))
+        .limit(10);
+
+      for (const s of sessions) {
+        const createdAtIso = s.createdAt ? new Date(s.createdAt).toISOString() : new Date().toISOString();
+        if (!allLogs.some(l => l.$id === `sess-log-${s.id}`)) {
+          allLogs.push({
+            $id: `sess-log-${s.id}`,
+            event: 'account.sessions.create',
+            eventType: 'account.sessions.create',
+            userId: actor.$id,
+            ip: s.ipAddress || '127.0.0.1',
+            geo: '',
+            clientName: s.userAgent || 'Web Browser',
+            deviceType: /mobile|android|iphone/i.test(s.userAgent || '') ? 'mobile' : 'desktop',
+            time: createdAtIso,
+            $createdAt: createdAtIso,
+          });
+        }
+      }
+    } catch (err: any) {
+      console.warn('[listAccountLogsSecure] Turso activityLog query warning:', err.message);
+    }
+
+    if (allLogs.length > 0) {
+      allLogs.sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
+      return { success: true, logs: allLogs };
+    }
+
+    // 3. Fallback to Appwrite with timeout race
+    try {
+      const systemClient = createSystemClient();
+      const logsPromise = systemClient.users.listLogs(actor.$id);
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const logsRes = await Promise.race([logsPromise, timeoutPromise]);
+      if (logsRes && (logsRes as any).logs) {
+        return { success: true, logs: (logsRes as any).logs || [] };
+      }
+    } catch (systemErr) {
+      console.warn('[listAccountLogsSecure] System client fetch failed, trying server client:', systemErr);
     }
 
     try {

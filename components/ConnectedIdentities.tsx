@@ -72,22 +72,26 @@ export default function ConnectedIdentities() {
       const res = await listUserIdentitiesAction().catch(() => null);
       const all: Identity[] = (res?.identities || []) as Identity[];
       const signIn = all.filter((i) => !i.provider?.startsWith(OAUTH2_PREFIX));
-      const grants = all.filter((i) => i.provider?.startsWith(OAUTH2_PREFIX));
       setIdentities(signIn);
 
-      const rows = await Promise.all(
-        grants.map(async (identity) => {
-          const appId = identity.provider.slice(OAUTH2_PREFIX.length);
-          let app: OauthApp | null = null;
-          try {
-            app = await getApp(appId);
-          } catch {
-            app = null;
-          }
-          return { identity, appId, app };
-        })
-      );
-      setExternals(rows);
+      if (res?.externals && Array.isArray(res.externals)) {
+        setExternals(res.externals as ExternalRow[]);
+      } else {
+        const grants = all.filter((i) => i.provider?.startsWith(OAUTH2_PREFIX));
+        const rows = await Promise.all(
+          grants.map(async (identity) => {
+            const appId = identity.provider.slice(OAUTH2_PREFIX.length);
+            let app: OauthApp | null = null;
+            try {
+              app = await getApp(appId);
+            } catch {
+              app = null;
+            }
+            return { identity, appId, app };
+          })
+        );
+        setExternals(rows);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not load');
       setIdentities([]);

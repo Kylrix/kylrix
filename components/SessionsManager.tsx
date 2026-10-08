@@ -123,6 +123,8 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
     try {
       setLoading(true);
       setError(null);
+      const { revokeAllUserSessionsAction } = await import('@/lib/actions/user-settings');
+      await revokeAllUserSessionsAction().catch(() => null);
       await account.deleteSessions().catch(() => {});
       invalidate('user_sessions');
       setSessions([]);
