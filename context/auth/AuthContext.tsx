@@ -6,6 +6,8 @@ import { account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCu
 import { getEcosystemUrl } from '@/lib/ecosystem';
 import { assertAuthenticatedAccount, completeMfaChallenge, isMfaRequiredError } from '@/lib/mfa';
 
+import { toast } from 'react-hot-toast';
+
 interface User {
   $id: string;
   email: string | null;
@@ -28,6 +30,9 @@ interface AuthContextType {
   verifyMFA: (challengeId: string, otp: string) => Promise<void>;
   getJWT: () => Promise<string | null>;
   updatePreferences: (prefs: Record<string, any>) => Promise<any>;
+  listDeviceSessions: () => Promise<any[]>;
+  switchAccount: (sessionToken: string) => Promise<boolean>;
+  revokeDeviceSession: (sessionToken: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -393,6 +398,62 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [user?.prefs]);
 
+  const switchAccount = useCallback(async (sessionToken: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      const res = await (authClient as any).multiSession.setActive({ sessionToken });
+      if (res?.error) {
+        toast.error(res.error.message || 'Failed to switch account');
+        return false;
+      }
+      clearKylrixPulse();
+      lastSeenUserIdRef.current = null;
+      userProfileBootstrappedRef.current = null;
+      const newUser = await refreshUser(true);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('kylrix:auth:account-switched', { detail: { user: newUser } }));
+      }
+      toast.success(`Switched account to ${newUser?.email || newUser?.name || 'account'}`);
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to switch account');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [refreshUser]);
+
+  const listDeviceSessions = useCallback(async (): Promise<any[]> => {
+    try {
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      const res = await (authClient as any).multiSession.listDeviceSessions();
+      if (res?.data && Array.isArray(res.data)) {
+        return res.data;
+      }
+      return [];
+    } catch (err) {
+      console.warn('[AuthContext] listDeviceSessions failed:', err);
+      return [];
+    }
+  }, []);
+
+  const revokeDeviceSession = useCallback(async (sessionToken: string): Promise<boolean> => {
+    try {
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      const res = await (authClient as any).multiSession.revoke({ sessionToken });
+      if (res?.error) {
+        toast.error(res.error.message || 'Failed to remove session');
+        return false;
+      }
+      toast.success('Session removed');
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove session');
+      return false;
+    }
+  }, []);
+
   const value = useMemo(() => ({
     user,
     isLoading,
@@ -406,7 +467,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     verifyEmailOTP,
     verifyMFA,
     getJWT,
-    updatePreferences}), [user, isLoading, isAuthenticating, logout, refreshUser, openIDMWindow, idmWindowOpen, loginWithEmailOTP, verifyEmailOTP, verifyMFA, getJWT, updatePreferences]);
+    updatePreferences,
+    listDeviceSessions,
+    switchAccount,
+    revokeDeviceSession,
+  }), [user, isLoading, isAuthenticating, logout, refreshUser, openIDMWindow, idmWindowOpen, loginWithEmailOTP, verifyEmailOTP, verifyMFA, getJWT, updatePreferences, listDeviceSessions, switchAccount, revokeDeviceSession]);
 
   return (
     <AuthContext.Provider value={value}>

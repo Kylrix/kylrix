@@ -23,6 +23,7 @@ import {
   PhoneIcon} from '@/lib/openbricks/icons';
 import { Laptop, Tablet, RefreshCw } from 'lucide-react';
 import { Models } from 'appwrite';
+import { AccountSwitcher } from '@/components/auth/AccountSwitcher';
 
 interface Session extends Models.Session {
   deviceType?: 'desktop' | 'mobile' | 'tablet';
@@ -146,6 +147,9 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
 
   return (
     <Box>
+      <Box sx={{ mb: 4 }}>
+        <AccountSwitcher />
+      </Box>
       {error && (
         <Alert
           severity="error"

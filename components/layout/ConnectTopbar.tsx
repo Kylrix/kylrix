@@ -78,6 +78,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSection } from '@/context/SectionContext';
 import { executeInstantShare } from '@/lib/share/instant-share';
+import { AccountSwitcher } from '@/components/auth/AccountSwitcher';
 
 import {
   renderShortcutsList,
@@ -1817,6 +1818,11 @@ export default function ConnectTopbar({
               <span>{copyState === 'copied-referral' ? 'Copied' : 'Copy'}</span>
             </Box>
           </Box>
+        </Box>
+
+        {/* Multi-Account Switcher */}
+        <Box sx={{ width: '100%', minWidth: 0, pt: 0.5 }}>
+          <AccountSwitcher onSwitched={handleCloseAll} compact />
         </Box>
 
         {/* 3. Action Buttons (Wallet & Settings side-by-side, Sign Out below) */}

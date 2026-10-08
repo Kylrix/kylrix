@@ -855,7 +855,7 @@ export default function CreateNoteForm({
     })();
     const noteMeta = {
       ...existingMeta,
-      ...(targetProjectId ? { projectId: targetProjectId, isWorkspace: true } : {}),
+      ...(targetProjectId ? { projectId: targetProjectId, isWorkspace: true } : { projectId: undefined, isWorkspace: false }),
     };
 
     const payload = {
@@ -953,8 +953,8 @@ export default function CreateNoteForm({
           isPublic: payload.isPublic,
           isGuest: payload.isGuest,
           title: generatedTitle,
-          isWorkspace: activeWorkspace && !activeWorkspace.isPersonal ? true : payload.isWorkspace,
-          projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : payload.projectId,
+          isWorkspace: activeWorkspace && !activeWorkspace.isPersonal ? true : false,
+          projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined,
         })) as Notes;
         markNotePersistedRemote(saved.$id);
         if (saved?.$id && activeWorkspace && !activeWorkspace.isPersonal) {

@@ -21,10 +21,12 @@ export function isDefaultWorkspaceObject(row: {
     } catch {}
   }
 
-  // Explicit inbox / personal marker always means default workspace
+  // Explicit inbox / personal marker or owner's personal workspace ID always means default workspace
   const pid = row.projectId ?? row.project_id ?? row.workspaceId ?? row.workspace_id ?? meta?.projectId;
+  const uid = row.userId || row.creatorId;
+
   if (pid && typeof pid === 'string') {
-    if (pid === 'inbox' || pid === 'personal' || pid === 'default') {
+    if (pid === 'inbox' || pid === 'personal' || pid === 'default' || (uid && pid === uid)) {
       return true;
     }
     return false;

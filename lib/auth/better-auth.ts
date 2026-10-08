@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
-import { emailOTP, bearer, jwt } from 'better-auth/plugins';
+import { emailOTP, bearer, jwt, multiSession } from 'better-auth/plugins';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
@@ -55,6 +55,9 @@ export const auth = betterAuth({
       : {}),
   },
   plugins: [
+    multiSession({
+      maximumSessions: 5,
+    }),
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
         console.log(`[BetterAuth OTP] ${type.toUpperCase()} for ${email}: ${otp}`);

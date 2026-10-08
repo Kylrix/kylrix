@@ -351,12 +351,17 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           });
           if (local?.notes?.length) {
             setNotes((prev) => {
-              const liveById = new Map(prev.filter((n) => !LocalEngine.isDeleted(n.$id, activeUserId)).map((n) => [n.$id, n]));
-              const next = local.notes
+              const mergedById = new Map<string, Notes>();
+              (Array.isArray(prev) ? prev : [])
                 .filter((n) => !LocalEngine.isDeleted(n.$id, activeUserId))
-                .map((n) => liveById.get(n.$id) || n)
-                .filter((n) => liveById.has(n.$id) || !LocalEngine.isDeleted(n.$id, activeUserId));
-              return next;
+                .forEach((n) => mergedById.set(n.$id, n));
+              local.notes
+                .filter((n) => !LocalEngine.isDeleted(n.$id, activeUserId))
+                .forEach((n) => {
+                  const existing = mergedById.get(n.$id);
+                  mergedById.set(n.$id, existing ? { ...existing, ...n } : n);
+                });
+              return Array.from(mergedById.values());
             });
           }
         })();

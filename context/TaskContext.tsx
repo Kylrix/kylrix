@@ -1070,10 +1070,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         const targetProjectId = row.projectId && row.projectId !== 'inbox'
           ? row.projectId
           : (live?.projectId || 'inbox');
+        const isPersonalPid = !targetProjectId || targetProjectId === 'inbox' || targetProjectId === 'personal' || targetProjectId === 'default' || targetProjectId === activeUid;
         const targetIsWorkspace = Boolean(
-          (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal') ||
-          row.isWorkspace === true ||
-          (row.isWorkspace === undefined && live?.isWorkspace === true)
+          !isPersonalPid && (row.isWorkspace === true || live?.isWorkspace === true || (Boolean(targetProjectId) && !isPersonalPid))
         );
         const merged = live
           ? {
