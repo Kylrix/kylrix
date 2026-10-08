@@ -635,7 +635,7 @@ export function clearKylrixPulse() {
 export async function salvageUserFromLocalSubstrate(): Promise<any | null> {
     if (!canUseStorage()) return null;
     
-    // 1. Direct snapshot
+    // 1. Direct snapshot for current active partition
     const snap = readCurrentUserSnapshot(true);
     if (snap?.user?.$id) return snap.user;
 
@@ -650,46 +650,6 @@ export async function salvageUserFromLocalSubstrate(): Promise<any | null> {
             isPulse: true
         };
     }
-
-    // 3. Search all local storage keys for previous active users
-    for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('kylrix_last_logged_in_user_')) {
-            try {
-                const u = JSON.parse(localStorage.getItem(k) || '');
-                if (u?.$id) return u;
-            } catch {}
-        }
-    }
-
-    // 4. Scan RxDB/IndexedDB local copy collections for existing owner rows
-    try {
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const [notesList, projectsList, goalsList] = await Promise.all([
-            LocalEngine.cacheGet<any[]>('f_notes_list').catch(() => null),
-            LocalEngine.cacheGet<any[]>('f_projects_list').catch(() => null),
-            LocalEngine.cacheGet<any[]>('f_goals_list').catch(() => null),
-        ]);
-
-        const sampleRows = [...(notesList || []), ...(projectsList || []), ...(goalsList || [])];
-        for (const row of sampleRows) {
-            const uid = row.userId || row.ownerId || row.creatorId || row.authorId;
-            if (uid && typeof uid === 'string') {
-                const identity = await LocalEngine.cacheGet<any>(`identity:${uid}`).catch(() => null);
-                const recovered = {
-                    $id: uid,
-                    name: identity?.displayName || identity?.username || row.userName || row.authorName || null,
-                    username: identity?.username || null,
-                    email: identity?.email || null,
-                    profilePicId: identity?.avatar || null,
-                    isSalvaged: true,
-                };
-                writeCurrentUserSnapshot(recovered);
-                setKylrixPulse(recovered);
-                return recovered;
-            }
-        }
-    } catch {}
 
     return null;
 }
@@ -721,21 +681,53 @@ export async function getCurrentUser(force = false): Promise<any | null> {
         return currentUserInFlight;
     }
 
-    currentUserInFlight = withNetworkTimeout(account.get())
-        .then((user) => {
-            const forcedAt = Date.now();
-            currentUserCache = { 
-                user, 
-                expiresAt: Date.now() + CURRENT_USER_CACHE_TTL,
-                lastForcedAt: forcedAt
-            };
-            writeCurrentUserSnapshot(user, forcedAt);
-            setKylrixPulse(user);
-            emitCurrentUserChange(user);
-            return user;
-        })
-        .catch(async (error: any) => {
-            // Only true 401 unauthenticated signals when online should invalidate session
+    currentUserInFlight = (async () => {
+        // 1. Primary check: Better Auth session
+        try {
+            const { authClient } = await import('@/lib/auth/better-auth-client');
+            const betterSession = await authClient.getSession().catch(() => null);
+            if (betterSession?.data?.user) {
+                const bUser = betterSession.data.user;
+                const mappedUser = {
+                    $id: bUser.id,
+                    id: bUser.id,
+                    name: bUser.name || bUser.email || 'User',
+                    email: bUser.email,
+                    emailVerification: (bUser as any).emailVerified ?? true,
+                    prefs: {},
+                    isPulse: false,
+                    authProvider: 'better-auth',
+                    profilePicId: bUser.image || null,
+                };
+                const forcedAt = Date.now();
+                currentUserCache = { 
+                    user: mappedUser, 
+                    expiresAt: Date.now() + CURRENT_USER_CACHE_TTL,
+                    lastForcedAt: forcedAt
+                };
+                writeCurrentUserSnapshot(mappedUser, forcedAt);
+                setKylrixPulse(mappedUser);
+                emitCurrentUserChange(mappedUser);
+                return mappedUser;
+            }
+        } catch {}
+
+        // 2. Secondary check: Appwrite account session
+        try {
+            const user = await withNetworkTimeout(account.get());
+            if (user) {
+                const forcedAt = Date.now();
+                currentUserCache = { 
+                    user, 
+                    expiresAt: Date.now() + CURRENT_USER_CACHE_TTL,
+                    lastForcedAt: forcedAt
+                };
+                writeCurrentUserSnapshot(user, forcedAt);
+                setKylrixPulse(user);
+                emitCurrentUserChange(user);
+                return user;
+            }
+        } catch (error: any) {
             const isStrictUnauthorized =
                 typeof navigator !== 'undefined' &&
                 navigator.onLine &&
@@ -745,27 +737,21 @@ export async function getCurrentUser(force = false): Promise<any | null> {
                 currentUserCache = null;
                 return null;
             }
+        }
 
-            // Rate limits, billing cap, network timeouts, offline, or server errors:
-            // MUST NEVER log out the user — salvage the local authenticated user!
+        // 3. Strictly offline fallback
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
             const snap = readCurrentUserSnapshot(true);
-            if (snap?.user) {
-                return snap.user;
-            }
-            if (currentUserCache?.user) {
-                return currentUserCache.user;
-            }
-
+            if (snap?.user) return snap.user;
             const salvaged = await salvageUserFromLocalSubstrate();
-            if (salvaged) {
-                return salvaged;
-            }
+            if (salvaged) return salvaged;
+        }
 
-            return null;
-        })
-        .finally(() => {
-            currentUserInFlight = null;
-        });
+        currentUserCache = null;
+        return null;
+    })().finally(() => {
+        currentUserInFlight = null;
+    });
 
     return currentUserInFlight;
 }

@@ -258,7 +258,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuthStarted.current = true;
     (async () => {
       const refreshed = await refreshUser();
-      if (!refreshed) {
+      if (!refreshed && typeof navigator !== 'undefined' && !navigator.onLine) {
         const { salvageUserFromLocalSubstrate } = await import('@/lib/appwrite/client');
         const salvaged = await salvageUserFromLocalSubstrate();
         if (salvaged) {
