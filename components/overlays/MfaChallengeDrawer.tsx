@@ -101,7 +101,7 @@ export function MfaChallengeDrawer({ open, onClose: _onClose, loginMethod, onSuc
     setLoading(true);
     setError(null);
     try {
-      await completeMfaChallenge(challengeId, otp.trim());
+      await completeMfaChallenge(challengeId, otp.trim(), undefined, activeFactor || 'totp');
       toast.success('Second factor verified.');
       onSuccess();
     } catch (err) {

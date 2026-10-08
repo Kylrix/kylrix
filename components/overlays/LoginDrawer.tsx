@@ -228,8 +228,18 @@ export function LoginDrawer() {
           });
           if (betterRes?.data?.user) {
             betterAuthLoggedIn = true;
+          } else if ((betterRes?.data as any)?.twoFactorRedirect) {
+            setMfaLoginMethod('password');
+            setMfaDrawerOpen(true);
+            return;
           }
-        } catch {}
+        } catch (err: any) {
+          if (isMfaRequiredError(err) || String(err?.message || '').toLowerCase().includes('two_factor')) {
+            setMfaLoginMethod('password');
+            setMfaDrawerOpen(true);
+            return;
+          }
+        }
       }
 
       // 3. If still not logged in, handle self-hosted signup or throw invalid credentials

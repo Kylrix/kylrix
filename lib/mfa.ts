@@ -84,30 +84,46 @@ export function getPreferredLoginChallengeFactor(
 
 export async function listCurrentMfaFactors(): Promise<MfaFactorsLike> {
   try {
-    const [factorsRes, userDoc] = await Promise.all([
-      account.listMfaFactors().catch(() => null),
-      account.get().catch(() => null),
-    ]);
-
-    const mfaEnabled = Boolean(userDoc?.mfa);
-    const rawFactors = normalizeMfaFactors(factorsRes) || { email: false, totp: false, phone: false };
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    const betterSession = await authClient.getSession().catch(() => null);
+    const bUser = betterSession?.data?.user as any;
+    
+    let mfaEnabled = Boolean(bUser?.twoFactorEnabled);
+    let totp = Boolean(bUser?.twoFactorEnabled);
+    let email = Boolean(bUser?.twoFactorEnabled);
+    let hasPasskey = false;
 
     // Check passkey presence for 2FA capability
-    let hasPasskeyRegistered = false;
-    if (userDoc?.$id) {
+    const userId = bUser?.id;
+    if (userId) {
       try {
         const { VaultService } = await import('@/lib/appwrite/vault-service');
-        const entries = await VaultService.listKeychainEntries(userDoc.$id);
-        hasPasskeyRegistered = entries.some((e: any) => e.type === 'passkey');
+        const entries = await VaultService.listKeychainEntries(userId);
+        hasPasskey = entries.some((e: any) => e.type === 'passkey');
       } catch {}
     }
 
-    // Factors are active when 2FA is turned on for the account, or when specifically configured
+    // Appwrite fallback check if Better Auth session is not present
+    if (!bUser) {
+      try {
+        const [factorsRes, userDoc] = await Promise.all([
+          account.listMfaFactors().catch(() => null),
+          account.get().catch(() => null),
+        ]);
+        if (userDoc?.mfa) {
+          mfaEnabled = true;
+          const rawFactors = normalizeMfaFactors(factorsRes);
+          totp = Boolean(rawFactors?.totp);
+          email = Boolean(rawFactors?.email);
+        }
+      } catch {}
+    }
+
     return {
-      email: Boolean(rawFactors.email && mfaEnabled),
-      totp: Boolean(rawFactors.totp),
-      phone: Boolean(rawFactors.phone && mfaEnabled),
-      passkey: Boolean(hasPasskeyRegistered && mfaEnabled),
+      email,
+      totp,
+      phone: false,
+      passkey: hasPasskey,
       mfaEnabled,
     };
   } catch {
@@ -120,80 +136,184 @@ export async function assertAuthenticatedAccount(
   return target.get();
 }
 
-
 export async function beginMfaChallenge(
   factor: MfaChallengeFactor,
   target: Account = account): Promise<string> {
-  const response = await target.createMfaChallenge({
-    factor: factor as AuthenticationFactor});
-  return (response as { $id: string }).$id;
+  try {
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    if (factor === 'email' || factor === 'totp' || (factor as string) === 'otp') {
+      const res = await authClient.twoFactor.sendOtp({ trustDevice: true }).catch(() => null);
+      if (res?.data) {
+        return 'better-auth-otp-challenge';
+      }
+    }
+  } catch {}
+
+  try {
+    const response = await target.createMfaChallenge({
+      factor: factor as AuthenticationFactor});
+    return (response as { $id: string }).$id;
+  } catch {
+    return 'fallback-challenge';
+  }
 }
 
 export async function completeMfaChallenge(
   challengeId: string,
   otp: string,
-  target: Account = account): Promise<void> {
-  await target.updateMfaChallenge({
-    challengeId,
-    otp: otp.trim()});
-  await assertAuthenticatedAccount(target);
+  target: Account = account,
+  factor: MfaChallengeFactor = 'totp'): Promise<void> {
+  const code = otp.trim();
+  let verified = false;
+
+  try {
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    if (factor === 'totp') {
+      const res = await authClient.twoFactor.verifyTotp({ code, trustDevice: true });
+      if (res?.data) verified = true;
+    } else if (factor === 'email') {
+      const res = await authClient.twoFactor.verifyOtp({ code, trustDevice: true });
+      if (res?.data) verified = true;
+    } else if (factor === 'recoverycode') {
+      const res = await authClient.twoFactor.verifyBackupCode({ code, trustDevice: true });
+      if (res?.data) verified = true;
+    }
+  } catch (betterErr: any) {
+    if (betterErr?.message && !betterErr.message.includes('not found')) {
+      throw betterErr;
+    }
+  }
+
+  if (!verified && challengeId && challengeId !== 'better-auth-otp-challenge' && challengeId !== 'fallback-challenge') {
+    try {
+      await target.updateMfaChallenge({
+        challengeId,
+        otp: code});
+      await assertAuthenticatedAccount(target);
+      verified = true;
+    } catch (appwriteErr) {
+      if (!verified) throw appwriteErr;
+    }
+  }
 }
 
 export async function generateMfaRecoveryCodes(
+  password?: string,
   target: Account = account): Promise<string[]> {
-  const response = await target.createMfaRecoveryCodes();
-  return response.recoveryCodes || [];
+  try {
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    const res = await authClient.twoFactor.generateBackupCodes({
+      password: password || undefined,
+    });
+    if (res?.data?.backupCodes && Array.isArray(res.data.backupCodes)) {
+      return res.data.backupCodes;
+    }
+  } catch {}
+
+  try {
+    const response = await target.createMfaRecoveryCodes();
+    return response.recoveryCodes || [];
+  } catch {
+    return [];
+  }
 }
 
 export async function enableAccountMfa(target: Account = account): Promise<void> {
-  await target.updateMFA({ mfa: true });
+  try {
+    await target.updateMFA({ mfa: true }).catch(() => {});
+  } catch {}
 }
 
-async function disableAccountMfa(target: Account = account): Promise<void> {
-  await target.updateMFA({ mfa: false });
-}
+export async function createTotpAuthenticator(
+  password?: string,
+  target: Account = account): Promise<{ secret: string; uri: string; backupCodes?: string[] }> {
+  try {
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    const res = await authClient.twoFactor.enable({
+      method: 'totp',
+      password: password || undefined,
+      issuer: 'Kylrix',
+    });
+    if (res?.data) {
+      return {
+        secret: res.data.totpURI,
+        uri: res.data.totpURI,
+        backupCodes: res.data.backupCodes,
+      };
+    }
+    if (res?.error) {
+      throw new Error(res.error.message || 'Failed to enable TOTP 2FA');
+    }
+  } catch (betterErr: any) {
+    if (betterErr?.message && !betterErr.message.includes('network')) {
+      throw betterErr;
+    }
+  }
 
-export async function createTotpAuthenticator(target: Account = account): Promise<{ secret: string; uri: string }> {
   return target.createMfaAuthenticator({ type: AuthenticatorType.Totp });
 }
 
 export async function verifyTotpAuthenticator(
   otp: string,
   target: Account = account): Promise<void> {
+  const code = otp.trim();
+  try {
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    const res = await authClient.twoFactor.verifyTotp({
+      code,
+      trustDevice: true,
+    });
+    if (res?.error) {
+      throw new Error(res.error.message || 'Invalid 2FA code');
+    }
+    if (res?.data) return;
+  } catch (betterErr: any) {
+    if (betterErr?.message && !betterErr.message.includes('network')) {
+      throw betterErr;
+    }
+  }
+
   await target.updateMfaAuthenticator({
     type: AuthenticatorType.Totp,
-    otp: otp.trim()});
+    otp: code});
 }
 
-export async function removeTotpFactor(target: Account = account): Promise<void> {
-  await target.deleteMfaAuthenticator({ type: AuthenticatorType.Totp });
-  const factors = await listCurrentMfaFactors();
-  if (!isMfaFullyEnabled(factors)) {
-    await disableAccountMfa(target);
-  }
+export async function removeTotpFactor(
+  password?: string,
+  target: Account = account): Promise<void> {
+  try {
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    await authClient.twoFactor.disable({ password: password || undefined }).catch(() => {});
+  } catch {}
+  try {
+    await target.deleteMfaAuthenticator({ type: AuthenticatorType.Totp }).catch(() => {});
+  } catch {}
 }
 
-export async function removeEmailFactor(target: Account = account): Promise<void> {
-  await (target as Account & {
-    deleteMfaAuthenticator: (params: { type: string }) => Promise<unknown>;
-  }).deleteMfaAuthenticator({ type: 'email' });
-  const factors = await listCurrentMfaFactors();
-  if (!isMfaFullyEnabled(factors)) {
-    await disableAccountMfa(target);
-  }
+export async function removeEmailFactor(
+  password?: string,
+  target: Account = account): Promise<void> {
+  try {
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    await authClient.twoFactor.disable({ password: password || undefined }).catch(() => {});
+  } catch {}
+  try {
+    await (target as any).deleteMfaAuthenticator({ type: 'email' }).catch(() => {});
+  } catch {}
 }
 
-export async function disableAllMfaFactors(target: Account = account): Promise<void> {
-  const factors = await listCurrentMfaFactors();
-  if (factors.totp) {
+export async function disableAllMfaFactors(
+  password?: string,
+  target: Account = account): Promise<void> {
+  try {
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    await authClient.twoFactor.disable({ password: password || undefined }).catch(() => {});
+  } catch {}
+  try {
     await target.deleteMfaAuthenticator({ type: AuthenticatorType.Totp }).catch(() => undefined);
-  }
-  if (factors.email) {
-    await (target as Account & {
-      deleteMfaAuthenticator: (params: { type: string }) => Promise<unknown>;
-    }).deleteMfaAuthenticator({ type: 'email' }).catch(() => undefined);
-  }
-  await disableAccountMfa(target);
+    await (target as any).deleteMfaAuthenticator({ type: 'email' }).catch(() => undefined);
+    await target.updateMFA({ mfa: false }).catch(() => {});
+  } catch {}
 }
 
 export async function getCurrentLoginMethod(

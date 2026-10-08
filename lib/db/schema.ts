@@ -10,6 +10,7 @@ export const user = sqliteTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
   image: text('image'),
+  twoFactorEnabled: integer('two_factor_enabled', { mode: 'boolean' }).default(false),
   tier1Synced: integer('tier1_synced', { mode: 'boolean' }).default(false),
   tier2Synced: integer('tier2_synced', { mode: 'boolean' }).default(false),
   hasAppwriteAccount: integer('has_appwrite_account', { mode: 'boolean' }),
@@ -62,6 +63,15 @@ export const verification = sqliteTable('verification', {
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }),
   updatedAt: integer('updated_at', { mode: 'timestamp' }),
+});
+
+export const twoFactor = sqliteTable('two_factor', {
+  id: text('id').primaryKey(),
+  secret: text('secret').notNull(),
+  backupCodes: text('backup_codes').notNull(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
 });
 
 export const passkey = sqliteTable('passkey', {
