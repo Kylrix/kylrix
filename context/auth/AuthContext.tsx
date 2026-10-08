@@ -85,10 +85,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isPulse: false,
             authProvider: 'better-auth',
           };
-          if (lastSeenUserIdRef.current && lastSeenUserIdRef.current !== bUser.id) {
-            const { purgeAllClientStorageOnLogout } = await import('@/lib/services/wipe-client-storage');
-            await purgeAllClientStorageOnLogout();
-          }
           lastSeenUserIdRef.current = bUser.id;
           setUser(userObj as any);
           setKylrixPulse(userObj as any);
@@ -109,10 +105,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const appwriteUser = await getCurrentUser(forceRefresh || isOAuthSuccess).catch(() => null);
         if (appwriteUser && appwriteUser.$id) {
-          if (lastSeenUserIdRef.current && lastSeenUserIdRef.current !== appwriteUser.$id) {
-            const { purgeAllClientStorageOnLogout } = await import('@/lib/services/wipe-client-storage');
-            await purgeAllClientStorageOnLogout();
-          }
           lastSeenUserIdRef.current = appwriteUser.$id;
           setUser(appwriteUser as any);
           setKylrixPulse(appwriteUser);

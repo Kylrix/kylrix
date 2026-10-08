@@ -129,6 +129,25 @@ export const auth = betterAuth({
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
         console.log(`[BetterAuth OTP] ${type.toUpperCase()} for ${email}: ${otp}`);
+        try {
+          const { dispatchEmail } = await import('@/lib/services/internal/emailDispatch');
+          await dispatchEmail({
+            eventType: 'auth_verification',
+            sourceApp: 'auth',
+            verificationMode: 'error',
+            actorName: email.split('@')[0],
+            actorId: email,
+            recipientIds: [email],
+            recipientEmails: [email],
+            resourceId: `otp:${Date.now()}`,
+            resourceTitle: 'Login Verification Code',
+            resourceType: 'auth.otp',
+            templateKey: 'kylrix:mfa-challenge',
+            ctaUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space',
+            ctaText: 'Sign In',
+            metadata: { otp, email },
+          }).catch(() => {});
+        } catch {}
       },
     }),
     bearer(),
