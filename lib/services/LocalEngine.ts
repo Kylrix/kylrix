@@ -385,7 +385,7 @@ export const LocalEngine = {
       const uid = u?.$id || (u as any)?.id;
       if (uid && uid !== 'guest') {
         realtimeRelay.init(uid);
-        unsubRelay = realtimeRelay.subscribe(`user-${uid}`, async (msg) => {
+        unsubRelay = realtimeRelay.subscribe(`user-${uid}`, async (msg: any) => {
           try {
             if (!msg) return;
             const msgChannel = String(msg.channel || '');

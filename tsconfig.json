@@ -47,6 +47,8 @@
     "**/*.spec.tsx",
     "packages",
     "packages/**",
+    "workers",
+    "workers/**",
     ".next/types/validator.ts"
   ]
 }

@@ -492,14 +492,14 @@ export async function handleTelegramUpdate(body: any): Promise<{
         const target = callbackData.replace('switch_ws:', '');
         if (target === 'personal') {
           setTelegramActiveWorkspace(chatId, null);
-          await answerCallbackQuery(callbackQuery.id, 'Switched to Personal Workspace');
+          await answerCallbackQuery(callbackId, 'Switched to Personal Workspace');
         } else {
           try {
             const ws = await ApiResources.getWorkspace(actor, target);
-            setTelegramActiveWorkspace(chatId, { id: ws.id, name: ws.name });
-            await answerCallbackQuery(callbackQuery.id, `Switched to ${ws.name}`);
+            setTelegramActiveWorkspace(chatId, { id: ws.id, name: ws.name || 'Workspace' });
+            await answerCallbackQuery(callbackId, `Switched to ${ws.name || 'Workspace'}`);
           } catch (err: any) {
-            await answerCallbackQuery(callbackQuery.id, `Switch failed: ${err?.message || 'Workspace not found'}`);
+            await answerCallbackQuery(callbackId, `Switch failed: ${err?.message || 'Workspace not found'}`);
           }
         }
         const { text, replyMarkup } = await renderWorkspacesMenu(actor, chatId);
