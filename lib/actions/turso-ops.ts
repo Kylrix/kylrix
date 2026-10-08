@@ -1351,6 +1351,90 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       console.warn('[syncTier1FromAppwriteTurso] Conversations/threads sync warning:', e.message);
     }
 
+    // 6b. Chat Conversations & Messages Sync
+    try {
+      const convRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'conversations',
+        queries: [Query.limit(100)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const c of (convRes.rows || []) as any[]) {
+        const isParticipant = Array.isArray(c.participants) && c.participants.includes(appwriteOwnerId);
+        const isCreator = c.createdBy === appwriteOwnerId || c.userId === appwriteOwnerId;
+        if (!isParticipant && !isCreator && !c.isWorkspace) continue;
+
+        await upsertConversationTurso({
+          id: c.$id,
+          type: c.type || (c.isWorkspace ? 'workspace' : 'direct'),
+          name: c.name || c.title || null,
+          description: c.description || null,
+          avatarUrl: c.avatarUrl || null,
+          createdBy: c.createdBy === appwriteOwnerId ? userId : (c.createdBy || userId),
+          isWorkspace: Boolean(c.isWorkspace),
+          contextType: c.contextType || null,
+          contextId: c.contextId || null,
+          lastMessageText: c.lastMessageText || null,
+          lastMessageSenderId: c.lastMessageSenderId || null,
+          lastMessageAt: c.lastMessageAt || null,
+          createdAt: c.createdAt || c.$createdAt || new Date().toISOString(),
+          updatedAt: c.updatedAt || c.$updatedAt || new Date().toISOString(),
+        });
+
+        // Messages for this conversation
+        const msgsRes = await tablesDB.listRows({
+          databaseId: DB,
+          tableId: 'messages',
+          queries: [Query.equal('conversationId', c.$id), Query.limit(200)],
+        }).catch(() => ({ rows: [] }));
+
+        for (const m of (msgsRes.rows || []) as any[]) {
+          await upsertMessageTurso({
+            id: m.$id,
+            conversationId: c.$id,
+            senderId: m.senderId === appwriteOwnerId ? userId : (m.senderId || userId),
+            senderName: m.senderName || null,
+            senderAvatar: m.senderAvatar || null,
+            content: m.content || m.text || '',
+            encrypted: Boolean(m.encrypted),
+            isSystem: Boolean(m.isSystem),
+            replyToId: m.replyToId || null,
+            status: m.status || 'sent',
+            readBy: Array.isArray(m.readBy) ? JSON.stringify(m.readBy) : (m.readBy || null),
+            createdAt: m.createdAt || m.$createdAt || new Date().toISOString(),
+            updatedAt: m.updatedAt || m.$updatedAt || new Date().toISOString(),
+          });
+        }
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Conversations & Messages sync warning:', e.message);
+    }
+
+    // 6c. Agentic Sessions & History Sync
+    try {
+      const agenticRes = await tablesDB.listRows({
+        databaseId: DB,
+        tableId: 'agentic_sessions',
+        queries: [Query.equal('userId', appwriteOwnerId), Query.limit(100)],
+      }).catch(() => ({ rows: [] }));
+
+      for (const a of (agenticRes.rows || []) as any[]) {
+        await upsertAgenticSessionTurso({
+          id: a.$id,
+          userId,
+          title: a.title || 'Agent Session',
+          agentType: a.agentType || 'general',
+          workspaceId: a.projectId || a.workspaceId || null,
+          chatHistory: typeof a.chatHistory === 'string' ? a.chatHistory : JSON.stringify(a.chatHistory || []),
+          status: a.status || 'idle',
+          createdAt: a.createdAt || a.$createdAt || new Date().toISOString(),
+          updatedAt: a.updatedAt || a.$updatedAt || new Date().toISOString(),
+        });
+      }
+    } catch (e: any) {
+      console.warn('[syncTier1FromAppwriteTurso] Agentic sessions sync warning:', e.message);
+    }
+
     // 7. Aggressive Verification Re-Check: Ensure 100% of TOTPs and Secrets are captured
     try {
       const totpVerify = await tablesDB.listRows({

@@ -57,7 +57,19 @@ export function LoginDrawer() {
   const navigateToAppAfterAuth = useCallback(() => {
     close();
     if (!pathname || pathname === '/' || pathname === '/landing') {
-      router.push('/app');
+      let target = '/app';
+      if (typeof document !== 'undefined') {
+        const match = document.cookie.match(/(?:^|; )kylrix_last_route=([^;]*)/);
+        if (match && match[1]) {
+          try {
+            const decoded = decodeURIComponent(match[1]);
+            if (decoded && decoded !== '/' && decoded !== '/landing' && !decoded.startsWith('/login') && !decoded.startsWith('/connect')) {
+              target = decoded;
+            }
+          } catch {}
+        }
+      }
+      router.push(target);
     }
   }, [close, pathname, router]);
 

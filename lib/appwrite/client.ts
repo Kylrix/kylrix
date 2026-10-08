@@ -742,7 +742,7 @@ export async function getCurrentUser(force = false): Promise<any | null> {
                 (error?.code === 401 || error?.type === 'user_unauthorized' || error?.code === 'user_unauthorized');
 
             if (isStrictUnauthorized) {
-                invalidateCurrentUserCache();
+                currentUserCache = null;
                 return null;
             }
 

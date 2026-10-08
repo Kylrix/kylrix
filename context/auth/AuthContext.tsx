@@ -254,14 +254,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [refreshUser]);
 
   useEffect(() => {
-    const unsubscribe = onCurrentUserChanged((nextUser) => {
-      setUser(nextUser ? (nextUser as any) : null);
+    const unsubscribe = onCurrentUserChanged(async (nextUser) => {
       if (nextUser) {
+        setUser(nextUser as any);
         setKylrixPulse(nextUser);
+        setIsLoading(false);
       } else {
+        try {
+          const { authClient } = await import('@/lib/auth/better-auth-client');
+          const betterSession = await authClient.getSession().catch(() => null);
+          if (betterSession?.data?.user) {
+            const bUser = betterSession.data.user;
+            const userObj = {
+              $id: bUser.id,
+              name: bUser.name,
+              email: bUser.email,
+              isPulse: false,
+              authProvider: 'better-auth',
+            };
+            setUser(userObj as any);
+            setKylrixPulse(userObj as any);
+            setIsLoading(false);
+            return;
+          }
+        } catch {}
+        setUser(null);
         clearKylrixPulse();
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
     return () => unsubscribe();
   }, []);
