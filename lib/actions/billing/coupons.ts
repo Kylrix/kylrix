@@ -249,11 +249,12 @@ export async function createCouponAction(input: {
   
   for (const targetUserId of targets) {
     const couponId = ID.unique();
+    const isLifetime = String(input.planId || '').toUpperCase().includes('LIFETIME');
     const couponData = {
       discountPercent: Number(input.discountPercent),
       discountPercentage: Number(input.discountPercent),
       status: String(input.status || 'active').toLowerCase(),
-      expiresAt: input.expiresAt || null,
+      expiresAt: isLifetime ? null : (input.expiresAt || null),
       redemptionLimit: targetUserId ? 1 : Math.max(1, Number(input.redemptionLimit || 1)),
       redemptionCount: 0,
       targetUserId: targetUserId || null,
@@ -264,8 +265,9 @@ export async function createCouponAction(input: {
         ...(input.metadata || {}),
         scope,
         source: 'admin.coupons.action',
-        months: input.months ? Number(input.months) : 1,
+        months: isLifetime ? null : (input.months ? Number(input.months) : 1),
         planId: input.planId || 'PRO_MONTH',
+        isLifetime,
       }),
     };
 

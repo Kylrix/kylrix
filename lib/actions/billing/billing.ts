@@ -439,8 +439,8 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       couponId: coupon.$id,
       discountPercent,
       planId,
-      months: isLifetime ? 1200 : months,
-      currentPeriodEnd: effectivePeriodEnd.toISOString(),
+      months: isLifetime ? null : months,
+      currentPeriodEnd: isLifetime ? null : effectivePeriodEnd.toISOString(),
       payerUserId: payerUserId || null,
       message: isLifetime
         ? 'Valid pass for Sovereign Lifetime Access.'
@@ -455,8 +455,8 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       couponId: coupon.$id,
       discountPercent,
       planId,
-      months: isLifetime ? 1200 : months,
-      currentPeriodEnd: effectivePeriodEnd.toISOString(),
+      months: isLifetime ? null : months,
+      currentPeriodEnd: isLifetime ? null : effectivePeriodEnd.toISOString(),
       payerUserId: payerUserId || null};
   }
 

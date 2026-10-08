@@ -308,7 +308,7 @@ export default function AdminCouponsPage() {
         title: form.title || undefined,
         note: form.note || undefined,
         redemptionLimit: Number.parseInt(form.redemptionLimit, 10) || 1,
-        months: Number.parseInt(form.months, 10) || 1,
+        months: form.planId === 'LIFETIME' ? undefined : (Number.parseInt(form.months, 10) || 1),
         planId: form.planId || 'PRO_MONTH',
         metadata: {
           scope: targetUserIds.length > 0 ? 'targeted' : 'open'}}, jwt || undefined);
@@ -342,7 +342,7 @@ export default function AdminCouponsPage() {
       title: 'Kylrix Lifetime Sovereign Pass',
       note: 'In-house sovereign lifetime access — permanent license',
       redemptionLimit: '1',
-      months: '1200',
+      months: '',
       planId: 'LIFETIME',
     });
     setSuccess('Form populated for Lifetime Sovereign Pass (100% discount, permanent access).');
@@ -715,10 +715,11 @@ export default function AdminCouponsPage() {
             <div className="space-y-1.5">
               <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">Active Months</span>
               <input
-                type="number"
-                value={form.months}
+                type={form.planId === 'LIFETIME' ? 'text' : 'number'}
+                value={form.planId === 'LIFETIME' ? 'Permanent (N/A)' : form.months}
+                disabled={form.planId === 'LIFETIME'}
                 onChange={(event) => setForm((prev) => ({ ...prev, months: event.target.value }))}
-                className="w-full bg-[#000000] px-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono"
+                className="w-full bg-[#000000] px-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono disabled:opacity-50 disabled:bg-white/[0.02]"
               />
             </div>
 
@@ -812,9 +813,15 @@ export default function AdminCouponsPage() {
                     <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-amber-500/15 border-amber-500/30 text-amber-400">
                       {parseMetadata(coupon.metadata)?.planId || 'PRO_MONTH'}
                     </span>
-                    <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-emerald-500/15 border-emerald-500/30 text-emerald-400">
-                      {parseMetadata(coupon.metadata)?.months || 1} Month(s)
-                    </span>
+                    {String(parseMetadata(coupon.metadata)?.planId || '').toUpperCase().includes('LIFETIME') ? (
+                      <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-amber-500/15 border-amber-500/30 text-amber-300">
+                        👑 Permanent (Lifetime)
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-emerald-500/15 border-emerald-500/30 text-emerald-400">
+                        {parseMetadata(coupon.metadata)?.months || 1} Month(s)
+                      </span>
+                    )}
                     <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-white/10 border-white/20 text-white/70">
                       {String(coupon.status || 'active')}
                     </span>
