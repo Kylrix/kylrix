@@ -62,8 +62,14 @@ export const FormsService = {
             if (doc) return doc as unknown as Forms;
         }
 
+        const isDefaultFeedback = formId === '6aae3dab003a7247b90a' || (process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID && formId === process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID);
+        if (isDefaultFeedback) {
+            const { DEFAULT_FEEDBACK_FORM_ROW } = await import('@/lib/actions/secure-ops/projects');
+            return DEFAULT_FEEDBACK_FORM_ROW as unknown as Forms;
+        }
+
         try {
-            const res = await (tablesDB as any).listRows({
+            const appwritePromise = (tablesDB as any).listRows({
                 databaseId: DATABASE_ID,
                 tableId: FORMS_TABLE,
                 queries: [
@@ -72,8 +78,10 @@ export const FormsService = {
                     Query.select(['$id', 'userId', 'status', 'settings', 'title', 'description', 'schema', 'isPublic', 'isGuest', '$createdAt'])
                 ]
             });
+            const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+            const res: any = await Promise.race([appwritePromise, timeoutPromise]);
 
-            if (res.total > 0) return res.rows[0];
+            if (res && res.total > 0) return res.rows[0];
         } catch (_e) {
             console.warn('[FormsService] Client-side getForm failed, trying secure fallback...');
         }
@@ -272,24 +280,9 @@ export const FormsService = {
      * Submit form data
      */
     async submitForm(formId: string, payload: string, userId?: string) {
-        // Use listRows to bypass potential SDK-level getRow restrictions for anonymous users
-        const formRes = await tablesDB.listRows<Forms>({
-            databaseId: DATABASE_ID,
-            tableId: FORMS_TABLE,
-            queries: [
-                Query.equal('$id', formId),
-                Query.limit(1),
-                Query.select(['$id', 'userId', 'status', 'settings', 'title', 'description', 'schema', 'isPublic', 'isGuest', 'isMultiple', '$createdAt'])
-            ]
-        });
-
-        if (formRes.total === 0) {
-            throw new Error('Form configuration not found.');
-        }
-
-        const form = formRes.rows[0];
+        const form = await FormsService.getForm(formId);
         
-        if (form.status !== 'published') {
+        if (form.status !== 'published' && !form.isPublic && !form.isGuest) {
             throw new Error('This form is not accepting submissions.');
         }
 
@@ -490,6 +483,26 @@ export const FormsService = {
                 );
             }
         }
+
+        if (submission?.$id) {
+            try {
+                const { db } = await import('@/lib/db');
+                const schema = await import('@/lib/db/schema');
+                await db.insert(schema.formSubmissions).values({
+                    id: submission.$id,
+                    formId,
+                    submitterId: submitterId || null,
+                    payload,
+                    status: (submission as any).status || 'unread',
+                    metadata: typeof (submission as any).metadata === 'string' ? (submission as any).metadata : JSON.stringify((submission as any).metadata || {}),
+                    isPublic: Boolean(form.isPublic),
+                    isGuest: Boolean(form.isGuest),
+                    isTrash: false,
+                    createdAt: (submission as any).$createdAt || new Date().toISOString(),
+                }).onConflictDoNothing().catch(() => {});
+            } catch {}
+        }
+
         // Notify form owner via ActivityLog
         try {
             await tablesDB.createRow<ActivityLog>(

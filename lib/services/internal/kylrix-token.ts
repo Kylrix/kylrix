@@ -296,16 +296,38 @@ async function getUserDailyMinted(userId: string) {
 
 async function getRecentUserMintActivityCount(userId: string, windowHours = 24) {
   const since = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString();
-  const { rows } = await ledgerTables().listRows({
-    databaseId: DB_ID,
-    tableId: TABLE_ID,
-    queries: [
-      Query.equal('rowType', 'event'),
-      Query.equal('userId', userId),
-      Query.equal('eventType', 'mint_activity'),
-      Query.greaterThanEqual('createdAt', since),
-      Query.limit(200)]});
-  return rows?.length ?? 0;
+  try {
+    const { db } = await import('@/lib/db');
+    const { kylrixTokenLedger } = await import('@/lib/db/schema');
+    const { eq, gte, and, sql } = await import('drizzle-orm');
+    const [row] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(kylrixTokenLedger)
+      .where(
+        and(
+          eq(kylrixTokenLedger.rowType, 'event'),
+          eq(kylrixTokenLedger.userId, userId),
+          eq(kylrixTokenLedger.eventType, 'mint_activity'),
+          gte(kylrixTokenLedger.createdAt, since)
+        )
+      );
+    if (row && typeof row.count === 'number') return row.count;
+  } catch {}
+
+  try {
+    const { rows } = await ledgerTables().listRows({
+      databaseId: DB_ID,
+      tableId: TABLE_ID,
+      queries: [
+        Query.equal('rowType', 'event'),
+        Query.equal('userId', userId),
+        Query.equal('eventType', 'mint_activity'),
+        Query.greaterThanEqual('createdAt', since),
+        Query.limit(200)]});
+    return rows?.length ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 async function getUserThermalScore(userId: string): Promise<number> {
@@ -324,7 +346,14 @@ async function getUserThermalScore(userId: string): Promise<number> {
 }
 
 async function getTotalUserCount() {
-// ... existing getTotalUserCount code ...
+  try {
+    const { db } = await import('@/lib/db');
+    const { users } = await import('@/lib/db/schema');
+    const { sql } = await import('drizzle-orm');
+    const [row] = await db.select({ count: sql<number>`count(*)` }).from(users);
+    if (row && typeof row.count === 'number' && row.count > 0) return row.count;
+  } catch {}
+
   const { users } = createSystemClient();
   try {
     const response = await users.list([Query.limit(1)]);
@@ -336,14 +365,34 @@ async function getTotalUserCount() {
 
 async function getRecentSystemVolume(windowMinutes: number) {
   const since = new Date(Date.now() - windowMinutes * 60_000).toISOString();
-  const { rows } = await ledgerTables().listRows({
-    databaseId: DB_ID,
-    tableId: TABLE_ID,
-    queries: [
-      Query.equal('rowType', 'event'),
-      Query.greaterThanEqual('createdAt', since),
-      Query.limit(5000)]});
-  return rows?.length ?? 0;
+  try {
+    const { db } = await import('@/lib/db');
+    const { kylrixTokenLedger } = await import('@/lib/db/schema');
+    const { eq, gte, and, sql } = await import('drizzle-orm');
+    const [row] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(kylrixTokenLedger)
+      .where(
+        and(
+          eq(kylrixTokenLedger.rowType, 'event'),
+          gte(kylrixTokenLedger.createdAt, since)
+        )
+      );
+    if (row && typeof row.count === 'number') return row.count;
+  } catch {}
+
+  try {
+    const { rows } = await ledgerTables().listRows({
+      databaseId: DB_ID,
+      tableId: TABLE_ID,
+      queries: [
+        Query.equal('rowType', 'event'),
+        Query.greaterThanEqual('createdAt', since),
+        Query.limit(5000)]});
+    return rows?.length ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 async function appendEvent(input: {

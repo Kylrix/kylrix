@@ -31,6 +31,58 @@ const {
   sanitizeEventData,
   rowCache} = shared;
 
+export const DEFAULT_FEEDBACK_FORM_ID = '6aae3dab003a7247b90a';
+
+export const DEFAULT_FEEDBACK_FORM_ROW = {
+  $id: DEFAULT_FEEDBACK_FORM_ID,
+  id: DEFAULT_FEEDBACK_FORM_ID,
+  userId: 'system',
+  title: 'Feature Request & Bug Report',
+  description: 'Help shape the future of Kylrix. Report issues, request new features, or share suggestions directly with the core development team.',
+  schema: JSON.stringify([
+    {
+      id: 'f_category',
+      type: 'radio',
+      label: 'Submission Category',
+      required: true,
+      options: ['Feature Request', 'Bug Report', 'General Feedback', 'Performance Issue'],
+    },
+    {
+      id: 'f_title',
+      type: 'text',
+      label: 'Summary / Title',
+      placeholder: 'Brief summary of your request or issue',
+      required: true,
+    },
+    {
+      id: 'f_module',
+      type: 'checkbox',
+      label: 'Affected Area / Module',
+      required: false,
+      options: ['Notes', 'Flow', 'Vault', 'Settings', 'Sync & Turso', 'AI / Agents', 'UI & Theme', 'Billing'],
+    },
+    {
+      id: 'f_details',
+      type: 'textarea',
+      label: 'Details & Context',
+      placeholder: 'Describe what you would like to see, or the steps to reproduce the bug...',
+      required: true,
+    },
+  ]),
+  settings: JSON.stringify({
+    ghostFields: ['client_environment', 'subscription_tier', 'identity_id', 'contributor_status'],
+    collectGhostFields: true,
+    allowAnonymousFill: true,
+  }),
+  status: 'published',
+  visibility: 'public',
+  isPublic: true,
+  isGuest: true,
+  isWorkspace: false,
+  $createdAt: '2026-01-01T00:00:00.000Z',
+  $updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
 export async function getPublicFormDataSecure(formId: string) {
   let row: any = null;
 
@@ -51,7 +103,7 @@ export async function getPublicFormDataSecure(formId: string) {
         $id: tr.id,
         id: tr.id,
         userId: tr.userId,
-        status: tr.status || 'draft',
+        status: tr.status || 'published',
         title: tr.title,
         description: tr.description,
         schema: tr.schema,
@@ -64,15 +116,45 @@ export async function getPublicFormDataSecure(formId: string) {
     }
   } catch {}
 
-  // 2. Fallback to Appwrite
+  // 2. Default Built-in Feedback Form Seeding
+  const isDefaultFeedbackForm = formId === DEFAULT_FEEDBACK_FORM_ID || (process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID && formId === process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID);
+  if (!row && isDefaultFeedbackForm) {
+    row = { ...DEFAULT_FEEDBACK_FORM_ROW, $id: formId, id: formId };
+    // Non-blocking Turso seeding
+    void (async () => {
+      try {
+        const { db } = await import('@/lib/db');
+        const schema = await import('@/lib/db/schema');
+        await db.insert(schema.forms).values({
+          id: formId,
+          userId: 'system',
+          title: DEFAULT_FEEDBACK_FORM_ROW.title,
+          description: DEFAULT_FEEDBACK_FORM_ROW.description,
+          schema: DEFAULT_FEEDBACK_FORM_ROW.schema,
+          settings: DEFAULT_FEEDBACK_FORM_ROW.settings,
+          status: 'published',
+          visibility: 'public',
+          isPublic: true,
+          isGuest: true,
+          isWorkspace: false,
+          createdAt: DEFAULT_FEEDBACK_FORM_ROW.$createdAt,
+          updatedAt: DEFAULT_FEEDBACK_FORM_ROW.$updatedAt,
+        }).onConflictDoNothing().catch(() => {});
+      } catch {}
+    })();
+  }
+
+  // 3. Fallback to Appwrite with timeout race
   if (!row) {
     try {
       const tables = createSystemTablesDB();
-      row = await tables.getRow({
+      const appwritePromise = tables.getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
         tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
         rowId: formId
       });
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      row = await Promise.race([appwritePromise, timeoutPromise]);
     } catch {
       row = null;
     }
@@ -111,6 +193,76 @@ export async function getPublicFormDataSecure(formId: string) {
     $createdAt: row.$createdAt,
     $updatedAt: row.$updatedAt
   }));
+}
+
+export async function submitPublicFormDataSecure(input: {
+  formId: string;
+  payload: string;
+  submitterId?: string | null;
+  status?: string;
+  metadata?: string | null;
+}) {
+  const formId = String(input?.formId || '').trim();
+  if (!formId) throw new Error('formId is required');
+
+  const form = await getPublicFormDataSecure(formId);
+  if (!form) throw new Error('Form not found or inaccessible');
+  if (form.status !== 'published' && !form.isPublic && !form.isGuest) {
+    throw new Error('This form is not accepting submissions');
+  }
+
+  const submissionId = `sub_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const nowIso = new Date().toISOString();
+
+  // 1. Write to Turso SQLite first
+  try {
+    const { db } = await import('@/lib/db');
+    const schema = await import('@/lib/db/schema');
+    await db.insert(schema.formSubmissions).values({
+      id: submissionId,
+      formId,
+      submitterId: input.submitterId || null,
+      payload: input.payload || '{}',
+      status: input.status || 'unread',
+      metadata: input.metadata || null,
+      isPublic: Boolean(form.isPublic),
+      isGuest: Boolean(form.isGuest),
+      isTrash: false,
+      createdAt: nowIso,
+    }).onConflictDoNothing().catch(() => {});
+  } catch (err) {
+    console.warn('[submitPublicFormDataSecure] Turso insert warning:', err);
+  }
+
+  // 2. Non-blocking Appwrite sync
+  void (async () => {
+    try {
+      const tables = createSystemTablesDB();
+      await tables.createRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.FORM_SUBMISSIONS,
+        rowId: submissionId,
+        data: {
+          formId,
+          submitterId: input.submitterId || 'anonymous',
+          payload: input.payload || '{}',
+          status: input.status || 'unread',
+          metadata: input.metadata || null,
+        }
+      }).catch(() => {});
+    } catch (_e) {}
+  })();
+
+  return {
+    $id: submissionId,
+    id: submissionId,
+    formId,
+    submitterId: input.submitterId || null,
+    payload: input.payload,
+    status: input.status || 'unread',
+    metadata: input.metadata,
+    $createdAt: nowIso,
+  };
 }
 
 export async function getPublicGoalDataSecure(goalId: string, _jwt?: string) {

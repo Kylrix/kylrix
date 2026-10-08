@@ -493,17 +493,15 @@ export async function createRowSecure(
   let isAnonymousFormSubmission = false;
   if (tblId === 'formSubmissions' && rowData && (rowData as any).formId) {
     try {
-      const tables = createSystemTablesDB();
-      const form = await tables.getRow({
-        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-        tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-        rowId: (rowData as any).formId});
+      const formId = (rowData as any).formId;
+      const { getPublicFormDataSecure } = await import('./projects');
+      const form = await getPublicFormDataSecure(formId);
       if (form && form.status === 'published') {
         let settings: any = {};
         try {
-          settings = JSON.parse(form.settings || '{}');
+          settings = typeof form.settings === 'string' ? JSON.parse(form.settings || '{}') : (form.settings || {});
         } catch (_) {}
-        if (settings.allowAnonymousFill) {
+        if (settings.allowAnonymousFill || form.isGuest || form.isPublic) {
           isAnonymousFormSubmission = true;
         }
       }

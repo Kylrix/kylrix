@@ -336,6 +336,17 @@ export async function getPublicFormData(formId: string) {
   return getPublicFormDataSecure(formId);
 }
 
+export async function submitPublicFormData(input: {
+  formId: string;
+  payload: string;
+  submitterId?: string | null;
+  status?: string;
+  metadata?: string | null;
+}) {
+  const { submitPublicFormDataSecure } = await import('./secure-ops');
+  return submitPublicFormDataSecure(input);
+}
+
 export async function grantPermission(input: any) {
   const jwt = await getJwt();
   return grantPermissionSecure({ ...input, jwt });

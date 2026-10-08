@@ -370,9 +370,7 @@ function SettingsPageInner() {
             const { mintDailyLoginSecure } = await import('@/lib/actions/secure-ops');
             let userJwt: string | undefined;
             try {
-                const { account } = await import('@/lib/appwrite');
-                const jwtRes = await account.createJWT();
-                userJwt = jwtRes.jwt;
+                userJwt = (await getJWT()) || undefined;
             } catch {}
 
             const today = new Date();

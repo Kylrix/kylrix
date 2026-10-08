@@ -43,6 +43,7 @@ import {
 
 import {
   getPublicFormDataSecure,
+  submitPublicFormDataSecure,
   getPublicGoalDataSecure,
   createAccountEventSecure,
   listProjectsWithCollaborationsSecure,
@@ -178,6 +179,7 @@ export {
   listthreadNoteChatsSecure,
   listTagsSecure,
   getPublicFormDataSecure,
+  submitPublicFormDataSecure,
   getPublicGoalDataSecure,
   createAccountEventSecure,
   listProjectsWithCollaborationsSecure,
