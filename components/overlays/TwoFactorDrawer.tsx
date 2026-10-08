@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { account, avatars } from '@/lib/appwrite/client';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import {
   createTotpAuthenticator,
@@ -179,11 +178,11 @@ export function TwoFactorPanel({
     setLoading(true);
     setError(null);
     try {
-      const verifyUrl = `${window.location.origin}/settings?tab=security#mfa`;
-      await account.createVerification({ url: verifyUrl });
-      toast.success('Verification email sent.');
-    } catch (err) {
-      setError((err as { message?: string })?.message || 'Could not send email.');
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      await authClient.twoFactor.sendOtp();
+      toast.success('Verification code sent.');
+    } catch (err: any) {
+      setError(err?.message || 'Could not send verification code.');
     } finally {
       setLoading(false);
     }
@@ -195,21 +194,25 @@ export function TwoFactorPanel({
     try {
       ensureVaultUnlocked();
       const factors = await refreshFactors();
-      if (!factors?.email && !emailVerified) {
-        setStep('email-verify');
-        return;
-      }
       if (factors?.totp) {
-        if (factors.email) await finalizeTwoFactor();
-        else setStep('manage');
+        setStep('manage');
         return;
       }
-      const { secret, uri } = await createTotpAuthenticator();
+      const { secret, uri, backupCodes } = await createTotpAuthenticator();
       setTotpSecret(secret);
       setTotpUri(uri);
+      if (backupCodes && backupCodes.length > 0) {
+        setRecoveryCodes(backupCodes);
+        setStoredRecoveryCodes(backupCodes);
+        void persistMfaRecoveryCodes(userId, backupCodes, {
+          source: 'better-auth-mfa',
+          loginMethod,
+        }).catch(() => {});
+      }
       try {
-        const qr = await avatars.getQR({ text: uri, size: 320, margin: 0, download: false });
-        setTotpQr(qr.toString());
+        const QRCode = (await import('qrcode')).default;
+        const qr = await QRCode.toDataURL(uri, { width: 320, margin: 1 });
+        setTotpQr(qr);
       } catch {
         setTotpQr('');
       }
@@ -220,7 +223,7 @@ export function TwoFactorPanel({
     } finally {
       setLoading(false);
     }
-  }, [emailVerified, finalizeTwoFactor, refreshFactors]);
+  }, [finalizeTwoFactor, loginMethod, refreshFactors, userId]);
 
   const verifyTotpSetup = async () => {
     if (totpOtp.trim().length !== 6) {

@@ -230,22 +230,27 @@ export async function createTotpAuthenticator(
   try {
     const { authClient } = await import('@/lib/auth/better-auth-client');
     const res = await authClient.twoFactor.enable({
-      method: 'totp',
       password: password || undefined,
       issuer: 'Kylrix',
     });
     if (res?.data && 'totpURI' in res.data) {
+      const uri = (res.data as any).totpURI || '';
+      let secret = uri;
+      try {
+        const parsed = new URL(uri);
+        secret = parsed.searchParams.get('secret') || uri;
+      } catch {}
       return {
-        secret: res.data.totpURI,
-        uri: res.data.totpURI,
-        backupCodes: res.data.backupCodes,
+        secret,
+        uri,
+        backupCodes: (res.data as any).backupCodes || [],
       };
     }
     if (res?.error) {
-      throw new Error(res.error.message || 'Failed to enable TOTP 2FA');
+      throw new Error(res.error.message || 'Failed to generate 2FA secret');
     }
   } catch (betterErr: any) {
-    if (betterErr?.message && !betterErr.message.includes('network')) {
+    if (betterErr?.message && !betterErr.message.includes('network') && !betterErr.message.includes('fetch')) {
       throw betterErr;
     }
   }
