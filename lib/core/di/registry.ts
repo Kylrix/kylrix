@@ -5,7 +5,6 @@ import { FunctionsPort } from '../ports/functions.port';
 import { MessagingPort } from '../ports/messaging.port';
 
 import { TursoDatabaseAdapter } from '../adapters/turso/database.adapter';
-import { AppwriteDatabaseAdapter } from '../adapters/appwrite/database.adapter';
 import { AppwriteAuthAdapter } from '../adapters/appwrite/auth.adapter';
 import { AppwriteStorageAdapter } from '../adapters/appwrite/storage.adapter';
 import { AppwriteFunctionsAdapter } from '../adapters/appwrite/functions.adapter';

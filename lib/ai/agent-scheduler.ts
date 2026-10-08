@@ -163,13 +163,14 @@ export async function runAgentTask(req: AgentTaskRequest): Promise<AgentTaskResu
   // Broadcast realtime update to user's room if realtime relay is available
   try {
     const { realtimeRelay } = await import('@/lib/realtime/client');
-    realtimeRelay.publish(`user-${req.actor.userId}`, {
+    realtimeRelay.send(`user-${req.actor.userId}`, {
       channel: `user-${req.actor.userId}`,
       type: 'agent_update',
-      action: 'broadcast_agent_update',
-      agentName: 'Cloudflare Edge Agent',
-      message: `Executed: ${prompt.slice(0, 60)}`,
+      kind: 'broadcast_agent_update',
+      userId: req.actor.userId,
       data: {
+        agentName: 'Cloudflare Edge Agent',
+        message: `Executed: ${prompt.slice(0, 60)}`,
         output: outputText.slice(0, 200),
         workspaceId: req.workspaceId,
         createdItems,
