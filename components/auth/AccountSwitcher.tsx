@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { UserPlus, Check, Trash2, Loader2, ArrowRightLeft, Shield } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 
 interface DeviceSession {
   session: {
@@ -32,7 +31,7 @@ export function AccountSwitcher({
   const { open: openUnified } = useUnifiedDrawer();
 
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [switchingToken, setSwitchingToken] = useState<string | null>(null);
   const [revokingToken, setRevokingToken] = useState<string | null>(null);
 

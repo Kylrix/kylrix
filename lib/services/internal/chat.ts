@@ -327,6 +327,8 @@ export async function createMessageInternal(payload: {
         console.warn('[streakNotification] Background streak check failed:', err);
       }
     })();
+  }
+
   // Mirror message and conversation update to Turso SQLite
   try {
     const { upsertMessageTurso, upsertConversationTurso } = await import('@/lib/actions/turso-ops');

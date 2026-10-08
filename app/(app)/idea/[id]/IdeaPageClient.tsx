@@ -146,7 +146,7 @@ function computeRole(note: Notes, userId?: string): NoteAccessRole | 'none' {
 
 export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: IdeaPageClientProps) {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { setCachedData, invalidate } = useDataNexus();
 
   const [access, setAccess] = useState<AccessResult>(() => {
