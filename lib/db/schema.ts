@@ -946,4 +946,152 @@ export const resourceTags = sqliteTable('resource_tags', {
   createdAt: text('created_at'),
 });
 
+// 11. AI Context, Knowledge Graph & Agent Patterns
+export const contexts = sqliteTable('contexts', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  workspaceId: text('workspace_id'),
+  projectId: text('project_id'),
+  title: text('title').notNull().default(''),
+  content: text('content').notNull().default(''),
+  type: text('type').default('memory'),
+  metadata: text('metadata'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const knowledgeGraph = sqliteTable('knowledge_graph', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  workspaceId: text('workspace_id'),
+  subject: text('subject').notNull(),
+  predicate: text('predicate').notNull(),
+  object: text('object').notNull(),
+  confidence: text('confidence').default('1.0'),
+  metadata: text('metadata'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const patterns = sqliteTable('patterns', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  workspaceId: text('workspace_id'),
+  name: text('name').notNull(),
+  pattern: text('pattern').notNull(),
+  category: text('category').default('general'),
+  metadata: text('metadata'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const agentByokKeys = sqliteTable('agent_byok_keys', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  provider: text('provider').notNull(),
+  keyHash: text('key_hash'),
+  encryptedKey: text('encrypted_key').notNull(),
+  iv: text('iv'),
+  status: text('status').default('active'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const agentPaymentIntents = sqliteTable('agent_payment_intents', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  agentId: text('agent_id').notNull(),
+  amount: text('amount').notNull(),
+  currency: text('currency').default('USD'),
+  status: text('status').default('pending'),
+  metadata: text('metadata'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const userConvenienceSessions = sqliteTable('user_convenience_sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  deviceId: text('device_id'),
+  publicKey: text('public_key'),
+  expiresAt: text('expires_at'),
+  createdAt: text('created_at').notNull(),
+  lastUsedAt: text('last_used_at'),
+});
+
+// 12. Security Logs, Key Mapping & Resource Pins
+export const securityLogs = sqliteTable('security_logs', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  action: text('action').notNull(),
+  ip: text('ip'),
+  userAgent: text('user_agent'),
+  status: text('status').default('success'),
+  metadata: text('metadata'),
+  createdAt: text('created_at').notNull(),
+});
+
+export const keyMapping = sqliteTable('key_mapping', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  keyType: text('key_type').notNull(),
+  mappingData: text('mapping_data').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const userResourcePins = sqliteTable('user_resource_pins', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  resourceId: text('resource_id').notNull(),
+  resourceType: text('resource_type').notNull(),
+  pinnedAt: text('pinned_at').notNull(),
+});
+
+// 13. Comments, Reactions & Activity Logs
+export const comments = sqliteTable('comments', {
+  id: text('id').primaryKey(),
+  resourceId: text('resource_id').notNull(),
+  resourceType: text('resource_type').notNull(),
+  userId: text('user_id').notNull(),
+  content: text('content').notNull(),
+  replyToId: text('reply_to_id'),
+  metadata: text('metadata'),
+  isDeleted: integer('is_deleted', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const reactions = sqliteTable('reactions', {
+  id: text('id').primaryKey(),
+  resourceId: text('resource_id').notNull(),
+  resourceType: text('resource_type').notNull(),
+  userId: text('user_id').notNull(),
+  emoji: text('emoji').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const extensions = sqliteTable('extensions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  version: text('version').default('1.0.0'),
+  manifest: text('manifest'),
+  enabled: integer('enabled', { mode: 'boolean' }).default(true),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const activityLog = sqliteTable('activity_log', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  action: text('action').notNull(),
+  resourceId: text('resource_id'),
+  resourceType: text('resource_type'),
+  metadata: text('metadata'),
+  createdAt: text('created_at').notNull(),
+});
+
+
 

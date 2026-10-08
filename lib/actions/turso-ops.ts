@@ -2158,3 +2158,124 @@ export async function upsertConversationMemberTurso(
   }
 }
 
+// ── AI Contexts ──
+export async function upsertContextTurso(data: typeof schema.contexts.$inferInsert) {
+  try {
+    const existing = await db.select({ id: schema.contexts.id }).from(schema.contexts).where(eq(schema.contexts.id, data.id)).limit(1);
+    if (existing.length > 0) {
+      await db.update(schema.contexts).set(data).where(eq(schema.contexts.id, data.id));
+    } else {
+      await db.insert(schema.contexts).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] upsertContextTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function listContextsTurso(userId: string, workspaceId?: string) {
+  try {
+    if (workspaceId) {
+      const rows = await db.select().from(schema.contexts).where(and(eq(schema.contexts.userId, userId), eq(schema.contexts.workspaceId, workspaceId)));
+      return { success: true, rows };
+    }
+    const rows = await db.select().from(schema.contexts).where(eq(schema.contexts.userId, userId));
+    return { success: true, rows };
+  } catch (err: any) {
+    return { success: false, rows: [], error: err.message };
+  }
+}
+
+// ── Knowledge Graph ──
+export async function upsertKnowledgeGraphTurso(data: typeof schema.knowledgeGraph.$inferInsert) {
+  try {
+    const existing = await db.select({ id: schema.knowledgeGraph.id }).from(schema.knowledgeGraph).where(eq(schema.knowledgeGraph.id, data.id)).limit(1);
+    if (existing.length > 0) {
+      await db.update(schema.knowledgeGraph).set(data).where(eq(schema.knowledgeGraph.id, data.id));
+    } else {
+      await db.insert(schema.knowledgeGraph).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] upsertKnowledgeGraphTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+// ── Patterns ──
+export async function upsertPatternTurso(data: typeof schema.patterns.$inferInsert) {
+  try {
+    const existing = await db.select({ id: schema.patterns.id }).from(schema.patterns).where(eq(schema.patterns.id, data.id)).limit(1);
+    if (existing.length > 0) {
+      await db.update(schema.patterns).set(data).where(eq(schema.patterns.id, data.id));
+    } else {
+      await db.insert(schema.patterns).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] upsertPatternTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+// ── Security Logs ──
+export async function insertSecurityLogTurso(data: typeof schema.securityLogs.$inferInsert) {
+  try {
+    await db.insert(schema.securityLogs).values(data);
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] insertSecurityLogTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+// ── User Resource Pins ──
+export async function upsertResourcePinTurso(data: typeof schema.userResourcePins.$inferInsert) {
+  try {
+    const existing = await db.select({ id: schema.userResourcePins.id }).from(schema.userResourcePins).where(eq(schema.userResourcePins.id, data.id)).limit(1);
+    if (existing.length > 0) {
+      await db.update(schema.userResourcePins).set(data).where(eq(schema.userResourcePins.id, data.id));
+    } else {
+      await db.insert(schema.userResourcePins).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function deleteResourcePinTurso(pinId: string) {
+  try {
+    await db.delete(schema.userResourcePins).where(eq(schema.userResourcePins.id, pinId));
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+// ── Comments & Reactions ──
+export async function upsertCommentTurso(data: typeof schema.comments.$inferInsert) {
+  try {
+    const existing = await db.select({ id: schema.comments.id }).from(schema.comments).where(eq(schema.comments.id, data.id)).limit(1);
+    if (existing.length > 0) {
+      await db.update(schema.comments).set(data).where(eq(schema.comments.id, data.id));
+    } else {
+      await db.insert(schema.comments).values(data);
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function listCommentsTurso(resourceId: string) {
+  try {
+    const rows = await db.select().from(schema.comments).where(and(eq(schema.comments.resourceId, resourceId), eq(schema.comments.isDeleted, false)));
+    return { success: true, rows };
+  } catch (err: any) {
+    return { success: false, rows: [], error: err.message };
+  }
+}
+
+
