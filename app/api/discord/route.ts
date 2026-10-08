@@ -205,8 +205,53 @@ export const DISCORD_SLASH_COMMANDS = [
   },
   {
     name: 'workspaces',
-    description: 'List your workspaces',
+    description: 'List, switch, create, or delete workspaces',
     ...DEFAULT_COMMAND_SETTINGS,
+    options: [
+      {
+        name: 'action',
+        description: 'Action: list, switch, create, or delete',
+        type: 3, // STRING
+        required: false,
+        choices: [
+          { name: 'List Workspaces', value: 'list' },
+          { name: 'Switch Active Workspace', value: 'switch' },
+          { name: 'Create Workspace', value: 'create' },
+          { name: 'Delete Workspace', value: 'delete' },
+        ],
+      },
+      {
+        name: 'name',
+        description: 'Workspace name or ID (for switch/create/delete)',
+        type: 3, // STRING
+        required: false,
+      },
+    ],
+  },
+  {
+    name: 'workspace',
+    description: 'Switch, create, or manage a workspace',
+    ...DEFAULT_COMMAND_SETTINGS,
+    options: [
+      {
+        name: 'action',
+        description: 'Action: switch, create, delete, or list',
+        type: 3, // STRING
+        required: false,
+        choices: [
+          { name: 'Switch Active Workspace', value: 'switch' },
+          { name: 'Create Workspace', value: 'create' },
+          { name: 'Delete Workspace', value: 'delete' },
+          { name: 'List Workspaces', value: 'list' },
+        ],
+      },
+      {
+        name: 'name',
+        description: 'Workspace name or ID',
+        type: 3, // STRING
+        required: false,
+      },
+    ],
   },
   {
     name: 'pair',
@@ -342,6 +387,19 @@ interface DiscordLinkRecord {
 }
 
 const discordUserCache = new Map<string, DiscordLinkRecord>();
+const discordActiveWorkspaceCache = new Map<string, { id: string; name: string }>();
+
+export function getDiscordActiveWorkspace(callerId: string): { id: string; name: string } | null {
+  return discordActiveWorkspaceCache.get(callerId) || null;
+}
+
+export function setDiscordActiveWorkspace(callerId: string, workspace: { id: string; name: string } | null) {
+  if (!workspace || workspace.id === 'personal' || workspace.id === 'default') {
+    discordActiveWorkspaceCache.delete(callerId);
+  } else {
+    discordActiveWorkspaceCache.set(callerId, workspace);
+  }
+}
 
 export async function resolveActorForDiscordUser(
   callerId: string,
@@ -1113,38 +1171,68 @@ function buildGoalsEmbed(goals: any[], isLinked = true) {
   };
 }
 
-function buildWorkspacesEmbed(workspaces: any[]) {
+function buildWorkspacesEmbed(workspaces: any[], activeWsId?: string | null) {
   const fields =
     workspaces.length > 0
-      ? workspaces.map((w, idx) => ({
-          name: `${idx + 1}. ${w.name || 'Workspace'}`,
-          value: `Members: ${w.collaboratorsCount || 1}`,
-          inline: true,
-        }))
+      ? workspaces.map((w, idx) => {
+          const isActive = activeWsId === w.id;
+          return {
+            name: `${idx + 1}. 📂 ${w.name || 'Workspace'} ${isActive ? '🟢 [ACTIVE]' : ''}`,
+            value: `ID: \`${w.id}\` · Members: ${w.collaboratorsCount || 1}`,
+            inline: false,
+          };
+        })
       : [
           {
             name: 'Personal Workspace',
-            value: 'You are currently in your Personal Workspace.',
+            value: 'You are currently in your Personal Virtual Workspace.',
             inline: false,
           },
         ];
 
+  const selectOptions = [
+    {
+      label: 'Personal Workspace (Default)',
+      value: 'ws_switch:personal',
+      description: 'Switch to personal virtual workspace',
+      default: !activeWsId || activeWsId === 'personal',
+    },
+    ...workspaces.slice(0, 24).map((w) => ({
+      label: (w.name || 'Workspace').slice(0, 50),
+      value: `ws_switch:${w.id}`,
+      description: `ID: ${w.id}`.slice(0, 50),
+      default: activeWsId === w.id,
+    })),
+  ];
+
   return {
     embeds: [
       {
-        title: '📂 Workspaces',
-        description: 'Your project spaces:',
+        title: '📂 Workspaces Manager',
+        description: activeWsId && activeWsId !== 'personal'
+          ? `Active Workspace: **${workspaces.find((w) => w.id === activeWsId)?.name || activeWsId}** 🟢\nSelect below to switch active workspace, or use \`/workspaces action:create\` / \`/workspaces action:delete\`.`
+          : `Active Workspace: **Personal Workspace** 🟢\nSelect below to switch active workspace, or use \`/workspaces action:create\` / \`/workspaces action:delete\`.`,
         color: 0x6366f1, // Indigo #6366F1
         fields,
       },
     ],
     components: [
-      buildDiscordSelectMenu(),
+      {
+        type: 1,
+        components: [
+          {
+            type: 3,
+            custom_id: 'select_switch_workspace',
+            placeholder: '🔄 Switch Active Workspace...',
+            options: selectOptions,
+          },
+        ],
+      },
       {
         type: 1,
         components: [
           { type: 2, style: 1, label: 'Refresh', custom_id: 'btn_workspaces', emoji: { name: '🔄' } },
-          { type: 2, style: 2, label: 'Home', custom_id: 'btn_main', emoji: { name: '🏠' } },
+          { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
           { type: 2, style: 5, label: 'Open App', url: 'https://www.kylrix.space/app' },
         ],
       },
@@ -1363,10 +1451,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ type: 7, data });
     }
 
-    // D. Workspaces Menu
-    if (customId === 'btn_workspaces' || selectedValue === 'val_workspaces') {
-      const wsRes = await ApiResources.listWorkspaces(actor, 5).catch(() => []);
-      const data = buildWorkspacesEmbed(extractItems(wsRes));
+    // D. Workspaces Menu & Switch Workspace Select
+    if (
+      customId === 'btn_workspaces' ||
+      selectedValue === 'val_workspaces' ||
+      customId === 'select_switch_workspace' ||
+      selectedValue?.startsWith('ws_switch:') ||
+      customId.startsWith('ws_switch:')
+    ) {
+      let activeWs = getDiscordActiveWorkspace(callerId);
+      const chosen = selectedValue?.startsWith('ws_switch:')
+        ? selectedValue.replace('ws_switch:', '')
+        : customId.startsWith('ws_switch:')
+        ? customId.replace('ws_switch:', '')
+        : null;
+
+      const wsRes = await ApiResources.listWorkspaces(actor, 20).catch(() => []);
+      const items = extractItems(wsRes);
+
+      if (chosen) {
+        if (chosen === 'personal' || chosen === 'default') {
+          setDiscordActiveWorkspace(callerId, null);
+          activeWs = null;
+        } else {
+          const match = items.find((w: any) => w.id === chosen || (w.name && w.name.toLowerCase() === chosen.toLowerCase()));
+          if (match) {
+            setDiscordActiveWorkspace(callerId, { id: match.id, name: match.name || match.id });
+            activeWs = { id: match.id, name: match.name || match.id };
+          }
+        }
+      }
+
+      const data = buildWorkspacesEmbed(items, activeWs?.id);
       return NextResponse.json({ type: 7, data });
     }
 
@@ -1782,7 +1898,12 @@ export async function POST(req: NextRequest) {
       }
       const title = extractTitleSnippet(rawContent);
       try {
-        const newNote = await ApiResources.createNote(actor, { title, content: rawContent });
+        const activeWs = getDiscordActiveWorkspace(callerId);
+        const newNote = await ApiResources.createNote(actor, {
+          title,
+          content: rawContent,
+          ...(activeWs ? { projectId: activeWs.id, isWorkspace: true } : {}),
+        });
         const domainUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
         const shareUrl = `${domainUrl}/idea/${encodeURIComponent(newNote.id)}`;
 
@@ -1837,7 +1958,12 @@ export async function POST(req: NextRequest) {
         const title = getOption('title') || 'Quick Idea';
         const content = getOption('content') || '';
         try {
-          const newNote = await ApiResources.createNote(actor, { title, content });
+          const activeWs = getDiscordActiveWorkspace(callerId);
+          const newNote = await ApiResources.createNote(actor, {
+            title,
+            content,
+            ...(activeWs ? { projectId: activeWs.id, isWorkspace: true } : {}),
+          });
           return NextResponse.json({
             type: 4,
             data: {
@@ -1886,7 +2012,12 @@ export async function POST(req: NextRequest) {
         const rawContent = resolved.content;
         const title = customTitle || extractTitleSnippet(rawContent);
         try {
-          const newNote = await ApiResources.createNote(actor, { title, content: rawContent });
+          const activeWs = getDiscordActiveWorkspace(callerId);
+          const newNote = await ApiResources.createNote(actor, {
+            title,
+            content: rawContent,
+            ...(activeWs ? { projectId: activeWs.id, isWorkspace: true } : {}),
+          });
           return NextResponse.json({
             type: 4,
             data: {
@@ -2105,15 +2236,20 @@ export async function POST(req: NextRequest) {
 
       case 'goal': {
         const title = getOption('title') || 'New Goal';
+        const activeWs = getDiscordActiveWorkspace(callerId);
         try {
-          const newGoal = await ApiResources.createGoal(actor, { title, status: 'todo' });
+          const newGoal = await ApiResources.createGoal(actor, {
+            title,
+            status: 'todo',
+            ...(activeWs ? { projectId: activeWs.id, isWorkspace: true } : {}),
+          });
           return NextResponse.json({
             type: 4,
             data: {
               embeds: [
                 {
                   title: `🎯 Goal: ${newGoal.title}`,
-                  description: 'Goal added to your list.',
+                  description: activeWs ? `Goal added to workspace **${activeWs.name}**.` : 'Goal added to your list.',
                   color: 0xa855f7,
                 },
               ],
@@ -2309,9 +2445,160 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      case 'workspace':
       case 'workspaces': {
-        const wsRes = await ApiResources.listWorkspaces(actor, 5).catch(() => []);
-        const data = buildWorkspacesEmbed(extractItems(wsRes));
+        const action = String(getOption('action') || 'list').toLowerCase();
+        const nameOrId = String(getOption('name') || '').trim();
+
+        const wsRes = await ApiResources.listWorkspaces(actor, 20).catch(() => []);
+        const workspaces = extractItems(wsRes);
+        let activeWs = getDiscordActiveWorkspace(callerId);
+
+        if (action === 'create' && nameOrId) {
+          try {
+            const created = await ApiResources.createWorkspace(actor, {
+              name: nameOrId,
+              description: 'Created via Discord bot',
+            });
+            setDiscordActiveWorkspace(callerId, { id: created.id, name: created.name || nameOrId });
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: '🎉 Workspace Created & Activated!',
+                    description: `Workspace **${created.name || nameOrId}** has been created and set as your active workspace 🟢\nID: \`${created.id}\``,
+                    color: 0x10b981,
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 1, label: 'All Workspaces', custom_id: 'btn_workspaces', emoji: { name: '📂' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          } catch (err: any) {
+            return NextResponse.json({
+              type: 4,
+              data: { content: `❌ Failed to create workspace: ${err?.message || 'Error'}` },
+            });
+          }
+        }
+
+        if (action === 'switch' && nameOrId) {
+          if (nameOrId.toLowerCase() === 'personal' || nameOrId.toLowerCase() === 'default') {
+            setDiscordActiveWorkspace(callerId, null);
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: '🔄 Switched to Personal Workspace',
+                    description: 'Your active workspace is now set to **Personal Workspace** 🟢',
+                    color: 0x6366f1,
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 1, label: 'All Workspaces', custom_id: 'btn_workspaces', emoji: { name: '📂' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          }
+
+          const match = workspaces.find((w: any) =>
+            w.id === nameOrId ||
+            (w.name && w.name.toLowerCase() === nameOrId.toLowerCase()) ||
+            (w.name && w.name.toLowerCase().includes(nameOrId.toLowerCase()))
+          );
+
+          if (!match) {
+            return NextResponse.json({
+              type: 4,
+              data: { content: `❌ Workspace "${nameOrId}" not found. Run \`/workspaces\` to view your list.` },
+            });
+          }
+
+          setDiscordActiveWorkspace(callerId, { id: match.id, name: match.name || match.id });
+          return NextResponse.json({
+            type: 4,
+            data: {
+              embeds: [
+                {
+                  title: '🔄 Active Workspace Switched!',
+                  description: `Switched active workspace to **${match.name || match.id}** 🟢\nNew ideas and goals created via Discord will now target this workspace.`,
+                  color: 0x6366f1,
+                },
+              ],
+              components: [
+                {
+                  type: 1,
+                  components: [
+                    { type: 2, style: 1, label: 'View Ideas', custom_id: 'btn_ideas', emoji: { name: '💡' } },
+                    { type: 2, style: 1, label: 'View Goals', custom_id: 'btn_goals', emoji: { name: '🎯' } },
+                    { type: 2, style: 2, label: 'All Workspaces', custom_id: 'btn_workspaces', emoji: { name: '📂' } },
+                  ],
+                },
+              ],
+            },
+          });
+        }
+
+        if (action === 'delete' && nameOrId) {
+          const match = workspaces.find((w: any) =>
+            w.id === nameOrId || (w.name && w.name.toLowerCase() === nameOrId.toLowerCase())
+          );
+          if (!match) {
+            return NextResponse.json({
+              type: 4,
+              data: { content: `❌ Workspace "${nameOrId}" not found.` },
+            });
+          }
+          try {
+            await ApiResources.deleteWorkspace(actor, match.id);
+            if (activeWs?.id === match.id) {
+              setDiscordActiveWorkspace(callerId, null);
+            }
+            return NextResponse.json({
+              type: 4,
+              data: {
+                embeds: [
+                  {
+                    title: '🗑️ Workspace Deleted',
+                    description: `Workspace **${match.name || match.id}** has been removed.`,
+                    color: 0xef4444,
+                  },
+                ],
+                components: [
+                  {
+                    type: 1,
+                    components: [
+                      { type: 2, style: 1, label: 'All Workspaces', custom_id: 'btn_workspaces', emoji: { name: '📂' } },
+                      { type: 2, style: 2, label: 'Main Menu', custom_id: 'btn_main', emoji: { name: '🏠' } },
+                    ],
+                  },
+                ],
+              },
+            });
+          } catch (err: any) {
+            return NextResponse.json({
+              type: 4,
+              data: { content: `❌ Failed to delete workspace: ${err?.message || 'Error'}` },
+            });
+          }
+        }
+
+        const data = buildWorkspacesEmbed(workspaces, activeWs?.id);
         return NextResponse.json({ type: 4, data });
       }
 
@@ -2633,7 +2920,12 @@ export async function POST(req: NextRequest) {
             const rawContent = resolved.content;
             const title = extractTitleSnippet(rawContent);
             try {
-              const newNote = await ApiResources.createNote(actor, { title, content: rawContent });
+              const activeWs = getDiscordActiveWorkspace(callerId);
+              const newNote = await ApiResources.createNote(actor, {
+                title,
+                content: rawContent,
+                ...(activeWs ? { projectId: activeWs.id, isWorkspace: true } : {}),
+              });
               const shareUrl = `${domainUrl}/idea/${encodeURIComponent(newNote.id)}`;
               return NextResponse.json({
                 type: 4,
