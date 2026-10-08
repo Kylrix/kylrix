@@ -90,9 +90,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setKylrixPulse(userObj as any);
 
           if (isOAuthSuccess) {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('auth');
-            window.history.replaceState({}, '', url.toString());
+            let target = '/app';
+            if (typeof document !== 'undefined') {
+              const match = document.cookie.match(/(?:^|; )kylrix_last_route=([^;]*)/);
+              if (match && match[1]) {
+                try {
+                  const decoded = decodeURIComponent(match[1]);
+                  if (
+                    decoded &&
+                    decoded !== '/' &&
+                    decoded !== '/landing' &&
+                    !decoded.startsWith('/login') &&
+                    !decoded.startsWith('/connect')
+                  ) {
+                    target = decoded;
+                  }
+                } catch {}
+              }
+            }
+            if (!pathname || pathname === '/' || pathname === '/landing' || pathname.startsWith('/login') || pathname.startsWith('/connect')) {
+              router.replace(target);
+            } else {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('auth');
+              window.history.replaceState({}, '', url.toString());
+            }
           }
 
           return userObj as any;
@@ -110,9 +132,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setKylrixPulse(appwriteUser);
 
           if (isOAuthSuccess) {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('auth');
-            window.history.replaceState({}, '', url.toString());
+            let target = '/app';
+            if (typeof document !== 'undefined') {
+              const match = document.cookie.match(/(?:^|; )kylrix_last_route=([^;]*)/);
+              if (match && match[1]) {
+                try {
+                  const decoded = decodeURIComponent(match[1]);
+                  if (
+                    decoded &&
+                    decoded !== '/' &&
+                    decoded !== '/landing' &&
+                    !decoded.startsWith('/login') &&
+                    !decoded.startsWith('/connect')
+                  ) {
+                    target = decoded;
+                  }
+                } catch {}
+              }
+            }
+            if (!pathname || pathname === '/' || pathname === '/landing' || pathname.startsWith('/login') || pathname.startsWith('/connect')) {
+              router.replace(target);
+            } else {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('auth');
+              window.history.replaceState({}, '', url.toString());
+            }
           }
 
           return appwriteUser as any;
@@ -327,9 +371,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (idmWindowRef.current && !idmWindowRef.current.closed) {
         idmWindowRef.current.close();
       }
-      idmWindowRef.current = null;
-      if (!pathname || pathname === '/' || pathname === '/landing') {
-        router.push('/app');
+      let target = '/app';
+      if (typeof document !== 'undefined') {
+        const match = document.cookie.match(/(?:^|; )kylrix_last_route=([^;]*)/);
+        if (match && match[1]) {
+          try {
+            const decoded = decodeURIComponent(match[1]);
+            if (
+              decoded &&
+              decoded !== '/' &&
+              decoded !== '/landing' &&
+              !decoded.startsWith('/login') &&
+              !decoded.startsWith('/connect')
+            ) {
+              target = decoded;
+            }
+          } catch {}
+        }
+      }
+      if (!pathname || pathname === '/' || pathname === '/landing' || pathname.startsWith('/login') || pathname.startsWith('/connect')) {
+        router.push(target);
       }
     };
 

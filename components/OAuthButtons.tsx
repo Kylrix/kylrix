@@ -84,12 +84,36 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
 
     const providerKey = String(provider).toLowerCase() as 'google' | 'github';
 
+    const getTargetRoute = () => {
+      let targetPath = '/app';
+      if (typeof document !== 'undefined') {
+        const match = document.cookie.match(/(?:^|; )kylrix_last_route=([^;]*)/);
+        if (match && match[1]) {
+          try {
+            const decoded = decodeURIComponent(match[1]);
+            if (
+              decoded &&
+              decoded !== '/' &&
+              decoded !== '/landing' &&
+              !decoded.startsWith('/login') &&
+              !decoded.startsWith('/connect')
+            ) {
+              targetPath = decoded;
+            }
+          } catch {}
+        }
+      }
+      return targetPath;
+    };
+
+    const targetRoute = getTargetRoute();
+
     // 1. Primary authentication via Better Auth
     try {
       const { authClient } = await import('@/lib/auth/better-auth-client');
       const res = await authClient.signIn.social({
         provider: providerKey,
-        callbackURL: `${window.location.origin}/?auth=success`,
+        callbackURL: `${window.location.origin}${targetRoute}?auth=success`,
       });
       if ((res as any)?.error) {
         throw new Error((res as any).error.message || 'Better Auth social login failed');
@@ -101,8 +125,8 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
 
     // 2. Secondary fallback via Appwrite
     try {
-      const success = `${window.location.origin}/?auth=success`;
-      const failure = `${window.location.origin}/?error=oauth_failed`;
+      const success = `${window.location.origin}${targetRoute}?auth=success`;
+      const failure = `${window.location.origin}${targetRoute}?error=oauth_failed`;
       await account.createOAuth2Session(
         provider,
         success,

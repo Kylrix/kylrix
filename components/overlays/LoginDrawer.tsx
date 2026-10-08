@@ -56,20 +56,28 @@ export function LoginDrawer() {
 
   const navigateToAppAfterAuth = useCallback(() => {
     close();
-    if (!pathname || pathname === '/' || pathname === '/landing') {
-      let target = '/app';
-      if (typeof document !== 'undefined') {
-        const match = document.cookie.match(/(?:^|; )kylrix_last_route=([^;]*)/);
-        if (match && match[1]) {
-          try {
-            const decoded = decodeURIComponent(match[1]);
-            if (decoded && decoded !== '/' && decoded !== '/landing' && !decoded.startsWith('/login') && !decoded.startsWith('/connect')) {
-              target = decoded;
-            }
-          } catch {}
-        }
+    let target = '/app';
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(/(?:^|; )kylrix_last_route=([^;]*)/);
+      if (match && match[1]) {
+        try {
+          const decoded = decodeURIComponent(match[1]);
+          if (
+            decoded &&
+            decoded !== '/' &&
+            decoded !== '/landing' &&
+            !decoded.startsWith('/login') &&
+            !decoded.startsWith('/connect')
+          ) {
+            target = decoded;
+          }
+        } catch {}
       }
+    }
+    if (!pathname || pathname === '/' || pathname === '/landing' || pathname.startsWith('/login') || pathname.startsWith('/connect')) {
       router.push(target);
+    } else {
+      router.refresh();
     }
   }, [close, pathname, router]);
 

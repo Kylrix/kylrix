@@ -178,27 +178,22 @@ export function middleware(request: NextRequest) {
   if (pathname === '/' || pathname === '') {
     const isSelfHosted = isSelfHostedDeployment();
 
-    if (isSelfHosted) {
-      // Self-host: no brand landing — still preserve ?ref= into attribution cookie
+    if (isSelfHosted || hasAuthSessionHint(request)) {
       const lastRoute = readResumePathFromCookie(request);
-      const target = (lastRoute && lastRoute.startsWith('/') && lastRoute !== '/')
+      const target = (lastRoute && lastRoute.startsWith('/') && lastRoute !== '/' && lastRoute !== '/landing')
         ? lastRoute
         : DEFAULT_AUTHENTICATED_ROUTE;
       return attachAttribution(NextResponse.redirect(new URL(target, request.url)));
     }
 
     if (ref) {
-      if (hasAuthSessionHint(request)) {
-        // Logged-in (new or existing): send to app to claim once
-        return attachAttribution(NextResponse.redirect(new URL('/app', request.url)));
-      }
       // Guest: landing + auth open; cookie persists for claim after sign-in
       const landingWithAuth = new URL('/', request.url);
       landingWithAuth.searchParams.set('auth', 'open');
       return attachAttribution(NextResponse.redirect(landingWithAuth));
     }
 
-    // Natural landing behavior: anyone who visits / stays on / without requiring ?stay
+    // Natural landing behavior: unauthenticated guests stay on /
   }
 
   // Handle deep link ?ref= query parameter stripping (URL hygiene)

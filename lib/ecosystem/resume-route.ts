@@ -1,47 +1,33 @@
 /** Shared resume-route rules (middleware-safe — no browser APIs). */
 
-const PUBLIC_PREFIXES = [
-  '/send',
-  '/i/',
-  '/app',
-  '/idea',
-  '/u/',
-  '/p/',
-  '/form/',
-  '/forms/',
-  '/events/',
-  '/goal/',
-  '/goals/',
-  '/agents/session/',
-  '/agents/chat/',
-  '/',
-  '/billing/',
-];
-
-const APP_PREFIXES = [
+const VALID_APP_PREFIXES = [
   '/app',
   '/vault',
   '/flows',
   '/goals',
+  '/goal',
   '/forms',
+  '/form',
   '/events',
   '/settings',
-  '/settings/agents',
   '/billing',
-  '/',
-  '/',
+  '/idea',
+  '/agents',
+  '/moment',
+  '/u/',
 ];
 
 export const LAST_ROUTE_COOKIE = 'kylrix_last_route';
 export const DEFAULT_AUTHENTICATED_ROUTE = '/app';
 
 export function isPublicResumePath(path: string): boolean {
-  if (!path || path === '/') return true;
-  return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
+  if (!path || path === '/' || path === '/landing') return true;
+  return path.startsWith('/send') || path.startsWith('/p/');
 }
 
 export function isValidAppResumePath(path: string): boolean {
-  if (!path || path === '/' || isPublicResumePath(path)) return false;
-  return APP_PREFIXES.some((prefix) => path.startsWith(prefix));
+  if (!path || path === '/' || path === '/landing' || path.startsWith('/login') || path.startsWith('/connect')) {
+    return false;
+  }
+  return VALID_APP_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
-
