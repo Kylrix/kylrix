@@ -192,6 +192,33 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
       }
     }
   } catch {
+    // fall through to Turso / prefs
+  }
+
+  // Check Turso SQLite subscriptions table
+  try {
+    const { db } = await import('@/lib/db');
+    const { subscriptions: subsTable } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    const tursoSub = await db
+      .select()
+      .from(subsTable)
+      .where(eq(subsTable.userId, userId))
+      .limit(1);
+    if (tursoSub && tursoSub.length > 0 && tursoSub[0].status === 'active') {
+      const tierUpper = String(tursoSub[0].tier || 'free').toUpperCase();
+      if (tierUpper !== 'FREE') {
+        const resTier = (tierUpper === 'PRO' || tierUpper === 'TEAMS' || tierUpper === 'LIFETIME' || tierUpper === 'CONTRIBUTOR')
+          ? (tierUpper as BillingUiTier)
+          : 'PRO';
+        ledgerTier = maxBillingUiTier(ledgerTier, resTier);
+        if (!ledgerExpiresAt) {
+          ledgerExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        }
+        ledgerSource = 'subscription_row';
+      }
+    }
+  } catch {
     // fall through to prefs
   }
 

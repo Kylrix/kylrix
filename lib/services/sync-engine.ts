@@ -176,11 +176,11 @@ let firstPendingTimestamp: number | null = null;
  * - When user pauses or triggers discrete actions (close, commit, blur): flush instantly (0ms).
  * - HARD_CEILING_MS forces opportunistic flush when changes have been pending.
  */
-const FLUSH_TYPING_DEBOUNCE_MS = 1500;
+const FLUSH_TYPING_DEBOUNCE_MS = 500;
 const FLUSH_DISCRETE_MS = 0;
-const HARD_CEILING_MS = 15000;
-const RETRY_BASE_MS = 500;
-const RETRY_MAX_MS = 15_000;
+const HARD_CEILING_MS = 2000;
+const RETRY_BASE_MS = 200;
+const RETRY_MAX_MS = 3_000;
 
 // Pre-warmed JWT — avoids 100-300ms createJWT per flush (kept warm in background)
 let cachedJwt: string | null = null;
@@ -1167,7 +1167,17 @@ export const autonomicSyncEngine = {
     const { hasAuthSessionHint, getCurrentUserSnapshot } = await import('@/lib/appwrite');
     const hasSession = hasAuthSessionHint();
     const activeUser = getCurrentUserSnapshot();
-    const activeUserId = activeUser?.$id || null;
+    let activeUserId = activeUser?.$id || (activeUser as any)?.id || null;
+
+    if (!activeUserId && typeof window !== 'undefined') {
+      try {
+        const { authClient } = await import('@/lib/auth/better-auth-client');
+        const session = (authClient as any)?.useSession?.get?.() || null;
+        if (session?.data?.user?.id) {
+          activeUserId = session.data.user.id;
+        }
+      } catch {}
+    }
 
     if (!hasSession && !activeUserId) {
       // No account — guest work stays local in RxDB.
@@ -1197,8 +1207,8 @@ export const autonomicSyncEngine = {
       });
 
       if (tasksToFlush.length > 0) {
-        // Micro-batch execution in chunks of 5 to preserve quota & handle parallel pushes cleanly
-        const chunkSize = 5;
+        // Parallel micro-batch execution in chunks of 10
+        const chunkSize = 10;
         for (let i = 0; i < tasksToFlush.length; i += chunkSize) {
           const chunk = tasksToFlush.slice(i, i + chunkSize);
           await Promise.allSettled(
