@@ -217,8 +217,24 @@ export function NoteDetailSidebar({
 
   const updateLocalAndParentNote = useCallback((updated: Notes) => {
     if (updated?.$id) {
-      pushLiveNote(updated, { pending: false });
-      void setCachedData(`note_${updated.$id}`, updated);
+      const existing = liveNoteRef.current;
+      const targetProjectId = (updated as any).projectId || (existing as any)?.projectId || undefined;
+      const isExplicitPersonal = targetProjectId === 'inbox' || targetProjectId === 'personal' || targetProjectId === 'default';
+      const isWorkspace = !isExplicitPersonal && (
+        (updated as any).isWorkspace === true ||
+        (existing as any)?.isWorkspace === true ||
+        Boolean(targetProjectId && !isExplicitPersonal)
+      );
+      const safeUpdated: Notes = {
+        ...existing,
+        ...updated,
+        projectId: isExplicitPersonal ? undefined : targetProjectId,
+        isWorkspace: isExplicitPersonal ? false : isWorkspace,
+      };
+      pushLiveNote(safeUpdated, { pending: false });
+      void setCachedData(`note_${safeUpdated.$id}`, safeUpdated);
+      onUpdate(safeUpdated);
+      return;
     }
     onUpdate(updated);
   }, [onUpdate, pushLiveNote, setCachedData]);

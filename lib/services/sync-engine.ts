@@ -939,11 +939,33 @@ export const autonomicSyncEngine = {
       try {
         if (kind === 'note') {
           const { getNote } = await import('@/lib/appwrite');
+          const { getLiveNoteForSync } = await import('@/lib/sync/pending-sync-bridge');
           const remote = await getNote(targetId).catch(() => null);
           if (remote && !this.isPending(targetId)) {
             sessionStorage.setItem(`freshness_${targetId}`, String(Date.now()));
-            LocalEngine.snapshotBaseline(targetId, remote);
-            if (onRefreshed) onRefreshed(remote);
+            const liveNote = getLiveNoteForSync(targetId);
+            const targetProjectId = (remote as any).projectId && (remote as any).projectId !== 'inbox' && (remote as any).projectId !== 'personal' && (remote as any).projectId !== 'default'
+              ? (remote as any).projectId
+              : ((liveNote as any)?.projectId || undefined);
+            const targetIsWorkspace = Boolean(
+              (targetProjectId && targetProjectId !== 'inbox' && targetProjectId !== 'default' && targetProjectId !== 'personal') ||
+              (remote as any).isWorkspace === true ||
+              ((remote as any).isWorkspace === undefined && (liveNote as any)?.isWorkspace === true)
+            );
+            const mergedNote = liveNote
+              ? {
+                  ...liveNote,
+                  ...remote,
+                  projectId: targetProjectId,
+                  isWorkspace: targetIsWorkspace,
+                }
+              : {
+                  ...remote,
+                  projectId: targetProjectId,
+                  isWorkspace: targetIsWorkspace,
+                };
+            LocalEngine.snapshotBaseline(targetId, mergedNote);
+            if (onRefreshed) onRefreshed(mergedNote);
           }
         } else if (kind === 'goal') {
           const { tasks: taskApi } = await import('@/lib/kylrixflow');

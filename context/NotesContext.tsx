@@ -133,7 +133,7 @@ const NotesContext = createContext<NotesContextType>({
   isUnpersistedComposeDraft: () => false,
 });
 
-function normalizeVisibility(note: Notes): Notes {
+function normalizeVisibility(note: Notes, existingNote?: Notes): Notes {
   const meta = (() => {
     try {
       return typeof note.metadata === 'string' ? JSON.parse(note.metadata) : (note.metadata || {});
@@ -141,17 +141,31 @@ function normalizeVisibility(note: Notes): Notes {
       return {};
     }
   })();
-  // Prefer real DB projectId; fall back to metadata for local drafts
-  const projectId = (note as any).projectId || meta.projectId || undefined;
+  const existingMeta = (() => {
+    try {
+      return existingNote && typeof existingNote.metadata === 'string' ? JSON.parse(existingNote.metadata) : (existingNote?.metadata || {});
+    } catch {
+      return {};
+    }
+  })();
+
+  // Prefer real DB projectId; fall back to metadata or existing item in cache
+  const projectId = (note as any).projectId || meta.projectId || (note as any).workspaceId || meta.workspaceId || (existingNote as any)?.projectId || existingMeta?.projectId || undefined;
   const isExplicitPersonal = projectId === 'inbox' || projectId === 'personal' || projectId === 'default';
   const isActualWorkspaceId = Boolean(projectId && !isExplicitPersonal);
-  // Respect DB/metadata isWorkspace flag or fallback to presence of actual workspace ID
-  const isWorkspace = !isExplicitPersonal && (note.isWorkspace === true || meta.isWorkspace === true || isActualWorkspaceId);
+  // Respect DB/metadata/existing isWorkspace flag or fallback to presence of actual workspace ID
+  const isWorkspace = !isExplicitPersonal && (
+    note.isWorkspace === true ||
+    meta.isWorkspace === true ||
+    (existingNote as any)?.isWorkspace === true ||
+    existingMeta?.isWorkspace === true ||
+    isActualWorkspaceId
+  );
   return {
     ...note,
     isPublic: getNotePublicState(note),
-    projectId,
-    isWorkspace,
+    projectId: isExplicitPersonal ? undefined : (projectId || undefined),
+    isWorkspace: isExplicitPersonal ? false : isWorkspace,
   } as Notes;
 }
 
@@ -625,12 +639,12 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const upsertNote = useCallback((note: Notes) => {
-    const normalized = normalizeVisibility(note);
     let added = false;
     setNotes((prev) => {
-      const existingIndex = prev.findIndex((n) => n.$id === normalized.$id);
-      if (existingIndex !== -1) {
-        const existing = prev[existingIndex];
+      const existingIndex = prev.findIndex((n) => n.$id === note.$id);
+      const existing = existingIndex !== -1 ? prev[existingIndex] : undefined;
+      const normalized = normalizeVisibility(note, existing);
+      if (existing) {
         if (
           existing.title === normalized.title &&
           existing.content === normalized.content &&

@@ -261,10 +261,23 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   React.useEffect(() => {
     if (task?.id) {
       autonomicSyncEngine.requestObjectFreshness('goal', task.id, (refreshedGoal) => {
-        pushLiveGoal(refreshedGoal, { pending: false });
+        const existing = task;
+        const targetProjectId = (refreshedGoal as any)?.projectId || existing?.projectId || undefined;
+        const isExplicitPersonal = targetProjectId === 'inbox' || targetProjectId === 'personal' || targetProjectId === 'default';
+        const isWorkspace = !isExplicitPersonal && (
+          (refreshedGoal as any)?.isWorkspace === true ||
+          existing?.isWorkspace === true ||
+          Boolean(targetProjectId && !isExplicitPersonal)
+        );
+        pushLiveGoal({
+          ...existing,
+          ...refreshedGoal,
+          projectId: isExplicitPersonal ? 'inbox' : (targetProjectId || 'inbox'),
+          isWorkspace: isExplicitPersonal ? false : isWorkspace,
+        }, { pending: false });
       });
     }
-  }, [task?.id, pushLiveGoal]);
+  }, [task, pushLiveGoal]);
 
   const handleInitDiscussion = async () => {
     if (!task) return;
