@@ -158,7 +158,7 @@ export async function checkTelegramConnection(jwt?: string) {
     // 1. Primary Check in Turso
     try {
       const { db } = await import('@/lib/db');
-      const { schema } = await import('@/lib/db');
+      const schema = await import('@/lib/db/schema');
       const { eq } = await import('drizzle-orm');
       const tursoRows = await db
         .select()

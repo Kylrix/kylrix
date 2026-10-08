@@ -36,7 +36,8 @@ export async function getPublicFormDataSecure(formId: string) {
 
   // 1. Check Turso first
   try {
-    const { db, schema } = await import('@/lib/db');
+    const { db } = await import('@/lib/db');
+    const schema = await import('@/lib/db/schema');
     const { eq } = await import('drizzle-orm');
     const tursoRows = await db
       .select()
@@ -50,13 +51,13 @@ export async function getPublicFormDataSecure(formId: string) {
         $id: tr.id,
         id: tr.id,
         userId: tr.userId,
-        status: tr.isPublished ? 'published' : 'draft',
+        status: tr.status || 'draft',
         title: tr.title,
         description: tr.description,
-        schema: tr.fields,
+        schema: tr.schema,
         settings: tr.settings,
-        isPublic: Boolean(tr.isPublished),
-        isGuest: true,
+        isPublic: Boolean(tr.isPublic),
+        isGuest: Boolean(tr.isGuest),
         $createdAt: tr.createdAt,
         $updatedAt: tr.updatedAt,
       };

@@ -481,11 +481,13 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     await upsertSubscriptionTurso({
       id: subscription.$id,
       userId: user.$id,
-      plan: planTier,
       tier: planTier,
       status: 'active',
-      currentPeriodStart: currentPeriodStart.toISOString(),
-      currentPeriodEnd: effectivePeriodEnd.toISOString(),
+      metadata: JSON.stringify({
+        plan: planTier,
+        currentPeriodStart: currentPeriodStart.toISOString(),
+        currentPeriodEnd: effectivePeriodEnd.toISOString(),
+      }),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
