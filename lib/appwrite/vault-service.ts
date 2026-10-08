@@ -538,6 +538,7 @@ export class VaultService {
       const arr = Array.isArray(prev) ? prev : [];
       const next = this.dedupeRowsById([row, ...arr.filter((r) => r && (r.$id || r.id) !== row.$id)]);
       await LocalEngine.cacheSet(listKey, next);
+      LocalEngine.broadcastRealtime('credentials', row as any, userId);
     } catch {
       /* offline / first run */
     }
@@ -552,6 +553,7 @@ export class VaultService {
       const arr = Array.isArray(prev) ? prev : [];
       const next = this.dedupeRowsById([row, ...arr.filter((r) => r && (r.$id || r.id) !== row.$id)]);
       await LocalEngine.cacheSet(listKey, next);
+      LocalEngine.broadcastRealtime('totp', row as any, userId);
     } catch {
       /* offline / first run */
     }

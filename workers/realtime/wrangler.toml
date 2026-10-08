@@ -1,0 +1,17 @@
+name = "kylrix-realtime"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+routes = [
+  { pattern = "realtime.kylrix.space/*", zone_name = "kylrix.space" }
+]
+
+[durable_objects]
+bindings = [
+  { name = "REALTIME_ROOM", class_name = "KylrixRealtimeRoom" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["KylrixRealtimeRoom"]

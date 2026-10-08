@@ -303,6 +303,7 @@ export const LocalEngine = {
   /** Instant toggle: write local immediately, sync to Appwrite in background, revert on failure */
   async instantWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
     await this.cacheSet(cacheKey, data);
+    this.broadcastRealtime(cacheKey, data);
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data } }));
     if (!isDogfoodSafetyActive()) {
       void (async () => {
@@ -320,6 +321,7 @@ export const LocalEngine = {
   /** Lazy write: local immediately, debounced sync (800ms) */
   async lazyWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
     await this.cacheSet(cacheKey, data);
+    this.broadcastRealtime(cacheKey, data);
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data } }));
     if (!isDogfoodSafetyActive()) {
       setTimeout(async () => {
@@ -332,6 +334,7 @@ export const LocalEngine = {
   /** Batched write: queue and flush every 2s or 10 items — for high activity */
   async batchedWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
     await this.cacheSet(cacheKey, data);
+    this.broadcastRealtime(cacheKey, data);
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data } }));
     batchQueue.set(cacheKey, { data, mutator: async () => { const jwt = await getFreshJWT(); return mutator(jwt); }, ts: Date.now() });
     if (batchQueue.size >= 10) {
@@ -340,6 +343,28 @@ export const LocalEngine = {
       for (const [, { mutator: m }] of entries) { try { await m(); } catch (e) { console.warn('[LocalEngine batch] failed', e); } }
     } else scheduleBatchFlush();
     return data;
+  },
+
+  /** Broadcast a realtime event across devices for this user/workspace via Cloudflare Durable Objects */
+  broadcastRealtime(channel: string, payload: any, userId?: string): void {
+    if (typeof window === 'undefined' || !payload) return;
+    try {
+      const { realtimeRelay } = require('@/lib/realtime/client');
+      const { getCurrentUserSnapshot } = require('@/lib/appwrite/client');
+      const u = getCurrentUserSnapshot();
+      const uid = userId || payload.userId || payload.creatorId || u?.$id || (u as any)?.id;
+      if (uid && uid !== 'guest') {
+        const isDelete = payload.isDeleted === true || payload.isTrash === true;
+        realtimeRelay.broadcastToUser(uid, {
+          type: isDelete ? 'delete' : 'mutation',
+          channel,
+          id: payload.$id || payload.id,
+          data: payload,
+          userId: uid,
+          projectId: payload.projectId || payload.workspaceId,
+        });
+      }
+    } catch {}
   },
 
   /** Subscribe to Realtime events for a channel and pipe to local cache */
@@ -351,6 +376,56 @@ export const LocalEngine = {
       existing.refCount++;
       return () => { existing.refCount--; if (existing.refCount <= 0) { existing.unsubscribe(); realtimeSubs.delete(channel); } };
     }
+
+    let unsubRelay: (() => void) | null = null;
+    try {
+      const { realtimeRelay } = require('@/lib/realtime/client');
+      const { getCurrentUserSnapshot } = require('@/lib/appwrite/client');
+      const u = getCurrentUserSnapshot();
+      const uid = u?.$id || (u as any)?.id;
+      if (uid && uid !== 'guest') {
+        realtimeRelay.init(uid);
+        unsubRelay = realtimeRelay.subscribe(`user-${uid}`, async (msg) => {
+          try {
+            if (!msg) return;
+            const msgChannel = String(msg.channel || '');
+            const targetChannel = String(channel || '');
+            const isMatch =
+              msgChannel === targetChannel ||
+              msgChannel.includes(targetChannel) ||
+              targetChannel.includes(msgChannel) ||
+              (msg.kind && targetChannel.toLowerCase().includes(String(msg.kind).toLowerCase()));
+
+            if (!isMatch && msgChannel) return;
+
+            const doc = msg.data || { $id: msg.id, id: msg.id };
+            const docId = msg.id || doc.$id || doc.id;
+            if (!docId) return;
+            const cacheKey = `${channel}:${docId}`;
+            const isDelete = msg.type === 'delete' || doc.isTrash === true || doc.isDeleted === true;
+
+            if (isDelete) {
+              await this.cacheDelete(cacheKey);
+              await this.cacheDelete(`note_${docId}`);
+              await this.cacheDelete(`goal_${docId}`);
+              await this.cacheDelete(docId);
+              if (typeof window !== 'undefined') {
+                delete (window as any)[`__kylrix_baseline_${docId}`];
+                window.dispatchEvent(new CustomEvent('kylrix:nexus:delete', { detail: { key: cacheKey, id: docId } }));
+              }
+            } else {
+              await this.cacheSet(cacheKey, doc);
+              LocalEngine.snapshotBaseline(docId, doc);
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data: doc } }));
+              }
+            }
+            if (handler) handler(doc);
+          } catch {}
+        });
+      }
+    } catch {}
+
     try {
       const unsubscribe = client.subscribe(channel, async (event: any) => {
         try {
@@ -379,10 +454,18 @@ export const LocalEngine = {
           } else if (handler) handler(event);
         } catch {}
       });
-      const entry = { unsubscribe: unsubscribe as unknown as () => void, refCount: 1 };
+      const entry = {
+        unsubscribe: () => {
+          if (typeof unsubscribe === 'function') unsubscribe();
+          if (unsubRelay) unsubRelay();
+        },
+        refCount: 1,
+      };
       realtimeSubs.set(channel, entry);
       return () => { entry.refCount--; if (entry.refCount <= 0) { entry.unsubscribe(); realtimeSubs.delete(channel); } };
-    } catch { return () => {}; }
+    } catch {
+      return () => { if (unsubRelay) unsubRelay(); };
+    }
   },
 
   /** Unified query: RxDB first, coalesced network fetch with revalidation throttle — UI never calls Appwrite directly */
@@ -514,8 +597,10 @@ export const LocalEngine = {
   async create<T extends Models.Row>(kind: string, data: Record<string, any>): Promise<T> {
     const { unifiedCreate } = await import('./unified-object-service');
     const row = await unifiedCreate<T>(kind, data);
-    // optimistic cache
-    await this.cacheSet(`local:${kind}:${(row as any).$id || (row as any).id}`, row as any);
+    // optimistic cache & live broadcast
+    const rowId = (row as any).$id || (row as any).id;
+    await this.cacheSet(`local:${kind}:${rowId}`, row as any);
+    this.broadcastRealtime(`local:${kind}:${rowId}`, row as any);
     return row;
   },
 
@@ -523,6 +608,7 @@ export const LocalEngine = {
     const { unifiedUpdate } = await import('./unified-object-service');
     const row = await unifiedUpdate<T>(kind, id, data);
     await this.cacheSet(`local:${kind}:${id}`, row as any);
+    this.broadcastRealtime(`local:${kind}:${id}`, row as any);
     return row;
   },
 
@@ -530,6 +616,7 @@ export const LocalEngine = {
     const { unifiedDelete } = await import('./unified-object-service');
     await unifiedDelete(kind, id, opts);
     await this.cacheDelete(`local:${kind}:${id}`);
+    this.broadcastRealtime(`local:${kind}:${id}`, { id, isDeleted: true });
   },
 
   async systemCreate<T extends Models.Row>(kind: string, data: Record<string, any>): Promise<T> {
