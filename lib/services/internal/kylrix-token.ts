@@ -346,17 +346,6 @@ async function getRecentSystemVolume(windowMinutes: number) {
   return rows?.length ?? 0;
 }
 
-async function ensureNoDuplicateIdempotency(idempotencyKey: string) {
-  const { rows } = await ledgerTables().listRows({
-    databaseId: DB_ID,
-    tableId: TABLE_ID,
-    queries: [
-      Query.equal('rowType', 'event'),
-      Query.equal('idempotencyKey', idempotencyKey),
-      Query.limit(1)]});
-  return rows?.[0] || null;
-}
-
 async function appendEvent(input: {
   txId: string;
   idempotencyKey: string;
@@ -373,6 +362,23 @@ async function appendEvent(input: {
 }) {
   const createdAt = nowIso();
   const rowId = ID.unique();
+
+  // Check idempotency in Turso SQLite
+  try {
+    const { db } = await import('@/lib/db');
+    const { kylrixTokenLedger } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    const existing = await db
+      .select({ id: kylrixTokenLedger.id })
+      .from(kylrixTokenLedger)
+      .where(eq(kylrixTokenLedger.idempotencyKey, input.idempotencyKey))
+      .limit(1);
+    if (existing && existing.length > 0) {
+      throw new Error('IDEMPOTENCY_CONFLICT');
+    }
+  } catch (err: any) {
+    if (err?.message === 'IDEMPOTENCY_CONFLICT') throw err;
+  }
 
   // 1. Insert into Turso SQLite
   try {
