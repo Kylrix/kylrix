@@ -3,6 +3,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Close as CloseIcon } from './icons';
+import { Identicon } from '@/components/Identicon';
 
 const OPENBRICKS_TOKENS = {
   shell: '#000000',
@@ -1004,7 +1005,7 @@ export const Avatar = ({ src, alt, children, className, sx, variant, ...props }:
       style={cleanSx(sx)}
       {...props}
     >
-      {src ? <img src={src} alt={alt} className="w-full h-full object-cover" /> : children || alt?.[0]?.toUpperCase()}
+      {src ? <img src={src} alt={alt} className="w-full h-full object-cover" /> : children || <Identicon seed={alt || 'kylrix'} size={40} className="w-full h-full" />}
     </div>
   );
 };

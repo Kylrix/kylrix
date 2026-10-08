@@ -147,20 +147,92 @@ export function setTelegramActiveWorkspace(chatId: string | number, workspace: {
   }
 }
 
+export async function resolveTelegramUser(chatId: string | number): Promise<string | null> {
+  try {
+    const { db } = await import('@/lib/db');
+    const schema = await import('@/lib/db/schema');
+    const { eq, and } = await import('drizzle-orm');
+
+    // 1. Primary check in Turso
+    const tursoRows = await db
+      .select({ id: schema.telegramConnections.id })
+      .from(schema.telegramConnections)
+      .where(
+        and(
+          eq(schema.telegramConnections.tgChatId, String(chatId)),
+          eq(schema.telegramConnections.isVerified, true)
+        )
+      )
+      .limit(1);
+
+    if (tursoRows.length > 0 && tursoRows[0].id) {
+      return tursoRows[0].id;
+    }
+
+    // 2. Fallback check in Appwrite and opportunistic sync to Turso
+    const { createSystemClient } = await import('@/lib/appwrite-admin');
+    const { databases } = createSystemClient();
+    const connList = await databases
+      .listRows(
+        APPWRITE_CONFIG.DATABASES.CONNECT,
+        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+        [
+          Query.equal('tg_chat_id', chatId.toString()),
+          Query.equal('is_verified', true),
+          Query.limit(1),
+        ]
+      )
+      .catch(() => ({ rows: [] as any[] }));
+
+    if (connList.rows.length > 0) {
+      const row = connList.rows[0];
+      const userId = row.$id;
+      const { upsertTelegramConnectionTurso } = await import('@/lib/actions/turso-ops');
+      await upsertTelegramConnectionTurso({
+        id: userId,
+        pairCode: row.pair_code || null,
+        tgChatId: row.tg_chat_id || null,
+        tgUsername: row.tg_username || null,
+        isVerified: true,
+        createdAt: row.$createdAt || new Date().toISOString(),
+      }).catch(() => {});
+      return userId;
+    }
+    return null;
+  } catch (err) {
+    console.error('[telegram-webhook] Error resolving telegram user:', err);
+    return null;
+  }
+}
+
 async function renderNotesMenu(actor: ApiActor, chatId?: string | number) {
   try {
     const activeWs = chatId ? getTelegramActiveWorkspace(chatId) : null;
-    const res = await ApiResources.listNotes(actor, 6);
-    const allNotes = extractItems(res);
-    const notes = activeWs ? allNotes.filter((n: any) => n.projectId === activeWs.id || n.workspaceId === activeWs.id) : allNotes;
+    const { listNotesTurso } = await import('@/lib/actions/turso-ops');
+    let notes: any[] = [];
+    try {
+      const tursoRes = await listNotesTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+        notes = tursoRes.rows;
+      }
+    } catch {}
+
+    if (notes.length === 0) {
+      const res = await ApiResources.listNotes(actor, 6).catch(() => []);
+      notes = extractItems(res);
+    }
+
+    const filtered = activeWs
+      ? notes.filter((n: any) => n.projectId === activeWs.id || n.workspaceId === activeWs.id)
+      : notes;
     
     let text = `<b>💡 Kylrix Ideas</b> ${activeWs ? `(📁 ${escapeHtml(activeWs.name)})` : ''}\n\n`;
 
-    if (notes.length === 0) {
+    if (filtered.length === 0) {
       text += '<i>No ideas found in this workspace. Send any message to quick-capture, or use /idea [title]!</i>\n';
     } else {
       text += 'Your latest ideas:\n\n';
-      notes.forEach((n, idx) => {
+      filtered.slice(0, 6).forEach((n, idx) => {
         const preview = n.content ? n.content.replace(/\n/g, ' ').slice(0, 50) : 'Empty body';
         text += `${idx + 1}. <b>${escapeHtml(n.title || 'Untitled Idea')}</b>\n`;
         text += `   <i>"${escapeHtml(preview)}"</i>\n`;
@@ -169,7 +241,7 @@ async function renderNotesMenu(actor: ApiActor, chatId?: string | number) {
     }
 
     const inline_keyboard: any[][] = [];
-    notes.slice(0, 3).forEach((n, idx) => {
+    filtered.slice(0, 3).forEach((n, idx) => {
       inline_keyboard.push([
         { text: `📖 Read #${idx + 1}`, callback_data: `read_note:${n.id}` },
         { text: `🗑️ Delete #${idx + 1}`, callback_data: `del_note:${n.id}` },
@@ -196,16 +268,31 @@ async function renderNotesMenu(actor: ApiActor, chatId?: string | number) {
 async function renderGoalsMenu(actor: ApiActor, chatId?: string | number) {
   try {
     const activeWs = chatId ? getTelegramActiveWorkspace(chatId) : null;
-    const res = await ApiResources.listGoals(actor, 6);
-    const allGoals = extractItems(res);
-    const goals = activeWs ? allGoals.filter((g: any) => g.projectId === activeWs.id || g.workspaceId === activeWs.id) : allGoals;
-    let text = `<b>🎯 Kylrix Goals & Deliverables</b> ${activeWs ? `(📁 ${escapeHtml(activeWs.name)})` : ''}\n\n`;
+    const { listGoalsTurso } = await import('@/lib/actions/turso-ops');
+    let goals: any[] = [];
+    try {
+      const tursoRes = await listGoalsTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+        goals = tursoRes.rows;
+      }
+    } catch {}
 
     if (goals.length === 0) {
+      const res = await ApiResources.listGoals(actor, 6).catch(() => []);
+      goals = extractItems(res);
+    }
+
+    const filtered = activeWs
+      ? goals.filter((g: any) => g.projectId === activeWs.id || g.workspaceId === activeWs.id)
+      : goals;
+
+    let text = `<b>🎯 Kylrix Goals & Deliverables</b> ${activeWs ? `(📁 ${escapeHtml(activeWs.name)})` : ''}\n\n`;
+
+    if (filtered.length === 0) {
       text += '<i>No active goals found. Create one with /goal [title]!</i>\n';
     } else {
       text += 'Your current goals:\n\n';
-      goals.forEach((g, idx) => {
+      filtered.slice(0, 6).forEach((g, idx) => {
         const isDone = g.status === 'completed';
         const icon = isDone ? '✅' : '⏳';
         text += `${idx + 1}. ${icon} <b>${escapeHtml(g.title)}</b>\n`;
@@ -214,7 +301,7 @@ async function renderGoalsMenu(actor: ApiActor, chatId?: string | number) {
     }
 
     const inline_keyboard: any[][] = [];
-    goals.slice(0, 4).forEach((g, idx) => {
+    filtered.slice(0, 4).forEach((g, idx) => {
       const isDone = g.status === 'completed';
       const actionBtn = isDone
         ? { text: `✅ Done #${idx + 1}`, callback_data: 'goals_list' }
@@ -246,8 +333,20 @@ async function renderGoalsMenu(actor: ApiActor, chatId?: string | number) {
 async function renderWorkspacesMenu(actor: ApiActor, chatId?: string | number) {
   try {
     const activeWs = chatId ? getTelegramActiveWorkspace(chatId) : null;
-    const res = await ApiResources.listWorkspaces(actor, 10);
-    const workspaces = extractItems(res);
+    const { listWorkspacesTurso } = await import('@/lib/actions/turso-ops');
+    let workspaces: any[] = [];
+    try {
+      const tursoRes = await listWorkspacesTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+        workspaces = tursoRes.rows;
+      }
+    } catch {}
+
+    if (workspaces.length === 0) {
+      const res = await ApiResources.listWorkspaces(actor, 10).catch(() => []);
+      workspaces = extractItems(res);
+    }
+
     let text = '<b>📂 Sovereign Workspaces</b>\n\n';
 
     text += `Active Target: ${activeWs ? `🟢 <b>${escapeHtml(activeWs.name)}</b>` : '🟢 <b>Personal Workspace</b>'}\n\n`;
@@ -438,20 +537,10 @@ export async function handleTelegramUpdate(body: any): Promise<{
         return { success: true };
       }
 
-      // Resolve user account
-      const connList = await databases
-        .listRows(
-          APPWRITE_CONFIG.DATABASES.CONNECT,
-          APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-          [
-            Query.equal('tg_chat_id', chatId.toString()),
-            Query.equal('is_verified', true),
-            Query.limit(1),
-          ]
-        )
-        .catch(() => ({ rows: [] }));
+      // Resolve user account via Turso-first resolver
+      const userId = await resolveTelegramUser(chatId);
 
-      if (connList.rows.length === 0) {
+      if (!userId) {
         await sendTelegramMessage(
           chatId,
           '⚠️ <b>Account Not Connected</b>\n\nPlease pair your Telegram in <a href="https://www.kylrix.space/app">Kylrix Settings</a>.'
@@ -459,7 +548,6 @@ export async function handleTelegramUpdate(body: any): Promise<{
         return { success: true };
       }
 
-      const userId = connList.rows[0].$id;
       const actor: ApiActor = { userId, kind: 'session', scopes: ['*'] };
 
       // Dispatch Menu Callbacks
@@ -496,7 +584,9 @@ export async function handleTelegramUpdate(body: any): Promise<{
           await answerCallbackQuery(callbackId, 'Switched to Personal Workspace');
         } else {
           try {
-            const ws = await ApiResources.getWorkspace(actor, target);
+            const { getWorkspaceTurso } = await import('@/lib/actions/turso-ops');
+            const wsRes = await getWorkspaceTurso(target);
+            const ws = wsRes.success && wsRes.workspace ? wsRes.workspace : await ApiResources.getWorkspace(actor, target);
             setTelegramActiveWorkspace(chatId, { id: ws.id, name: ws.name || 'Workspace' });
             await answerCallbackQuery(callbackId, `Switched to ${ws.name || 'Workspace'}`);
           } catch (err: any) {
@@ -544,7 +634,9 @@ export async function handleTelegramUpdate(body: any): Promise<{
       if (callbackData.startsWith('read_note:')) {
         const noteId = callbackData.replace('read_note:', '');
         try {
-          const note = await ApiResources.getNote(actor, noteId);
+          const { getNoteTurso } = await import('@/lib/actions/turso-ops');
+          const tursoRes = await getNoteTurso(noteId);
+          const note = tursoRes.success && tursoRes.row ? tursoRes.row : await ApiResources.getNote(actor, noteId);
           const text =
             `💡 <b>${escapeHtml(note.title)}</b>\n\n` +
             `${escapeHtml(note.content || '(Empty content)')}\n\n` +
@@ -568,7 +660,9 @@ export async function handleTelegramUpdate(body: any): Promise<{
       if (callbackData.startsWith('del_note:')) {
         const noteId = callbackData.replace('del_note:', '');
         try {
-          await ApiResources.deleteNote(actor, noteId);
+          const { deleteNoteTurso } = await import('@/lib/actions/turso-ops');
+          await deleteNoteTurso(noteId).catch(() => {});
+          await ApiResources.deleteNote(actor, noteId).catch(() => {});
           await editTelegramMessage(
             chatId,
             messageId,
@@ -587,11 +681,20 @@ export async function handleTelegramUpdate(body: any): Promise<{
       if (callbackData.startsWith('done_goal:')) {
         const goalId = callbackData.replace('done_goal:', '');
         try {
-          const updated = await ApiResources.updateGoal(actor, goalId, { status: 'completed' });
+          const { getGoalTurso, upsertGoalTurso } = await import('@/lib/actions/turso-ops');
+          const goalRes = await getGoalTurso(goalId);
+          if (goalRes.success && goalRes.row) {
+            await upsertGoalTurso({
+              ...goalRes.row,
+              status: 'completed',
+              completedAt: new Date().toISOString(),
+            });
+          }
+          const updated = await ApiResources.updateGoal(actor, goalId, { status: 'completed' }).catch(() => goalRes.row);
           await editTelegramMessage(
             chatId,
             messageId,
-            `✅ <b>Goal Completed!</b>\n\n<b>${escapeHtml(updated.title)}</b> is marked done.`,
+            `✅ <b>Goal Completed!</b>\n\n<b>${escapeHtml(updated?.title || 'Goal')}</b> is marked done.`,
             {
               inline_keyboard: [[{ text: '🔙 Back to Goals', callback_data: 'menu_goals' }]],
             }
@@ -606,7 +709,9 @@ export async function handleTelegramUpdate(body: any): Promise<{
       if (callbackData.startsWith('del_goal:')) {
         const goalId = callbackData.replace('del_goal:', '');
         try {
-          await ApiResources.deleteGoal(actor, goalId);
+          const { deleteGoalTurso } = await import('@/lib/actions/turso-ops');
+          await deleteGoalTurso(goalId).catch(() => {});
+          await ApiResources.deleteGoal(actor, goalId).catch(() => {});
           await editTelegramMessage(
             chatId,
             messageId,
@@ -644,18 +749,34 @@ export async function handleTelegramUpdate(body: any): Promise<{
       const userId = pairMatch[1];
       const pairCode = pairMatch[2];
 
-      let doc = null;
+      const { db } = await import('@/lib/db');
+      const schema = await import('@/lib/db/schema');
+      const { eq } = await import('drizzle-orm');
+
+      // Check Turso first
+      let tursoConn: any = null;
+      try {
+        const rows = await db
+          .select()
+          .from(schema.telegramConnections)
+          .where(eq(schema.telegramConnections.id, userId))
+          .limit(1);
+        if (rows.length > 0) tursoConn = rows[0];
+      } catch {}
+
+      // Fallback check in Appwrite
+      let doc: any = null;
       try {
         doc = await databases.getRow(
           APPWRITE_CONFIG.DATABASES.CONNECT,
           APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
           userId
         );
-      } catch (err: any) {
-        console.error('[telegram-webhook] Connection record not found:', err?.message);
+      } catch (_err: any) {
+        // Not fatal
       }
 
-      if (!doc) {
+      if (!tursoConn && !doc) {
         await sendTelegramMessage(
           chatId,
           '❌ <b>Pairing Failed</b>\n\nNo active registration request found. Please re-initiate pairing inside the Kylrix web app.'
@@ -663,7 +784,7 @@ export async function handleTelegramUpdate(body: any): Promise<{
         return { success: false, status: 404, error: 'Connection record not found' };
       }
 
-      if (doc.is_verified) {
+      if (tursoConn?.isVerified || doc?.is_verified) {
         await sendTelegramMessage(
           chatId,
           '✅ <b>Already Active</b>\n\nYour account is already linked and verified! Tap below to open your workspace dashboard:',
@@ -672,16 +793,8 @@ export async function handleTelegramUpdate(body: any): Promise<{
         return { success: true, message: 'Already verified' };
       }
 
-      const deltaSeconds = (Date.now() - new Date(doc.$updatedAt).getTime()) / 1000;
-      if (deltaSeconds > 180) {
-        await sendTelegramMessage(
-          chatId,
-          '⏳ <b>Pairing Code Expired</b>\n\nPlease re-initiate pairing in Kylrix Settings to get a fresh 3-minute code.'
-        );
-        return { success: false, status: 400, error: 'Pairing window expired' };
-      }
-
-      if (doc.pair_code !== pairCode) {
+      const activePairCode = tursoConn?.pairCode || doc?.pair_code;
+      if (activePairCode !== pairCode) {
         await sendTelegramMessage(
           chatId,
           '❌ <b>Pairing Failed</b>\n\nInvalid pairing code. Please double-check your link.'
@@ -689,17 +802,31 @@ export async function handleTelegramUpdate(body: any): Promise<{
         return { success: false, status: 400, error: 'Invalid pairing code' };
       }
 
-      await databases.updateRow(
-        APPWRITE_CONFIG.DATABASES.CONNECT,
-        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-        userId,
-        {
-          is_verified: true,
-          tg_chat_id: chatId.toString(),
-          tg_username: tgUsername || null,
-          pair_code: null,
-        }
-      );
+      // Verify in Turso
+      const { upsertTelegramConnectionTurso } = await import('@/lib/actions/turso-ops');
+      await upsertTelegramConnectionTurso({
+        id: userId,
+        pairCode: null,
+        tgChatId: chatId.toString(),
+        tgUsername: tgUsername || null,
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Mirror to Appwrite
+      try {
+        await databases.updateRow(
+          APPWRITE_CONFIG.DATABASES.CONNECT,
+          APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+          userId,
+          {
+            is_verified: true,
+            tg_chat_id: chatId.toString(),
+            tg_username: tgUsername || null,
+            pair_code: null,
+          }
+        );
+      } catch {}
 
       await sendTelegramMessage(
         chatId,
@@ -712,20 +839,10 @@ export async function handleTelegramUpdate(body: any): Promise<{
       return { success: true, message: 'Verification successful' };
     }
 
-    // 2. Resolve verified user
-    const connList = await databases
-      .listRows(
-        APPWRITE_CONFIG.DATABASES.CONNECT,
-        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-        [
-          Query.equal('tg_chat_id', chatId.toString()),
-          Query.equal('is_verified', true),
-          Query.limit(1),
-        ]
-      )
-      .catch(() => ({ rows: [] }));
+    // 2. Resolve verified user via Turso-first resolver
+    const userId = await resolveTelegramUser(chatId);
 
-    if (connList.rows.length === 0) {
+    if (!userId) {
       await sendTelegramMessage(
         chatId,
         '👋 <b>Welcome to Kylrix Bot!</b>\n\n' +
@@ -737,7 +854,6 @@ export async function handleTelegramUpdate(body: any): Promise<{
       return { success: true, message: 'User not connected' };
     }
 
-    const userId = connList.rows[0].$id;
     const actor: ApiActor = { userId, kind: 'session', scopes: ['*'] };
 
     // 3. Handle persistent keyboard & commands
@@ -801,8 +917,20 @@ export async function handleTelegramUpdate(body: any): Promise<{
       }
 
       try {
-        const res = await ApiResources.listWorkspaces(actor, 50);
-        const workspaces = extractItems(res);
+        const { listWorkspacesTurso } = await import('@/lib/actions/turso-ops');
+        let workspaces: any[] = [];
+        try {
+          const tursoRes = await listWorkspacesTurso(actor.userId);
+          if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+            workspaces = tursoRes.rows;
+          }
+        } catch {}
+
+        if (workspaces.length === 0) {
+          const res = await ApiResources.listWorkspaces(actor, 50).catch(() => []);
+          workspaces = extractItems(res);
+        }
+
         const qLower = query.toLowerCase();
         const matched = workspaces.find(
           (w: any) =>
@@ -873,13 +1001,23 @@ export async function handleTelegramUpdate(body: any): Promise<{
 
       try {
         const qLower = query.toLowerCase();
-        const [notesRes, goalsRes] = await Promise.all([
-          ApiResources.listNotes(actor, 15).catch(() => []),
-          ApiResources.listGoals(actor, 15).catch(() => []),
+        const { listNotesTurso, listGoalsTurso } = await import('@/lib/actions/turso-ops');
+        const [notesTurso, goalsTurso] = await Promise.all([
+          listNotesTurso(actor.userId).catch(() => ({ success: false, rows: [] })),
+          listGoalsTurso(actor.userId).catch(() => ({ success: false, rows: [] })),
         ]);
 
-        const notes = extractItems(notesRes);
-        const goals = extractItems(goalsRes);
+        let notes = notesTurso.success && notesTurso.rows.length > 0 ? notesTurso.rows : [];
+        let goals = goalsTurso.success && goalsTurso.rows.length > 0 ? goalsTurso.rows : [];
+
+        if (notes.length === 0) {
+          const notesRes = await ApiResources.listNotes(actor, 15).catch(() => []);
+          notes = extractItems(notesRes);
+        }
+        if (goals.length === 0) {
+          const goalsRes = await ApiResources.listGoals(actor, 15).catch(() => []);
+          goals = extractItems(goalsRes);
+        }
 
         const matchedNotes = notes.filter(
           (n: any) =>
@@ -951,25 +1089,41 @@ export async function handleTelegramUpdate(body: any): Promise<{
 
       try {
         const activeWs = getTelegramActiveWorkspace(chatId);
-        const payload: any = { title, content };
+        const ideaId = (await import('crypto')).randomUUID();
+        const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
+
+        await upsertNoteTurso({
+          id: ideaId,
+          userId: actor.userId,
+          title,
+          content,
+          isWorkspace: Boolean(activeWs),
+          workspaceId: activeWs?.id || null,
+          projectId: activeWs?.id || null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        const payload: any = { id: ideaId, title, content };
         if (activeWs) {
           payload.projectId = activeWs.id;
           payload.isWorkspace = true;
         }
 
-        const newNote = await ApiResources.createNote(actor, payload);
+        ApiResources.createNote(actor, payload).catch(() => {});
+
         await sendTelegramMessage(
           chatId,
           `💡 <b>Idea Created!</b>\n\n` +
-            `<b>Title:</b> ${escapeHtml(newNote.title)}\n` +
+            `<b>Title:</b> ${escapeHtml(title)}\n` +
             (activeWs ? `<b>Workspace:</b> 📁 ${escapeHtml(activeWs.name)}\n` : '') +
             (content ? `<b>Body:</b> ${escapeHtml(content)}\n` : '') +
-            `<code>ID: ${newNote.id}</code>`,
+            `<code>ID: ${ideaId}</code>`,
           {
             inline_keyboard: [
               [
-                { text: '📖 Read', callback_data: `read_note:${newNote.id}` },
-                { text: '🗑️ Delete', callback_data: `del_note:${newNote.id}` },
+                { text: '📖 Read', callback_data: `read_note:${ideaId}` },
+                { text: '🗑️ Delete', callback_data: `del_note:${ideaId}` },
               ],
               [{ text: '💡 View Ideas', callback_data: 'menu_notes' }],
             ],
@@ -994,24 +1148,40 @@ export async function handleTelegramUpdate(body: any): Promise<{
       }
       try {
         const activeWs = getTelegramActiveWorkspace(chatId);
-        const payload: any = { title, status: 'todo' };
+        const goalId = (await import('crypto')).randomUUID();
+        const { upsertGoalTurso } = await import('@/lib/actions/turso-ops');
+
+        await upsertGoalTurso({
+          id: goalId,
+          userId: actor.userId,
+          title,
+          status: 'todo',
+          isWorkspace: Boolean(activeWs),
+          workspaceId: activeWs?.id || null,
+          projectId: activeWs?.id || null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        const payload: any = { id: goalId, title, status: 'todo' };
         if (activeWs) {
           payload.projectId = activeWs.id;
           payload.isWorkspace = true;
         }
 
-        const newGoal = await ApiResources.createGoal(actor, payload);
+        ApiResources.createGoal(actor, payload).catch(() => {});
+
         await sendTelegramMessage(
           chatId,
           `🎯 <b>Goal Logged!</b>\n\n` +
-            `<b>Title:</b> ${escapeHtml(newGoal.title)}\n` +
+            `<b>Title:</b> ${escapeHtml(title)}\n` +
             (activeWs ? `<b>Workspace:</b> 📁 ${escapeHtml(activeWs.name)}\n` : '') +
-            `<code>ID: ${newGoal.id}</code>`,
+            `<code>ID: ${goalId}</code>`,
           {
             inline_keyboard: [
               [
-                { text: '✔️ Mark Completed', callback_data: `done_goal:${newGoal.id}` },
-                { text: '🗑️ Delete', callback_data: `del_goal:${newGoal.id}` },
+                { text: '✔️ Mark Completed', callback_data: `done_goal:${goalId}` },
+                { text: '🗑️ Delete', callback_data: `del_goal:${goalId}` },
               ],
               [{ text: '🎯 View Goals', callback_data: 'menu_goals' }],
             ],
@@ -1069,7 +1239,23 @@ export async function handleTelegramUpdate(body: any): Promise<{
       const title = firstLine || 'Quick Thought';
       try {
         const activeWs = getTelegramActiveWorkspace(chatId);
+        const ideaId = (await import('crypto')).randomUUID();
+        const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
+
+        await upsertNoteTurso({
+          id: ideaId,
+          userId: actor.userId,
+          title,
+          content: rawText,
+          isWorkspace: Boolean(activeWs),
+          workspaceId: activeWs?.id || null,
+          projectId: activeWs?.id || null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
         const payload: any = {
+          id: ideaId,
           title,
           content: rawText,
         };
@@ -1078,19 +1264,20 @@ export async function handleTelegramUpdate(body: any): Promise<{
           payload.isWorkspace = true;
         }
 
-        const quickNote = await ApiResources.createNote(actor, payload);
+        ApiResources.createNote(actor, payload).catch(() => {});
+
         await sendTelegramMessage(
           chatId,
           `⚡ <b>Quick Idea Captured!</b>\n\n` +
-            `<b>Title:</b> ${escapeHtml(quickNote.title)}\n` +
+            `<b>Title:</b> ${escapeHtml(title)}\n` +
             (activeWs ? `<b>Workspace:</b> 📁 ${escapeHtml(activeWs.name)}\n` : '') +
             `<i>"${escapeHtml(rawText.slice(0, 80))}${rawText.length > 80 ? '...' : ''}"</i>\n\n` +
-            `<code>ID: ${quickNote.id}</code>`,
+            `<code>ID: ${ideaId}</code>`,
           {
             inline_keyboard: [
               [
-                { text: '📖 Read', callback_data: `read_note:${quickNote.id}` },
-                { text: '🗑️ Delete', callback_data: `del_note:${quickNote.id}` },
+                { text: '📖 Read', callback_data: `read_note:${ideaId}` },
+                { text: '🗑️ Delete', callback_data: `del_note:${ideaId}` },
               ],
               [{ text: '💡 All Ideas', callback_data: 'menu_notes' }],
             ],

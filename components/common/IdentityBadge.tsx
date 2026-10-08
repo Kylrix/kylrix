@@ -8,6 +8,7 @@ import { UserPresenceState } from '@/lib/services/presence';
 
 import { getCachedIdentityById, resolveIdentityById, subscribeIdentityCache } from '@/lib/identity-cache';
 import { computeIdentityFlags, type IdentitySignals } from '@/sdk/identity';
+import { Identicon } from '@/components/Identicon';
 
 export type { IdentitySignals };
 export { computeIdentityFlags };
@@ -298,21 +299,12 @@ export function IdentityAvatar({
             display: 'block'}}
         />
       ) : (
-        <Box
-          sx={{
-            width: '100%',
-            height: '100%',
-            borderRadius: `calc(${typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius} - 2px)`,
-            bgcolor: alpha('#F59E0B', 0.12),
-            color: '#F59E0B',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 900,
-            fontSize: `${Math.max(11, size / 3)}px`}}
-        >
-          {initial}
-        </Box>
+        <Identicon
+          seed={userId || resolvedUsername || resolvedEmail || resolvedDisplayName || fallback || alt || 'kylrix'}
+          size={typeof size === 'number' ? size - (resolvedPro ? 4 : 0) : 36}
+          borderRadius={`calc(${typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius} - 2px)`}
+          className="w-full h-full"
+        />
       )}
       {status && status !== 'offline' && (
           <Box 

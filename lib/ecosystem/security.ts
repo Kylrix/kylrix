@@ -121,16 +121,33 @@ class EcosystemSecurity {
         ? userDoc.backupCodes.length > 0
         : Boolean(userDoc?.backupCodes);
       this.passkeyReminderAtState = userDoc?.passkey_reminder_at || null;
+      const checkIsArgon = (entry: any): boolean => {
+        if (!entry) return false;
+        if (entry.isArgon === true || entry.isArgon === 'true' || entry.isArgon === 1) return true;
+        if (typeof entry.params === 'string' && entry.params.includes('Argon2id')) return true;
+        if (entry.params?.algo === 'Argon2id' || entry.params?.algorithm === 'Argon2id') return true;
+        if (entry.algorithm === 'Argon2id') return true;
+        if (entry.salt || entry.nonce) {
+          try {
+            const s = entry.salt || entry.nonce;
+            const norm = s.replace(/-/g, '+').replace(/_/g, '/');
+            const pad = norm.padEnd(Math.ceil(norm.length / 4) * 4, '=');
+            if (atob(pad).length === 32) return true;
+          } catch {}
+        }
+        return true;
+      };
+
       const passwordEntryLocal = keychainEntries.find((entry: any) => entry?.type === 'password');
-      this.isArgonState = passwordEntryLocal ? !!passwordEntryLocal.isArgon : false;
+      this.isArgonState = passwordEntryLocal ? checkIsArgon(passwordEntryLocal) : false;
       this.emitStatusChange();
 
       // 2) Background / forced remote refresh into enclave
       const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
       if (!offline) {
         try {
-          await SecurityEnclave.hydrateFromRemote(resolvedUserId, { force: forceRefresh });
-          keychainEntries = await SecurityEnclave.getKeychain(resolvedUserId);
+          const { KeychainService } = await import('@/lib/appwrite/keychain');
+          keychainEntries = await KeychainService.listKeychainEntries(resolvedUserId);
           userDoc = await SecurityEnclave.getUserDoc(resolvedUserId);
 
           this.hasMasterpassState = !!(
@@ -146,7 +163,7 @@ class EcosystemSecurity {
             : Boolean(userDoc?.backupCodes);
           this.passkeyReminderAtState = userDoc?.passkey_reminder_at || null;
           const passwordEntry = keychainEntries.find((entry: any) => entry?.type === 'password');
-          this.isArgonState = passwordEntry ? !!passwordEntry.isArgon : false;
+          this.isArgonState = passwordEntry ? checkIsArgon(passwordEntry) : false;
           this.emitStatusChange();
         } catch (err) {
           console.warn('[Security] Remote snapshot refresh failed; local enclave remains SoT:', err);

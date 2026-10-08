@@ -52,11 +52,11 @@ function BareBonesMasterpassUnlock() {
     if (!user?.$id) return;
     try {
       const { SecurityEnclave } = await import('@/lib/security/enclave');
-      const { AppwriteService } = await import('@/lib/appwrite');
+      const { KeychainService } = await import('@/lib/appwrite/keychain');
 
       let entries = await SecurityEnclave.getKeychain(user.$id);
-      if (!entries.length && typeof navigator !== 'undefined' && navigator.onLine) {
-        entries = await AppwriteService.listKeychainEntries(user.$id).catch(() => []);
+      if ((!entries.length || entries.length === 0) && typeof navigator !== 'undefined' && navigator.onLine) {
+        entries = await KeychainService.listKeychainEntries(user.$id).catch(() => []);
       }
 
       if (!entries.length) {
@@ -75,7 +75,7 @@ function BareBonesMasterpassUnlock() {
 
       if (!pwdEntry) {
         setDetectedEngine({
-          algo: 'None',
+          algo: hasPasskey ? 'Passkey' : 'None',
           saltBytes: 0,
           hasPasswordEntry: false,
           hasPasskeyEntry: hasPasskey,
@@ -99,7 +99,9 @@ function BareBonesMasterpassUnlock() {
         pwdEntry.isArgon ||
         saltLen === 32 ||
         (typeof pwdEntry.params === 'string' && pwdEntry.params.includes('Argon2id')) ||
-        pwdEntry.params?.algo === 'Argon2id'
+        pwdEntry.params?.algo === 'Argon2id' ||
+        pwdEntry.algorithm === 'Argon2id' ||
+        !pwdEntry.algorithm
       );
 
       setDetectedEngine({
@@ -579,39 +581,46 @@ export function SecurityTab({
         />
 
         {/* Encryption engine */}
-        {vaultSetup && (
-          <Row
-            icon={
-              isArgon ? (
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              ) : (
-                <ShieldAlert className="w-4 h-4 text-amber-400" />
-              )
-            }
-            title={isArgon ? 'T5 Argon2id engine' : 'Legacy T4 engine'}
-            meta={
-              isArgon
-                ? 'Argon2id 64MB/3 iterations — maximum security'
-                : 'Older encryption engine — upgrade available'
-            }
-            trailing={
-              !isArgon ? (
-                <button
-                  type="button"
-                  onClick={onManageVault}
-                  className="shrink-0 flex items-center gap-1 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-amber-500/30 bg-amber-500/10 text-amber-400"
-                >
-                  <ArrowUpCircle className="w-3 h-3" />
-                  Upgrade
-                </button>
-              ) : (
-                <span className="text-[10px] font-bold text-emerald-400/80 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
-                  Latest
-                </span>
-              )
-            }
-          />
-        )}
+        {vaultSetup && (() => {
+          const isEngineArgon = Boolean(
+            isArgon ||
+            detectedEngine.algo === 'Argon2id' ||
+            (detectedEngine.hasPasswordEntry && detectedEngine.algo !== 'PBKDF2')
+          );
+          return (
+            <Row
+              icon={
+                isEngineArgon ? (
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <ShieldAlert className="w-4 h-4 text-amber-400" />
+                )
+              }
+              title={isEngineArgon ? 'T5 Argon2id engine' : 'Legacy T4 engine'}
+              meta={
+                isEngineArgon
+                  ? 'Argon2id 64MB/3 iterations — maximum security'
+                  : 'Older encryption engine — upgrade available'
+              }
+              trailing={
+                !isEngineArgon ? (
+                  <button
+                    type="button"
+                    onClick={onManageVault}
+                    className="shrink-0 flex items-center gap-1 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-amber-500/30 bg-amber-500/10 text-amber-400"
+                  >
+                    <ArrowUpCircle className="w-3 h-3" />
+                    Upgrade
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-bold text-emerald-400/80 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                    Latest
+                  </span>
+                )
+              }
+            />
+          );
+        })()}
 
         {/* Master password info & sign-in status */}
         {vaultSetup && (

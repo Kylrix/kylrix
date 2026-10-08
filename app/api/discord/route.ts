@@ -414,7 +414,34 @@ export async function resolveActorForDiscordUser(
     };
   }
 
-  // 2. Query persistent storage (oauth_consent_requests)
+  // 2. Query Turso persistent storage
+  try {
+    const { db } = await import('@/lib/db');
+    const schema = await import('@/lib/db/schema');
+    const { eq, and } = await import('drizzle-orm');
+
+    const consentRows = await db
+      .select({ userId: schema.oauthConsent.userId })
+      .from(schema.oauthConsent)
+      .where(
+        and(
+          eq(schema.oauthConsent.clientId, 'discord_account'),
+          eq(schema.oauthConsent.referenceId, callerId)
+        )
+      )
+      .limit(1);
+
+    if (consentRows.length > 0 && consentRows[0].userId) {
+      const userId = consentRows[0].userId;
+      discordUserCache.set(callerId, { userId, linkedAt: Date.now(), userName: callerName });
+      return {
+        actor: { userId, kind: 'session', scopes: ['*'] },
+        isLinked: true,
+      };
+    }
+  } catch {}
+
+  // 3. Fallback query to Appwrite legacy storage (oauth_consent_requests)
   try {
     const tables = createSystemTablesDB();
     const res = await tables.listRows({
@@ -440,7 +467,7 @@ export async function resolveActorForDiscordUser(
     // Non-fatal, gracefully fall back
   }
 
-  // 3. Fallback to sandbox user (callerId)
+  // 4. Fallback to sandbox user (callerId)
   return {
     actor: { userId: callerId, kind: 'session', scopes: ['*'] },
     isLinked: false,

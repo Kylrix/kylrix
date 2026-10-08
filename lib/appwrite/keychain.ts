@@ -31,12 +31,26 @@ export const KeychainService = {
             (r.type === 'passkey' && r.account && r.account !== 'passkey' && r.account !== 'masterpass'
               ? r.account
               : undefined);
+          const isArgon = Boolean(
+            r.isArgon ??
+            metaObj?.isArgon ??
+            (metaObj?.algo === 'Argon2id' || metaObj?.algorithm === 'Argon2id') ??
+            (r.nonce && (r.nonce.length === 44 || r.nonce.length === 43)) ??
+            true
+          );
+          const isAuthPass = Boolean(
+            r.authPass ??
+            metaObj?.authPass ??
+            false
+          );
           return {
             ...r,
             $id: r.id,
             credentialId: credId,
             wrappedKey: r.encryptedPayload || r.wrappedKey,
             salt: r.nonce || r.salt,
+            isArgon,
+            authPass: isAuthPass,
             params: r.params || (metaObj?.params ? JSON.stringify(metaObj.params) : (typeof r.metadata === 'string' ? r.metadata : JSON.stringify(metaObj))),
           };
         });
