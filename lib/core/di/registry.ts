@@ -4,6 +4,7 @@ import { StoragePort } from '../ports/storage.port';
 import { FunctionsPort } from '../ports/functions.port';
 import { MessagingPort } from '../ports/messaging.port';
 
+import { TursoDatabaseAdapter } from '../adapters/turso/database.adapter';
 import { AppwriteDatabaseAdapter } from '../adapters/appwrite/database.adapter';
 import { AppwriteAuthAdapter } from '../adapters/appwrite/auth.adapter';
 import { AppwriteStorageAdapter } from '../adapters/appwrite/storage.adapter';
@@ -19,7 +20,7 @@ export class Registry {
 
   static getDatabase(): DatabasePort {
     if (!this.db) {
-      this.db = new AppwriteDatabaseAdapter();
+      this.db = new TursoDatabaseAdapter();
     }
     return this.db!;
   }
