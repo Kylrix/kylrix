@@ -214,7 +214,7 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
               title = 'Connect Huddles & Channels';
               description = 'You frequently connect with teammates. Start a persistent workspace call?';
               actionLabel = 'Open connect';
-              actionHref = '/connect';
+              actionHref = '/app';
             }
 
             if (title) {
@@ -253,7 +253,7 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
                 : 'Browse trending topics and user updates in the public Moments feed!',
               niche: 'connect',
               actionLabel: 'Explore moments',
-              actionHref: '/connect'
+              actionHref: '/app'
             });
           }
         }

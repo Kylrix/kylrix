@@ -6,9 +6,9 @@ describe('useLastActiveApp / getLastActiveAppRedirectUrl', () => {
     localStorage.clear();
   });
 
-  it('defaults to connect dashboard when localStorage is empty', () => {
+  it('defaults to note dashboard when localStorage is empty', () => {
     const url = getLastActiveAppRedirectUrl('https://app.kylrix.space/');
-    expect(url).toBe('https://app.kylrix.space/connect');
+    expect(url).toBe('https://app.kylrix.space/app');
   });
 
   it('resolves correct dashboard URL for saved app in localStorage', () => {

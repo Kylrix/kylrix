@@ -368,7 +368,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           description: 'Continue conversations',
           icon: 'messages',
           kind: 'navigate',
-          href: '/connect'},
+          href: '/app'},
       ];
 
     case 'projects':

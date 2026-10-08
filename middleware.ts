@@ -267,6 +267,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`/vault${subPath}`, request.url));
   }
 
+  if (pathname === '/connect' || pathname.startsWith('/connect/')) {
+    return NextResponse.redirect(new URL('/app', request.url), 308);
+  }
+
   // ─── REDIRECT LOOP DEFENSE ────────────────────────────────────────────
   const redirectDepth = parseInt(searchParams.get(REDIRECT_DEPTH_PARAM) || '0', 10);
   if (redirectDepth >= MAX_REDIRECT_DEPTH) {

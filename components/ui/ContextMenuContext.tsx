@@ -215,7 +215,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
         menuTitle = 'Navigation Hub';
         items.push(
           { label: 'Notes & Ideas', icon: <FileText size={16} />, onClick: () => router.push('/app') },
-          { label: 'Agent Inbox', icon: <MessageSquare size={16} />, onClick: () => router.push('/connect') },
+          { label: 'Agent Inbox', icon: <MessageSquare size={16} />, onClick: () => router.push('/app') },
           { label: 'Goals & Tasks', icon: <CheckCircle2 size={16} />, onClick: () => router.push('/goals') },
           { label: 'Security Vault', icon: <Lock size={16} />, onClick: () => router.push('/vault') },
           { label: 'Workspaces', icon: <Layers size={16} />, onClick: () => router.push('/app') },
@@ -305,7 +305,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
           items.push(
             { label: 'Quick Capture Note', icon: <Plus size={16} />, onClick: () => openUnifiedDrawer('note') },
             { label: 'Universal Search', icon: <Search size={16} />, onClick: () => focusGlobalSearch() },
-            { label: 'Connect Stream', icon: <MessageSquare size={16} />, onClick: () => router.push('/connect') },
+            { label: 'Connect Stream', icon: <MessageSquare size={16} />, onClick: () => router.push('/app') },
             { label: 'Settings', icon: <Settings size={16} />, onClick: () => router.push('/settings') }
           );
         }

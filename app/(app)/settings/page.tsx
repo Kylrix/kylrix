@@ -559,7 +559,7 @@ function SettingsPageInner() {
             router.back();
             return;
         }
-        router.push('/connect');
+        router.push('/app');
     };
 
     const tabsList = [

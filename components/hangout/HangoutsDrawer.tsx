@@ -350,7 +350,7 @@ export function HangoutsDrawer({
           icon: <Share2 size={16} className="text-emerald-500" />,
           onClick: async () => {
             try {
-              const url = `${window.location.origin}/connect?chat=${target.id}`;
+              const url = `${window.location.origin}/app?chat=${target.id}`;
               await navigator.clipboard.writeText(url);
               toast.success('Hangout link copied');
             } catch {

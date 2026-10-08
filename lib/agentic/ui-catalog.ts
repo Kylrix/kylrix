@@ -66,7 +66,7 @@ export const UI_DESTINATIONS: UiDestination[] = [
     id: 'connect.home',
     label: 'Connect',
     description: 'Social feed and messages',
-    route: '/connect',
+    route: '/app',
     zone: 'connect',
     aliases: ['connect', 'social', 'moments', 'feed']},
   {

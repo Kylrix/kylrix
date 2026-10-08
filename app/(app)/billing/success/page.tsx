@@ -37,7 +37,7 @@ export default function ProSuccessPage() {
     if (typeof window !== 'undefined') {
         return getLastActiveAppRedirectUrl(window.location.origin);
     }
-    return '/connect';
+    return '/app';
   });
 
   React.useEffect(() => {

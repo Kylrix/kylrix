@@ -12,12 +12,12 @@ type AppName = 'accounts' | 'note' | 'vault' | 'flow' | 'connect';
  */
 
 /**
- * Get the last active app, or default to 'connect' if none found
+ * Get the last active app, or default to 'note' if none found
  */
 function getLastActiveApp(): AppName {
-  if (typeof window === 'undefined') return 'connect';
+  if (typeof window === 'undefined') return 'note';
   const saved = localStorage.getItem('kylrix_last_active_app') as AppName | null;
-  return saved || 'connect';
+  return saved || 'note';
 }
 
 /**
@@ -34,7 +34,7 @@ export function getLastActiveAppRedirectUrl(baseUrl: string): string {
     note: '/app',
     vault: '/vault',
     flow: '/flow',
-    connect: '/connect'};
+    connect: '/app'};
 
   return `${baseUri}${dashboards[app]}`;
 }

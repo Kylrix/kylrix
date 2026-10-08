@@ -586,7 +586,7 @@ export default function ConnectTopbar({
         { id: 'share-secrets', title: 'Audit Ephemeral Secrets', description: 'Review sharing keychains and rules', href: '/vault', kind: 'vault', accent: '#10B981' }
       ],
       connect: [
-        { id: 'start-huddle', title: 'Open Agent Inbox', description: 'Inbound agent logs, messages, and collaborative sessions', href: '/connect', kind: 'connect', accent: '#F59E0B' }
+        { id: 'start-huddle', title: 'Open Agent Inbox', description: 'Inbound agent logs, messages, and collaborative sessions', href: '/app', kind: 'connect', accent: '#F59E0B' }
       ]
     };
 
