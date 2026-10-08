@@ -1757,10 +1757,33 @@ export default function ConnectTopbar({
             </Box>
           </Box>
 
-          {/* Close Action slot */}
-          <IconButton onClick={handleCloseAll} size="small" sx={{ width: 30, height: 30, borderRadius: '999px', color: alpha('#fff', 0.6), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
-            <CloseIcon size={15} />
-          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+            <Tooltip title="Switch or add account">
+              <IconButton
+                onClick={() => {
+                  openUnified('login', { mode: 'add-account', isAddAccount: true });
+                  handleCloseAll();
+                }}
+                size="small"
+                sx={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: '999px',
+                  color: '#EC4899',
+                  bgcolor: 'rgba(236,72,153,0.12)',
+                  border: '1px solid rgba(236,72,153,0.25)',
+                  flexShrink: 0,
+                  '&:hover': { bgcolor: 'rgba(236,72,153,0.25)', color: 'white' },
+                }}
+              >
+                <Users size={14} />
+              </IconButton>
+            </Tooltip>
+            {/* Close Action slot */}
+            <IconButton onClick={handleCloseAll} size="small" sx={{ width: 30, height: 30, borderRadius: '999px', color: alpha('#fff', 0.6), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
+              <CloseIcon size={15} />
+            </IconButton>
+          </Box>
         </Box>
 
         {/* 2. Referral Outlined Tile */}

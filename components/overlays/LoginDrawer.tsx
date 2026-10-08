@@ -73,8 +73,9 @@ export function LoginDrawer() {
     }
   }, [close, pathname, router]);
 
-  const customTitle = drawerData?.title || 'Continue to Kylrix';
-  const customSubtitle = drawerData?.subtitle;
+  const isAddAccountMode = Boolean(drawerData?.isAddAccount || drawerData?.mode === 'add-account');
+  const customTitle = drawerData?.title || (isAddAccountMode ? 'Add Another Account' : 'Continue to Kylrix');
+  const customSubtitle = drawerData?.subtitle || (isAddAccountMode ? 'Sign in to an additional account on this device to switch profiles seamlessly' : undefined);
 
   const [step, setStep] = useState<LoginStep>('initial');
   const [email, setEmail] = useState('');
@@ -401,7 +402,7 @@ export function LoginDrawer() {
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || isAddAccountMode) {
       setCheckingSession(false);
       return;
     }
@@ -425,7 +426,7 @@ export function LoginDrawer() {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, close, refreshUser]);
+  }, [isOpen, isAddAccountMode, close, refreshUser]);
 
   const handleSendOTP = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
