@@ -73,6 +73,9 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
     return { success: false, error: AI_REQUIRES_PRO_MESSAGE };
   }
 
+  let tables: any = null;
+  let balanceRow: any = null;
+
   // Compute checking for ecosystem users (non-BYOK)
   if (!isBYOK) {
     try {

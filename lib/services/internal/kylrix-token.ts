@@ -348,9 +348,9 @@ async function getUserThermalScore(userId: string): Promise<number> {
 async function getTotalUserCount() {
   try {
     const { db } = await import('@/lib/db');
-    const { users } = await import('@/lib/db/schema');
+    const { user } = await import('@/lib/db/schema');
     const { sql } = await import('drizzle-orm');
-    const [row] = await db.select({ count: sql<number>`count(*)` }).from(users);
+    const [row] = await db.select({ count: sql<number>`count(*)` }).from(user);
     if (row && typeof row.count === 'number' && row.count > 0) return row.count;
   } catch {}
 

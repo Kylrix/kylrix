@@ -1,11 +1,6 @@
 'use client';
 
-import { tablesDB } from '@/lib/appwrite/client';
-import { ID, Query, Permission, Role } from 'appwrite';
-import { encryptField, decryptField, masterPassCrypto } from '@/lib/masterpass-crypto';
-
-const DATABASE_ID = 'passwordManagerDb';
-const TABLE_ID = 'user_keys';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
 
 export const BYOKManager = {
   /**

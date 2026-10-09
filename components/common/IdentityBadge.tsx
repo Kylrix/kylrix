@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Box, Typography, alpha } from '@/lib/openbricks/primitives';
+import { Box, Typography } from '@/lib/openbricks/primitives';
 import { CheckCircle as CheckCircleIcon } from '@/lib/openbricks/icons';
 import { useAuth } from '@/lib/auth';
 import { UserPresenceState } from '@/lib/services/presence';
@@ -238,21 +238,6 @@ export function IdentityAvatar({
   const resolvedAccountName = accountName || null;
   const resolvedEmail = email || null;
 
-  let initial = 'U';
-  if (resolvedDisplayName && resolvedDisplayName.trim()) {
-    initial = resolvedDisplayName.trim().charAt(0).toUpperCase();
-  } else if (resolvedUsername && resolvedUsername.trim()) {
-    initial = resolvedUsername.trim().replace(/^@/, '').charAt(0).toUpperCase();
-  } else if (resolvedAccountName && resolvedAccountName.trim()) {
-    initial = resolvedAccountName.trim().charAt(0).toUpperCase();
-  } else if (resolvedEmail && resolvedEmail.trim()) {
-    initial = resolvedEmail.trim().charAt(0).toUpperCase();
-  } else if (fallback) {
-    initial = fallback.charAt(0).toUpperCase();
-  } else if (alt) {
-    initial = alt.charAt(0).toUpperCase();
-  }
-
   const getStatusColor = (s: UserPresenceState) => {
       switch (s) {
           case 'online': return '#10B981';
@@ -300,7 +285,7 @@ export function IdentityAvatar({
         />
       ) : (
         <Identicon
-          seed={userId || resolvedUsername || resolvedEmail || resolvedDisplayName || fallback || alt || 'kylrix'}
+          seed={userId || resolvedUsername || resolvedDisplayName || resolvedAccountName || resolvedEmail || fallback || alt || 'kylrix'}
           size={typeof size === 'number' ? size - (resolvedPro ? 4 : 0) : 36}
           borderRadius={`calc(${typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius} - 2px)`}
           className="w-full h-full"

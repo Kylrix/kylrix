@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or } from 'drizzle-orm';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 function getAppwriteMigrationTablesDB(jwt?: string) {
@@ -408,6 +408,21 @@ export async function listWorkspacesTurso(userId: string) {
   } catch (err: any) {
     console.error('[turso-ops] listWorkspacesTurso failed:', err);
     return { success: false, rows: [], error: err.message };
+  }
+}
+
+export async function getWorkspaceTurso(id: string) {
+  try {
+    const rows = await db
+      .select()
+      .from(schema.projects)
+      .where(eq(schema.projects.id, id))
+      .limit(1);
+    if (rows.length === 0) return { success: false, workspace: null };
+    return { success: true, workspace: rows[0] };
+  } catch (err: any) {
+    console.error('[turso-ops] getWorkspaceTurso failed:', err);
+    return { success: false, workspace: null, error: err.message };
   }
 }
 

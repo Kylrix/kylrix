@@ -13,18 +13,12 @@ import {
   ChevronRight,
   Copy,
   Check,
-  Zap,
   Sparkles,
   ArrowRight,
   Terminal,
-  Layers,
   Database,
   KeyRound,
   CheckCircle2,
-  Workflow,
-  Globe,
-  Sliders,
-  Send,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ThreadNoteClaimer } from '@/components/landing/ThreadNoteClaimer';

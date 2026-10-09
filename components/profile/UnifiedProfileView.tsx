@@ -644,7 +644,7 @@ export function UnifiedProfileView({
                   />
                 ) : (
                   <Identicon
-                    seed={targetUserId || activeDisplayName || 'kylrix'}
+                    seed={targetUid || activeDisplayName || 'kylrix'}
                     size={88}
                     borderRadius="1.25rem"
                     className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-white/20 shadow-md"

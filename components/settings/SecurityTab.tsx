@@ -34,7 +34,7 @@ function BareBonesMasterpassUnlock() {
   const [logs, setLogs] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [detectedEngine, setDetectedEngine] = useState<{
-    algo: 'Argon2id' | 'PBKDF2' | 'None' | 'Checking';
+    algo: 'Argon2id' | 'PBKDF2' | 'None' | 'Passkey' | 'Checking';
     saltBytes: number;
     hasPasswordEntry: boolean;
     hasPasskeyEntry: boolean;
@@ -582,11 +582,7 @@ export function SecurityTab({
 
         {/* Encryption engine */}
         {vaultSetup && (() => {
-          const isEngineArgon = Boolean(
-            isArgon ||
-            detectedEngine.algo === 'Argon2id' ||
-            (detectedEngine.hasPasswordEntry && detectedEngine.algo !== 'PBKDF2')
-          );
+          const isEngineArgon = Boolean(isArgon);
           return (
             <Row
               icon={

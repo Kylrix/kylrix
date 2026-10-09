@@ -95,7 +95,7 @@ function MethodRow({
 export function TwoFactorPanel({
   onClose,
   userId,
-  emailVerified = false,
+  emailVerified: _emailVerified = false,
   loginMethod = 'password',
   hasPasskeys = false,
   onAddPasskey,
