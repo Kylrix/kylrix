@@ -16,6 +16,7 @@ export async function listGoalsCommand(opts: {
   try {
     const isAuthed = hasAuth(opts);
     const limit = opts.all || opts.limit === '0' ? 0 : (opts.limit ? parseInt(opts.limit, 10) : 50);
+    let cloudWarning: string | null = null;
 
     // 1. If authed, pull latest goals from cloud into local SQLite in background
     if (isAuthed) {
@@ -24,15 +25,15 @@ export async function listGoalsCommand(opts: {
         const cloudRes = await client.goals.list({ limit: limit || 100, workspaceId: opts.workspace, status: opts.status });
         const items = extractItems(cloudRes);
         for (const item of items) {
-          LocalStore.upsertGoalFromCloud(item);
+          LocalStore.upsertGoalFromCloud(item, opts);
         }
-      } catch {
-        // Fall back gracefully to local SQLite
+      } catch (err: any) {
+        cloudWarning = err?.message || 'Could not sync latest goals from cloud';
       }
     }
 
     // 2. Read authoritative local store
-    let items = LocalStore.listGoals().items;
+    let items = LocalStore.listGoals(opts).items;
     if (opts.status) {
       items = items.filter((g: any) => g.status === opts.status);
     }
@@ -41,7 +42,7 @@ export async function listGoalsCommand(opts: {
     const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
 
     if (opts.json) {
-      printJson({ items: sliced, count: allItems.length });
+      printJson({ items: sliced, count: allItems.length, ...(cloudWarning ? { warning: cloudWarning } : {}) });
       return;
     }
 
@@ -64,6 +65,9 @@ export async function listGoalsCommand(opts: {
     printTable(rows, ['id', 'title', 'status', 'progress', 'sync']);
     if (allItems.length > rows.length) {
       console.log(pc.dim(`\nShowing ${rows.length} of ${allItems.length} goals. Use --limit <number> or --all to view more.`));
+    }
+    if (cloudWarning && allItems.length === 0) {
+      console.log(pc.yellow(`\n⚠ Cloud note: ${cloudWarning}`));
     }
     if (!isAuthed) {
       console.log(pc.dim('💡 Local-first mode. Run `kylrix login` to sync goals with cloud.'));

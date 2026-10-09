@@ -1,6 +1,6 @@
 {
   "name": "@kylrix/cli",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "mcpName": "io.github.kylrix/cli",
   "description": "Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.",
   "homepage": "https://www.kylrix.space",

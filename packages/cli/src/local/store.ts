@@ -30,8 +30,8 @@ function saveFallback(data: any): void {
 
 export const LocalStore = {
   // ── Ideas ──
-  listIdeas(): { items: any[]; count: number } {
-    const db = getDatabase();
+  listIdeas(cliOptions?: any): { items: any[]; count: number } {
+    const db = getDatabase(undefined, cliOptions);
     if (db) {
       const stmt = db.prepare('SELECT * FROM ideas ORDER BY updated_at DESC');
       const rows = stmt.all().map((r: any) => ({
@@ -52,8 +52,8 @@ export const LocalStore = {
     return { items: store.ideas || [], count: store.ideas?.length || 0 };
   },
 
-  getIdea(id: string): any {
-    const db = getDatabase();
+  getIdea(id: string, cliOptions?: any): any {
+    const db = getDatabase(undefined, cliOptions);
     if (db) {
       const stmt = db.prepare('SELECT * FROM ideas WHERE id = ? OR cloud_id = ?');
       const r = stmt.get(id, id) as any;
@@ -77,12 +77,12 @@ export const LocalStore = {
     return item;
   },
 
-  createIdea(data: { id?: string; title: string; content?: string; category?: string; tags?: string[]; syncStatus?: string; cloudId?: string }): any {
+  createIdea(data: { id?: string; title: string; content?: string; category?: string; tags?: string[]; syncStatus?: string; cloudId?: string }, cliOptions?: any): any {
     const id = data.id || generateLocalId('idea');
     const now = new Date().toISOString();
     const syncStatus = data.syncStatus || 'unsynced';
     const cloudId = data.cloudId || null;
-    const db = getDatabase();
+    const db = getDatabase(undefined, cliOptions);
     if (db) {
       const stmt = db.prepare(`
         INSERT INTO ideas (id, title, content, category, tags, is_local, sync_status, cloud_id, created_at, updated_at)
@@ -109,8 +109,8 @@ export const LocalStore = {
     return item;
   },
 
-  upsertIdeaFromCloud(item: { id: string; title: string; content?: string; category?: string; tags?: string[]; createdAt?: string; updatedAt?: string }): any {
-    const db = getDatabase();
+  upsertIdeaFromCloud(item: { id: string; title: string; content?: string; category?: string; tags?: string[]; createdAt?: string; updatedAt?: string }, cliOptions?: any): any {
+    const db = getDatabase(undefined, cliOptions);
     const now = new Date().toISOString();
     const createdAt = item.createdAt || now;
     const updatedAt = item.updatedAt || now;
@@ -204,8 +204,8 @@ export const LocalStore = {
   },
 
   // ── Goals ──
-  listGoals(): { items: any[]; count: number } {
-    const db = getDatabase();
+  listGoals(cliOptions?: any): { items: any[]; count: number } {
+    const db = getDatabase(undefined, cliOptions);
     if (db) {
       const stmt = db.prepare('SELECT * FROM goals ORDER BY updated_at DESC');
       const rows = stmt.all().map((r: any) => ({
@@ -228,8 +228,8 @@ export const LocalStore = {
     return { items: store.goals || [], count: store.goals?.length || 0 };
   },
 
-  getGoal(id: string): any {
-    const db = getDatabase();
+  getGoal(id: string, cliOptions?: any): any {
+    const db = getDatabase(undefined, cliOptions);
     if (db) {
       const r = db.prepare('SELECT * FROM goals WHERE id = ? OR cloud_id = ?').get(id, id) as any;
       if (!r) throw new Error(`Goal not found: ${id}`);
@@ -254,12 +254,12 @@ export const LocalStore = {
     return item;
   },
 
-  createGoal(data: any): any {
+  createGoal(data: any, cliOptions?: any): any {
     const id = data.id || generateLocalId('goal');
     const now = new Date().toISOString();
     const syncStatus = data.syncStatus || 'unsynced';
     const cloudId = data.cloudId || null;
-    const db = getDatabase();
+    const db = getDatabase(undefined, cliOptions);
     if (db) {
       const stmt = db.prepare(`
         INSERT INTO goals (id, title, description, target_value, current_value, unit, status, is_local, sync_status, cloud_id, created_at, updated_at)
@@ -300,8 +300,8 @@ export const LocalStore = {
     return item;
   },
 
-  upsertGoalFromCloud(item: any): any {
-    const db = getDatabase();
+  upsertGoalFromCloud(item: any, cliOptions?: any): any {
+    const db = getDatabase(undefined, cliOptions);
     const now = new Date().toISOString();
     const createdAt = item.createdAt || now;
     const updatedAt = item.updatedAt || now;

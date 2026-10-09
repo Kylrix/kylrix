@@ -281,12 +281,13 @@ export function saveConfig(updates: Partial<CliConfig>, targetServerUrl?: string
   }
 
   const existingAcc = server.accounts[accId] || { userId: accId };
+  const hasWorkspaceUpdate = 'workspaceId' in updates;
   const updatedAcc: CliAccountRecord = {
     ...existingAcc,
     userId: updates.userId || existingAcc.userId || accId,
     email: updates.email !== undefined ? updates.email : existingAcc.email,
     token: updates.token !== undefined ? updates.token : existingAcc.token,
-    workspaceId: updates.workspaceId !== undefined ? updates.workspaceId : existingAcc.workspaceId,
+    workspaceId: hasWorkspaceUpdate ? (updates.workspaceId || undefined) : existingAcc.workspaceId,
     tier: updates.tier !== undefined ? updates.tier : existingAcc.tier,
     lastUsedAt: new Date().toISOString(),
   };
@@ -296,6 +297,12 @@ export function saveConfig(updates: Partial<CliConfig>, targetServerUrl?: string
   config.currentServer = normUrl;
 
   syncLegacyFields(config, normUrl, updatedAcc);
+  if (hasWorkspaceUpdate && !updates.workspaceId) {
+    config.workspaceId = undefined;
+    if (server.accounts[updatedAcc.userId]) {
+      delete server.accounts[updatedAcc.userId].workspaceId;
+    }
+  }
   saveMasterConfig(config);
   return config;
 }
@@ -473,18 +480,104 @@ export function resolveEnvironment(cliOptions: { url?: string; token?: string; w
   const server = config.servers[apiUrl];
   const account = server?.activeAccountId ? server.accounts[server.activeAccountId] : undefined;
 
-  const token =
+  let token =
     cliOptions.token ||
     process.env.KYLRIX_API_KEY ||
     process.env.KYLRIX_PAT ||
+    process.env.KYLRIX_TOKEN ||
     account?.token ||
     config.token;
 
-  const workspaceId =
+  // Multi-source token fallback if not found under active server
+  if (!token && config.servers) {
+    // Check other registered servers (e.g. https://www.kylrix.space vs https://kylrix.space)
+    for (const s of Object.values(config.servers)) {
+      if (s.activeAccountId && s.accounts[s.activeAccountId]?.token) {
+        token = s.accounts[s.activeAccountId].token;
+        break;
+      }
+      for (const acc of Object.values(s.accounts || {})) {
+        if (acc.token) {
+          token = acc.token;
+          break;
+        }
+      }
+      if (token) break;
+    }
+  }
+
+  // Check sovereign credentials files
+  if (!token) {
+    try {
+      const userKeyPath = path.join(CONFIG_DIR, 'credentials', 'user.key');
+      if (fs.existsSync(userKeyPath)) {
+        const val = fs.readFileSync(userKeyPath, 'utf-8').trim();
+        if (val) token = val;
+      }
+    } catch {}
+  }
+  if (!token) {
+    try {
+      const patKeyPath = path.join(CONFIG_DIR, 'credentials', 'pat.key');
+      if (fs.existsSync(patKeyPath)) {
+        const val = fs.readFileSync(patKeyPath, 'utf-8').trim();
+        if (val) token = val;
+      }
+    } catch {}
+  }
+  if (!token) {
+    try {
+      const wsKeyPath = path.join(CONFIG_DIR, 'credentials', 'workspace.key');
+      if (fs.existsSync(wsKeyPath)) {
+        const val = fs.readFileSync(wsKeyPath, 'utf-8').trim();
+        if (val) token = val;
+      }
+    } catch {}
+  }
+  if (!token) {
+    try {
+      const agentsDir = path.join(CONFIG_DIR, 'agents');
+      if (fs.existsSync(agentsDir)) {
+        const files = fs.readdirSync(agentsDir);
+        for (const f of files) {
+          if (f.endsWith('.json')) {
+            const raw = fs.readFileSync(path.join(agentsDir, f), 'utf-8');
+            const parsed = JSON.parse(raw);
+            if (parsed?.agentToken) {
+              token = parsed.agentToken;
+              break;
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  let workspaceId =
     cliOptions.workspace ||
     process.env.KYLRIX_WORKSPACE_ID ||
+    process.env.KYLRIX_PROJECT_ID ||
     account?.workspaceId ||
     config.workspaceId;
+
+  if (!workspaceId) {
+    try {
+      const agentsDir = path.join(CONFIG_DIR, 'agents');
+      if (fs.existsSync(agentsDir)) {
+        const files = fs.readdirSync(agentsDir);
+        for (const f of files) {
+          if (f.endsWith('.json')) {
+            const raw = fs.readFileSync(path.join(agentsDir, f), 'utf-8');
+            const parsed = JSON.parse(raw);
+            if (parsed?.defaultWorkspaceId) {
+              workspaceId = parsed.defaultWorkspaceId;
+              break;
+            }
+          }
+        }
+      }
+    } catch {}
+  }
 
   const userId = account?.userId || config.userId;
   const email = account?.email || config.email;

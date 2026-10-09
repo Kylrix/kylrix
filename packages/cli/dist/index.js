@@ -776,12 +776,13 @@ function saveConfig(updates, targetServerUrl) {
     accId = updates.email ? updates.email.replace(/[^a-zA-Z0-9_-]/g, "_") : "anonymous";
   }
   const existingAcc = server2.accounts[accId] || { userId: accId };
+  const hasWorkspaceUpdate = "workspaceId" in updates;
   const updatedAcc = {
     ...existingAcc,
     userId: updates.userId || existingAcc.userId || accId,
     email: updates.email !== void 0 ? updates.email : existingAcc.email,
     token: updates.token !== void 0 ? updates.token : existingAcc.token,
-    workspaceId: updates.workspaceId !== void 0 ? updates.workspaceId : existingAcc.workspaceId,
+    workspaceId: hasWorkspaceUpdate ? updates.workspaceId || void 0 : existingAcc.workspaceId,
     tier: updates.tier !== void 0 ? updates.tier : existingAcc.tier,
     lastUsedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
@@ -789,6 +790,12 @@ function saveConfig(updates, targetServerUrl) {
   server2.activeAccountId = updatedAcc.userId;
   config2.currentServer = normUrl;
   syncLegacyFields(config2, normUrl, updatedAcc);
+  if (hasWorkspaceUpdate && !updates.workspaceId) {
+    config2.workspaceId = void 0;
+    if (server2.accounts[updatedAcc.userId]) {
+      delete server2.accounts[updatedAcc.userId].workspaceId;
+    }
+  }
   saveMasterConfig2(config2);
   return config2;
 }
@@ -933,8 +940,91 @@ function resolveEnvironment(cliOptions = {}) {
   const partitionKey = getBaseUriPartitionKey(apiUrl);
   const server2 = config2.servers[apiUrl];
   const account = server2?.activeAccountId ? server2.accounts[server2.activeAccountId] : void 0;
-  const token = cliOptions.token || process.env.KYLRIX_API_KEY || process.env.KYLRIX_PAT || account?.token || config2.token;
-  const workspaceId = cliOptions.workspace || process.env.KYLRIX_WORKSPACE_ID || account?.workspaceId || config2.workspaceId;
+  let token = cliOptions.token || process.env.KYLRIX_API_KEY || process.env.KYLRIX_PAT || process.env.KYLRIX_TOKEN || account?.token || config2.token;
+  if (!token && config2.servers) {
+    for (const s of Object.values(config2.servers)) {
+      if (s.activeAccountId && s.accounts[s.activeAccountId]?.token) {
+        token = s.accounts[s.activeAccountId].token;
+        break;
+      }
+      for (const acc of Object.values(s.accounts || {})) {
+        if (acc.token) {
+          token = acc.token;
+          break;
+        }
+      }
+      if (token) break;
+    }
+  }
+  if (!token) {
+    try {
+      const userKeyPath = path.join(CONFIG_DIR, "credentials", "user.key");
+      if (fs.existsSync(userKeyPath)) {
+        const val = fs.readFileSync(userKeyPath, "utf-8").trim();
+        if (val) token = val;
+      }
+    } catch {
+    }
+  }
+  if (!token) {
+    try {
+      const patKeyPath = path.join(CONFIG_DIR, "credentials", "pat.key");
+      if (fs.existsSync(patKeyPath)) {
+        const val = fs.readFileSync(patKeyPath, "utf-8").trim();
+        if (val) token = val;
+      }
+    } catch {
+    }
+  }
+  if (!token) {
+    try {
+      const wsKeyPath = path.join(CONFIG_DIR, "credentials", "workspace.key");
+      if (fs.existsSync(wsKeyPath)) {
+        const val = fs.readFileSync(wsKeyPath, "utf-8").trim();
+        if (val) token = val;
+      }
+    } catch {
+    }
+  }
+  if (!token) {
+    try {
+      const agentsDir = path.join(CONFIG_DIR, "agents");
+      if (fs.existsSync(agentsDir)) {
+        const files = fs.readdirSync(agentsDir);
+        for (const f2 of files) {
+          if (f2.endsWith(".json")) {
+            const raw = fs.readFileSync(path.join(agentsDir, f2), "utf-8");
+            const parsed = JSON.parse(raw);
+            if (parsed?.agentToken) {
+              token = parsed.agentToken;
+              break;
+            }
+          }
+        }
+      }
+    } catch {
+    }
+  }
+  let workspaceId = cliOptions.workspace || process.env.KYLRIX_WORKSPACE_ID || process.env.KYLRIX_PROJECT_ID || account?.workspaceId || config2.workspaceId;
+  if (!workspaceId) {
+    try {
+      const agentsDir = path.join(CONFIG_DIR, "agents");
+      if (fs.existsSync(agentsDir)) {
+        const files = fs.readdirSync(agentsDir);
+        for (const f2 of files) {
+          if (f2.endsWith(".json")) {
+            const raw = fs.readFileSync(path.join(agentsDir, f2), "utf-8");
+            const parsed = JSON.parse(raw);
+            if (parsed?.defaultWorkspaceId) {
+              workspaceId = parsed.defaultWorkspaceId;
+              break;
+            }
+          }
+        }
+      }
+    } catch {
+    }
+  }
   const userId = account?.userId || config2.userId;
   const email3 = account?.email || config2.email;
   const tier = account?.tier || config2.tier;
@@ -1365,8 +1455,8 @@ var init_store = __esm({
     init_config();
     LocalStore = {
       // ── Ideas ──
-      listIdeas() {
-        const db = getDatabase();
+      listIdeas(cliOptions) {
+        const db = getDatabase(void 0, cliOptions);
         if (db) {
           const stmt = db.prepare("SELECT * FROM ideas ORDER BY updated_at DESC");
           const rows = stmt.all().map((r2) => ({
@@ -1386,8 +1476,8 @@ var init_store = __esm({
         const store = loadFallback();
         return { items: store.ideas || [], count: store.ideas?.length || 0 };
       },
-      getIdea(id) {
-        const db = getDatabase();
+      getIdea(id, cliOptions) {
+        const db = getDatabase(void 0, cliOptions);
         if (db) {
           const stmt = db.prepare("SELECT * FROM ideas WHERE id = ? OR cloud_id = ?");
           const r2 = stmt.get(id, id);
@@ -1410,12 +1500,12 @@ var init_store = __esm({
         if (!item) throw new Error(`Idea not found: ${id}`);
         return item;
       },
-      createIdea(data) {
+      createIdea(data, cliOptions) {
         const id = data.id || generateLocalId("idea");
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const syncStatus = data.syncStatus || "unsynced";
         const cloudId = data.cloudId || null;
-        const db = getDatabase();
+        const db = getDatabase(void 0, cliOptions);
         if (db) {
           const stmt = db.prepare(`
         INSERT INTO ideas (id, title, content, category, tags, is_local, sync_status, cloud_id, created_at, updated_at)
@@ -1441,8 +1531,8 @@ var init_store = __esm({
         saveFallback(store);
         return item;
       },
-      upsertIdeaFromCloud(item) {
-        const db = getDatabase();
+      upsertIdeaFromCloud(item, cliOptions) {
+        const db = getDatabase(void 0, cliOptions);
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const createdAt = item.createdAt || now;
         const updatedAt = item.updatedAt || now;
@@ -1532,8 +1622,8 @@ var init_store = __esm({
         return { success: true };
       },
       // ── Goals ──
-      listGoals() {
-        const db = getDatabase();
+      listGoals(cliOptions) {
+        const db = getDatabase(void 0, cliOptions);
         if (db) {
           const stmt = db.prepare("SELECT * FROM goals ORDER BY updated_at DESC");
           const rows = stmt.all().map((r2) => ({
@@ -1555,8 +1645,8 @@ var init_store = __esm({
         const store = loadFallback();
         return { items: store.goals || [], count: store.goals?.length || 0 };
       },
-      getGoal(id) {
-        const db = getDatabase();
+      getGoal(id, cliOptions) {
+        const db = getDatabase(void 0, cliOptions);
         if (db) {
           const r2 = db.prepare("SELECT * FROM goals WHERE id = ? OR cloud_id = ?").get(id, id);
           if (!r2) throw new Error(`Goal not found: ${id}`);
@@ -1580,12 +1670,12 @@ var init_store = __esm({
         if (!item) throw new Error(`Goal not found: ${id}`);
         return item;
       },
-      createGoal(data) {
+      createGoal(data, cliOptions) {
         const id = data.id || generateLocalId("goal");
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const syncStatus = data.syncStatus || "unsynced";
         const cloudId = data.cloudId || null;
-        const db = getDatabase();
+        const db = getDatabase(void 0, cliOptions);
         if (db) {
           const stmt = db.prepare(`
         INSERT INTO goals (id, title, description, target_value, current_value, unit, status, is_local, sync_status, cloud_id, created_at, updated_at)
@@ -1625,8 +1715,8 @@ var init_store = __esm({
         saveFallback(store);
         return item;
       },
-      upsertGoalFromCloud(item) {
-        const db = getDatabase();
+      upsertGoalFromCloud(item, cliOptions) {
+        const db = getDatabase(void 0, cliOptions);
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const createdAt = item.createdAt || now;
         const updatedAt = item.updatedAt || now;
@@ -3912,22 +4002,75 @@ async function deleteWorkspaceCommand(id, opts) {
     process.exit(1);
   }
 }
-async function switchWorkspaceCommand(id, opts) {
+async function switchWorkspaceCommand(idOrName, opts) {
+  const target = idOrName?.trim();
+  if (!target || ["clear", "personal", "default", "none", "reset", "0"].includes(target.toLowerCase())) {
+    clearWorkspaceCommand(opts);
+    return;
+  }
   try {
-    const client = requireAuthClient(opts);
-    const ws = await client.workspaces.get(id);
-    saveConfig({ workspaceId: ws.id });
+    let matchedWs = null;
+    let client = null;
+    try {
+      client = requireAuthClient(opts);
+    } catch {
+    }
+    if (client) {
+      if (/^[a-zA-Z0-9_-]{15,36}$/.test(target)) {
+        try {
+          matchedWs = await client.workspaces.get(target);
+        } catch {
+        }
+      }
+      if (!matchedWs) {
+        try {
+          const listRes = await client.workspaces.list(100);
+          const items = listRes.items || [];
+          const query = target.toLowerCase();
+          matchedWs = items.find(
+            (w2) => w2.name && w2.name.toLowerCase() === query || w2.title && w2.title.toLowerCase() === query || w2.id.toLowerCase() === query
+          );
+          if (!matchedWs) {
+            matchedWs = items.find(
+              (w2) => w2.name && w2.name.toLowerCase().includes(query) || w2.title && w2.title.toLowerCase().includes(query)
+            );
+          }
+          if (!matchedWs && items.length > 0) {
+            const available = items.map((w2) => `  \u2022 ${pc6.bold(w2.name || w2.title || w2.id)} (${pc6.cyan(w2.id)})`).join("\n");
+            throw new Error(
+              `No workspace found matching "${target}".
+
+Available workspaces:
+${available}
+
+Tip: Run \`kylrix ws switch <id|name>\` or \`kylrix ws clear\``
+            );
+          }
+        } catch (err) {
+          if (!/^[a-zA-Z0-9_-]{10,36}$/.test(target)) {
+            throw err;
+          }
+        }
+      }
+    }
+    const finalId = matchedWs ? matchedWs.id : target;
+    const wsName = matchedWs?.name || matchedWs?.title || finalId;
+    saveConfig({ workspaceId: finalId });
     if (opts.json) {
-      printJson({ activeWorkspaceId: ws.id, name: ws.name });
+      printJson({ activeWorkspaceId: finalId, name: wsName, summary: matchedWs?.description || matchedWs?.summary });
       return;
     }
-    printSuccess(`Switched active workspace to "${pc6.bold(ws.name)}" (${ws.id})`);
+    if (matchedWs) {
+      printSuccess(`Switched active workspace to "${pc6.bold(wsName)}" (${pc6.cyan(matchedWs.id)})`);
+    } else {
+      printSuccess(`Switched active workspace to "${pc6.bold(finalId)}" ${pc6.dim("(local config)")}`);
+    }
   } catch (err) {
-    printError(`Failed to switch to workspace "${id}"`, err);
+    printError(`Failed to switch to workspace "${idOrName}"`, err);
     process.exit(1);
   }
 }
-function currentWorkspaceCommand(opts = {}) {
+async function currentWorkspaceCommand(opts = {}) {
   const config2 = loadConfig();
   const wsId = config2.workspaceId;
   if (opts.json) {
@@ -3935,6 +4078,19 @@ function currentWorkspaceCommand(opts = {}) {
     return;
   }
   if (wsId) {
+    try {
+      const client = requireAuthClient(opts);
+      const ws = await client.workspaces.get(wsId).catch(() => null);
+      if (ws) {
+        const name = ws.name || ws.title || wsId;
+        console.log(`Active Workspace: ${pc6.bold(pc6.green(name))} (${pc6.cyan(wsId)})`);
+        if (ws.description || ws.summary) {
+          console.log(`     Description: ${pc6.dim(ws.description || ws.summary)}`);
+        }
+        return;
+      }
+    } catch {
+    }
     console.log(`Active Workspace: ${pc6.bold(pc6.cyan(wsId))}`);
   } else {
     console.log(`Active Workspace: ${pc6.bold("Personal Virtual Workspace")} (no project filter)`);
@@ -4204,20 +4360,22 @@ async function listIdeasCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
     const limit = opts.all || opts.limit === "0" ? 0 : opts.limit ? parseInt(opts.limit, 10) : 50;
+    let cloudWarning = null;
     if (isAuthed) {
       try {
         const client = getClient(opts);
         const cloudRes = await client.ideas.list({ limit: limit || 100, workspaceId: opts.workspace });
         const items = extractItems(cloudRes);
         for (const item of items) {
-          LocalStore.upsertIdeaFromCloud(item);
+          LocalStore.upsertIdeaFromCloud(item, opts);
         }
-      } catch {
+      } catch (err) {
+        cloudWarning = err?.message || "Could not sync latest ideas from cloud";
       }
     }
-    const res = LocalStore.listIdeas();
+    const res = LocalStore.listIdeas(opts);
     if (opts.json) {
-      printJson(res);
+      printJson({ items: res.items, count: res.count, ...cloudWarning ? { warning: cloudWarning } : {} });
       return;
     }
     const allItems = res.items || [];
@@ -4241,6 +4399,10 @@ async function listIdeasCommand(opts) {
     if (allItems.length > rows.length) {
       console.log(pc8.dim(`
 Showing ${rows.length} of ${allItems.length} ideas. Use --limit <number> or --all to view more.`));
+    }
+    if (cloudWarning && allItems.length === 0) {
+      console.log(pc8.yellow(`
+\u26A0 Cloud note: ${cloudWarning}`));
     }
     if (!isAuthed) {
       console.log(pc8.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync ideas with cloud."));
@@ -4437,25 +4599,27 @@ async function listGoalsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
     const limit = opts.all || opts.limit === "0" ? 0 : opts.limit ? parseInt(opts.limit, 10) : 50;
+    let cloudWarning = null;
     if (isAuthed) {
       try {
         const client = getClient(opts);
         const cloudRes = await client.goals.list({ limit: limit || 100, workspaceId: opts.workspace, status: opts.status });
         const items2 = extractItems(cloudRes);
         for (const item of items2) {
-          LocalStore.upsertGoalFromCloud(item);
+          LocalStore.upsertGoalFromCloud(item, opts);
         }
-      } catch {
+      } catch (err) {
+        cloudWarning = err?.message || "Could not sync latest goals from cloud";
       }
     }
-    let items = LocalStore.listGoals().items;
+    let items = LocalStore.listGoals(opts).items;
     if (opts.status) {
       items = items.filter((g2) => g2.status === opts.status);
     }
     const allItems = items || [];
     const sliced = limit > 0 ? allItems.slice(0, limit) : allItems;
     if (opts.json) {
-      printJson({ items: sliced, count: allItems.length });
+      printJson({ items: sliced, count: allItems.length, ...cloudWarning ? { warning: cloudWarning } : {} });
       return;
     }
     const rows = sliced.map((g2) => {
@@ -4477,6 +4641,10 @@ async function listGoalsCommand(opts) {
     if (allItems.length > rows.length) {
       console.log(pc9.dim(`
 Showing ${rows.length} of ${allItems.length} goals. Use --limit <number> or --all to view more.`));
+    }
+    if (cloudWarning && allItems.length === 0) {
+      console.log(pc9.yellow(`
+\u26A0 Cloud note: ${cloudWarning}`));
     }
     if (!isAuthed) {
       console.log(pc9.dim("\u{1F4A1} Local-first mode. Run `kylrix login` to sync goals with cloud."));
@@ -6428,7 +6596,7 @@ import * as os4 from "os";
 import { spawn } from "child_process";
 import pc23 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.16";
+var CURRENT_VERSION = "1.0.17";
 var CACHE_DIR = path7.join(os4.homedir(), ".kylrix");
 var CACHE_FILE = path7.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
