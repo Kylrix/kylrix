@@ -64,7 +64,7 @@ export const FormsService = {
 
         const isDefaultFeedback = formId === '6aae3dab003a7247b90a' || (process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID && formId === process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID);
         if (isDefaultFeedback) {
-            const { DEFAULT_FEEDBACK_FORM_ROW } = await import('@/lib/actions/secure-ops/projects');
+            const { DEFAULT_FEEDBACK_FORM_ROW } = await import('@/constants/forms');
             return DEFAULT_FEEDBACK_FORM_ROW as unknown as Forms;
         }
 
