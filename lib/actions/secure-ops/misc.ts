@@ -1413,7 +1413,9 @@ export async function deleteThreadSecure(threadId: string, jwt?: string) {
     return { success: true, threadId, result: JSON.parse(JSON.stringify(result || {})) };
 }
 
-export const deletethreadThreadSecure = deleteThreadSecure;
+export async function deletethreadThreadSecure(threadId: string, jwt?: string) {
+  return deleteThreadSecure(threadId, jwt);
+}
 
 export async function getGlobalProfileStatusSecure(userId: string) {
   const targetUserId = String(userId || '').trim();
