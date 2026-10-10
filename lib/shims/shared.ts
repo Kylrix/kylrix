@@ -270,6 +270,14 @@ export enum AuthenticatorType {
   Totp = 'totp',
 }
 
+export enum OAuthProvider {
+  Google = 'google',
+  Github = 'github',
+  Apple = 'apple',
+  Discord = 'discord',
+  Spotify = 'spotify',
+}
+
 export enum ExecutionMethod {
   GET = 'GET',
   POST = 'POST',
