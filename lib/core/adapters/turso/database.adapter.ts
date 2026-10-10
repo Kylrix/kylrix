@@ -2,6 +2,7 @@ import { DatabasePort, QueryExpression, ListRowsResult } from '../../ports/datab
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, ne, lt, lte, gt, gte, and, desc, asc, like, isNull, isNotNull, sql } from 'drizzle-orm';
+import { broadcastRealtimeEvent } from '@/lib/realtime/partykit';
 
 const TABLE_MAP: Record<string, any> = {
   // Appwrite collection IDs
@@ -458,7 +459,15 @@ export class TursoDatabaseAdapter implements DatabasePort {
 
     try {
       await db.insert(table).values(insertData);
-      return this.shapeRow<T>(insertData, tableId);
+      const shaped = this.shapeRow<T>(insertData, tableId);
+      broadcastRealtimeEvent({
+        databaseId,
+        tableId,
+        rowId: id,
+        action: 'create',
+        payload: shaped,
+      }).catch(() => {});
+      return shaped;
     } catch (err: any) {
       // If conflicting primary key, perform update
       if (err?.message?.includes('UNIQUE constraint') || err?.message?.includes('PRIMARY KEY')) {
@@ -502,7 +511,15 @@ export class TursoDatabaseAdapter implements DatabasePort {
 
     try {
       await db.update(table).set(updateData).where(eq(table.id, rowId));
-      return await this.getRow<T>(databaseId, tableId, rowId, options);
+      const updated = await this.getRow<T>(databaseId, tableId, rowId, options);
+      broadcastRealtimeEvent({
+        databaseId,
+        tableId,
+        rowId,
+        action: 'update',
+        payload: updated,
+      }).catch(() => {});
+      return updated;
     } catch (err: any) {
       console.error(`[TursoDatabaseAdapter] updateRow ${tableId}/${rowId} error:`, err?.message || err);
       throw err;
@@ -523,6 +540,13 @@ export class TursoDatabaseAdapter implements DatabasePort {
 
     try {
       await db.delete(table).where(eq(table.id, rowId));
+      broadcastRealtimeEvent({
+        databaseId,
+        tableId,
+        rowId,
+        action: 'delete',
+        payload: { $id: rowId, id: rowId, isDeleted: true },
+      }).catch(() => {});
     } catch (err: any) {
       console.error(`[TursoDatabaseAdapter] deleteRow ${tableId}/${rowId} error:`, err?.message || err);
       throw err;
@@ -550,6 +574,15 @@ export class TursoDatabaseAdapter implements DatabasePort {
       await db.update(table).set({
         [input.column]: sql`${col} + ${incrementBy}`
       }).where(eq(table.id, input.rowId));
+      this.getRow(input.databaseId, input.tableId, input.rowId).then((updated) => {
+        broadcastRealtimeEvent({
+          databaseId: input.databaseId,
+          tableId: input.tableId,
+          rowId: input.rowId,
+          action: 'update',
+          payload: updated,
+        }).catch(() => {});
+      }).catch(() => {});
     } catch (err: any) {
       console.error(`[TursoDatabaseAdapter] incrementRowColumn error:`, err?.message || err);
     }

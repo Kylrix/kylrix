@@ -232,8 +232,16 @@ export class Messaging {
 
 export class Realtime {
   constructor(_client?: Client) {}
-  subscribe() {
-    return () => {};
+  subscribe(channels: string | string[], callback: (response: any) => void) {
+    if (typeof window === 'undefined') {
+      return () => {};
+    }
+    try {
+      const { partyRealtime } = require('@/lib/realtime/partykit');
+      return partyRealtime.subscribe(channels, callback);
+    } catch {
+      return () => {};
+    }
   }
 }
 
