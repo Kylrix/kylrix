@@ -89,27 +89,27 @@ Migrating completely to Turso resolves this bottleneck:
 | 70 | `app_activity_logs` | -> | `activity_log` | System & Logs | Detailed activity log entries ➔ unified activity log |
 | 71 | `folders` (Folders) | -> | | Legacy / Unmatched | Hierarchical folder tree (obsoleted by workspaces & tags) |
 | 72 | `contacts` (Contacts) | -> | | Legacy / Unmatched | Address book contacts (handled by conversations & profiles) |
-| 73 | `follows` (Follows) | -> | | Social / Unmatched | User follower/following graph |
+| 73 | `follows` (Follows) | -> | `follows` | Social & Graph | User follower/following graph, notification flags |
 | 74 | `interactions` (Interactions) | -> | | Legacy / Unmatched | Redundant interaction events (superseded by `reactions`) |
 | 75 | `moments` (Moments) | -> | | Social / Unmatched | Ephemeral story/moment feeds |
-| 76 | `epochs` (epochs) | -> | | Security / Unmatched | Key rotation epoch sequences (superseded by `keychain`) |
-| 77 | `joinRequests` (Join Requests) | -> | | Workspaces / Unmatched | Workspace join requests (superseded by invite codes) |
-| 78 | `unorganic_emails` | -> | | System / Unmatched | Transactional email deduplication and queue logs |
+| 76 | `epochs` (epochs) | -> | `epochs` | Security & Cryptography | Key rotation epoch sequences and creator attribution |
+| 77 | `joinRequests` (Join Requests) | -> | `join_requests` | Workspaces & Access | Workspace join requests, resolution status, and approver |
+| 78 | `unorganic_emails` | -> | `unorganic_emails` | System & Communications | Transactional email deduplication, priority, and dispatch logs |
 | 79 | `engagement_views` | -> | | Analytics / Unmatched | Raw content view counts and analytics events |
 | 80 | `engagement_view_rollups` | -> | | Analytics / Unmatched | Aggregated daily/monthly analytics rollups |
 | 81 | `system_pulse` (system_pulse) | -> | | DevOps / Unmatched | Health check and monitoring heartbeat metric store |
-| 82 | `source_control` | -> | | Integrations / Unmatched | GitHub/GitLab repository sync and PAT linkages |
+| 82 | `source_control` | -> | `source_control` | Integrations & Repos | GitHub/GitLab repository sync, provider credentials, and mappings |
 | 83 | `accountEvents` (Account Events) | -> | | Billing / Unmatched | Ephemeral token grant and daily login reward events |
 | 84 | `focusSessions` (focusSessions) | -> | | Productivity / Unmatched | Pomodoro focus session timers attached to tasks |
-| 85 | `agents` (agents) | -> | | AI / Unmatched | Legacy agent definition rows (superseded by `agentic_sessions`) |
-| 86 | `Collaborators` (Collaborators) | -> | | Permissions / Unmatched | Legacy ACL rows (superseded by `workspace_objects`) |
-| 87 | `compute_balances` | -> | | Billing / Unmatched | Cached compute balance (computed from `compute_ledger`) |
-| 88 | `notifications` (notifications) | -> | | Messaging / Unmatched | User notifications (handled client-side / webhooks) |
-| 89 | `objects` (objects) | -> | | Core / Unmatched | Generic polymorphic join table (superseded by `workspace_objects`) |
+| 85 | `agents` (agents) | -> | `agents` | AI & Autonomous | Agent definition records, public keys, and engine configurations |
+| 86 | `Collaborators` (Collaborators) | -> | `collaborators` | Permissions & Access | Resource-level collaborator grants, roles, and invitation states |
+| 87 | `compute_balances` | -> | `compute_balances` | Billing & Compute | User compute balance cache and tier quota status |
+| 88 | `notifications` (notifications) | -> | `notifications` | Messaging & Alerts | In-app user notifications, pointers, and read states |
+| 89 | `objects` (objects) | -> | `objects` | Core Relations | Generic polymorphic parent-child entity relations |
 | 90 | `nostr_identities` | -> | | Web3 / Unmatched | Decentralized Nostr npub/nsec identity keys |
 | 91 | `swept` (swept) | -> | | Workspaces / Unmatched | Workspace auto-sweeping policy and config records |
-| 92 | `pat_rate_state` | -> | | API / Unmatched | Ephemeral Redis/in-memory PAT rate-limit window counters |
-| 93 | `api_user_rate_state` | -> | | API / Unmatched | Ephemeral Redis/in-memory user rate-limit window counters |
+| 92 | `pat_rate_state` | -> | `pat_rate_state` | API & Shield | PAT rate-limiting window counters and minute/hour buckets |
+| 93 | `api_user_rate_state` | -> | `api_user_rate_state` | API & Shield | User rate-limiting window counters and minute/hour buckets |
 
 ---
 

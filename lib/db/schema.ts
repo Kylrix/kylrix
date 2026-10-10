@@ -1096,5 +1096,177 @@ export const activityLog = sqliteTable('activity_log', {
   createdAt: text('created_at').notNull(),
 });
 
+export const follows = sqliteTable('follows', {
+  id: text('id').primaryKey(),
+  followerId: text('follower_id').notNull(),
+  followingId: text('following_id').notNull(),
+  status: text('status').default('accepted'),
+  isCloseFriend: integer('is_close_friend', { mode: 'boolean' }).default(false),
+  notificationsEnabled: integer('notifications_enabled', { mode: 'boolean' }).default(true),
+  createdAt: text('created_at').notNull(),
+}, (table) => [
+  uniqueIndex('idx_follows_pair').on(table.followerId, table.followingId),
+  index('idx_follows_following').on(table.followingId),
+]);
 
+export const epochs = sqliteTable('epochs', {
+  id: text('id').primaryKey(),
+  resourceId: text('resource_id').notNull(),
+  epochNumber: integer('epoch_number').notNull(),
+  createdBy: text('created_by').notNull(),
+  createdAt: text('created_at'),
+}, (table) => [
+  uniqueIndex('idx_epochs_resource_epoch').on(table.resourceId, table.epochNumber),
+]);
 
+export const joinRequests = sqliteTable('join_requests', {
+  id: text('id').primaryKey(),
+  resourceType: text('resource_type').notNull(),
+  resourceId: text('resource_id').notNull(),
+  requesterId: text('requester_id').notNull(),
+  status: text('status').default('pending'),
+  createdAt: text('created_at'),
+  resolvedAt: text('resolved_at'),
+  resolvedBy: text('resolved_by'),
+}, (table) => [
+  uniqueIndex('idx_join_requests_unique').on(table.resourceType, table.resourceId, table.requesterId),
+  index('idx_join_requests_resource').on(table.resourceType, table.resourceId, table.status),
+  index('idx_join_requests_requester').on(table.requesterId, table.status),
+]);
+
+export const unorganicEmails = sqliteTable('unorganic_emails', {
+  id: text('id').primaryKey(),
+  eventType: text('event_type').notNull(),
+  sourceApp: text('source_app').notNull(),
+  actorId: text('actor_id'),
+  recipientId: text('recipient_id'),
+  recipientEmail: text('recipient_email'),
+  resourceType: text('resource_type'),
+  resourceId: text('resource_id'),
+  templateKey: text('template_key').notNull(),
+  priority: integer('priority').default(0),
+  status: text('status').notNull().default('pending'),
+  dedupeKey: text('dedupe_key').notNull().unique(),
+  attempts: integer('attempts').default(0),
+  sentAt: text('sent_at'),
+  expiresAt: text('expires_at'),
+  processedAt: text('processed_at'),
+  blockedReason: text('blocked_reason'),
+  metadata: text('metadata'),
+}, (table) => [
+  index('idx_unorganic_emails_recipient').on(table.recipientId, table.status, table.sentAt),
+  index('idx_unorganic_emails_status').on(table.status, table.priority),
+]);
+
+export const sourceControl = sqliteTable('source_control', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull(),
+  provider: text('provider').notNull(),
+  repoName: text('repo_name'),
+  ownerName: text('owner_name'),
+  accessToken: text('access_token'),
+  enabled: integer('enabled', { mode: 'boolean' }).default(true),
+  metadata: text('metadata'),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+}, (table) => [
+  index('idx_source_control_project').on(table.projectId),
+]);
+
+export const agents = sqliteTable('agents', {
+  id: text('id').primaryKey(),
+  ownerId: text('owner_id').notNull(),
+  parentId: text('parent_id'),
+  publicKey: text('public_key').notNull(),
+  config: text('config').notNull(),
+  status: text('status').default('idle'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+}, (table) => [
+  index('idx_agents_owner').on(table.ownerId),
+  index('idx_agents_parent').on(table.parentId),
+]);
+
+export const collaborators = sqliteTable('collaborators', {
+  id: text('id').primaryKey(),
+  resourceId: text('resource_id').notNull(),
+  resourceType: text('resource_type').notNull(),
+  userId: text('user_id').notNull(),
+  permission: text('permission').notNull().default('read'),
+  inviterId: text('inviter_id'),
+  status: text('status').default('pending'),
+  invitedAt: text('invited_at'),
+  accepted: integer('accepted', { mode: 'boolean' }).default(false),
+  expiresAt: text('expires_at'),
+  role: text('role'),
+  metadata: text('metadata'),
+}, (table) => [
+  uniqueIndex('idx_collaborators_resource_user').on(table.resourceId, table.userId),
+  index('idx_collaborators_user').on(table.userId),
+]);
+
+export const computeBalances = sqliteTable('compute_balances', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().unique(),
+  tier: text('tier').notNull().default('free'),
+  lastResetAt: text('last_reset_at'),
+  balance: integer('balance').default(0),
+  updatedAt: text('updated_at'),
+});
+
+export const notifications = sqliteTable('notifications', {
+  id: text('id').primaryKey(),
+  originatorId: text('originator_id').notNull(),
+  targets: text('targets').notNull(),
+  targetPointer: text('target_pointer'),
+  type: text('type').default('direct'),
+  metadata: text('metadata'),
+  isRead: integer('is_read', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at'),
+}, (table) => [
+  index('idx_notifications_originator').on(table.originatorId),
+]);
+
+export const objects = sqliteTable('objects', {
+  id: text('id').primaryKey(),
+  parentId: text('parent_id').notNull(),
+  parentKind: text('parent_kind').notNull(),
+  childId: text('child_id').notNull(),
+  childKind: text('child_kind').notNull(),
+  metadata: text('metadata'),
+  userId: text('user_id').notNull(),
+  createdAt: text('created_at'),
+  updatedAt: text('updated_at'),
+  isPublic: integer('is_public', { mode: 'boolean' }).default(false),
+  isGuest: integer('is_guest', { mode: 'boolean' }).default(false),
+  isGeneral: integer('is_general', { mode: 'boolean' }).default(false),
+}, (table) => [
+  index('idx_objects_parent').on(table.parentId, table.parentKind),
+  index('idx_objects_child').on(table.childId, table.childKind),
+  index('idx_objects_user_parent').on(table.userId, table.parentId),
+]);
+
+export const patRateState = sqliteTable('pat_rate_state', {
+  id: text('id').primaryKey(),
+  patId: text('pat_id').notNull().unique(),
+  userId: text('user_id').notNull(),
+  minuteKey: text('minute_key').notNull(),
+  minuteCount: integer('minute_count').default(0),
+  hourKey: text('hour_key').notNull(),
+  hourCount: integer('hour_count').default(0),
+  updatedAt: text('updated_at'),
+}, (table) => [
+  index('idx_pat_rate_state_user').on(table.userId),
+]);
+
+export const apiUserRateState = sqliteTable('api_user_rate_state', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().unique(),
+  minuteKey: text('minute_key').notNull(),
+  minuteCount: integer('minute_count').default(0),
+  hourKey: text('hour_key').notNull(),
+  hourCount: integer('hour_count').default(0),
+  updatedAt: text('updated_at'),
+});
