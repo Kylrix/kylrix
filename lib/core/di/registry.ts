@@ -7,7 +7,7 @@ import { MessagingPort } from '../ports/messaging.port';
 import { TursoDatabaseAdapter } from '../adapters/turso/database.adapter';
 import { TursoAuthAdapter } from '../adapters/turso/auth.adapter';
 import { AppwriteAuthAdapter } from '../adapters/appwrite/auth.adapter';
-import { AppwriteStorageAdapter } from '../adapters/appwrite/storage.adapter';
+import { DisabledStorageAdapter } from '../adapters/disabled/storage.adapter';
 import { AppwriteFunctionsAdapter } from '../adapters/appwrite/functions.adapter';
 import { AppwriteMessagingAdapter } from '../adapters/appwrite/messaging.adapter';
 
@@ -34,7 +34,7 @@ export class Registry {
 
   static getStorage(): StoragePort {
     if (!this.storage) {
-      this.storage = new AppwriteStorageAdapter();
+      this.storage = new DisabledStorageAdapter();
     }
     return this.storage;
   }

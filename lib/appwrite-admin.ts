@@ -405,12 +405,27 @@ export function createSystemClient() {
       .setKey(apiKey || '')
   );
 
+  const disabledStorage = new Proxy({} as any, {
+    get(_target, prop) {
+      if (prop === 'createFile') {
+        return async () => { throw new Error('File storage is disabled.'); };
+      }
+      if (prop === 'deleteFile') {
+        return async () => {};
+      }
+      if (prop === 'getFilePreview' || prop === 'getFileView' || prop === 'getFileDownload') {
+        return () => '';
+      }
+      return () => {};
+    }
+  }) as unknown as Storage;
+
   cachedSystemClient = {
     client,
     account: new Account(client),
     databases: createProxiedDatabases(client),
     messaging: new Messaging(client),
-    storage: new Storage(client),
+    storage: disabledStorage,
     users: createTursoUsers() as unknown as Users,
     teams: new Teams(client),
   };

@@ -290,7 +290,20 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
 
 export const tablesDB = tablesDBProxy as unknown as TablesDB;
 
-export const storage = new Storage(client);
+export const storage = new Proxy({} as any, {
+    get(_target, prop) {
+        if (prop === 'createFile') {
+            return async () => { throw new Error('File storage is disabled.'); };
+        }
+        if (prop === 'deleteFile') {
+            return async () => {};
+        }
+        if (prop === 'getFilePreview' || prop === 'getFileView' || prop === 'getFileDownload') {
+            return () => '';
+        }
+        return () => {};
+    }
+}) as unknown as Storage;
 export const avatars = new Avatars(client);
 export const teams = new Teams(client);
 export const functions = new Functions(client);
