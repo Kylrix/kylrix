@@ -273,23 +273,9 @@ async function getUserDailyMinted(userId: string) {
         )
       );
 
-    if (rows && rows.length > 0) {
-      return rows.reduce((sum, doc) => sum + asMicro(doc.amountMicro), 0n);
-    }
-  } catch {}
-
-  try {
-    const { rows } = await ledgerTables().listRows({
-      databaseId: DB_ID,
-      tableId: TABLE_ID,
-      queries: [
-        Query.equal('rowType', 'event'),
-        Query.equal('userId', userId),
-        Query.equal('eventType', 'mint_activity'),
-        Query.greaterThanEqual('createdAt', sinceIso),
-        Query.limit(5000)]});
-    return (rows ?? []).reduce((sum, doc: any) => sum + asMicro(doc.amountMicro), 0n);
-  } catch {
+    return (rows || []).reduce((sum, doc) => sum + asMicro(doc.amountMicro), 0n);
+  } catch (err: any) {
+    console.warn('[getUserDailyMinted] Turso query error:', err?.message);
     return 0n;
   }
 }
