@@ -5,6 +5,7 @@ import { FunctionsPort } from '../ports/functions.port';
 import { MessagingPort } from '../ports/messaging.port';
 
 import { TursoDatabaseAdapter } from '../adapters/turso/database.adapter';
+import { TursoAuthAdapter } from '../adapters/turso/auth.adapter';
 import { AppwriteAuthAdapter } from '../adapters/appwrite/auth.adapter';
 import { AppwriteStorageAdapter } from '../adapters/appwrite/storage.adapter';
 import { AppwriteFunctionsAdapter } from '../adapters/appwrite/functions.adapter';
@@ -26,7 +27,7 @@ export class Registry {
 
   static getAuth(): AuthPort {
     if (!this.auth) {
-      this.auth = new AppwriteAuthAdapter();
+      this.auth = new TursoAuthAdapter();
     }
     return this.auth;
   }

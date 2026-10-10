@@ -131,10 +131,8 @@ const databasesProxy = new Proxy(originalDatabases, {
                     [dbId, tblId, q] = args;
                 }
                 const fetcher = async () => {
-                    const t: any = target as any;
-                    if (typeof t.listRows === 'function') return await t.listRows(...args);
-                    if (typeof t.listDocuments === 'function') return await t.listDocuments(...args);
-                    throw new Error('listRows/listDocuments not available on Databases client');
+                    const { listRowsSecure } = await import('@/lib/actions/secure-ops');
+                    return await listRowsSecure(dbId, tblId, q);
                 };
                 if (dbId && tblId) {
                     const { getTablesDbListCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
@@ -159,10 +157,8 @@ const databasesProxy = new Proxy(originalDatabases, {
                     [dbId, tblId, rId] = args;
                 }
                 const fetcher = async () => {
-                    const t: any = target as any;
-                    if (typeof t.getRow === 'function') return await t.getRow(...args);
-                    if (typeof t.getDocument === 'function') return await t.getDocument(...args);
-                    throw new Error('getRow/getDocument not available on Databases client');
+                    const { getRowSecure } = await import('@/lib/actions/secure-ops');
+                    return await getRowSecure(dbId, tblId, rId);
                 };
                 if (dbId && tblId && rId) {
                     const { getTablesDbRowCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
@@ -190,7 +186,7 @@ const databasesProxy = new Proxy(originalDatabases, {
     }
 });
 
-export const databases = typeof window !== 'undefined' ? (databasesProxy as unknown as Databases) : originalDatabases;
+export const databases = databasesProxy as unknown as Databases;
 
 const tablesDBProxy = new Proxy(originalTablesDB, {
     get(target: any, prop: string | symbol, receiver: any) {
@@ -237,10 +233,8 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
                     [dbId, tblId, q] = args;
                 }
                 const fetcher = async () => {
-                    const t: any = target as any;
-                    if (typeof t.listRows === 'function') return await t.listRows(...args);
-                    if (typeof t.listDocuments === 'function') return await t.listDocuments(...args);
-                    throw new Error('listRows/listDocuments not available on TablesDB client');
+                    const { listRowsSecure } = await import('@/lib/actions/secure-ops');
+                    return await listRowsSecure(dbId, tblId, q);
                 };
                 if (dbId && tblId) {
                     const { getTablesDbListCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
@@ -265,10 +259,8 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
                     [dbId, tblId, rId] = args;
                 }
                 const fetcher = async () => {
-                    const t: any = target as any;
-                    if (typeof t.getRow === 'function') return await t.getRow(...args);
-                    if (typeof t.getDocument === 'function') return await t.getDocument(...args);
-                    throw new Error('getRow/getDocument not available on TablesDB client');
+                    const { getRowSecure } = await import('@/lib/actions/secure-ops');
+                    return await getRowSecure(dbId, tblId, rId);
                 };
                 if (dbId && tblId && rId) {
                     const { getTablesDbRowCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
@@ -296,7 +288,7 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
     }
 });
 
-export const tablesDB = typeof window !== 'undefined' ? (tablesDBProxy as unknown as TablesDB) : originalTablesDB;
+export const tablesDB = tablesDBProxy as unknown as TablesDB;
 
 export const storage = new Storage(client);
 export const avatars = new Avatars(client);
