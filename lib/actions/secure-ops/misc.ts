@@ -248,7 +248,7 @@ export async function executeMasterPurgeSecure(jwt?: string) {
   if (!actor?.$id) throw new Error('Unauthorized');
 
   const userId = actor.$id;
-  const { databases, users, storage } = createSystemClient() as any;
+  const { databases, users } = createSystemClient() as any;
 
   // Single-database: passwordManagerDb holds all tables; also support legacy CHAT/VAULT ids via fallback
   const mainDb = (APPWRITE_CONFIG as any).DATABASES?.PASSWORD_MANAGER || (APPWRITE_CONFIG as any).DATABASES?.VAULT || 'passwordManagerDb';
@@ -338,22 +338,7 @@ export async function executeMasterPurgeSecure(jwt?: string) {
   // Profiles: null out publicKey rather than delete (keep row for audit)
   for (const pr of (profilesRows.rows || [])) actions.push(tryUpdateRow(mainDb, 'profiles', pr.$id, { publicKey: null, updatedAt: new Date().toISOString() }));
 
-  // Storage buckets: purge files owned by user (best-effort, no retention)
-  actions.push((async () => {
-    const bucketIds = ['notes_attachments', 'voice', 'profile_pictures', 'form_attachments', 'project_files'];
-    for (const bid of bucketIds) {
-      try {
-        const { Query } = await import('node-appwrite');
-        for (;;) {
-          const files: any = await (storage as any).listFiles(bid, [Query.limit(100)]).catch(() => ({ files: [] }));
-          const owned = (files.files || []).filter((f: any) => String(f.name || '').includes(userId) || String((f as any).userId || '') === userId);
-          if (!owned.length) break;
-          await Promise.all(owned.map((f: any) => (storage as any).deleteFile(bid, f.$id).catch(() => null)));
-          if (owned.length < 100) break;
-        }
-      } catch {}
-    }
-  })());
+  // Storage buckets: not applicable (storage removed)
 
   await Promise.all(actions);
 
@@ -1158,28 +1143,9 @@ export async function getRowSecure(databaseId: string, tableId: string, rowId: s
   }
 }
 
-export async function getFilePreviewSecure(bucketId: string, fileId: string, width = 100, height = 100) {
-  const { storage } = createSystemClient();
-  try {
-    const url = storage.getFilePreview(bucketId, fileId, width, height);
-    // Fetch preview content from the server-side context where we have full credentials
-    const res = await fetch(url.toString(), {
-      headers: {
-        'X-Appwrite-Project': APPWRITE_CONFIG.PROJECT_ID,
-        'X-Appwrite-Key': process.env.APPWRITE_API || ''}});
-    if (!res.ok) {
-      console.warn('[getFilePreviewSecure] Failed to fetch url:', url.toString(), 'status:', res.status);
-      return null;
-    }
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64 = buffer.toString('base64');
-    const contentType = res.headers.get('content-type') || 'image/png';
-    return `data:${contentType};base64,${base64}`;
-  } catch (error: any) {
-    console.warn('[getFilePreviewSecure] Failed:', error?.message);
-    return null;
-  }
+export async function getFilePreviewSecure(_bucketId: string, _fileId: string, _width = 100, _height = 100): Promise<string | null> {
+  // File storage removed — previews are not available
+  return null;
 }
 
 export async function promotethreadResourceThreadToStorySecure(
@@ -1737,35 +1703,14 @@ export async function detachObjectByRelationSecure(params: {
     })
   ));
 
-  // If this was a secondary object (created in-situ directly on the parent), wipe its storage or row
-  if (isSecondary) {
-    try {
-      if (childKind === 'voice' || childKind === 'file' || childKind === 'image') {
-        const { storage } = createSystemClient();
-        const targetBucket = bucketId || (childKind === 'voice' ? APPWRITE_CONFIG.BUCKETS.VOICE : APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE);
-        await storage.deleteFile(targetBucket, params.childId).catch(() => {});
-      }
-    } catch (storageErr) {
-      console.warn('[detachObjectByRelationSecure] Could not delete secondary storage file:', storageErr);
-    }
-  }
+  // Storage file deletion not applicable (storage removed)
 
   return { success: true, count: res.rows.length };
 }
 
-export async function getProfilePicturePreviewSecure(fileId: string): Promise<string | null> {
-  const targetId = String(fileId || '').trim();
-  if (!targetId) return null;
-
-  try {
-    const { storage } = createSystemClient();
-    const fileBuffer = await storage.getFilePreview('profile_pictures', targetId, 160, 160);
-    const base64 = Buffer.from(fileBuffer).toString('base64');
-    return `data:image/png;base64,${base64}`;
-  } catch (err: any) {
-    console.error('[secure-ops] getProfilePicturePreviewSecure failed:', err);
-    return null;
-  }
+export async function getProfilePicturePreviewSecure(_fileId: string): Promise<string | null> {
+  // File storage removed — profile picture previews are not available
+  return null;
 }
 
 export async function getObjectsByParentSecure(parentId: string, parentKind: string, jwt?: string) {

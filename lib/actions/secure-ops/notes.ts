@@ -173,36 +173,16 @@ export async function getNoteSecondaryObjectPreviewSecure(
   }
 
   if (childKind === 'file' || childKind === 'image' || childKind === 'voice') {
-    const bucketId = input.bucketId || (childKind === 'voice' ? 'voice' : APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE);
-    const { getFilePreviewSecure } = await import('./misc');
-    let previewDataUrl: string | null = null;
-
-    const needsRasterPreview = visualKind === 'image' || visualKind === 'video' || childKind === 'image';
-    if (needsRasterPreview) {
-      previewDataUrl = await getFilePreviewSecure(bucketId, childId, 960, 540);
-    }
-
-    const needsFullBlob =
-      !previewDataUrl &&
-      (visualKind === 'image' || visualKind === 'pdf' || visualKind === 'video' || visualKind === 'audio');
-    if (needsFullBlob) {
-      try {
-        const blob = await getNoteInheritedFileBlobSecure(input.noteId, childId, bucketId, validatedJwt);
-        if (blob.dataUrl) previewDataUrl = blob.dataUrl;
-      } catch {
-        // best effort
-      }
-    }
-
+    // File storage removed — no preview data available
     return {
       ok: true as const,
       title: fallbackTitle,
       href: null as string | null,
-      previewDataUrl,
+      previewDataUrl: null as string | null,
       childKind,
-      bucketId,
+      bucketId: '',
       fileId: childId,
-      mimeType: blobMimeFromPreview(previewDataUrl) || mimeType,
+      mimeType,
       visualKind};
   }
 
@@ -257,29 +237,17 @@ function blobMimeFromPreview(dataUrl: string | null | undefined): string | null 
 }
 
 export async function getNoteInheritedFileBlobSecure(
-  noteId: string,
+  _noteId: string,
   fileId: string,
-  bucketId: string,
-  jwt?: string,
+  _bucketId: string,
+  _jwt?: string,
 ) {
-  const validatedJwt = JWTSchema.parse(jwt);
-  const actor = await getActor(validatedJwt).catch(() => null);
-  const canRead = await canReadSharedNoteSecure(noteId, actor?.$id);
-  if (!canRead) {
-    throw new Error('Forbidden');
-  }
-
-  const { storage } = createSystemClient();
-  const [buffer, fileMeta] = await Promise.all([
-    storage.getFileDownload(bucketId, fileId),
-    storage.getFile(bucketId, fileId).catch(() => null),
-  ]);
-  const mimeType = fileMeta?.mimeType || 'application/octet-stream';
-  const base64 = Buffer.from(buffer).toString('base64');
+  // File storage removed — blobs are not available
   return {
-    dataUrl: `data:${mimeType};base64,${base64}`,
-    mimeType,
-    name: fileMeta?.name || fileId};
+    dataUrl: null,
+    mimeType: 'application/octet-stream',
+    name: fileId,
+  };
 }
 
 export async function getPublicNoteCommentsSecure(noteId: string) {

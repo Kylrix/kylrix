@@ -1,5 +1,4 @@
 import { getProductName } from '@/lib/config/product';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 export async function resolveProfileAvatarDataUrl(
   fileId: string | null | undefined
@@ -17,14 +16,8 @@ export async function resolveProfileAvatarDataUrl(
       }
       return null;
     }
-    const { storage } = await import('@/lib/appwrite-admin').then((m) => m.createSystemClient());
-    const fileBuffer = await storage.getFilePreview(
-      APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES,
-      id,
-      256,
-      256
-    );
-    return `data:image/png;base64,${Buffer.from(fileBuffer).toString('base64')}`;
+    // Storage bucket-based avatars are no longer supported
+    return null;
   } catch {
     return null;
   }

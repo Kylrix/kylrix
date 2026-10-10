@@ -3,7 +3,6 @@
 import { Query } from 'appwrite';
 import React, { useEffect, useState, useRef, useTransition, useMemo } from 'react';
 import { ChatService } from '@/lib/services/chat';
-import { StorageService } from '@/lib/services/storage';
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -1476,11 +1475,7 @@ export const ChatWindow = ({
                 // Underlying substrate is notes/idea → threads/thread_messages (canonical) with legacy comments fallback.
                 // Mirrors project discussion: ensure thread then post (bottom-up: thread_messages, not conversations).
                 let actualAttachments = initialAttachments;
-                if (file) {
-                    const bucketId = StorageService.getBucketForType(type);
-                    const uploaded = await StorageService.uploadFile(file, bucketId);
-                    actualAttachments = [uploaded.$id];
-                }
+                // File attachments are not supported
                 const { getOrCreateThread, postThreadMessage } = await import('@/lib/actions/client-ops');
                 let threadId = conversationId;
                 try {
@@ -1529,11 +1524,7 @@ export const ChatWindow = ({
             }
 
             let actualAttachments = initialAttachments;
-            if (file) {
-                const bucketId = StorageService.getBucketForType(type);
-                const uploaded = await StorageService.uploadFile(file, bucketId);
-                actualAttachments = [uploaded.$id];
-            }
+            // File attachments are not supported
 
             const sentMessage = await ChatService.sendMessage(conversationId, user.$id, finalText, type, actualAttachments, replyToId);
 
@@ -1665,25 +1656,10 @@ export const ChatWindow = ({
                     // Stop all tracks to release microphone
                     stream.getTracks().forEach(track => track.stop());
 
-                    // Send the audio file — branch on substrate (thread thread vs secure conversation)
+                    // Voice note upload is not supported (file storage removed)
                     setSending(true);
                     try {
-                        const uploaded = await StorageService.uploadFile(audioFile, StorageService.getBucketForType('audio'));
-                        const isThreadHangoutVoice = !!(conversation as any)?.isThreadFallback || (conversation as any)?.type === 'thread' || !!(conversation as any)?.isthreadChat || !!(conversation as any)?.isSelfBookmarks;
-                        if (isThreadHangoutVoice) {
-                            const { getOrCreateThread, postThreadMessage } = await import('@/lib/actions/client-ops');
-                            let threadId: any = conversationId;
-                            try {
-                                const parentKind: any = (conversation as any)?.isSelfBookmarks ? 'user' : 'chat';
-                                const parentId: any = (conversation as any)?.isSelfBookmarks ? user?.$id : conversationId;
-                                const channel: any = (conversation as any)?.isSelfBookmarks ? 'bookmarks' : 'general';
-                                const ensured: any = await getOrCreateThread({ parentKind, parentId, channel, title: (conversation as any)?.name || 'Bookmarks', legacyNoteId: conversationId } as any);
-                                threadId = ensured?.thread?.id || threadId;
-                            } catch {}
-                            await postThreadMessage({ threadId, content: `__voice_note__:${uploaded.$id}` } as any);
-                        } else {
-                            await ChatService.sendMessage(conversationId, user?.$id || '', 'Voice Message', 'audio', [uploaded.$id]);
-                        }
+                        toast.error('Voice note upload is not supported.');
                     } catch (error) {
                         console.error('Failed to send voice note:', error);
                     } finally {

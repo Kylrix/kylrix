@@ -153,27 +153,7 @@ export const APPWRITE_CONFIG = {
         },
         // Identical to CONNECT — assigned after object init
         CHAT: null as any},
-    BUCKETS: {
-        PROFILE_PICTURES: 'profile_pictures',
-        GROUP_AVATARS: 'group_avatars',
-        NOTES_ATTACHMENTS: 'notes_attachments',
-        GENERAL_STORAGE: 'generalstorage',
-        BLOG_MEDIA: 'event_covers',
-        EXTENSION_ASSETS: 'extension_assets',
-        BACKUPS: 'backups',
-        TEMP_UPLOADS: 'temp_uploads',
-        /** Ephemeral file payloads for Send by Kylrix (provision in Appwrite; TTL ~7d via cron/cleanup). */
-        SEND_EPHEMERAL: 'kylrix_send',
-        MESSAGES: 'messages',
-        VAULT_ATTACHMENTS: 'vault_attachments',
-        FORM_MEDIA: 'form_media',
-        FORM_ATTACHMENTS: 'form_attachments',
-        CHAT_UPLOADS: 'chat_uploads',
-        TASK_ATTACHMENTS: 'notes_attachments', // Alias
-        EVENT_COVERS: 'event_covers', // Alias
-        VOICE: 'voice',
-        APP_LOGOS: 'app_logos'
-    },
+    BUCKETS: {} as Record<string, string>,
     FUNCTIONS: {
         PERMISSION_UPDATER: '69c0ff79001b60e664d2',
         SEARCH_USERS: '69a582720012957d2027',

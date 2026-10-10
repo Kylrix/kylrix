@@ -250,12 +250,12 @@ export default function FormsDashboard() {
         let unsubscribe: (() => void) | undefined;
         void (async () => {
             try {
-                const { client } = await import('@/lib/appwrite/client');
+                const { realtime } = await import('@/lib/appwrite/client');
                 const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
                 const dbId = APPWRITE_CONFIG.DATABASES.FLOW;
                 const tableId = APPWRITE_CONFIG.TABLES.FLOW.FORMS;
                 const channel = `databases.${dbId}.collections.${tableId}.documents`;
-                unsubscribe = client.subscribe(channel, (response: any) => {
+                unsubscribe = realtime.subscribe(channel, (response: any) => {
                     if (response?.events?.some((event: string) => event.includes('.create') || event.includes('.update') || event.includes('.delete'))) {
                         void fetchFormsRef.current(false);
                     }

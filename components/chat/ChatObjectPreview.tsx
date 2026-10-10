@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { X, FileText, Target, FolderKanban, Shield, Key, Bot } from 'lucide-react';
 import type { SecondaryObjectPayload } from '@/lib/note-object-secondary';
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { StorageService } from '@/lib/services/storage';
 import { useAuth } from '@/lib/auth';
 
 const KIND_LABELS: Record<string, string> = {
@@ -43,14 +42,8 @@ export function ChatObjectPreview({
   const [title, setTitle] = useState(payload.label || 'Attachment');
 
   const thumb = useMemo(() => {
-    const mime = String(payload.metadata?.mimeType || '');
-    if (payload.childKind !== 'image' && !mime.startsWith('image/')) return null;
-    try {
-      const bucket = payload.bucketId || 'notes_attachments';
-      return StorageService.getFilePreview(payload.childId, bucket, 96, 96).toString();
-    } catch {
-      return null;
-    }
+    // File storage removed — no thumbnail previews
+    return null;
   }, [payload]);
 
   useEffect(() => {

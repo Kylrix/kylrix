@@ -87,6 +87,17 @@ export class Client {
     this.headers[key] = value;
     return this;
   }
+  subscribe(channels: string | string[], callback: (response: any) => void) {
+    if (typeof window === 'undefined') {
+      return () => {};
+    }
+    try {
+      const { partyRealtime } = require('@/lib/realtime/partykit');
+      return partyRealtime.subscribe(channels, callback);
+    } catch {
+      return () => {};
+    }
+  }
 }
 
 export class Account {
@@ -105,6 +116,12 @@ export class Account {
   }
   async deleteSession(_sessionId: string): Promise<any> {
     return {};
+  }
+  async getPrefs(): Promise<Record<string, any>> {
+    return {};
+  }
+  async updatePrefs(prefs: Record<string, any>): Promise<Record<string, any>> {
+    return prefs;
   }
 }
 
@@ -159,48 +176,42 @@ export class Databases extends TablesDB {
   }
 }
 
+/** Storage has been removed. File uploads, attachments, and buckets are not supported. */
 export class Storage {
-  constructor(_client?: Client) {}
-  async createFile(): Promise<any> {
-    throw new Error('Storage is deprecated and disabled.');
+  constructor(_client?: any) {}
+  async createFile(): Promise<never> {
+    throw new Error('File storage is not supported.');
   }
-  async deleteFile(): Promise<any> {
-    return {};
-  }
-  getFileView(): string {
-    return '';
-  }
-  getFilePreview(): string {
-    return '';
-  }
-  getFileDownload(): string {
-    return '';
-  }
+  async deleteFile(): Promise<void> { return; }
+  getFileView(_bucketId?: string, _fileId?: string, ..._args: any[]): string { return ''; }
+  getFilePreview(_bucketId?: string, _fileId?: string, _width?: number, _height?: number, ..._args: any[]): string { return ''; }
+  getFileDownload(_bucketId?: string, _fileId?: string, ..._args: any[]): string { return ''; }
+  async getFile(_bucketId?: string, _fileId?: string): Promise<any> { return null; }
 }
 
 export class Users {
   constructor(_client?: Client) {}
-  async get(userId: string) {
+  async get(userId: string): Promise<any> {
     const { createSystemClient } = await import('@/lib/appwrite-admin');
     return createSystemClient().users.get(userId);
   }
-  async list(queries?: any[]) {
+  async list(queries?: any[]): Promise<any> {
     const { createSystemClient } = await import('@/lib/appwrite-admin');
     return createSystemClient().users.list(queries as any);
   }
-  async create(...args: any[]) {
+  async create(...args: any[]): Promise<any> {
     const { createSystemClient } = await import('@/lib/appwrite-admin');
     return (createSystemClient().users as any).create(...args);
   }
-  async updatePrefs(userId: string, prefs: any) {
+  async updatePrefs(userId: string, prefs: any): Promise<any> {
     const { createSystemClient } = await import('@/lib/appwrite-admin');
     return createSystemClient().users.updatePrefs(userId, prefs);
   }
-  async getPrefs(userId: string) {
+  async getPrefs(userId: string): Promise<any> {
     const { createSystemClient } = await import('@/lib/appwrite-admin');
     return createSystemClient().users.getPrefs(userId);
   }
-  async delete(userId: string) {
+  async delete(userId: string): Promise<any> {
     const { createSystemClient } = await import('@/lib/appwrite-admin');
     return createSystemClient().users.delete(userId);
   }
@@ -225,8 +236,8 @@ export class Functions {
 
 export class Messaging {
   constructor(_client?: Client) {}
-  async createEmail() {
-    return {};
+  async createEmail(..._args: any[]): Promise<any> {
+    return { $id: 'msg_stub' };
   }
 }
 

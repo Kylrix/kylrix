@@ -1,19 +1,16 @@
 import { DatabasePort } from '../ports/database.port';
 import { AuthPort } from '../ports/auth.port';
-import { StoragePort } from '../ports/storage.port';
 import { FunctionsPort } from '../ports/functions.port';
 import { MessagingPort } from '../ports/messaging.port';
 
 import { TursoDatabaseAdapter } from '../adapters/turso/database.adapter';
 import { TursoAuthAdapter } from '../adapters/turso/auth.adapter';
-import { DisabledStorageAdapter } from '../adapters/disabled/storage.adapter';
 import { AppwriteFunctionsAdapter } from '../adapters/appwrite/functions.adapter';
 import { AppwriteMessagingAdapter } from '../adapters/appwrite/messaging.adapter';
 
 export class Registry {
   private static db: DatabasePort | null = null;
   private static auth: AuthPort | null = null;
-  private static storage: StoragePort | null = null;
   private static functions: FunctionsPort | null = null;
   private static messaging: MessagingPort | null = null;
 
@@ -29,13 +26,6 @@ export class Registry {
       this.auth = new TursoAuthAdapter();
     }
     return this.auth;
-  }
-
-  static getStorage(): StoragePort {
-    if (!this.storage) {
-      this.storage = new DisabledStorageAdapter();
-    }
-    return this.storage;
   }
 
   static getFunctions(): FunctionsPort {
@@ -61,10 +51,6 @@ export class Registry {
 
   static overrideAuth(customAuth: AuthPort): void {
     this.auth = customAuth;
-  }
-
-  static overrideStorage(customStorage: StoragePort): void {
-    this.storage = customStorage;
   }
 
   static overrideFunctions(customFunctions: FunctionsPort): void {

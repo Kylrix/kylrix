@@ -1,4 +1,4 @@
-import { Client, TablesDB, Storage, Account, Realtime, Databases, Avatars, Teams, Functions, Locale } from 'appwrite';
+import { Client, TablesDB, Account, Realtime, Databases, Avatars, Teams, Functions, Locale } from 'appwrite';
 import { APPWRITE_CONFIG } from './config';
 
 const client = new Client();
@@ -290,24 +290,11 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
 
 export const tablesDB = tablesDBProxy as unknown as TablesDB;
 
-export const storage = new Proxy({} as any, {
-    get(_target, prop) {
-        if (prop === 'createFile') {
-            return async () => { throw new Error('File storage is disabled.'); };
-        }
-        if (prop === 'deleteFile') {
-            return async () => {};
-        }
-        if (prop === 'getFilePreview' || prop === 'getFileView' || prop === 'getFileDownload') {
-            return () => '';
-        }
-        return () => {};
-    }
-}) as unknown as Storage;
 export const avatars = new Avatars(client);
 export const teams = new Teams(client);
 export const functions = new Functions(client);
 export const locale = new Locale(client);
+export const storage = new Storage(client);
 const originalRealtime = new Realtime(client);
 export const realtime = new Proxy(originalRealtime, {
     get(target, prop, receiver) {
@@ -331,8 +318,69 @@ export const realtime = new Proxy(originalRealtime, {
 
 export { client };
 
+export const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT || 'passwordManagerDb';
 export const APPWRITE_BUCKET_BACKUPS_ID = APPWRITE_CONFIG.BUCKETS.BACKUPS;
 export const APPWRITE_BUCKET_PROFILE_PICTURES_ID = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
+export const APPWRITE_COLLECTION_KEYCHAIN_ID = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
+
+export function getFilePreview(bucketId: string, fileId: string, width: number = 64, height: number = 64) {
+    return storage.getFilePreview(bucketId, fileId, width, height);
+}
+
+export function getProfilePicturePreview(fileId: string, width: number = 64, height: number = 64) {
+    return getFilePreview("profile_pictures", fileId, width, height);
+}
+
+const PULSE_COOKIE_NAME = 'kylrix_pulse_v2';
+const AVATAR_CACHE_PREFIX = 'kylrix_avatar_pulse_v2_';
+
+export function getKylrixPulse(): { $id: string; name: string; profilePicId?: string | null; avatarBase64?: string | null } | null {
+    if (typeof window === 'undefined') return null;
+    if ((window as any).__KYLRIX_PULSE__) return (window as any).__KYLRIX_PULSE__;
+
+    try {
+        const match = document.cookie.match(new RegExp('(^| )' + PULSE_COOKIE_NAME + '=([^;]+)'));
+        if (match) {
+            const basic = JSON.parse(decodeURIComponent(match[2]));
+            const avatar = localStorage.getItem(AVATAR_CACHE_PREFIX + basic.$id);
+            return { ...basic, avatarBase64: avatar };
+        }
+    } catch (_e) {}
+    return null;
+}
+
+export function setKylrixPulse(user: any, avatarBase64?: string | null) {
+    if (typeof window === 'undefined') return;
+    try {
+        const pulse = {
+            $id: user.$id,
+            name: user.name || user.username || 'User',
+            profilePicId: user.prefs?.profilePicId || user.profilePicId || null,
+        };
+        
+        const hostname = window.location.hostname;
+        const domain = hostname === 'localhost' || hostname.startsWith('127.') 
+            ? '' 
+            : `.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
+        const domainStr = domain ? `domain=${domain}; ` : '';
+        
+        document.cookie = `${PULSE_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(pulse))}; path=/; ${domainStr}max-age=31536000; SameSite=Lax`;
+        if (avatarBase64) localStorage.setItem(AVATAR_CACHE_PREFIX + user.$id, avatarBase64);
+        (window as any).__KYLRIX_PULSE__ = { ...pulse, avatarBase64: avatarBase64 || localStorage.getItem(AVATAR_CACHE_PREFIX + user.$id) };
+    } catch (_e) {}
+}
+
+export function clearKylrixPulse() {
+    if (typeof window === 'undefined') return;
+    const hostname = window.location.hostname;
+    const domain = hostname === 'localhost' || hostname.startsWith('127.') 
+        ? '' 
+        : `.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
+    const domainStr = domain ? `domain=${domain}; ` : '';
+    document.cookie = `${PULSE_COOKIE_NAME}=; path=/; ${domainStr}expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    delete (window as any).__KYLRIX_PULSE__;
+    document.documentElement.removeAttribute('data-kylrix-pulse');
+}
 
 let currentUserCache: { user: any | null; expiresAt: number; lastForcedAt?: number } | null = null;
 let currentUserInFlight: Promise<any | null> | null = null;
@@ -569,14 +617,6 @@ export class AppwriteService {
             console.error('setMasterpassFlag error', _e);
         }
     }
-}
-
-export function getFilePreview(bucketId: string, fileId: string, width: number = 64, height: number = 64) {
-    return storage.getFilePreview(bucketId, fileId, width, height);
-}
-
-export function getProfilePicturePreview(fileId: string, width: number = 64, height: number = 64) {
-    return getFilePreview("profile_pictures", fileId, width, height);
 }
 
 const PULSE_COOKIE_NAME = 'kylrix_pulse_v2';

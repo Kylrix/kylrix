@@ -6,7 +6,6 @@ import { Lock, File as FileIcon } from 'lucide-react';
 import { VoiceMessage } from './VoiceMessage';
 import { ChatMarkdownContent } from '@/components/chat/ChatMarkdownContent';
 import { parseObjectBlocks } from '@/lib/note-object-secondary';
-import { StorageService } from '@/lib/services/storage';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import type { AttachmentMetadata } from '@/types/p2p';
 import { MessagesType, type ChatMessage } from './chat-types';
@@ -128,74 +127,20 @@ export function ChatMessageContent({
             );
         }
 
-        const bucketId = StorageService.getBucketForType(msg.type);
-        const viewUrl = StorageService.getFileView(fileId, bucketId);
-        const previewUrl = StorageService.getFilePreview(fileId, bucketId, 300, 300);
+        const bucketId = '';
+        const viewUrl = '';
+        const previewUrl = '';
 
         switch (msg.type) {
             case 'image':
-                return (
-                    <Box>
-                        <Box
-                            sx={{
-                                maxWidth: '100%',
-                                maxHeight: '65vh',
-                                position: 'relative',
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                                cursor: 'pointer',
-                                bgcolor: '#0A0908',
-                            }}
-                            onClick={() => {
-                                window.dispatchEvent(new CustomEvent('kylrix:open-unified-media', {
-                                    detail: {
-                                        src: viewUrl,
-                                        type: 'image',
-                                        title: 'Chat image',
-                                        fileId,
-                                        bucketId,
-                                    }
-                                }));
-                            }}
-                        >
-                            <img
-                                src={viewUrl || previewUrl}
-                                alt="attachment"
-                                className="w-full max-h-[65vh] object-contain rounded-2xl cursor-pointer hover:opacity-95 transition-opacity"
-                            />
-                        </Box>
-                        {displayedContent && <Typography variant="body2" sx={{ mt: 1 }}>{displayedContent}</Typography>}
-                    </Box>
-                );
             case 'video':
-                return (
-                    <Box>
-                        <video
-                            src={viewUrl}
-                            controls
-                            playsInline
-                            style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: 16 }}
-                        />
-                        {displayedContent && <Typography variant="body2" sx={{ mt: 1 }}>{displayedContent}</Typography>}
-                    </Box>
-                );
             case 'audio':
-                return (
-                    <VoiceMessage url={viewUrl} />
-                );
-
             default:
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, bgcolor: '#161514', borderRadius: 1, border: '1px solid rgba(255,255,255,0.05)' }}>
                         <FileIcon size={18} strokeWidth={1.5} />
-                        <Typography
-                            variant="body2"
-                            component="a"
-                            href={StorageService.getFileDownload(fileId, bucketId)}
-                            target="_blank"
-                            sx={{ textDecoration: 'none', color: 'inherit' }}
-                        >
-                            Download File
+                        <Typography variant=\"body2\" sx={{ color: 'text.secondary' }}>
+                            File attachment not available
                         </Typography>
                     </Box>
                 );

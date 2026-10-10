@@ -22,15 +22,10 @@ import {
 import { UsersService } from '@/lib/services/users';
 import { useAuth } from '@/lib/auth';
 import { account, client } from '@/lib/appwrite/client';
-import { Storage } from 'appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { secureUploadFile } from '@/lib/actions/client-ops';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan, getEffectiveUsername } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
-
-const storage = new Storage(client);
-const AVATAR_BUCKET_ID = 'profile_pictures';
 
 const compressImage = (file: File, maxWidth = 512, maxHeight = 512, quality = 0.7): Promise<File> => {
   return new Promise((resolve, reject) => {
@@ -211,16 +206,8 @@ export function EditProfileModal({
         setHideSensitiveInfo(false);
       }
 
-      // Set initial picture preview url if profile has avatar field
-      const targetAvatarId = profile.userId || profile.$id;
-      if (targetAvatarId) {
-        try {
-          const url = storage.getFilePreview(AVATAR_BUCKET_ID, targetAvatarId, 160, 160);
-          setProfilePicUrl(url.toString());
-        } catch (err) {
-          console.warn('Failed to fetch initial profile preview:', err);
-        }
-      }
+      // Profile pictures are not supported (storage removed)
+      setProfilePicUrl(null);
     }
   }, [profile, open]);
 
@@ -336,38 +323,9 @@ export function EditProfileModal({
     setLoading(true);
     setError('');
     try {
-      // 1. Process profile picture delete / upload
-      if (removePicRequested) {
-        try {
-          await storage.deleteFile(AVATAR_BUCKET_ID, userId);
-        } catch (e) {
-          console.warn('Best effort deletion of profile photo failed:', e);
-        }
-        const currentPrefs = user?.prefs || {};
-        await account.updatePrefs({ ...currentPrefs, profilePicId: null });
-      }
-
-      if (profilePic) {
-        if (profilePic.size > 1024 * 1024) {
-          throw new Error('Maximum file size of 1MB exceeded.');
-        }
-        
-        const formData = new FormData();
-        formData.append('file', profilePic);
-        formData.append('bucketId', AVATAR_BUCKET_ID);
-        formData.append('fileId', userId);
-        
-        const uploadedFile = await secureUploadFile(formData);
-        const currentPrefs = user?.prefs || {};
-        await account.updatePrefs({ ...currentPrefs, profilePicId: uploadedFile.$id });
-      }
-
+      // 1. Profile picture upload/delete not supported (storage removed)
+      // avatarVal stays as-is from the profile record
       let avatarVal = profile?.avatar;
-      if (removePicRequested) {
-        avatarVal = null;
-      } else if (profilePic) {
-        avatarVal = userId;
-      }
 
       // 2. Setup public key E2E identity if unlocked
       let publicKey: string | undefined;

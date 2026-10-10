@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og';
 import { validatePublicNoteAccess } from '@/lib/appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { renderKylrixShareCard } from '@/lib/og/share-card';
 import { resolveOwnerForOg } from '@/lib/og/resolve-avatar';
 import { getProductName } from '@/lib/config/product';
@@ -23,97 +22,9 @@ function stripPreview(content: string): string {
     .trim();
 }
 
-function isImageLikeMime(value: unknown): boolean {
-  return typeof value === 'string' && value.startsWith('image/');
-}
-
-function isImageLikeFilename(value: unknown): boolean {
-  return typeof value === 'string' && /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(value);
-}
-
 /** Best-effort first image from body objects / attachments. Never throws. */
-async function resolveOptionalPreviewImage(note: any, isEncrypted: boolean): Promise<string | null> {
-  if (isEncrypted) return null;
-  try {
-    const content = String(note?.content || '');
-    const objectBlockRegex = /\[\[kylrix-object:(\{.*?\})\]\]/g;
-    let objMatch: RegExpExecArray | null;
-    while ((objMatch = objectBlockRegex.exec(content)) !== null) {
-      try {
-        const payload = JSON.parse(objMatch[1]);
-        const looksLikeImage =
-          payload?.childKind === 'image' ||
-          payload?.type === 'image' ||
-          isImageLikeMime(payload?.mimeType) ||
-          isImageLikeMime(payload?.metadata?.mimeType) ||
-          isImageLikeFilename(payload?.metadata?.fileName);
-        if (!looksLikeImage) continue;
-
-        const fileUrl = payload?.metadata?.fileUrl || payload?.src || payload?.url;
-        if (typeof fileUrl === 'string' && fileUrl.trim()) {
-          const imgRes = await fetch(fileUrl);
-          if (!imgRes.ok) continue;
-          const buf = Buffer.from(await imgRes.arrayBuffer());
-          const ct = imgRes.headers.get('content-type') || 'image/png';
-          return `data:${ct};base64,${buf.toString('base64')}`;
-        }
-
-        const fileId = payload?.childId;
-        const bucketId = payload?.bucketId;
-        if (fileId && bucketId) {
-          const { storage } = await import('@/lib/appwrite-admin').then((m) => m.createSystemClient());
-          const fileBuffer = await storage.getFilePreview(String(bucketId), String(fileId), 1200, 630);
-          return `data:image/png;base64,${Buffer.from(fileBuffer).toString('base64')}`;
-        }
-      } catch {
-        /* try next */
-      }
-    }
-
-    const attachments = Array.isArray(note?.attachments) ? note.attachments : [];
-    for (const entry of attachments) {
-      try {
-        const parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
-        const mime = parsed?.mimeType || parsed?.mime;
-        const name = parsed?.fileName || parsed?.name;
-        if (!isImageLikeMime(mime) && !isImageLikeFilename(name)) continue;
-
-        const fileUrl = parsed?.fileUrl || parsed?.url;
-        if (typeof fileUrl === 'string' && fileUrl.trim()) {
-          const imgRes = await fetch(fileUrl);
-          if (!imgRes.ok) continue;
-          const buf = Buffer.from(await imgRes.arrayBuffer());
-          const ct = imgRes.headers.get('content-type') || 'image/png';
-          return `data:${ct};base64,${buf.toString('base64')}`;
-        }
-
-        const fileId = parsed?.fileId || parsed?.id || parsed?.$id;
-        if (!fileId) continue;
-        const bucketId = parsed?.bucketId || APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS;
-        const { storage } = await import('@/lib/appwrite-admin').then((m) => m.createSystemClient());
-        const fileBuffer = await storage.getFilePreview(String(bucketId), String(fileId), 1200, 630);
-        return `data:image/png;base64,${Buffer.from(fileBuffer).toString('base64')}`;
-      } catch {
-        /* try next */
-      }
-    }
-
-    const mdImageMatch = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/i.exec(content);
-    if (mdImageMatch && mdImageMatch[1]) {
-      try {
-        const imgRes = await fetch(mdImageMatch[1]);
-        if (imgRes.ok) {
-          const buf = Buffer.from(await imgRes.arrayBuffer());
-          const ct = imgRes.headers.get('content-type') || 'image/png';
-          return `data:${ct};base64,${buf.toString('base64')}`;
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-  } catch {
-    /* card still renders without preview image */
-  }
+async function resolveOptionalPreviewImage(_note: any, _isEncrypted: boolean): Promise<string | null> {
+  // File storage removed — no attachment preview images
   return null;
 }
 

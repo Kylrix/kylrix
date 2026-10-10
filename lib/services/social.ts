@@ -530,9 +530,9 @@ export const SocialService = {
             const payload = response.payload;
             let type: 'create' | 'update' | 'delete' | null = null;
 
-            if (response.events.some(e => e.includes('.create'))) type = 'create';
-            else if (response.events.some(e => e.includes('.update'))) type = 'update';
-            else if (response.events.some(e => e.includes('.delete'))) type = 'delete';
+            if (response.events.some((e: string) => e.includes('.create'))) type = 'create';
+            else if (response.events.some((e: string) => e.includes('.update'))) type = 'update';
+            else if (response.events.some((e: string) => e.includes('.delete'))) type = 'delete';
 
             if (type) {
                 callback({ type, payload });
@@ -540,7 +540,7 @@ export const SocialService = {
         });
 
         const unsubInteractionsPromise = realtime.subscribe(interactionsChannel, (response) => {
-            if (response.events.some(e => e.includes('.create') || e.includes('.delete'))) {
+            if (response.events.some((e: string) => e.includes('.create') || e.includes('.delete'))) {
                 const payload = response.payload;
                 callback({ type: 'update', payload: { $id: payload.messageId, _interactionUpdate: true } });
             }

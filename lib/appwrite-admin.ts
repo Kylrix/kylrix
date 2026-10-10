@@ -1,4 +1,4 @@
-import { Client, Account, Databases, Messaging, Storage, Users, TablesDB, Teams, Functions } from 'node-appwrite';
+import { Client, Account, Databases, Messaging, Users, TablesDB, Teams, Functions } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { configureInternalAppwriteClient } from '@/lib/appwrite/internal-headers';
 import * as React from 'react';
@@ -72,7 +72,6 @@ let cachedSystemClient: {
   account: Account;
   databases: Databases;
   messaging: Messaging;
-  storage: Storage;
   users: Users;
   teams: Teams;
 } | null = null;
@@ -405,27 +404,11 @@ export function createSystemClient() {
       .setKey(apiKey || '')
   );
 
-  const disabledStorage = new Proxy({} as any, {
-    get(_target, prop) {
-      if (prop === 'createFile') {
-        return async () => { throw new Error('File storage is disabled.'); };
-      }
-      if (prop === 'deleteFile') {
-        return async () => {};
-      }
-      if (prop === 'getFilePreview' || prop === 'getFileView' || prop === 'getFileDownload') {
-        return () => '';
-      }
-      return () => {};
-    }
-  }) as unknown as Storage;
-
   cachedSystemClient = {
     client,
     account: new Account(client),
     databases: createProxiedDatabases(client),
     messaging: new Messaging(client),
-    storage: disabledStorage,
     users: createTursoUsers() as unknown as Users,
     teams: new Teams(client),
   };
@@ -482,7 +465,6 @@ export function createAdminClient(actorEmail: string) {
     account: new Account(client),
     databases: createProxiedDatabases(client),
     messaging: new Messaging(client),
-    storage: new Storage(client),
     users: createTursoUsers() as unknown as Users,
     teams: new Teams(client)};
 
