@@ -27,6 +27,11 @@ export const Query = {
   endsWith: (attribute: string, value: string) => `endsWith("${attribute}", ${JSON.stringify(value)})`,
   select: (attributes: string[]) => `select(${JSON.stringify(attributes)})`,
   between: (attribute: string, start: any, end: any) => `between("${attribute}", ${JSON.stringify(start)}, ${JSON.stringify(end)})`,
+  cursorAfter: (documentId: string) => `cursorAfter("${documentId}")`,
+  cursorBefore: (documentId: string) => `cursorBefore("${documentId}")`,
+  or: (queries: string[]) => `or(${JSON.stringify(queries)})`,
+  and: (queries: string[]) => `and(${JSON.stringify(queries)})`,
+  notContains: (attribute: string, value: any) => `notContains("${attribute}", ${JSON.stringify(value)})`,
 };
 
 export const Role = {
@@ -123,6 +128,24 @@ export class Account {
   async updatePrefs(prefs: Record<string, any>): Promise<Record<string, any>> {
     return prefs;
   }
+  async listSessions(): Promise<{ rows: any[]; sessions: any[] }> {
+    return { rows: [], sessions: [] };
+  }
+  async deleteSessions(): Promise<void> { return; }
+  async updateName(_name: string): Promise<any> { return null; }
+  async createEmailPasswordSession(_email: string, _password: string): Promise<any> { return null; }
+  async createSession(_params: { userId: string; secret: string } | string, _secret?: string): Promise<any> { return null; }
+  async createEmailToken(_userId: string, _email: string): Promise<any> { return { userId: _userId, secret: '' }; }
+  async createOAuth2Session(_provider: string, _success: string, _failure: string): Promise<void> { return; }
+  async listLogs(): Promise<{ logs: any[] }> { return { logs: [] }; }
+  async listMfaFactors(): Promise<{ totp: boolean; email: boolean; phone: boolean }> { return { totp: false, email: false, phone: false }; }
+  async createMfaChallenge(_params: string | { factor: any }): Promise<any> { return { $id: '' }; }
+  async updateMfaChallenge(_params: { challengeId: string; otp: string } | string, _otp?: string): Promise<any> { return {}; }
+  async createMfaRecoveryCodes(): Promise<{ recoveryCodes: string[] }> { return { recoveryCodes: [] }; }
+  async updateMFA(_params: boolean | { mfa: boolean }): Promise<any> { return null; }
+  async createMfaAuthenticator(_params: string | { type: any }): Promise<any> { return { secret: '', uri: '' }; }
+  async updateMfaAuthenticator(_params: string | { type: any }, _otp?: string): Promise<any> { return {}; }
+  async deleteMfaAuthenticator(_params: string | { type: any }, ..._args: any[]): Promise<void> { return; }
 }
 
 export class TablesDB {
@@ -179,10 +202,12 @@ export class Databases extends TablesDB {
 /** Storage has been removed. File uploads, attachments, and buckets are not supported. */
 export class Storage {
   constructor(_client?: any) {}
-  async createFile(): Promise<never> {
+  async createFile(..._args: any[]): Promise<never> {
     throw new Error('File storage is not supported.');
   }
-  async deleteFile(): Promise<void> { return; }
+  async deleteFile(_bucketId: string, _fileId: string, ..._args: any[]): Promise<void> { return; }
+  async updateFile(_bucketId: string, _fileId: string, ..._args: any[]): Promise<any> { return null; }
+  async listFiles(_bucketId: string, _queries?: any[]): Promise<{ total: number; files: any[] }> { return { total: 0, files: [] }; }
   getFileView(_bucketId?: string, _fileId?: string, ..._args: any[]): string { return ''; }
   getFilePreview(_bucketId?: string, _fileId?: string, _width?: number, _height?: number, ..._args: any[]): string { return ''; }
   getFileDownload(_bucketId?: string, _fileId?: string, ..._args: any[]): string { return ''; }
@@ -215,21 +240,31 @@ export class Users {
     const { createSystemClient } = await import('@/lib/appwrite-admin');
     return createSystemClient().users.delete(userId);
   }
+  async listLogs(_userId: string): Promise<{ logs: any[] }> { return { logs: [] }; }
+  async createToken(_userId: string): Promise<{ userId: string; secret: string }> { return { userId: _userId, secret: '' }; }
+  async updatePassword(_userId: string, _password: string): Promise<any> { return null; }
+  async updateStatus(_userId: string, _status: boolean): Promise<any> { return null; }
+  async updateLabels(_userId: string, _labels: string[]): Promise<any> { return null; }
 }
 
 export class Teams {
   constructor(_client?: Client) {}
-  async list() {
+  async list(_queries?: any[]) {
     return { total: 0, teams: [] };
   }
-  async get() {
+  async get(_teamId: string) {
     return null;
   }
+  async create(_teamId: string, _name: string, _roles?: string[]): Promise<any> { return { $id: _teamId, name: _name }; }
+  async delete(_teamId: string): Promise<void> { return; }
+  async createMembership(_teamId: string, _roles: string[], _email?: string, ..._args: any[]): Promise<any> { return {}; }
+  async deleteMembership(_teamId: string, _membershipId: string): Promise<void> { return; }
+  async listMemberships(_teamId: string): Promise<{ total: number; memberships: any[] }> { return { total: 0, memberships: [] }; }
 }
 
 export class Functions {
   constructor(_client?: Client) {}
-  async createExecution() {
+  async createExecution(..._args: any[]): Promise<any> {
     return { status: 'completed', responseBody: '' };
   }
 }
@@ -336,6 +371,8 @@ export namespace Models {
   }
   export interface Session {
     $id: string;
+    $createdAt: string;
+    $updatedAt: string;
     userId: string;
     expire: string;
     provider: string;
@@ -344,6 +381,21 @@ export namespace Models {
     current: boolean;
     factors: string[];
     secret: string;
+    ip: string;
+    osCode: string;
+    osName: string;
+    osVersion: string;
+    clientType: string;
+    clientCode: string;
+    clientName: string;
+    clientVersion: string;
+    clientEngine: string;
+    clientEngineVersion: string;
+    deviceName: string;
+    deviceBrand: string;
+    deviceModel: string;
+    countryCode: string;
+    countryName: string;
   }
   export interface File {
     $id: string;
@@ -368,4 +420,36 @@ export namespace Models {
   export interface Preferences {
     [key: string]: any;
   }
+  export interface Log {
+    event: string;
+    userId: string;
+    userEmail: string;
+    userName: string;
+    mode: string;
+    ip: string;
+    time: string;
+    osCode: string;
+    osName: string;
+    osVersion: string;
+    clientType: string;
+    clientCode: string;
+    clientName: string;
+    clientVersion: string;
+    clientEngine: string;
+    clientEngineVersion: string;
+    deviceName: string;
+    deviceBrand: string;
+    deviceModel: string;
+    countryCode: string;
+    countryName: string;
+  }
+  export interface FileList {
+    total: number;
+    files: File[];
+  }
+  export interface RowList<T = Document> {
+    total: number;
+    rows: T[];
+  }
+  export interface DefaultRow extends Document {}
 }

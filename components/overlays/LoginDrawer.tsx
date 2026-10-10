@@ -286,7 +286,7 @@ export function LoginDrawer() {
         await checkAndSyncAppwritePasswordToBetterAuth({
           email: emailTrimmed,
           password,
-          appwriteUserId: session.userId,
+          appwriteUserId: session?.userId,
         });
         await authClient.signIn.email({
           email: emailTrimmed,

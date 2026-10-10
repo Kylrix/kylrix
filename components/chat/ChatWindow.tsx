@@ -1182,7 +1182,7 @@ export const ChatWindow = ({
                     const payload = response.payload as Partial<ChatReaction>;
                     if (String(payload?.conversationId || '') !== String(conversationId)) return;
 
-                    if (response.events.some((event) => event.includes('.delete'))) {
+                    if (response.events.some((event: string) => event.includes('.delete'))) {
                         if (!payload.messageId) return;
                         startTransition(() => {
                             setMessageReactions((prev) => {
@@ -1651,7 +1651,7 @@ export const ChatWindow = ({
                         recordingTimerRef.current = null;
                     }
                     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                    const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
+                    const _audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
                     
                     // Stop all tracks to release microphone
                     stream.getTracks().forEach(track => track.stop());

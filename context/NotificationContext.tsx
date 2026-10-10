@@ -118,9 +118,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const payload = response.payload as ActivityLog;
       if (payload.userId !== user.$id) return;
 
-      const isCreate = response.events.some(e => e.includes('.create'));
-      const isUpdate = response.events.some(e => e.includes('.update'));
-      const isDelete = response.events.some(e => e.includes('.delete'));
+      const isCreate = response.events.some((e: string) => e.includes('.create'));
+      const isUpdate = response.events.some((e: string) => e.includes('.update'));
+      const isDelete = response.events.some((e: string) => e.includes('.delete'));
 
       if (isCreate) {
         setNotifications(prev => {

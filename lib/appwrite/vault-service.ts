@@ -2288,17 +2288,8 @@ export class VaultService {
   }
 
   // --- Storage Operations ---
-  static async cloudBackup(userId: string): Promise<Models.File> {
-    const data = await this.exportUserData(userId);
-    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
-    const file = new File([blob], `${APPWRITE_CONFIG.SYSTEM.RP_NAME}-backup-${new Date().getTime()}.json`, { type: "application/json" });
-
-    const { secureUploadFile } = await import('@/lib/actions/secure-upload');
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('bucketId', APPWRITE_BUCKET_BACKUPS_ID);
-    formData.append('fileId', ID.unique());
-    return await secureUploadFile(formData);
+  static async cloudBackup(_userId: string): Promise<Models.File> {
+    throw new Error('Cloud backup via file storage has been removed.');
   }
 
   static async listCloudBackups(_userId: string): Promise<Models.FileList> {

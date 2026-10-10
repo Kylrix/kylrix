@@ -1682,14 +1682,14 @@ export async function detachObjectByRelationSecure(params: {
   });
 
   // Check metadata from rows to see if any record was secondary
-  let isSecondary = Boolean(params.isSecondary);
+  let _isSecondary = Boolean(params.isSecondary);
   let bucketId = params.bucketId;
   let childKind = params.childKind;
 
   for (const row of res.rows as any[]) {
     try {
       const meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
-      if (meta?.isSecondary) isSecondary = true;
+      if (meta?.isSecondary) _isSecondary = true;
       if (meta?.bucketId && !bucketId) bucketId = meta.bucketId;
       if (row.childKind && !childKind) childKind = row.childKind;
     } catch {}

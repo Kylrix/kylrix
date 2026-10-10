@@ -256,7 +256,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                     showDynamicIsland(payload);
                 }
             }
-        }).then((s) => {
+        }).then((s: any) => {
             if (closed) void closeSub(s);
             else unsubChat = s;
         });
@@ -275,7 +275,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                     }
                 } catch (_e) {}
             }
-        }).then((s) => {
+        }).then((s: any) => {
             if (closed) void closeSub(s);
             else unsubActivity = s;
         });

@@ -938,9 +938,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         (payload as any).creatorId === user.$id;
       if (!isOwner) return;
 
-      const isCreate = response.events.some(e => e.endsWith('.create'));
-      const isUpdate = response.events.some(e => e.endsWith('.update'));
-      const isDelete = response.events.some(e => e.endsWith('.delete'));
+      const isCreate = response.events.some((e: string) => e.endsWith('.create'));
+      const isUpdate = response.events.some((e: string) => e.endsWith('.update'));
+      const isDelete = response.events.some((e: string) => e.endsWith('.delete'));
       const isTrash = (payload as any).isTrash === true || (payload as any).isDeleted === true;
 
       if (isDelete || isTrash) {

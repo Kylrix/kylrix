@@ -117,12 +117,12 @@ export class TursoAuthAdapter implements AuthPort {
         const u = users[0];
         let labels: string[] = [];
         try {
-          if (u.labels) labels = JSON.parse(u.labels);
+          if ((u as any).labels) labels = JSON.parse((u as any).labels);
         } catch {}
 
         let prefs: Record<string, any> = {};
         try {
-          if (u.prefs) prefs = JSON.parse(u.prefs);
+          if ((u as any).prefs) prefs = JSON.parse((u as any).prefs);
         } catch {}
 
         const actor: Actor = {

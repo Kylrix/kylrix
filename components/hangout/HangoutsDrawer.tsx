@@ -599,7 +599,7 @@ export function HangoutsDrawer({
           });
         }
       }
-    }).then((s) => {
+    }).then((s: any) => {
       if (closed) {
         void closeSub(s);
         return;

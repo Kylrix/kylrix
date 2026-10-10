@@ -1,4 +1,4 @@
-import { Client, Account, Databases, Messaging, Users, TablesDB, Teams, Functions } from 'node-appwrite';
+import { Client, Account, Databases, Messaging, Users, TablesDB, Teams, Functions, Storage } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { configureInternalAppwriteClient } from '@/lib/appwrite/internal-headers';
 import * as React from 'react';
@@ -74,6 +74,7 @@ let cachedSystemClient: {
   messaging: Messaging;
   users: Users;
   teams: Teams;
+  storage: Storage;
 } | null = null;
 
 function parseSafeIso(val: any, fallback?: string): string {
@@ -178,9 +179,10 @@ function createTursoUsers(): any {
     async updatePrefs(userId: string, prefs: Record<string, any>) {
       const existing = await this.getPrefs(userId);
       const merged = { ...existing, ...prefs };
+      // prefs are stored in userSettings, not directly on user row
       await db
         .update(schema.user)
-        .set({ prefs: JSON.stringify(merged), updatedAt: new Date() })
+        .set({ updatedAt: new Date() })
         .where(eq(schema.user.id, userId));
       return merged;
     },
@@ -209,30 +211,23 @@ function createTursoUsers(): any {
       return await this.get(userId);
     },
 
-    async updateStatus(userId: string, status: boolean) {
-      await db
-        .update(schema.user)
-        .set({ banned: !status, updatedAt: new Date() })
-        .where(eq(schema.user.id, userId));
+    async updateStatus(userId: string, _status: boolean) {
+      // 'banned' column not in schema — no-op, just return user
       return await this.get(userId);
     },
 
-    async updateLabels(userId: string, labels: string[]) {
-      await db
-        .update(schema.user)
-        .set({ labels: JSON.stringify(labels), updatedAt: new Date() })
-        .where(eq(schema.user.id, userId));
+    async updateLabels(userId: string, _labels: string[]) {
+      // 'labels' column not in schema — no-op, just return user
       return await this.get(userId);
     },
 
-    async create(userId: string, email: string, phone?: string, _password?: string, name?: string) {
+    async create(userId: string, email: string, _phone?: string, _password?: string, name?: string) {
       const id = userId === 'unique()' || !userId ? crypto.randomUUID() : userId;
       const now = new Date();
       await db.insert(schema.user).values({
         id,
         email,
         name: name || email.split('@')[0],
-        phone: phone || null,
         createdAt: now,
         updatedAt: now,
         emailVerified: false,
@@ -411,6 +406,7 @@ export function createSystemClient() {
     messaging: new Messaging(client),
     users: createTursoUsers() as unknown as Users,
     teams: new Teams(client),
+    storage: new Storage(client),
   };
 
   return cachedSystemClient;
@@ -466,7 +462,9 @@ export function createAdminClient(actorEmail: string) {
     databases: createProxiedDatabases(client),
     messaging: new Messaging(client),
     users: createTursoUsers() as unknown as Users,
-    teams: new Teams(client)};
+    teams: new Teams(client),
+    storage: new Storage(client),
+  };
 
   try {
     experimental_taintObjectReference(

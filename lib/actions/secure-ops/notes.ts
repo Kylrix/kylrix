@@ -229,7 +229,7 @@ export async function getNoteSecondaryObjectPreviewSecure(
   }
 }
 
-function blobMimeFromPreview(dataUrl: string | null | undefined): string | null {
+function _blobMimeFromPreview(dataUrl: string | null | undefined): string | null {
   if (!dataUrl || !dataUrl.startsWith('data:')) return null;
   const semi = dataUrl.indexOf(';');
   if (semi <= 5) return null;

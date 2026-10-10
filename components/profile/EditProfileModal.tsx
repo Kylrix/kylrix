@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { UsersService } from '@/lib/services/users';
 import { useAuth } from '@/lib/auth';
-import { account, client } from '@/lib/appwrite/client';
+import { account } from '@/lib/appwrite/client';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan, getEffectiveUsername } from '@/lib/utils';
@@ -135,9 +135,9 @@ export function EditProfileModal({
   const isPro = hasPaidKylrixPlan(user);
 
   // Profile picture local state
-  const [profilePic, setProfilePic] = useState<File | null>(null);
+  const [_profilePic, setProfilePic] = useState<File | null>(null);
   const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
-  const [removePicRequested, setRemovePicRequested] = useState(false);
+  const [_removePicRequested, setRemovePicRequested] = useState(false);
 
   // Sync mode from initialMode
   useEffect(() => {

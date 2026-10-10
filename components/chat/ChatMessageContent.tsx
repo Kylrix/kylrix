@@ -3,7 +3,6 @@
 import React from 'react';
 import { Box, Typography } from '@/lib/openbricks/primitives';
 import { Lock, File as FileIcon } from 'lucide-react';
-import { VoiceMessage } from './VoiceMessage';
 import { ChatMarkdownContent } from '@/components/chat/ChatMarkdownContent';
 import { parseObjectBlocks } from '@/lib/note-object-secondary';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -127,9 +126,9 @@ export function ChatMessageContent({
             );
         }
 
-        const bucketId = '';
-        const viewUrl = '';
-        const previewUrl = '';
+        const _bucketId = '';
+        const _viewUrl = '';
+        const _previewUrl = '';
 
         switch (msg.type) {
             case 'image':
@@ -139,7 +138,7 @@ export function ChatMessageContent({
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, bgcolor: '#161514', borderRadius: 1, border: '1px solid rgba(255,255,255,0.05)' }}>
                         <FileIcon size={18} strokeWidth={1.5} />
-                        <Typography variant=\"body2\" sx={{ color: 'text.secondary' }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                             File attachment not available
                         </Typography>
                     </Box>

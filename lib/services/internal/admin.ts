@@ -114,9 +114,9 @@ export async function listAdminUsers(
       const queries = [Query.limit(limit), Query.orderDesc('$createdAt'), ...(cursorAfter ? [Query.cursorAfter(cursorAfter)] : [])];
       const response = await users.list(queries);
       const filteredUsers = search
-        ? response.users.filter((user) => [user.$id, user.name || '', user.email || ''].join(' ').toLowerCase().includes(search))
+        ? response.users.filter((user: any) => [user.$id, user.name || '', user.email || ''].join(' ').toLowerCase().includes(search))
         : response.users;
-      const visibleUsers = verifiedOnly ? filteredUsers.filter((user) => user.emailVerification) : filteredUsers;
+      const visibleUsers = verifiedOnly ? filteredUsers.filter((user: any) => user.emailVerification) : filteredUsers;
       const nextCursor = response.users.length > 0 ? response.users[response.users.length - 1].$id : null;
       const hasMore = response.users.length === limit;
 

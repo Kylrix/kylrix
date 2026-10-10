@@ -25,9 +25,9 @@ export function subscribeToTable<T extends Models.Row>(
         const payload = response.payload as T;
         let type: 'create' | 'update' | 'delete' | null = null;
 
-        if (response.events.some(e => e.includes('.create'))) type = 'create';
-        else if (response.events.some(e => e.includes('.update'))) type = 'update';
-        else if (response.events.some(e => e.includes('.delete'))) type = 'delete';
+        if (response.events.some((e: string) => e.includes('.create'))) type = 'create';
+        else if (response.events.some((e: string) => e.includes('.update'))) type = 'update';
+        else if (response.events.some((e: string) => e.includes('.delete'))) type = 'delete';
 
         if (type) {
             callback({ type, payload });

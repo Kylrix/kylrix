@@ -8,7 +8,7 @@ import type { Models } from 'appwrite';
 
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
 import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
-import { client, realtime } from '@/lib/appwrite/client';
+import { realtime } from '@/lib/appwrite/client';
 
 /** Realtime subscription registry — one per channel, survives HMR */
 const realtimeSubs = new Map<string, { unsubscribe: () => void; refCount: number }>();
