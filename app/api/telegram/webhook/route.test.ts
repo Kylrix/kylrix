@@ -5,6 +5,31 @@ import { POST, GET, syncTelegramBot, TELEGRAM_BOT_COMMANDS } from './route';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { ApiResources } from '@/lib/api/resources';
 
+vi.mock('@/lib/db', () => ({
+  db: {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([{ id: 'user_123' }]),
+    insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([]) }),
+    delete: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue(Object.assign(Promise.resolve([]), { catch: vi.fn().mockResolvedValue([]) })) }),
+  },
+}));
+
+vi.mock('@/lib/actions/turso-ops', () => ({
+  upsertTelegramConnectionTurso: vi.fn().mockResolvedValue({ success: true }),
+  listNotesTurso: vi.fn().mockResolvedValue({ success: false, rows: [] }),
+  listGoalsTurso: vi.fn().mockResolvedValue({ success: false, rows: [] }),
+  listWorkspacesTurso: vi.fn().mockResolvedValue({ success: false, rows: [] }),
+  getNoteTurso: vi.fn().mockResolvedValue({ success: false }),
+  deleteNoteTurso: vi.fn().mockResolvedValue({ success: true }),
+  getGoalTurso: vi.fn().mockResolvedValue({ success: false }),
+  upsertGoalTurso: vi.fn().mockResolvedValue({ success: true }),
+  deleteGoalTurso: vi.fn().mockResolvedValue({ success: true }),
+  upsertNoteTurso: vi.fn().mockResolvedValue({ success: true }),
+  getWorkspaceTurso: vi.fn().mockResolvedValue({ success: false }),
+}));
+
 vi.mock('@/lib/appwrite-admin', () => ({
   createSystemClient: vi.fn(),
 }));

@@ -14,6 +14,19 @@ const mockUsersGet = vi.fn(async (id: string) => ({
 const mockUpdateStatus = vi.fn(async (_id: string, _status: boolean) => ({}));
 
 // Mock dependencies
+vi.mock('@/lib/db', () => ({
+  db: {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+vi.mock('@/lib/actions/contributor-ops', () => ({
+  verifyAndApplyContributorStatus: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock('@/lib/appwrite-admin', () => ({
   createSystemClient: vi.fn(() => ({
     databases: {
