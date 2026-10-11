@@ -11,7 +11,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./__tests__/setup.ts'],
     include: ['**/*.test.{ts,tsx}'],
-    exclude: ['**/node_modules/**', '**/dist/**', '**/config.*', '**/__tests__/**', '**/.*/**', '.repo/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/config.*', '**/.*/**', '.repo/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

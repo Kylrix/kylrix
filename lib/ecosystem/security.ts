@@ -269,6 +269,10 @@ class EcosystemSecurity {
     this.decryptionCache.clear();
   }
 
+  clearAgentMekCache(): void {
+    this.agentMekCache.clear();
+  }
+
   // Import a raw key and set it as the master key
   async importMasterKey(keyBytes: ArrayBuffer): Promise<boolean> {
     try {
@@ -553,7 +557,7 @@ class EcosystemSecurity {
   }
 
   /**
-   * Seamless workspace-aware decryption supporting agentic workspaces, DEK wrappers, and standard vault payloads.
+   * Seamless workspace-aware decryption supporting personal (2-tier) vs agentic (3-tier) workspaces.
    */
   async decryptWithWorkspace(
     encryptedData: string,
@@ -571,8 +575,10 @@ class EcosystemSecurity {
       (workspace?.ownerId && String(workspace.ownerId).startsWith('agent_'))
     );
 
-    // 1. Direct User MEK First for Non-Agentic / Personal Workspaces
-    if (!isAgentic && masterKey) {
+    // 1. Direct User MEK (2-step: user_MEK -> item_DEK -> ciphertext) for Personal Workspaces
+    if (!isAgentic) {
+      if (!masterKey) throw new Error("VAULT_LOCKED");
+
       if (wrappedDek) {
         try {
           const dekBytes = atob(wrappedDek).split('').map((c) => c.charCodeAt(0));
@@ -588,7 +594,9 @@ class EcosystemSecurity {
           const plaintext = new TextDecoder().decode(decrypted);
           this.decryptionCache.set(encryptedData, plaintext);
           return plaintext;
-        } catch {}
+        } catch (_err: any) {
+          throw new Error("AEAD_AUTH_TAG_MISMATCH: Personal workspace envelope decryption failed");
+        }
       }
 
       try {
@@ -601,29 +609,24 @@ class EcosystemSecurity {
         const plaintext = new TextDecoder().decode(decrypted);
         this.decryptionCache.set(encryptedData, plaintext);
         return plaintext;
-      } catch {}
-    }
-
-    // 2. Hierarchical Agent MEK Resolution for Agentic Workspaces
-    let keyToUse = masterKey;
-    if (isAgentic) {
-      const agentKey = await this.resolveWorkspaceMek(workspace);
-      if (agentKey) {
-        keyToUse = agentKey;
+      } catch (_err: any) {
+        throw new Error("AEAD_AUTH_TAG_MISMATCH: Direct user MEK decryption failed");
       }
     }
 
-    if (!keyToUse) {
-      throw new Error("VAULT_LOCKED");
+    // 2. Hierarchical Agent MEK Resolution (3-step: user_MEK -> agent_MEK -> item_DEK -> ciphertext) for Agentic Workspaces
+    const agentKey = await this.resolveWorkspaceMek(workspace);
+    if (!agentKey) {
+      throw new Error("AGENT_MEK_UNAVAILABLE: Agent key could not be resolved or vault is locked");
     }
 
-    // A. If wrappedDek is present, unwrap DEK and decrypt payload
+    // A. If wrappedDek is present, unwrap DEK using agent_MEK and decrypt payload
     if (wrappedDek) {
       try {
         const dekBytes = atob(wrappedDek).split('').map((c) => c.charCodeAt(0));
         const dekIv = new Uint8Array(dekBytes.slice(0, EcosystemSecurity.IV_SIZE));
         const dekEncrypted = new Uint8Array(dekBytes.slice(EcosystemSecurity.IV_SIZE));
-        const rawDek = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dekIv }, keyToUse, dekEncrypted);
+        const rawDek = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dekIv }, agentKey, dekEncrypted);
         const itemKey = await crypto.subtle.importKey("raw", rawDek, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
 
         const dataBytes = atob(encryptedData).split('').map((c) => c.charCodeAt(0));
@@ -633,28 +636,24 @@ class EcosystemSecurity {
         const plaintext = new TextDecoder().decode(decrypted);
         this.decryptionCache.set(encryptedData, plaintext);
         return plaintext;
-      } catch {}
+      } catch (_err: any) {
+        throw new Error("AEAD_AUTH_TAG_MISMATCH: Agentic workspace envelope decryption failed");
+      }
     }
 
-    // B. Direct decryption with workspace key
+    // B. Direct decryption with workspace agent_MEK
     try {
       const combined = new Uint8Array(
         atob(encryptedData).split("").map((char: any) => char.charCodeAt(0))
       );
       const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
       const encrypted = combined.slice(EcosystemSecurity.IV_SIZE);
-      const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, keyToUse, encrypted);
+      const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, agentKey, encrypted);
       const plaintext = new TextDecoder().decode(decrypted);
       this.decryptionCache.set(encryptedData, plaintext);
       return plaintext;
-    } catch (directErr) {
-      // Fallback: If agentic decryption failed, try masterKey fallback if different
-      if (keyToUse !== masterKey && masterKey) {
-        try {
-          return await this.decrypt(encryptedData);
-        } catch {}
-      }
-      throw directErr;
+    } catch (_directErr: any) {
+      throw new Error("AEAD_AUTH_TAG_MISMATCH: Agentic direct decryption failed");
     }
   }
 
@@ -1221,6 +1220,7 @@ class EcosystemSecurity {
     this.masterKey = null;
     this.identityKeyPair = null;
     this.conversationKeys.clear();
+    this.agentMekCache.clear();
     this.decryptionCache.clear();
     this.isUnlocked = false;
     if (typeof sessionStorage !== "undefined") {
