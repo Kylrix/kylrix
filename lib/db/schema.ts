@@ -302,7 +302,11 @@ export const ideas = sqliteTable('ideas', {
   tags: text('tags'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
-});
+}, (table) => [
+  index('idx_ideas_updated_at').on(table.updatedAt),
+  index('idx_ideas_user_trash').on(table.userId, table.isTrashed),
+  index('idx_ideas_user_updated').on(table.userId, table.updatedAt, table.createdAt),
+]);
 export const notes = ideas;
 
 export const workspaces = sqliteTable('workspaces', {
@@ -384,7 +388,10 @@ export const goals = sqliteTable('goals', {
   tags: text('tags'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
-});
+}, (table) => [
+  index('idx_goals_created_at').on(table.createdAt),
+  index('idx_goals_user_id').on(table.userId),
+]);
 export const tasks = goals;
 
 export const vaultItems = sqliteTable('vault_items', {
@@ -566,7 +573,9 @@ export const agenticSessions = sqliteTable('agentic_sessions', {
   projectId: text('project_id'),
   createdAt: text('created_at'),
   updatedAt: text('updated_at'),
-});
+}, (table) => [
+  index('idx_agentic_sessions_target_created').on(table.targetId, table.createdAt),
+]);
 
 export const toolCalls = sqliteTable('tool_calls', {
   id: text('id').primaryKey(),

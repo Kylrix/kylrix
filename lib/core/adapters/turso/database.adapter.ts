@@ -498,7 +498,7 @@ export class TursoDatabaseAdapter implements DatabasePort {
 
     const validKeys = new Set(Object.keys(table));
     for (const [k, v] of Object.entries(data || {})) {
-      if (k.startsWith('$') || k === 'id') continue;
+      if (k.startsWith('$') || k === 'id' || v === undefined) continue;
       if (validKeys.has(k)) {
         updateData[k] = v;
       } else {
