@@ -20,6 +20,7 @@ import { ManageOAuthAppDrawer } from '@/components/settings/ManageOAuthAppDrawer
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { CloudSyncSection } from '@/components/settings/CloudSyncSection';
 
 type PatItem = {
@@ -109,6 +110,7 @@ export const WEBMCP_TOPBAR_STORAGE_KEY = 'setting_show_webmcp_topbar';
 export const WEBMCP_TOPBAR_EVENT = 'kylrix:webmcp-topbar-changed';
 
 export function DevelopersTab() {
+  const { user: authUser } = useAuth();
   const { open: openDrawer } = useUnifiedDrawer();
   const { tools: webMcpTools, openInspector: openWebMcpInspector } = useWebMcpContext();
   const { currentTier } = useSubscription();
@@ -162,18 +164,24 @@ export function DevelopersTab() {
   const refreshApps = useCallback(async () => {
     setLoadingApps(true);
     try {
-      const user = await account.get();
-      setApps(await listMyApps(user.$id));
+      const uid = authUser?.$id || (await Promise.race([
+        account.get().then((u) => u.$id),
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('User timeout')), 800)),
+      ]).catch(() => 'guest'));
+      if (uid && uid !== 'guest') {
+        setApps(await listMyApps(uid));
+      } else {
+        setApps([]);
+      }
     } catch (err: any) {
       setApps([]);
       if (err?.message) {
         console.error('[Developers OAuth apps]', err);
-        toast.error(err.message);
       }
     } finally {
       setLoadingApps(false);
     }
-  }, []);
+  }, [authUser?.$id]);
 
   useEffect(() => {
     void refreshPats();

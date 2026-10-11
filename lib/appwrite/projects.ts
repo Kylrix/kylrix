@@ -52,7 +52,10 @@ export const ProjectsService = {
       if (typeof navigator === 'undefined' || navigator.onLine) {
         try {
           const { account } = await import('./client');
-          const res = await account.createJWT().catch(() => null);
+          const res = await Promise.race([
+            account.createJWT(),
+            new Promise<null>((r) => setTimeout(() => r(null), 800)),
+          ]).catch(() => null);
           jwt = res?.jwt;
         } catch {}
       }
@@ -96,7 +99,10 @@ export const ProjectsService = {
     if (typeof window !== 'undefined') {
       try {
         const { account } = await import('./client');
-        const res = await account.createJWT().catch(() => null);
+        const res = await Promise.race([
+          account.createJWT(),
+          new Promise<null>((r) => setTimeout(() => r(null), 800)),
+        ]).catch(() => null);
         const { getResourceCollaboratorsSecure } = await import('@/lib/actions/secure-ops');
         const { collaborators } = await getResourceCollaboratorsSecure({
           resourceId: projectId,
@@ -150,8 +156,11 @@ export const ProjectsService = {
   async requestProjectAccess(projectId: string) {
     const { requestProjectAccessSecure } = await import('@/lib/actions/secure-ops');
     const { account } = await import('@/lib/appwrite/client');
-    const { jwt } = await account.createJWT();
-    return await requestProjectAccessSecure(projectId, jwt);
+    const res = await Promise.race([
+      account.createJWT(),
+      new Promise<null>((r) => setTimeout(() => r(null), 800)),
+    ]).catch(() => null);
+    return await requestProjectAccessSecure(projectId, res?.jwt);
   },
 
   async removeCollaborator(projectId: string, userId: string) {
@@ -428,9 +437,12 @@ export const ProjectsService = {
     if (typeof window !== 'undefined' && projectId) {
       try {
         const { account } = await import('./client');
-        const { jwt } = await account.createJWT();
+        const resJwt = await Promise.race([
+          account.createJWT(),
+          new Promise<null>((r) => setTimeout(() => r(null), 800)),
+        ]).catch(() => null);
         const { listProjectTaggedResourcesSecure } = await import('@/lib/actions/secure-ops');
-        const res = await listProjectTaggedResourcesSecure(projectId, tagIds, jwt);
+        const res = await listProjectTaggedResourcesSecure(projectId, tagIds, resJwt?.jwt);
         if (res) return res;
       } catch {}
     }

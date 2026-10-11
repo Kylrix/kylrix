@@ -933,63 +933,69 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           await LocalEngine.cacheSet(overallCacheKey, [...existingOverall, optimisticRow]);
         }
       } catch {}
-      try {
-        await attachObjectToProject({
-          projectId: activeWorkspace.id,
-          entityKind,
-          entityId});
-        // Mark row as workspace-scoped so default (no-workspace) views can hide it
+      // Execute network attachment in non-blocking background task
+      void (async () => {
         try {
-          const { databases } = await import('@/lib/appwrite/client');
-          const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
-          const tableByKind: Record<string, string> = {
-            note: APPWRITE_CONFIG.TABLES.NOTES,
-            idea: APPWRITE_CONFIG.TABLES.NOTES,
-            goal: APPWRITE_CONFIG.TABLES.TASKS,
-            task: APPWRITE_CONFIG.TABLES.TASKS,
-            form: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-            event: APPWRITE_CONFIG.TABLES.EVENTS,
-            credential: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
-            totp: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
-            agent_session: 'agentic_sessions',
-            agentic_session: 'agentic_sessions',
-          };
-          const tableId = tableByKind[entityKind];
-          if (tableId) {
-            let existingMetadata: any = {};
-            try {
-              const row = (await databases.getRow(APPWRITE_CONFIG.DATABASE_ID, tableId, entityId).catch(() => null)) as any;
-              if (row?.metadata) {
-                existingMetadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
-              }
-            } catch {}
-            const newMeta = {
-              ...existingMetadata,
-              projectId: activeWorkspace.id,
-              isWorkspace: true,
+          await attachObjectToProject({
+            projectId: activeWorkspace.id,
+            entityKind,
+            entityId,
+          });
+          // Mark row as workspace-scoped in background
+          try {
+            const { databases } = await import('@/lib/appwrite/client');
+            const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+            const tableByKind: Record<string, string> = {
+              note: APPWRITE_CONFIG.TABLES.NOTES,
+              idea: APPWRITE_CONFIG.TABLES.NOTES,
+              goal: APPWRITE_CONFIG.TABLES.TASKS,
+              task: APPWRITE_CONFIG.TABLES.TASKS,
+              form: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+              event: APPWRITE_CONFIG.TABLES.EVENTS,
+              credential: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+              totp: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+              agent_session: 'agentic_sessions',
+              agentic_session: 'agentic_sessions',
             };
-            try {
-              await databases.updateRow(
-                APPWRITE_CONFIG.DATABASE_ID,
-                tableId,
-                entityId,
-                { isWorkspace: true, metadata: JSON.stringify(newMeta) },
-              );
-            } catch {
-              await databases.updateRow(
-                APPWRITE_CONFIG.DATABASE_ID,
-                tableId,
-                entityId,
-                { isWorkspace: true },
-              ).catch(() => null);
+            const tableId = tableByKind[entityKind];
+            if (tableId) {
+              let existingMetadata: any = {};
+              try {
+                const getRowPromise = databases.getRow(APPWRITE_CONFIG.DATABASE_ID, tableId, entityId);
+                const timeoutPromise = new Promise<null>((r) => setTimeout(() => r(null), 800));
+                const row = (await Promise.race([getRowPromise, timeoutPromise]).catch(() => null)) as any;
+                if (row?.metadata) {
+                  existingMetadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+                }
+              } catch {}
+              const newMeta = {
+                ...existingMetadata,
+                projectId: activeWorkspace.id,
+                isWorkspace: true,
+              };
+              try {
+                await databases.updateRow(
+                  APPWRITE_CONFIG.DATABASE_ID,
+                  tableId,
+                  entityId,
+                  { isWorkspace: true, metadata: JSON.stringify(newMeta) },
+                );
+              } catch {
+                await databases.updateRow(
+                  APPWRITE_CONFIG.DATABASE_ID,
+                  tableId,
+                  entityId,
+                  { isWorkspace: true },
+                ).catch(() => null);
+              }
             }
+          } catch (flagErr) {
+            console.warn('[WorkspaceContext] isWorkspace flag update failed:', flagErr);
           }
-        } catch (flagErr) {
-          console.warn('[WorkspaceContext] isWorkspace flag update failed:', flagErr);
+        } catch (err) {
+          console.warn(`[WorkspaceContext] Auto-attach entity ${entityKind} ${entityId} failed:`, err);
         }
-      } catch (err) {
-        console.warn(`[WorkspaceContext] Auto-attach entity ${entityKind} ${entityId} failed:`, err);
-      }
+      })();
     },
     [activeWorkspace]
   );
