@@ -628,7 +628,7 @@ export async function deleteNoteTurso(noteId: string) {
     const updatedAt = new Date().toISOString();
     await db
       .update(schema.notes)
-      .set({ isTrash: true, updatedAt })
+      .set({ isTrashed: true, updatedAt })
       .where(eq(schema.notes.id, noteId));
 
     try {
