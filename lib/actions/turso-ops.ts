@@ -28,6 +28,194 @@ function getAppwriteMigrationTablesDB(jwt?: string) {
 }
 
 /**
+ * Consolidates duplicate user entries matching the same email into a single canonical user ID
+ * (preferring the Appwrite account ID or earliest created user row).
+ * Re-links accounts, sessions, and domain resources to ensure seamless data access across all auth methods.
+ */
+export async function consolidateUserByEmail(
+  email: string,
+  candidateData?: { id?: string; name?: string; image?: string | null; emailVerified?: boolean }
+) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return null;
+
+  try {
+    // 1. Strictly query existing user rows by normalized email
+    let matchingUsers = await db
+      .select()
+      .from(schema.user)
+      .where(eq(schema.user.email, normalizedEmail));
+
+    // 2. If candidate ID is provided, verify if that user ID exists
+    if (candidateData?.id) {
+      const userById = await db
+        .select()
+        .from(schema.user)
+        .where(eq(schema.user.id, candidateData.id))
+        .limit(1);
+
+      if (userById.length > 0) {
+        const u = userById[0];
+        // If the ID matches a row with a different email, update its email if unassigned or merge if matching
+        if (u.email && u.email.trim().toLowerCase() === normalizedEmail) {
+          if (!matchingUsers.some((x) => x.id === u.id)) {
+            matchingUsers.push(u);
+          }
+        }
+      }
+    }
+
+    if (!matchingUsers.length) {
+      if (!candidateData?.id) return null;
+      const now = new Date();
+      const newUser = {
+        id: candidateData.id,
+        name: candidateData.name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        emailVerified: Boolean(candidateData.emailVerified),
+        image: candidateData.image || null,
+        tier1Synced: false,
+        tier2Synced: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await db.insert(schema.user).values(newUser).onConflictDoNothing();
+      return newUser;
+    }
+
+    // Determine canonical user ID:
+    // Prefer row with appwriteAccountId / hasAppwriteAccount === true, or row with earliest createdAt.
+    let canonicalUser = matchingUsers[0];
+    for (const u of matchingUsers) {
+      if (u.appwriteAccountId || u.hasAppwriteAccount) {
+        if (!canonicalUser.appwriteAccountId && !canonicalUser.hasAppwriteAccount) {
+          canonicalUser = u;
+        }
+      } else if (!canonicalUser.appwriteAccountId && !canonicalUser.hasAppwriteAccount) {
+        const uCreated = u.createdAt ? new Date(u.createdAt).getTime() : Date.now();
+        const canCreated = canonicalUser.createdAt ? new Date(canonicalUser.createdAt).getTime() : Date.now();
+        if (uCreated < canCreated) {
+          canonicalUser = u;
+        }
+      }
+    }
+
+    const canonicalId = canonicalUser.id;
+    const duplicateUsers = matchingUsers.filter((u) => u.id !== canonicalId);
+
+    if (duplicateUsers.length > 0) {
+      const duplicateIds = duplicateUsers.map((u) => u.id);
+      const { inArray } = await import('drizzle-orm');
+
+      // Re-link accounts to canonical user ID
+      for (const dupId of duplicateIds) {
+        const dupAccounts = await db
+          .select()
+          .from(schema.account)
+          .where(eq(schema.account.userId, dupId));
+
+        for (const acc of dupAccounts) {
+          const existingAcc = await db
+            .select({ id: schema.account.id })
+            .from(schema.account)
+            .where(
+              and(
+                eq(schema.account.userId, canonicalId),
+                eq(schema.account.providerId, acc.providerId)
+              )
+            )
+            .limit(1);
+
+          if (existingAcc.length > 0) {
+            await db.delete(schema.account).where(eq(schema.account.id, acc.id)).catch(() => {});
+          } else {
+            await db
+              .update(schema.account)
+              .set({ userId: canonicalId, updatedAt: new Date() })
+              .where(eq(schema.account.id, acc.id))
+              .catch(() => {});
+          }
+        }
+      }
+
+      // Re-link sessions
+      await db.update(schema.session).set({ userId: canonicalId }).where(inArray(schema.session.userId, duplicateIds)).catch(() => {});
+
+      // Domain entities re-linking
+      await db.update(schema.notes).set({ userId: canonicalId }).where(inArray(schema.notes.userId, duplicateIds)).catch(() => {});
+      await db.update(schema.goals).set({ userId: canonicalId }).where(inArray(schema.goals.userId, duplicateIds)).catch(() => {});
+      await db.update(schema.projects).set({ creatorId: canonicalId }).where(inArray(schema.projects.creatorId, duplicateIds)).catch(() => {});
+      await db.update(schema.projectObjects).set({ userId: canonicalId }).where(inArray(schema.projectObjects.userId, duplicateIds)).catch(() => {});
+      await db.update(schema.vaultItems).set({ userId: canonicalId }).where(inArray(schema.vaultItems.userId, duplicateIds)).catch(() => {});
+      await db.update(schema.totpSecrets).set({ userId: canonicalId }).where(inArray(schema.totpSecrets.userId, duplicateIds)).catch(() => {});
+      await db.update(schema.keychain).set({ userId: canonicalId }).where(inArray(schema.keychain.userId, duplicateIds)).catch(() => {});
+      await db.update(schema.forms).set({ userId: canonicalId }).where(inArray(schema.forms.userId, duplicateIds)).catch(() => {});
+      await db.update(schema.events).set({ userId: canonicalId }).where(inArray(schema.events.userId, duplicateIds)).catch(() => {});
+      await db.update(schema.agenticSessions).set({ userId: canonicalId }).where(inArray(schema.agenticSessions.userId, duplicateIds)).catch(() => {});
+      await db.update(schema.conversations).set({ creatorId: canonicalId }).where(inArray(schema.conversations.creatorId, duplicateIds)).catch(() => {});
+      await db.update(schema.subscriptions).set({ userId: canonicalId }).where(inArray(schema.subscriptions.userId, duplicateIds)).catch(() => {});
+
+      // Handle unique table conflicts for userSettings and profiles
+      const existingSettings = await db.select({ id: schema.userSettings.id }).from(schema.userSettings).where(eq(schema.userSettings.userId, canonicalId)).limit(1);
+      if (existingSettings.length > 0) {
+        await db.delete(schema.userSettings).where(inArray(schema.userSettings.userId, duplicateIds)).catch(() => {});
+      } else {
+        await db.update(schema.userSettings).set({ userId: canonicalId }).where(inArray(schema.userSettings.userId, duplicateIds)).catch(() => {});
+      }
+
+      const existingProfile = await db.select({ id: schema.profiles.id }).from(schema.profiles).where(eq(schema.profiles.userId, canonicalId)).limit(1);
+      if (existingProfile.length > 0) {
+        await db.delete(schema.profiles).where(inArray(schema.profiles.userId, duplicateIds)).catch(() => {});
+      } else {
+        await db.update(schema.profiles).set({ userId: canonicalId }).where(inArray(schema.profiles.userId, duplicateIds)).catch(() => {});
+      }
+
+      // Re-link wallets
+      for (const dupId of duplicateIds) {
+        await db.update(schema.wallets).set({ ownerId: `user:${canonicalId}` }).where(eq(schema.wallets.ownerId, `user:${dupId}`)).catch(() => {});
+        await db.update(schema.wallets).set({ ownerId: canonicalId }).where(eq(schema.wallets.ownerId, dupId)).catch(() => {});
+      }
+
+      // Merge user flags onto canonical user row
+      const mergedFlags = {
+        hasAppwriteAccount: Boolean(matchingUsers.some((u) => u.hasAppwriteAccount)),
+        appwriteAccountId: matchingUsers.find((u) => u.appwriteAccountId)?.appwriteAccountId || canonicalUser.appwriteAccountId || null,
+        appwritePasswordSynced: Boolean(matchingUsers.some((u) => u.appwritePasswordSynced)),
+        tier1Synced: Boolean(matchingUsers.some((u) => u.tier1Synced)),
+        tier2Synced: Boolean(matchingUsers.some((u) => u.tier2Synced)),
+        name: candidateData?.name || canonicalUser.name,
+        email: normalizedEmail,
+        emailVerified: Boolean(candidateData?.emailVerified ?? canonicalUser.emailVerified),
+        image: candidateData?.image || canonicalUser.image || null,
+        updatedAt: new Date(),
+      };
+
+      await db.update(schema.user).set(mergedFlags).where(eq(schema.user.id, canonicalId));
+
+      // Remove duplicate user rows
+      await db.delete(schema.user).where(inArray(schema.user.id, duplicateIds)).catch(() => {});
+    } else if (candidateData) {
+      await db
+        .update(schema.user)
+        .set({
+          name: candidateData.name || canonicalUser.name,
+          email: normalizedEmail,
+          emailVerified: Boolean(candidateData.emailVerified ?? canonicalUser.emailVerified),
+          image: candidateData.image || canonicalUser.image || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.user.id, canonicalId));
+    }
+
+    const freshRows = await db.select().from(schema.user).where(eq(schema.user.id, canonicalId)).limit(1);
+    return freshRows[0] || canonicalUser;
+  } catch (err: any) {
+    console.error('[turso-ops] consolidateUserByEmail error:', err);
+    return null;
+  }
+}
+
+/**
  * Ensures a user exists in Turso/Better Auth table with deterministic user ID matching Appwrite $id.
  */
 export async function ensureBetterAuthUserTurso(data: {
@@ -38,38 +226,25 @@ export async function ensureBetterAuthUserTurso(data: {
   image?: string | null;
 }) {
   try {
-    const existing = await db
-      .select({ id: schema.user.id, tier1Synced: schema.user.tier1Synced, tier2Synced: schema.user.tier2Synced })
-      .from(schema.user)
-      .where(eq(schema.user.id, data.id))
-      .limit(1);
+    const consolidated = await consolidateUserByEmail(data.email, {
+      id: data.id,
+      name: data.name,
+      image: data.image,
+      emailVerified: data.emailVerified,
+    });
 
-    if (existing.length > 0) {
-      await db
-        .update(schema.user)
-        .set({
-          name: data.name,
-          email: data.email,
-          emailVerified: Boolean(data.emailVerified),
-          image: data.image || null,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.user.id, data.id));
-      return { success: true, user: existing[0] };
-    } else {
-      await db.insert(schema.user).values({
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        emailVerified: Boolean(data.emailVerified),
-        image: data.image || null,
-        tier1Synced: false,
-        tier2Synced: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      return { success: true, user: { id: data.id, tier1Synced: false, tier2Synced: false } };
+    if (consolidated) {
+      return {
+        success: true,
+        user: {
+          id: consolidated.id,
+          tier1Synced: Boolean(consolidated.tier1Synced),
+          tier2Synced: Boolean(consolidated.tier2Synced),
+        },
+      };
     }
+
+    return { success: false, error: 'User consolidation failed' };
   } catch (err: any) {
     console.error('[turso-ops] ensureBetterAuthUserTurso failed:', err);
     return { success: false, error: err.message };

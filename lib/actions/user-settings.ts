@@ -198,12 +198,38 @@ export async function listUserIdentitiesAction(jwt?: string) {
   // Strictly query Turso SQLite account and oauthConsent tables (Better Auth live connected apps)
   try {
     const { db } = await import('@/lib/db');
-    const { account: accountTable, oauthConsent, oauthClient } = await import('@/lib/db/schema');
-    const { eq } = await import('drizzle-orm');
+    const { account: accountTable, oauthConsent, oauthClient, user: userTable } = await import('@/lib/db/schema');
+    const { eq, inArray } = await import('drizzle-orm');
+    const { consolidateUserByEmail } = await import('@/lib/actions/turso-ops');
+
+    // Run consolidation by email if available to resolve duplicate user IDs
+    if (actor.email) {
+      await consolidateUserByEmail(actor.email, { id: actor.$id, name: actor.name }).catch(() => {});
+    }
+
+    const allUserIds = [actor.$id];
+    if (actor.email) {
+      const matchingUsers = await db
+        .select({ id: userTable.id })
+        .from(userTable)
+        .where(eq(userTable.email, actor.email.trim().toLowerCase()));
+      for (const u of matchingUsers) {
+        if (!allUserIds.includes(u.id)) allUserIds.push(u.id);
+      }
+    }
 
     // 1. Better Auth linked sign-in methods
-    const accounts = await db.select().from(accountTable).where(eq(accountTable.userId, actor.$id));
+    const accounts = await db
+      .select()
+      .from(accountTable)
+      .where(inArray(accountTable.userId, allUserIds));
+
+    const seenProviders = new Set<string>();
     for (const a of accounts) {
+      const providerKey = (a.providerId || '').toLowerCase();
+      if (seenProviders.has(providerKey)) continue;
+      seenProviders.add(providerKey);
+
       identities.push({
         $id: a.id,
         $createdAt: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString(),
@@ -226,7 +252,7 @@ export async function listUserIdentitiesAction(jwt?: string) {
       })
       .from(oauthConsent)
       .leftJoin(oauthClient, eq(oauthConsent.clientId, oauthClient.clientId))
-      .where(eq(oauthConsent.userId, actor.$id));
+      .where(inArray(oauthConsent.userId, allUserIds));
 
     for (const c of consents) {
       externals.push({
