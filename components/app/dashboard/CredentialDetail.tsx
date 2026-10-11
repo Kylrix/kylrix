@@ -35,6 +35,46 @@ import toast from 'react-hot-toast';
 const labelClass =
   'text-[0.72rem] font-bold text-white tracking-[0.08em] uppercase font-satoshi';
 
+function FieldValue({
+  children,
+  className = '',
+  onClick,
+  isCopied = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
+  isCopied?: boolean;
+}) {
+  return (
+    <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className={`relative group p-3.5 rounded-xl bg-black border font-mono text-sm text-white break-all transition-colors ${
+        onClick ? 'cursor-pointer hover:border-white/40' : 'cursor-default'
+      } ${isCopied ? 'border-[#10B981]' : 'border-white/20'} ${className}`}
+    >
+      {children}
+      {onClick && (
+        <span className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {isCopied ? (
+            <Check className="w-3.5 h-3.5 text-[#10B981]" />
+          ) : (
+            <Copy className="w-3.5 h-3.5 text-white" />
+          )}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function CredentialDetail({
   credential,
   onClose,
@@ -343,47 +383,6 @@ export default function CredentialDetail({
     ? `${liveCredential.$id.slice(0, 6)}…${liveCredential.$id.slice(-4)}`
     : '';
 
-  const FieldValue = ({
-    children,
-    className = '',
-    onClick,
-    fieldId,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: () => void;
-    fieldId?: string;
-  }) => {
-    const isFieldCopied = copied === fieldId;
-    return (
-      <div
-        role={onClick ? 'button' : undefined}
-        tabIndex={onClick ? 0 : undefined}
-        onClick={onClick}
-        onKeyDown={(e) => {
-          if (onClick && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault();
-            onClick();
-          }
-        }}
-        className={`relative group p-3.5 rounded-xl bg-black border font-mono text-sm text-white break-all transition-colors ${
-          onClick ? 'cursor-pointer hover:border-white/40' : 'cursor-default'
-        } ${isFieldCopied ? 'border-[#10B981]' : 'border-white/20'} ${className}`}
-      >
-        {children}
-        {onClick && (
-          <span className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            {isFieldCopied ? (
-              <Check className="w-3.5 h-3.5 text-[#10B981]" />
-            ) : (
-              <Copy className="w-3.5 h-3.5 text-white" />
-            )}
-          </span>
-        )}
-      </div>
-    );
-  };
-
   const content = (
     <div
       className={`h-full flex flex-col ${inline ? 'bg-transparent' : 'bg-[#161412]'} w-full min-h-0 text-white`}
@@ -588,7 +587,7 @@ export default function CredentialDetail({
                     <span className={labelClass}>Username / Email</span>
                   </div>
                   <FieldValue
-                    fieldId="username"
+                    isCopied={copied === 'username'}
                     onClick={() =>
                       handleCopy(liveCredential.username || credential.username, 'username')
                     }
@@ -619,7 +618,7 @@ export default function CredentialDetail({
                   </button>
                 </div>
                 <FieldValue
-                  fieldId="password"
+                  isCopied={copied === 'password'}
                   onClick={() =>
                     requestSudo({
                       onSuccess: () =>
@@ -722,7 +721,7 @@ export default function CredentialDetail({
                         </div>
                       ) : (
                         <FieldValue
-                          fieldId={`custom-${index}`}
+                          isCopied={copied === `custom-${index}`}
                           onClick={() => handleCopy(field.value || '', `custom-${index}`)}
                           className="text-xs"
                         >
@@ -742,7 +741,7 @@ export default function CredentialDetail({
                 <span className={labelClass}>Notes</span>
               </div>
               <FieldValue
-                fieldId="notes"
+                isCopied={copied === 'notes'}
                 onClick={() => handleCopy(liveCredential.notes || credential.notes, 'notes')}
                 className="whitespace-pre-wrap font-sans text-xs leading-relaxed"
               >

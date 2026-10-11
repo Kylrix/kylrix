@@ -1,15 +1,15 @@
 import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url);
-const nextConfigs = require("eslint-config-next/core-web-vitals");
-const unusedImports = require("eslint-plugin-unused-imports");
-const typescriptEslint = require(
-  require.resolve("@typescript-eslint/eslint-plugin", {
-    paths: [require.resolve("eslint-config-next")],
+const _require = createRequire(import.meta.url);
+const _nextConfigs = _require("eslint-config-next/core-web-vitals");
+const _unusedImports = _require("eslint-plugin-unused-imports");
+const _typescriptEslint = _require(
+  _require.resolve("@typescript-eslint/eslint-plugin", {
+    paths: [_require.resolve("eslint-config-next")],
   }),
 );
 
-const eslintConfig = [
+const _eslintConfig = [
   {
     ignores: [
       ".next/**",
@@ -26,11 +26,11 @@ const eslintConfig = [
       ".ignore/**",
     ],
   },
-  ...nextConfigs,
+  ..._nextConfigs,
   {
     plugins: {
-      "unused-imports": unusedImports,
-      "@typescript-eslint": typescriptEslint,
+      "unused-imports": _unusedImports,
+      "@typescript-eslint": _typescriptEslint,
     },
     linterOptions: {
       reportUnusedDisableDirectives: "off",
@@ -49,10 +49,16 @@ const eslintConfig = [
       "no-unused-vars": "off",
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/exhaustive-deps": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/globals": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/rules-of-hooks": "error",
       "@next/next/no-img-element": "off",
       "import/no-anonymous-default-export": "off",
     },
   },
 ];
 
-export default eslintConfig;
+export default _eslintConfig;

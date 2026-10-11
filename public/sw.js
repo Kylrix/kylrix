@@ -22,19 +22,19 @@ self.addEventListener('activate', (event) => {
 });
 
 // 3. Volatile MEK Preservation
-let volatileContext = null;
+let _volatileContext = null;
 
 self.addEventListener('message', (event) => {
   if (event.data.type === 'STORE_CONTEXT') {
-    volatileContext = event.data.payload;
+    _volatileContext = event.data.payload;
   }
   
   if (event.data.type === 'RECOVER_CONTEXT') {
-    event.ports[0].postMessage({ type: 'CONTEXT_RECOVERED', payload: volatileContext });
+    event.ports[0].postMessage({ type: 'CONTEXT_RECOVERED', payload: _volatileContext });
   }
 
   if (event.data.type === 'WIPE_CONTEXT') {
-    volatileContext = null;
+    _volatileContext = null;
   }
 });
 
@@ -42,5 +42,3 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (_event) => {
   // Pass-through
 });
-
-

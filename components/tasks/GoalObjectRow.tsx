@@ -387,14 +387,14 @@ export default function GoalObjectRow({ task }: Props) {
     [contextMenuItems, openMenu],
   );
 
+  const rawTaskTags = (task as any).tags;
   const goalTags = useMemo(() => {
-    const rawTags = (task as any).tags;
     const userLabels = Array.isArray(task.labels) && task.labels.length > 0 ? task.labels : [];
-    const extractedTags = Array.isArray(rawTags)
-      ? rawTags.filter((t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'))
+    const extractedTags = Array.isArray(rawTaskTags)
+      ? rawTaskTags.filter((t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'))
       : [];
     return Array.from(new Set([...userLabels, ...extractedTags])).filter(Boolean);
-  }, [task.labels, (task as any).tags]);
+  }, [task.labels, rawTaskTags]);
 
   const isActuallyLocked = locked && !(task as any)._dekViewDecrypted;
 

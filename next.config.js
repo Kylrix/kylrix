@@ -1,19 +1,19 @@
-const webpack = require('webpack');
-const path = require('path');
+const _webpack = require('webpack');
+const _path = require('path');
 
 function buildPublicPricingPlansJson() {
   try {
-    const { serializePricingPlansForClient } = require('./lib/config/pricing-plans');
-    return serializePricingPlansForClient();
+    const { serializePricingPlansForClient: _serializePricingPlansForClient } = require('./lib/config/pricing-plans');
+    return _serializePricingPlansForClient();
   } catch {
     return '[]';
   }
 }
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const _nextConfig = {
   turbopack: {
-    root: path.resolve(__dirname),
+    root: _path.resolve(__dirname),
   },
   env: {
     NEXT_PUBLIC_SELFHOSTED: process.env.SELFHOSTED === 'true' ? 'true' : 'false',
@@ -52,9 +52,9 @@ const nextConfig = {
   webpack: (config, { isServer }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      'appwrite$': path.resolve(__dirname, 'lib/shims/appwrite.ts'),
-      'node-appwrite$': path.resolve(__dirname, 'lib/shims/node-appwrite.ts'),
-      'node-appwrite/file$': path.resolve(__dirname, 'lib/shims/node-appwrite-file.ts'),
+      'appwrite$': _path.resolve(__dirname, 'lib/shims/appwrite.ts'),
+      'node-appwrite$': _path.resolve(__dirname, 'lib/shims/node-appwrite.ts'),
+      'node-appwrite/file$': _path.resolve(__dirname, 'lib/shims/node-appwrite-file.ts'),
     };
     if (!isServer) {
       config.resolve.fallback = {
@@ -70,7 +70,7 @@ const nextConfig = {
       };
       // Strip 'node:' prefix from imports to prevent UnhandledSchemeError
       config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+        new _webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
           resource.request = resource.request.replace(/^node:/, '');
         })
       );
@@ -436,4 +436,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = _nextConfig;
