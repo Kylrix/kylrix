@@ -1364,7 +1364,19 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     const initRealtime = async () => {
       // Subscribe to Tasks
       unsubTasks = await subscribeToTable<AppwriteTask>(APPWRITE_CONFIG.TABLES.TASKS, ({ type, payload }) => {
-        const isBelonging = Boolean(state.userId && (payload.userId === state.userId || (Array.isArray(payload.assigneeIds) && payload.assigneeIds.includes(state.userId))));
+        const payloadId = payload.$id || payload.id;
+        if (!payloadId) return;
+        const isBelonging = Boolean(
+          !state.userId ||
+          state.userId === 'guest' ||
+          payload.userId === state.userId ||
+          (payload as any).creatorId === state.userId ||
+          (Array.isArray(payload.assigneeIds) && payload.assigneeIds.includes(state.userId)) ||
+          payload.isWorkspace ||
+          Boolean((payload as any).projectId) ||
+          payload.isPublic ||
+          payload.isGuest
+        );
         if (!isBelonging) return;
 
         // Mirror notes live-edit guards: never clobber a goal the engine still owes a flush for.

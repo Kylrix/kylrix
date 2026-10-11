@@ -693,6 +693,9 @@ export async function upsertGoalTurso(
       .where(eq(schema.goals.id, data.id))
       .limit(1);
 
+    let isCreate = false;
+    let shapedPayload: any = null;
+
     if (existing.length > 0) {
       const updateData: any = {
         updatedAt: data.updatedAt || new Date().toISOString(),
@@ -706,13 +709,28 @@ export async function upsertGoalTurso(
         .update(schema.goals)
         .set(updateData)
         .where(eq(schema.goals.id, data.id));
+      shapedPayload = { $id: data.id, ...updateData };
     } else {
-      await db.insert(schema.goals).values({
+      isCreate = true;
+      shapedPayload = {
         ...data,
+        $id: data.id,
         createdAt: data.createdAt || new Date().toISOString(),
         updatedAt: data.updatedAt || new Date().toISOString(),
-      } as any);
+      };
+      await db.insert(schema.goals).values(shapedPayload as any);
     }
+
+    try {
+      const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+      await broadcastRealtimeEvent({
+        tableId: 'tasks',
+        rowId: data.id,
+        action: isCreate ? 'create' : 'update',
+        payload: shapedPayload,
+      }).catch(() => {});
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertGoalTurso failed:', err);
@@ -753,6 +771,15 @@ export async function getGoalTurso(goalId: string) {
 export async function deleteGoalTurso(goalId: string) {
   try {
     await db.delete(schema.goals).where(eq(schema.goals.id, goalId));
+    try {
+      const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+      await broadcastRealtimeEvent({
+        tableId: 'tasks',
+        rowId: goalId,
+        action: 'delete',
+        payload: { id: goalId, $id: goalId, isTrash: true, isDeleted: true },
+      }).catch(() => {});
+    } catch {}
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] deleteGoalTurso failed:', err);

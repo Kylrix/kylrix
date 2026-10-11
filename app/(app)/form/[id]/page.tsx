@@ -153,6 +153,44 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
         fetchForm();
     }, [resolvedParams.id]);
 
+    // Live realtime subscription for recipient of shared form
+    useEffect(() => {
+        if (!resolvedParams.id) return;
+        let unsub: any;
+        void (async () => {
+            try {
+                const { realtime } = await import('@/lib/appwrite/client');
+                const channels = [
+                    `forms:${resolvedParams.id}`,
+                    `forms`,
+                ];
+                unsub = realtime.subscribe(channels, (response: any) => {
+                    const rowId = response.payload?.$id || response.payload?.id;
+                    if (rowId && rowId !== resolvedParams.id) return;
+                    if (response.events?.some((e: string) => e.endsWith('.delete')) || response.payload?.isTrash || response.payload?.isDeleted) {
+                        setError('This form is no longer available.');
+                        setForm(null);
+                        return;
+                    }
+                    if (response.events?.some((e: string) => e.endsWith('.update') || e.endsWith('.create'))) {
+                        if (response.payload) {
+                            if (response.payload.isPublic === false && response.payload.isGuest === false && response.payload.status !== 'published') {
+                                setError('This form is private and not currently accepting responses.');
+                                setForm(null);
+                                return;
+                            }
+                            setForm((prev: any) => ({ ...prev, ...response.payload }));
+                        }
+                    }
+                });
+            } catch {}
+        })();
+        return () => {
+            if (typeof unsub === 'function') unsub();
+            else if (unsub?.unsubscribe) unsub.unsubscribe();
+        };
+    }, [resolvedParams.id]);
+
     // Local-only draft autosave with RxDB LocalEngine
     useEffect(() => {
         if (!form || Object.keys(formData).length === 0 || submitted) return;

@@ -207,6 +207,18 @@ export async function broadcastRealtimeEvent(params: {
   const rowId = params.rowId;
   const action = params.action;
 
+  const normalizedPayload = typeof params.payload === 'object' && params.payload !== null
+    ? {
+        ...params.payload,
+        $id: params.payload.$id || rowId,
+        id: params.payload.id || rowId,
+      }
+    : {
+        $id: rowId,
+        id: rowId,
+        data: params.payload,
+      };
+
   const eventPayload = {
     events: [
       `databases.${dbId}.collections.${tableId}.documents.${rowId}.${action}`,
@@ -214,6 +226,10 @@ export async function broadcastRealtimeEvent(params: {
       `databases.${dbId}.collections.${tableId}.documents.${action}`,
       `databases.${dbId}.tables.${tableId}.rows.${action}`,
       `${tableId}.${action}`,
+      `${tableId}:${rowId}:${action}`,
+      `${tableId}.${rowId}.${action}`,
+      `row:${rowId}:${action}`,
+      `doc:${rowId}:${action}`,
     ],
     channels: [
       `databases.${dbId}.collections.${tableId}.documents`,
@@ -221,16 +237,21 @@ export async function broadcastRealtimeEvent(params: {
       `databases.${dbId}.collections.${tableId}.documents.${rowId}`,
       `databases.${dbId}.tables.${tableId}.rows.${rowId}`,
       tableId,
+      `${tableId}:${rowId}`,
+      `${tableId}.${rowId}`,
+      `row:${rowId}`,
+      `doc:${rowId}`,
     ],
     timestamp: new Date().toISOString(),
-    payload: params.payload,
+    payload: normalizedPayload,
   };
 
   const body = JSON.stringify(eventPayload);
+  const protocol = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http:' : 'https:';
 
   // Broadcast to global room non-blockingly
   try {
-    fetch(`https://${host}/room/global`, {
+    fetch(`${protocol}//${host}/room/global`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,

@@ -728,6 +728,26 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [activeWorkspaceId, userId, personalWorkspace]);
 
   // Active workspace validation: if current active workspace ID does not exist in the active user's workspaces list, reset to personal
+  // Live realtime sync for workspace creations, updates, deletions, and object attachments
+  useEffect(() => {
+    let unsub: any;
+    void (async () => {
+      try {
+        const { realtime } = await import('@/lib/appwrite/client');
+        const channels = ['projects', 'project_objects', 'Collaborators'];
+        unsub = realtime.subscribe(channels, (response: any) => {
+          if (response?.events?.some((evt: string) => evt.includes('.create') || evt.includes('.update') || evt.includes('.delete'))) {
+            void refreshWorkspaces();
+          }
+        });
+      } catch {}
+    })();
+    return () => {
+      if (typeof unsub === 'function') unsub();
+      else if (unsub?.unsubscribe) unsub.unsubscribe();
+    };
+  }, [refreshWorkspaces]);
+
   useEffect(() => {
     if (!loadingWorkspaces && workspaces.length > 0 && activeWorkspaceId && activeWorkspaceId !== userId && activeWorkspaceId !== 'guest' && activeWorkspaceId !== 'personal') {
       const exists = workspaces.some((w) => w.id === activeWorkspaceId);

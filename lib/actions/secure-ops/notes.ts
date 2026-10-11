@@ -7,6 +7,7 @@ import {
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { validatePublicNoteAccess } from '@/lib/appwrite/note';
+import { broadcastRealtimeEvent } from '@/lib/realtime/partykit';
 import { inferAttachmentMimeType, resolveAttachmentVisualKind } from '@/lib/note-object-visual';
 import {
   JWTSchema,
@@ -745,6 +746,12 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
         updatedAt: note.updatedAt || note.$updatedAt || new Date().toISOString(),
       }).catch((err) => console.warn('[turso] Silent note creation mirror error:', err));
     }).catch(() => {});
+    void broadcastRealtimeEvent({
+      tableId: 'notes',
+      rowId: note.$id || note.id || reservedRowId,
+      action: 'create',
+      payload: note,
+    });
     return JSON.parse(JSON.stringify(note));
   } catch (error: any) {
     const message = String(error?.message || '').toLowerCase();
@@ -891,6 +898,12 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
 
   const updatedAt = new Date().toISOString();
   const row = await noteService.updateNote(noteId, patch, { ownerId: noteOwnerId || actor.$id });
+  void broadcastRealtimeEvent({
+    tableId: 'notes',
+    rowId: noteId,
+    action: 'update',
+    payload: row,
+  });
 
   try {
     if (Array.isArray(patch.tags)) {
