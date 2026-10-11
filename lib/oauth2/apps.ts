@@ -71,11 +71,13 @@ export async function listMyApps(userId: string): Promise<OauthApp[]> {
       userId: r.userId || undefined,
     }));
   } catch {
-    const data = await appwriteSessionFetch<AppsList>('GET', '/apps', {
+    const fetchPromise = appwriteSessionFetch<AppsList>('GET', '/apps', {
       query: {
         queries: [Query.equal('userId', userId), Query.limit(100)],
       },
-    }).catch(() => null);
+    });
+    const timeoutPromise = new Promise<null>((r) => setTimeout(() => r(null), 1200));
+    const data = await Promise.race([fetchPromise, timeoutPromise]).catch(() => null);
     return data?.apps || [];
   }
 }
