@@ -317,67 +317,117 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
     throw new Error('Unauthorized');
   }
 
-  const tables = createSystemTablesDB();
-  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-  const CHAT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-
-  // Parallel Fetch: Owned projects + Collaborator rows
-  const [ownedProjectsRes, collabRowsRes] = await Promise.all([
-    tables.listRows({
-        databaseId: CHAT_DATABASE_ID,
-        tableId: 'projects',
-        queries: ownedWorkspaceListQueries(actor.$id) as any,
-    }),
-    tables.listRows({
-        databaseId: FLOW_DATABASE_ID,
-        tableId: COLLABORATORS_TABLE,
-        queries: [
-          Query.equal('resourceType', 'project'),
-          Query.equal('userId', actor.$id),
-        ] as any}),
-  ]);
-
   const projectsListMap = new Map<string, any>();
 
-  // Initialize map with owned projects
-  for (const proj of ownedProjectsRes.rows) {
-    projectsListMap.set(proj.$id, {
-      ...proj,
-      collabStatus: 'owner',
-      isPending: false});
+  // 1. Primary datasource: Query Turso SQLite projects table directly across all user IDs for this email
+  try {
+    const { listWorkspacesTurso, consolidateUserByEmail } = await import('@/lib/actions/turso-ops');
+    if (actor.email) {
+      await consolidateUserByEmail(actor.email, { id: actor.$id, name: actor.name }).catch(() => {});
+    }
+
+    const allUserIds = [actor.$id];
+    if (actor.email) {
+      const { db } = await import('@/lib/db');
+      const { user: userTable } = await import('@/lib/db/schema');
+      const { eq } = await import('drizzle-orm');
+      const matching = await db
+        .select({ id: userTable.id })
+        .from(userTable)
+        .where(eq(userTable.email, actor.email.trim().toLowerCase()));
+      for (const u of matching) {
+        if (!allUserIds.includes(u.id)) allUserIds.push(u.id);
+      }
+    }
+
+    for (const uid of allUserIds) {
+      const tursoRes = await listWorkspacesTurso(uid);
+      if (tursoRes.success && Array.isArray(tursoRes.rows)) {
+        for (const p of tursoRes.rows) {
+          const id = p.id || (p as any).$id;
+          if (!id) continue;
+          projectsListMap.set(id, {
+            ...p,
+            $id: id,
+            collabStatus: allUserIds.includes(p.creatorId) ? 'owner' : 'member',
+            isPending: false,
+          });
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn('[listProjectsWithCollaborationsSecure] Turso primary query warning:', err?.message);
   }
 
-  // Identify unique project IDs to fetch that are NOT owned by the user
-  const projectsToFetch = collabRowsRes.rows.filter(row => !projectsListMap.has(row.resourceId));
-  
-  if (projectsToFetch.length > 0) {
-    // Optimized Batch Fetch: Details for all collaborated projects in one query
-    const targetProjectIds = projectsToFetch.map(r => r.resourceId);
-    
-    try {
-        const collaboratedProjectsRes = await tables.listRows({
-            databaseId: CHAT_DATABASE_ID,
-            tableId: 'projects',
-            queries: [Query.equal('$id', targetProjectIds)]});
+  // 2. Secondary/Appwrite sync query (non-blocking fallback with short timeout)
+  try {
+    const tables = createSystemTablesDB();
+    const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+    const CHAT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
+    const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
 
-        for (const proj of collaboratedProjectsRes.rows) {
-            if (!isWorkspaceRecord(proj)) continue;
-            const collabRow = projectsToFetch.find(r => r.resourceId === proj.$id);
-            if (collabRow) {
-                const isRealInvite = collabRow.status === 'pending' && collabRow.inviterId && collabRow.inviterId !== '';
-                const isJoinRequest = collabRow.status === 'pending' && (!collabRow.inviterId || collabRow.inviterId === '');
-                projectsListMap.set(proj.$id, {
-                    ...proj,
-                    collabStatus: isJoinRequest ? 'requested' : collabRow.status,
-                    isPending: isRealInvite,
-                    isRequested: isJoinRequest,
-                    role: collabRow.permission === 'admin' ? 'admin' : (collabRow.permission === 'write' ? 'editor' : 'viewer')});
-            }
-        }
-    } catch (e) {
-        console.error('[listProjectsWithCollaborationsSecure] Batch project fetch failed:', e);
+    const ownedPromise = tables.listRows({
+      databaseId: CHAT_DATABASE_ID,
+      tableId: 'projects',
+      queries: ownedWorkspaceListQueries(actor.$id) as any,
+    }).catch(() => ({ rows: [] }));
+
+    const collabPromise = tables.listRows({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      queries: [
+        Query.equal('resourceType', 'project'),
+        Query.equal('userId', actor.$id),
+      ] as any,
+    }).catch(() => ({ rows: [] }));
+
+    const timeoutPromise = new Promise<{ rows: any[] }>((resolve) => setTimeout(() => resolve({ rows: [] }), 1200));
+
+    const [ownedProjectsRes, collabRowsRes] = await Promise.all([
+      Promise.race([ownedPromise, timeoutPromise]),
+      Promise.race([collabPromise, timeoutPromise]),
+    ]);
+
+    for (const proj of ownedProjectsRes.rows || []) {
+      projectsListMap.set(proj.$id, {
+        ...proj,
+        collabStatus: 'owner',
+        isPending: false,
+      });
     }
+
+    const projectsToFetch = (collabRowsRes.rows || []).filter((row: any) => !projectsListMap.has(row.resourceId));
+
+    if (projectsToFetch.length > 0) {
+      const targetProjectIds = projectsToFetch.map((r: any) => r.resourceId);
+      try {
+        const collaboratedProjectsRes = await tables.listRows({
+          databaseId: CHAT_DATABASE_ID,
+          tableId: 'projects',
+          queries: [Query.equal('$id', targetProjectIds)],
+        });
+
+        for (const proj of collaboratedProjectsRes.rows || []) {
+          if (!isWorkspaceRecord(proj)) continue;
+          const collabRow = projectsToFetch.find((r: any) => r.resourceId === proj.$id);
+          if (collabRow) {
+            const isRealInvite = collabRow.status === 'pending' && collabRow.inviterId && collabRow.inviterId !== '';
+            const isJoinRequest = collabRow.status === 'pending' && (!collabRow.inviterId || collabRow.inviterId === '');
+            projectsListMap.set(proj.$id, {
+              ...proj,
+              collabStatus: isJoinRequest ? 'requested' : collabRow.status,
+              isPending: isRealInvite,
+              isRequested: isJoinRequest,
+              role: collabRow.permission === 'admin' ? 'admin' : (collabRow.permission === 'write' ? 'editor' : 'viewer'),
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('[listProjectsWithCollaborationsSecure] Batch collaborated projects fetch warning:', e);
+      }
+    }
+  } catch (appwriteErr: any) {
+    console.warn('[listProjectsWithCollaborationsSecure] Appwrite fallback warning:', appwriteErr?.message);
   }
 
   return filterRootWorkspaceProjects(Array.from(projectsListMap.values()));
