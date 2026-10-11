@@ -14,6 +14,17 @@ import {
 import { ApiResources } from '@/lib/api/resources';
 import { PairingService } from '@/lib/services/pairing';
 
+vi.mock('@/lib/db', () => ({
+  db: {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([{ userId: 'alice' }]),
+    insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([]) }),
+    delete: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue(Object.assign(Promise.resolve([]), { catch: vi.fn().mockResolvedValue([]) })) }),
+  },
+}));
+
 vi.mock('@/lib/appwrite-admin', () => ({
   createSystemTablesDB: vi.fn().mockReturnValue({
     listRows: vi.fn().mockResolvedValue({ rows: [] }),
@@ -220,6 +231,7 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
           custom_id: 'kylrix_main_select',
           values: ['val_ideas'],
         },
+        message: { flags: 64 },
         user: { username: 'alice' },
       }),
     });
@@ -388,6 +400,7 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
       body: JSON.stringify({
         type: 3,
         data: { custom_id: 'check_pair:dev_granted' },
+        message: { flags: 64 },
         user: { id: 'discord_user_88', username: 'alice' },
       }),
     });
@@ -628,6 +641,7 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
       body: JSON.stringify({
         type: 3,
         data: { custom_id: 'share_pick:idea:note_123' },
+        message: { flags: 64 },
         user: { id: 'discord_user_88', username: 'alice' },
       }),
     });
