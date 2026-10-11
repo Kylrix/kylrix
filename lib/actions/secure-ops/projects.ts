@@ -19,6 +19,7 @@ import {
 import { filterRootWorkspaceProjects, isWorkspaceRecord } from '@/lib/projects/sub-projects';
 import { ownedWorkspaceListQueries } from '@/lib/projects/workspace-queries';
 import { DEFAULT_FEEDBACK_FORM_ID, DEFAULT_FEEDBACK_FORM_ROW } from '@/constants/forms';
+import { broadcastRealtimeEvent } from '@/lib/realtime/partykit';
 
 // Import interfaces / types from shared
 
@@ -2051,6 +2052,13 @@ export async function createGoalSecure(data: any, jwt?: string): Promise<any> {
       permissions,
     });
 
+    void broadcastRealtimeEvent({
+      tableId: 'tasks',
+      rowId: (result as any).$id || reservedRowId,
+      action: 'create',
+      payload: result,
+    });
+
     return JSON.parse(JSON.stringify(result));
   } catch (err: any) {
     console.error('[createGoalSecure Exception]', err);
@@ -2118,6 +2126,13 @@ export async function updateGoalSecure(goalId: string, data: any, jwt?: string):
       permissions: ownerRowPermissions(ownerId && ownerId !== 'guest' ? ownerId : actor.$id, {
         isPublic: !!(dataPayload as any)?.isPublic,
       }),
+    });
+
+    void broadcastRealtimeEvent({
+      tableId: 'tasks',
+      rowId: goalId,
+      action: 'update',
+      payload: updated,
     });
 
     return JSON.parse(JSON.stringify(updated));

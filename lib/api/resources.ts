@@ -72,6 +72,7 @@ import {
 } from '@/lib/projects/sub-projects';
 import { ownedWorkspaceListQueries } from '@/lib/projects/workspace-queries';
 import { assertActorFeatureAccess } from '@/lib/tools/gate';
+import { broadcastRealtimeEvent } from '@/lib/realtime/partykit';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
 const NOTES = APPWRITE_CONFIG.TABLES.NOTE?.NOTES || APPWRITE_CONFIG.TABLES.NOTES;
@@ -604,7 +605,9 @@ export const ApiResources = {
       }).catch((e) => console.warn('[turso] ApiResources note mirror warning:', e));
     }).catch(() => {});
 
-    return shapeNote(note);
+    const shapedNote = shapeNote(note);
+    void broadcastRealtimeEvent({ tableId: NOTES, rowId: noteId, action: 'create', payload: shapedNote });
+    return shapedNote;
   },
 
   async updateNote(actor: ApiActor, id: string, body: Record<string, unknown>) {
@@ -659,7 +662,9 @@ export const ApiResources = {
       }).catch((e) => console.warn('[turso] ApiResources updateNote mirror warning:', e));
     }).catch(() => {});
 
-    return shapeNote(row);
+    const shapedNote = shapeNote(row);
+    void broadcastRealtimeEvent({ tableId: NOTES, rowId: id, action: 'update', payload: shapedNote });
+    return shapedNote;
   },
 
   async deleteNote(actor: ApiActor, id: string) {
@@ -682,6 +687,7 @@ export const ApiResources = {
       deleteNoteTurso(id).catch((e) => console.warn('[turso] ApiResources deleteNote mirror warning:', e));
     }).catch(() => {});
 
+    void broadcastRealtimeEvent({ tableId: NOTES, rowId: id, action: 'delete', payload: { id, $id: id, isTrash: true, isDeleted: true } });
     return { id, deleted: true, trashed: true };
   },
 
@@ -807,7 +813,9 @@ export const ApiResources = {
       });
     }).catch((e) => console.warn('[turso] ApiResources goal mirror warning:', e));
 
-    return shapeGoal(row);
+    const shapedGoal = shapeGoal(row);
+    void broadcastRealtimeEvent({ tableId: TASKS, rowId: goalId, action: 'create', payload: shapedGoal });
+    return shapedGoal;
   },
 
   async updateGoal(actor: ApiActor, id: string, body: Record<string, unknown>) {
@@ -851,7 +859,9 @@ export const ApiResources = {
       });
     }).catch((e) => console.warn('[turso] ApiResources updateGoal mirror warning:', e));
 
-    return shapeGoal(row);
+    const shapedGoal = shapeGoal(row);
+    void broadcastRealtimeEvent({ tableId: TASKS, rowId: id, action: 'update', payload: shapedGoal });
+    return shapedGoal;
   },
 
   async deleteGoal(actor: ApiActor, id: string) {
@@ -875,6 +885,7 @@ export const ApiResources = {
       deleteGoalTurso(id).catch((e) => console.warn('[turso] ApiResources deleteGoal mirror warning:', e));
     });
 
+    void broadcastRealtimeEvent({ tableId: TASKS, rowId: id, action: 'delete', payload: { id, $id: id, isTrash: true, isDeleted: true, status: 'trash' } });
     return { id, deleted: true, trashed: true };
   },
 
@@ -1799,13 +1810,15 @@ export const ApiResources = {
       await this.sendChatMessage(actor, (conv as any).$id, { content: initialText }).catch(() => null);
     }
 
-    return {
+    const createdChat = {
       id: (conv as any).$id,
       type: (conv as any).type || 'direct',
       participants: (conv as any).participants || [actor.userId, participantId],
       isEncrypted: !!(conv as any).isEncrypted,
       createdAt: (conv as any).createdAt || now,
     };
+    void broadcastRealtimeEvent({ tableId: 'conversations', rowId: (conv as any).$id, action: 'create', payload: createdChat });
+    return createdChat;
   },
 
   async listChats(actor: ApiActor, limit = 25) {
@@ -2014,7 +2027,7 @@ export const ApiResources = {
       });
     }).catch((e) => console.warn('[turso] ApiResources sendChatMessage mirror warning:', e));
 
-    return {
+    const chatMsgObj = {
       id: (row as any).$id,
       conversationId,
       senderId: actor.userId,
@@ -2022,6 +2035,9 @@ export const ApiResources = {
       isEncrypted: false,
       createdAt: now,
     };
+    void broadcastRealtimeEvent({ tableId: 'messages', rowId: (row as any).$id, action: 'create', payload: chatMsgObj });
+    void broadcastRealtimeEvent({ tableId: 'conversations', rowId: conversationId, action: 'update', payload: { id: conversationId, lastMessageAt: now } });
+    return chatMsgObj;
   },
 
   async createWorkspace(actor: ApiActor, body: Record<string, unknown>) {
@@ -2057,7 +2073,9 @@ export const ApiResources = {
         Permission.read(Role.user(actor.userId)),
       ],
     });
-    return shapeWorkspace(row as Record<string, unknown>);
+    const shaped = shapeWorkspace(row as Record<string, unknown>);
+    void broadcastRealtimeEvent({ tableId: 'projects', rowId: (row as any).$id, action: 'create', payload: shaped });
+    return shaped;
   },
 
   async updateWorkspace(actor: ApiActor, id: string, body: Record<string, unknown>) {
@@ -2077,7 +2095,9 @@ export const ApiResources = {
       rowId: id,
       data: patch as any,
     });
-    return shapeWorkspace(row as Record<string, unknown>);
+    const shaped = shapeWorkspace(row as Record<string, unknown>);
+    void broadcastRealtimeEvent({ tableId: 'projects', rowId: id, action: 'update', payload: shaped });
+    return shaped;
   },
 
   async deleteWorkspace(actor: ApiActor, id: string) {
@@ -2088,6 +2108,7 @@ export const ApiResources = {
     await this.getWorkspace(actor, id);
     const tables = systemTables();
     await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: id });
+    void broadcastRealtimeEvent({ tableId: 'projects', rowId: id, action: 'delete', payload: { id, $id: id, isDeleted: true } });
     return { id, deleted: true };
   },
 
@@ -2235,7 +2256,9 @@ export const ApiResources = {
       await linkObjectToWorkspace(tables, wsId, 'event', (row as any).$id, actor.userId, { title });
     }
 
-    return this.getEvent(actor, (row as any).$id);
+    const evt = await this.getEvent(actor, (row as any).$id);
+    void broadcastRealtimeEvent({ tableId: 'events', rowId: (row as any).$id, action: 'create', payload: evt });
+    return evt;
   },
 
   async updateEvent(actor: ApiActor, id: string, body: Record<string, unknown>) {
@@ -2258,7 +2281,9 @@ export const ApiResources = {
         title: (patch.title as string) || 'Event',
       });
     }
-    return this.getEvent(actor, id);
+    const evt = await this.getEvent(actor, id);
+    void broadcastRealtimeEvent({ tableId: 'events', rowId: id, action: 'update', payload: evt });
+    return evt;
   },
 
   async deleteEvent(actor: ApiActor, id: string) {
@@ -2275,6 +2300,7 @@ export const ApiResources = {
         updatedAt: new Date().toISOString(),
       },
     });
+    void broadcastRealtimeEvent({ tableId: 'events', rowId: id, action: 'delete', payload: { id, $id: id, isDeleted: true, isTrash: true } });
     return { id, deleted: true, trashed: true };
   },
 
@@ -2350,7 +2376,9 @@ export const ApiResources = {
       await linkObjectToWorkspace(tables, wsId, 'form', (row as any).$id, actor.userId, { title });
     }
 
-    return this.getForm(actor, (row as any).$id);
+    const frm = await this.getForm(actor, (row as any).$id);
+    void broadcastRealtimeEvent({ tableId: 'forms', rowId: (row as any).$id, action: 'create', payload: frm });
+    return frm;
   },
 
   async updateForm(actor: ApiActor, id: string, body: Record<string, unknown>) {
@@ -2386,7 +2414,9 @@ export const ApiResources = {
         title: (patch.title as string) || 'Form',
       });
     }
-    return this.getForm(actor, id);
+    const frm = await this.getForm(actor, id);
+    void broadcastRealtimeEvent({ tableId: 'forms', rowId: id, action: 'update', payload: frm });
+    return frm;
   },
 
   async deleteForm(actor: ApiActor, id: string) {
@@ -2403,6 +2433,7 @@ export const ApiResources = {
         updatedAt: new Date().toISOString(),
       },
     });
+    void broadcastRealtimeEvent({ tableId: 'forms', rowId: id, action: 'delete', payload: { id, $id: id, isDeleted: true, isTrash: true } });
     return { id, deleted: true, trashed: true };
   },
 
@@ -2828,7 +2859,7 @@ export const ApiResources = {
       await linkObjectToWorkspace(tables, wsId, 'secret', itemId, actor.userId, { title: name });
     }
 
-    return {
+    const createdVaultItem = {
       id: (row as any).$id,
       name,
       username: body.username != null ? String(body.username) : null,
@@ -2851,6 +2882,8 @@ export const ApiResources = {
       createdAt: now,
       updatedAt: now,
     };
+    void broadcastRealtimeEvent({ tableId: 'credentials', rowId: (row as any).$id, action: 'create', payload: createdVaultItem });
+    return createdVaultItem;
   },
 
   async updateVaultItem(
@@ -2956,7 +2989,9 @@ export const ApiResources = {
       });
     }
 
-    return this.getVaultItem(actor, id, opts);
+    const updatedItem = await this.getVaultItem(actor, id, opts);
+    void broadcastRealtimeEvent({ tableId: 'credentials', rowId: id, action: 'update', payload: updatedItem });
+    return updatedItem;
   },
 
   async deleteVaultItem(actor: ApiActor, id: string) {
@@ -2983,6 +3018,7 @@ export const ApiResources = {
     });
     await unlinkObjectFromWorkspace(tables, 'credential', id);
 
+    void broadcastRealtimeEvent({ tableId: 'credentials', rowId: id, action: 'delete', payload: { id, $id: id, isDeleted: true } });
     return { id, deleted: true, trashed: true };
   },
 
@@ -3173,7 +3209,7 @@ export const ApiResources = {
       await linkObjectToWorkspace(tables, wsId, 'totp', itemId, actor.userId, { title: issuer });
     }
 
-    return {
+    const createdTotp = {
       id: (row as any).$id,
       issuer,
       accountName,
@@ -3188,6 +3224,8 @@ export const ApiResources = {
       createdAt: now,
       updatedAt: now,
     };
+    void broadcastRealtimeEvent({ tableId: 'totpSecrets', rowId: (row as any).$id, action: 'create', payload: createdTotp });
+    return createdTotp;
   },
 
   async updateTotpSecret(
@@ -3278,7 +3316,9 @@ export const ApiResources = {
       });
     }
 
-    return this.getTotpSecret(actor, id, opts);
+    const updatedTotp = await this.getTotpSecret(actor, id, opts);
+    void broadcastRealtimeEvent({ tableId: 'totpSecrets', rowId: id, action: 'update', payload: updatedTotp });
+    return updatedTotp;
   },
 
   async deleteTotpSecret(actor: ApiActor, id: string) {
@@ -3305,6 +3345,7 @@ export const ApiResources = {
     });
     await unlinkObjectFromWorkspace(tables, 'totp', id);
 
+    void broadcastRealtimeEvent({ tableId: 'totpSecrets', rowId: id, action: 'delete', payload: { id, $id: id, isDeleted: true } });
     return { id, deleted: true, trashed: true };
   },
 
@@ -3428,6 +3469,8 @@ export const ApiResources = {
     await assertObjectInWorkspace(tables, actor, kind, id);
     const now = new Date().toISOString();
 
+    const targetTbl = kind === 'goal' || kind === 'task' ? TASKS : (kind === 'vault' || kind === 'secret' || kind === 'credential' ? 'credentials' : kind === 'event' ? 'events' : kind === 'form' ? 'forms' : NOTES);
+
     if (kind === 'vault' || kind === 'secret' || kind === 'credential') {
       await tables.updateRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
@@ -3435,6 +3478,7 @@ export const ApiResources = {
         rowId: id,
         data: { isDeleted: false, updatedAt: now },
       });
+      void broadcastRealtimeEvent({ tableId: targetTbl, rowId: id, action: 'update', payload: { id, $id: id, isDeleted: false, isTrash: false } });
       return { id, kind: 'vault', restored: true };
     }
 
@@ -3445,6 +3489,7 @@ export const ApiResources = {
         rowId: id,
         data: { isDeleted: false, isTrash: false, updatedAt: now },
       });
+      void broadcastRealtimeEvent({ tableId: targetTbl, rowId: id, action: 'update', payload: { id, $id: id, isDeleted: false, isTrash: false } });
       return { id, kind: 'note', restored: true };
     }
 
@@ -3455,6 +3500,7 @@ export const ApiResources = {
         rowId: id,
         data: { isDeleted: false, isTrash: false, status: 'todo', updatedAt: now },
       });
+      void broadcastRealtimeEvent({ tableId: targetTbl, rowId: id, action: 'update', payload: { id, $id: id, isDeleted: false, isTrash: false } });
       return { id, kind: 'goal', restored: true };
     }
 
@@ -3465,6 +3511,7 @@ export const ApiResources = {
         rowId: id,
         data: { isDeleted: false, isTrash: false, updatedAt: now },
       });
+      void broadcastRealtimeEvent({ tableId: targetTbl, rowId: id, action: 'update', payload: { id, $id: id, isDeleted: false, isTrash: false } });
       return { id, kind: 'event', restored: true };
     }
 
@@ -3475,6 +3522,7 @@ export const ApiResources = {
         rowId: id,
         data: { isDeleted: false, isTrash: false, updatedAt: now },
       });
+      void broadcastRealtimeEvent({ tableId: targetTbl, rowId: id, action: 'update', payload: { id, $id: id, isDeleted: false, isTrash: false } });
       return { id, kind: 'form', restored: true };
     }
 
@@ -3489,32 +3537,39 @@ export const ApiResources = {
     const tables = systemTables();
     await assertObjectInWorkspace(tables, actor, kind, id);
 
+    const targetTbl = kind === 'goal' || kind === 'task' ? TASKS : (kind === 'vault' || kind === 'secret' || kind === 'credential' ? 'credentials' : kind === 'event' ? 'events' : kind === 'form' ? 'forms' : NOTES);
+
     if (kind === 'vault' || kind === 'secret' || kind === 'credential') {
       await tables.deleteRow({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
         tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
         rowId: id,
       });
+      void broadcastRealtimeEvent({ tableId: targetTbl, rowId: id, action: 'delete', payload: { id, $id: id, purged: true } });
       return { id, kind: 'vault', purged: true };
     }
 
     if (kind === 'note') {
       await tables.deleteRow({ databaseId: DB, tableId: NOTES, rowId: id });
+      void broadcastRealtimeEvent({ tableId: targetTbl, rowId: id, action: 'delete', payload: { id, $id: id, purged: true } });
       return { id, kind: 'note', purged: true };
     }
 
     if (kind === 'goal' || kind === 'task') {
       await tables.deleteRow({ databaseId: FLOW_DB, tableId: TASKS, rowId: id });
+      void broadcastRealtimeEvent({ tableId: targetTbl, rowId: id, action: 'delete', payload: { id, $id: id, purged: true } });
       return { id, kind: 'goal', purged: true };
     }
 
     if (kind === 'event') {
       await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'events', rowId: id });
+      void broadcastRealtimeEvent({ tableId: targetTbl, rowId: id, action: 'delete', payload: { id, $id: id, purged: true } });
       return { id, kind: 'event', purged: true };
     }
 
     if (kind === 'form') {
       await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id });
+      void broadcastRealtimeEvent({ tableId: targetTbl, rowId: id, action: 'delete', payload: { id, $id: id, purged: true } });
       return { id, kind: 'form', purged: true };
     }
 
@@ -3666,7 +3721,7 @@ export const ApiResources = {
     const text = String(body.content ?? body.text ?? '').trim();
     if (!text) badRequest('content required');
     const { ThreadService } = await import('@/lib/services/threads');
-    return ThreadService.postMessage({
+    const threadMsg = await ThreadService.postMessage({
       threadId,
       userId: actor.userId,
       content: text,
@@ -3681,6 +3736,9 @@ export const ApiResources = {
       isVoice: body.isVoice === true,
       isEncrypted: body.isEncrypted === true,
     });
+    void broadcastRealtimeEvent({ tableId: 'thread_messages', rowId: threadMsg.id, action: 'create', payload: threadMsg });
+    void broadcastRealtimeEvent({ tableId: 'threads', rowId: threadId, action: 'update', payload: { id: threadId, updatedAt: new Date().toISOString() } });
+    return threadMsg;
   },
 
   async getWorkspaceThread(actor: ApiActor, workspaceId: string) {
@@ -3832,7 +3890,9 @@ export const ApiResources = {
       permissions: [Permission.read(Role.any()), Permission.update(Role.user(actor.userId))],
     });
 
-    return shapeTag(created);
+    const shapedTag = shapeTag(created);
+    void broadcastRealtimeEvent({ tableId: TAGS_TABLE, rowId: (created as any).$id || shapedTag.id, action: 'create', payload: shapedTag });
+    return shapedTag;
   },
 
   async deleteTag(actor: ApiActor, id: string) {
@@ -3846,6 +3906,7 @@ export const ApiResources = {
       tableId: TAGS_TABLE,
       rowId: id,
     });
+    void broadcastRealtimeEvent({ tableId: TAGS_TABLE, rowId: id, action: 'delete', payload: { id, $id: id } });
     return { id, deleted: true };
   },
 

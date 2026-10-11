@@ -14,6 +14,7 @@ import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import { executeCascadeDeleteSecure } from '../cascade-delete';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
+import { broadcastRealtimeEvent } from '@/lib/realtime/partykit';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import {
   IDSchema,
@@ -653,6 +654,13 @@ export async function createRowSecure(
       perms,
       { forceSystem: true }
     );
+    void broadcastRealtimeEvent({
+      databaseId: dbId,
+      tableId: tblId,
+      rowId: customRowId || result.$id,
+      action: 'create',
+      payload: result,
+    });
     return JSON.parse(JSON.stringify(result));
   } catch (error: any) {
     const message = String(error?.message || '').toLowerCase();
@@ -745,6 +753,14 @@ export async function updateRowSecure(
     { forceSystem: true }
   );
 
+  void broadcastRealtimeEvent({
+    databaseId: dbId,
+    tableId: tblId,
+    rowId: rId,
+    action: 'update',
+    payload: result,
+  });
+
   return JSON.parse(JSON.stringify(result));
 }
 
@@ -831,6 +847,13 @@ export async function deleteRowSecure(
 
   if (trashSupportedTables.includes(tblId)) {
     await Registry.getDatabase().updateRow(dbId, tblId, rId, { isTrash: true }, undefined, { forceSystem: true });
+    void broadcastRealtimeEvent({
+      databaseId: dbId,
+      tableId: tblId,
+      rowId: rId,
+      action: 'delete',
+      payload: { id: rId, $id: rId, isTrash: true, isDeleted: true },
+    });
     return JSON.parse(JSON.stringify({ success: true, softDeleted: true }));
   }
 
@@ -850,6 +873,14 @@ export async function deleteRowSecure(
     await Registry.getDatabase().deleteRow(dbId, tblId, rId, { forceSystem: true });
   }
   const result = { success: true };
+
+  void broadcastRealtimeEvent({
+    databaseId: dbId,
+    tableId: tblId,
+    rowId: rId,
+    action: 'delete',
+    payload: { id: rId, $id: rId, isDeleted: true },
+  });
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -1530,6 +1561,24 @@ export async function toggleResourcePublicGuestSecure(params: {
   }
 
   const publicUrl = buildPublicResourceUrl(resourceType, resourceId, { projectId });
+
+  const updatedPayload = {
+    ...row,
+    id: resourceId,
+    $id: resourceId,
+    isPublic,
+    isGuest,
+    publicUrl,
+    updatedAt: new Date().toISOString(),
+  };
+
+  void broadcastRealtimeEvent({
+    databaseId: config.databaseId,
+    tableId: config.tableId,
+    rowId: resourceId,
+    action: 'update',
+    payload: updatedPayload,
+  });
 
   return {
     success: true,
