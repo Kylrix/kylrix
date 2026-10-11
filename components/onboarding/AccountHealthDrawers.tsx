@@ -19,6 +19,7 @@ import {
     Chip,
     Paper} from '@/lib/openbricks/primitives';
 import { X, ShieldAlert, Shield, User, Fingerprint, Bell, ShieldCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSetup } from '@/context/SetupContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -40,6 +41,7 @@ const normalizeHandleInput = (raw: string) =>
     raw.toLowerCase().trim().replace(/^@/, '').replace(/[^a-z0-9_]/g, '');
 
 export function AccountHealthDrawers() {
+    const router = useRouter();
     const { user } = useAuth();
     const { close: _close, activeContent } = useUnifiedDrawer();
     const { currentStep, dismissStep, profile, triggerCheck } = useSetup();
@@ -109,9 +111,7 @@ export function AccountHealthDrawers() {
 
     const openVaultSetup = () => {
         // Direct users to Security settings where the full vault setup flow lives
-        if (typeof window !== 'undefined') {
-            window.location.href = '/settings?tab=security';
-        }
+        router.push('/settings?tab=security');
     };
 
     const commitUsername = async (normalizedHandle: string, displayTrim: string) => {

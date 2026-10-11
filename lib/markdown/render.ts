@@ -14,17 +14,29 @@ let layersReady = false;
 let serverPurify: typeof DOMPurify | null = null;
 
 function sanitizeHtml(html: string): string {
+  let output = '';
   if (typeof window !== 'undefined') {
-    return String(DOMPurify.sanitize(html, MATH_PURIFY));
+    output = String(DOMPurify.sanitize(html, MATH_PURIFY));
+  } else {
+    if (!serverPurify) {
+      // Dynamic require happy-dom on Node server-side only so it won't be bundled into client browser bundles
+      const req = (globalThis as any).__non_webpack_require__ ?? eval('require');
+      const { Window } = req('happy-dom');
+      const win = new Window();
+      serverPurify = DOMPurify(win as unknown as Window & typeof globalThis);
+    }
+    output = String(serverPurify.sanitize(html, MATH_PURIFY));
   }
-  if (!serverPurify) {
-    // Dynamic require happy-dom on Node server-side only so it won't be bundled into client browser bundles
-    const req = (globalThis as any).__non_webpack_require__ ?? eval('require');
-    const { Window } = req('happy-dom');
-    const win = new Window();
-    serverPurify = DOMPurify(win as unknown as Window & typeof globalThis);
+
+  // Sanitization pass: strip inline script tags, inline event handlers, and javascript: pseudo-URLs
+  if (output) {
+    output = output
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|\x27[^\x27]*\x27|[^\s>]+)/gi, '')
+      .replace(/(href|src)\s*=\s*(?:"javascript:[^"]*"|\x27javascript:[^\x27]*\x27|javascript:[^\s>]+)/gi, '');
   }
-  return String(serverPurify.sanitize(html, MATH_PURIFY));
+
+  return output;
 }
 
 export function ensureMarkdownLayers() {
@@ -37,7 +49,9 @@ marked.setOptions({ gfm: true, breaks: true });
 
 const MATH_PURIFY: DomPurifyConfig = {
   ADD_TAGS: [
+    '',
     'a',
+    'img',
     'math',
     'annotation',
     'semantics',
@@ -65,6 +79,9 @@ const MATH_PURIFY: DomPurifyConfig = {
     'figure',
   ],
   ADD_ATTR: [
+    'href',
+    'src',
+    'alt',
     'class',
     'style',
     'viewBox',
