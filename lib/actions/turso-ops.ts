@@ -581,6 +581,9 @@ export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
       .where(eq(schema.notes.id, data.id))
       .limit(1);
 
+    let isCreate = false;
+    let shapedPayload: any = null;
+
     if (existing.length > 0) {
       const updateData: any = {
         updatedAt: data.updatedAt || new Date().toISOString(),
@@ -594,9 +597,25 @@ export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
         .update(schema.notes)
         .set(updateData)
         .where(eq(schema.notes.id, data.id));
+      shapedPayload = { $id: data.id, ...updateData };
     } else {
+      isCreate = true;
       await db.insert(schema.notes).values(data);
+      shapedPayload = { $id: data.id, ...data };
     }
+
+    try {
+      const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+      const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+      await broadcastRealtimeEvent({
+        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+        tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+        rowId: data.id,
+        action: isCreate ? 'create' : 'update',
+        payload: shapedPayload,
+      }).catch(() => {});
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertNoteTurso failed:', err);
@@ -606,10 +625,24 @@ export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
 
 export async function deleteNoteTurso(noteId: string) {
   try {
+    const updatedAt = new Date().toISOString();
     await db
       .update(schema.notes)
-      .set({ isTrashed: true, updatedAt: new Date().toISOString() })
+      .set({ isTrash: true, updatedAt })
       .where(eq(schema.notes.id, noteId));
+
+    try {
+      const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+      const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+      await broadcastRealtimeEvent({
+        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+        tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+        rowId: noteId,
+        action: 'delete',
+        payload: { $id: noteId, id: noteId, isDeleted: true, isTrash: true, updatedAt },
+      }).catch(() => {});
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] deleteNoteTurso failed:', err);
