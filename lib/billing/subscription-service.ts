@@ -15,7 +15,7 @@ export class SubscriptionService {
     planId: string,
     months: number,
     ratio = 1) {
-    const { currentPeriodStart, currentPeriodEnd } = await calculateStackedSubscriptionCredit(
+    const { currentPeriodEnd } = await calculateStackedSubscriptionCredit(
       null,
       targetUserId,
       planId,

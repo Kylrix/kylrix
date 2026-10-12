@@ -4,7 +4,7 @@ import { systemTables } from '@/lib/data/system-tables';
 
 import * as shared from './shared';
 import {
-  ID, Permission, Query, Role
+  ID, Permission, Query, Role, createSystemClient
 } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
@@ -1952,21 +1952,21 @@ export async function createStandaloneTagSecure(tagName: string, jwt?: string) {
   const tagsTable = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
   const nameLower = tagName.trim().toLowerCase();
 
-  return await tables.createRow(
-    APPWRITE_DATABASE_ID,
-    tagsTable,
-    ID.unique(),
-    {
+  return await tables.createRow({
+    databaseId: APPWRITE_DATABASE_ID,
+    tableId: tagsTable,
+    rowId: ID.unique(),
+    data: {
       name: tagName.trim(),
       nameLower,
       userId: actor.$id,
       isPublic: false,
       isGuest: false,
       usageCount: 0,
-      metadata: JSON.stringify({ version: 'v2' })
+      metadata: JSON.stringify({ version: 'v2' }),
     },
-    [Permission.read(Role.user(actor.$id))]
-  );
+    permissions: [Permission.read(Role.user(actor.$id))],
+  });
 }
 
 export async function toggleTaskReminderSecure(taskId: string, enabled: boolean, jwt?: string) {
@@ -2012,8 +2012,7 @@ export async function toggleTaskReminderSecure(taskId: string, enabled: boolean,
       throw new Error('Deadline is in the past.');
     }
 
-    const { Functions, client } = createSystemClient();
-    const functions = new Functions(client);
+    const { functions } = createSystemClient();
     const functionId = 'goal-reminder-dispatch';
 
     // Trigger/schedule execution of goal-reminder-dispatch function

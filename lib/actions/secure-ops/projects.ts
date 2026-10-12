@@ -13,6 +13,7 @@ import {
 } from '@/lib/entitlements';
 
 import { provisionHybridTeamExpansionSecure } from '@/lib/api/permission-updater';
+import { ownerRowPermissions } from '@/lib/appwrite/owner-acl';
 import { executeCascadeDeleteSecure } from '../cascade-delete';
 import {
   ProjectSchema
@@ -487,8 +488,7 @@ export async function createProjectSecure(data: any, jwt?: string) {
   const now = new Date().toISOString();
   const projectId = ID.unique();
 
-  const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
-  const permissions = ownerRowPermissions(actor.$id);
+  const permissions: string[] = ownerRowPermissions(actor.$id);
 
   const project = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
@@ -762,7 +762,7 @@ export async function acceptProjectInviteSecure(projectId: string, jwt?: string)
   }
 
   // 3. Grant physical Appwrite read permission
-  const newPermissions = new Set(project.$permissions || []);
+  const newPermissions = new Set<string>((project.$permissions || []) as string[]);
   newPermissions.add(`read("user:${actor.$id}")`);
 
   const { users, databases } = createSystemClient();
@@ -1675,7 +1675,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
       rowId: eventId,
       data: {},
-      permissions: Array.from(permissions)});
+      permissions: Array.from(permissions) as string[]});
 
   // 2. Add or update Guest entry
   const guestsRes = await tables.listRows({
@@ -1930,11 +1930,11 @@ export async function initGoalDiscussionSecure(taskId: string, jwt?: string) {
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const tables = systemTables();
-  const goal = await tables.getRow<any>(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.TASKS,
-    taskId
-  );
+  const goal = await tables.getRow<any>({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+    rowId: taskId
+  });
   if (!goal) throw new Error('Goal not found');
 
   const { ThreadService } = await import('@/lib/services/threads');
@@ -2036,15 +2036,14 @@ export async function approveProjectJoinRequestSecure(projectId: string, targetU
   const newPermissions = new Set(project.$permissions || []);
   newPermissions.add(`read("user:${targetUserId}")`);
 
-  const { databases } = createSystemClient();
   const permissionsList = Array.from(newPermissions);
-  await databases.updateRow(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'projects',
-    projectId,
-    { $permissions: permissionsList },
-    permissionsList
-  );
+  await tables.updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'projects',
+    rowId: projectId,
+    data: { $permissions: permissionsList },
+    permissions: permissionsList as string[],
+  });
 
   return { success: true };
 }
@@ -2436,7 +2435,7 @@ export async function joinWorkspaceByInviteCodeSecure(workspaceId: string, invit
 
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
   const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-  const collabPermissions = [
+  const collabPermissions: string[] = [
     Permission.read(Role.user(actor.$id)),
     Permission.read(Role.user(ownerId)),
     Permission.update(Role.user(actor.$id)),
@@ -2523,7 +2522,7 @@ export async function joinWorkspaceByInviteCodeSecure(workspaceId: string, invit
       data: {
         updatedAt: new Date().toISOString(),
       },
-      permissions: Array.from(newPermissions),
+      permissions: Array.from(newPermissions) as string[],
     }).catch(() => null);
   } catch (permErr: any) {
     console.warn('[joinWorkspaceByInviteCodeSecure] Permission sync warning:', permErr?.message);

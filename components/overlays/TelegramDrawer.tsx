@@ -272,7 +272,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
             setVerifiedUsername(res.tgUsername || 'User');
             setLoading(false);
             const appUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
-            void syncTelegramBotCommands(jwt, appUrl);
+            void syncTelegramBotCommands(appUrl);
             return;
           }
         } catch (err) {

@@ -165,7 +165,7 @@ export function DevelopersTab() {
     setLoadingApps(true);
     try {
       const uid = authUser?.$id || (await Promise.race([
-        account.get().then((u) => u.$id),
+        account.get().then((u: any) => u.$id),
         new Promise<string>((_, reject) => setTimeout(() => reject(new Error('User timeout')), 800)),
       ]).catch(() => 'guest'));
       if (uid && uid !== 'guest') {
@@ -212,8 +212,8 @@ export function DevelopersTab() {
     // Asynchronous background sync to account prefs
     account
       .getPrefs()
-      .then((prefs) => account.updatePrefs({ ...(prefs as any), showWebMcpTopbar: next }))
-      .catch((e) => console.warn('[Developers] failed background sync of showWebMcpTopbar', e));
+      .then((prefs: any) => account.updatePrefs({ ...(prefs as any), showWebMcpTopbar: next }))
+      .catch((e: any) => console.warn('[Developers] failed background sync of showWebMcpTopbar', e));
   };
 
   const confirmRevokePat = (pat: PatItem) => {

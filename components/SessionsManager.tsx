@@ -136,8 +136,8 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+  const formatDate = (dateString?: string) => {
+    return dateString ? new Date(dateString).toLocaleString() : '';
   };
 
   const getCountryFromIP = (_ip: string): string => {
@@ -278,7 +278,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                         {session.clientName || 'Unknown Client'} ({session.deviceType?.toUpperCase() || 'DESKTOP'})
                       </Typography>
                       <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {getCountryFromIP(session.ip)} • {session.ip}
+                        {getCountryFromIP(session.ip || '')} • {session.ip}
                       </Typography>
                     </Box>
                   </Box>

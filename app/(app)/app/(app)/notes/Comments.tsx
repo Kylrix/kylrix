@@ -636,7 +636,7 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap,
                   }}
                 >
                   {username ? `@${username}` : displayName}
-                </Link> • {new Date(comment.$createdAt).toLocaleString()}
+                </Link> • {new Date(comment.$createdAt || Date.now()).toLocaleString()}
               </Typography>
               {!isDeleted && (
                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
@@ -802,7 +802,7 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
 
       // Sort by date ascending
       const sorted = [...docs].sort(
-        (a, b) => new Date(a.$createdAt).getTime() - new Date(b.$createdAt).getTime()
+        (a, b) => new Date(a.$createdAt || 0).getTime() - new Date(b.$createdAt || 0).getTime()
       );
       setComments(sorted);
 

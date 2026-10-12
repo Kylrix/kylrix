@@ -6,6 +6,7 @@ import { Box, Chip, Stack, Typography } from '@/lib/openbricks/primitives';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { createReaction, listReactions, deleteReaction } from '@/lib/appwrite';
+import { Query } from '@/lib/appwrite/types';
 import type { Reactions } from '@/types/appwrite';
 import { TargetType } from '@/types/appwrite';
 

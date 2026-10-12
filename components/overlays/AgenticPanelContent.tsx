@@ -310,7 +310,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     void (async () => {
       try {
         const { ProjectsService } = await import('@/lib/appwrite/projects');
-        const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
+        const tagged: any = await ProjectsService.listTaggedResources(wsId).catch(() => null);
         if (tagged?.sessions && Array.isArray(tagged.sessions) && tagged.sessions.length > 0 && !cancelled) {
           setSessions((prev) => {
             const byId = new Map(prev.map((s) => [s.$id || s.id, s]));

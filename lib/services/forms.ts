@@ -206,7 +206,7 @@ export const FormsService = {
             ]
         });
 
-        return res.rows.find(s => {
+        return res.rows.find((s: any) => {
             try {
                 if (!s.metadata) return false;
                 const meta = JSON.parse(s.metadata);
@@ -231,7 +231,7 @@ export const FormsService = {
             ]
         });
 
-        const existingDraft = res.rows.find(s => {
+        const existingDraft = res.rows.find((s: any) => {
             try {
                 if (!s.metadata) return false;
                 const meta = JSON.parse(s.metadata);
@@ -341,7 +341,7 @@ export const FormsService = {
                 ]
             });
 
-            const existingDraft = res.rows.find(s => {
+            const existingDraft = res.rows.find((s: any) => {
                 try {
                     if (!s.metadata) return false;
                     const meta = JSON.parse(s.metadata);
@@ -363,7 +363,7 @@ export const FormsService = {
                     }
                 );
             } else if (!isMultiple) {
-                const completedSubmission = res.rows.find(s => {
+                const completedSubmission = res.rows.find((s: any) => {
                     try {
                         if (!s.metadata) return true;
                         const meta = JSON.parse(s.metadata);
@@ -601,7 +601,7 @@ export const FormsService = {
         });
 
         // Enrich with usernames from Chat database if submitterId exists
-        const submitterIds = Array.from(new Set(res.rows.map(r => r.submitterId).filter(Boolean))) as string[];
+        const submitterIds = Array.from(new Set(res.rows.map((r: any) => r.submitterId).filter(Boolean))) as string[];
         
         if (submitterIds.length > 0) {
             try {
@@ -616,7 +616,7 @@ export const FormsService = {
                 
                 return {
                     ...res,
-                    rows: res.rows.map(row => ({
+                    rows: res.rows.map((row: any) => ({
                         ...row,
                         submitterName: row.submitterId ? (userMap.get(row.submitterId) || row.submitterId) : 'Anonymous'
                     }))
@@ -628,7 +628,7 @@ export const FormsService = {
 
         return {
             ...res,
-            rows: res.rows.map(row => ({
+            rows: res.rows.map((row: any) => ({
                 ...row,
                 submitterName: row.submitterId ? row.submitterId : 'Anonymous'
             }))

@@ -470,8 +470,8 @@ export async function getResourceCollaboratorsSecure(input: {
         }
     } else {
         // Fallback for tasks
-        const rawPermissions = row.$permissions || [];
-        const collabMeta = extractCollaboratorsFromPermissions(rawPermissions as string[]);
+        const rawPermissions = (row.$permissions || []) as string[];
+        const collabMeta = extractCollaboratorsFromPermissions(rawPermissions);
         const ownerId = resolveResourceOwnerId(row);
         filteredCollabs = collabMeta
             .filter(c => c.userId !== ownerId && c.userId !== requester.$id)
@@ -723,7 +723,7 @@ export async function addFormCollaboratorSecure(formId: string, targetUserId: st
   }
   settings.collaborators[targetUserId] = permissionLevel;
 
-  const permissions = new Set(form.$permissions || []);
+  const permissions = new Set<string>((form.$permissions || []) as string[]);
   permissions.add(`read("user:${targetUserId}")`);
 
   const updatedForm = await tables.updateRow({

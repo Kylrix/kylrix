@@ -20,7 +20,7 @@ export function DeleteAccountFlow({ onClose }: { onClose?: () => void }) {
   const [purging, setPurging] = useState(false);
 
   useEffect(() => {
-    account.get().then(u => setHandle((u as any)?.name || (u as any)?.email || u.$id)).catch(() => setHandle(null));
+    account.get().then((u: any) => setHandle((u as any)?.name || (u as any)?.email || u.$id)).catch(() => setHandle(null));
   }, []);
 
   useEffect(() => {

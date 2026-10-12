@@ -253,7 +253,7 @@ export function FormDetail({
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {activeTab === 'responses' && (
           <div className="space-y-4">
-            <SubmissionViewer formId={form.$id} formSchema={form.schema} />
+            <SubmissionViewer formId={form.$id} formSchema={form.schema || undefined} />
           </div>
         )}
 

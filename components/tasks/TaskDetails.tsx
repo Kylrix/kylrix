@@ -44,6 +44,7 @@ import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 import { useTask } from '@/context/TaskContext';
 import { useAI } from '@/hooks/useAI';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { Query } from '@/lib/appwrite/types';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { useToast } from '@/components/ui/Toast';
 import { useWorkspace } from '@/context/WorkspaceContext';

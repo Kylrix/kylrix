@@ -174,7 +174,7 @@ export async function permissionsInternal(
   if (!effectiveActorId) {
     const jwt = payload.jwt as string | undefined;
     const { account } = await createServerClient(jwt);
-    const user = await account.get().catch(() => null);
+    const user: any = await account.get().catch(() => null);
 
     if (!user) throw new Error('Unauthorized');
     effectiveActorId = user.$id;

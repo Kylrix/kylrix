@@ -8,6 +8,7 @@ import { UsersService } from '@/lib/services/users';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { tablesDB, realtime } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { Query } from '@/lib/appwrite/types';
 import { formatTime } from '@/lib/time-util';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import {
@@ -1035,7 +1036,7 @@ export const ChatWindow = ({
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.documents`,
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.documents`,
                 ],
-                async (response) => {
+                async (response: any) => {
                     const payload = response.payload as any;
                     if (!payload) return;
                     const events: string[] = response.events || [];
@@ -1178,7 +1179,7 @@ export const ChatWindow = ({
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.documents`,
                     `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`,
                 ],
-                async (response) => {
+                async (response: any) => {
                     const payload = response.payload as Partial<ChatReaction>;
                     if (String(payload?.conversationId || '') !== String(conversationId)) return;
 

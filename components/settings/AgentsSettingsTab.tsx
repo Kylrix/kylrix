@@ -147,7 +147,7 @@ export function AgentsSettingsTab() {
       setLoadingCompute(true);
       const { getComputeBalanceAction } = await import('@/lib/actions/ai');
       const { account } = await import('@/lib/appwrite/client');
-      const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+      const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
       const res = await getComputeBalanceAction(jwt);
       if (res) {
         setComputeState(res);

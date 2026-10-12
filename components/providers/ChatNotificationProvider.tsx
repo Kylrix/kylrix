@@ -241,7 +241,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         };
 
         try {
-            const s = realtime.subscribe(chatChannels, (response) => {
+            const s = realtime.subscribe(chatChannels, (response: any) => {
                 if (response.events.some((e: string) => e.includes('.create'))) {
                     const payload = response.payload as any;
                     if (!payload?.conversationId) return;
@@ -263,7 +263,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         } catch (_e) {}
 
         try {
-            const s = realtime.subscribe(activityChannels, (response) => {
+            const s = realtime.subscribe(activityChannels, (response: any) => {
                 if (response.events.some((e: string) => e.includes('.update') || e.includes('.create'))) {
                     const activity = response.payload as any;
                     if (!activity?.customStatus) return;

@@ -1,20 +1,48 @@
 import { APPWRITE_CONFIG } from './config';
 import { systemTables } from '@/lib/data/system-tables';
 
-export const databases = {
-  createRow: <T = any>(dbId: string, tblId: string, rowId: string, data: any, permissions?: string[]): Promise<T> =>
-    systemTables().createRow({ databaseId: dbId, tableId: tblId, rowId, data, permissions }),
-  updateRow: <T = any>(dbId: string, tblId: string, rowId: string, data: any, permissions?: string[]): Promise<T> =>
-    systemTables().updateRow({ databaseId: dbId, tableId: tblId, rowId, data, permissions }),
-  getRow: <T = any>(dbId: string, tblId: string, rowId: string): Promise<T> =>
-    systemTables().getRow({ databaseId: dbId, tableId: tblId, rowId }),
-  listRows: <T = any>(dbId: string, tblId: string, queries?: any[]): Promise<{ total: number; rows: T[] }> =>
-    systemTables().listRows({ databaseId: dbId, tableId: tblId, queries }),
-  deleteRow: (dbId: string, tblId: string, rowId: string): Promise<void> =>
-    systemTables().deleteRow({ databaseId: dbId, tableId: tblId, rowId }),
+export interface TablesDbClient {
+  createRow: <T = any>(...args: any[]) => Promise<T>;
+  updateRow: <T = any>(...args: any[]) => Promise<T>;
+  getRow: <T = any>(...args: any[]) => Promise<T>;
+  listRows: <T = any>(...args: any[]) => Promise<{ total: number; rows: T[] }>;
+  deleteRow: (...args: any[]) => Promise<void>;
+}
+
+export const databases: TablesDbClient = {
+  createRow: <T = any>(...args: any[]): Promise<T> => {
+    const [dbId, tblId, rowId, data, permissions] = args.length === 1 && typeof args[0] === 'object' && args[0] !== null
+      ? [args[0].databaseId, args[0].tableId, args[0].rowId, args[0].data, args[0].permissions]
+      : args;
+    return systemTables().createRow({ databaseId: dbId, tableId: tblId, rowId, data, permissions });
+  },
+  updateRow: <T = any>(...args: any[]): Promise<T> => {
+    const [dbId, tblId, rowId, data, permissions] = args.length === 1 && typeof args[0] === 'object' && args[0] !== null
+      ? [args[0].databaseId, args[0].tableId, args[0].rowId, args[0].data, args[0].permissions]
+      : args;
+    return systemTables().updateRow({ databaseId: dbId, tableId: tblId, rowId, data, permissions });
+  },
+  getRow: <T = any>(...args: any[]): Promise<T> => {
+    const [dbId, tblId, rowId] = args.length === 1 && typeof args[0] === 'object' && args[0] !== null
+      ? [args[0].databaseId, args[0].tableId, args[0].rowId]
+      : args;
+    return systemTables().getRow({ databaseId: dbId, tableId: tblId, rowId });
+  },
+  listRows: <T = any>(...args: any[]): Promise<{ total: number; rows: T[] }> => {
+    const [dbId, tblId, queries] = args.length === 1 && typeof args[0] === 'object' && args[0] !== null
+      ? [args[0].databaseId, args[0].tableId, args[0].queries]
+      : args;
+    return systemTables().listRows({ databaseId: dbId, tableId: tblId, queries });
+  },
+  deleteRow: (...args: any[]): Promise<void> => {
+    const [dbId, tblId, rowId] = args.length === 1 && typeof args[0] === 'object' && args[0] !== null
+      ? [args[0].databaseId, args[0].tableId, args[0].rowId]
+      : args;
+    return systemTables().deleteRow({ databaseId: dbId, tableId: tblId, rowId });
+  },
 };
 
-export const tablesDB: any = databases;
+export const tablesDB: TablesDbClient = databases;
 export const account: any = {
   get: async () => getCurrentUser(),
   listSessions: async () => ({ sessions: [] }),
@@ -36,6 +64,10 @@ export const realtime: any = {
 
 export const storage: any = {
   getFilePreview: () => '',
+};
+
+export const functions: any = {
+  createExecution: async () => ({}),
 };
 
 export const client: any = {
