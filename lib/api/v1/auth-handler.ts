@@ -53,6 +53,8 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
         );
       }
 
+      const { createSystemClient } = await import('@/lib/appwrite-admin');
+      const { users } = createSystemClient();
       const userId = ID.unique();
       const user = await users.create(userId, email, undefined, password, name);
 
