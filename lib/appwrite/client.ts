@@ -29,18 +29,7 @@ export function getSessionTablesDB(): TablesDB {
 
 // Helper to fetch JWT securely from client-side SDK
 async function getJwt(): Promise<string | undefined> {
-  if (isDogfoodSafetyActive()) {
-    return undefined;
-  }
-  if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && !navigator.onLine) {
-    return undefined;
-  }
-  try {
-    const res = await account.createJWT().catch(() => null);
-    return res?.jwt;
-  } catch (_e) {
-    return undefined;
-  }
+  return undefined;
 }
 
 // --- HELPER PARSERS (Hoisted/Early Defined) ---
@@ -356,24 +345,7 @@ let currentUserCache: { user: any | null; expiresAt: number; lastForcedAt?: numb
 let currentUserInFlight: Promise<any | null> | null = null;
 const currentUserListeners = new Set<(user: any | null) => void>();
 const CURRENT_USER_CACHE_TTL = 30000; // 30 seconds for passive reads
-const CURRENT_USER_NETWORK_TIMEOUT_MS = 4000;
 const CURRENT_USER_CACHE_KEY = 'kylrix_flow_current_user_v2';
-
-function withNetworkTimeout<T>(promise: Promise<T>, ms = CURRENT_USER_NETWORK_TIMEOUT_MS): Promise<T> {
-    return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('account.get timeout')), ms);
-        promise.then(
-            (value) => {
-                clearTimeout(timer);
-                resolve(value);
-            },
-            (error) => {
-                clearTimeout(timer);
-                reject(error);
-            }
-        );
-    });
-}
 
 /** Fast local signal — skip network auth probes when nothing suggests a session. */
 export function hasAuthSessionHint(): boolean {
@@ -689,14 +661,6 @@ export async function getCurrentUser(force = false): Promise<any | null> {
         }
     }
 
-    if (isDogfoodSafetyActive()) {
-        const snap = readCurrentUserSnapshot(true);
-        if (snap?.user) return snap.user;
-        const salvaged = await salvageUserFromLocalSubstrate();
-        if (salvaged) return salvaged;
-        return null;
-    }
-
     if (currentUserInFlight) {
         return currentUserInFlight;
     }
@@ -732,42 +696,11 @@ export async function getCurrentUser(force = false): Promise<any | null> {
             }
         } catch {}
 
-        // 2. Secondary check: Appwrite account session (only if Appwrite session cookie exists)
-        if (typeof document !== 'undefined' && document.cookie.includes('a_session_')) {
-            try {
-                const user = await withNetworkTimeout(account.get(), 1500);
-                if (user) {
-                    const forcedAt = Date.now();
-                    currentUserCache = {
-                        user,
-                        expiresAt: Date.now() + CURRENT_USER_CACHE_TTL,
-                        lastForcedAt: forcedAt
-                    };
-                    writeCurrentUserSnapshot(user, forcedAt);
-                    setKylrixPulse(user);
-                    emitCurrentUserChange(user);
-                    return user;
-                }
-            } catch (error: any) {
-                const isStrictUnauthorized =
-                    typeof navigator !== 'undefined' &&
-                    navigator.onLine &&
-                    (error?.code === 401 || error?.type === 'user_unauthorized' || error?.code === 'user_unauthorized');
-
-                if (isStrictUnauthorized) {
-                    currentUserCache = null;
-                    return null;
-                }
-            }
-        }
-
-        // 3. Strictly offline fallback
-        if (typeof navigator !== 'undefined' && !navigator.onLine) {
-            const snap = readCurrentUserSnapshot(true);
-            if (snap?.user) return snap.user;
-            const salvaged = await salvageUserFromLocalSubstrate();
-            if (salvaged) return salvaged;
-        }
+        // 2. Local substrate snapshot / pulse fallback
+        const snap = readCurrentUserSnapshot(true);
+        if (snap?.user) return snap.user;
+        const salvaged = await salvageUserFromLocalSubstrate();
+        if (salvaged) return salvaged;
 
         currentUserCache = null;
         return null;
@@ -813,26 +746,26 @@ export async function resolveCurrentUser(req?: { headers: { get(k: string): stri
 // Per-request user fetch using incoming Cookie header
 export async function getCurrentUserFromRequest(req: { headers: { get(k: string): string | null } } | null | undefined): Promise<any | null> {
     try {
-        if (isDogfoodSafetyActive()) return null;
         if (!req) return null;
-        const cookieHeader = req.headers.get('cookie') || req.headers.get('Cookie');
-        if (!cookieHeader) return null;
-
-        const res = await fetch(`${APPWRITE_CONFIG.ENDPOINT}/account`, {
-            method: 'GET',
-            headers: {
-                'X-Appwrite-Project': APPWRITE_CONFIG.PROJECT_ID,
-                'Cookie': cookieHeader,
-                'Accept': 'application/json'
-            },
-            cache: 'no-store'
-        });
-        if (!res.ok) return null;
-        const data = await res.json();
-        if (!data || typeof data !== 'object' || !data.$id) return null;
-        return data;
+        const { auth } = await import('@/lib/auth/better-auth');
+        const session = await auth.api.getSession({
+            headers: req.headers as any,
+        }).catch(() => null);
+        if (session?.user) {
+            return {
+                $id: session.user.id,
+                id: session.user.id,
+                name: session.user.name || session.user.email || 'User',
+                email: session.user.email,
+                emailVerification: (session.user as any).emailVerified ?? true,
+                prefs: {},
+                isPulse: false,
+                authProvider: 'better-auth',
+                profilePicId: session.user.image || null,
+            };
+        }
+        return null;
     } catch (_e: unknown) {
-        console.error('getCurrentUserFromRequest error', _e);
         return null;
     }
 }

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono, Outfit, Space_Grotesk } from 'next/font/google';
 import { getProductName, getProductSiteUrl } from '@/lib/config/product';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import './globals.css';
 import './chrome.css';
 import './lists.css';
@@ -75,14 +74,9 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const appwriteOrigin = APPWRITE_CONFIG.ENDPOINT.replace(/\/v1\/?$/, '');
-
   return (
     <html lang="en" suppressHydrationWarning className={`${mono.variable} ${outfit.variable} ${spaceGrotesk.variable}`}>
       <head>
-        <link rel="preconnect" href={appwriteOrigin} crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href={appwriteOrigin} />
-
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
             try {

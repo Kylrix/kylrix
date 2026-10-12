@@ -9,9 +9,7 @@ export const OAUTH2_API_BASE = `${APPWRITE_CONFIG.ENDPOINT}/oauth2/${OAUTH2_PROJ
 
 export const OAUTH2_DISCOVERY_URL =
   process.env.NEXT_PUBLIC_OAUTH2_DISCOVERY_URL ||
-  (process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/.well-known/openid-configuration`
-    : `https://fra.cloud.appwrite.io/v1/oauth2/${OAUTH2_PROJECT_ID}/.well-known/openid-configuration`);
+  `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space'}/.well-known/openid-configuration`;
 
 export const OAUTH2_CONSENT_PATH = '/oauth/consent';
 
