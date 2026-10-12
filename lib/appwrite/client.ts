@@ -1,16 +1,16 @@
 import { APPWRITE_CONFIG } from './config';
 import { systemTables } from '@/lib/data/system-tables';
 
-export const databases: any = {
-  createRow: (dbId: string, tblId: string, rowId: string, data: any, permissions?: string[]) =>
+export const databases = {
+  createRow: <T = any>(dbId: string, tblId: string, rowId: string, data: any, permissions?: string[]): Promise<T> =>
     systemTables().createRow({ databaseId: dbId, tableId: tblId, rowId, data, permissions }),
-  updateRow: (dbId: string, tblId: string, rowId: string, data: any, permissions?: string[]) =>
+  updateRow: <T = any>(dbId: string, tblId: string, rowId: string, data: any, permissions?: string[]): Promise<T> =>
     systemTables().updateRow({ databaseId: dbId, tableId: tblId, rowId, data, permissions }),
-  getRow: (dbId: string, tblId: string, rowId: string) =>
+  getRow: <T = any>(dbId: string, tblId: string, rowId: string): Promise<T> =>
     systemTables().getRow({ databaseId: dbId, tableId: tblId, rowId }),
-  listRows: (dbId: string, tblId: string, queries?: any[]) =>
+  listRows: <T = any>(dbId: string, tblId: string, queries?: any[]): Promise<{ total: number; rows: T[] }> =>
     systemTables().listRows({ databaseId: dbId, tableId: tblId, queries }),
-  deleteRow: (dbId: string, tblId: string, rowId: string) =>
+  deleteRow: (dbId: string, tblId: string, rowId: string): Promise<void> =>
     systemTables().deleteRow({ databaseId: dbId, tableId: tblId, rowId }),
 };
 

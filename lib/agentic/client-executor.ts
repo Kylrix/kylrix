@@ -161,7 +161,7 @@ async function executeAgenticToolCall(
       const tags = Array.isArray(args.tags) ? args.tags : args.tags ? [args.tags] : [];
       const isPublic = args.isPublic === true || args.isPublic === 'true';
 
-      const { ID } = await import('appwrite');
+      const { ID } = await import('@/lib/appwrite/types');
       const { resolveNoteCardTitle } = await import('@/constants/noteTitle');
       const { markNotePersistedRemote } = await import('@/lib/notes/compose-draft-registry');
       const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');

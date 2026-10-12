@@ -574,7 +574,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
         const rows = await LocalEngine.query<any[]>(
           cacheKey,
           async () => {
-            const { TablesDB, Client, Query } = await import('appwrite');
+            const { TablesDB, Client, Query } = await import('@/lib/appwrite/types');
             const client = new Client()
               .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
               .setProject(APPWRITE_CONFIG.PROJECT_ID);

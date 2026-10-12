@@ -6,6 +6,7 @@
  */
 
 import { databases, getCurrentUser } from '@/lib/appwrite/client';
+import { Permission, Role } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import type { Task as AppwriteTask } from '@/types/kylrixflow';

@@ -366,7 +366,7 @@ export async function setTotpPinned(id: string, pinned: boolean) {
 export async function validatePublicVaultAccess(credentialId: string): Promise<Credentials | null> {
   try {
     if (typeof window === 'undefined') {
-      const { createSystemClient } = await import('@/lib/appwrite-admin');
+      const { createSystemClient } = await import('@/lib/appwrite/types');
       const { databases: adminDbs } = createSystemClient();
       const doc = await adminDbs.getRow(
         APPWRITE_DATABASE_ID,
@@ -397,7 +397,7 @@ export async function validatePublicVaultAccess(credentialId: string): Promise<C
 export async function validatePublicTotpAccess(totpId: string): Promise<TotpSecrets | null> {
   try {
     if (typeof window === 'undefined') {
-      const { createSystemClient } = await import('@/lib/appwrite-admin');
+      const { createSystemClient } = await import('@/lib/appwrite/types');
       const { databases: adminDbs } = createSystemClient();
       const doc = await adminDbs.getRow(
         APPWRITE_DATABASE_ID,

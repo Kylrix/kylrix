@@ -3986,7 +3986,7 @@ export const ApiResources = {
 
   async syncAccount(actor: ApiActor, body: Record<string, unknown>) {
     await assertPaidActor(actor, 'Cloud synchronization requires a paid Kylrix Pro plan.');
-    const { createSystemClient, createSystemTablesDB } = await import('@/lib/appwrite-admin');
+    const { createSystemClient } = await import('@/lib/appwrite/types');
     const { isSelfHostedDeployment, isKylrixCloud } = await import('@/lib/deployment/surface');
 
     const accountObj = (body.account || {}) as Record<string, any>;
@@ -4137,7 +4137,7 @@ export const ApiResources = {
     const ticker = input.ticker || input.coin;
     const couponId = input.couponId ? String(input.couponId).trim() : undefined;
 
-    const { createSystemClient } = await import('@/lib/appwrite-admin');
+    const { createSystemClient } = await import('@/lib/appwrite/types');
     const { calculateSubscriptionPrice } = await import('@/lib/subscription/ppp');
     const { BlockBeeBillingAdapter } = await import('@/lib/billing/providers/blockbee');
     const { resolveBillingNotifyUrl, resolveBillingSuccessUrl } = await import('@/lib/billing/callback-urls');
@@ -4235,7 +4235,7 @@ export const ApiResources = {
     requireScope(actor, 'billing:read');
     const { getVerifiedProEntitlementForUser } = await import('@/lib/services/internal/subscription-entitlement');
     const { InternalKylrixTokenService } = await import('@/lib/services/internal/kylrix-token');
-    const { createSystemClient } = await import('@/lib/appwrite-admin');
+    const { createSystemClient } = await import('@/lib/appwrite/types');
 
     const [entitlement, balance, txList] = await Promise.all([
       getVerifiedProEntitlementForUser(actor.userId).catch(() => ({

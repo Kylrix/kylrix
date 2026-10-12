@@ -64,7 +64,7 @@ export async function dispatchTelegramNotification(
     } catch (_e) {
       // Try list query fallback if rowId != targetUserId
       try {
-        const { Query } = await import('node-appwrite');
+        const { Query } = await import('@/lib/appwrite/types');
         const list = await databases.listRows(
           APPWRITE_CONFIG.DATABASES.CONNECT || 'passwordManagerDb',
           APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS || 'telegram_connections',

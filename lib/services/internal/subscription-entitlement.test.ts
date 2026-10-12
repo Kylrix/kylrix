@@ -1,4 +1,3 @@
-import { systemTables } from '@/lib/data/system-tables';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getVerifiedProEntitlementForUser,

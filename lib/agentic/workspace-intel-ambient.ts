@@ -213,7 +213,7 @@ export async function maybeEmitWorkspaceIntelNudge(opts: {
       );
       if (await shouldAllowAiInference('workspace_ambient')) {
         const { account } = await import('@/lib/appwrite/client');
-        const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+        const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
         if (jwt) {
           await recordAiInference('workspace_ambient');
           const { generateWorkspaceIntelNudgeAction } = await import('@/lib/actions/type-intel');

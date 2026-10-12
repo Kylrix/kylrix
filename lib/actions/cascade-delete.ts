@@ -1,5 +1,6 @@
-import { systemTables } from '@/lib/data/system-tables';
 'use server';
+
+import { systemTables } from '@/lib/data/system-tables';
 
 import { Query } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';

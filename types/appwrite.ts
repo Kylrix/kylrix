@@ -10,6 +10,21 @@ export interface ModelsRow {
 
 export namespace Models {
     export interface Row extends ModelsRow {}
+    export interface DefaultRow extends ModelsRow {}
+    export interface RowList<T = any> {
+        total: number;
+        rows: T[];
+        documents?: T[];
+    }
+    export interface File extends ModelsRow {
+        name?: string;
+        mimeType?: string;
+        sizeOriginal?: number;
+    }
+    export interface FileList {
+        total: number;
+        files: File[];
+    }
     export interface Document extends ModelsRow {}
     export interface User<T = any> {
         $id: string;

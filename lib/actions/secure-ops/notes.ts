@@ -2,7 +2,7 @@
 
 import * as shared from './shared';
 import {
-  ID, Permission, Query, Role
+  ID, Permission, Query, Role, createSystemClient
 } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
@@ -1381,7 +1381,7 @@ export async function listthreadNoteChatsSecure(jwt?: string) {
       ] as any
   }).catch(() => ({ rows: [] }));
 
-  const collabResourceIds = collaboratorsRes.rows.map(r => r.resourceId).filter(Boolean);
+  const collabResourceIds = collaboratorsRes.rows.map((r: any) => r.resourceId).filter(Boolean);
 
   // 2. Build Authorization Filter: (Owned by me) OR (Linked to resource I collaborate on)
   const authOrFilters = [
@@ -1431,9 +1431,9 @@ export async function listTagsSecure(userId?: string, jwt?: string) {
   } catch (_) {}
 
   const targetUserId = userId || actor?.$id;
-  const systemTables = systemTables();
+  const tables = systemTables();
 
-  const result = await systemTables.listRows({
+  const result = await tables.listRows({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.TAGS || '67ff06280034908cf08a',
     queries: targetUserId

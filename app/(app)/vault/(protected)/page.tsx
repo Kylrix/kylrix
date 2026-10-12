@@ -200,7 +200,7 @@ function DashboardPageContent() {
         const rows = await LocalEngine.query<Credentials[]>(
           cacheKey,
           async () => {
-            const { TablesDB, Client, Query } = await import('appwrite');
+            const { TablesDB, Client, Query } = await import('@/lib/appwrite/types');
             const client = new Client()
               .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
               .setProject(APPWRITE_CONFIG.PROJECT_ID);
@@ -231,7 +231,7 @@ function DashboardPageContent() {
         setHasMore(unique.length === 50);
         setNextCursor(unique.length === 50 && unique.length ? (unique[unique.length - 1] as any).$id : null);
       } else {
-        const { TablesDB, Client, Query } = await import('appwrite');
+        const { TablesDB, Client, Query } = await import('@/lib/appwrite/types');
         const client = new Client()
           .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
           .setProject(APPWRITE_CONFIG.PROJECT_ID);

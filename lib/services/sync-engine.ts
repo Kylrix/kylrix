@@ -183,7 +183,7 @@ const RETRY_BASE_MS = 200;
 const RETRY_MAX_MS = 3_000;
 
 // Pre-warmed JWT — avoids 100-300ms createJWT per flush (kept warm in background)
-let cachedJwt: string | null = null;
+let cachedJwt: string | undefined = undefined;
 let cachedJwtExpiry = 0;
 let jwtRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 async function getPrewarmedJwt(): Promise<string | undefined> {

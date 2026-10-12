@@ -48,7 +48,7 @@ function ownerPerms(userId: string, extraReadUserIds: string[] = []) {
 }
 
 async function stampPrimaryThreadId(
-  tables: ReturnType<typeof createSystemTablesDB>,
+  tables: any,
   parentKind: string,
   parentId: string,
   threadId: string,

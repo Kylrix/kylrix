@@ -5,7 +5,8 @@ import type {
   SecurityLogs,
   User,
   Keychain,
-  KeyMapping} from '@/types/appwrite';
+  KeyMapping,
+  Models} from '@/types/appwrite';
 
 export type {
   Credentials,
@@ -14,7 +15,8 @@ export type {
   SecurityLogs,
   User,
   Keychain,
-  KeyMapping};
+  KeyMapping,
+  Models};
 
 export const ID = {
   unique: (padding?: number) => {
@@ -91,29 +93,58 @@ export class Account {
   async getPrefs(): Promise<Record<string, any>> { return {}; }
   async updatePrefs(prefs: Record<string, any>): Promise<Record<string, any>> { return prefs; }
   async listSessions(): Promise<{ rows: any[]; sessions: any[] }> { return { rows: [], sessions: [] }; }
+  async updateMFA(_opts?: any): Promise<any> { return {}; }
+  async listMfaFactors(): Promise<any> { return {}; }
+  async createMfaChallenge(_opts?: any): Promise<any> { return { $id: 'challenge' }; }
+  async updateMfaChallenge(_opts?: any): Promise<any> { return {}; }
+  async createMfaRecoveryCodes(): Promise<any> { return { recoveryCodes: [] }; }
+  async createMfaAuthenticator(_opts?: any): Promise<any> { return { secret: '', uri: '' }; }
+  async updateMfaAuthenticator(_opts?: any): Promise<any> { return {}; }
+  async deleteMfaAuthenticator(_opts?: any): Promise<any> { return {}; }
 }
+
+export enum AuthenticatorType {
+  Totp = 'totp',
+  Email = 'email',
+}
+
+export enum AuthenticationFactor {
+  Totp = 'totp',
+  Email = 'email',
+  RecoveryCode = 'recoverycode',
+}
+
+export enum ExecutionMethod {
+  GET = 'GET',
+  POST = 'POST',
+  PUT = 'PUT',
+  PATCH = 'PATCH',
+  DELETE = 'DELETE',
+}
+
+export { OAuthProvider } from '@/types/appwrite';
 
 export class TablesDB {
   constructor(_client?: any) {}
-  async getRow<T = any>(...args: any[]): Promise<T> {
+  async getRow<TRow = any>(...args: any[]): Promise<TRow> {
     const { Registry } = await import('@/lib/core/di/registry');
     const db = Registry.getDatabase();
     let [databaseId, tableId, rowId] = args.length === 1 && typeof args[0] === 'object' && args[0] !== null ? [args[0].databaseId, args[0].tableId, args[0].rowId] : args;
     return db.getRow(databaseId, tableId, rowId, { forceSystem: true });
   }
-  async listRows<T = any>(...args: any[]): Promise<{ total: number; rows: T[] }> {
+  async listRows<TRow = any>(...args: any[]): Promise<{ total: number; rows: TRow[] }> {
     const { Registry } = await import('@/lib/core/di/registry');
     const db = Registry.getDatabase();
     let [databaseId, tableId, queries] = args.length === 1 && typeof args[0] === 'object' && args[0] !== null ? [args[0].databaseId, args[0].tableId, args[0].queries] : args;
     return db.listRows(databaseId, tableId, queries, { forceSystem: true });
   }
-  async createRow<T = any>(...args: any[]): Promise<T> {
+  async createRow<TRow = any>(...args: any[]): Promise<TRow> {
     const { Registry } = await import('@/lib/core/di/registry');
     const db = Registry.getDatabase();
     let [databaseId, tableId, rowId, data, permissions] = args.length === 1 && typeof args[0] === 'object' && args[0] !== null ? [args[0].databaseId, args[0].tableId, args[0].rowId, args[0].data, args[0].permissions] : args;
     return db.createRow(databaseId, tableId, rowId, data, permissions, { forceSystem: true });
   }
-  async updateRow<T = any>(...args: any[]): Promise<T> {
+  async updateRow<TRow = any>(...args: any[]): Promise<TRow> {
     const { Registry } = await import('@/lib/core/di/registry');
     const db = Registry.getDatabase();
     let [databaseId, tableId, rowId, data, permissions] = args.length === 1 && typeof args[0] === 'object' && args[0] !== null ? [args[0].databaseId, args[0].tableId, args[0].rowId, args[0].data, args[0].permissions] : args;
@@ -128,10 +159,10 @@ export class TablesDB {
 }
 
 export class Databases extends TablesDB {
-  async getDocument<T = any>(...args: any[]): Promise<T> { return this.getRow(...args); }
-  async listDocuments<T = any>(...args: any[]): Promise<any> { return this.listRows(...args); }
-  async createDocument<T = any>(...args: any[]): Promise<T> { return this.createRow(...args); }
-  async updateDocument<T = any>(...args: any[]): Promise<T> { return this.updateRow(...args); }
+  async getDocument<TRow = any>(...args: any[]): Promise<TRow> { return this.getRow(...args); }
+  async listDocuments(...args: any[]): Promise<any> { return this.listRows(...args); }
+  async createDocument<TRow = any>(...args: any[]): Promise<TRow> { return this.createRow(...args); }
+  async updateDocument<TRow = any>(...args: any[]): Promise<TRow> { return this.updateRow(...args); }
   async deleteDocument(...args: any[]): Promise<void> { return this.deleteRow(...args); }
 }
 
@@ -158,13 +189,34 @@ export class Users {
   async create(..._args: any[]): Promise<any> { return null; }
   async updatePrefs(_userId: string, prefs: any): Promise<any> { return prefs; }
   async getPrefs(_userId: string): Promise<any> { return {}; }
+  async updateStatus(_userId: string, _status: boolean): Promise<any> { return {}; }
+  async updatePassword(_userId: string, _password: string): Promise<any> { return {}; }
   async delete(_userId: string): Promise<any> { return {}; }
 }
 
-export class Teams { constructor(_client?: any) {} }
-export class Functions { constructor(_client?: any) {} }
-export class Messaging { constructor(_client?: any) {} }
-export class Storage { constructor(_client?: any) {} }
+export class Teams {
+  constructor(_client?: any) {}
+  async list(..._args: any[]): Promise<any> { return { total: 0, teams: [] }; }
+  async create(..._args: any[]): Promise<any> { return {}; }
+  async createMembership(..._args: any[]): Promise<any> { return {}; }
+  async delete(..._args: any[]): Promise<any> { return {}; }
+  async listMemberships(..._args: any[]): Promise<any> { return { total: 0, memberships: [] }; }
+  async deleteMembership(..._args: any[]): Promise<any> { return {}; }
+}
+export class Functions {
+  constructor(_client?: any) {}
+  async createExecution(..._args: any[]): Promise<any> { return {}; }
+}
+export class Messaging {
+  constructor(_client?: any) {}
+  async createEmail(..._args: any[]): Promise<any> { return {}; }
+}
+export class Storage {
+  constructor(_client?: any) {}
+  async deleteFile(..._args: any[]): Promise<any> { return {}; }
+  async getFile(..._args: any[]): Promise<any> { return {}; }
+  async updateFile(..._args: any[]): Promise<any> { return {}; }
+}
 export class Realtime { constructor(_client?: any) {} }
 
 export function isEmailInAdminList(email?: string | null): boolean {
@@ -191,6 +243,7 @@ export function createSystemClient() {
     users: new Users(client),
     teams: new Teams(client),
     storage: new Storage(client),
+    functions: new Functions(client),
   };
 }
 

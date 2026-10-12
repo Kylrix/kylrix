@@ -120,7 +120,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       // 2. Fetch remote and merge using timestamp comparison & pending guards
       let remoteItems: any[] = [];
       try {
-        const { Query } = await import('appwrite');
+        const { Query } = await import('@/lib/appwrite/types');
         const queries = userId !== 'guest' ? [Query.equal('userId', userId), Query.limit(100)] : [Query.limit(100)];
         const res = await eventApi.list(queries);
         remoteItems = res?.rows || (Array.isArray(res) ? res : []);

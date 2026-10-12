@@ -1,5 +1,5 @@
 import { systemTables } from '@/lib/data/system-tables';
-import { Query, ID } from '@/lib/appwrite/types';
+import { Query, ID, createSystemClient } from '@/lib/appwrite/types';
 
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';

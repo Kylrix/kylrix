@@ -60,7 +60,7 @@ function getParticipantIds(body: any) {
   return normalizeTargetUserIds(body?.participantUserIds || body?.participants || body?.remainingParticipantIds || body?.targetUserIds);
 }
 
-export async function applyPermissionMutation(actorId: string, body: any) {
+export async function applyPermissionMutation(actorId: string, body: any): Promise<any> {
   const action = getAction(body);
   const { databases, storage } = createSystemClient();
   const targetUserIds = normalizeTargetUserIds(body?.targetUserIds || body?.recipientUserIds || body?.targetUserId);

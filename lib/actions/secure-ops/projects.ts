@@ -1,8 +1,9 @@
 'use server';
 
+import { systemTables } from '@/lib/data/system-tables';
 import * as shared from './shared';
 import {
-  ID, Permission, Query, Role
+  ID, Permission, Query, Role, createSystemClient
 } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
@@ -958,9 +959,9 @@ export async function addObjectToProjectSecure(
         metadata: metadata ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null,
         createdAt: now,
         updatedAt: now,
-        isPublic: !!obj.isPublic,
-        isGuest: !!obj.isGuest,
-        isGeneral: !!obj.isGeneral
+        isPublic: !!(obj as any).isPublic,
+        isGuest: !!(obj as any).isGuest,
+        isGeneral: !!(obj as any).isGeneral
       },
       permissions: permissions
     });
@@ -1374,9 +1375,9 @@ export async function listUserFormsSecure(userId?: string, jwt?: string) {
   }
 
   // Use admin SDK directly - bypasses RLS so we always get the user's own forms
-  const systemTables = systemTables();
+  const tables = systemTables();
 
-  const result = await systemTables.listRows({
+  const result = await tables.listRows({
     databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
     tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
     queries: [
@@ -1463,10 +1464,10 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
   rowCache.delete(cacheKey);
 
   // Directly retrieve the form details using system privileges to verify owner identity
-  const systemTables = systemTables();
+  const tables = systemTables();
   let formRow = null;
   try {
-      formRow = await systemTables.getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, formId);
+      formRow = await tables.getRow({ databaseId: APPWRITE_CONFIG.DATABASES.FLOW, tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS, rowId: formId });
   } catch (err) {
       console.warn('[deleteFormSecure] Failed to retrieve form row:', err);
   }
@@ -1482,7 +1483,7 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
   // 1. Mark form as trashed immediately on server
   let result = null;
   try {
-    result = await systemTables.updateRow({
+    result = await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
       rowId: formId,
@@ -1908,7 +1909,7 @@ export async function convertResponseToGoalSecure(submissionId: string, jwt?: st
         data: {
           projectId: link.projectId,
           entityKind: 'goal',
-          entityId: task.$id,
+          entityId: (task as any).$id,
           role: 'member',
           createdAt: now,
           updatedAt: now,

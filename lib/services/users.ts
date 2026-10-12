@@ -273,7 +273,7 @@ export const UsersService = {
 
         // 2. Secondary: fallback check against Appwrite
         try {
-            const { Query } = await import("appwrite");
+            const { Query } = await import("@/lib/appwrite/types");
             const res = await (tablesDB as any).listRows({
                 databaseId: DATABASE_ID,
                 tableId: TABLE_ID,
@@ -431,7 +431,7 @@ export const UsersService = {
     },
 
     async lookupUserByEmail(email: string) {
-        const { Query } = await import('appwrite');
+        const { Query } = await import('@/lib/appwrite/types');
         const res = await (tablesDB as any).listRows({
             databaseId: DATABASE_ID,
             tableId: TABLE_ID,

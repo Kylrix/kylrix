@@ -380,7 +380,7 @@ export const TelemetryService = {
             rowId: targetSessionId,
             data: payload
           });
-          return updated?.$id || targetSessionId;
+          return (updated as any)?.$id || targetSessionId;
         } catch {}
       }
 
@@ -390,7 +390,7 @@ export const TelemetryService = {
         rowId: targetSessionId || ID.unique(),
         data: payload
       });
-      return created?.$id || targetSessionId;
+      return (created as any)?.$id || targetSessionId;
     } catch (err) {
       console.error('[TelemetryService] Failed to save session:', err);
       return sessionId;

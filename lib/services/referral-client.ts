@@ -49,7 +49,7 @@ export async function claimPendingReferralAttribution(): Promise<{
 
   try {
     const { account } = await import('@/lib/appwrite/client');
-    const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+    const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
     const { claimReferralAction } = await import('@/lib/actions/referrals');
     const res = await claimReferralAction(payload, jwt);
 
