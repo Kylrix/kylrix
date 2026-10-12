@@ -25,7 +25,7 @@ import {
 } from './vault-actions';
 import { VaultService, vaultDatabases } from './vault-service';
 import { account, storage } from './client';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { createSystemClient } from '@/lib/appwrite/types';
 import { purgeAllClientStorageOnLogout } from '@/lib/services/wipe-client-storage';
 
 // Mock dependencies

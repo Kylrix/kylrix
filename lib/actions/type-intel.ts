@@ -1,7 +1,7 @@
 'use server';
 
-import { Query } from 'node-appwrite';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { Query } from '@/lib/appwrite/types';
+import { createSystemClient } from '@/lib/appwrite/types';
 import { generateAiSdkCompletion } from '@/lib/agentic/llm-provider';
 import {
   buildTypeIntelCompletePrompt,

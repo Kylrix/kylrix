@@ -1,334 +1,51 @@
-import { Client, TablesDB, Account, Realtime, Databases, Avatars, Teams, Functions, Locale, Storage } from 'appwrite';
 import { APPWRITE_CONFIG } from './config';
+import { systemTables } from '@/lib/data/system-tables';
 
-const client = new Client();
-
-const initAppwrite = () => {
-    if (typeof APPWRITE_CONFIG === 'undefined') return;
-    
-    // Use the api subdomain for the endpoint
-    const endpoint = APPWRITE_CONFIG.ENDPOINT;
-    client.setEndpoint(endpoint);
-
-    if (APPWRITE_CONFIG.PROJECT_ID) {
-        client.setProject(APPWRITE_CONFIG.PROJECT_ID);
-    }
+export const databases: any = {
+  createRow: (dbId: string, tblId: string, rowId: string, data: any, permissions?: string[]) =>
+    systemTables().createRow({ databaseId: dbId, tableId: tblId, rowId, data, permissions }),
+  updateRow: (dbId: string, tblId: string, rowId: string, data: any, permissions?: string[]) =>
+    systemTables().updateRow({ databaseId: dbId, tableId: tblId, rowId, data, permissions }),
+  getRow: (dbId: string, tblId: string, rowId: string) =>
+    systemTables().getRow({ databaseId: dbId, tableId: tblId, rowId }),
+  listRows: (dbId: string, tblId: string, queries?: any[]) =>
+    systemTables().listRows({ databaseId: dbId, tableId: tblId, queries }),
+  deleteRow: (dbId: string, tblId: string, rowId: string) =>
+    systemTables().deleteRow({ databaseId: dbId, tableId: tblId, rowId }),
 };
 
-import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
+export const tablesDB: any = databases;
+export const account: any = {
+  get: async () => getCurrentUser(),
+  listSessions: async () => ({ sessions: [] }),
+  deleteSession: async () => ({}),
+  deleteSessions: async () => ({}),
+};
 
-initAppwrite();
-export const account = new Account(client);
-const originalDatabases = new Databases(client);
-const originalTablesDB = new TablesDB(client);
-
-/** Session TablesDB without the secure-ops proxy — sole-owner direct writes only. */
-export function getSessionTablesDB(): TablesDB {
-  return originalTablesDB;
-}
-
-// Helper to fetch JWT securely from client-side SDK
-async function getJwt(): Promise<string | undefined> {
-  return undefined;
-}
-
-// --- HELPER PARSERS (Hoisted/Early Defined) ---
-
-function parseDatabasesArgs(args: any[]) {
-    const [databaseId, tableId, rowId, data, permissions] = args;
-    return { databaseId, tableId, rowId, data, permissions };
-}
-
-function parseDatabasesDeleteArgs(args: any[]) {
-    const [databaseId, tableId, rowId] = args;
-    return { databaseId, tableId, rowId };
-}
-
-function parseTablesDBArgs(args: any[]) {
-    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && ('databaseId' in args[0])) {
-        const obj = args[0];
-        return {
-            databaseId: obj.databaseId,
-            tableId: obj.tableId || obj.tableId,
-            rowId: obj.rowId || obj.rowId,
-            data: obj.data,
-            permissions: obj.permissions
-        };
+export const realtime: any = {
+  subscribe: (channels: any, callback: any) => {
+    if (typeof window === 'undefined') return () => {};
+    try {
+      const { partyRealtime } = require('@/lib/realtime/partykit');
+      return partyRealtime.subscribe(channels, callback);
+    } catch {
+      return () => {};
     }
-    const [databaseId, tableId, rowId, data, permissions] = args;
-    return { databaseId, tableId, rowId, data, permissions };
+  },
+};
+
+export const storage: any = {
+  getFilePreview: () => '',
+};
+
+export const client: any = {
+  setEndpoint: () => client,
+  setProject: () => client,
+};
+
+export function getSessionTablesDB(): any {
+  return tablesDB;
 }
-
-function parseTablesDBDeleteArgs(args: any[]) {
-    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && ('databaseId' in args[0])) {
-        const obj = args[0];
-        return {
-            databaseId: obj.databaseId,
-            tableId: obj.tableId || obj.tableId,
-            rowId: obj.rowId || obj.rowId
-        };
-    }
-    const [databaseId, tableId, rowId] = args;
-    return { databaseId, tableId, rowId };
-}
-
-// --- PROXIES ---
-
-const databasesProxy = new Proxy(originalDatabases, {
-    get(target: any, prop: string | symbol, receiver: any) {
-        // Standardized method names (Primary)
-        if (prop === 'createRow' || prop === 'createRow') {
-            return async (...args: any[]) => {
-                const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
-                const payload = data ? { ...data } : {};
-                if (rowId) payload.$id = rowId;
-                if (isDogfoodSafetyActive()) {
-                    return payload;
-                }
-                const jwt = await getJwt();
-                const { createRowSecure } = await import('@/lib/actions/secure-ops');
-                return await createRowSecure(databaseId, tableId, payload, permissions, jwt);
-            };
-        }
-        if (prop === 'updateRow' || prop === 'updateRow') {
-            return async (...args: any[]) => {
-                const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
-                if (isDogfoodSafetyActive()) {
-                    return { $id: rowId, ...data };
-                }
-                const jwt = await getJwt();
-                const { updateRowSecure } = await import('@/lib/actions/secure-ops');
-                const res = await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
-                const { invalidateTablesDbRowCache } = await import('@/lib/ecosystem/tablesdb-row-cache');
-                invalidateTablesDbRowCache({ databaseId, tableId, rowId });
-                return res;
-            };
-        }
-        if (prop === 'listRows' || prop === 'listRows' || prop === 'listDocuments' || prop === 'listDocuments') {
-            return async (...args: any[]) => {
-                if (isDogfoodSafetyActive()) {
-                    return { total: 0, rows: [] };
-                }
-                let dbId: string = '';
-                let tblId: string = '';
-                let q: any[] | undefined;
-                if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
-                    dbId = args[0].databaseId;
-                    tblId = args[0].tableId;
-                    q = args[0].queries;
-                } else {
-                    [dbId, tblId, q] = args;
-                }
-                const fetcher = async () => {
-                    const { listRowsSecure } = await import('@/lib/actions/secure-ops');
-                    return await listRowsSecure(dbId, tblId, q);
-                };
-                if (dbId && tblId) {
-                    const { getTablesDbListCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
-                    return getTablesDbListCached({ databaseId: dbId, tableId: tblId, queries: q }, fetcher);
-                }
-                return fetcher();
-            };
-        }
-        if (prop === 'getRow' || prop === 'getRow' || prop === 'getDocument' || prop === 'getDocument') {
-            return async (...args: any[]) => {
-                if (isDogfoodSafetyActive()) {
-                    return null;
-                }
-                let dbId: string = '';
-                let tblId: string = '';
-                let rId: string = '';
-                if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
-                    dbId = args[0].databaseId;
-                    tblId = args[0].tableId;
-                    rId = args[0].rowId;
-                } else {
-                    [dbId, tblId, rId] = args;
-                }
-                const fetcher = async () => {
-                    const { getRowSecure } = await import('@/lib/actions/secure-ops');
-                    return await getRowSecure(dbId, tblId, rId);
-                };
-                if (dbId && tblId && rId) {
-                    const { getTablesDbRowCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
-                    return getTablesDbRowCached({ databaseId: dbId, tableId: tblId, rowId: rId }, fetcher);
-                }
-                return fetcher();
-            };
-        }
-        if (prop === 'deleteRow' || prop === 'deleteRow') {
-            return async (...args: any[]) => {
-                const { databaseId, tableId, rowId } = parseDatabasesDeleteArgs(args);
-                if (isDogfoodSafetyActive()) {
-                    return { success: true };
-                }
-                const jwt = await getJwt();
-                const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
-                const res = await deleteRowSecure(databaseId, tableId, rowId, jwt);
-                const { invalidateTablesDbRowCache } = await import('@/lib/ecosystem/tablesdb-row-cache');
-                invalidateTablesDbRowCache({ databaseId, tableId, rowId });
-                return res;
-            };
-        }
-        const val = Reflect.get(target, prop, receiver);
-        return typeof val === 'function' ? val.bind(target) : val;
-    }
-});
-
-export const databases = databasesProxy as unknown as Databases;
-
-const tablesDBProxy = new Proxy(originalTablesDB, {
-    get(target: any, prop: string | symbol, receiver: any) {
-        if (prop === 'createRow') {
-            return async (...args: any[]) => {
-                const { databaseId, tableId, rowId, data, permissions } = parseTablesDBArgs(args);
-                const payload = data ? { ...data } : {};
-                if (rowId) payload.$id = rowId;
-                if (isDogfoodSafetyActive()) {
-                    return payload;
-                }
-                const jwt = await getJwt();
-                const { createRowSecure } = await import('@/lib/actions/secure-ops');
-                return await createRowSecure(databaseId, tableId, payload, permissions, jwt);
-            };
-        }
-        if (prop === 'updateRow') {
-            return async (...args: any[]) => {
-                const { databaseId, tableId, rowId, data, permissions } = parseTablesDBArgs(args);
-                if (isDogfoodSafetyActive()) {
-                    return { $id: rowId, ...data };
-                }
-                const jwt = await getJwt();
-                const { updateRowSecure } = await import('@/lib/actions/secure-ops');
-                const res = await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
-                const { invalidateTablesDbRowCache } = await import('@/lib/ecosystem/tablesdb-row-cache');
-                invalidateTablesDbRowCache({ databaseId, tableId, rowId });
-                return res;
-            };
-        }
-        if (prop === 'listRows' || prop === 'listDocuments') {
-            return async (...args: any[]) => {
-                if (isDogfoodSafetyActive()) {
-                    return { total: 0, rows: [] };
-                }
-                let dbId: string = '';
-                let tblId: string = '';
-                let q: any[] | undefined;
-                if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
-                    dbId = args[0].databaseId;
-                    tblId = args[0].tableId;
-                    q = args[0].queries;
-                } else {
-                    [dbId, tblId, q] = args;
-                }
-                const fetcher = async () => {
-                    const { listRowsSecure } = await import('@/lib/actions/secure-ops');
-                    return await listRowsSecure(dbId, tblId, q);
-                };
-                if (dbId && tblId) {
-                    const { getTablesDbListCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
-                    return getTablesDbListCached({ databaseId: dbId, tableId: tblId, queries: q }, fetcher);
-                }
-                return fetcher();
-            };
-        }
-        if (prop === 'getRow' || prop === 'getDocument') {
-            return async (...args: any[]) => {
-                if (isDogfoodSafetyActive()) {
-                    return null;
-                }
-                let dbId: string = '';
-                let tblId: string = '';
-                let rId: string = '';
-                if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
-                    dbId = args[0].databaseId;
-                    tblId = args[0].tableId;
-                    rId = args[0].rowId;
-                } else {
-                    [dbId, tblId, rId] = args;
-                }
-                const fetcher = async () => {
-                    const { getRowSecure } = await import('@/lib/actions/secure-ops');
-                    return await getRowSecure(dbId, tblId, rId);
-                };
-                if (dbId && tblId && rId) {
-                    const { getTablesDbRowCached } = await import('@/lib/ecosystem/tablesdb-row-cache');
-                    return getTablesDbRowCached({ databaseId: dbId, tableId: tblId, rowId: rId }, fetcher);
-                }
-                return fetcher();
-            };
-        }
-        if (prop === 'deleteRow') {
-            return async (...args: any[]) => {
-                const { databaseId, tableId, rowId } = parseTablesDBDeleteArgs(args);
-                if (isDogfoodSafetyActive()) {
-                    return { success: true };
-                }
-                const jwt = await getJwt();
-                const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
-                const res = await deleteRowSecure(databaseId, tableId, rowId, jwt);
-                const { invalidateTablesDbRowCache } = await import('@/lib/ecosystem/tablesdb-row-cache');
-                invalidateTablesDbRowCache({ databaseId, tableId, rowId });
-                return res;
-            };
-        }
-        const val = Reflect.get(target, prop, receiver);
-        return typeof val === 'function' ? val.bind(target) : val;
-    }
-});
-
-export const tablesDB = tablesDBProxy as unknown as TablesDB;
-
-export const avatars = new Avatars(client);
-export const teams = new Teams(client);
-export const functions = new Functions(client);
-export const locale = new Locale(client);
-export const storage = new Storage(client);
-const originalRealtime = new Realtime(client);
-
-function wrapRealtimeSubscription(rawUnsub: any) {
-    const unsub = typeof rawUnsub === 'function' ? rawUnsub : () => {};
-    (unsub as any).close = unsub;
-    (unsub as any).unsubscribe = unsub;
-
-    const wrapper = () => {
-        try {
-            unsub();
-        } catch {}
-    };
-    wrapper.close = wrapper;
-    wrapper.unsubscribe = wrapper;
-    // Defensive thenable: allows callers expecting a Promise (.then or await) to work seamlessly without throwing
-    wrapper.then = (onFulfilled?: (val: any) => any, onRejected?: (err: any) => any) => {
-        return Promise.resolve(unsub).then(onFulfilled, onRejected);
-    };
-    wrapper.catch = (onRejected?: (err: any) => any) => {
-        return Promise.resolve(unsub).catch(onRejected);
-    };
-    return wrapper;
-}
-
-export const realtime = new Proxy(originalRealtime, {
-    get(target, prop, receiver) {
-        if (prop === 'subscribe') {
-            return (...args: any[]) => {
-                if (isDogfoodSafetyActive()) {
-                    return wrapRealtimeSubscription(() => {});
-                }
-                try {
-                    const { partyRealtime } = require('@/lib/realtime/partykit');
-                    return wrapRealtimeSubscription(partyRealtime.subscribe(args[0], args[1]));
-                } catch {
-                    return wrapRealtimeSubscription((target as any).subscribe(...args));
-                }
-            };
-        }
-        const val = Reflect.get(target, prop, receiver);
-        return typeof val === 'function' ? val.bind(target) : val;
-    }
-}) as unknown as Realtime;
-
-export { client };
 
 export const APPWRITE_BUCKET_BACKUPS_ID = APPWRITE_CONFIG.BUCKETS.BACKUPS;
 export const APPWRITE_BUCKET_PROFILE_PICTURES_ID = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
@@ -344,10 +61,9 @@ export function getProfilePicturePreview(fileId: string, width: number = 64, hei
 let currentUserCache: { user: any | null; expiresAt: number; lastForcedAt?: number } | null = null;
 let currentUserInFlight: Promise<any | null> | null = null;
 const currentUserListeners = new Set<(user: any | null) => void>();
-const CURRENT_USER_CACHE_TTL = 30000; // 30 seconds for passive reads
+const CURRENT_USER_CACHE_TTL = 30000;
 const CURRENT_USER_CACHE_KEY = 'kylrix_flow_current_user_v2';
 
-/** Fast local signal — skip network auth probes when nothing suggests a session. */
 export function hasAuthSessionHint(): boolean {
     if (typeof window === 'undefined') return false;
     if (getKylrixPulse()) return true;
@@ -373,7 +89,6 @@ function readCurrentUserSnapshot(allowOfflineFallback: boolean = true) {
                 }
             }
         }
-        // Fallback to durable last logged in user
         const lastUserKey = `kylrix_last_logged_in_user_${pid}`;
         const lastRaw = localStorage.getItem(lastUserKey);
         if (lastRaw) {
@@ -413,9 +128,7 @@ function writeCurrentUserSnapshot(user: any | null, lastForcedAt?: number) {
             lastForcedAt: lastForcedAt || (currentUserCache?.lastForcedAt)
         }));
         localStorage.setItem(lastUserKey, JSON.stringify(user));
-    } catch {
-        // Best effort only.
-    }
+    } catch {}
 }
 
 function emitCurrentUserChange(user: any | null) {
@@ -425,7 +138,6 @@ function emitCurrentUserChange(user: any | null) {
 }
 
 function hydrateCurrentUserCache() {
-    // Refresh when missing or expired so local-first pages keep a stable user id.
     if (currentUserCache && currentUserCache.expiresAt > Date.now()) return;
     const snapshot = readCurrentUserSnapshot();
     if (snapshot) {
@@ -433,19 +145,15 @@ function hydrateCurrentUserCache() {
     }
 }
 
-/** Optimistic local user for instant hydration — never waits on account.get. */
 export function getCurrentUserSnapshot() {
     hydrateCurrentUserCache();
     return currentUserCache?.user ?? null;
 }
 
-/** True when snapshot TTL is still fresh (safe to skip forced network probe). */
 export function isCurrentUserSnapshotFresh() {
     hydrateCurrentUserCache();
     return Boolean(currentUserCache && currentUserCache.expiresAt > Date.now());
 }
-
-import { Query } from 'appwrite';
 
 export const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
 export const APPWRITE_COLLECTION_KEYCHAIN_ID = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
@@ -465,17 +173,17 @@ export class AppwriteService {
                 return probe.hasMasterpass || probe.hasPasskey;
             }
 
-            const res = await tablesDB.listRows<any>({
+            const res = await tablesDB.listRows({
                 databaseId: FLOW_DB,
                 tableId: USERS_TABLE,
-                queries: [Query.equal("userId", userId)]
+                queries: [`equal("userId", ${JSON.stringify(userId)})`]
             }).catch(() => null);
 
             if (res && res.total > 0 && res.rows[0].hasMasterpass) {
                 return true;
             }
             const entries = await this.listKeychainEntries(userId);
-            return entries.some(e => e.type === 'password' || e.type === 'passkey');
+            return entries.some((e: any) => e.type === 'password' || e.type === 'passkey');
         } catch (_e: unknown) {
             return probe.hasMasterpass || probe.hasPasskey;
         }
@@ -493,10 +201,10 @@ export class AppwriteService {
             const { value, source } = await raceNetworkOrLocal({
                 timeoutMs: 2500,
                 network: async () => {
-                    const res = await tablesDB.listRows<any>({
+                    const res = await tablesDB.listRows({
                         databaseId: APPWRITE_DATABASE_ID,
                         tableId: APPWRITE_COLLECTION_KEYCHAIN_ID,
-                        queries: [Query.equal("userId", userId)]
+                        queries: [`equal("userId", ${JSON.stringify(userId)})`]
                     });
                     return res.rows || [];
                 },
@@ -515,11 +223,10 @@ export class AppwriteService {
     }
 
     static async createKeychainEntry(data: any): Promise<any> {
-        const { ID } = await import("appwrite");
         return await tablesDB.createRow(
             APPWRITE_DATABASE_ID,
             APPWRITE_COLLECTION_KEYCHAIN_ID,
-            ID.unique(),
+            crypto.randomUUID(),
             data
         );
     }
@@ -535,12 +242,12 @@ export class AppwriteService {
     static async setMasterpassFlag(userId: string, email: string): Promise<void> {
         try {
             const FLOW_DB = APPWRITE_CONFIG.DATABASES.FLOW;
-            const USERS_TABLE = 'users'; // Standard user table in Flow
+            const USERS_TABLE = 'users';
 
-            const res = await tablesDB.listRows<any>({
+            const res = await tablesDB.listRows({
                 databaseId: FLOW_DB,
                 tableId: USERS_TABLE,
-                queries: [Query.equal("userId", userId)]
+                queries: [`equal("userId", ${JSON.stringify(userId)})`]
             });
 
             if (res.total > 0) {
@@ -548,8 +255,7 @@ export class AppwriteService {
                     hasMasterpass: true
                 });
             } else {
-                const { ID } = await import("appwrite");
-                await tablesDB.createRow(FLOW_DB, USERS_TABLE, ID.unique(), {
+                await tablesDB.createRow(FLOW_DB, USERS_TABLE, crypto.randomUUID(), {
                     userId,
                     email,
                     hasMasterpass: true
@@ -627,11 +333,9 @@ export function clearKylrixPulse() {
 export async function salvageUserFromLocalSubstrate(): Promise<any | null> {
     if (!canUseStorage()) return null;
     
-    // 1. Direct snapshot for current active partition
     const snap = readCurrentUserSnapshot(true);
     if (snap?.user?.$id) return snap.user;
 
-    // 2. Pulse
     const pulse = getKylrixPulse();
     if (pulse?.$id) {
         return {
@@ -666,7 +370,6 @@ export async function getCurrentUser(force = false): Promise<any | null> {
     }
 
     currentUserInFlight = (async () => {
-        // 1. Primary check: Better Auth session
         try {
             const { authClient } = await import('@/lib/auth/better-auth-client');
             const betterSession = await authClient.getSession().catch(() => null);
@@ -696,7 +399,6 @@ export async function getCurrentUser(force = false): Promise<any | null> {
             }
         } catch {}
 
-        // 2. Local substrate snapshot / pulse fallback
         const snap = readCurrentUserSnapshot(true);
         if (snap?.user) return snap.user;
         const salvaged = await salvageUserFromLocalSubstrate();
@@ -730,9 +432,6 @@ export const globalSessionPromise = typeof window !== 'undefined' && hasAuthSess
     ? getCurrentUser().catch(() => null)
     : Promise.resolve(null);
 
-// --- USER SESSION ---
-
-// Unified resolver: attempts global session then cookie-based fallback
 export async function resolveCurrentUser(req?: { headers: { get(k: string): string | null } } | null): Promise<any | null> {
     const direct = await getCurrentUser();
     if (direct && direct.$id) return direct;
@@ -743,7 +442,6 @@ export async function resolveCurrentUser(req?: { headers: { get(k: string): stri
     return null;
 }
 
-// Per-request user fetch using incoming Cookie header
 export async function getCurrentUserFromRequest(req: { headers: { get(k: string): string | null } } | null | undefined): Promise<any | null> {
     try {
         if (!req) return null;

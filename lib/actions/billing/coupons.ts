@@ -1,8 +1,8 @@
 'use server';
 
-import { ID, Permission, Query, Role } from 'node-appwrite';
+import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
 import { getActor } from '@/lib/actions/secure-ops';
-import { createAdminClient, createSystemClient } from '@/lib/appwrite-admin';
+import { createAdminClient, createSystemClient } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { requireAdmin } from '@/lib/services/internal/admin';
 

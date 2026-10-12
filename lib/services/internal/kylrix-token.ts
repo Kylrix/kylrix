@@ -1,5 +1,6 @@
-import { ID, Permission, Query, Role } from 'node-appwrite';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+import { systemTables } from '@/lib/data/system-tables';
+import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
+
 import { APPWRITE_CONFIG, KYLRIX_AUTH_URI } from '@/lib/appwrite/config';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import {
@@ -15,7 +16,7 @@ const STATE_ROW_ID = 'state';
 const contract = createKylrixTokenContract();
 
 /** TablesDB ledger access — KYLRIX_TOKEN_LEDGER is Tables-only; Documents API reads/writes the wrong projection. */
-const ledgerTables = () => createSystemTablesDB();
+const ledgerTables = () => systemTables();
 
 interface TokenStateRow {
   $id: string;

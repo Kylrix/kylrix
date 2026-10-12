@@ -1,9 +1,9 @@
 import {
   ID,
   Query,
-  Models,
   Permission,
-  Role,} from "appwrite";
+  Role,} from "./types";
+import type { Models } from "@/types/appwrite";
 import { 
   databases, 
   client, 

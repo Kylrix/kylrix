@@ -21,7 +21,7 @@ import {
 import { Tags } from '@/types/appwrite';
 import { createTag, updateTag } from '@/lib/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
-import { ID } from 'appwrite';
+
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSection } from '@/context/SectionContext';
 import { useTask } from '@/context/TaskContext';
@@ -123,7 +123,7 @@ export function NewTagDrawer() {
     setError(null);
 
     const tagName = formData.name.trim();
-    const tagId = editingTag ? editingTag.$id : ID.unique();
+    const tagId = editingTag ? editingTag.$id : crypto.randomUUID();
     const now = new Date().toISOString();
     const liveTag: Tags = {
       $id: tagId,

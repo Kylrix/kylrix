@@ -1,6 +1,6 @@
-import { ID, Query, Permission, Role, type Models } from 'appwrite';
 import { account, databases, tablesDB, getCurrentUser } from './client';
 import { APPWRITE_CONFIG } from './config';
+import type { Models } from '@/types/appwrite';
 
 export const CONNECT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 export const CONNECT_TABLE_ID_USERS = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
@@ -79,7 +79,7 @@ export class AppwriteService {
       };
 
       if (!profile) {
-        await databases.createRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, ID.unique(), baseData, [Permission.read(Role.any())]);
+        await databases.createRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, crypto.randomUUID(), baseData, ['read("role:all")']);
       } else if (profile.username !== derivedUsername || profile.tier !== baseData.tier) {
         await databases.updateRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, profile.$id, baseData);
       }
@@ -96,8 +96,8 @@ export class AppwriteService {
   static async getGlobalProfileStatus(userId: string) {
     try {
       const res = await databases.listRows(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, [
-        Query.equal('userId', userId),
-        Query.limit(1)
+        `equal("userId", ${JSON.stringify(userId)})`,
+        'limit(1)'
       ]);
       if (res.total > 0) {
         return { exists: true, profile: res.rows[0] };
@@ -125,7 +125,7 @@ export class AppwriteService {
       const res = await tablesDB.listRows<any>({
         databaseId: FLOW_DATABASE_ID,
         tableId: USERS_TABLE,
-        queries: [Query.equal("userId", userId)]
+        queries: [`equal("userId", ${JSON.stringify(userId)})`]
       });
 
       return res.total > 0 && !!res.rows[0].hasMasterpass;
@@ -150,7 +150,7 @@ export class AppwriteService {
           const response = await databases.listRows(
             VAULT_DATABASE_ID,
             VAULT_TABLE_ID_KEYCHAIN,
-            [Query.equal("userId", userId)]);
+            [`equal("userId", ${JSON.stringify(userId)})`]);
           return response.rows || [];
         },
         local: async () => cached});
@@ -170,7 +170,7 @@ export class AppwriteService {
     const created = await databases.createRow(
       VAULT_DATABASE_ID,
       VAULT_TABLE_ID_KEYCHAIN,
-      ID.unique(),
+      crypto.randomUUID(),
       data
     );
     if (data?.userId) {
@@ -220,34 +220,15 @@ export class AppwriteService {
       
       // Attempt optimized Query.or with startsWith (Prefix match)
       try {
-        const res = await tablesDB.listRows<ProfileRow>({
-          databaseId: CONNECT_DATABASE_ID,
-          tableId,
-          queries: [
-            Query.or([
-              Query.startsWith('username', text.toLowerCase()),
-              Query.startsWith('displayName', text)
-            ]),
-            Query.limit(limit)
-          ]});
-
-        const merged = new Map<string, ProfileRow>();
-        for (const row of res.rows) {
-          const key = row.userId || row.$id;
-          if (key && !merged.has(key)) merged.set(key, row);
-        }
-        return Array.from(merged.values());
-      } catch (_e: any) {
-        // Fallback: Individual startsWith queries
         const [byUsername, byDisplayName] = await Promise.all([
           tablesDB.listRows<ProfileRow>({
             databaseId: CONNECT_DATABASE_ID,
             tableId,
-            queries: [Query.startsWith('username', text.toLowerCase()), Query.limit(limit)]}),
+            queries: [`startsWith("username", ${JSON.stringify(text.toLowerCase())})`, `limit(${limit})`]}),
           tablesDB.listRows<ProfileRow>({
             databaseId: CONNECT_DATABASE_ID,
             tableId,
-            queries: [Query.startsWith('displayName', text), Query.limit(limit)]})]);
+            queries: [`startsWith("displayName", ${JSON.stringify(text)})`, `limit(${limit})`]})]);
 
         const merged = new Map<string, ProfileRow>();
         for (const row of [...byUsername.rows, ...byDisplayName.rows]) {
@@ -421,7 +402,7 @@ export class AppwriteService {
         await databases.createRow(
           APPWRITE_CONFIG.DATABASES.NOTE,
           APPWRITE_CONFIG.TABLES.NOTE.ACTIVITY_LOG,
-          ID.unique(),
+          crypto.randomUUID(),
           {
             userId: data.userId,
             action: data.type === 'username_change' ? 'username_change' : 'profile_update',

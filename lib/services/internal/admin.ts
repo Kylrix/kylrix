@@ -1,11 +1,17 @@
-import { Query } from 'node-appwrite';
-import { createAdminClient, isEmailInAdminList } from '@/lib/appwrite-admin';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { desc, count } from 'drizzle-orm';
 
-/**
- * Sync admin gate for administrative console/dashboard operations.
- * Single source of truth: the ADMINS environment variable (comma-separated emails).
- */
+export function isEmailInAdminList(email?: string | null): boolean {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return false;
+  const adminList = String(process.env.ADMINS || '')
+    .split(',')
+    .map((e: any) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return adminList.includes(normalized);
+}
+
 export function requireAdmin(user: any) {
   if (user?.isAdmin) return;
   if (user?.labels && Array.isArray(user.labels) && user.labels.includes('admin')) return;
@@ -14,56 +20,13 @@ export function requireAdmin(user: any) {
   throw new Error('Forbidden: admin privileges required');
 }
 
-export async function getAdminStats(actorEmail: string) {
+export async function getAdminStats(_actorEmail: string) {
   try {
-    if (process.env.APPWRITE_API) {
-      const { users, databases } = createAdminClient(actorEmail);
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const appwritePromise = Promise.all([
-        users.list([Query.limit(10), Query.orderDesc('$createdAt')]),
-        databases.listRows(
-          APPWRITE_CONFIG.DATABASES.NOTE,
-          APPWRITE_CONFIG.TABLES.NOTE.ACTIVITY_LOG,
-          [Query.greaterThanEqual('$createdAt', oneDayAgo), Query.limit(1), Query.select(['$createdAt'])]
-        ).catch(() => null),
-      ]);
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Appwrite admin stats query timed out')), 2500)
-      );
-      const [userList, activityResult] = await Promise.race([appwritePromise, timeoutPromise]);
-      const totalUsers = userList.total;
-      const recentUsers = userList.users.map((u: any) => ({
-        name: u.name || 'Anonymous',
-        email: u.email,
-        date: u.$createdAt}));
-      const activeNow = activityResult ? activityResult.total : Math.floor(totalUsers * 0.05);
+    const usersInTurso = await db.select().from(schema.user).orderBy(desc(schema.user.createdAt)).limit(10);
+    const totalCountRes = await db.select({ value: count() }).from(schema.user);
+    const totalUsers = totalCountRes[0]?.value ?? usersInTurso.length;
 
-      return {
-        totalUsers,
-        activeNow,
-        recentUsers,
-        growth: '+14.2%',
-        systemHealth: '99.9%',
-        analytics: [
-          { name: 'Mon', users: Math.floor(totalUsers * 0.1) },
-          { name: 'Tue', users: Math.floor(totalUsers * 0.12) },
-          { name: 'Wed', users: Math.floor(totalUsers * 0.15) },
-          { name: 'Thu', users: Math.floor(totalUsers * 0.11) },
-          { name: 'Fri', users: Math.floor(totalUsers * 0.14) },
-          { name: 'Sat', users: Math.floor(totalUsers * 0.08) },
-          { name: 'Sun', users: Math.floor(totalUsers * 0.18) }]};
-    }
-  } catch (err: any) {
-    console.warn('[getAdminStats] Appwrite stats failed, falling back to Turso:', err.message);
-  }
-
-  // Fallback to Turso / SQLite
-  try {
-    const { db } = await import('@/lib/db');
-    const { user } = await import('@/lib/db/schema');
-    const usersInTurso = await db.select().from(user).limit(100);
-    const totalUsers = usersInTurso.length;
-    const recentUsers = usersInTurso.slice(0, 10).map((u: any) => ({
+    const recentUsers = usersInTurso.map((u) => ({
       name: u.name || 'User',
       email: u.email,
       date: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
@@ -74,7 +37,7 @@ export async function getAdminStats(actorEmail: string) {
       activeNow: Math.max(1, Math.floor(totalUsers * 0.1)),
       recentUsers,
       growth: '+10.0%',
-      systemHealth: '100% (Standalone)',
+      systemHealth: '100%',
       analytics: [
         { name: 'Mon', users: Math.floor(totalUsers * 0.1) },
         { name: 'Tue', users: Math.floor(totalUsers * 0.12) },
@@ -86,7 +49,7 @@ export async function getAdminStats(actorEmail: string) {
       ],
     };
   } catch (err: any) {
-    console.warn('[getAdminStats] Turso stats fallback warning:', err.message);
+    console.warn('[getAdminStats] Turso stats warning:', err.message);
     return {
       totalUsers: 1,
       activeNow: 1,
@@ -105,57 +68,15 @@ export async function listAdminUsers(
     limit?: number;
     cursorAfter?: string | null;
   },
-  actorEmail: string
+  _actorEmail: string
 ) {
   const search = (params.search || '').trim().toLowerCase();
   const verifiedOnly = Boolean(params.verifiedOnly);
   const limit = Math.min(Math.max(Number(params.limit || 100), 1), 100);
-  const cursorAfter = params.cursorAfter?.trim() || null;
-  
-  try {
-    if (process.env.APPWRITE_API) {
-      const { users } = createAdminClient(actorEmail);
-      const queries = [Query.limit(limit), Query.orderDesc('$createdAt'), ...(cursorAfter ? [Query.cursorAfter(cursorAfter)] : [])];
-      const appwritePromise = users.list(queries);
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Appwrite listAdminUsers query timed out')), 2500)
-      );
-      const response = await Promise.race([appwritePromise, timeoutPromise]);
-      const filteredUsers = search
-        ? response.users.filter((user: any) => [user.$id, user.name || '', user.email || ''].join(' ').toLowerCase().includes(search))
-        : response.users;
-      const visibleUsers = verifiedOnly ? filteredUsers.filter((user: any) => user.emailVerification) : filteredUsers;
-      const nextCursor = response.users.length > 0 ? response.users[response.users.length - 1].$id : null;
-      const hasMore = response.users.length === limit;
 
-      return {
-        users: visibleUsers.map((user: any) => ({
-          id: user.$id,
-          name: user.name || 'Anonymous',
-          email: user.email,
-          status: user.status ? 'active' : 'inactive',
-          role: user.labels.includes('admin') ? 'admin' : 'user',
-          joinDate: new Date(user.$createdAt).toLocaleDateString('en-US', {
-            month: 'short',
-            day: '2-digit',
-            year: 'numeric'}),
-          emailVerification: user.emailVerification,
-          labels: user.labels})),
-        total: visibleUsers.length,
-        rawTotal: response.total,
-        nextCursor,
-        hasMore};
-    }
-  } catch (err: any) {
-    console.warn('[listAdminUsers] Appwrite users query warning, falling back to Turso:', err.message);
-  }
-
-  // Fallback to Turso / SQLite
   try {
-    const { db } = await import('@/lib/db');
-    const { user } = await import('@/lib/db/schema');
-    const allUsers = await db.select().from(user).limit(limit);
-    const filtered = allUsers.filter((u: any) => {
+    const allUsers = await db.select().from(schema.user).orderBy(desc(schema.user.createdAt)).limit(limit);
+    const filtered = allUsers.filter((u) => {
       const haystack = [u.id, u.name || '', u.email || ''].join(' ').toLowerCase();
       if (search && !haystack.includes(search)) return false;
       if (verifiedOnly && !u.emailVerified) return false;
@@ -163,7 +84,7 @@ export async function listAdminUsers(
     });
 
     return {
-      users: filtered.map((u: any) => ({
+      users: filtered.map((u) => ({
         id: u.id,
         name: u.name || 'Anonymous',
         email: u.email,
@@ -179,7 +100,7 @@ export async function listAdminUsers(
       hasMore: false,
     };
   } catch (err: any) {
-    console.warn('[listAdminUsers] Turso users fallback warning:', err.message);
+    console.warn('[listAdminUsers] Turso users list warning:', err.message);
     return {
       users: [],
       total: 0,

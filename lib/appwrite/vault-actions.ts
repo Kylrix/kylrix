@@ -1,4 +1,4 @@
-import { ID, Query } from "appwrite";
+import { ID, Query } from "./types";
 import {
   VaultService,
   vaultDatabases as appwriteDatabases,

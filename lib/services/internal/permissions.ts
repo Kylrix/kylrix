@@ -10,7 +10,7 @@ import {
   removeLockboxRows,
   resolveNextEpochNumber,
   upsertLockboxRows} from '@/lib/api/permission-updater';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { createSystemClient } from '@/lib/appwrite/types';
 import { createServerClient } from '@/lib/appwrite/server';
 
 const DEFAULT_thread_RESOURCE_TYPE = 'thread_note';

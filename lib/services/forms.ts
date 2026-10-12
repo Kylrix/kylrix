@@ -1,8 +1,7 @@
 import { tablesDB, getCurrentUser } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { getEcosystemUrl } from '../constants';
-import { ID, Query, Permission, Role } from 'appwrite';
-import { Forms, FormSubmissions, FormSubmissionsStatus, ActivityLog } from '../../generated/appwrite/types';
+import { Forms, FormSubmissions, FormSubmissionsStatus, ActivityLog } from '@/types/appwrite';
 import { sendKylrixEmailNotification } from '../email-notifications';
 
 const DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
@@ -73,9 +72,9 @@ export const FormsService = {
                 databaseId: DATABASE_ID,
                 tableId: FORMS_TABLE,
                 queries: [
-                    Query.equal('$id', formId),
-                    Query.limit(1),
-                    Query.select(['$id', 'userId', 'status', 'settings', 'title', 'description', 'schema', 'isPublic', 'isGuest', '$createdAt'])
+                    `equal("$id", ${JSON.stringify(formId)})`,
+                    'limit(1)',
+                    `select(${JSON.stringify(['$id', 'userId', 'status', 'settings', 'title', 'description', 'schema', 'isPublic', 'isGuest', '$createdAt'])})`
                 ]
             });
             const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
@@ -200,10 +199,10 @@ export const FormsService = {
             databaseId: DATABASE_ID,
             tableId: SUBMISSIONS_TABLE,
             queries: [
-                Query.equal('formId', formId),
-                Query.equal('submitterId', userId),
-                Query.limit(20),
-                Query.select(['$id', 'formId', 'submitterId', 'status', 'metadata', 'payload', '$createdAt'])
+                `equal("formId", ${JSON.stringify(formId)})`,
+                `equal("submitterId", ${JSON.stringify(userId)})`,
+                'limit(20)',
+                `select(${JSON.stringify(['$id', 'formId', 'submitterId', 'status', 'metadata', 'payload', '$createdAt'])})`
             ]
         });
 
@@ -225,10 +224,10 @@ export const FormsService = {
             databaseId: DATABASE_ID,
             tableId: SUBMISSIONS_TABLE,
             queries: [
-                Query.equal('formId', formId),
-                Query.equal('submitterId', userId),
-                Query.limit(20),
-                Query.select(['$id', 'formId', 'submitterId', 'status', 'metadata', 'payload', '$createdAt'])
+                `equal("formId", ${JSON.stringify(formId)})`,
+                `equal("submitterId", ${JSON.stringify(userId)})`,
+                'limit(20)',
+                `select(${JSON.stringify(['$id', 'formId', 'submitterId', 'status', 'metadata', 'payload', '$createdAt'])})`
             ]
         });
 
@@ -240,8 +239,7 @@ export const FormsService = {
             } catch (_e) { return false; }
         });
 
-        const submissionPermissions = [
-            Permission.read(Role.user(userId))];
+        const submissionPermissions = [`read("user:${userId}")`];
 
         if (existingDraft) {
             return await tablesDB.updateRow<FormSubmissions>(
@@ -261,7 +259,7 @@ export const FormsService = {
         return await tablesDB.createRow<FormSubmissions>(
             DATABASE_ID,
             SUBMISSIONS_TABLE,
-            ID.unique(),
+            crypto.randomUUID(),
             {
                 formId,
                 submitterId: userId,
@@ -320,12 +318,11 @@ export const FormsService = {
 
         // Submissions Table permissions:
         // 1. Owner can READ/UPDATE/DELETE
-        const submissionPermissions = [
-            Permission.read(Role.user(form.userId))];
+        const submissionPermissions = [`read("user:${form.userId}")`];
 
         // 2. If user is logged in, allow THEM to read their own submission later
         if (submitterId) {
-            submissionPermissions.push(Permission.read(Role.user(submitterId)));
+            submissionPermissions.push(`read("user:${submitterId}")`);
         }
 
         const isMultiple = Boolean((form as any).isMultiple);
@@ -337,10 +334,10 @@ export const FormsService = {
                 databaseId: DATABASE_ID,
                 tableId: SUBMISSIONS_TABLE,
                 queries: [
-                    Query.equal('formId', formId),
-                    Query.equal('submitterId', submitterId),
-                    Query.limit(20),
-                    Query.select(['$id', 'formId', 'submitterId', 'status', 'metadata', '$createdAt'])
+                    `equal("formId", ${JSON.stringify(formId)})`,
+                    `equal("submitterId", ${JSON.stringify(submitterId)})`,
+                    'limit(20)',
+                    `select(${JSON.stringify(['$id', 'formId', 'submitterId', 'status', 'metadata', '$createdAt'])})`
                 ]
             });
 
@@ -449,7 +446,7 @@ export const FormsService = {
                         created = await tablesDB.createRow<FormSubmissions>(
                             DATABASE_ID,
                             SUBMISSIONS_TABLE,
-                            ID.unique(),
+                            crypto.randomUUID(),
                             {
                                 formId,
                                 submitterId: submitterId || null,
@@ -469,7 +466,7 @@ export const FormsService = {
                 submission = await tablesDB.createRow<FormSubmissions>(
                     DATABASE_ID,
                     SUBMISSIONS_TABLE,
-                    ID.unique(),
+                    crypto.randomUUID(),
                     {
                         formId,
                         submitterId: null,
@@ -508,7 +505,7 @@ export const FormsService = {
             await tablesDB.createRow<ActivityLog>(
                 NOTE_DATABASE_ID,
                 ACTIVITY_LOG_TABLE,
-                ID.unique(),
+                crypto.randomUUID(),
                 {
                     userId: form.userId,
                     action: `New submission received for form: ${form.title}`,
@@ -597,9 +594,9 @@ export const FormsService = {
             databaseId: DATABASE_ID,
             tableId: SUBMISSIONS_TABLE,
             queries: [
-                Query.equal('formId', formId),
-                Query.notEqual('isTrash', true),
-                Query.orderDesc('$createdAt')
+                `equal("formId", ${JSON.stringify(formId)})`,
+                'notEqual("isTrash", true)',
+                'orderDesc("$createdAt")'
             ]
         });
 
@@ -611,7 +608,7 @@ export const FormsService = {
                 const userRes = await tablesDB.listRows<any>({
                     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
                     tableId: 'users', 
-                    queries: [Query.equal('$id', submitterIds)] 
+                    queries: [`equal("$id", ${JSON.stringify(submitterIds)})`]
                 });
                 
                 // Map of userId -> username

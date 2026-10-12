@@ -1,4 +1,4 @@
-import { Permission, Query, Role } from 'node-appwrite';
+import { Permission, Query, Role } from '@/lib/appwrite/types';
 import { systemTables } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { ledgerMeetsFeature } from '@/lib/config/pricing-plans';

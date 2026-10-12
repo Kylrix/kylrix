@@ -25,15 +25,6 @@
     "paths": {
       "@/*": [
         "./*"
-      ],
-      "appwrite": [
-        "./lib/shims/appwrite.ts"
-      ],
-      "node-appwrite": [
-        "./lib/shims/node-appwrite.ts"
-      ],
-      "node-appwrite/file": [
-        "./lib/shims/node-appwrite-file.ts"
       ]
     }
   },
@@ -46,8 +37,6 @@
   ],
   "exclude": [
     "node_modules",
-    "generated",
-    "generated/**",
     "functions",
     "functions/**",
     "**/*.test.ts",

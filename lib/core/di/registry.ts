@@ -1,12 +1,25 @@
 import { DatabasePort } from '../ports/database.port';
 import { AuthPort } from '../ports/auth.port';
 import { FunctionsPort } from '../ports/functions.port';
-import { MessagingPort } from '../ports/messaging.port';
+import { MessagingPort, EmailPayload, UnorganicEmailPayload } from '../ports/messaging.port';
 
 import { TursoDatabaseAdapter } from '../adapters/turso/database.adapter';
 import { TursoAuthAdapter } from '../adapters/turso/auth.adapter';
-import { AppwriteFunctionsAdapter } from '../adapters/appwrite/functions.adapter';
-import { AppwriteMessagingAdapter } from '../adapters/appwrite/messaging.adapter';
+
+export class StubFunctionsAdapter implements FunctionsPort {
+  async executeFunction(_functionId: string, _data?: string): Promise<any> {
+    return { status: 'completed', responseBody: '' };
+  }
+}
+
+export class StubMessagingAdapter implements MessagingPort {
+  async sendEmail(_payload: EmailPayload): Promise<{ success: boolean }> {
+    return { success: true };
+  }
+  async dispatchUnorganicEmail(_payload: UnorganicEmailPayload): Promise<{ success: boolean }> {
+    return { success: true };
+  }
+}
 
 export class Registry {
   private static db: DatabasePort | null = null;
@@ -30,14 +43,14 @@ export class Registry {
 
   static getFunctions(): FunctionsPort {
     if (!this.functions) {
-      this.functions = new AppwriteFunctionsAdapter();
+      this.functions = new StubFunctionsAdapter();
     }
     return this.functions;
   }
 
   static getMessaging(): MessagingPort {
     if (!this.messaging) {
-      this.messaging = new AppwriteMessagingAdapter();
+      this.messaging = new StubMessagingAdapter();
     }
     return this.messaging;
   }

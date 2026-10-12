@@ -1,4 +1,4 @@
-import { Permission, Role, Query } from 'appwrite';
+import { Permission, Role, Query } from '@/lib/appwrite/types';
 import { tablesDB, storage } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { seedIdentityCache } from '../identity-cache';

@@ -1,6 +1,7 @@
+import { systemTables } from '@/lib/data/system-tables';
 import { createServerClient } from '@/lib/appwrite/server';
-import { ID, Permission, Role, Query } from 'node-appwrite';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+import { ID, Permission, Role, Query } from '@/lib/appwrite/types';
+
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createHash } from 'node:crypto';
 import { withSystemTransaction } from './transaction';
@@ -140,7 +141,7 @@ async function deleteRowsInBatches(
 async function deleteRowsTransactional(txId: string, databaseId: string, tableId: string, rowIds: string[]) {
   const uniqueIds = Array.from(new Set(rowIds.filter(Boolean)));
   if (!uniqueIds.length) return 0;
-  const tables: any = createSystemTablesDB();
+  const tables: any = systemTables();
   for (let i = 0; i < uniqueIds.length; i += 10) {
     const batch = uniqueIds.slice(i, i + 10);
     await Promise.all(batch.map((rowId: string) => tables.deleteRow({ databaseId, tableId, rowId, transactionId: txId })));
@@ -1060,7 +1061,7 @@ export async function clearChatForMeInternal(payload: {
   // Transactional single-row update — ensures settings flip is atomic with any concurrent deletes
   try {
     await withSystemTransaction(async (txId) => {
-      const tables: any = createSystemTablesDB();
+      const tables: any = systemTables();
       await tables.updateRow({ databaseId: CHAT_DB_ID, tableId: CONVERSATIONS_TABLE_ID, rowId: payload.conversationId, data: { settings: payload.encryptedSettings }, transactionId: txId });
     }, { ttl: 30 });
   } catch {
@@ -1176,7 +1177,7 @@ export async function createConversationTransactionalInternal(payload: {
   let result: any;
   try {
     result = await withSystemTransaction(async (txId) => {
-    const tables: any = createSystemTablesDB();
+    const tables: any = systemTables();
     // Stage conversation
     await tables.createRow({ databaseId: CHAT_DB_ID, tableId: CONVERSATIONS_TABLE_ID, rowId: convId, data: convData, permissions: convPerms, transactionId: txId });
     // Stage members

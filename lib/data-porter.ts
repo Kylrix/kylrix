@@ -5,7 +5,7 @@
  * Handles import/export operations with progress tracking and fallback.
  */
 
-import { Functions, ExecutionMethod } from 'appwrite';
+import { Functions, ExecutionMethod } from '@/lib/appwrite/types';
 import { client } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 

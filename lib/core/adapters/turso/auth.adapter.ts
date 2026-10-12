@@ -2,8 +2,19 @@ import { AuthPort, Actor } from '../../ports/auth.port';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { isEmailInAdminList } from '@/lib/appwrite-admin';
 import { auth } from '@/lib/auth/better-auth';
+
+export function isEmailInAdminList(email?: string | null): boolean {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return false;
+
+  const adminList = String(process.env.ADMINS || '')
+    .split(',')
+    .map((e: any) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  return adminList.includes(normalized);
+}
 
 // In-memory actor cache (TTL 60,000ms) with in-flight deduplication
 const actorCache = new Map<string, { actor: Actor | null; expiresAt: number }>();

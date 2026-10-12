@@ -1,4 +1,4 @@
-import { Databases, ID, Permission, Query, Role, Storage } from 'node-appwrite';
+import { Databases, ID, Permission, Query, Role, Storage } from '@/lib/appwrite/types';
 import { createHash } from 'node:crypto';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 

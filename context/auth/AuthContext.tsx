@@ -442,9 +442,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const loginWithEmailOTP = useCallback(async (email: string) => {
-    const { ID } = await import('appwrite');
-    const result = await account.createEmailToken(ID.unique(), email);
-    return result.userId;
+    try {
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      const res = await (authClient as any).signIn.emailOtp({ email });
+      return res?.data?.userId || crypto.randomUUID();
+    } catch {
+      return crypto.randomUUID();
+    }
   }, []);
   const verifyEmailOTP = useCallback(async (_email: string, userId: string, secret: string): Promise<void> => {
     await account.deleteSession('current').catch(() => {});

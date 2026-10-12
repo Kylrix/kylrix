@@ -1,3 +1,4 @@
+import { systemTables } from '@/lib/data/system-tables';
 /**
  * Modular Transactions helper — system SDK / server actions only.
  * Wraps Appwrite TablesDB Transactions API for atomic multi-table writes.
@@ -14,7 +15,7 @@
  * If any staged op fails or commit conflicts, entire transaction rolls back.
  */
 
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+
 
 export type TransactionCallback<T> = (txId: string) => Promise<T>;
 
@@ -22,7 +23,7 @@ export async function withSystemTransaction<T>(
   fn: TransactionCallback<T>,
   opts?: { ttl?: number }
 ): Promise<T> {
-  const tables: any = createSystemTablesDB();
+  const tables: any = systemTables();
   if (typeof tables?.createTransaction !== 'function') {
     return await fn(`tx_fallback_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
   }
@@ -57,6 +58,6 @@ export async function stageOperations(
   }>
 ): Promise<void> {
   if (!operations.length) return;
-  const tables: any = createSystemTablesDB();
+  const tables: any = systemTables();
   await tables.createOperations({ transactionId: txId, operations } as any);
 }

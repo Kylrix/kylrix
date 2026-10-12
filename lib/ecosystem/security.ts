@@ -7,7 +7,7 @@
 import { MeshProtocol } from './mesh';
 import { tablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Query, ID } from 'appwrite';
+import { Query, ID } from '@/lib/appwrite/types';
 import { decodeBase64ToBytes, normalizeStoredSecretString } from '@/lib/crypto/public-key';
 
 const PW_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;

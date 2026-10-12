@@ -3,14 +3,14 @@
 import * as shared from './shared';
 import {
   ID, Permission, Query, Role
-} from 'node-appwrite';
+} from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
 import {
   allowsCollaboratorSharing,
   getProjectCap
 } from '@/lib/entitlements';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+
 import { provisionHybridTeamExpansionSecure } from '@/lib/api/permission-updater';
 import { executeCascadeDeleteSecure } from '../cascade-delete';
 import {
@@ -98,7 +98,7 @@ export async function getPublicFormDataSecure(formId: string) {
   // 3. Fallback to Appwrite with timeout race
   if (!row) {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const appwritePromise = tables.getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
         tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
@@ -188,7 +188,7 @@ export async function submitPublicFormDataSecure(input: {
   // 2. Non-blocking Appwrite sync
   void (async () => {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       await tables.createRow({
         databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
         tableId: APPWRITE_CONFIG.TABLES.FLOW.FORM_SUBMISSIONS,
@@ -246,7 +246,7 @@ export async function getPublicGoalDataSecure(goalId: string, _jwt?: string) {
   // 2. Fallback to Appwrite
   if (!row) {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       row = await tables.getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
         tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
@@ -361,7 +361,7 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
 
   // 2. Secondary/Appwrite sync query (non-blocking fallback with short timeout)
   try {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
     const CHAT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
     const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
@@ -448,7 +448,7 @@ export async function createProjectSecure(data: any, jwt?: string) {
   const validated = ProjectSchema.parse(data);
   const userTier = getUserSubscriptionTier(actor);
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const existingProjects = await tables.listRows({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
@@ -517,7 +517,7 @@ export async function updateProjectSecure(projectId: string, data: any, permissi
     throw new Error('Forbidden: Insufficient permissions to update this project');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const existing = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
@@ -587,7 +587,7 @@ export async function deleteProjectSecure(
 
   // 2. Soft update in Appwrite with short timeout to prevent hanging
   try {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     await Promise.race([
       tables.updateRow({
         databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
@@ -610,7 +610,7 @@ export async function requestProjectAccessSecure(projectId: string, jwt?: string
     throw new Error('Unauthorized');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
   const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
 
@@ -672,7 +672,7 @@ export async function acceptProjectInviteSecure(projectId: string, jwt?: string)
     throw new Error('Unauthorized');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const project = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
@@ -880,7 +880,7 @@ export async function addObjectToProjectSecure(
   const { hasPaidKylrixPlanServer } = await import('@/lib/services/internal/subscription-entitlement');
   const isActorPaid = await hasPaidKylrixPlanServer(actor.$id);
   if (!isActorPaid) {
-    const probeTables = createSystemTablesDB();
+    const probeTables = systemTables();
     const proj = (await probeTables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
@@ -900,7 +900,7 @@ export async function addObjectToProjectSecure(
     throw new Error('Forbidden: Insufficient permissions to manage objects in this project');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const now = new Date().toISOString();
 
   const duplicateRes = await tables.listRows({
@@ -1009,7 +1009,7 @@ export async function listProjectTaggedResourcesSecure(
     return { ...EMPTY_TAGGED };
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const databaseId = APPWRITE_CONFIG.DATABASE_ID;
   const pivotTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'resource_tags';
   const tagsTable = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
@@ -1143,7 +1143,7 @@ export async function getSweptConfigSecure(projectId: string, jwt?: string) {
     throw new Error('Forbidden: Insufficient permissions to view this project');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const existing = await tables.listRows({
     databaseId: APPWRITE_CONFIG.DATABASE_ID,
     tableId: APPWRITE_CONFIG.TABLES.SWEPT || 'swept',
@@ -1182,7 +1182,7 @@ export async function upsertSweptConfigSecure(
     throw new Error('Forbidden: Insufficient permissions to update project settings');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const tableId = APPWRITE_CONFIG.TABLES.SWEPT || 'swept';
   const now = new Date().toISOString();
   const existing = await tables.listRows({
@@ -1254,7 +1254,7 @@ export async function removeObjectFromProjectSecure(objectId: string, jwt?: stri
     throw new Error('Backend database storage requires a paid plan. Your changes remain saved locally on your device.');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   const obj = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
@@ -1303,7 +1303,7 @@ export async function createFormSecure(data: any, jwt?: string) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const status = data.status || 'draft';
   const isPublic = data.isPublic !== undefined ? data.isPublic : status === 'published';
   const isGuest = data.isGuest !== undefined ? data.isGuest : status === 'published';
@@ -1374,7 +1374,7 @@ export async function listUserFormsSecure(userId?: string, jwt?: string) {
   }
 
   // Use admin SDK directly - bypasses RLS so we always get the user's own forms
-  const systemTables = createSystemTablesDB();
+  const systemTables = systemTables();
 
   const result = await systemTables.listRows({
     databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1405,7 +1405,7 @@ export async function updateFormSecure(formId: string, data: any, jwt?: string) 
     throw new Error('Forbidden: Insufficient permissions to update this form');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   const form = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1463,7 +1463,7 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
   rowCache.delete(cacheKey);
 
   // Directly retrieve the form details using system privileges to verify owner identity
-  const systemTables = createSystemTablesDB();
+  const systemTables = systemTables();
   let formRow = null;
   try {
       formRow = await systemTables.getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, formId);
@@ -1531,7 +1531,7 @@ export async function createEventSecure(data: any, jwt?: string) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const isPublic = data.isPublic !== undefined ? Boolean(data.isPublic) : true;
 
   const { ownerRowPermissions } = await import('@/lib/appwrite/owner-acl');
@@ -1567,7 +1567,7 @@ export async function updateEventSecure(eventId: string, data: any, jwt?: string
     throw new Error('Forbidden: Insufficient permissions to update this event');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   const event = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1627,7 +1627,7 @@ export async function deleteEventSecure(eventId: string, jwt?: string) {
     throw new Error('Forbidden: Insufficient permissions to delete this event');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   // Cascade delete guests
   try {
@@ -1657,7 +1657,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
     throw new Error('Forbidden: Insufficient permissions to manage managers');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   // 1. Fetch current event to update permissions
   const event = await tables.getRow({
@@ -1767,7 +1767,7 @@ export async function removeEventManagerSecure(eventId: string, targetUserId: st
     throw new Error('Forbidden: Insufficient permissions to manage managers');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   // 1. Fetch current event to update permissions
   const event = await tables.getRow({
@@ -1844,7 +1844,7 @@ export async function convertResponseToGoalSecure(submissionId: string, jwt?: st
     throw new Error('Unauthorized');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const submission = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
     tableId: 'formSubmissions',
@@ -1928,7 +1928,7 @@ export async function initGoalDiscussionSecure(taskId: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const goal = await tables.getRow<any>(
     APPWRITE_CONFIG.DATABASES.FLOW,
     APPWRITE_CONFIG.TABLES.FLOW.TASKS,
@@ -1978,7 +1978,7 @@ export async function approveProjectJoinRequestSecure(projectId: string, targetU
     throw new Error('Forbidden: Only owners and admins can approve join requests');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
   const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
 
@@ -2059,7 +2059,7 @@ export async function createGoalSecure(data: any, jwt?: string): Promise<any> {
     const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
     const { pickGoalAutosavePayload } = await import('@/lib/goals/pick-goal-autosave-payload');
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const reservedRowId = [data?.$id, data?.id].find(
       (id) => typeof id === 'string' && isValidAppwriteRowId(id),
     ) as string | undefined;
@@ -2134,7 +2134,7 @@ export async function updateGoalSecure(goalId: string, data: any, jwt?: string):
 
     const { pickGoalAutosavePayload } = await import('@/lib/goals/pick-goal-autosave-payload');
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = (await tables
       .getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -2206,7 +2206,7 @@ export async function deleteGoalSecure(goalId: string, jwt?: string): Promise<vo
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   try {
     await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -2225,7 +2225,7 @@ export async function deleteGoalSecure(goalId: string, jwt?: string): Promise<vo
 
 export async function resolveWorkspaceShareAccessSecure(workspaceId: string, jwt?: string) {
   const actor = await getActor(jwt).catch(() => null);
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
   const tableId = 'projects';
 
@@ -2338,7 +2338,7 @@ export async function rotateWorkspaceInviteCodeSecure(workspaceId: string, jwt?:
     throw new Error('Missing workspace ID');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
   const tableId = 'projects';
 
@@ -2398,7 +2398,7 @@ export async function joinWorkspaceByInviteCodeSecure(workspaceId: string, invit
     throw new Error('Invalid workspace or invite code');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
   const tableId = 'projects';
 
@@ -2568,7 +2568,7 @@ export async function getSharedWorkspaceEntitiesSecure(
       return { success: false, rows: [], message: access.message || 'No access to workspace' };
     }
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
 
     let normKind = entityKind.toLowerCase().trim();
@@ -2730,7 +2730,7 @@ export async function resolveAgentKeyBlobSecure(
     const rawId = String(agentOrWorkspaceId).replace(/^agent_/, '').trim();
     if (!rawId) return { success: false, error: 'Agent ID required' };
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const dbId = APPWRITE_CONFIG.DATABASES.FLOW;
 
     // 1. Try direct agent row

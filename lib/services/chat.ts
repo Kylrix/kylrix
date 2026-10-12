@@ -1,4 +1,4 @@
-import { ID, Permission, Query, Role } from 'appwrite';
+import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
 import { account, storage, tablesDB, getCurrentUser } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';

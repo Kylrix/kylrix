@@ -1,8 +1,9 @@
+import { systemTables } from '@/lib/data/system-tables';
 'use server';
 
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Permission, Role, Query } from 'node-appwrite';
+import { Permission, Role, Query } from '@/lib/appwrite/types';
 import { z } from 'zod';
 import { JWTSchema } from '@/lib/validations/schemas';
 import {
@@ -36,7 +37,7 @@ export async function initializeTelegramConnection(
     const pairCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Create the system tables client to write with proper terminology rows methods
-    const databases = createSystemTablesDB();
+    const databases = systemTables();
 
     // Check if the record already exists
     let existingDoc = null;
@@ -175,7 +176,7 @@ export async function checkTelegramConnection(jwt?: string) {
       }
     } catch {}
 
-    const databases = createSystemTablesDB();
+    const databases = systemTables();
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_API;
     if (botToken) {
@@ -310,7 +311,7 @@ async function syncServerTelegramListener(jwt?: string) {
     return;
   }
 
-  const databases = createSystemTablesDB();
+  const databases = systemTables();
 
   // Check if there are any active pending (unverified) connections
   try {
@@ -399,7 +400,7 @@ function runPollerLoop(botToken: string) {
         }
       }
 
-      const databasesInstance = createSystemTablesDB();
+      const databasesInstance = systemTables();
       const listRes = await databasesInstance.listRows(
         APPWRITE_CONFIG.DATABASES.CONNECT,
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,

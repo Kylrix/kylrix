@@ -1,4 +1,4 @@
-import { ID, Query, Permission, Role } from 'appwrite';
+import { ID, Query, Permission, Role } from './types';
 import { account, databases, getCurrentUser } from './client';
 import type {
   Notes,

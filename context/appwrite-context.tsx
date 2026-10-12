@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from 'react';
-import type { Models } from 'appwrite';
+import type { Models } from '@/lib/appwrite/types';
 
 export interface AppwriteContextType {
   user: Models.User<Models.Preferences> | null;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Priority, TaskStatus, TaskCollaborator, CollaboratorPermission } from '@/types';
-import { Query } from 'appwrite';
+
 import { notes as noteApi } from '@/lib/kylrixflow';
 import { 
   X, 

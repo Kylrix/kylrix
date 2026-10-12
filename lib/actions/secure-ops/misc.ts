@@ -1,13 +1,14 @@
+import { systemTables } from '@/lib/data/system-tables';
 'use server';
 
 import * as shared from './shared';
 import {
   ID, Permission, Query, Role
-} from 'node-appwrite';
+} from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+
 import { withSystemTransaction } from '@/lib/services/internal/transaction';
 import { Registry } from '@/lib/core/di/registry';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
@@ -431,7 +432,7 @@ export async function createSendthreadObjectSecure(data: {
     isEncrypted: data.isEncrypted ?? false,
     ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {})});
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const result = await tables.createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
@@ -619,7 +620,7 @@ export async function createRowSecure(
     }
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   // Setup permissions
   if (!perms) {
     if (actor && actor.$id) {
@@ -866,7 +867,7 @@ export async function deleteRowSecure(
   // Transactional parent delete (same DB as cascade children for notes/objects in NOTE/CHAT/FLOW where possible)
   try {
     await withSystemTransaction(async (txId) => {
-      const t: any = createSystemTablesDB();
+      const t: any = systemTables();
       await t.deleteRow({ databaseId: dbId, tableId: tblId, rowId: rId, transactionId: txId });
     }, { ttl: 60 });
   } catch {
@@ -919,7 +920,7 @@ export async function batchTrashFormSubmissionsSecure(
 
   if (!isFormOwner) {
     // If not form owner, verify each submission belongs to the submitter
-    const tables: any = createSystemTablesDB();
+    const tables: any = systemTables();
     for (const subId of ids) {
       try {
         const sub = await tables.getRow({ databaseId: dbId, tableId: submissionsTable, rowId: subId });
@@ -933,7 +934,7 @@ export async function batchTrashFormSubmissionsSecure(
   // Atomically update all submissions to isTrash: true using Appwrite Transactions API
   try {
     await withSystemTransaction(async (txId) => {
-      const tables: any = createSystemTablesDB();
+      const tables: any = systemTables();
       for (const subId of ids) {
         await tables.updateRow({
           databaseId: dbId,
@@ -946,7 +947,7 @@ export async function batchTrashFormSubmissionsSecure(
     }, { ttl: 60 });
   } catch (_err) {
     // Fallback: batch update with system client
-    const tables: any = createSystemTablesDB();
+    const tables: any = systemTables();
     await Promise.all(
       ids.map(subId =>
         tables.updateRow({
@@ -977,7 +978,7 @@ export async function searchGlobalUsersSecure(query: string, limit = 10, callerU
     } catch {}
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const databaseId = APPWRITE_CONFIG.DATABASES.CHAT;
   const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
   const isEmailQuery = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned);
@@ -1063,7 +1064,7 @@ export async function getProfileByUsernameSecure(username: string) {
   }
 
   // 2. Secondary: Fallback to Appwrite with timeout
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const databaseId = APPWRITE_CONFIG.DATABASES.CHAT;
   const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 
@@ -1119,7 +1120,7 @@ export async function getRowSecure(databaseId: string, tableId: string, rowId: s
       try {
         const actor = await getActor(jwt);
         if (actor?.$id) {
-          const adminTables = createSystemTablesDB();
+          const adminTables = systemTables();
           const adminRes = await adminTables.getRow({
             databaseId,
             tableId,
@@ -1200,7 +1201,7 @@ export async function promotethreadResourceThreadToStorySecure(
     throw new Error('Unauthorized');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   // 1. Fetch all comments linked to this resource's discussion note
   const commentsList = await tables.listRows({
@@ -1291,7 +1292,7 @@ export async function deleteThreadSecure(threadId: string, jwt?: string) {
     const actor = await getActor(jwt);
     if (!actor || !actor.$id) throw new Error('Unauthorized');
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
     const threadsTable = APPWRITE_CONFIG.TABLES.NOTE.THREADS || 'threads';
     const notesTable = APPWRITE_CONFIG.TABLES.NOTE.NOTES || 'notes';
@@ -1430,7 +1431,7 @@ export async function getGlobalProfileStatusSecure(userId: string) {
   if (!targetUserId) return { exists: false, error: 'userId is required' };
 
   try {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
@@ -1459,7 +1460,7 @@ export async function toggleResourcePublicGuestSecure(params: {
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const { resourceType, resourceId, mode, projectId } = params;
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   const config = getResourceConfig(resourceType);
   if (!config) throw new Error(`Unsupported resource type: ${resourceType}`);
@@ -1543,7 +1544,7 @@ export async function toggleResourcePublicGuestSecure(params: {
   try {
     try {
       await withSystemTransaction(async (txId) => {
-        await (createSystemTablesDB() as any).updateRow({ databaseId: config.databaseId, tableId: config.tableId, rowId: resourceId, data: updateData, permissions: updatedPermissions, transactionId: txId });
+        await (systemTables() as any).updateRow({ databaseId: config.databaseId, tableId: config.tableId, rowId: resourceId, data: updateData, permissions: updatedPermissions, transactionId: txId });
       }, { ttl: 30 });
     } catch {
       await tables.updateRow({
@@ -1596,7 +1597,7 @@ export async function getResourcePublicGuestSecure(params: {
   const config = getResourceConfig(params.resourceType);
   if (!config) throw new Error(`Unsupported resource type: ${params.resourceType}`);
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const row = await tables.getRow({
     databaseId: config.databaseId,
     tableId: config.tableId,
@@ -1642,7 +1643,7 @@ export async function attachObjectSecure(params: {
   const actor = await getActor(params.jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const databaseId = APPWRITE_CONFIG.DATABASES.FLOW;
   const tableId = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
 
@@ -1727,7 +1728,7 @@ export async function detachObjectByRelationSecure(params: {
   const actor = await getActor(params.jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const databaseId = APPWRITE_CONFIG.DATABASES.FLOW;
   const tableId = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
 
@@ -1777,7 +1778,7 @@ export async function getObjectsByParentSecure(parentId: string, parentKind: str
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const databaseId = APPWRITE_CONFIG.DATABASES.FLOW;
   const tableId = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
 
@@ -1886,7 +1887,7 @@ export async function upgradeKeychainToArgonAction(payload: {
   const { createSystemClient, createSystemTablesDB } = await import('@/lib/appwrite-admin');
   const { withSystemTransaction } = await import('@/lib/services/internal/transaction');
   const { databases } = createSystemClient();
-  const tables: any = createSystemTablesDB();
+  const tables: any = systemTables();
 
   // Find existing password entries to preserve authPass and clean up legacy records
   const existing = await databases.listRows(
@@ -1946,7 +1947,7 @@ export async function createStandaloneTagSecure(tagName: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
   const tagsTable = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
   const nameLower = tagName.trim().toLowerCase();
@@ -1973,7 +1974,7 @@ export async function toggleTaskReminderSecure(taskId: string, enabled: boolean,
   if (!actor?.$id) throw new Error('Unauthorized');
 
   const { createSystemClient } = await import('@/lib/appwrite-admin');
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
   const TASKS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
@@ -2071,7 +2072,7 @@ export async function purgeExpiredTrashSecure(input?: { retentionDays?: number; 
   const days = typeof input?.retentionDays === 'number' && input.retentionDays > 0 ? input.retentionDays : 90;
   const cutoffTimestamp = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const mainDb = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb';
 
   const targets = [
@@ -2211,7 +2212,7 @@ export async function replicateAccountAndKeychainSecure(params: {
     const { createSystemClient, createSystemTablesDB } = await import('@/lib/appwrite-admin');
     const { normalizeCloudEndpoint } = await import('@/lib/sync/cloud-sync-client');
     const systemClient = createSystemClient();
-    const tables: any = createSystemTablesDB();
+    const tables: any = systemTables();
 
     // 1. Fetch local account info
     let localUser: any = null;

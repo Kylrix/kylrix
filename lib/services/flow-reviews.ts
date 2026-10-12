@@ -1,5 +1,6 @@
-import { ID, Permission, Query, Role } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { systemTables } from '@/lib/data/system-tables';
+import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
+
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { detectFlowPii } from '@/lib/flows/pii';
 import { WorkflowDbService } from '@/lib/services/workflows';
@@ -23,7 +24,7 @@ export const FlowReviewService = {
     findings?: Record<string, unknown>;
     piiSummary?: string | null;
   }) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const now = new Date().toISOString();
     return tables.createRow({
       databaseId: DATABASE_ID,
@@ -47,7 +48,7 @@ export const FlowReviewService = {
   },
 
   async latestForFlow(flowId: string) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: DATABASE_ID,
       tableId: TABLE_ID,
@@ -106,7 +107,7 @@ export const FlowReviewService = {
         : null,
     });
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
 
     if (isRisky) {
       const verdict = hasNetwork || hasDeceptive ? 'blocked' : 'rejected';

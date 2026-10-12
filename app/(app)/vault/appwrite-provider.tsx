@@ -20,7 +20,7 @@ import { logDebug, logWarn } from '@/lib/logger';
 import { AppwriteContext } from '@/context/appwrite-context';
 
 // Types
-import type { Models } from 'appwrite';
+import type { Models } from '@/lib/appwrite/types';
 
 interface AppwriteError extends Error {
   code?: number;

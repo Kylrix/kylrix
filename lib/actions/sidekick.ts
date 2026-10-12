@@ -1,7 +1,7 @@
 'use server';
 
-import { Query, ID } from 'node-appwrite';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { Query, ID } from '@/lib/appwrite/types';
+import { createSystemClient } from '@/lib/appwrite/types';
 import { buildSidekickSystemInstruction, buildSidekickUserPrompt } from '@/lib/agentic/prompts/sidekick';
 import { getAgenticUserMessage } from '@/lib/agentic/errors';
 

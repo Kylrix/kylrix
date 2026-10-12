@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Query } from 'node-appwrite';
 import { ApiResources } from '@/lib/api/resources';
 import type { ApiActor } from '@/lib/api/guard';
 
@@ -153,7 +151,6 @@ export async function resolveTelegramUser(chatId: string | number): Promise<stri
     const schema = await import('@/lib/db/schema');
     const { eq, and } = await import('drizzle-orm');
 
-    // 1. Primary check in Turso
     const tursoRows = await db
       .select({ id: schema.telegramConnections.id })
       .from(schema.telegramConnections)
@@ -167,36 +164,6 @@ export async function resolveTelegramUser(chatId: string | number): Promise<stri
 
     if (tursoRows.length > 0 && tursoRows[0].id) {
       return tursoRows[0].id;
-    }
-
-    // 2. Fallback check in Appwrite and opportunistic sync to Turso
-    const { createSystemClient } = await import('@/lib/appwrite-admin');
-    const { databases } = createSystemClient();
-    const connList = await databases
-      .listRows(
-        APPWRITE_CONFIG.DATABASES.CONNECT,
-        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-        [
-          Query.equal('tg_chat_id', chatId.toString()),
-          Query.equal('is_verified', true),
-          Query.limit(1),
-        ]
-      )
-      .catch(() => ({ rows: [] as any[] }));
-
-    if (connList.rows.length > 0) {
-      const row = connList.rows[0];
-      const userId = row.$id;
-      const { upsertTelegramConnectionTurso } = await import('@/lib/actions/turso-ops');
-      await upsertTelegramConnectionTurso({
-        id: userId,
-        pairCode: row.pair_code || null,
-        tgChatId: row.tg_chat_id || null,
-        tgUsername: row.tg_username || null,
-        isVerified: true,
-        createdAt: row.$createdAt || new Date().toISOString(),
-      }).catch(() => {});
-      return userId;
     }
     return null;
   } catch (err) {
@@ -520,8 +487,6 @@ export async function handleTelegramUpdate(body: any): Promise<{
     if (!body || (!body.message && !body.callback_query)) {
       return { success: false, status: 400, error: 'Invalid payload or message missing' };
     }
-
-    const { databases } = createSystemClient();
 
     // ── A. HANDLE CALLBACK QUERY (Inline Button Taps) ──
     if (body.callback_query) {

@@ -14,7 +14,7 @@ import {
   Crown
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
-import { FormSubmissions } from '@/generated/appwrite/types';
+import { FormSubmissions } from '@/types/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/lib/auth';
 import { useProUpgrade } from '@/context/ProUpgradeContext';

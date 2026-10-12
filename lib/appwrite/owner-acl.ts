@@ -1,5 +1,3 @@
-import { Permission, Role } from 'appwrite';
-
 /**
  * Owner row ACL: read + update + delete for the owner.
  * Collaborators stay read-only at the ACL layer; cross-owner writes still use secure-ops.
@@ -13,18 +11,18 @@ export function ownerRowPermissions(
   if (!uid) return [];
 
   const permissions = [
-    Permission.read(Role.user(uid)),
-    Permission.update(Role.user(uid)),
-    Permission.delete(Role.user(uid)),
+    `read("user:${uid}")`,
+    `update("user:${uid}")`,
+    `delete("user:${uid}")`,
   ];
 
   for (const extra of opts?.extraReadUserIds || []) {
     const id = String(extra || '').trim();
-    if (id && id !== uid) permissions.push(Permission.read(Role.user(id)));
+    if (id && id !== uid) permissions.push(`read("user:${id}")`);
   }
 
   if (opts?.isPublic) {
-    permissions.push(Permission.read(Role.any()));
+    permissions.push('read("role:all")');
   }
 
   return permissions;

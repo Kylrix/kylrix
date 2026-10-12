@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
-import { Forms } from '@/generated/appwrite/types';
+import { Forms } from '@/types/appwrite';
 import FormDialog from '@/components/forms/FormDialog';
 import FormSettingsDialog from '@/components/forms/FormSettingsDialog';
 import { FormDetail } from '@/components/forms/FormDetail';

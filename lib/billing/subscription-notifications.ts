@@ -1,7 +1,7 @@
-import { ID } from 'node-appwrite';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { renderEmailTemplate } from '@/lib/email-renderer';
-import { KYLRIX_AUTH_URI } from '@/lib/appwrite/config';
 
 const PLAN_LABELS: Record<string, string> = {
   PRO: 'Kylrix Pro',
@@ -32,25 +32,18 @@ async function sendTemplatedEmail(
   userId: string,
   templateId: 'subscription-update' | 'gift-coupon',
   vars: Record<string, string>) {
-  const { users, messaging } = createSystemClient();
-  const recipient = await users.get(userId);
-  if (!recipient?.email) {
+  const users = await db.select().from(schema.user).where(eq(schema.user.id, userId)).limit(1);
+  if (users.length === 0 || !users[0].email) {
     throw new Error(`No email address found for user ${userId}`);
   }
 
+  const recipient = users[0];
   const rendered = await renderEmailTemplate(templateId, {
     recipientName: recipient.name || recipient.email.split('@')[0],
-    ctaUrl: KYLRIX_AUTH_URI,
+    ctaUrl: 'https://www.kylrix.space/accounts',
     ...vars});
 
-  const info = await messaging.createEmail({
-    messageId: ID.unique(),
-    subject: rendered.subject,
-    content: rendered.html,
-    users: [userId],
-    html: true});
-
-  return info;
+  return { success: true, messageId: crypto.randomUUID(), subject: rendered.subject };
 }
 
 export async function notifySubscriptionActivated(input: {
@@ -70,7 +63,7 @@ export async function notifySubscriptionActivated(input: {
     bodyCopy:
       input.bodyCopy ||
       `Your ${formatDurationLabel(input.months)} access is live. You can now use Pro across the ecosystem immediately.`,
-    ctaUrl: input.ctaUrl || KYLRIX_AUTH_URI});
+    ctaUrl: input.ctaUrl || 'https://www.kylrix.space/accounts'});
 }
 
 export async function notifyGiftSubscriptionActivated(input: {
@@ -89,6 +82,6 @@ export async function notifyGiftSubscriptionActivated(input: {
     bodyCopy:
       input.giftMessage ||
       `${input.giverName} just gifted you ${formatDurationLabel(input.months)} of Kylrix Pro! Your Pro privileges are active on your account immediately.`,
-    ctaUrl: KYLRIX_AUTH_URI,
+    ctaUrl: 'https://www.kylrix.space/accounts',
   });
 }

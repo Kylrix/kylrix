@@ -1,5 +1,6 @@
-import { ID, Query } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { systemTables } from '@/lib/data/system-tables';
+import { ID, Query } from '@/lib/appwrite/types';
+
 import { WorkflowChain } from '@/lib/workflow-engine';
 import { TelemetryNiche } from '@/lib/context-engine';
 import crypto from 'crypto';
@@ -20,7 +21,7 @@ export const WorkflowDbService = {
    */
   async saveWorkflow(wf: WorkflowChain, userId?: string): Promise<string> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const extra = wf as WorkflowChain & {
         flowKind?: string;
         toolTierMax?: string;
@@ -102,7 +103,7 @@ export const WorkflowDbService = {
    */
   async listWorkflows(): Promise<WorkflowChain[]> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const res = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLE_ID,
@@ -139,7 +140,7 @@ export const WorkflowDbService = {
    */
   async listPublicWorkflows(): Promise<WorkflowChain[]> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const res = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLE_ID,
@@ -181,7 +182,7 @@ export const WorkflowDbService = {
    */
   async deleteWorkflow(workflowId: string): Promise<void> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const existing = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLE_ID,
@@ -247,7 +248,7 @@ export const WorkflowDbService = {
 
   async getByWorkflowId(workflowId: string) {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const existing = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLE_ID,
@@ -263,7 +264,7 @@ export const WorkflowDbService = {
 
   /** System-only counter punch — never expose to client RLS writes. */
   async incrementInstallCount(workflowId: string): Promise<number> {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = await tables.listRows({
       databaseId: DATABASE_ID,
       tableId: TABLE_ID,
@@ -290,7 +291,7 @@ export const WorkflowDbService = {
       reviewStatus?: string;
     }
   ): Promise<WorkflowChain> {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = await tables.listRows({
       databaseId: DATABASE_ID,
       tableId: TABLE_ID,
@@ -346,7 +347,7 @@ export const WorkflowDbService = {
     reviewStatus: string,
     extra?: { isPublic?: boolean }
   ) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = await tables.listRows({
       databaseId: DATABASE_ID,
       tableId: TABLE_ID,

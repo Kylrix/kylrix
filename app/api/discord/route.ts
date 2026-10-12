@@ -5,9 +5,8 @@ import { ApiResources } from '@/lib/api/resources';
 import type { ApiActor } from '@/lib/api/guard';
 import { PairingService } from '@/lib/services/pairing';
 import { PatService } from '@/lib/services/pats';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { systemTables } from '@/lib/data/system-tables';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { ID, Query } from 'node-appwrite';
 
 interface DiscordInteractionContext {
   isExistingEphemeral: boolean;
@@ -483,15 +482,15 @@ export async function resolveActorForDiscordUser(
 
   // 3. Fallback query to Appwrite legacy storage (oauth_consent_requests)
   try {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: APPWRITE_CONFIG.DATABASES.NOTE || 'passwordManagerDb',
       tableId: APPWRITE_CONFIG.TABLES.FLOW.OAUTH_CONSENT_REQUESTS || 'oauth_consent_requests',
       queries: [
-        Query.equal('clientId', 'discord_account'),
-        Query.equal('nonce', callerId),
-        Query.equal('status', 'approved'),
-        Query.limit(1),
+        `equal("clientId", "discord_account")`,
+        `equal("nonce", ${JSON.stringify(callerId)})`,
+        `equal("status", "approved")`,
+        'limit(1)',
       ],
     }).catch(() => ({ rows: [] as any[] }));
 
@@ -552,14 +551,14 @@ export async function linkDiscordUserAccount(
 
   // 2. Legacy Appwrite persistence
   try {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = await tables.listRows({
       databaseId: APPWRITE_CONFIG.DATABASES.NOTE || 'passwordManagerDb',
       tableId: APPWRITE_CONFIG.TABLES.FLOW.OAUTH_CONSENT_REQUESTS || 'oauth_consent_requests',
       queries: [
-        Query.equal('clientId', 'discord_account'),
-        Query.equal('nonce', callerId),
-        Query.limit(1),
+        `equal("clientId", "discord_account")`,
+        `equal("nonce", ${JSON.stringify(callerId)})`,
+        'limit(1)',
       ],
     }).catch(() => ({ rows: [] as any[] }));
 
@@ -582,7 +581,7 @@ export async function linkDiscordUserAccount(
       await tables.createRow({
         databaseId: APPWRITE_CONFIG.DATABASES.NOTE || 'passwordManagerDb',
         tableId: APPWRITE_CONFIG.TABLES.FLOW.OAUTH_CONSENT_REQUESTS || 'oauth_consent_requests',
-        rowId: ID.unique(),
+        rowId: crypto.randomUUID(),
         data: {
           clientId: 'discord_account',
           userId,
@@ -631,13 +630,13 @@ export async function unlinkDiscordUserAccount(callerId: string): Promise<void> 
 
   // 2. Legacy Appwrite cleanup
   try {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = await tables.listRows({
       databaseId: APPWRITE_CONFIG.DATABASES.NOTE || 'passwordManagerDb',
       tableId: APPWRITE_CONFIG.TABLES.FLOW.OAUTH_CONSENT_REQUESTS || 'oauth_consent_requests',
       queries: [
-        Query.equal('clientId', 'discord_account'),
-        Query.equal('nonce', callerId),
+        `equal("clientId", "discord_account")`,
+        `equal("nonce", ${JSON.stringify(callerId)})`,
       ],
     }).catch(() => ({ rows: [] as any[] }));
 

@@ -1,8 +1,9 @@
+import { systemTables } from '@/lib/data/system-tables';
 "use server";
 
-import { ID } from 'node-appwrite';
+import { ID } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+
 import * as shared from './shared';
 
 const { getActor } = shared;
@@ -28,7 +29,7 @@ export async function createPaymentIntentAction(input: PaymentIntentInput) {
         throw new Error('Unauthorized');
     }
 
-    const tablesDB = createSystemTablesDB();
+    const tablesDB = systemTables();
     const intentId = ID.unique();
     const payloadStr = JSON.stringify(input.contextPayload || {});
 
@@ -79,7 +80,7 @@ export async function submitGasRelayAction(input: {
         throw new Error('Unauthorized');
     }
 
-    const tablesDB = createSystemTablesDB();
+    const tablesDB = systemTables();
 
     // Retrieve the active payment intent row
     const intent = await tablesDB.getRow(

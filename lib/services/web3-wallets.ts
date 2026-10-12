@@ -3,7 +3,7 @@ import { mainnet, base, arbitrum, polygon } from 'viem/chains';
 import { WalletService, type SupportedWalletChain } from './wallets';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
-import { Query, Permission, Role } from 'appwrite';
+import { Query, Permission, Role } from '@/lib/appwrite/types';
 
 // DRPC configuration mapping
 const DRPC_CHAINS: Record<string, any> = {

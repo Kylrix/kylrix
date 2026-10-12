@@ -1,11 +1,12 @@
+import { systemTables } from '@/lib/data/system-tables';
 'use server';
 
 import * as shared from './shared';
 import {
   ID, Query
-} from 'node-appwrite';
+} from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+
 import { permissionsInternal } from '@/lib/services/internal/permissions';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import { dispatchSecureNotification } from '@/lib/services/internal/notification-dispatcher';
@@ -147,7 +148,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       throw new Error('Forbidden: Collaborator sharing requires a paid plan');
     }
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
     const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
 
@@ -272,7 +273,7 @@ export async function revokePermissionSecure(input: {
 
     // 2. Remove virtual permission from metadata for legacy compatibility
     if (input.resourceType === 'note') {
-        const tables = createSystemTablesDB();
+        const tables = systemTables();
         const noteRow = await tables.getRow({
       databaseId: dbId,
       tableId: tableId,
@@ -295,7 +296,7 @@ export async function revokePermissionSecure(input: {
 
     // 3. Remove polymorphic collaborators row for any resource type
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
       const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
       const collabsRes = await tables.listRows({
@@ -378,7 +379,7 @@ export async function getResourceCollaboratorsSecure(input: {
                     resourceType === 'totp' ? 'totpSecrets' :
                     APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     let row: Record<string, unknown> | null = null;
     try {
       row = await tables.getRow({
@@ -520,7 +521,7 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
     throw new Error('Forbidden: Insufficient permissions to manage collaborators');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   // 1. Fetch current project
   const project = await tables.getRow({
@@ -568,7 +569,7 @@ export async function removeProjectCollaboratorSecure(projectId: string, targetU
     throw new Error('Forbidden: Insufficient permissions to manage collaborators');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   // 1. Fetch current project to update permissions
   const project = await tables.getRow({
@@ -705,7 +706,7 @@ export async function addFormCollaboratorSecure(formId: string, targetUserId: st
     throw new Error('Forbidden: Insufficient permissions to manage collaborators');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   const form = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -746,7 +747,7 @@ export async function removeFormCollaboratorSecure(formId: string, targetUserId:
     throw new Error('Forbidden: Insufficient permissions to manage collaborators');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   const form = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,

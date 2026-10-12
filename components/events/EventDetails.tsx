@@ -20,7 +20,7 @@ import { EventDateTimePickerDrawer } from './drawers/EventDateTimePickerDrawer';
 import { EventLocationDrawer } from './drawers/EventLocationDrawer';
 import { EventVisibilityDrawer } from './drawers/EventVisibilityDrawer';
 import { useAuth } from '@/context/auth/AuthContext';
-import { Query } from 'appwrite';
+
 import toast from 'react-hot-toast';
 
 import { useEvents } from '@/context/EventsContext';

@@ -14,7 +14,6 @@ export async function getUserPreferencesAction(jwt?: string): Promise<Record<str
 
   let prefs: Record<string, any> = {};
 
-  // 1. Try Turso SQLite userSettings table
   try {
     const res = await getUserSettingsTurso(actor.$id);
     if (res.success && res.settings?.preferences) {
@@ -26,7 +25,6 @@ export async function getUserPreferencesAction(jwt?: string): Promise<Record<str
     console.warn('[getUserPreferencesAction] Turso query warning:', err.message);
   }
 
-  // 2. Merge with actor prefs if available
   if (actor.prefs && typeof actor.prefs === 'object') {
     prefs = { ...actor.prefs, ...prefs };
   }
@@ -43,7 +41,6 @@ export async function updateUserPreferencesAction(
 
   const merged = { ...(actor.prefs || {}), ...newPrefs };
 
-  // 1. Save to Turso SQLite
   try {
     await upsertUserSettingsTurso({
       id: `settings-${actor.$id}`,
@@ -57,21 +54,6 @@ export async function updateUserPreferencesAction(
     console.warn('[updateUserPreferencesAction] Turso save warning:', err.message);
   }
 
-  // 2. Sync to Appwrite if available (with 2.5s timeout)
-  try {
-    if (process.env.APPWRITE_API) {
-      const { createAdminClient } = await import('@/lib/appwrite-admin');
-      const { users } = createAdminClient(actor.email);
-      const appwritePromise = users.updatePrefs(actor.$id, merged);
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Appwrite updatePrefs timed out')), 2500)
-      );
-      await Promise.race([appwritePromise, timeoutPromise]);
-    }
-  } catch (_e) {
-    // Non-fatal if Appwrite is not configured or times out
-  }
-
   return { success: true, prefs: merged };
 }
 
@@ -81,7 +63,6 @@ export async function listUserSessionsAction(jwt?: string) {
 
   const allSessions: any[] = [];
 
-  // 1. Primary: Turso SQLite session table
   try {
     const tursoRes = await listUserSessionsTurso(actor.$id);
     if (tursoRes.success && Array.isArray(tursoRes.sessions) && tursoRes.sessions.length > 0) {
@@ -103,27 +84,6 @@ export async function listUserSessionsAction(jwt?: string) {
     console.warn('[listUserSessionsAction] Turso sessions warning:', err.message);
   }
 
-  // 2. Secondary: If needed, query Appwrite sessions with strict 1.5s timeout & migration gate
-  try {
-    const { resolveUserAppwriteMigrationGate } = await import('@/lib/actions/turso-ops');
-    const gate = await resolveUserAppwriteMigrationGate({ userId: actor.$id });
-    if (!gate.shouldSkipAppwrite) {
-      const { createServerClient } = await import('@/lib/appwrite/server');
-      const { account } = await createServerClient(jwt);
-      const appwritePromise = account.listSessions().catch(() => null);
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
-      const appwriteList = await Promise.race([appwritePromise, timeoutPromise]);
-      if (appwriteList?.sessions) {
-        for (const s of appwriteList.sessions) {
-          if (!allSessions.some((item) => item.$id === s.$id)) {
-            allSessions.push(s);
-          }
-        }
-      }
-    }
-  } catch {}
-
-  // Fallback: If no sessions are stored, create a local active session entry so user gets instant UI
   if (allSessions.length === 0) {
     allSessions.push({
       $id: `sess-${actor.$id}`,
@@ -138,7 +98,6 @@ export async function listUserSessionsAction(jwt?: string) {
     });
   }
 
-  // Mark at least one as current if none marked
   if (allSessions.length > 0 && !allSessions.some((s) => s.current)) {
     allSessions[0].current = true;
   }
@@ -150,19 +109,11 @@ export async function revokeUserSessionAction(sessionId: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor) throw new Error('Unauthorized');
 
-  // 1. Delete from Turso
   try {
     await deleteUserSessionTurso(sessionId);
   } catch (err: any) {
     console.warn('[revokeUserSessionAction] Turso delete warning:', err.message);
   }
-
-  // 2. Delete from Appwrite if available
-  try {
-    const { createServerClient } = await import('@/lib/appwrite/server');
-    const { account } = await createServerClient(jwt);
-    await account.deleteSession(sessionId).catch(() => null);
-  } catch {}
 
   return { success: true };
 }
@@ -171,7 +122,6 @@ export async function revokeAllUserSessionsAction(jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor) throw new Error('Unauthorized');
 
-  // 1. Delete all sessions in Turso SQLite
   try {
     const { db } = await import('@/lib/db');
     const { session: sessionTable } = await import('@/lib/db/schema');
@@ -181,13 +131,6 @@ export async function revokeAllUserSessionsAction(jwt?: string) {
   } catch (err: any) {
     console.warn('[revokeAllUserSessionsAction] Turso delete warning:', err.message);
   }
-
-  // 2. Delete from Appwrite if available
-  try {
-    const { createServerClient } = await import('@/lib/appwrite/server');
-    const { account } = await createServerClient(jwt);
-    await account.deleteSessions().catch(() => null);
-  } catch {}
 
   return { success: true };
 }
@@ -199,14 +142,12 @@ export async function listUserIdentitiesAction(jwt?: string) {
   const identities: any[] = [];
   const externals: any[] = [];
 
-  // Strictly query Turso SQLite account and oauthConsent tables (Better Auth live connected apps)
   try {
     const { db } = await import('@/lib/db');
     const { account: accountTable, oauthConsent, oauthClient, user: userTable } = await import('@/lib/db/schema');
     const { eq, inArray } = await import('drizzle-orm');
     const { consolidateUserByEmail } = await import('@/lib/actions/turso-ops');
 
-    // Run consolidation by email if available to resolve duplicate user IDs
     if (actor.email) {
       await consolidateUserByEmail(actor.email, { id: actor.$id, name: actor.name }).catch(() => {});
     }
@@ -222,7 +163,6 @@ export async function listUserIdentitiesAction(jwt?: string) {
       }
     }
 
-    // 1. Better Auth linked sign-in methods
     const accounts = await db
       .select()
       .from(accountTable)
@@ -243,7 +183,6 @@ export async function listUserIdentitiesAction(jwt?: string) {
       });
     }
 
-    // 2. Better Auth live authorized external apps (OAuth consents)
     const consents = await db
       .select({
         id: oauthConsent.id,

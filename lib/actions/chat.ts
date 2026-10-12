@@ -1,3 +1,4 @@
+import { systemTables } from '@/lib/data/system-tables';
 'use server';
 
 import {
@@ -12,9 +13,9 @@ import {
   updateConversationInternal,
   createConversationTransactionalInternal
 } from '@/lib/services/internal/chat';
-import { Query } from 'node-appwrite';
+import { Query } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+
 
 import { 
   ChatMessageSchema, 
@@ -278,7 +279,7 @@ export async function getConversationsAction(payload: {
 
   // 2. Fetch from Appwrite (best-effort merge & mirror to Turso)
   try {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
     const CONV_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
     const CONV_MEMBERS_TABLE = 'conversationMembers';
@@ -429,7 +430,7 @@ export async function getMessagesAction(payload: {
 
   // 2. Fallback to Appwrite if available
   try {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
     const MSG_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
     const res = await tables.listRows({

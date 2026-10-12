@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ID } from 'appwrite';
+
 import { ArrowLeft, Calendar, Check, ChevronDown, ChevronUp, Plus, Tag, Target, X } from 'lucide-react';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
 import { useTask } from '@/context/TaskContext';
@@ -212,7 +212,7 @@ export function CreateGoalComposer({
   const ensureId = useCallback(() => {
     const existing = initialContent?.id || resolvedId || liveIdRef.current;
     if (existing) return existing;
-    const id = ID.unique();
+    const id = crypto.randomUUID();
     liveIdRef.current = id;
     setResolvedId(id);
     return id;
