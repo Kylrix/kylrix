@@ -1,5 +1,6 @@
-import { systemTables } from '@/lib/data/system-tables';
 'use server';
+
+import { systemTables } from '@/lib/data/system-tables';
 
 import * as shared from './shared';
 import {
@@ -267,7 +268,7 @@ export async function executeMasterPurgeSecure(jwt?: string) {
   // Helper: batched delete for infinite data (limit 100 per page, loop until empty)
   const purgeByQuery = async (db: string, table: string, queries: any[]) => {
     for (;;) {
-      const res: any = await tryList(db, table, [...queries, (await import('node-appwrite')).Query.limit(100)]);
+      const res: any = await tryList(db, table, [...queries, Query.limit(100)]);
       if (!res.rows?.length) break;
       await Promise.all(res.rows.map((r: any) => tryDeleteRow(db, table, r.$id).catch(() => null)));
       if (res.rows.length < 100) break;
@@ -289,18 +290,18 @@ export async function executeMasterPurgeSecure(jwt?: string) {
     commentsRows,
     reactionsRows,
   ] = await Promise.all([
-    tryList(mainDb, 'keychain', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'totpSecrets', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'identities', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'keyMapping', [ (await import('node-appwrite')).Query.or([(await import('node-appwrite')).Query.equal('grantee', userId), (await import('node-appwrite')).Query.contains('metadata', userId)]), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'profiles', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(10) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'notes', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'tasks', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'projects', [ (await import('node-appwrite')).Query.equal('creatorId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'events', [ (await import('node-appwrite')).Query.equal('creatorId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'forms', [ (await import('node-appwrite')).Query.equal('creatorId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'comments', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
-    tryList(mainDb, 'reactions', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'keychain', [ Query.equal('userId', userId), Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'totpSecrets', [ Query.equal('userId', userId), Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'identities', [ Query.equal('userId', userId), Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'keyMapping', [ Query.or([Query.equal('grantee', userId), Query.contains('metadata', userId)]), Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'profiles', [ Query.equal('userId', userId), Query.limit(10) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'notes', [ Query.equal('userId', userId), Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'tasks', [ Query.equal('userId', userId), Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'projects', [ Query.equal('creatorId', userId), Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'events', [ Query.equal('creatorId', userId), Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'forms', [ Query.equal('creatorId', userId), Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'comments', [ Query.equal('userId', userId), Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'reactions', [ Query.equal('userId', userId), Query.limit(100) ]).catch(() => ({ rows: [] })),
   ]);
 
   // Immediate parallel cascade: delete all discovered rows (storage files next, auth last)
@@ -324,18 +325,18 @@ export async function executeMasterPurgeSecure(jwt?: string) {
   }
   // Conversations/members/messages: sweep via conversationMembers → conversations
   actions.push((async () => {
-    const memRes: any = await tryList(mainDb, 'conversationMembers', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(1000) ]);
+    const memRes: any = await tryList(mainDb, 'conversationMembers', [ Query.equal('userId', userId), Query.limit(1000) ]);
     const cids = Array.from(new Set((memRes.rows || []).map((r: any) => r.conversationId).filter(Boolean)));
     for (const cid of cids) {
-      await purgeByQuery(mainDb, 'messages', [ (await import('node-appwrite')).Query.equal('conversationId', cid as string), (await import('node-appwrite')).Query.equal('senderId', userId) ]);
-      await purgeByQuery(mainDb, 'messageReactions', [ (await import('node-appwrite')).Query.equal('conversationId', cid as string) ]);
+      await purgeByQuery(mainDb, 'messages', [ Query.equal('conversationId', cid as string), Query.equal('senderId', userId) ]);
+      await purgeByQuery(mainDb, 'messageReactions', [ Query.equal('conversationId', cid as string) ]);
       // remove membership
       for (const m of (memRes.rows || []).filter((r: any) => r.conversationId === cid)) await tryDeleteRow(mainDb, 'conversationMembers', m.$id);
       // if self-chat, delete conversation row itself
       try { const conv: any = await databases.getRow(mainDb, 'conversations', cid as string).catch(() => null); if (conv && Array.isArray(conv.participants) && conv.participants.every((p: string) => p === userId)) await tryDeleteRow(mainDb, 'conversations', cid as string); } catch {}
     }
     // epochs
-    await purgeByQuery(mainDb, 'epochs', [ (await import('node-appwrite')).Query.equal('grantee', userId) ]).catch(() => null);
+    await purgeByQuery(mainDb, 'epochs', [ Query.equal('grantee', userId) ]).catch(() => null);
   })());
   // Profiles: null out publicKey rather than delete (keep row for audit)
   for (const pr of (profilesRows.rows || [])) actions.push(tryUpdateRow(mainDb, 'profiles', pr.$id, { publicKey: null, updatedAt: new Date().toISOString() }));
@@ -1531,7 +1532,6 @@ export async function toggleResourcePublicGuestSecure(params: {
     updateData.status = 'published';
   }
 
-  const { Permission, Role } = await import('node-appwrite');
   const existingPerms: string[] = Array.isArray(row.$permissions) ? row.$permissions : [];
   const updatedPermissions = isPublic || isGuest
     ? [
@@ -1811,7 +1811,7 @@ export async function syncMasterpassToAccountPasswordAction(payload: {
   }
 
   // 1. Update the Appwrite authentication password via System Users service
-  const { createSystemClient } = await import('@/lib/appwrite-admin');
+  const { createSystemClient } = await import('@/lib/appwrite/types');
   const { users, databases } = createSystemClient();
   await users.updatePassword(validatedUserId, validatedMasterpass);
 
@@ -1884,7 +1884,7 @@ export async function upgradeKeychainToArgonAction(payload: {
     throw new Error('Unauthorized');
   }
 
-  const { createSystemClient, createSystemTablesDB } = await import('@/lib/appwrite-admin');
+  const { createSystemClient } = await import('@/lib/appwrite/types');
   const { withSystemTransaction } = await import('@/lib/services/internal/transaction');
   const { databases } = createSystemClient();
   const tables: any = systemTables();
@@ -1973,7 +1973,7 @@ export async function toggleTaskReminderSecure(taskId: string, enabled: boolean,
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const { createSystemClient } = await import('@/lib/appwrite-admin');
+  const { createSystemClient } = await import('@/lib/appwrite/types');
   const tables = systemTables();
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
   const TASKS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.TASKS;
@@ -2012,8 +2012,7 @@ export async function toggleTaskReminderSecure(taskId: string, enabled: boolean,
       throw new Error('Deadline is in the past.');
     }
 
-    const { Functions } = await import('node-appwrite');
-    const { client } = createSystemClient();
+    const { Functions, client } = createSystemClient();
     const functions = new Functions(client);
     const functionId = 'goal-reminder-dispatch';
 
@@ -2209,7 +2208,7 @@ export async function replicateAccountAndKeychainSecure(params: {
       return { success: false, error: 'Unauthorized: Valid user session required.' };
     }
 
-    const { createSystemClient, createSystemTablesDB } = await import('@/lib/appwrite-admin');
+    const { createSystemClient } = await import('@/lib/appwrite/types');
     const { normalizeCloudEndpoint } = await import('@/lib/sync/cloud-sync-client');
     const systemClient = createSystemClient();
     const tables: any = systemTables();

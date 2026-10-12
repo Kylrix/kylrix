@@ -65,11 +65,11 @@ export const ReferralService = {
         const agentRows = await db
           .select()
           .from(schema.agents)
-          .where(or(eq(schema.agents.id, agentId), eq(schema.agents.name, agentId)))
+          .where(eq(schema.agents.id, agentId))
           .limit(1);
         if (agentRows.length > 0) {
           const agent = agentRows[0];
-          return { referrerUserId: agent.ownerId || agent.userId || agent.id, src: 'agent' };
+          return { referrerUserId: agent.ownerId || agent.id, src: 'agent' };
         }
       } catch {}
       return null;

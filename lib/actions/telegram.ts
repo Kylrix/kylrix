@@ -1,9 +1,10 @@
-import { systemTables } from '@/lib/data/system-tables';
 'use server';
+
+import { systemTables } from '@/lib/data/system-tables';
 
 
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Permission, Role, Query } from '@/lib/appwrite/types';
+import { Permission, Role, Query, createSystemClient } from '@/lib/appwrite/types';
 import { z } from 'zod';
 import { JWTSchema } from '@/lib/validations/schemas';
 import {
@@ -70,7 +71,7 @@ export async function initializeTelegramConnection(
         
         const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_API;
         if (botToken) {
-          syncTelegramBotCommands(validatedJwt, validatedAppUrl).catch(err =>
+          syncTelegramBotCommands(validatedAppUrl).catch(err =>
             console.error('[telegram-bot] Failed to sync bot commands/webhook:', err)
           );
           syncServerTelegramListener().catch(err =>
@@ -120,7 +121,7 @@ export async function initializeTelegramConnection(
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_API;
     if (botToken) {
-      syncTelegramBotCommands(validatedJwt, validatedAppUrl).catch(err =>
+      syncTelegramBotCommands(validatedAppUrl).catch(err =>
         console.error('[telegram-bot] Failed to sync bot commands/webhook:', err)
       );
       syncServerTelegramListener().catch(err =>
@@ -272,7 +273,7 @@ export async function updateTelegramNotificationPreferences(
   }
 }
 
-export async function syncTelegramBotCommands(jwt?: string, appUrl?: string) {
+export async function syncTelegramBotCommands(appUrl?: string) {
   try {
     const { syncTelegramBot } = await import('@/app/api/telegram/webhook/route');
     return await syncTelegramBot(appUrl);

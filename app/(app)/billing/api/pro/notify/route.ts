@@ -17,17 +17,6 @@ import {
 import { SponsorshipService } from '@/lib/services/sponsorship-service';
 import { BadgeTier } from '@/lib/types/badges';
 
-function parseMetadata(value: unknown): Record<string, any> {
-  if (!value) return {};
-  if (typeof value === 'object') return value as Record<string, any>;
-  if (typeof value !== 'string') return {};
-  try {
-    return JSON.parse(value);
-  } catch {
-    return {};
-  }
-}
-
 async function recordCompletedTransactionLedger(params: {
   paymentId: string;
   userId: string;
@@ -312,11 +301,8 @@ export async function POST(req: Request) {
     await db.insert(schema.subscriptions).values({
       id: subId,
       userId: targetUserId,
-      plan: 'pro',
+      tier: 'pro',
       status: 'active',
-      currentPeriodStart: currentPeriodStart.toISOString(),
-      currentPeriodEnd: currentPeriodEnd.toISOString(),
-      seats: 1,
       createdAt: now,
       updatedAt: now,
     });

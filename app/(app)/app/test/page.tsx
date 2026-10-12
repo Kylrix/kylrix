@@ -22,7 +22,7 @@ export default function AppTestPage() {
 
     try {
       log('Initializing direct Client SDK fetch for notes...');
-      const { Query, Client, TablesDB } = await import('appwrite');
+      const { Query, Client, TablesDB } = await import('@/lib/appwrite/types');
       const { account, databases } = await import('@/lib/appwrite/client');
       const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
 

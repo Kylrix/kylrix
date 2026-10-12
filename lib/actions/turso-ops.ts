@@ -8,7 +8,7 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 function getAppwriteMigrationTablesDB(jwt?: string) {
   const apiKey = process.env.APPWRITE_API;
   try {
-    const { Client, TablesDB } = require('node-appwrite');
+    const { Client, TablesDB } = require('@/lib/appwrite/types');
     const client = new Client()
       .setEndpoint(process.env.APPWRITE_ENDPOINT || APPWRITE_CONFIG.SERVER_ENDPOINT)
       .setProject(process.env.APPWRITE_PROJECT_ID || APPWRITE_CONFIG.PROJECT_ID);
@@ -343,9 +343,9 @@ export async function resolveUserAppwriteMigrationGate(userIdentifier: {
 
     let foundAppwriteId: string | null = null;
     try {
-      const { createSystemClient } = await import('@/lib/appwrite-admin');
+      const { createSystemClient } = await import('@/lib/appwrite/types');
       const { users } = createSystemClient();
-      const { Query } = await import('node-appwrite');
+      const { Query } = await import('@/lib/appwrite/types');
       const appwritePromise = users.list([Query.equal('email', targetEmail), Query.limit(1)]);
       const timeoutPromise = new Promise<null>((_, reject) =>
         setTimeout(() => reject(new Error('Appwrite migration gate lookup timed out')), 2500)
@@ -1278,7 +1278,7 @@ export async function syncTier1FromAppwriteTurso(userId: string, force = false, 
       return { success: true, skipped: true, reason: 'Appwrite not configured on server' };
     }
 
-    const { Query } = require('node-appwrite');
+    const { Query } = require('@/lib/appwrite/types');
     const DB = 'passwordManagerDb';
     const counts = { keychain: 0, vault: 0, totp: 0, workspaces: 0, workspaceObjects: 0 };
 
@@ -2098,7 +2098,7 @@ export async function syncTier2FromAppwriteTurso(userId: string, force = false) 
       return { success: true, skipped: true, reason: 'Appwrite not configured on server' };
     }
 
-    const { Query } = require('node-appwrite');
+    const { Query } = require('@/lib/appwrite/types');
     const DB = 'passwordManagerDb';
     const counts = { notes: 0, goals: 0 };
 

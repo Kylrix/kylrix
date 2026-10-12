@@ -1,6 +1,7 @@
 export { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
-import { Query } from '@/lib/appwrite/types';
+import { systemTables } from '@/lib/data/system-tables';
+import { Query, createSystemClient } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getUserSubscriptionTierServer } from '@/lib/services/internal/subscription-entitlement';
 
@@ -417,7 +418,7 @@ export async function getActor(jwt?: string) {
         const h = await headers();
         const session = await auth.api.getSession({ headers: h });
         if (session?.user) {
-          const { isEmailInAdminList } = await import('@/lib/appwrite-admin');
+          const { isEmailInAdminList } = await import('@/lib/appwrite/types');
           actor = {
             $id: session.user.id,
             email: session.user.email || '',
@@ -508,8 +509,8 @@ export async function verifyResourcePermissionSecure(params: {
     // Dynamic Admin RLS Bypass Fallback (Second Gate)
     if (!row) {
       try {
-        const systemTables = systemTables();
-        row = await systemTables.getRow({
+        const tables = systemTables();
+        row = await tables.getRow({
           databaseId,
           tableId,
           rowId});

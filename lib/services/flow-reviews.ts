@@ -23,7 +23,7 @@ export const FlowReviewService = {
     toolTierMax?: string;
     findings?: Record<string, unknown>;
     piiSummary?: string | null;
-  }) {
+  }): Promise<any> {
     const tables = systemTables();
     const now = new Date().toISOString();
     return tables.createRow({

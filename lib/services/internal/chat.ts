@@ -1,6 +1,6 @@
 import { systemTables } from '@/lib/data/system-tables';
 import { createServerClient } from '@/lib/appwrite/server';
-import { ID, Permission, Role, Query } from '@/lib/appwrite/types';
+import { ID, Permission, Role, Query, createSystemClient } from '@/lib/appwrite/types';
 
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createHash } from 'node:crypto';

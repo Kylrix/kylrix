@@ -1,6 +1,6 @@
 import { systemTables } from '@/lib/data/system-tables';
 import { NextRequest, NextResponse } from 'next/server';
-import { ID } from '@/lib/appwrite/types';
+import { ID, Permission, Role } from '@/lib/appwrite/types';
 
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { PatService } from '@/lib/services/pats';
@@ -54,7 +54,7 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
         );
       }
 
-      const { createSystemClient } = await import('@/lib/appwrite-admin');
+      const { createSystemClient } = await import('@/lib/appwrite/types');
       const { users } = createSystemClient();
       const userId = ID.unique();
       const user = await users.create(userId, email, undefined, password, name);
@@ -84,8 +84,8 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
             updatedAt: new Date().toISOString(),
           },
           permissions: [
-            (await import('node-appwrite')).Permission.read((await import('node-appwrite')).Role.any()),
-            (await import('node-appwrite')).Permission.update((await import('node-appwrite')).Role.user(userId)),
+            Permission.read(Role.any()),
+            Permission.update(Role.user(userId)),
           ],
         });
       } catch (profErr) {

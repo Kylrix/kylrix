@@ -1611,7 +1611,7 @@ export class VaultService {
     const recentRows = Array.from(byId.values())
       .sort(
         (a, b) =>
-          new Date(b.$updatedAt).getTime() - new Date(a.$updatedAt).getTime())
+          new Date(b.$updatedAt || 0).getTime() - new Date(a.$updatedAt || 0).getTime())
       .slice(0, limit);
 
     return await Promise.all(

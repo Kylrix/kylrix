@@ -32,7 +32,7 @@ export const PresenceService = {
      */
     subscribeToPresence: (channel: string, callback: (payload: any) => void) => {
         // Appwrite 2026 uses 'presence.[context]' for its dedicated presence channels
-        return realtime.subscribe([`presence.${channel}`], (response) => {
+        return realtime.subscribe([`presence.${channel}`], (response: any) => {
             callback(response.payload);
         });
     },

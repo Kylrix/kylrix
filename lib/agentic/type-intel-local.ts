@@ -120,7 +120,7 @@ export async function refreshTypeIntelVoice(
     const ENSURE_TTL_MS = 24 * 60 * 60 * 1000;
     if (!lastEnsure || Date.now() - lastEnsure > ENSURE_TTL_MS) {
       const { account } = await import('@/lib/appwrite/client');
-      const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+      const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
       if (jwt) {
         const { ensureTypeIntelSessionAction } = await import('@/lib/actions/type-intel');
         void ensureTypeIntelSessionAction({

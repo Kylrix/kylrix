@@ -260,7 +260,7 @@ export const SecurityEnclave = {
     try {
       const { tablesDB } = await import('@/lib/appwrite/client');
       const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
-      const { Query } = await import('appwrite');
+      const { Query } = await import('@/lib/appwrite/types');
 
       const [keychainRes, userRes, identityRes, walletsRes] = await Promise.all([
         tablesDB
