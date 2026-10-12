@@ -19,7 +19,7 @@ export async function getAdminStats(actorEmail: string) {
     if (process.env.APPWRITE_API) {
       const { users, databases } = createAdminClient(actorEmail);
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const [userList, activityResult] = await Promise.all([
+      const appwritePromise = Promise.all([
         users.list([Query.limit(10), Query.orderDesc('$createdAt')]),
         databases.listRows(
           APPWRITE_CONFIG.DATABASES.NOTE,
@@ -27,6 +27,10 @@ export async function getAdminStats(actorEmail: string) {
           [Query.greaterThanEqual('$createdAt', oneDayAgo), Query.limit(1), Query.select(['$createdAt'])]
         ).catch(() => null),
       ]);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Appwrite admin stats query timed out')), 2500)
+      );
+      const [userList, activityResult] = await Promise.race([appwritePromise, timeoutPromise]);
       const totalUsers = userList.total;
       const recentUsers = userList.users.map((u: any) => ({
         name: u.name || 'Anonymous',
@@ -112,7 +116,11 @@ export async function listAdminUsers(
     if (process.env.APPWRITE_API) {
       const { users } = createAdminClient(actorEmail);
       const queries = [Query.limit(limit), Query.orderDesc('$createdAt'), ...(cursorAfter ? [Query.cursorAfter(cursorAfter)] : [])];
-      const response = await users.list(queries);
+      const appwritePromise = users.list(queries);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Appwrite listAdminUsers query timed out')), 2500)
+      );
+      const response = await Promise.race([appwritePromise, timeoutPromise]);
       const filteredUsers = search
         ? response.users.filter((user: any) => [user.$id, user.name || '', user.email || ''].join(' ').toLowerCase().includes(search))
         : response.users;
