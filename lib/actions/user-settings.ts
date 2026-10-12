@@ -57,15 +57,19 @@ export async function updateUserPreferencesAction(
     console.warn('[updateUserPreferencesAction] Turso save warning:', err.message);
   }
 
-  // 2. Sync to Appwrite if available
+  // 2. Sync to Appwrite if available (with 2.5s timeout)
   try {
     if (process.env.APPWRITE_API) {
       const { createAdminClient } = await import('@/lib/appwrite-admin');
       const { users } = createAdminClient(actor.email);
-      await users.updatePrefs(actor.$id, merged);
+      const appwritePromise = users.updatePrefs(actor.$id, merged);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Appwrite updatePrefs timed out')), 2500)
+      );
+      await Promise.race([appwritePromise, timeoutPromise]);
     }
   } catch (_e) {
-    // Non-fatal if Appwrite is not configured
+    // Non-fatal if Appwrite is not configured or times out
   }
 
   return { success: true, prefs: merged };

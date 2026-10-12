@@ -346,8 +346,12 @@ export async function resolveUserAppwriteMigrationGate(userIdentifier: {
       const { createSystemClient } = await import('@/lib/appwrite-admin');
       const { users } = createSystemClient();
       const { Query } = await import('node-appwrite');
-      const res = await users.list([Query.equal('email', targetEmail), Query.limit(1)]);
-      if (res.total > 0 && res.users[0]?.$id) {
+      const appwritePromise = users.list([Query.equal('email', targetEmail), Query.limit(1)]);
+      const timeoutPromise = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error('Appwrite migration gate lookup timed out')), 2500)
+      );
+      const res = (await Promise.race([appwritePromise, timeoutPromise])) as any;
+      if (res && res.total > 0 && res.users[0]?.$id) {
         foundAppwriteId = res.users[0].$id;
       }
     } catch (e: any) {
