@@ -1,0 +1,504 @@
+/**
+ * Agentic session local copy — LocalEngine partition between UI, AI provider, and Appwrite.
+ * Messages are written locally first (pending), then flushed to agentic_sessions.
+ */
+
+import type { AgenticMessageBlock } from './message-blocks';
+import type { TypeIntelKind } from '@/lib/agentic/type-intel-kinds';
+import { TYPE_INTEL_KINDS } from '@/lib/agentic/type-intel-kinds';
+
+export type AgenticSyncStatus = 'pending' | 'synced' | 'error';
+
+export interface AgenticLocalMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  syncStatus?: AgenticSyncStatus;
+  isPublic?: boolean;
+  isGuest?: boolean;
+  blocks?: AgenticMessageBlock[];
+  nextSteps?: Array<{ label: string; prompt: string }>;
+  tools?: unknown[];
+}
+
+export interface AgenticLocalSession {
+  id: string;
+  userId: string;
+  context?: string;
+  chatHistory: AgenticLocalMessage[];
+  isPublic?: boolean;
+  isGuest?: boolean;
+  isPinned?: boolean;
+  targetType?: string | null;
+  targetId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AgenticSessionListItem {
+  id: string;
+  userId: string;
+  context?: string;
+  chatHistory: string;
+  isPublic?: boolean;
+  isGuest?: boolean;
+  isPinned?: boolean;
+  targetType?: string | null;
+  targetId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+function sortSessions(rows: AgenticSessionListItem[]): AgenticSessionListItem[] {
+  return [...rows].sort((a: any, b: any) => {
+    const pinDelta = Number(b.isPinned === true) - Number(a.isPinned === true);
+    if (pinDelta !== 0) return pinDelta;
+    const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    return bTime - aTime;
+  });
+}
+
+const listeners = new Set<() => void>();
+
+function emit() {
+  listeners.forEach((fn) => {
+    try {
+      fn();
+    } catch {
+      /* non-fatal */
+    }
+  });
+}
+
+export function subscribeAgenticLocalStore(onChange: () => void): () => void {
+  listeners.add(onChange);
+  return () => listeners.delete(onChange);
+}
+
+function sessionsListKey(userId: string) {
+  return `f_agent_sessions_${userId}`;
+}
+
+function sessionKey(sessionId: string) {
+  return `f_agent_session_${sessionId}`;
+}
+
+function activeSessionKey(userId: string) {
+  return `f_agent_active_session_${userId}`;
+}
+
+/** Deterministic Moments voice-twin session id (instant local fetch). */
+export function momentDoppelgangerSessionId(userId: string): string {
+  return `moment_doppelganger_${userId}`;
+}
+
+/**
+ * Appwrite row ids max 36 chars — short deterministic remote id.
+ * Local id stays `moment_doppelganger_${userId}` for LocalEngine.
+ */
+export function momentDoppelgangerRemoteRowId(userId: string): string {
+  const raw = `mdg_${String(userId || '').replace(/[^a-zA-Z0-9._-]/g, '_')}`.slice(0, 36);
+  return raw || `mdg_${Date.now().toString(36)}`.slice(0, 36);
+}
+
+export const MOMENT_DOPPELGANGER_TARGET_TYPE = 'momentDoppelganger' as const;
+
+/** Deterministic type-intel session id (instant local fetch). */
+export function typeIntelSessionId(kind: TypeIntelKind, userId: string): string {
+  return `type_intel_${kind}_${userId}`;
+}
+
+/**
+ * Appwrite row ids max 36 chars — short deterministic remote id.
+ * Local id stays `type_intel_${kind}_${userId}` for LocalEngine.
+ */
+export function typeIntelRemoteRowId(kind: TypeIntelKind, userId: string): string {
+  const prefix = TYPE_INTEL_KINDS[kind].remotePrefix;
+  const raw = `${prefix}${String(userId || '').replace(/[^a-zA-Z0-9._-]/g, '_')}`.slice(0, 36);
+  return raw || `${prefix}${Date.now().toString(36)}`.slice(0, 36);
+}
+
+export function typeIntelTargetType(kind: TypeIntelKind): string {
+  return TYPE_INTEL_KINDS[kind].targetType;
+}
+
+export const AgenticSessionLocalStore = {
+  sessionsListKey,
+  sessionKey,
+  activeSessionKey,
+
+  async getSessionsList(userId: string): Promise<AgenticSessionListItem[]> {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const hit = await LocalEngine.cacheGet<AgenticSessionListItem[]>(sessionsListKey(userId));
+    return Array.isArray(hit) ? hit : [];
+  },
+
+  async setSessionsList(userId: string, rows: AgenticSessionListItem[]): Promise<void> {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    await LocalEngine.cacheSet(sessionsListKey(userId), sortSessions(rows));
+    emit();
+  },
+
+  async getSession(sessionId: string): Promise<AgenticLocalSession | null> {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    return LocalEngine.cacheGet<AgenticLocalSession>(sessionKey(sessionId));
+  },
+
+  async upsertSession(session: AgenticLocalSession): Promise<void> {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const now = new Date().toISOString();
+    const row: AgenticLocalSession = {
+      ...session,
+      updatedAt: now,
+      createdAt: session.createdAt || now};
+    await LocalEngine.cacheSet(sessionKey(session.id), row);
+
+    const list = await this.getSessionsList(session.userId);
+    const chatHistoryStr = JSON.stringify(row.chatHistory || []);
+    const idx = list.findIndex((s) => s.id === session.id);
+    const summary: AgenticSessionListItem = {
+      id: session.id,
+      userId: session.userId,
+      context: session.context || '',
+      chatHistory: chatHistoryStr,
+      isPublic: session.isPublic,
+      isGuest: session.isGuest,
+      isPinned: session.isPinned,
+      targetType: (session as any).targetType || null,
+      targetId: (session as any).targetId || null,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt};
+    if (idx >= 0) list[idx] = summary;
+    else list.unshift(summary);
+    await this.setSessionsList(session.userId, list.slice(0, 120));
+    emit();
+  },
+
+  async setActiveSessionId(userId: string, sessionId: string | null): Promise<void> {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    await LocalEngine.cacheSet(activeSessionKey(userId), sessionId);
+    emit();
+  },
+
+  async getActiveSessionId(userId: string): Promise<string | null> {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    return LocalEngine.cacheGet<string | null>(activeSessionKey(userId));
+  },
+
+  async getActiveMessages(userId: string): Promise<AgenticLocalMessage[]> {
+    const sessionId = await this.getActiveSessionId(userId);
+    if (!sessionId) return [];
+    const session = await this.getSession(sessionId);
+    return session?.chatHistory || [];
+  },
+
+  async setActiveMessages(userId: string, sessionId: string, messages: AgenticLocalMessage[]): Promise<void> {
+    const existing = (await this.getSession(sessionId)) || {
+      id: sessionId,
+      userId,
+      chatHistory: []};
+    await this.upsertSession({
+      ...existing,
+      id: sessionId,
+      userId,
+      chatHistory: messages});
+    await this.setActiveSessionId(userId, sessionId);
+  },
+
+  async appendMessages(
+    userId: string,
+    sessionId: string,
+    messages: AgenticLocalMessage[]): Promise<void> {
+    const existing = (await this.getSession(sessionId)) || {
+      id: sessionId,
+      userId,
+      chatHistory: []};
+    const merged = [...(existing.chatHistory || []), ...messages];
+    await this.upsertSession({ ...existing, id: sessionId, userId, chatHistory: merged });
+    await this.setActiveSessionId(userId, sessionId);
+  },
+
+  async patchMessage(
+    sessionId: string,
+    messageId: string,
+    patch: Partial<AgenticLocalMessage>): Promise<void> {
+    const session = await this.getSession(sessionId);
+    if (!session) return;
+    const next = session.chatHistory.map((m: any) => (m.id === messageId ? { ...m, ...patch } : m));
+    await this.upsertSession({ ...session, chatHistory: next });
+  },
+
+  async markMessagesSynced(sessionId: string, messageIds: string[]): Promise<void> {
+    const session = await this.getSession(sessionId);
+    if (!session) return;
+    const idSet = new Set(messageIds);
+    const next = session.chatHistory.map((m: any) =>
+      idSet.has(m.id) ? { ...m, syncStatus: 'synced' as const } : m);
+    await this.upsertSession({ ...session, chatHistory: next });
+  },
+
+  async removeSession(sessionId: string, userId: string): Promise<void> {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    await LocalEngine.cacheDelete(sessionKey(sessionId));
+    const list = await this.getSessionsList(userId);
+    await this.setSessionsList(
+      userId,
+      list.filter((s) => s.id !== sessionId));
+    const active = await this.getActiveSessionId(userId);
+    if (active === sessionId) await this.setActiveSessionId(userId, null);
+    emit();
+  },
+
+  async patchSessionMeta(
+    userId: string,
+    sessionId: string,
+    patch: Partial<Pick<AgenticLocalSession, 'isPublic' | 'isGuest' | 'isPinned' | 'context' | 'createdAt' | 'updatedAt'>>): Promise<void> {
+    const session = await this.getSession(sessionId);
+    if (session) {
+      await this.upsertSession({ ...session, ...patch, id: sessionId, userId });
+      return;
+    }
+
+    const list = await this.getSessionsList(userId);
+    const next = list.map((row: any) => (row.id === sessionId ? { ...row, ...patch } : row));
+    await this.setSessionsList(userId, next);
+  },
+
+  async getOrCreateKylieHangoutSession(userId: string): Promise<AgenticLocalSession> {
+    const list = await this.getSessionsList(userId);
+    const existingSummary = list.find((s) => s.targetType === 'kylieHangout');
+    if (existingSummary) {
+      const full = await this.getSession(existingSummary.id);
+      if (full) return full;
+    }
+
+    const sessionId = `kylie_hangout_${userId}_${Date.now()}`;
+    const newSession: AgenticLocalSession = {
+      id: sessionId,
+      userId,
+      targetType: 'kylieHangout',
+      context: 'Kylie Assistant — Ecosystem AI assistant with full tool access, note/task management, and natural guidance.',
+      chatHistory: [
+        {
+          id: `msg_welcome_${Date.now()}`,
+          role: 'assistant',
+          content: "Hey there! I'm **Kylie**, your AI assistant for Kylrix. I can help you write notes, organize tasks, run system workflows, search your workspace, or answer questions. What are we working on today?",
+          syncStatus: 'synced',
+        },
+      ],
+    };
+
+    await this.upsertSession(newSession);
+    return newSession;
+  },
+
+  /**
+   * Moments voice twin — one durable session per account (no chat UI).
+   * Stable id for instant local fetch: `moment_doppelganger_${userId}`.
+   * Prunes any stray duplicate list entries for the same target.
+   */
+  async getOrCreateMomentDoppelgangerSession(userId: string): Promise<AgenticLocalSession> {
+    const sessionId = momentDoppelgangerSessionId(userId);
+    const list = await this.getSessionsList(userId);
+    const dupes = list.filter(
+      (s) =>
+        s.targetType === MOMENT_DOPPELGANGER_TARGET_TYPE &&
+        (s.targetId === userId || s.targetId === 'self' || s.id === sessionId),
+    );
+
+    // Collapse list duplicates → keep canonical id only
+    if (dupes.length > 1 || (dupes.length === 1 && dupes[0].id !== sessionId)) {
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      for (const d of dupes) {
+        if (d.id === sessionId) continue;
+        await LocalEngine.cacheDelete(sessionKey(d.id)).catch(() => {});
+      }
+      await this.setSessionsList(
+        userId,
+        list.filter(
+          (s) =>
+            !(
+              s.targetType === MOMENT_DOPPELGANGER_TARGET_TYPE &&
+              (s.targetId === userId || s.targetId === 'self') &&
+              s.id !== sessionId
+            ),
+        ),
+      );
+    }
+
+    const existing = await this.getSession(sessionId);
+    if (existing) {
+      if (
+        existing.targetType !== MOMENT_DOPPELGANGER_TARGET_TYPE ||
+        existing.targetId !== userId
+      ) {
+        await this.upsertSession({
+          ...existing,
+          id: sessionId,
+          userId,
+          targetType: MOMENT_DOPPELGANGER_TARGET_TYPE,
+          targetId: userId,
+        });
+        return (await this.getSession(sessionId)) || existing;
+      }
+      return existing;
+    }
+
+    // Migrate legacy list row with wrong id into canonical cache key
+    const byType = dupes.find((s) => s.id !== sessionId) || dupes[0];
+    if (byType && byType.id !== sessionId) {
+      const full = await this.getSession(byType.id);
+      if (full) {
+        await this.upsertSession({
+          ...full,
+          id: sessionId,
+          userId,
+          targetType: MOMENT_DOPPELGANGER_TARGET_TYPE,
+          targetId: userId,
+        });
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        await LocalEngine.cacheDelete(sessionKey(byType.id)).catch(() => {});
+        return (await this.getSession(sessionId))!;
+      }
+    }
+
+    const newSession: AgenticLocalSession = {
+      id: sessionId,
+      userId,
+      targetType: MOMENT_DOPPELGANGER_TARGET_TYPE,
+      targetId: userId,
+      context: 'Moment voice twin — learns from your posts to draft in your style. No chat UI.',
+      chatHistory: [],
+    };
+    await this.upsertSession(newSession);
+    return newSession;
+  },
+
+  /**
+   * Type-level intelligence — one durable session per account × object type (no chat UI).
+   * Stable id: `type_intel_${kind}_${userId}`. Prunes stray duplicate list entries.
+   */
+  async getOrCreateTypeIntelSession(
+    kind: TypeIntelKind,
+    userId: string,
+  ): Promise<AgenticLocalSession> {
+    const sessionId = typeIntelSessionId(kind, userId);
+    const targetType = typeIntelTargetType(kind);
+    const list = await this.getSessionsList(userId);
+    const dupes = list.filter(
+      (s) =>
+        s.targetType === targetType &&
+        (s.targetId === userId || s.targetId === 'self' || s.id === sessionId),
+    );
+
+    if (dupes.length > 1 || (dupes.length === 1 && dupes[0].id !== sessionId)) {
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      for (const d of dupes) {
+        if (d.id === sessionId) continue;
+        await LocalEngine.cacheDelete(sessionKey(d.id)).catch(() => {});
+      }
+      await this.setSessionsList(
+        userId,
+        list.filter(
+          (s) =>
+            !(
+              s.targetType === targetType &&
+              (s.targetId === userId || s.targetId === 'self') &&
+              s.id !== sessionId
+            ),
+        ),
+      );
+    }
+
+    const existing = await this.getSession(sessionId);
+    if (existing) {
+      if (existing.targetType !== targetType || existing.targetId !== userId) {
+        await this.upsertSession({
+          ...existing,
+          id: sessionId,
+          userId,
+          targetType,
+          targetId: userId,
+        });
+        return (await this.getSession(sessionId)) || existing;
+      }
+      return existing;
+    }
+
+    const byType = dupes.find((s) => s.id !== sessionId) || dupes[0];
+    if (byType && byType.id !== sessionId) {
+      const full = await this.getSession(byType.id);
+      if (full) {
+        await this.upsertSession({
+          ...full,
+          id: sessionId,
+          userId,
+          targetType,
+          targetId: userId,
+        });
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        await LocalEngine.cacheDelete(sessionKey(byType.id)).catch(() => {});
+        return (await this.getSession(sessionId))!;
+      }
+    }
+
+    const label = TYPE_INTEL_KINDS[kind].label;
+    const newSession: AgenticLocalSession = {
+      id: sessionId,
+      userId,
+      targetType,
+      targetId: userId,
+      context: `${label} writing twin — learns from your past ${label}s. No chat UI.`,
+      chatHistory: [],
+    };
+    await this.upsertSession(newSession);
+    return newSession;
+  },
+
+  /**
+   * Scans for empty sessions for this user, keeps the active or most recent empty session,
+   * and prunes redundant empty duplicates from LocalEngine and lists.
+   */
+  async findAndPruneEmptySessions(
+    userId: string,
+    currentActiveId?: string | null): Promise<{ reusableSessionId?: string; prunedIds: string[] }> {
+    const list = await this.getSessionsList(userId);
+    const prunedIds: string[] = [];
+    let reusableSessionId: string | undefined;
+
+    // Filter only general sessions (not object-sidekick sessions)
+    const generalSessions = list.filter((s) => !s.targetType && !s.targetId);
+
+    for (const item of generalSessions) {
+      const full = await this.getSession(item.id);
+      const isHistoryEmpty = !full || !full.chatHistory || full.chatHistory.length === 0;
+
+      if (isHistoryEmpty) {
+        if (!reusableSessionId) {
+          // If the current active is empty, prefer that as reusable, otherwise keep this first empty one
+          reusableSessionId = (currentActiveId && item.id === currentActiveId) ? currentActiveId : item.id;
+        } else if (item.id !== reusableSessionId && item.id !== currentActiveId) {
+          // Duplicate empty session — delete from local cache
+          prunedIds.push(item.id);
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          await LocalEngine.cacheDelete(sessionKey(item.id));
+        }
+      }
+    }
+
+    if (prunedIds.length > 0) {
+      const remaining = list.filter((s) => !prunedIds.includes(s.id));
+      await this.setSessionsList(userId, remaining);
+      emit();
+    }
+
+    return { reusableSessionId, prunedIds };
+  },
+
+  isMessagePending(message?: AgenticLocalMessage | null): boolean {
+    if (!message) return false;
+    return message.syncStatus === 'pending' || message.syncStatus === 'error';
+  }
+};
+

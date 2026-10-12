@@ -1,0 +1,838 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import { ArrowLeft, Calendar, Check, ChevronDown, ChevronUp, Plus, Tag, Target, X } from 'lucide-react';
+import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
+import { useTask } from '@/context/TaskContext';
+import { useAuth } from '@/lib/auth';
+import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
+import { goalPendingKey } from '@/lib/sync/goal-keys';
+import { PRIORITY_COLORS } from '@/components/objects/ObjectCardMeta';
+import type { Priority, Task } from '@/types';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import {
+  EventDateTimePickerDrawer,
+} from '@/components/events/drawers/EventDateTimePickerDrawer';
+
+import { useDataNexus } from '@/context/DataNexusContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { useContextualAutocomplete } from '@/lib/contextual-engine';
+import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelligence';
+import { TypeIntelToggle, TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
+
+const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low'];
+
+type Props = {
+  onClose?: () => void;
+  onRegisterClose?: (close: (() => void) | null) => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+  onGoalCreated?: (task: Task) => void;
+  initialContent?: {
+    id?: string;
+    title?: string;
+    content?: string;
+    priority?: Priority;
+    dueDate?: string;
+    tags?: string[];
+  };
+};
+
+/**
+ * Goal create composer — same live-copy contract as CreateNoteForm:
+ * keystroke → pushLiveGoal → SyncStatusDot; Check / Enter (minimized) closes.
+ */
+export function CreateGoalComposer({
+  onClose,
+  onRegisterClose,
+  isExpanded: controlledExpanded,
+  onToggleExpand,
+  onGoalCreated,
+  initialContent,
+}: Props) {
+  const { pushLiveGoal, selectedProjectId, userId, deleteTask, ecosystemTags, refreshEcosystemTags, tasks: allTasks } = useTask();
+  const { user } = useAuth();
+  const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
+  const { openProUpgrade } = useProUpgrade();
+  const isPro = hasPaidKylrixPlan(user);
+  const { enabled: createWithAgent, persist: persistAgent } = useTypeIntelEnabled('goal');
+  const openPro = useCallback(() => openProUpgrade('Kylie Assist'), [openProUpgrade]);
+  const ownerId = user?.$id || userId || 'guest';
+  const { closeSidebar } = useDynamicSidebar();
+  const { getCachedData, setCachedData } = useDataNexus();
+  const draftKey = `kylrix_goal_compose_draft_${ownerId}`;
+
+  const [content, setContent] = useState(initialContent?.content || '');
+  const [title, setTitle] = useState(initialContent?.title || '');
+  const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(Boolean(initialContent?.title));
+  const [priority, setPriority] = useState<Priority>(initialContent?.priority || 'medium');
+  const [dueDate, setDueDate] = useState(initialContent?.dueDate || '');
+  const [tags, setTags] = useState<string[]>(initialContent?.tags || []);
+  const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
+
+  // Derive available tags from both ecosystem registry and local task copy
+  const availableTagList = React.useMemo(() => {
+    const list: { name: string; color: string }[] = [];
+    const seenLower = new Set<string>();
+
+    const addIfUnique = (name: string, color: string) => {
+      const trimmed = String(name || '').trim();
+      if (!trimmed) return;
+      const key = trimmed.toLowerCase();
+      if (!seenLower.has(key)) {
+        seenLower.add(key);
+        list.push({ name: trimmed, color: color || '#A855F7' });
+      }
+    };
+
+    (ecosystemTags || []).forEach((t: any) => {
+      if (t?.name) addIfUnique(t.name, t.color);
+    });
+
+    (allTasks || []).forEach((task) => {
+      (task.labels || []).forEach((label) => {
+        if (label) addIfUnique(label, '#A855F7');
+      });
+    });
+
+    return list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  }, [ecosystemTags, allTasks]);
+
+  // Refresh tags when tag selector opens
+  useEffect(() => {
+    if (isTagSelectorOpen) {
+      void refreshEcosystemTags();
+    }
+  }, [isTagSelectorOpen, refreshEcosystemTags]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [resolvedId, setResolvedId] = useState<string | undefined>(initialContent?.id);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [localExpanded, setLocalExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const isExpanded = controlledExpanded !== undefined ? controlledExpanded : localExpanded;
+  const toggleExpand = onToggleExpand || (() => setLocalExpanded((v) => !v));
+  const liveIdRef = useRef<string | undefined>(initialContent?.id);
+  const announcedRef = useRef(false);
+  const isPastedRef = useRef(false);
+  const pasteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contentRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const {
+    inlineSuffix,
+    handleKeyDown: handleAutoKeyDown,
+    recordContent,
+  } = useContextualAutocomplete(content, {
+    niche: 'productivity',
+    activeObjectId: resolvedId,
+    tags,
+    onAccept: (completedText) => {
+      handleContentChange(completedText);
+    },
+  });
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Hydrate draft memory from LocalEngine on mount
+  useEffect(() => {
+    if (draftHydrated) return;
+    const cachedDraft = getCachedData<{
+      id?: string;
+      title?: string;
+      content?: string;
+      priority?: Priority;
+      dueDate?: string;
+    }>(draftKey);
+
+    if (cachedDraft && (cachedDraft.content || cachedDraft.title || cachedDraft.dueDate)) {
+      const targetId = initialContent?.id || cachedDraft.id;
+      if (targetId) {
+        liveIdRef.current = targetId;
+        setResolvedId(targetId);
+      }
+      if (initialContent?.content === undefined && cachedDraft.content) setContent(cachedDraft.content);
+      if (initialContent?.title === undefined && cachedDraft.title) {
+        setTitle(cachedDraft.title);
+        setIsTitleManuallyEdited(true);
+      }
+      if (initialContent?.priority === undefined && cachedDraft.priority) setPriority(cachedDraft.priority);
+      if (initialContent?.dueDate === undefined && cachedDraft.dueDate) setDueDate(cachedDraft.dueDate);
+    }
+    setDraftHydrated(true);
+  }, [draftHydrated, draftKey, getCachedData, initialContent]);
+
+  useEffect(() => {
+    if (initialContent?.id) {
+      liveIdRef.current = initialContent.id;
+      setResolvedId(initialContent.id);
+    }
+    if (initialContent?.dueDate !== undefined) {
+      setDueDate(initialContent.dueDate);
+    }
+    if (initialContent?.content !== undefined) {
+      setContent(initialContent.content);
+    }
+    if (initialContent?.title !== undefined) {
+      setTitle(initialContent.title);
+      if (initialContent.title) setIsTitleManuallyEdited(true);
+    }
+    if (initialContent?.priority !== undefined) {
+      setPriority(initialContent.priority);
+    }
+  }, [initialContent?.id, initialContent?.dueDate, initialContent?.content, initialContent?.title, initialContent?.priority]);
+
+  // Save active draft into LocalEngine
+  useEffect(() => {
+    if (!draftHydrated) return;
+    const activeId = liveIdRef.current || resolvedId;
+    const hasDraft = Boolean(content.trim() || title.trim() || dueDate.trim());
+    if (hasDraft) {
+      setCachedData(draftKey, {
+        id: activeId,
+        title,
+        content,
+        priority,
+        dueDate,
+      });
+    }
+  }, [content, title, priority, dueDate, resolvedId, draftKey, setCachedData, draftHydrated]);
+
+  useEffect(() => {
+    if (isTitleManuallyEdited) return;
+    const generated = buildAutoTitleFromContent(content);
+    setTitle(content.trim() ? generated : '');
+  }, [content, isTitleManuallyEdited]);
+
+  const ensureId = useCallback(() => {
+    const existing = initialContent?.id || resolvedId || liveIdRef.current;
+    if (existing) return existing;
+    const id = crypto.randomUUID();
+    liveIdRef.current = id;
+    setResolvedId(id);
+    return id;
+  }, [initialContent?.id, resolvedId]);
+
+  const appendTag = (tagName: string) => {
+    const trimmed = tagName?.trim();
+    if (!trimmed) return;
+    const lower = trimmed.toLowerCase();
+    if (tags.some((t) => t.toLowerCase() === lower)) return;
+    const nextTags = [...tags, trimmed];
+    setTags(nextTags);
+    pushLive(buildLive(content, title, priority, dueDate, nextTags));
+  };
+
+  const removeTag = (tagName: string) => {
+    const lower = tagName.toLowerCase().trim();
+    const nextTags = tags.filter((t) => t.toLowerCase().trim() !== lower);
+    setTags(nextTags);
+    pushLive(buildLive(content, title, priority, dueDate, nextTags));
+  };
+
+  const buildLive = useCallback(
+    (nextContent: string, nextTitle?: string, nextPriority?: Priority, nextDue?: string, nextTags?: string[]): Task => {
+      const id = ensureId();
+      const previewTitle =
+        resolveNoteCardTitle(
+          isTitleManuallyEdited ? title : nextTitle ?? buildAutoTitleFromContent(nextContent),
+          nextContent,
+        ) ||
+        (isTitleManuallyEdited ? title : nextTitle) ||
+        'Untitled Goal';
+      const rawDue = (nextDue ?? dueDate) && String(nextDue ?? dueDate).trim();
+      let due: Date | undefined = undefined;
+      if (rawDue) {
+        const parsed = new Date(
+          rawDue.includes('T') || rawDue.includes(' ') || rawDue.includes(':')
+            ? rawDue
+            : `${rawDue}T12:00:00`
+        );
+        if (!Number.isNaN(parsed.getTime())) due = parsed;
+      }
+
+      return {
+        id,
+        title: previewTitle,
+        description: nextContent,
+        priority: nextPriority || priority,
+        status: 'todo',
+        projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : (selectedProjectId || 'inbox'),
+        isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
+        labels: nextTags !== undefined ? nextTags : tags,
+        linkedNotes: [],
+        subtasks: [],
+        comments: [],
+        attachments: [],
+        reminders: [],
+        timeEntries: [],
+        assigneeIds: ownerId !== 'guest' ? [ownerId] : [],
+        creatorId: ownerId,
+        userId: ownerId,
+        parentTaskId: null,
+        dueDate: due && !Number.isNaN(due.getTime()) ? due : undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        position: 0,
+        isArchived: false,
+        isPinned: false,
+        isPublic: false,
+        isGuest: false,
+      };
+    },
+    [activeWorkspace, dueDate, ensureId, isTitleManuallyEdited, ownerId, priority, selectedProjectId, tags, title],
+  );
+
+  const pushLive = useCallback(
+    (task: Task) => {
+      if (typeof pushLiveGoal === 'function') {
+        pushLiveGoal(task);
+        autonomicSyncEngine.nudge();
+      }
+    },
+    [pushLiveGoal],
+  );
+
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushLiveGoal = useCallback(() => {
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
+    const hasContent = Boolean(content.trim() || title.trim());
+    if (!hasContent) return;
+    const task = buildLive(content, title, priority, dueDate);
+    pushLive(task);
+  }, [buildLive, content, dueDate, priority, pushLive, title]);
+
+  const scheduleLiveGoalSync = useCallback(() => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      flushLiveGoal();
+    }, 250);
+  }, [flushLiveGoal]);
+
+  const handleContentChange = useCallback(
+    (next: string) => {
+      setContent(next);
+      const generated = isTitleManuallyEdited ? title : buildAutoTitleFromContent(next);
+      if (!isTitleManuallyEdited) setTitle(generated);
+
+      if (contentRef.current) {
+        contentRef.current.style.height = 'auto';
+        contentRef.current.style.height = `${Math.max(76, Math.min(contentRef.current.scrollHeight, 360))}px`;
+      }
+
+      scheduleLiveGoalSync();
+    },
+    [isTitleManuallyEdited, scheduleLiveGoalSync, title],
+  );
+
+  const {
+    learningStatus,
+    learningLabel,
+    suggestion: agentSuggestion,
+    busy: agentBusy,
+    acceptSuggestion: acceptAgentSuggestion,
+    runTakeover,
+    handleKeyDown: handleAgentKeyDown,
+    accent: agentAccent,
+  } = useTypeIntelligence({
+    kind: 'goal',
+    userId: user?.$id,
+    displayName: user?.name || user?.email || undefined,
+    draft: content,
+    enabled: createWithAgent,
+    isPro,
+    onOpenPro: openPro,
+    setDraft: handleContentChange,
+  });
+
+  const ghostSuggestion =
+    createWithAgent && agentSuggestion ? agentSuggestion : inlineSuffix || '';
+
+  const acceptGhost = useCallback(() => {
+    if (createWithAgent && agentSuggestion) {
+      acceptAgentSuggestion();
+      return;
+    }
+    if (inlineSuffix) handleContentChange(content + inlineSuffix);
+  }, [
+    createWithAgent,
+    agentSuggestion,
+    acceptAgentSuggestion,
+    inlineSuffix,
+    handleContentChange,
+    content,
+  ]);
+
+  const handleClose = useCallback(() => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    const id = liveIdRef.current || resolvedId;
+    const hasContent = Boolean(content.trim() || title.trim());
+    setCachedData(draftKey, null);
+    if (!hasContent && id) {
+      if (typeof deleteTask === 'function') {
+        void deleteTask(id);
+      }
+      autonomicSyncEngine.ack(goalPendingKey(id));
+    } else if (hasContent) {
+      const task = buildLive(content, title, priority, dueDate);
+      pushLiveGoal(task);
+      autonomicSyncEngine.nudge();
+      if (activeWorkspace && !activeWorkspace.isPersonal && id) {
+        void attachEntityToActiveWorkspace('goal', id);
+      }
+      if (!announcedRef.current) {
+        announcedRef.current = true;
+        onGoalCreated?.(task);
+      }
+    }
+    if (typeof onClose === 'function') {
+      onClose();
+    }
+    closeSidebar();
+  }, [activeWorkspace, attachEntityToActiveWorkspace, buildLive, closeSidebar, content, deleteTask, draftKey, dueDate, onClose, onGoalCreated, priority, pushLiveGoal, resolvedId, setCachedData, title]);
+
+  useEffect(() => {
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, []);
+
+  const handleOpenDatePicker = useCallback(() => {
+    setShowDatePicker(true);
+  }, []);
+
+  useEffect(() => {
+    onRegisterClose?.(handleClose);
+    return () => onRegisterClose?.(null);
+  }, [handleClose, onRegisterClose]);
+
+  const resourceId = resolvedId ? goalPendingKey(resolvedId) : null;
+
+  return (
+    <div
+      onContextMenu={(e) => e.preventDefault()}
+      className="w-full h-full min-h-0 flex flex-col bg-[#161412] text-white overscroll-contain"
+    >
+      {/* Header */}
+      <div className="px-3 py-2.5 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 bg-[#161412] shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="p-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all shrink-0 cursor-pointer"
+            title="Back / Close"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="w-7 h-7 rounded-xl flex items-center justify-center bg-[#A855F7]/10 border border-[#A855F7]/25 text-[#A855F7] shrink-0">
+            <Target className="w-3.5 h-3.5" />
+          </div>
+          <div className="min-w-0 flex flex-col">
+            <span className="font-extrabold text-sm font-clash tracking-tight text-white leading-tight">
+              Create Goal
+            </span>
+            <div className="flex items-center gap-1.5 mt-0.5 select-none">
+              <SyncStatusDot resourceId={resourceId} kind="goal" />
+              <SyncStatusLabel resourceId={resourceId} kind="goal" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {isMobile ? (
+            <button
+              type="button"
+              onClick={toggleExpand}
+              className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/5 transition-all shrink-0"
+            >
+              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#10B981] text-white hover:bg-[#10B981]/90 shadow-[0_4px_12px_rgba(16,185,129,0.25)] transition-all text-xs font-bold shrink-0"
+            title="Save and Close"
+          >
+            <Check className="w-3.5 h-3.5 stroke-[3]" />
+            <span>Done</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Body */}
+      <div className="flex-1 overflow-y-auto overscroll-contain p-4 flex flex-col gap-4 min-h-0 scrollbar-thin">
+        {/* Title Input */}
+        <div className="flex flex-col gap-1 shrink-0">
+          <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/35">
+            Goal Title
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              setIsTitleManuallyEdited(true);
+              scheduleLiveGoalSync();
+            }}
+            placeholder="What do you want to accomplish?"
+            className="w-full bg-transparent text-white placeholder-white/20 border-0 border-b border-white/10 focus:border-[#A855F7] px-0 py-1.5 text-lg font-bold font-clash focus:outline-none transition-colors"
+          />
+        </div>
+
+        {/* Description Input */}
+        <div className="shrink-0 flex flex-col gap-1">
+          <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/35">
+            Description & Milestones
+          </label>
+          <div className="relative rounded-2xl border border-white/10 bg-[#100F0E] focus-within:border-[#A855F7]/40 transition-all">
+            <textarea
+              ref={contentRef}
+              rows={3}
+              value={content}
+              onPaste={(e) => {
+                isPastedRef.current = true;
+                if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+                pasteTimerRef.current = setTimeout(() => {
+                  isPastedRef.current = false;
+                }, 2000);
+                const pastedText = e.clipboardData.getData('text');
+                if (pastedText) {
+                  setTimeout(() => {
+                    const updated = contentRef.current?.value || content;
+                    handleContentChange(updated);
+                  }, 10);
+                }
+              }}
+              onChange={(e) => handleContentChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (
+                  (e.key === 'ArrowRight' || e.key === 'Tab') &&
+                  ghostSuggestion &&
+                  e.currentTarget.selectionStart === e.currentTarget.value.length
+                ) {
+                  e.preventDefault();
+                  acceptGhost();
+                  return;
+                }
+                handleAgentKeyDown(e);
+                handleAutoKeyDown(e);
+                if (
+                  e.key === 'Enter' &&
+                  !e.shiftKey &&
+                  !isExpanded &&
+                  !isPastedRef.current &&
+                  !ghostSuggestion
+                ) {
+                  e.preventDefault();
+                  recordContent(content);
+                  handleClose();
+                }
+              }}
+              placeholder="Break down your goal, steps, or notes..."
+              autoFocus
+              style={{ minHeight: '76px', height: '76px' }}
+              className="w-full resize-none bg-transparent text-white placeholder-white/25 border-0 rounded-2xl p-3.5 text-sm leading-relaxed focus:outline-none transition-all scrollbar-thin font-satoshi"
+            />
+            <TypeIntelGhostLayer
+              draft={content}
+              suggestion={ghostSuggestion}
+              enabled={Boolean(ghostSuggestion) || createWithAgent}
+              showWand={createWithAgent}
+              busy={agentBusy}
+              accent={agentAccent}
+              onAccept={acceptGhost}
+              onTakeover={() => void runTakeover()}
+              className="p-3.5 text-sm leading-relaxed font-satoshi"
+            />
+          </div>
+          <TypeIntelToggle
+            enabled={createWithAgent}
+            onToggle={persistAgent}
+            locked={!isPro}
+            onLockedAttempt={openPro}
+            accent={agentAccent}
+            learningStatus={learningStatus}
+            learningLabel={learningLabel}
+            busy={agentBusy}
+          />
+        </div>
+
+        {/* Metadata & Properties Card */}
+        <div className="p-3.5 rounded-2xl bg-[#1C1A18] border border-white/5 flex flex-col gap-3.5 shrink-0">
+          {/* Priority */}
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/40">
+              Priority Level
+            </span>
+            <div className="grid grid-cols-4 gap-1.5">
+              {PRIORITIES.map((p) => {
+                const color = PRIORITY_COLORS[p];
+                const active = priority === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => {
+                      setPriority(p);
+                      pushLive(buildLive(content, title, p));
+                    }}
+                    className="py-2 px-1 rounded-xl text-[10px] font-extrabold font-mono uppercase tracking-wider border transition-all text-center"
+                    style={{
+                      color: active ? '#FFFFFF' : color,
+                      borderColor: active ? color : `${color}30`,
+                      backgroundColor: active ? `${color}44` : `${color}0c`,
+                    }}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Target Due Date */}
+          <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/40">
+                Target Due Date
+              </label>
+              {dueDate ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDueDate('');
+                    pushLive(buildLive(content, title, priority, ''));
+                  }}
+                  className="text-[10px] font-mono font-bold uppercase tracking-wider text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 flex items-center rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white hover:border-[#A855F7]/40 hover:bg-white/[0.03] transition-all">
+                <Calendar className="w-4 h-4 text-[#A855F7] shrink-0 mr-2 pointer-events-none" />
+                <input
+                  type="date"
+                  value={dueDate ? (dueDate.includes('T') ? dueDate.split('T')[0] : dueDate) : ''}
+                  onChange={(e) => {
+                    const dateStr = e.target.value;
+                    if (!dateStr) {
+                      setDueDate('');
+                      pushLive(buildLive(content, title, priority, ''));
+                      return;
+                    }
+                    let nextDate = new Date(`${dateStr}T12:00:00`);
+                    if (dueDate) {
+                      const prev = new Date(dueDate);
+                      if (!Number.isNaN(prev.getTime())) {
+                        const [y, m, d] = dateStr.split('-').map(Number);
+                        nextDate = new Date(prev);
+                        nextDate.setFullYear(y, m - 1, d);
+                      }
+                    }
+                    const iso = nextDate.toISOString();
+                    setDueDate(iso);
+                    pushLive(buildLive(content, title, priority, iso));
+                  }}
+                  className="w-full bg-transparent border-none text-white text-xs font-satoshi font-bold focus:outline-none focus:ring-0 cursor-pointer [color-scheme:dark]"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenDatePicker}
+                className="px-3 py-2 text-[11px] font-mono font-bold uppercase tracking-wider text-[#A855F7] bg-[#A855F7]/10 hover:bg-[#A855F7]/20 border border-[#A855F7]/20 rounded-xl transition-all shrink-0 cursor-pointer"
+                title="Open calendar & time picker"
+              >
+                Pick Date
+              </button>
+            </div>
+          </div>
+
+          {/* Tags Section */}
+          <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/40">
+                Tags & Categories
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsTagSelectorOpen(true)}
+                className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#A855F7] hover:text-[#C084FC] flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Plus size={12} />
+                <span>Add Tag</span>
+              </button>
+            </div>
+
+            {tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {tags.map((tagName) => {
+                  const tag = (ecosystemTags as any[]).find((t) => t.name === tagName);
+                  const color = tag?.color || '#A855F7';
+                  return (
+                    <span
+                      key={tagName}
+                      onClick={() => removeTag(tagName)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#100F0E] text-[10px] font-extrabold font-mono rounded-lg border cursor-pointer hover:bg-[#1C1A18] transition-colors"
+                      style={{ color: color, borderColor: `${color}40` }}
+                    >
+                      {tagName.toUpperCase()}
+                      <X className="w-2.5 h-2.5" />
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                onClick={() => setIsTagSelectorOpen(true)}
+                className="w-full py-2 px-3 rounded-xl border border-dashed border-white/10 hover:border-[#A855F7]/30 text-white/30 hover:text-white/60 text-xs font-satoshi flex items-center gap-2 cursor-pointer transition-all"
+              >
+                <Tag size={13} className="text-[#A855F7]/60" />
+                <span>No tags selected. Tap to add tags from local engine…</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Ecosystem Tags Selection Drawer */}
+      {isTagSelectorOpen && (
+        <div className="fixed inset-0 z-[15000] flex flex-col justify-end">
+          <div
+            className="fixed inset-0 bg-black/70 transition-opacity cursor-pointer"
+            onClick={() => setIsTagSelectorOpen(false)}
+          />
+          <div className="relative z-[15001] bg-[#161412] border-t border-white/10 rounded-t-[28px] max-h-[60dvh] w-full p-5 flex flex-col overflow-hidden shadow-2xl animate-slide-up">
+            <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3">
+              <div className="flex items-center gap-2">
+                <Tag size={18} className="text-[#A855F7]" />
+                <span className="text-white font-black text-sm font-clash uppercase tracking-wider">
+                  Select Tags
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTagSelectorOpen(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white bg-white/5 transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2 min-h-0">
+              {/* Inline Create Tag Row */}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const form = e.currentTarget;
+                  const input = form.elements.namedItem('newTagName') as HTMLInputElement;
+                  const val = input?.value?.trim();
+                  if (!val) return;
+                  try {
+                    const { createTag } = await import('@/lib/appwrite');
+                    await createTag({ name: val, description: '', color: '#A855F7' });
+                    await refreshEcosystemTags();
+                    appendTag(val);
+                    input.value = '';
+                  } catch (_err: any) {
+                    appendTag(val);
+                    if (input) input.value = '';
+                  }
+                }}
+                className="flex items-center gap-2 w-full mb-1"
+              >
+                <input
+                  type="text"
+                  name="newTagName"
+                  placeholder="Type new tag name & press Enter..."
+                  className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white font-mono placeholder-white/30 focus:outline-none focus:border-[#A855F7]"
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-2 rounded-xl bg-[#A855F7] text-white text-xs font-bold font-mono hover:bg-[#9333EA] transition-colors shrink-0"
+                >
+                  Add
+                </button>
+              </form>
+
+              {availableTagList.length === 0 ? (
+                <div className="text-center py-6 text-white/30 text-xs font-mono">
+                  No existing tags found. Type a name above to create your first tag.
+                </div>
+              ) : (
+                availableTagList.map((tag) => {
+                  const isSelected = tags.includes(tag.name || '');
+                  const color = tag.color || '#A855F7';
+                  return (
+                    <button
+                      key={tag.name}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          removeTag(tag.name || '');
+                        } else {
+                          appendTag(tag.name || '');
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer text-left ${
+                        isSelected
+                          ? 'bg-white/10 border-white/20'
+                          : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.06] hover:border-white/10'
+                      }`}
+                      style={isSelected ? { borderColor: `${color}60`, backgroundColor: `${color}15` } : undefined}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-3 h-3 rounded-md shrink-0"
+                          style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}50` }}
+                        />
+                        <span className="text-white text-xs font-mono font-bold uppercase tracking-wider">
+                          {tag.name}
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <span
+                          className="text-[10px] font-mono font-black uppercase tracking-wider px-2 py-0.5 rounded-md"
+                          style={{ color, backgroundColor: `${color}20` }}
+                        >
+                          SELECTED
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDatePicker && (
+        <EventDateTimePickerDrawer
+          open={showDatePicker}
+          startTime={dueDate ? new Date(dueDate) : new Date()}
+          endTime={dueDate ? new Date(new Date(dueDate).getTime() + 3600000) : new Date(Date.now() + 3600000)}
+          onApply={(start) => {
+            const iso = start.toISOString();
+            setDueDate(iso);
+            pushLive(buildLive(content, title, priority, iso));
+            setShowDatePicker(false);
+          }}
+          onClose={() => setShowDatePicker(false)}
+        />
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,130 @@
+name: Ota governance
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/FUNDING.yml'
+      - 'LICENSE'
+      - 'LICENSES/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/FUNDING.yml'
+      - 'LICENSE'
+      - 'LICENSES/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-native-linux:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ci-build]') || contains(github.event.head_commit.message, '[enable-ci]')
+    uses: ./.github/workflows/ota-verify-native-linux.yml
+    with:
+      ota_projection_identity: sha256:52218b0207b404fe7c0124b258d7b7170700a33fa75caf3bdd813186db9b97f4
+      ota_target_os: linux
+      ota_runner: ubuntu-latest
+
+  verify-container-linux:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ci-build]') || contains(github.event.head_commit.message, '[enable-ci]')
+    uses: ./.github/workflows/ota-verify-container-linux.yml
+    with:
+      ota_projection_identity: sha256:219fd38f9c23aefb9691a3d672d93d5a2372b2b330fd10f6bd4d98c6d314d9dd
+      ota_target_os: linux
+      ota_runner: ubuntu-latest
+
+  strict-replay-policy-refusal:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ci-build]') || contains(github.event.head_commit.message, '[enable-ci]')
+    name: Strict replay-input policy refusal
+    runs-on: ubuntu-latest
+    env:
+      OTA_POLICY: .ota/pressure-replay-policy.yaml
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - uses: ota-run/setup@85bf49c11a5aa3ddedfa56c47682cfd40b238f1f # v1.0.9
+        with:
+          source: contract
+
+      - name: Prove strict refusal before setup or execution
+        shell: bash
+        run: |
+          test ! -e node_modules
+          test ! -e .env
+          test ! -e .next
+
+          set +e
+          ota doctor --workflow verify --json . > "$RUNNER_TEMP/ota-policy-doctor.json"
+          doctor_status=$?
+          ota up --workflow verify --mode native --agent --dry-run --json . > "$RUNNER_TEMP/ota-policy-preview.json"
+          preview_status=$?
+          ota up --workflow verify --mode native --agent --json --receipt . > "$RUNNER_TEMP/ota-policy-refusal.json"
+          refusal_status=$?
+          ota doctor --workflow verify --fix --json . > "$RUNNER_TEMP/ota-policy-doctor-fix.json"
+          doctor_fix_status=$?
+          set -e
+
+          test "$doctor_status" -ne 0
+          test "$preview_status" -ne 0
+          test "$refusal_status" -ne 0
+          test "$doctor_fix_status" -ne 0
+
+          jq -e '
+            .replay_input_policy.decision == "deny"
+            and .replay_input_policy.coverage == "insufficient"
+            and (.replay_input_policy.inputs | any(
+              .task == "verify"
+              and .id == "pnpm_lockfile"
+              and .status == "unpinned"
+            ))
+          ' "$RUNNER_TEMP/ota-policy-doctor.json"
+          jq -e '
+            .receipt.status == "blocked"
+            and .receipt.failure_origin == "replay_input_policy_deny"
+            and .receipt.replay_input_policy.decision == "deny"
+          ' "$RUNNER_TEMP/ota-policy-preview.json"
+          jq -e '
+            .receipt.status == "blocked"
+            and .receipt.failure_origin == "replay_input_policy_deny"
+            and .receipt.replay_input_policy.decision == "deny"
+          ' "$RUNNER_TEMP/ota-policy-refusal.json"
+          jq -e '
+            .replay_input_policy.decision == "deny"
+          ' "$RUNNER_TEMP/ota-policy-doctor-fix.json"
+
+          test ! -e node_modules
+          test ! -e .env
+          test ! -e .next
+          git diff --exit-code
+
+      - name: Upload strict replay-input refusal evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ota-strict-replay-input-refusal
+          path: ${{ runner.temp }}/ota-policy-*.json
+          if-no-files-found: error
+
+  contract-ci-drift:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ci-build]') || contains(github.event.head_commit.message, '[enable-ci]')
+    name: Contract-to-CI drift gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Fail on contract-to-CI workflow drift
+        uses: ota-run/action@4fba25c6c0063af009d38e215d97ab1a925277c8
+        with:
+          command: doctor
+          source: contract
+          contract-path: ota.yaml
+          workflow: verify
+          fail-on-ci-drift: true
+          comment-pr: false
+          artifact-name: ota-contract-ci-drift

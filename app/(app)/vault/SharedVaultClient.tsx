@@ -1,0 +1,729 @@
+'use client';
+
+/**
+ * SharedVaultClient — Public read-only view for a shared password credential.
+ *
+ * Flow:
+ *  1. Fetches the public credential row (server already validated isPublic).
+ *  2. Decrypts all encrypted fields using the DEK fragment from the URL.
+ *  3. Renders name, username, password (masked) with copy buttons.
+ *  4. Shows a warning banner that this page is accessible to anyone with the link.
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Shield,
+  Copy,
+  Eye,
+  EyeOff,
+  Globe,
+  ExternalLink,
+  CheckCircle2,
+  Lock,
+  AlertTriangle} from 'lucide-react';
+
+interface SharedVaultClientProps {
+  credentialId: string;
+  dekFragment?: string; // URL-encoded base64 raw AES-GCM 256 key
+}
+
+interface DecryptedCredential {
+  $id: string;
+  name: string;
+  username: string | null;
+  password: string | null;
+  url: string | null;
+  notes: string | null;
+  customFields: Array<{ id: string; label: string; value: string }>;
+  itemType: string;
+  isEnv?: boolean;
+  $createdAt?: string;
+  $updatedAt?: string;
+}
+
+
+const DEK_IV_SIZE = 16;
+
+async function importDek(dekBase64Safe: string): Promise<CryptoKey> {
+  // Input is URL-safe base64 (- → +, _ → /, no padding)
+  const base64 = dekBase64Safe.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = (4 - (base64.length % 4)) % 4;
+  const rawString = atob(base64 + '='.repeat(pad));
+  const raw = Uint8Array.from(rawString, (c) => c.charCodeAt(0));
+  return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+}
+
+async function decryptWithDek(ciphertext: string, dek: CryptoKey): Promise<string> {
+  try {
+    // Format: base64(iv + ciphertext) — matches ecosystemSecurity.decryptWithKey
+    const buf = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0));
+    const iv = buf.slice(0, DEK_IV_SIZE);
+    const data = buf.slice(DEK_IV_SIZE);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, dek, data);
+    return new TextDecoder().decode(plain);
+  } catch (e) {
+    console.error('Decryption error:', e);
+    return '[DECRYPTION_FAILED]';
+  }
+}
+
+import { looksEncrypted } from '@/lib/masterpass-crypto';
+import { normalizeCustomFields, formatEnvText, extractRecoveryCodes } from '@/lib/vault/parse-env';
+
+export default function SharedVaultClient({ credentialId, dekFragment, rawCredential }: SharedVaultClientProps & { rawCredential: any }) {
+  const [credential, setCredential] = useState<DecryptedCredential | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyToClipboard = useCallback(async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(field);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const raw = rawCredential;
+        if (!raw) throw new Error('Failed to load shared credential.');
+
+        if (cancelled) return;
+
+        // If no DEK fragment, display only plaintext-safe fields
+        if (!dekFragment) {
+          setCredential({
+            $id: raw.$id,
+            name: raw.name || 'Shared Item',
+            username: null,
+            password: null,
+            url: null,
+            notes: null,
+            customFields: [],
+            itemType: raw.itemType || 'login',
+            isEnv: Boolean(raw.isEnv),
+            $createdAt: raw.$createdAt,
+            $updatedAt: raw.$updatedAt,
+          });
+          return;
+        }
+
+        // Decode the DEK from URL — importDek handles URL-safe base64 decoding internally
+        const dek = await importDek(dekFragment);
+
+        // Decrypt all encrypted fields
+        const decrypt = async (val: string | null | undefined): Promise<string | null> => {
+          if (!val) return null;
+          if (!looksEncrypted(val)) return val;
+          return decryptWithDek(val, dek);
+        };
+
+        const customFieldsRaw = await decrypt(raw.customFields);
+        const decrypted: DecryptedCredential = {
+          $id: raw.$id,
+          name: (await decrypt(raw.name)) || 'Shared Item',
+          username: await decrypt(raw.username),
+          password: await decrypt(raw.password),
+          url: await decrypt(raw.url),
+          notes: await decrypt(raw.notes),
+          customFields: normalizeCustomFields(customFieldsRaw),
+          itemType: raw.itemType || 'login',
+          isEnv: Boolean(raw.isEnv),
+          $createdAt: raw.$createdAt,
+          $updatedAt: raw.$updatedAt,
+        };
+
+        if (!cancelled) setCredential(decrypted);
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Unknown error');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [credentialId, dekFragment, rawCredential]);
+
+  if (loading) {
+    return (
+      <div className="shared-vault-wrap">
+        <div className="shared-vault-card loading-shimmer">
+          <div className="shimmer-line wide" />
+          <div className="shimmer-line medium" />
+          <div className="shimmer-line narrow" />
+        </div>
+        <style>{sharedVaultStyles}</style>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="shared-vault-wrap">
+        <div className="shared-vault-card error-card">
+          <AlertTriangle size={40} strokeWidth={1.5} className="error-icon" />
+          <h2>Link Unavailable</h2>
+          <p>{error}</p>
+        </div>
+        <style>{sharedVaultStyles}</style>
+      </div>
+    );
+  }
+
+  if (!credential) return null;
+
+  return (
+    <div className="shared-vault-wrap">
+      <div className="shared-vault-card">
+        {/* Header */}
+        <div className="svc-header">
+          <div className="svc-icon-wrap">
+            {credential.url ? (
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(credential.url)}&sz=64`}
+                alt=""
+                className="svc-favicon"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            ) : (
+              <Lock size={28} strokeWidth={1.5} />
+            )}
+          </div>
+          <div className="svc-title-block">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h1 className="svc-name">{credential.name}</h1>
+              <button className="svc-btn icon-btn" onClick={() => copyToClipboard(credential.name!, 'title')} title="Copy title">
+                {copied === 'title' ? <CheckCircle2 size={14} className="copied" /> : <Copy size={14} />}
+              </button>
+            </div>
+            <span className="svc-badge">
+              <Globe size={11} />
+              {credential.isEnv || (credential.customFields?.length && !credential.password)
+                ? 'Shared Env'
+                : 'Shared Secret'}
+            </span>
+          </div>
+        </div>
+
+        {/* Warning */}
+        <div className="svc-warning">
+          <Shield size={14} />
+          <span>Anyone with this link can view these credentials.</span>
+        </div>
+
+        {/* Fields */}
+        <div className="svc-fields">
+          {credential.url && (
+            <div className="svc-field">
+              <label>Website</label>
+              <div className="svc-field-value">
+                <span>{credential.url}</span>
+                <div className="svc-actions">
+                  <a href={credential.url} target="_blank" rel="noopener noreferrer" className="svc-btn icon-btn" title="Open">
+                    <ExternalLink size={14} />
+                  </a>
+                  <button className="svc-btn icon-btn" onClick={() => copyToClipboard(credential.url!, 'url')} title="Copy">
+                    {copied === 'url' ? <CheckCircle2 size={14} className="copied" /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {credential.username && (
+            <div className="svc-field">
+              <label>Username</label>
+              <div className="svc-field-value">
+                <span>{credential.username}</span>
+                <button className="svc-btn icon-btn" onClick={() => copyToClipboard(credential.username!, 'username')} title="Copy">
+                  {copied === 'username' ? <CheckCircle2 size={14} className="copied" /> : <Copy size={14} />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {credential.password && (
+            <div className="svc-field">
+              <label>Password</label>
+              <div className="svc-field-value">
+                <span className="password-val">
+                  {showPassword ? credential.password : '•'.repeat(Math.min(credential.password.length, 20))}
+                </span>
+                <div className="svc-actions">
+                  <button className="svc-btn icon-btn" onClick={() => setShowPassword((p) => !p)} title="Toggle visibility">
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                  <button className="svc-btn icon-btn" onClick={() => copyToClipboard(credential.password!, 'password')} title="Copy">
+                    {copied === 'password' ? <CheckCircle2 size={14} className="copied" /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {credential.notes && (
+            <div className="svc-field">
+              <label>Notes</label>
+              <div className="svc-field-value notes-val">
+                <span>{credential.notes}</span>
+              </div>
+            </div>
+          )}
+
+          {credential.customFields?.length > 0 && (
+            <div className="svc-field">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <label style={{ margin: 0 }}>
+                  {credential.isEnv || (!credential.password && !credential.username) ? 'Variables' : 'Custom Fields'}
+                </label>
+                {(credential.isEnv || (!credential.password && !credential.username)) && (
+                  <button
+                    className="svc-btn"
+                    onClick={() => copyToClipboard(formatEnvText(credential.customFields), 'all-envs')}
+                    title="Copy all variables as .env"
+                    style={{
+                      fontSize: '11px',
+                      padding: '4px 8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.06)',
+                      color: copied === 'all-envs' ? '#10B981' : '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {copied === 'all-envs' ? (
+                      <>
+                        <CheckCircle2 size={12} className="copied" />
+                        <span>Copied .env</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={12} />
+                        <span>Copy .env</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+              <div className="svc-custom-fields">
+                {credential.customFields.map((field, index) => {
+                  const recoveryCodes = extractRecoveryCodes(field.value);
+                  const isRecovery = recoveryCodes.length > 0;
+
+                  return (
+                    <div key={field.id || index} className="svc-custom-row">
+                      <span className="svc-custom-key" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{field.label || `Field ${index + 1}`}</span>
+                        {isRecovery && (
+                          <span style={{ fontSize: '10px', color: '#10B981', background: 'rgba(16,185,129,0.15)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(16,185,129,0.3)' }}>
+                            Recovery Codes ({recoveryCodes.length})
+                          </span>
+                        )}
+                      </span>
+                      {isRecovery ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#000', padding: '8px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                          {recoveryCodes.map((code, codeIdx) => {
+                            const fieldId = `cf-${index}-code-${codeIdx}`;
+                            return (
+                              <div
+                                key={codeIdx}
+                                onClick={() => copyToClipboard(code, fieldId)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '8px 10px',
+                                  background: '#161412',
+                                  borderRadius: '8px',
+                                  border: copied === fieldId ? '1px solid #10B981' : '1px solid rgba(255,255,255,0.1)',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <span className="password-val" style={{ fontSize: '12px', flex: 1, letterSpacing: '0.05em' }}>{code}</span>
+                                <button
+                                  className="svc-btn icon-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyToClipboard(code, fieldId);
+                                  }}
+                                  title="Copy code"
+                                >
+                                  {copied === fieldId ? (
+                                    <CheckCircle2 size={14} className="copied" />
+                                  ) : (
+                                    <Copy size={14} />
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="svc-field-value">
+                          <span className="password-val">{field.value || '—'}</span>
+                          <button
+                            className="svc-btn icon-btn"
+                            onClick={() => copyToClipboard(field.value || '', `cf-${index}`)}
+                            title="Copy"
+                          >
+                            {copied === `cf-${index}` ? (
+                              <CheckCircle2 size={14} className="copied" />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Timestamps */}
+        {(credential.$createdAt || credential.$updatedAt) && (
+          <div className="svc-timestamps">
+            {credential.$createdAt && (
+              <div className="svc-timestamp-row">
+                <span className="svc-timestamp-label">Created</span>
+                <span className="svc-timestamp-value">
+                  {new Date(credential.$createdAt).toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            )}
+            {credential.$updatedAt && credential.$updatedAt !== credential.$createdAt && (
+              <div className="svc-timestamp-row">
+                <span className="svc-timestamp-label">Updated</span>
+                <span className="svc-timestamp-value">
+                  {new Date(credential.$updatedAt).toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="svc-footer">
+          <span>Secured by</span>
+          <a href="https://www.kylrix.space" target="_blank" rel="noopener noreferrer" className="svc-brand">
+            Kylrix Vault
+          </a>
+        </div>
+      </div>
+      <style>{sharedVaultStyles}</style>
+    </div>
+  );
+}
+
+const sharedVaultStyles = `
+  .shared-vault-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background: #161412;
+  }
+
+  .shared-vault-card {
+    width: 100%;
+    max-width: 480px;
+    background: #000000;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 28px;
+  }
+
+  .svc-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .svc-icon-wrap {
+    width: 52px;
+    height: 52px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    color: #aaa;
+  }
+
+  .svc-favicon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+  }
+
+  .svc-title-block {
+    min-width: 0;
+  }
+
+  .svc-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f1f1f1;
+    margin: 0 0 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .svc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #aaa;
+    background: rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 3px 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .svc-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #d4a24a;
+    background: rgba(212,162,74,0.08);
+    border: 1px solid rgba(212,162,74,0.15);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 24px;
+  }
+
+  .svc-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .svc-field label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+
+  .svc-field-value {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: #161412;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 10px 12px;
+    min-height: 42px;
+  }
+
+  .svc-field-value span {
+    font-size: 14px;
+    color: #ffffff;
+    word-break: break-all;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .svc-field-value.notes-val {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .svc-custom-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .svc-custom-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .svc-custom-key {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #ffffff;
+    font-family: ui-monospace, monospace;
+    letter-spacing: 0.02em;
+  }
+
+  .password-val {
+    font-family: ui-monospace, 'Courier New', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  .svc-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .svc-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .svc-btn:hover {
+    color: #e0e0e0;
+    background: rgba(255,255,255,0.06);
+  }
+
+  .copied {
+    color: #4ade80 !important;
+  }
+
+  .svc-timestamps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+
+  .svc-timestamp-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .svc-timestamp-label {
+    color: #666;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .svc-timestamp-value {
+    color: #999;
+    font-weight: 500;
+  }
+
+  .svc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #444;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding-top: 20px;
+  }
+
+  .svc-brand {
+    color: #888;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .svc-brand:hover { color: #ccc; }
+
+  /* Error card */
+  .error-card {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 48px 32px;
+  }
+
+  .error-card h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f1f1f1;
+    margin: 0;
+  }
+
+  .error-card p {
+    font-size: 14px;
+    color: #888;
+    margin: 0;
+    max-width: 300px;
+    line-height: 1.6;
+  }
+
+  .error-icon { color: #888; }
+
+  /* Shimmer loading */
+  .loading-shimmer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 40px 32px;
+  }
+
+  .shimmer-line {
+    height: 14px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+    background-size: 200% 100%;
+    border-radius: 8px;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .shimmer-line.wide { width: 100%; height: 20px; }
+  .shimmer-line.medium { width: 70%; }
+  .shimmer-line.narrow { width: 45%; }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+`;

@@ -1,0 +1,410 @@
+version: 1
+
+project:
+  name: kylrix
+  description: Kylrix contributor verification and development contract
+
+execution:
+  default_context: host
+  lifecycle: persistent
+  backends:
+    container:
+      image: node@sha256:a25c9934ff6382cd4f08b6bc26c82bf4ea69b1e6f8dabfb2ead457374127c365
+      engines: [docker]
+      resources:
+        memory:
+          minimum: 3GiB
+          default: 4GiB
+  contexts:
+    host:
+      backend: native
+    contributor:container:
+      backend: container
+      lifecycle: persistent
+      attachments:
+        isolated_paths: [node_modules, .next, .pnpm-store]
+
+toolchains:
+  node:
+    version: ">=22"
+    package_managers:
+      pnpm: ">=11.5.1"
+    fulfillment:
+      source: corepack
+      mode: run
+
+surfaces:
+  contributor:web:
+    kind: http
+    port: 3005
+    path: /
+    readiness:
+      kind: http
+      method: GET
+      path: /?stay=1
+      headers:
+        Accept: text/html
+      success:
+        status: [200]
+      body:
+        contains: "<!DOCTYPE html>"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+  selfhost:web:
+    kind: https
+    port: 443
+    path: /
+    readiness:
+      kind: tcp
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+tasks:
+  setup:
+    context: host
+    description: Materialize local env profile and hydrate pinned pnpm dependencies
+    category: setup
+    prepare:
+      kind: sequence
+      steps:
+        - kind: ensure_env_file
+          path: .env
+          template: env.sample
+          vars:
+            PORT:
+              value: "3005"
+              mode: replace
+            DOMAIN:
+              value: localhost
+              mode: replace
+            NEXT_PUBLIC_APP_URL:
+              value: http://localhost:3005
+              mode: replace
+            NEXT_PUBLIC_APP_URI:
+              value: http://localhost:3005
+              mode: replace
+            NEXT_PUBLIC_ORIGIN:
+              value: http://localhost:3005
+              mode: replace
+            SELFHOST_MODE:
+              value: "true"
+              mode: replace
+            APPWRITE_ENDPOINT:
+              value: http://127.0.0.1/v1
+              mode: replace
+            NEXT_PUBLIC_APPWRITE_ENDPOINT:
+              value: http://127.0.0.1/v1
+              mode: replace
+            APPWRITE_PROJECT_ID:
+              value: kylrix-local
+              mode: replace
+            NEXT_PUBLIC_APPWRITE_PROJECT_ID:
+              value: kylrix-local
+              mode: replace
+            KYLRIX_INTERNAL_JOBS_SECRET:
+              random:
+                bytes: 32
+                encoding: hex
+            ATTACHMENT_URL_SIGNING_SECRET:
+              random:
+                bytes: 32
+                encoding: hex
+        - kind: dependency_hydration
+          medium: package_dependencies
+          source:
+            kind: node_package_manager
+            cwd: .
+            manager: pnpm
+            mode: install
+            frozen_lockfile: true
+    requirements:
+      toolchains:
+        - node
+    effects:
+      writes: [.env, node_modules, .pnpm-store]
+      network: true
+      network_kind: dependency_hydration
+    safe_for_agent: true
+    execution:
+      modes:
+        container:
+          context: contributor:container
+
+  test:
+    context: host
+    description: Run the repository unit and integration test suite
+    command:
+      exe: pnpm
+      args: [test]
+    env_files: [.env]
+    depends_on: [setup]
+    requirements:
+      toolchains:
+        - node
+    safe_for_agent: true
+    execution:
+      modes:
+        container:
+          context: contributor:container
+
+  lint:
+    context: host
+    description: Run the repository ESLint verification lane
+    command:
+      exe: pnpm
+      args: [lint]
+    env_files: [.env]
+    depends_on: [setup]
+    requirements:
+      toolchains:
+        - node
+    safe_for_agent: true
+    execution:
+      modes:
+        container:
+          context: contributor:container
+
+  build:
+    context: host
+    description: Build the Next.js application
+    command:
+      exe: pnpm
+      args: [build]
+    env_files: [.env]
+    depends_on: [setup]
+    requirements:
+      toolchains:
+        - node
+    effects:
+      writes: [.next]
+    safe_for_agent: true
+    execution:
+      modes:
+        container:
+          context: contributor:container
+
+  verify:
+    description: Run the complete finite test, lint, and build verification surface
+    replay_inputs:
+      - id: pnpm_lockfile
+        kind: static_file
+        path: pnpm-lock.yaml
+    aggregate:
+      tasks: [test, lint, build]
+    safe_for_agent: true
+
+  dev:
+    context: host
+    description: Start Kylrix locally with Next.js Turbopack and RxDB local engine
+    launch:
+      kind: command
+      exe: pnpm
+      args: [exec, next, dev, --turbopack]
+      runtime_projection:
+        listener: contributor:web
+        adapter: nextjs
+    env_files: [.env]
+    depends_on: [setup]
+    requirements:
+      toolchains:
+        - node
+    runtime:
+      kind: service
+      surfaces:
+        contributor:web:
+          project:
+            host:
+              primary: true
+    execution:
+      modes:
+        container:
+          context: contributor:container
+          runtime:
+            kind: service
+            surfaces:
+              contributor:web:
+                bind:
+                  address: 0.0.0.0
+
+  selfhost:env:
+    context: host
+    description: Materialize the isolated self-hosted Compose interpolation profile
+    notes: |
+      Keeps the self-hosted container topology separate from the local `.env`.
+      Generated secret values are retained on later runs; Ota never replaces them implicitly.
+    action:
+      kind: ensure_env_file
+      path: .ota/kylrix.selfhost.env
+      vars:
+        KYLRIX_ENV_FILE:
+          value: .ota/kylrix.selfhost.env
+          mode: replace
+        PORT:
+          value: "3005"
+          mode: missing
+        SELFHOST_MODE:
+          value: "true"
+          mode: replace
+        NEXT_PUBLIC_APP_URL:
+          value: http://localhost:3005
+          mode: missing
+        NEXT_PUBLIC_APP_URI:
+          value: http://localhost:3005
+          mode: missing
+        NEXT_PUBLIC_ORIGIN:
+          value: http://localhost:3005
+          mode: missing
+    effects:
+      writes: [.ota/kylrix.selfhost.env]
+    safe_for_agent: false
+
+  selfhost:build:
+    context: host
+    description: Build the documented self-hosted Kylrix production image
+    notes: |
+      Uses the repository Dockerfile and isolated self-hosted interpolation profile. This is an
+      image-build proof only; it does not claim Appwrite schema provisioning or application-level
+      functional verification.
+    adapter_inputs:
+      overlays:
+        compose:
+          files: [docker-compose.yml]
+          env_files: [.ota/kylrix.selfhost.env]
+    compose:
+      kind: build
+      services: [kylrix]
+    depends_on: [selfhost:env]
+    requirements:
+      tools:
+        docker: "*"
+    effects:
+      network: true
+      network_kind: container_image_hydration
+      external_state: [docker]
+    safe_for_agent: false
+
+  selfhost:up:
+    context: host
+    description: Start the documented full self-hosted Kylrix Compose topology
+    notes: |
+      Starts Kylrix, Appwrite, MariaDB, Redis, and Caddy through the documented Compose stack.
+      This owns container lifecycle only. The interactive setup wizard and Appwrite schema
+      provisioning still require explicit operator credentials and remain outside this workflow.
+    adapter_inputs:
+      overlays:
+        compose:
+          files: [docker-compose.yml]
+          env_files: [.ota/kylrix.selfhost.env]
+    launch:
+      kind: compose
+      action: up
+      detach: true
+    runtime:
+      kind: service
+      surfaces: [selfhost:web]
+    depends_on: [selfhost:build]
+    requirements:
+      tools:
+        docker: "*"
+    effects:
+      network: true
+      network_kind: container_image_hydration
+      external_state: [docker, appwrite, mariadb, redis, caddy]
+    safe_for_agent: false
+
+  selfhost:down:
+    context: host
+    description: Stop the self-hosted Compose topology without deleting persistent volumes
+    adapter_inputs:
+      overlays:
+        compose:
+          files: [docker-compose.yml]
+          env_files: [.ota/kylrix.selfhost.env]
+    compose:
+      kind: down
+    requirements:
+      tools:
+        docker: "*"
+    effects:
+      external_state: [docker]
+    safe_for_agent: false
+
+workflows:
+  default: dev
+  dev:
+    intent: local_development
+    description: Prepare the local environment and start the Next.js Turbopack runtime
+    readiness:
+      surfaces: [contributor:web]
+    setup:
+      task: setup
+    run:
+      task: dev
+  verify:
+    intent: verification
+    description: Run the finite test, lint, and build verification surface
+    setup:
+      task: setup
+    run:
+      task: verify
+  selfhost:
+    intent: production_runtime
+    description: Build and start the documented self-hosted Compose topology
+    setup:
+      task: selfhost:env
+    run:
+      task: selfhost:up
+
+agent:
+  bootstrap:
+    ota:
+      note: Only install Ota if it is missing and installation is approved.
+      source:
+        kind: version
+        version: v1.6.25
+  entrypoint: setup
+  default_task: verify
+  safe_tasks: [setup, test, lint, build, verify]
+  verify_after_changes: [verify]
+  refusal_canaries:
+    - task: selfhost:up
+    - workflow: selfhost
+  writable_paths:
+    - .env
+    - .next
+    - app
+    - components
+    - constants
+    - context
+    - docs
+    - functions
+    - hooks
+    - lib
+    - public
+    - scripts
+    - theme
+    - types
+    - utils
+    - node_modules
+    - .pnpm-store
+  exceptions:
+    sensitive_writes: [.env]
+  protected_paths:
+    - .ota/pressure-replay-policy.yaml
+    - .github/workflows
+    - AGENTS.md
+    - docker-compose.app-only.yml
+    - docker-compose.yml
+    - env.sample
+    - ota.yaml
+    - package.json
+    - pnpm-lock.yaml
+  notes: |
+    Start with `ota validate`, then `ota doctor`, then `ota tasks --use`.
+    Use `ota up --workflow verify --agent` for the finite verification path.
+    Use `ota up --workflow dev` for local development.
+    Use `ota up --workflow selfhost` for the documented full Compose topology.

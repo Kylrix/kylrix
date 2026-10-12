@@ -1,0 +1,245 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+@source "../components/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../app/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../lib/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../context/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../hooks/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../utils/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../theme/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../types/**/*.{js,ts,jsx,tsx,mdx}";
+
+@theme {
+  --color-background: #161412;
+  --color-foreground: #FFFFFF;
+  --color-surface: #161412;
+  --color-surface-2: #1C1917;
+  --color-surface-border: rgba(255, 255, 255, 0.08);
+  --color-surface-border-soft: rgba(255, 255, 255, 0.05);
+
+  --font-satoshi: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-clash: "Clash Display", "Satoshi", sans-serif;
+  --font-clash-display: "Clash Display", "Satoshi", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-outfit: "Outfit", sans-serif;
+  --font-space-grotesk: "Space Grotesk", sans-serif;
+}
+
+:root {
+  --background: var(--color-background);
+  --foreground: var(--color-foreground);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-2);
+  --surface-border: var(--color-surface-border);
+  --surface-border-soft: var(--color-surface-border-soft);
+  /* Alias: components use --color-surface (e.g. DynamicSidebar); must map to real tokens */
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --font-satoshi: var(--font-satoshi);
+  --font-clash: var(--font-clash);
+  --font-clash-display: var(--font-clash-display);
+  --font-mono: var(--font-mono);
+  --font-outfit: var(--font-outfit);
+  --font-space-grotesk: var(--font-space-grotesk);
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-satoshi), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+input, textarea, [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-clash), sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Background canvas */
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: #000000;
+}
+
+body[data-ui-mood="focus"] {
+  --surface: #191715;
+  --surface-2: #211E1B;
+}
+
+body[data-ui-mood="serious"] {
+  --surface: #151311;
+  --surface-2: #1B1917;
+}
+
+/* Ultra-smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Bulletproof NoteDetailSidebar header override inside DynamicSidebar */
+[data-dynamic-sidebar="true"]:has(.note-detail-sidebar-root) .dynamic-sidebar-header {
+  display: none !important;
+}
+
+/* Note markdown preview — readable rhythm on detail pages */
+.note-markdown-preview {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.note-markdown-preview p {
+  margin-bottom: 1rem;
+}
+
+.note-markdown-preview h1,
+.note-markdown-preview h2,
+.note-markdown-preview h3 {
+  color: #fff;
+  font-family: var(--font-clash), sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.note-markdown-preview h1 { font-size: 1.75rem; }
+.note-markdown-preview h2 { font-size: 1.4rem; }
+.note-markdown-preview h3 { font-size: 1.15rem; }
+
+.note-markdown-preview ul,
+.note-markdown-preview ol {
+  margin-bottom: 1rem;
+  padding-left: 1.25rem;
+}
+
+.note-markdown-preview li {
+  margin-bottom: 0.35rem;
+}
+
+.note-markdown-preview blockquote {
+  border-left: 3px solid #6366f1;
+  padding-left: 1rem;
+  margin: 1.25rem 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-style: italic;
+}
+
+.note-markdown-preview code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.35rem;
+  font-size: 0.88em;
+  color: #a5b4fc;
+}
+
+.note-markdown-preview pre {
+  background: #0b0a09;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.9rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+}
+
+.note-markdown-preview pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.note-markdown-preview a {
+  color: #6366f1;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.note-markdown-preview a:hover {
+  text-decoration: underline;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shine {
+  animation: shine 2.5s infinite;
+}
+
+/* Math Mode — KaTeX + custom charts/solve */
+.kylrix-math-mode .katex {
+  font-size: 1.05em;
+  color: #fff;
+}
+.kylrix-math-mode .katex-display {
+  margin: 1.25rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+.kylrix-solve-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.kylrix-solve {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: #0A0908;
+  border: 1px solid #34322F;
+}
+.kylrix-solve-out {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-weight: 800;
+  color: #F59E0B;
+  font-size: 0.9rem;
+}
+.kylrix-solve-err {
+  color: #f87171;
+  font-size: 0.85rem;
+}
+.kylrix-chart {
+  margin: 1.25rem 0;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #34322F;
+}
+.kylrix-chart-err {
+  padding: 1rem;
+  color: #9B9691;
+  font-size: 0.85rem;
+}
+.kylrix-html-preview {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px dashed #34322F;
+  background: #0A0908;
+}

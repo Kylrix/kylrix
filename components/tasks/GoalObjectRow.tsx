@@ -1,0 +1,492 @@
+'use client';
+
+import React, { useCallback, useMemo } from 'react';
+import {
+  Check,
+  Pin,
+  Trash2,
+  Share2,
+  Lock,
+  Unlock,
+  Bell,
+  BellOff,
+  Sparkles,
+  Wand2,
+  FileText,
+  CheckSquare,
+  FolderInput,
+  Copy,
+} from 'lucide-react';
+import { useSelection } from '@/context/SelectionContext';
+import { Task } from '@/types';
+import { useTask } from '@/context/TaskContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { ObjectCard } from '@/components/objects/ObjectCard';
+import { ObjectCardMeta, PRIORITY_COLORS } from '@/components/objects/ObjectCardMeta';
+import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
+import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { goalToCard } from '@/lib/objects/adapters';
+import { ShareLockButton } from '@/components/share/ShareLockButton';
+import { useResourcePins } from '@/context/ResourcePinContext';
+import { useContextMenu } from '@/components/ui/ContextMenuContext';
+import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useSudo } from '@/context/SudoContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import {
+  getGoalShareUrlWithDek,
+  isGoalLocked,
+  lockGoal,
+  unlockGoal,
+} from '@/lib/appwrite/goal-crypto';
+import { toast } from 'react-hot-toast';
+
+type Props = {
+  task: Task;
+  compact?: boolean;
+};
+
+function formatDue(due?: Date | null) {
+  if (!due) return null;
+  try {
+    const d = new Date(due);
+    if (isNaN(d.getTime())) return null;
+    const datePart = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const hasSpecificTime = d.getHours() !== 0 || d.getMinutes() !== 0;
+    if (hasSpecificTime && (d.getHours() !== 12 || d.getMinutes() !== 0)) {
+      const timePart = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      return `${datePart} · ${timePart}`;
+    }
+    return datePart;
+  } catch {
+    return null;
+  }
+}
+
+/** Goal tile — uniform ObjectCard; footer = priority + colored tags (no status copy). */
+export default function GoalObjectRow({ task }: Props) {
+  const { activeWorkspace } = useWorkspace();
+  const {
+    selectTask,
+    completeTask,
+    togglePinTask,
+    deleteTask,
+    updateTask,
+    toggleTaskReminder,
+    labels,
+  } = useTask();
+  const { enterSelectMode } = useSelection();
+  const { isPinned: isResourcePinned } = useResourcePins();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
+  const contextMenu = useContextMenu();
+  const openMenu = contextMenu?.openMenu;
+  const { open: openUnified } = useUnifiedDrawer();
+  const { promptSudo } = useSudo();
+  const { user } = useAuth();
+  const { openProUpgrade } = useProUpgrade();
+  const isPro = hasPaidKylrixPlan(user);
+
+  const ownerId = task.userId || task.creatorId || '';
+  const pinned = isResourcePinned('task', task.id, ownerId, task.isPinned);
+  const locked = isGoalLocked(task);
+  const due = formatDue(task.dueDate);
+  const reminded = !!task.scheduled;
+
+  const tagColors = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const label of labels || []) {
+      if (label?.name) map[label.name] = label.color || '';
+    }
+    return map;
+  }, [labels]);
+
+  const openDetail = useCallback(() => {
+    selectTask(task.id);
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+    if (isDesktop) {
+      openSidebar(
+        <GoalObjectDetail taskId={task.id} embedded onClose={closeSidebar} />,
+        task.id,
+        { hideHeader: true });
+    } else {
+      openOverlay(
+        <GoalObjectDetail taskId={task.id} onClose={closeOverlay} embedded />);
+    }
+  }, [closeOverlay, closeSidebar, openOverlay, openSidebar, selectTask, task.id]);
+
+  const handleComplete = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      await completeTask(task.id);
+    },
+    [completeTask, task.id]);
+
+  const handlePinToggle = useCallback(
+    async (e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      try {
+        await togglePinTask(task.id);
+      } catch (err: any) {
+        if (String(err?.message || '').includes('limit')) {
+          toast.error('Pin limit reached');
+          return;
+        }
+        toast.error(err?.message || 'Failed to update pin');
+      }
+    },
+    [task.id, togglePinTask]);
+
+  const openCollaborators = useCallback(() => {
+    openUnified('share-note', {
+      resourceType: 'goal',
+      noteId: task.id,
+      noteTitle: task.title || 'Untitled goal',
+    });
+  }, [openUnified, task.id, task.title]);
+
+  const openDelete = useCallback(() => {
+    openUnified('delete-confirm', {
+      title: `Delete "${task.title || 'Untitled goal'}"?`,
+      resourceName: 'this goal',
+      confirmLabel: 'Delete Goal',
+      onConfirm: async () => {
+        await deleteTask(task.id);
+      },
+    });
+  }, [deleteTask, openUnified, task.id, task.title]);
+
+  const handleLockToggle = useCallback(async () => {
+    const run = async () => {
+      try {
+        const updated = locked ? await unlockGoal(task.id) : await lockGoal(task.id);
+        updateTask(task.id, {
+          title: updated.title,
+          description: updated.description,
+          dek: updated.dek || null,
+        } as Partial<Task>);
+        toast.success(locked ? 'Goal unlocked' : 'Goal locked');
+      } catch (err: any) {
+        if (err?.message === 'VAULT_LOCKED') {
+          toast.error('Unlock vault to change lock state');
+          const unlocked = await promptSudo();
+          if (unlocked) await run();
+          return;
+        }
+        toast.error(err?.message || 'Failed to toggle lock');
+      }
+    };
+    await run();
+  }, [locked, promptSudo, task.id, updateTask]);
+
+  const handleRemindToggle = useCallback(async () => {
+    try {
+      await toggleTaskReminder(task.id, !reminded);
+      toast.success(reminded ? 'Reminder off' : 'Reminder on');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not update reminder');
+    }
+  }, [reminded, task.id, toggleTaskReminder]);
+
+  const handleCopyShareLink = useCallback(async () => {
+    try {
+      if (!(task.isPublic || task.isGuest)) {
+        const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
+        const res = await toggleResourcePublicGuest({
+          resourceType: 'goal',
+          resourceId: task.id,
+          mode: 'publish',
+        });
+        if (!res?.success) {
+          toast.error('Failed to publish goal');
+          return;
+        }
+        updateTask(task.id, { isPublic: true, isGuest: true });
+      }
+      const url = await getGoalShareUrlWithDek(task.id, task.dek);
+      await navigator.clipboard.writeText(url);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to copy share link');
+    }
+  }, [locked, task.dek, task.id, task.isGuest, task.isPublic, updateTask]);
+
+  const accessControlItems = useAccessControlMenuItems({
+    resourceType: 'goal',
+    resourceId: task.id,
+    isPublic: !!task.isPublic,
+    isGuest: !!task.isGuest,
+    resourceTitle: task.title || 'Untitled goal',
+    resolveShareUrl: async () => getGoalShareUrlWithDek(task.id, task.dek),
+    onUpdate: (updatedFields) => {
+      if (updatedFields) {
+        updateTask(task.id, updatedFields);
+      }
+    },
+  });
+
+  const contextMenuItems = useMemo(
+    () => [
+      {
+        label: pinned ? 'Unpin' : 'Pin',
+        icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#A855F7]' : ''} />,
+        onClick: () => {
+          void handlePinToggle();
+        },
+      },
+      {
+        label: 'Copy Content',
+        icon: <Copy size={16} className="text-[#3B82F6]" />,
+        onClick: async () => {
+          try {
+            const titleText = task.title || 'Untitled Goal';
+            const descText = task.description || (task as any).content || '';
+            const priorityText = task.priority ? `Priority: ${task.priority}` : '';
+            const dueText = due ? `Due: ${due}` : '';
+            const metaLine = [priorityText, dueText].filter(Boolean).join(' | ');
+            const fullContent = [titleText, metaLine, descText].filter(Boolean).join('\n\n');
+            await navigator.clipboard.writeText(fullContent);
+            toast.success('Goal content copied to clipboard');
+          } catch (err: any) {
+            toast.error(err?.message || 'Failed to copy goal content');
+          }
+        },
+      },
+      {
+        label: 'Select',
+        icon: <CheckSquare size={16} className="text-[#10B981]" />,
+        onClick: () => {
+          enterSelectMode('goal', task.id);
+        },
+      },
+      {
+        label: 'Copy Public Link',
+        icon: <Share2 size={16} className="text-emerald-500" />,
+        onClick: () => {
+          void handleCopyShareLink();
+        },
+      },
+      ...accessControlItems,
+      {
+        label: locked ? 'Unlock' : 'Lock',
+        icon: locked ? <Unlock size={16} /> : <Lock size={16} />,
+        onClick: () => {
+          void handleLockToggle();
+        },
+      },
+      {
+        label: reminded ? 'Stop Reminder' : 'Remind',
+        icon: reminded ? <BellOff size={16} /> : <Bell size={16} />,
+        onClick: () => {
+          void handleRemindToggle();
+        },
+      },
+      {
+        label: 'Move to Workspace',
+        icon: <FolderInput size={16} className="text-[#6366F1]" />,
+        onClick: () => {
+          openUnified('move-to-workspace', {
+            entityKind: 'goal',
+            entityId: task.id,
+            entityTitle: task.title || 'Untitled Goal',
+            currentWorkspaceId: task.projectId || undefined,
+          });
+        },
+      },
+      {
+        label: 'Workflows',
+        icon: <FileText size={16} className="text-[#A855F7]" />,
+        submenu: getWorkflowSubmenuItems({
+          objectType: 'goal',
+          targetObject: {
+            id: task.id,
+            title: task.title || 'Untitled Goal',
+            description: task.description || '',
+            tags: task.labels || [],
+            raw: task,
+          },
+          activeWorkspaceId: activeWorkspace?.id || null,
+          showSuccess: (msg) => toast.success(msg),
+          showError: (msg) => toast.error(msg),
+          showInfo: (msg) => toast(msg),
+        }),
+      },
+      {
+        label: 'Sidekick',
+        icon: <Sparkles size={16} className="text-[#A855F7]" />,
+        onClick: () => {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:open-sidekick', {
+              detail: {
+                type: 'goal',
+                id: task.id,
+                title: task.title,
+                content: task.description || '',
+                tags: task.labels || [],
+              },
+            })
+          );
+        },
+      },
+      {
+        label: 'Collaborators',
+        icon: <Share2 size={16} />,
+        onClick: openCollaborators,
+      },
+      {
+        label: 'Delete',
+        icon: <Trash2 size={16} className="text-red-500" />,
+        variant: 'destructive' as const,
+        onClick: openDelete,
+      },
+    ],
+    [
+      accessControlItems,
+      closeOverlay,
+      closeSidebar,
+      handleCopyShareLink,
+      handleLockToggle,
+      handlePinToggle,
+      handleRemindToggle,
+      isPro,
+      locked,
+      openCollaborators,
+      openDelete,
+      openOverlay,
+      openProUpgrade,
+      openSidebar,
+      openUnified,
+      enterSelectMode,
+      pinned,
+      reminded,
+      task.description,
+      task.id,
+      task.title,
+      activeWorkspace?.id,
+    ],
+  );
+
+  const handleRightClick = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      e.preventDefault?.();
+      e.stopPropagation?.();
+      if (!openMenu) return;
+      const clientX = 'clientX' in e ? e.clientX : 0;
+      const clientY = 'clientY' in e ? e.clientY : 0;
+      openMenu({
+        x: clientX,
+        y: clientY,
+        items: contextMenuItems,
+        appType: 'flow',
+        title: locked ? 'Locked Goal' : (task.title || 'Untitled Goal'),
+      });
+    },
+    [contextMenuItems, openMenu],
+  );
+
+  const rawTaskTags = (task as any).tags;
+  const goalTags = useMemo(() => {
+    const userLabels = Array.isArray(task.labels) && task.labels.length > 0 ? task.labels : [];
+    const extractedTags = Array.isArray(rawTaskTags)
+      ? rawTaskTags.filter((t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'))
+      : [];
+    return Array.from(new Set([...userLabels, ...extractedTags])).filter(Boolean);
+  }, [task.labels, rawTaskTags]);
+
+  const isActuallyLocked = locked && !(task as any)._dekViewDecrypted;
+
+  const item = useMemo(() => {
+    const base = goalToCard(task);
+    const contentText = String(
+      task.description ||
+      (task as any).content ||
+      (task as any).summary ||
+      (task.comments && task.comments.length > 0 ? task.comments[0].content : '') ||
+      ''
+    ).trim();
+
+    return {
+      ...base,
+      title: isActuallyLocked ? 'Locked' : (task.title || base.title || 'Untitled Goal'),
+      isPinned: pinned,
+      accent: null,
+      subtitle: isActuallyLocked
+        ? 'Locked goal'
+        : contentText.slice(0, 160) || undefined,
+    };
+  }, [task, pinned, isActuallyLocked]);
+
+  return (
+    <ObjectCard
+      item={item}
+      variant="task"
+      density="uniform"
+      railColor={PRIORITY_COLORS[task.priority || 'medium']}
+      onOpen={openDetail}
+      onContextMenu={handleRightClick}
+      leading={
+        <button
+          type="button"
+          onClick={handleComplete}
+          aria-label={task.status === 'done' ? 'Mark incomplete' : 'Mark complete'}
+          className={`flex h-5 w-5 items-center justify-center rounded-md border transition-colors ${
+            task.status === 'done'
+              ? 'border-[#A855F7] bg-[#A855F7] text-[#0A0908]'
+              : 'border-[#4A4744] text-transparent hover:border-[#A855F7]'
+          }`}
+        >
+          {task.status === 'done' ? <Check className="h-3 w-3 stroke-[3]" /> : null}
+        </button>
+      }
+      trailing={
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(
+                new CustomEvent('kylrix:open-sidekick', {
+                  detail: {
+                    type: 'goal',
+                    id: task.id,
+                    title: task.title,
+                    content: task.description || '',
+                    tags: task.labels || [],
+                  },
+                })
+              );
+            }}
+            className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#A855F7] hover:bg-[#A855F7]/10"
+            title="Sidekick Assist"
+            aria-label="Sidekick Assist"
+          >
+            <Wand2 size={15} />
+          </button>
+          <ShareLockButton
+            resourceType="goal"
+            resourceId={task.id}
+            isPublic={!!task.isPublic}
+            isGuest={!!task.isGuest}
+            resourceTitle={task.title}
+            dek={task.dek}
+            accentColor="#A855F7"
+            onPublished={({ isPublic, isGuest }) => {
+              updateTask(task.id, { isPublic, isGuest });
+            }}
+          />
+        </>
+      }
+      footer={
+        <ObjectCardMeta
+          priority={task.priority || 'medium'}
+          tags={goalTags}
+          tagColors={tagColors}
+          dueLabel={due}
+        />
+      }
+    />
+  );
+}

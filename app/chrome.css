@@ -1,0 +1,71 @@
+/* Kylrix Absolute Layout Isolation — no will-change: keeps chrome off permanent GPU layers */
+.kylrix-sidebar, .kylrix-topbar, .kylrix-bottombar {
+  contain: layout style paint;
+  background-color: #161412;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 899px) {
+  .kylrix-sidebar {
+    display: none !important;
+  }
+  .kylrix-main-content {
+    margin-left: 0 !important;
+  }
+}
+
+/* Authoritative Main Content Isolation */
+.kylrix-main-content {
+    transition: padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Project Detail Specialized Rigidity */
+.kylrix-main-content.project-detail {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+}
+
+@media (min-width: 900px) {
+    .kylrix-main-content.project-detail {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+}
+
+/* Note full-page detail — hug content, minimal dead space */
+.kylrix-main-content.note-detail {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+@media (min-width: 900px) {
+    .kylrix-main-content.note-detail {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+}
+
+/* Chat / communicative surfaces — fused secondary rail, zero side padding */
+.kylrix-main-content.chat-surface {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Skeleton pulse — CPU-friendly, no forced compositor layers */
+.nexus-skeleton-pulse {
+  animation: visual-fade 1.2s infinite ease-in-out;
+  background: linear-gradient(90deg, #121212 25%, #1c1c1c 50%, #121212 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes visual-fade {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Eliminate layout thrashing from dynamic Emotion interpolations */
+.static-surface {
+    background-color: #0A0908 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}

@@ -1,0 +1,2357 @@
+'use client';
+
+import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect, useRef, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
+
+import { tasks as taskApi, calendars as calendarApi, taskCollaborators, subscribeToTable, buildTaskPermissions } from '@/lib/kylrixflow';
+import { getCurrentUser, getCurrentUserSnapshot } from '@/lib/appwrite/client';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { Query } from '@/lib/appwrite/types';
+import { getEcosystemUrl } from '@/lib/constants';
+import { Task as AppwriteTask, Calendar as AppwriteCalendar } from '@/types/kylrixflow';
+import { useDataNexus } from './DataNexusContext';
+import { sendKylrixEmailNotification } from '@/lib/email-notifications';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useResourcePins } from '@/context/ResourcePinContext';
+import { getAllTags } from '@/lib/appwrite';
+import { tagsCacheKey } from '@/lib/data';
+import type { Tags } from '@/types/appwrite';
+import { parseSourceNoteIdsFromTags } from '@/sdk/crosslinks';
+import {
+  Task,
+  Project,
+  Label,
+  TaskFilter,
+  TaskSort,
+  TaskStatus,
+  Priority,
+  ViewMode,
+  Subtask,
+  Comment,
+  TaskCollaborator,
+  CollaboratorPermission} from '@/types';
+import { isFlowPath, isWorkspacesPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
+
+function parseSafeDate(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date) return isNaN(val.getTime()) ? new Date() : val;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
+function parseSafeOptionalDate(val: any): Date | undefined {
+  if (!val) return undefined;
+  if (val instanceof Date) return isNaN(val.getTime()) ? undefined : val;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+import { registerLiveGoalGetter } from '@/lib/sync/pending-sync-bridge';
+import { goalPendingKey } from '@/lib/sync/goal-keys';
+import { shouldSoftPull } from '@/lib/sync/local-copy-sync';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
+import { loadGoalsFromLocalCopy } from '@/lib/goals/load-local-goals';
+import { subscribeLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
+import { useProjectObjects } from '@/hooks/useProjectObjects';
+
+// Mappers
+function coerceCachedTask(row: any): Task | null {
+  if (!row || typeof row !== 'object') return null;
+  const id = String(row.$id || row.id || '').trim();
+  if (!id) return null;
+
+  // Already a live Task shape (cache / pushLiveGoal) — do NOT re-run Appwrite mapper
+  // (that expects tags[] and would wipe projectId/labels).
+  if (row.id && !row.$id) {
+    return {
+      ...row,
+      id,
+      title: String(row.title || ''),
+      description: String(row.description || ''),
+      status: (row.status as TaskStatus) || 'todo',
+      priority: (row.priority as Priority) || 'medium',
+      projectId: row.projectId || 'inbox',
+      labels: Array.isArray(row.labels) ? row.labels : [],
+      linkedNotes: Array.isArray(row.linkedNotes) ? row.linkedNotes : [],
+      subtasks: Array.isArray(row.subtasks) ? row.subtasks : [],
+      comments: Array.isArray(row.comments) ? row.comments : [],
+      attachments: Array.isArray(row.attachments) ? row.attachments : [],
+      reminders: Array.isArray(row.reminders) ? row.reminders : [],
+      timeEntries: Array.isArray(row.timeEntries) ? row.timeEntries : [],
+      assigneeIds: Array.isArray(row.assigneeIds) ? row.assigneeIds : [],
+      creatorId: row.creatorId || row.userId || 'guest',
+      userId: row.userId || row.creatorId || 'guest',
+      parentTaskId: row.parentTaskId || row.parentId || null,
+      dueDate: parseSafeOptionalDate(row.dueDate),
+      createdAt: parseSafeDate(row.createdAt),
+      updatedAt: parseSafeDate(row.updatedAt),
+      completedAt: parseSafeOptionalDate(row.completedAt),
+      position: typeof row.position === 'number' ? row.position : 0,
+      isArchived: row.isArchived === true || String(row.isArchived) === 'true',
+      isPinned: row.isPinned === true || String(row.isPinned) === 'true',
+      isPublic: row.isPublic === true || String(row.isPublic) === 'true',
+      isGuest: row.isGuest === true || String(row.isGuest) === 'true',
+      discussionId: row.discussionId || null,
+      scheduled: row.scheduled === true || String(row.scheduled) === 'true',
+      isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true',
+      isWorkspace: row.isWorkspace === true || String(row.isWorkspace) === 'true' || row.is_workspace === true || String(row.is_workspace) === 'true' || (Boolean(row.projectId) && row.projectId !== 'inbox' && row.projectId !== 'default' && row.projectId !== 'personal'),
+      dek: row.dek || null,
+    } as Task;
+  }
+
+  return mapAppwriteTaskToTask({ ...row, $id: id } as AppwriteTask);
+}
+
+function mergeTaskRows(...groups: any[][]): Task[] {
+  const byId = new Map<string, Task>();
+  for (const group of groups) {
+    for (const row of group || []) {
+      const task = coerceCachedTask(row);
+      if (!task?.id) continue;
+      const prev = byId.get(task.id);
+      if (!prev) {
+        byId.set(task.id, task);
+        continue;
+      }
+      const prevTs = prev.updatedAt instanceof Date ? prev.updatedAt.getTime() : 0;
+      const nextTs = task.updatedAt instanceof Date ? task.updatedAt.getTime() : 0;
+      if (nextTs >= prevTs) byId.set(task.id, task);
+    }
+  }
+  return Array.from(byId.values());
+}
+
+async function persistGoalsLocalCopy(userId: string | null | undefined, tasks: Task[]) {
+  if (typeof window === 'undefined') return;
+  const list = Array.isArray(tasks) ? tasks : [];
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    await LocalEngine.cacheSet('f_goals_list', list);
+    if (userId) {
+      await LocalEngine.cacheSet(`f_tasks_${userId}`, { rows: list, total: list.length });
+    }
+    const db = await import('@/lib/webrtc/RxDBManager').then((m) => m.getRxDB()).catch(() => null);
+    if (db?.tasks) {
+      await Promise.all(
+        list.slice(0, 200).map((t) =>
+          db.tasks
+            .upsert({
+              id: t.id,
+              title: t.title || '',
+              description: t.description || '',
+              status: t.status || 'todo',
+              priority: t.priority || 'medium',
+              projectId: t.projectId || 'inbox',
+              labels: Array.isArray(t.labels) ? t.labels : [],
+              userId: t.userId || t.creatorId || 'guest',
+              updatedAt: (t.updatedAt instanceof Date ? t.updatedAt : new Date()).toISOString()})
+            .catch(() => {}),
+        ),
+      );
+    }
+    if (userId && userId !== 'guest' && list.length > 0) {
+      void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
+        for (const t of list) {
+          if (!t.id) continue;
+          void upsertGoalTurso({
+            id: t.id,
+            userId,
+            title: t.title || 'Untitled Goal',
+            description: t.description || '',
+            status: t.status || 'todo',
+            priority: t.priority || 'medium',
+            dueDate: t.dueDate instanceof Date ? t.dueDate.toISOString() : (t.dueDate || null),
+            completedAt: t.completedAt instanceof Date ? t.completedAt.toISOString() : (t.completedAt || null),
+            isWorkspace: Boolean(t.isWorkspace),
+            projectId: t.projectId || null,
+            workspaceId: t.projectId || null,
+            tags: Array.isArray(t.labels) ? JSON.stringify(t.labels) : null,
+            createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : (t.createdAt || new Date().toISOString()),
+            updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : (t.updatedAt || new Date().toISOString()),
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[TaskContext] Failed to persist goals local copy:', err);
+  }
+}
+
+export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
+  const raw = doc as any;
+  // Extract project ID from tags if present (format: "project:ID")
+  const projectTag = raw.tags?.find((t: string) => String(t).startsWith('project:'));
+  const projectId = projectTag ? projectTag.split(':')[1] : (raw.projectId || raw.project_id || raw.workspaceId || 'inbox');
+  const userLabels = raw.tags
+    ? raw.tags.filter((t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'))
+    : (Array.isArray(raw.labels) ? raw.labels : []);
+  const linkedNotes = parseSourceNoteIdsFromTags(raw.tags || []);
+  const comments = Array.isArray(raw.comments)
+    ? raw.comments.map((entry: any) => parseCommentEntry(entry))
+    : [];
+
+  const rawParent = raw.parentId || raw.parentTaskId || null;
+  const docId = doc.$id || raw.id;
+  const parentTaskId =
+    rawParent &&
+    rawParent !== docId &&
+    rawParent !== 'null' &&
+    rawParent !== 'undefined' &&
+    String(rawParent).trim() !== ''
+      ? String(rawParent).trim()
+      : null;
+
+  const isPersonalOrInbox = !projectId || projectId === 'inbox' || projectId === 'default' || projectId === 'personal';
+  const isWs = !isPersonalOrInbox && Boolean(
+    projectId ||
+    raw.isWorkspace === true ||
+    String(raw.isWorkspace) === 'true' ||
+    raw.is_workspace === true ||
+    String(raw.is_workspace) === 'true'
+  );
+
+  return {
+    id: docId,
+    title: doc.title || raw.title || '',
+    description: doc.description || raw.description || '',
+    status: (doc.status as TaskStatus) || (raw.status as TaskStatus) || 'todo',
+    priority: (doc.priority as Priority) || (raw.priority as Priority) || 'medium',
+    projectId: projectId,
+    labels: userLabels,
+    linkedNotes: linkedNotes.length ? linkedNotes : (Array.isArray(raw.linkedNotes) ? raw.linkedNotes : []),
+    subtasks: Array.isArray(raw.subtasks) ? raw.subtasks : [],
+    comments,
+    attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
+    reminders: Array.isArray(raw.reminders) ? raw.reminders : [],
+    timeEntries: Array.isArray(raw.timeEntries) ? raw.timeEntries : [],
+    assigneeIds: raw.assigneeIds || [],
+    creatorId: raw.userId || raw.creatorId || 'guest',
+    userId: raw.userId || raw.creatorId || 'guest',
+    parentTaskId,
+    dueDate: parseSafeOptionalDate(doc.dueDate || raw.dueDate),
+    createdAt: parseSafeDate(doc.$createdAt || raw.createdAt),
+    updatedAt: parseSafeDate(doc.$updatedAt || raw.updatedAt),
+    position: typeof raw.position === 'number' ? raw.position : 0,
+    isArchived: raw.isArchived === true || String(raw.isArchived) === 'true',
+    isPinned: raw.isPinned === true || String(raw.isPinned) === 'true',
+    isPublic: raw.isPublic === true || String(raw.isPublic) === 'true',
+    isGuest: raw.isGuest === true || String(raw.isGuest) === 'true',
+    discussionId: raw.discussionId || null,
+    scheduled: raw.scheduled === true || String(raw.scheduled) === 'true',
+    isAgentic: raw.isAgentic === true || String(raw.isAgentic) === 'true',
+    isWorkspace: isWs,
+    dek: raw.dek || null,
+  };
+};
+
+async function notifyTaskAssignment(params: {
+  taskId: string;
+  taskTitle: string;
+  creatorId: string;
+  recipientIds: string[];
+}) {
+  if (params.recipientIds.length === 0) return;
+
+  await sendKylrixEmailNotification({
+    eventType: 'task_assigned',
+    sourceApp: 'flow',
+    actorName: params.creatorId,
+    recipientIds: params.recipientIds,
+    resourceId: params.taskId,
+    resourceTitle: params.taskTitle,
+    resourceType: 'task',
+    templateKey: 'flow:task-assigned',
+    ctaUrl: `${getEcosystemUrl('flow')}/goals/${params.taskId}`,
+    ctaText: 'Open task',
+  });
+}
+
+const parseCommentEntry = (entry: any): Comment => {
+  if (entry && typeof entry === 'object' && entry.id && entry.content) {
+    return {
+      ...entry,
+      createdAt: entry.createdAt ? new Date(entry.createdAt) : new Date(),
+      updatedAt: entry.updatedAt ? new Date(entry.updatedAt) : undefined};
+  }
+
+  if (typeof entry === 'string') {
+    try {
+      return parseCommentEntry(JSON.parse(entry));
+    } catch (_e) {
+      return {
+        id: crypto.randomUUID(),
+        content: entry,
+        authorId: 'system',
+        authorName: 'System',
+        createdAt: new Date()};
+    }
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    content: '',
+    authorId: 'system',
+    authorName: 'System',
+    createdAt: new Date()};
+};
+
+
+const buildTaskHierarchy = (tasks: Task[]) => {
+  const cloned = tasks.map((task) => ({
+    ...task,
+    subtasks: [...(task.subtasks || [])],
+    comments: [...(task.comments || [])]}));
+  const taskMap = new Map(cloned.map((task) => [task.id, task]));
+
+  cloned.forEach((task) => {
+    if (!task.parentTaskId || task.parentTaskId === task.id || task.parentTaskId === 'null' || task.parentTaskId === 'undefined') return;
+    const parent = taskMap.get(task.parentTaskId);
+    if (!parent || parent.id === task.id) return;
+
+    parent.subtasks = [
+      ...parent.subtasks.filter((subtask) => subtask.id !== task.id),
+      {
+        id: task.id,
+        title: task.title,
+        completed: task.status === 'done',
+        createdAt: task.createdAt,
+        completedAt: task.status === 'done' ? task.completedAt : undefined}];
+  });
+
+  return cloned.filter((task) => !task.parentTaskId || task.parentTaskId === task.id || task.parentTaskId === 'null' || task.parentTaskId === 'undefined');
+};
+
+const mapAppwriteCalendarToProject = (doc: AppwriteCalendar): Project => ({
+  id: doc.$id || (doc as any).id,
+  name: doc.name,
+  color: doc.color,
+  description: '',
+  icon: 'list',
+  ownerId: doc.userId,
+  memberIds: [],
+  isArchived: false,
+  isFavorite: doc.isDefault,
+  isPinned: (doc as any).isPinned === true || String((doc as any).isPinned) === 'true',
+  defaultView: 'list',
+  createdAt: doc.$createdAt ? new Date(doc.$createdAt) : (doc as any).createdAt ? new Date((doc as any).createdAt) : new Date(),
+  updatedAt: doc.$updatedAt ? new Date(doc.$updatedAt) : (doc as any).updatedAt ? new Date((doc as any).updatedAt) : new Date(),
+  position: 0,
+  settings: {
+    defaultPriority: 'medium',
+    allowSubtasks: true,
+    allowTimeTracking: true,
+    allowRecurrence: true,
+    showCompletedTasks: true},
+});
+
+const mapEcosystemTagsToLabels = (tags: Tags[]): Label[] =>
+  tags
+    .filter((tag): tag is Tags & { name: string } => Boolean(tag.name))
+    .map((tag) => ({
+      id: tag.name,
+      name: tag.name,
+      color: (tag as Tags & { color?: string }).color || '#9B9691',
+      description: (tag as Tags & { description?: string }).description,
+    }));
+
+// State
+interface TaskState {
+  tasks: Task[];
+  projects: Project[];
+  labels: Label[];
+  ecosystemTags: Tags[];
+  selectedTaskId: string | null;
+  selectedProjectId: string | null;
+  filter: TaskFilter;
+  sort: TaskSort;
+  viewMode: ViewMode;
+  isLoading: boolean;
+  error: string | null;
+  sidebarOpen: boolean;
+  taskDialogOpen: boolean;
+  searchQuery: string;
+  userId: string | null;
+}
+
+const initialState: TaskState = {
+  tasks: [],
+  projects: [],
+  labels: [],
+  ecosystemTags: [],
+  selectedTaskId: null,
+  selectedProjectId: null,
+  filter: {
+    showCompleted: true,
+    showArchived: false},
+  sort: {
+    field: 'updatedAt',
+    direction: 'desc'},
+  viewMode: 'list',
+  isLoading: false,
+  error: null,
+  sidebarOpen: true,
+  taskDialogOpen: false,
+  searchQuery: '',
+  userId: null,
+};
+
+// Actions
+type TaskAction =
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_DATA'; payload: { tasks: Task[]; projects: Project[] } }
+  | { type: 'SET_USER'; payload: string }
+  | { type: 'ADD_TASK'; payload: Task }
+  | { type: 'UPSERT_TASK'; payload: Task }
+  | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task> } }
+  | { type: 'DELETE_TASK'; payload: string }
+  | { type: 'COMPLETE_TASK'; payload: string }
+  | { type: 'SELECT_TASK'; payload: string | null }
+  | { type: 'ADD_PROJECT'; payload: Project }
+  | { type: 'UPDATE_PROJECT'; payload: { id: string; updates: Partial<Project> } }
+  | { type: 'DELETE_PROJECT'; payload: string }
+  | { type: 'SELECT_PROJECT'; payload: string | null }
+  | { type: 'ADD_LABEL'; payload: Label }
+  | { type: 'UPDATE_LABEL'; payload: { id: string; updates: Partial<Label> } }
+  | { type: 'DELETE_LABEL'; payload: string }
+  | { type: 'SET_FILTER'; payload: TaskFilter }
+  | { type: 'SET_SORT'; payload: TaskSort }
+  | { type: 'SET_VIEW_MODE'; payload: ViewMode }
+  | { type: 'TOGGLE_SIDEBAR' }
+  | { type: 'SET_SIDEBAR_OPEN'; payload: boolean }
+  | { type: 'SET_TASK_DIALOG_OPEN'; payload: boolean }
+  | { type: 'SET_SEARCH_QUERY'; payload: string }
+  | { type: 'ADD_SUBTASK'; payload: { taskId: string; subtask: Subtask } }
+  | { type: 'UPDATE_SUBTASK'; payload: { taskId: string; subtaskId: string; updates: Partial<Subtask> } }
+  | { type: 'DELETE_SUBTASK'; payload: { taskId: string; subtaskId: string } }
+  | { type: 'TOGGLE_SUBTASK'; payload: { taskId: string; subtaskId: string } }
+  | { type: 'ADD_COMMENT'; payload: { taskId: string; comment: Comment } }
+  | { type: 'REORDER_TASKS'; payload: { taskIds: string[]; projectId?: string } }
+  | { type: 'TOGGLE_PIN_TASK'; payload: string }
+  | { type: 'TOGGLE_PIN_PROJECT'; payload: string }
+  | { type: 'SET_ECOSYSTEM_TAGS'; payload: Tags[] };
+
+// Reducer
+function taskReducer(state: TaskState, action: TaskAction): TaskState {
+  switch (action.type) {
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload };
+
+    case 'SET_ERROR':
+      return { ...state, error: action.payload, isLoading: false };
+
+    case 'SET_DATA':
+      {
+        const uniqueTasks = Array.from(
+          new Map(action.payload.tasks.map((task) => [task.id, task])).values()
+        );
+        const uniqueProjects = Array.from(
+          new Map(action.payload.projects.map((project) => [project.id, project])).values()
+        );
+        return {
+          ...state,
+          tasks: uniqueTasks,
+          projects: uniqueProjects,
+          isLoading: false};
+      }
+
+    case 'SET_USER':
+      if (state.userId && state.userId !== 'guest' && action.payload !== 'guest' && state.userId !== action.payload) {
+        return { ...state, userId: action.payload, tasks: [], projects: [], selectedTaskId: null, selectedProjectId: null };
+      }
+      return { ...state, userId: action.payload };
+
+    case 'ADD_TASK':
+      if (state.tasks.some((task) => task.id === action.payload.id)) {
+        return state;
+      }
+      return { ...state, tasks: [action.payload, ...state.tasks] };
+
+    case 'UPSERT_TASK':
+      {
+        const next = action.payload;
+        const exists = state.tasks.some((task) => task.id === next.id);
+        if (exists) {
+          return {
+            ...state,
+            tasks: state.tasks.map((task) => (task.id === next.id ? { ...task, ...next, updatedAt: next.updatedAt || new Date() } : task)),
+          };
+        }
+        return { ...state, tasks: [next, ...state.tasks] };
+      }
+
+    case 'UPDATE_TASK':
+      return {
+        ...state,
+        tasks: state.tasks.map(task =>
+          task.id === action.payload.id
+            ? {
+                ...task,
+                ...action.payload.updates,
+                // Prefer caller-provided updatedAt (pushLiveGoal / server). Forcing `new Date()`
+                // here poisoned goal sync: realtime echoes re-queued forever after a successful flush.
+                updatedAt: action.payload.updates.updatedAt || task.updatedAt || new Date()}
+            : task
+        ),
+      };
+
+    case 'DELETE_TASK':
+      return {
+        ...state,
+        tasks: state.tasks.filter(task => task.id !== action.payload),
+        selectedTaskId: state.selectedTaskId === action.payload ? null : state.selectedTaskId};
+
+    case 'COMPLETE_TASK':
+      return {
+        ...state,
+        tasks: state.tasks.map(task =>
+          task.id === action.payload
+            ? {
+                ...task,
+                status: task.status === 'done' ? 'todo' : 'done',
+                completedAt: task.status === 'done' ? undefined : new Date(),
+                updatedAt: new Date()}
+            : task
+        ),
+      };
+
+    case 'SELECT_TASK':
+      return { ...state, selectedTaskId: action.payload };
+
+    case 'ADD_PROJECT':
+      return { ...state, projects: [...state.projects, action.payload] };
+
+    case 'UPDATE_PROJECT':
+      return {
+        ...state,
+        projects: state.projects.map(project =>
+          project.id === action.payload.id
+            ? { ...project, ...action.payload.updates, updatedAt: new Date() }
+            : project
+        ),
+      };
+
+    case 'DELETE_PROJECT':
+      return {
+        ...state,
+        projects: state.projects.filter(project => project.id !== action.payload),
+        tasks: state.tasks.map(task =>
+          task.projectId === action.payload ? { ...task, projectId: 'inbox' } : task
+        ),
+        selectedProjectId: state.selectedProjectId === action.payload ? null : state.selectedProjectId,
+      };
+
+    case 'SELECT_PROJECT':
+      return { ...state, selectedProjectId: action.payload };
+
+    case 'ADD_LABEL':
+      return { ...state, labels: [...state.labels, action.payload] };
+
+    case 'UPDATE_LABEL':
+      return {
+        ...state,
+        labels: state.labels.map(label =>
+          label.id === action.payload.id ? { ...label, ...action.payload.updates } : label
+        ),
+      };
+
+    case 'DELETE_LABEL':
+      return {
+        ...state,
+        labels: state.labels.filter(label => label.id !== action.payload),
+        tasks: state.tasks.map(task => ({
+          ...task,
+          labels: task.labels.filter(l => l !== action.payload)})),
+      };
+
+    case 'SET_FILTER':
+      return { ...state, filter: action.payload };
+
+    case 'SET_SORT':
+      return { ...state, sort: action.payload };
+
+    case 'SET_VIEW_MODE':
+      return { ...state, viewMode: action.payload };
+
+    case 'TOGGLE_SIDEBAR':
+      return { ...state, sidebarOpen: !state.sidebarOpen };
+
+    case 'SET_SIDEBAR_OPEN':
+      return { ...state, sidebarOpen: action.payload };
+
+    case 'SET_TASK_DIALOG_OPEN':
+      return { ...state, taskDialogOpen: action.payload };
+
+    case 'SET_SEARCH_QUERY':
+      return { ...state, searchQuery: action.payload };
+
+    case 'ADD_SUBTASK':
+      return {
+        ...state,
+        tasks: state.tasks.map(task =>
+          task.id === action.payload.taskId
+            ? { ...task, subtasks: [...task.subtasks, action.payload.subtask], updatedAt: new Date() }
+            : task
+        ),
+      };
+
+    case 'UPDATE_SUBTASK':
+      return {
+        ...state,
+        tasks: state.tasks.map(task =>
+          task.id === action.payload.taskId
+            ? {
+                ...task,
+                subtasks: task.subtasks.map(st =>
+                  st.id === action.payload.subtaskId ? { ...st, ...action.payload.updates } : st
+                ),
+                updatedAt: new Date(),
+              }
+            : task
+        ),
+      };
+
+    case 'DELETE_SUBTASK':
+      return {
+        ...state,
+        tasks: state.tasks.map(task =>
+          task.id === action.payload.taskId
+            ? {
+                ...task,
+                subtasks: task.subtasks.filter(st => st.id !== action.payload.subtaskId),
+                updatedAt: new Date()}
+            : task
+        ),
+      };
+
+    case 'TOGGLE_SUBTASK':
+      return {
+        ...state,
+        tasks: state.tasks.map(task =>
+          task.id === action.payload.taskId
+            ? {
+                ...task,
+                subtasks: task.subtasks.map(st =>
+                  st.id === action.payload.subtaskId
+                    ? { ...st, completed: !st.completed, completedAt: !st.completed ? new Date() : undefined }
+                    : st
+                ),
+                updatedAt: new Date(),
+              }
+            : task
+        ),
+      };
+
+    case 'ADD_COMMENT':
+      return {
+        ...state,
+        tasks: state.tasks.map(task =>
+          task.id === action.payload.taskId
+            ? { ...task, comments: [...task.comments, action.payload.comment], updatedAt: new Date() }
+            : task
+        ),
+      };
+
+    case 'REORDER_TASKS':
+      return {
+        ...state,
+        tasks: state.tasks.map(task => {
+          const newPosition = action.payload.taskIds.indexOf(task.id);
+          if (newPosition !== -1) {
+            return { ...task, position: newPosition };
+          }
+          return task;
+        }),
+      };
+
+    case 'TOGGLE_PIN_TASK':
+      return {
+        ...state,
+        tasks: state.tasks.map(task =>
+          task.id === action.payload
+            ? { ...task, isPinned: !task.isPinned, updatedAt: new Date() }
+            : task
+        ),
+      };
+
+    case 'TOGGLE_PIN_PROJECT':
+      return {
+        ...state,
+        projects: state.projects.map(project =>
+          project.id === action.payload
+            ? { ...project, isPinned: !project.isPinned, updatedAt: new Date() }
+            : project
+        ),
+      };
+
+    case 'SET_ECOSYSTEM_TAGS':
+      return {
+        ...state,
+        ecosystemTags: action.payload,
+        labels: mapEcosystemTagsToLabels(action.payload)};
+
+    default:
+      return state;
+  }
+}
+
+// Context
+interface TaskContextType extends TaskState {
+  // Task actions
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'position'>) => Promise<Task | null>;
+  /** Live-copy upsert. Default enqueues engine flush (amber). `pending: false` after remote confirm. */
+  pushLiveGoal: (task: Task, options?: { pending?: boolean }) => void;
+  updateTask: (id: string, updates: Partial<Task>) => void;
+  deleteTask: (id: string) => void;
+  completeTask: (id: string) => void;
+  selectTask: (id: string | null) => void;
+  togglePinTask: (id: string) => Promise<void>;
+  toggleTaskReminder: (id: string, enabled: boolean) => Promise<void>;
+  // Subtask actions
+  addSubtask: (taskId: string, title: string, description?: string) => void;
+  updateSubtask: (taskId: string, subtaskId: string, updates: Partial<Subtask>) => void;
+  deleteSubtask: (taskId: string, subtaskId: string) => void;
+  toggleSubtask: (taskId: string, subtaskId: string) => void;
+  // Comment actions
+  addComment: (taskId: string, content: string) => void;
+  listTaskCollaborators: (taskId: string) => Promise<TaskCollaborator[]>;
+  addTaskCollaborator: (taskId: string, userId: string, permission: CollaboratorPermission) => Promise<TaskCollaborator | null>;
+  updateTaskCollaborator: (taskId: string, collaboratorId: string, permission: CollaboratorPermission) => Promise<TaskCollaborator | null>;
+  deleteTaskCollaborator: (taskId: string, collaboratorId: string) => Promise<void>;
+  // Project actions
+  addProject: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'position'>) => void;
+  updateProject: (id: string, updates: Partial<Project>) => void;
+  deleteProject: (id: string) => void;
+  selectProject: (id: string | null) => void;
+  togglePinProject: (id: string) => Promise<void>;
+  // Label actions
+  addLabel: (label: Omit<Label, 'id'>) => void;
+  updateLabel: (id: string, updates: Partial<Label>) => void;
+  deleteLabel: (id: string) => void;
+  // Filter and sort actions
+  setFilter: (filter: TaskFilter) => void;
+  setSort: (sort: TaskSort) => void;
+  setViewMode: (mode: ViewMode) => void;
+  // UI actions
+  toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
+  setTaskDialogOpen: (open: boolean) => void;
+  setSearchQuery: (query: string) => void;
+  // Computed values
+  getFilteredTasks: () => Task[];
+  getTasksByProject: (projectId: string) => Task[];
+  getTaskStats: () => { total: number; completed: number; overdue: number; dueToday: number };
+  getSelectedTask: () => Task | null;
+  getSelectedProject: () => Project | null;
+  ecosystemTags: Tags[];
+  pushLiveTag: (tag: Tags) => void;
+  refreshEcosystemTags: () => Promise<void>;
+  getTagFilterOptions: () => string[];
+  refreshTasks: () => Promise<void>;
+}
+
+const TaskContext = createContext<TaskContextType | undefined>(undefined);
+
+const PENDING_STATUS_TTL_MS = 15000;
+
+type PendingStatusPatch = {
+  status: TaskStatus;
+  completedAt?: Date;
+  at: number;
+};
+
+export const useTask = () => {
+  const context = useContext(TaskContext);
+  if (!context) {
+    throw new Error('useTask must be used within a TaskProvider');
+  }
+  return context;
+};
+
+async function syncTaskAccess(taskId: string, creatorId: string, assigneeIds: string[], taskTitle: string, previousAssigneeIds: string[] = []) {
+  const collaboratorRows = await taskCollaborators.list(taskId);
+  const collaboratorIds = new Set(collaboratorRows.map((row) => row.userId));
+  const normalizedAssigneeIds = Array.from(new Set(assigneeIds.filter((id): id is string => Boolean(id) && id !== 'guest')));
+  const newlyAddedAssignees = normalizedAssigneeIds.filter((id) => id !== creatorId && !previousAssigneeIds.includes(id));
+
+  for (const assigneeId of normalizedAssigneeIds) {
+    if (!collaboratorIds.has(assigneeId)) {
+      const created = await taskCollaborators.create(taskId, assigneeId, 'read', creatorId);
+      collaboratorRows.push(created);
+      collaboratorIds.add(assigneeId);
+    } else {
+      const existing = collaboratorRows.find((row) => row.userId === assigneeId);
+      if (existing && existing.permission !== 'read') {
+        const updated = await taskCollaborators.update(existing.id, { permission: 'read' }, creatorId, taskId);
+        const rowIndex = collaboratorRows.findIndex((row) => row.id === existing.id);
+        if (rowIndex !== -1) {
+          collaboratorRows[rowIndex] = updated;
+        }
+      }
+    }
+  }
+
+  const permissions = buildTaskPermissions(creatorId, normalizedAssigneeIds, collaboratorRows);
+  await taskApi.update(taskId, { assigneeIds: normalizedAssigneeIds }, permissions);
+
+  if (newlyAddedAssignees.length > 0) {
+    await notifyTaskAssignment({
+      taskId,
+      taskTitle,
+      creatorId,
+      recipientIds: newlyAddedAssignees}).catch((error) => {
+      console.error('[TaskContext] Failed to queue task assignment email', error);
+    });
+  }
+
+  await Promise.all(
+    collaboratorRows.map((collaborator) =>
+      taskCollaborators.update(
+        collaborator.id,
+        { permission: collaborator.permission as CollaboratorPermission },
+        creatorId,
+        taskId,
+        permissions
+      )
+    )
+  );
+
+  return collaboratorRows;
+}
+
+export function TaskProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(taskReducer, initialState);
+  const threadTasksRef = useRef<Task[]>([]);
+  const tasksRef = useRef<Task[]>(state.tasks);
+  tasksRef.current = state.tasks;
+  const projectsRef = useRef<Project[]>(state.projects);
+  projectsRef.current = state.projects;
+  const { fetchOptimized, invalidate, getCachedData, getCachedDataAsync, setCachedData, refreshInBackground } = useDataNexus();
+  const { user: authUser, isLoading: isAuthLoading } = useAuth();
+  const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
+  const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
+  const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+  const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
+  const { rows: goalProjectObjects } = useProjectObjects(customWorkspaceId, 'goal');
+  // Keep IDs in a ref so getFilteredTasks callback can read without being in deps
+  const goalProjectObjectIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    goalProjectObjectIdsRef.current = new Set(
+      goalProjectObjects.map((po) => po.entityId).filter(Boolean) as string[]
+    );
+  }, [goalProjectObjects]);
+
+  const flowWarmOwnerRef = useRef<string | null>(null);
+  const pendingStatusPatchesRef = useRef<Map<string, PendingStatusPatch>>(new Map());
+
+  useEffect(() => {
+    registerLiveGoalGetter((goalId) => tasksRef.current.find((t) => t.id === goalId) || null);
+    // Live getter just came online — flush any stranded goal queue entries immediately.
+    if (autonomicSyncEngine.listPendingIds().length > 0) {
+      autonomicSyncEngine.flushImmediately();
+    }
+    return () => registerLiveGoalGetter(null);
+  }, []);
+
+  const clearStalePendingPatches = useCallback(() => {
+    const now = Date.now();
+    for (const [id, patch] of pendingStatusPatchesRef.current.entries()) {
+      if (now - patch.at > PENDING_STATUS_TTL_MS) {
+        pendingStatusPatchesRef.current.delete(id);
+      }
+    }
+  }, []);
+
+  const registerPendingStatus = useCallback((id: string, status: TaskStatus, completedAt?: Date) => {
+    pendingStatusPatchesRef.current.set(id, {
+      status,
+      completedAt,
+      at: Date.now()});
+  }, []);
+
+  const applyPendingPatches = useCallback((tasks: Task[]) => {
+    clearStalePendingPatches();
+    const pending = pendingStatusPatchesRef.current;
+    if (pending.size === 0) return tasks;
+
+    return tasks.map((task) => {
+      const patch = pending.get(task.id);
+      if (!patch) return task;
+      if (task.status === patch.status) {
+        pending.delete(task.id);
+        return task;
+      }
+      return {
+        ...task,
+        status: patch.status,
+        completedAt: patch.status === 'done' ? (patch.completedAt || task.completedAt || new Date()) : undefined,
+        updatedAt: new Date()};
+    });
+  }, [clearStalePendingPatches]);
+
+  const shouldIgnoreRealtimeStatus = useCallback((taskId: string, incomingStatus: TaskStatus) => {
+    clearStalePendingPatches();
+    const patch = pendingStatusPatchesRef.current.get(taskId);
+    if (!patch) return false;
+    if (incomingStatus === patch.status) {
+      pendingStatusPatchesRef.current.delete(taskId);
+      return false;
+    }
+    return true;
+  }, [clearStalePendingPatches]);
+
+  const pushLiveTag = useCallback((tag: Tags) => {
+    if (!tag?.name) return;
+    dispatch({
+      type: 'SET_ECOSYSTEM_TAGS',
+      payload: [tag, ...state.ecosystemTags.filter(t => t.name !== tag.name && t.$id !== tag.$id)]});
+    if (typeof window !== 'undefined' && state.userId) {
+      const tagsKey = tagsCacheKey(state.userId);
+      const updated = [tag, ...state.ecosystemTags.filter(t => t.name !== tag.name && t.$id !== tag.$id)];
+      void setCachedData(tagsKey, { rows: updated, total: updated.length });
+    }
+  }, [state.ecosystemTags, state.userId, setCachedData]);
+
+  const refreshEcosystemTags = useCallback(async () => {
+    const uid = state.userId || flowWarmOwnerRef.current || 'guest';
+    const tagsKey = tagsCacheKey(uid);
+    const COLD_START_TTL = 1000 * 60 * 60 * 24 * 7;
+    try {
+      const cached = await getCachedDataAsync<any>(tagsKey, COLD_START_TTL);
+      if (cached?.rows && Array.isArray(cached.rows) && cached.rows.length > 0) {
+        dispatch({ type: 'SET_ECOSYSTEM_TAGS', payload: cached.rows });
+      }
+    } catch {}
+
+    try {
+      const { rows } = await getAllTags();
+      dispatch({ type: 'SET_ECOSYSTEM_TAGS', payload: rows });
+      if (uid !== 'guest') {
+        void setCachedData(tagsKey, { rows, total: rows.length });
+      }
+    } catch (error) {
+      console.warn('[TaskContext] Remote tags fetch failed, keeping local tags:', error);
+    }
+  }, [state.userId, getCachedDataAsync, setCachedData]);
+
+  const fetchBatch = useCallback(async (uid: string, force = false) => {
+    const FLOW_WARM_TTL = 1000 * 60 * 30;
+    const tasksKey = `f_tasks_${uid}`;
+    const calsKey = `f_calendars_${uid}`;
+
+    const taskQueries = [
+      Query.equal('userId', uid),
+      Query.limit(1000),
+    ];
+    const calQueries = [
+      Query.equal('userId', uid),
+      Query.limit(100),
+    ];
+
+    // 1. Primary substrate: query Turso for user's goals
+    let tursoGoals: Task[] = [];
+    if (uid && uid !== 'guest') {
+      try {
+        const { listGoalsTurso } = await import('@/lib/actions/turso-ops');
+        const res = await listGoalsTurso(uid);
+        if (res.success && Array.isArray(res.rows) && res.rows.length > 0) {
+          tursoGoals = res.rows.map((row: any) => ({
+            id: row.id,
+            title: row.title || 'Untitled Goal',
+            description: row.description || '',
+            status: (row.status as TaskStatus) || 'todo',
+            priority: (row.priority as Priority) || 'medium',
+            dueDate: parseSafeOptionalDate(row.dueDate),
+            completedAt: parseSafeOptionalDate(row.completedAt),
+            isWorkspace: Boolean(row.isWorkspace),
+            projectId: row.projectId || row.workspaceId || 'inbox',
+            labels: row.tags ? (typeof row.tags === 'string' && row.tags.startsWith('[') ? JSON.parse(row.tags) : [row.tags]) : [],
+            linkedNotes: [],
+            subtasks: [],
+            comments: [],
+            attachments: [],
+            reminders: [],
+            timeEntries: [],
+            assigneeIds: [uid],
+            creatorId: uid,
+            userId: uid,
+            parentTaskId: null,
+            createdAt: parseSafeDate(row.createdAt),
+            updatedAt: parseSafeDate(row.updatedAt),
+            position: 0,
+            isArchived: false,
+            isPinned: false,
+            isPublic: false,
+            isGuest: false,
+            scheduled: false,
+            isAgentic: false,
+            dek: null,
+          } as Task));
+        }
+      } catch (tursoErr) {
+        console.warn('[TaskContext] Turso primary goals fetch failed, falling back to secondary:', tursoErr);
+      }
+    }
+
+    const [tList, cList] = await Promise.all([
+      tursoGoals.length > 0 ? Promise.resolve({ rows: [] }) : fetchOptimized(tasksKey, () => taskApi.list(taskQueries), force ? 0 : FLOW_WARM_TTL),
+      fetchOptimized(calsKey, () => calendarApi.list(calQueries), force ? 0 : FLOW_WARM_TTL)]);
+
+    // Opportunistic Turso migration: persist fetched goals to Turso so Turso becomes permanent primary
+    if (tursoGoals.length === 0 && Array.isArray(tList?.rows) && tList.rows.length > 0 && uid && uid !== 'guest') {
+      void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
+        for (const row of tList.rows) {
+          const m = mapAppwriteTaskToTask(row);
+          void upsertGoalTurso({
+            id: m.id,
+            userId: uid,
+            title: m.title || 'Untitled Goal',
+            description: m.description || '',
+            status: m.status || 'todo',
+            priority: m.priority || 'medium',
+            dueDate: m.dueDate ? m.dueDate.toISOString() : null,
+            completedAt: m.completedAt ? m.completedAt.toISOString() : null,
+            isWorkspace: Boolean(m.isWorkspace),
+            projectId: m.projectId || null,
+            workspaceId: m.projectId || null,
+            tags: Array.isArray(m.labels) ? JSON.stringify(m.labels) : null,
+            createdAt: m.createdAt ? m.createdAt.toISOString() : new Date().toISOString(),
+            updatedAt: m.updatedAt ? m.updatedAt.toISOString() : new Date().toISOString(),
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
+    const appwriteTasks = (tList?.rows || []).map(mapAppwriteTaskToTask);
+    const taskMap = new Map<string, Task>();
+    appwriteTasks.forEach((t) => taskMap.set(t.id, t));
+    tursoGoals.forEach((t) => {
+      const existing = taskMap.get(t.id);
+      if (!existing) {
+        taskMap.set(t.id, t);
+      } else {
+        const tTime = t.updatedAt instanceof Date ? t.updatedAt.getTime() : new Date(t.updatedAt || 0).getTime();
+        const aTime = existing.updatedAt instanceof Date ? existing.updatedAt.getTime() : new Date(existing.updatedAt || 0).getTime();
+        if (tTime > aTime) {
+          taskMap.set(t.id, { ...existing, ...t });
+        }
+      }
+    });
+
+    return { 
+      tasks: Array.from(taskMap.values()), 
+      projects: (cList?.rows || []).map(mapAppwriteCalendarToProject) 
+    };
+
+  }, [fetchOptimized]);
+
+  const dispatchSyncedData = useCallback((data: { tasks: Task[]; projects: Project[] }) => {
+    const mergedTasks = data.tasks;
+
+    // 1:1 with notes live guards: prefer in-memory live copy when engine still owes a flush
+    // or local updatedAt is newer; keep local-only ids missing from this page.
+    const liveById = new Map(tasksRef.current.map((t) => [t.id, t]));
+    const byId = new Map<string, Task>();
+
+    const activeUid = state.userId || flowWarmOwnerRef.current || 'guest';
+    for (const row of mergedTasks) {
+      if (LocalEngine.isDeleted(row.id, activeUid)) continue;
+      const live = liveById.get(row.id);
+      if (
+        live &&
+        (autonomicSyncEngine.isPending(goalPendingKey(row.id)) ||
+          (live.updatedAt instanceof Date &&
+            row.updatedAt instanceof Date &&
+            live.updatedAt.getTime() > row.updatedAt.getTime()))
+      ) {
+        byId.set(row.id, live);
+      } else {
+        const targetProjectId = row.projectId && row.projectId !== 'inbox'
+          ? row.projectId
+          : (live?.projectId || 'inbox');
+        const isPersonalPid = !targetProjectId || targetProjectId === 'inbox' || targetProjectId === 'personal' || targetProjectId === 'default' || targetProjectId === activeUid;
+        const targetIsWorkspace = Boolean(
+          !isPersonalPid && (row.isWorkspace === true || live?.isWorkspace === true || (Boolean(targetProjectId) && !isPersonalPid))
+        );
+        const merged = live
+          ? {
+              ...live,
+              ...row,
+              projectId: targetProjectId,
+              isWorkspace: targetIsWorkspace,
+              userId: (row.userId && row.userId !== 'guest') ? row.userId : (live.userId || state.userId || 'guest'),
+              creatorId: (row.creatorId && row.creatorId !== 'guest') ? row.creatorId : (live.creatorId || state.userId || 'guest'),
+              subtasks: row.subtasks?.length ? row.subtasks : (live.subtasks || []),
+              comments: row.comments?.length ? row.comments : (live.comments || []),
+              labels: row.labels?.length ? row.labels : (live.labels || []),
+            }
+          : row;
+        byId.set(row.id, merged);
+      }
+    }
+
+    for (const live of tasksRef.current) {
+      if (LocalEngine.isDeleted(live.id, activeUid)) continue;
+      if (!byId.has(live.id)) byId.set(live.id, live);
+    }
+
+    const projectsMap = new Map<string, Project>();
+    for (const proj of (data.projects || [])) {
+      if (proj?.id) projectsMap.set(proj.id, proj);
+    }
+
+    const nextTasks = applyPendingPatches(Array.from(byId.values()));
+
+    dispatch({
+      type: 'SET_DATA',
+      payload: {
+        tasks: nextTasks,
+        projects: Array.from(projectsMap.values())},
+    });
+
+    void persistGoalsLocalCopy(state.userId || flowWarmOwnerRef.current, nextTasks);
+  }, [applyPendingPatches, state.userId]);
+
+  const refreshTasks = useCallback(async () => {
+    if (!state.userId || state.userId === 'guest') return;
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const data = await fetchBatch(state.userId, true);
+      dispatchSyncedData(data);
+      await refreshEcosystemTags();
+    } catch (error) {
+      console.error('[TaskContext] Manual refresh failed:', error);
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [state.userId, fetchBatch, dispatchSyncedData, refreshEcosystemTags]);
+  const invalidateTasksNexus = useCallback((uid: string) => invalidate(`f_tasks_${uid}`), [invalidate]);
+  const invalidateCalendarsNexus = useCallback((uid: string) => invalidate(`f_calendars_${uid}`), [invalidate]);
+
+  const pathname = usePathname();
+  const lastPathnameRef = useRef<string | null>(null);
+
+  // Instant local hydration on mount & soft refresh channel — zero database calls
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+
+    const hydrateInstant = async () => {
+      const userId =
+        authUser?.$id ||
+        flowWarmOwnerRef.current ||
+        getCurrentUserSnapshot()?.$id ||
+        'guest';
+      if (userId !== 'guest') flowWarmOwnerRef.current = userId;
+      const instant = await loadGoalsFromLocalCopy({
+        userId,
+        existingTasks: tasksRef.current,
+        getCachedDataSync: (key) => getCachedData(key),
+        getCachedDataAsync: (key) => getCachedDataAsync(key)});
+
+      if (cancelled) return;
+
+      if (instant.length > 0) {
+        dispatchSyncedData({
+          tasks: instant,
+          projects: projectsRef.current});
+      }
+      dispatch({ type: 'SET_LOADING', payload: false });
+    };
+
+    void hydrateInstant();
+
+    // Rite of passage: soft refresh from LocalEngine whenever any object card/detail is opened
+    const unsubscribe = subscribeLocalSoftRefresh((kind) => {
+      if (!kind || kind === 'goal' || kind === 'task') {
+        void hydrateInstant();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [authUser?.$id, getCachedData, getCachedDataAsync, dispatchSyncedData]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleLogout = () => {
+      tasksRef.current = [];
+      threadTasksRef.current = [];
+      dispatch({ type: 'SET_DATA', payload: { tasks: [], projects: [] } });
+      dispatch({ type: 'SET_USER', payload: 'guest' });
+    };
+    window.addEventListener('kylrix:auth:logout', handleLogout);
+    return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
+  }, []);
+
+  // Initial Data Fetch & Cold Hydration
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    const init = async () => {
+      try {
+        let userId = authUser?.$id || 'guest';
+        if (!authUser?.$id) {
+            try {
+                const user = await getCurrentUser();
+                userId = user.$id;
+            } catch {
+                // If we can't get user even here, we are truly guest
+            }
+        }
+        dispatch({ type: 'SET_USER', payload: userId });
+        flowWarmOwnerRef.current = userId;
+
+        threadTasksRef.current = [];
+
+        const tasksKey = `f_tasks_${userId}`;
+        const calsKey = `f_calendars_${userId}`;
+        const COLD_START_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days authoritative window
+
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const db = await import('@/lib/webrtc/RxDBManager').then((m) => m.getRxDB()).catch(() => null);
+
+        const instant = await loadGoalsFromLocalCopy({
+          userId,
+          existingTasks: tasksRef.current,
+          getCachedDataSync: (key) => getCachedData(key, COLD_START_TTL),
+          getCachedDataAsync: (key) => getCachedDataAsync(key, COLD_START_TTL)});
+
+        const [cachedTasksRes, cachedCalsRes, guestTasksRes, goalsListCache, rxTasks] = await Promise.all([
+            getCachedDataAsync<any>(tasksKey, COLD_START_TTL),
+            getCachedDataAsync<any>(calsKey, COLD_START_TTL),
+            userId === 'guest' ? getCachedDataAsync<any>('f_tasks_guest', COLD_START_TTL) : Promise.resolve(null),
+            LocalEngine.cacheGet<any[]>(`f_goals_list_${userId}`),
+            db?.tasks ? db.tasks.find({ selector: { userId: { $eq: userId } } }).exec().then((docs: any[]) => docs.map((d) => d.toJSON())).catch(() => []) : Promise.resolve([]),
+        ]);
+
+        const combinedTasks = mergeTaskRows(
+          instant,
+          cachedTasksRes?.rows || (Array.isArray(cachedTasksRes) ? cachedTasksRes : []),
+          guestTasksRes?.rows || (Array.isArray(guestTasksRes) ? guestTasksRes : []),
+          Array.isArray(goalsListCache) ? goalsListCache : [],
+          Array.isArray(rxTasks) ? rxTasks : [],
+        );
+
+        if (combinedTasks.length > 0 || cachedCalsRes) {
+            console.log('[TaskContext] Cold-start hydration from local copy:', combinedTasks.length, 'goals');
+            dispatchSyncedData({
+              tasks: combinedTasks,
+              projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject)});
+        }
+
+        dispatch({ type: 'SET_LOADING', payload: false });
+
+        if (userId === 'guest') {
+            return;
+        }
+
+        // 2. Background Refresh — network errors are silent so local copy remains SoT
+        try {
+          const data = await fetchBatch(userId);
+          dispatchSyncedData(data);
+          await refreshEcosystemTags();
+        } catch (netErr) {
+          console.warn('[TaskContext] Background network sync failed, local copy remains SoT:', netErr);
+        } finally {
+          dispatch({ type: 'SET_LOADING', payload: false });
+        }
+      } catch (err: any) {
+          console.warn('[TaskContext] Init fallback:', err);
+          dispatch({ type: 'SET_LOADING', payload: false });
+      }
+    };
+
+    init();
+  }, [authUser?.$id, isAuthLoading, fetchBatch, getCachedDataAsync, dispatchSyncedData, refreshEcosystemTags]);
+
+  // Route-based background revalidation
+  useEffect(() => {
+    if (!state.userId || state.userId === 'guest' || isAuthLoading) return;
+    if (pathname === lastPathnameRef.current) return;
+
+    const prevPath = lastPathnameRef.current;
+    lastPathnameRef.current = pathname;
+
+    // Only revalidate if we actually navigated (not first load)
+    if (prevPath && (isFlowPath(pathname) || isGoalsSurfacePath(pathname) || isWorkspacesPath(pathname))) {
+      const uid = state.userId;
+      refreshInBackground(`f_route_refresh_${uid}`, async () => {
+        const data = await fetchBatch(uid, true);
+        dispatchSyncedData(data);
+        return true;
+      }, 10000); // 10s cooldown for route-based refreshes
+    }
+  }, [pathname, state.userId, isAuthLoading, fetchBatch, refreshInBackground, dispatchSyncedData]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleOnline = () => {
+      console.log('[TaskContext] Network connection restored. Refreshing tasks...');
+      if (state.userId && state.userId !== 'guest') {
+        void refreshTasks();
+      }
+    };
+
+    const handlethreadClaimed = () => {
+      console.log('[TaskContext] thread items claimed. Refreshing tasks...');
+      if (state.userId && state.userId !== 'guest') {
+        void refreshTasks();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('kylrix:thread-claimed', handlethreadClaimed);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('kylrix:thread-claimed', handlethreadClaimed);
+    };
+  }, [state.userId, refreshTasks]);
+
+  // Soft pull: focus/visibility demand only — never a fixed 3s DB hammer.
+  const lastTaskPullAtRef = useRef<number>(0);
+  const isFetchingTasksRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!state.userId || state.userId === 'guest') return;
+
+    const maybeSoftPull = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (isFetchingTasksRef.current) return;
+      if (
+        !shouldSoftPull({
+          lastPullAt: lastTaskPullAtRef.current,
+          activityIntensity: autonomicSyncEngine.getActivityIntensity()})
+      ) {
+        return;
+      }
+      isFetchingTasksRef.current = true;
+      try {
+        if (!state.userId) return;
+        const data = await fetchBatch(state.userId, true);
+        dispatchSyncedData(data);
+        lastTaskPullAtRef.current = Date.now();
+      } catch (err) {
+        console.warn('[TaskContext] Soft-pull failed:', err);
+      } finally {
+        isFetchingTasksRef.current = false;
+      }
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void maybeSoftPull();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [state.userId, fetchBatch, dispatchSyncedData]);
+
+  // Realtime Subscriptions
+  useEffect(() => {
+    if (!state.userId) return;
+
+    let unsubTasks: any;
+    let unsubProjects: any;
+
+    const initRealtime = async () => {
+      // Subscribe to Tasks
+      unsubTasks = await subscribeToTable<AppwriteTask>(APPWRITE_CONFIG.TABLES.TASKS, ({ type, payload }) => {
+        const payloadId = payload.$id || payload.id;
+        if (!payloadId) return;
+        const isBelonging = Boolean(
+          !state.userId ||
+          state.userId === 'guest' ||
+          payload.userId === state.userId ||
+          (payload as any).creatorId === state.userId ||
+          (Array.isArray(payload.assigneeIds) && payload.assigneeIds.includes(state.userId)) ||
+          payload.isWorkspace ||
+          Boolean((payload as any).projectId) ||
+          payload.isPublic ||
+          payload.isGuest
+        );
+        if (!isBelonging) return;
+
+        // Mirror notes live-edit guards: never clobber a goal the engine still owes a flush for.
+        if (autonomicSyncEngine.isPending(goalPendingKey(payload.$id))) {
+          return;
+        }
+
+        if (type === 'create') {
+          if ((payload as any).isTrash === true) {
+            dispatch({ type: 'DELETE_TASK', payload: payload.$id });
+            return;
+          }
+          dispatch({ type: 'ADD_TASK', payload: mapAppwriteTaskToTask(payload) });
+        } else if (type === 'update') {
+          if ((payload as any).isTrash === true) {
+            dispatch({ type: 'DELETE_TASK', payload: payload.$id });
+            invalidateTasksNexus(state.userId || 'guest');
+            return;
+          }
+          const mapped = mapAppwriteTaskToTask(payload);
+          if (shouldIgnoreRealtimeStatus(payload.$id, mapped.status)) return;
+          dispatch({ type: 'UPDATE_TASK', payload: { id: payload.$id, updates: mapped } });
+        } else if (type === 'delete') {
+          dispatch({ type: 'DELETE_TASK', payload: payload.$id });
+          invalidateTasksNexus(state.userId || 'guest');
+        }
+      });
+
+      // Subscribe to Calendars/Projects
+      unsubProjects = await subscribeToTable<AppwriteCalendar>(APPWRITE_CONFIG.TABLES.CALENDARS, ({ type, payload }) => {
+        if (payload.userId !== state.userId) return;
+
+        if (type === 'create') {
+          dispatch({ type: 'ADD_PROJECT', payload: mapAppwriteCalendarToProject(payload) });
+        } else if (type === 'update') {
+          dispatch({ type: 'UPDATE_PROJECT', payload: { id: payload.$id, updates: mapAppwriteCalendarToProject(payload) } });
+        } else if (type === 'delete') {
+          dispatch({ type: 'DELETE_PROJECT', payload: payload.$id });
+        }
+      });
+    };
+
+    initRealtime();
+
+    return () => {
+      if (typeof unsubTasks === 'function') unsubTasks();
+      else if (unsubTasks?.unsubscribe) unsubTasks.unsubscribe();
+      
+      if (typeof unsubProjects === 'function') unsubProjects();
+      else if (unsubProjects?.unsubscribe) unsubProjects.unsubscribe();
+    };
+  }, [state.userId, shouldIgnoreRealtimeStatus]);
+
+  // Task actions
+  const pushLiveGoal = useCallback(
+    (task: Task, options?: { pending?: boolean }) => {
+      if (!task?.id) return;
+      const existingTask = tasksRef.current.find((t) => t.id === task.id);
+      const isPending = options?.pending !== false;
+
+      const targetProjectId = task.projectId && task.projectId !== 'inbox'
+        ? task.projectId
+        : (existingTask?.projectId || 'inbox');
+      const isPersonalOrInbox = !targetProjectId || targetProjectId === 'inbox' || targetProjectId === 'personal' || targetProjectId === 'default';
+      const targetIsWorkspace = !isPersonalOrInbox && Boolean(
+        targetProjectId ||
+        task.isWorkspace === true ||
+        (task.isWorkspace === undefined && existingTask?.isWorkspace === true)
+      );
+
+      const ownerId = (task.userId && task.userId !== 'guest')
+        ? task.userId
+        : (existingTask?.userId || state.userId || 'guest');
+      const creatorId = (task.creatorId && task.creatorId !== 'guest')
+        ? task.creatorId
+        : (existingTask?.creatorId || ownerId);
+
+      const mergedGoal: Task = existingTask
+        ? {
+            ...existingTask,
+            ...task,
+            projectId: targetProjectId,
+            isWorkspace: targetIsWorkspace,
+            userId: ownerId,
+            creatorId: creatorId,
+            subtasks: task.subtasks?.length ? task.subtasks : (existingTask.subtasks || []),
+            comments: task.comments?.length ? task.comments : (existingTask.comments || []),
+            labels: task.labels?.length ? task.labels : (existingTask.labels || []),
+            updatedAt: task.updatedAt || existingTask.updatedAt || new Date(),
+          }
+        : {
+            ...task,
+            projectId: targetProjectId,
+            isWorkspace: targetIsWorkspace,
+            userId: ownerId,
+            creatorId: creatorId,
+            updatedAt: task.updatedAt || new Date(),
+          };
+
+      dispatch({ type: 'UPSERT_TASK', payload: mergedGoal });
+      void setCachedData(`goal_${mergedGoal.id}`, mergedGoal);
+      const updatedList = [mergedGoal, ...tasksRef.current.filter((t) => t.id !== mergedGoal.id)];
+      if (state.userId) {
+        const tasksKey = `f_tasks_${state.userId}`;
+        void setCachedData(tasksKey, { rows: updatedList, total: updatedList.length });
+      }
+      void persistGoalsLocalCopy(state.userId, updatedList);
+
+      // Primary write to Turso substrate
+      if (ownerId && ownerId !== 'guest') {
+        void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
+          upsertGoalTurso({
+            id: mergedGoal.id,
+            userId: ownerId,
+            title: mergedGoal.title || 'Untitled Goal',
+            description: mergedGoal.description || '',
+            status: mergedGoal.status || 'todo',
+            priority: mergedGoal.priority || 'medium',
+            dueDate: mergedGoal.dueDate ? mergedGoal.dueDate.toISOString() : null,
+            completedAt: mergedGoal.completedAt ? mergedGoal.completedAt.toISOString() : null,
+            isWorkspace: Boolean(mergedGoal.isWorkspace),
+            projectId: mergedGoal.projectId || null,
+            workspaceId: mergedGoal.projectId || null,
+            tags: Array.isArray(mergedGoal.labels) ? JSON.stringify(mergedGoal.labels) : null,
+            createdAt: mergedGoal.createdAt ? mergedGoal.createdAt.toISOString() : new Date().toISOString(),
+            updatedAt: mergedGoal.updatedAt ? mergedGoal.updatedAt.toISOString() : new Date().toISOString(),
+          }).catch((err) => console.warn('[TaskContext] Turso upsertGoalTurso failed:', err));
+        }).catch(() => {});
+      }
+
+      if (isPending) {
+        // markPending schedules demand flush; nudge(true) forces microtask discrete flush
+        autonomicSyncEngine.markPending(goalPendingKey(mergedGoal.id), mergedGoal.updatedAt.toISOString(), mergedGoal);
+        autonomicSyncEngine.nudge(true);
+      } else {
+        autonomicSyncEngine.markConfirmed(goalPendingKey(mergedGoal.id));
+        autonomicSyncEngine.markConfirmed(mergedGoal.id);
+      }
+    },
+    [setCachedData, state.userId],
+  );
+
+  // Sync completion event listener to update local task state with server-confirmed fields
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onSyncComplete = (event: Event) => {
+      const detail = (event as CustomEvent)?.detail;
+      if (detail?.kind !== 'goal') return;
+      const goalId = String(detail?.goalId || detail?.noteId || '').replace(/^goal:/, '').trim();
+      if (!goalId) return;
+
+      const syncedGoalRaw = detail?.syncedGoal;
+      if (syncedGoalRaw) {
+        const mapped = mapAppwriteTaskToTask(syncedGoalRaw);
+        const existingTask = tasksRef.current.find((t) => t.id === mapped.id);
+        const targetProjectId = mapped.projectId && mapped.projectId !== 'inbox'
+          ? mapped.projectId
+          : (existingTask?.projectId || 'inbox');
+        const isPersonalOrInbox = !targetProjectId || targetProjectId === 'inbox' || targetProjectId === 'personal' || targetProjectId === 'default';
+        const targetIsWorkspace = !isPersonalOrInbox && Boolean(
+          targetProjectId ||
+          mapped.isWorkspace === true ||
+          (mapped.isWorkspace === undefined && existingTask?.isWorkspace === true)
+        );
+
+        const mergedGoal: Task = existingTask
+          ? {
+              ...existingTask,
+              ...mapped,
+              projectId: targetProjectId,
+              isWorkspace: targetIsWorkspace,
+              userId: mapped.userId && mapped.userId !== 'guest' ? mapped.userId : (existingTask.userId || state.userId || 'guest'),
+              creatorId: mapped.creatorId && mapped.creatorId !== 'guest' ? mapped.creatorId : (existingTask.creatorId || state.userId || 'guest'),
+              subtasks: mapped.subtasks?.length ? mapped.subtasks : (existingTask.subtasks || []),
+              comments: mapped.comments?.length ? mapped.comments : (existingTask.comments || []),
+              labels: mapped.labels?.length ? mapped.labels : (existingTask.labels || []),
+            }
+          : mapped;
+
+        dispatch({ type: 'UPSERT_TASK', payload: mergedGoal });
+        void setCachedData(`goal_${mergedGoal.id}`, mergedGoal);
+        const updatedList = [mergedGoal, ...tasksRef.current.filter((t) => t.id !== mergedGoal.id)];
+        if (state.userId) {
+          const tasksKey = `f_tasks_${state.userId}`;
+          void setCachedData(tasksKey, { rows: updatedList, total: updatedList.length });
+        }
+        void persistGoalsLocalCopy(state.userId, updatedList);
+      }
+    };
+
+    window.addEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
+    return () => {
+      window.removeEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
+    };
+  }, [setCachedData, state.userId]);
+
+  // Eagerly pull custom workspace tasks into local state when switching workspaces
+  useEffect(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) return;
+    const wsId = activeWorkspace.id;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
+        if (tagged?.tasks && Array.isArray(tagged.tasks) && tagged.tasks.length > 0 && !cancelled) {
+          tagged.tasks.forEach((t: any) => {
+            const coerced = coerceCachedTask({ ...t, projectId: wsId, isWorkspace: true });
+            if (coerced) pushLiveGoal(coerced);
+          });
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspace?.id, pushLiveGoal]);
+
+  const addTask = useCallback(
+    async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'position'>) => {
+      try {
+        const userId = state.userId || 'guest';
+        const id = crypto.randomUUID();
+        const inCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+        const mappedTask: Task = {
+          id,
+          title: task.title,
+          description: task.description || '',
+          status: task.status,
+          priority: task.priority,
+          projectId: inCustomWorkspace ? activeWorkspace!.id : (task.projectId || 'inbox'),
+          labels: task.labels || [],
+          linkedNotes: task.linkedNotes || [],
+          subtasks: [],
+          comments: [],
+          attachments: [],
+          reminders: [],
+          timeEntries: [],
+          assigneeIds: task.assigneeIds || (userId !== 'guest' ? [userId] : []),
+          creatorId: userId,
+          userId,
+          parentTaskId: task.parentTaskId || null,
+          dueDate: task.dueDate,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          position: 0,
+          isArchived: false,
+          isPinned: false,
+          isPublic: false,
+          isGuest: false,
+          isAgentic: task.isAgentic === true,
+          isWorkspace: inCustomWorkspace,
+        };
+
+        pushLiveGoal(mappedTask);
+        if (inCustomWorkspace && typeof attachEntityToActiveWorkspace === 'function') {
+          void attachEntityToActiveWorkspace('goal', id);
+        }
+        autonomicSyncEngine.nudge();
+        return mappedTask;
+      } catch (error: unknown) {
+        console.error('Failed to create task', error);
+        dispatch({ type: 'SET_ERROR', payload: 'Failed to create task' });
+        return null;
+      }
+    },
+    [state.userId, setCachedData, pushLiveGoal, activeWorkspace, attachEntityToActiveWorkspace]
+  );
+
+  const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
+    const currentTask = state.tasks.find(t => t.id === id);
+
+    dispatch({ type: 'UPDATE_TASK', payload: { id, updates } });
+
+    if (updates.status !== undefined) {
+      registerPendingStatus(
+        id,
+        updates.status,
+        updates.completedAt ?? (updates.status === 'done' ? new Date() : undefined),
+      );
+    }
+
+    const mergedTask: Task = {
+      ...(currentTask || {
+        id,
+        title: updates.title || '',
+        description: updates.description || '',
+        status: updates.status || 'todo',
+        priority: updates.priority || 'medium',
+        projectId: updates.projectId || 'inbox',
+        labels: updates.labels || [],
+        subtasks: updates.subtasks || [],
+        comments: updates.comments || [],
+        attachments: [],
+        reminders: [],
+        timeEntries: [],
+        assigneeIds: updates.assigneeIds || [],
+        creatorId: state.userId || 'guest',
+        userId: state.userId || 'guest',
+        parentTaskId: updates.parentTaskId || null,
+        dueDate: updates.dueDate,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        position: 0,
+        isArchived: false,
+        isPinned: false,
+        isPublic: false,
+        isGuest: false,
+      }),
+      ...updates,
+      id,
+      updatedAt: updates.updatedAt || ((updates as any)._dekViewDecrypted && currentTask?.updatedAt ? currentTask.updatedAt : new Date()),
+    };
+
+    pushLiveGoal(mergedTask);
+  }, [state.tasks, state.userId, registerPendingStatus, pushLiveGoal]);
+
+  const togglePinTask = useCallback(async (id: string) => {
+    const task = state.tasks.find(t => t.id === id);
+    if (!task || !state.userId) return;
+    const ownerId = task.creatorId || state.userId;
+    const currentlyPinned = isResourcePinned('task', id, ownerId, task.isPinned);
+    const isOwner = state.userId === ownerId;
+
+    if (isOwner) {
+      dispatch({ type: 'TOGGLE_PIN_TASK', payload: id });
+    }
+
+    try {
+      await togglePin({
+        resourceType: 'task',
+        resourceId: id,
+        ownerId,
+        rowIsPinned: task.isPinned,
+        setOwnerRowPin: async (pinned) => {
+          await taskApi.update(id, { isPinned: pinned } as any);
+        },
+      });
+      invalidateTasksNexus(state.userId);
+    } catch (err) {
+      console.error('Failed to toggle task pin', err);
+      if (isOwner) {
+        dispatch({ type: 'TOGGLE_PIN_TASK', payload: id });
+      } else {
+        setLocalPin('task', id, currentlyPinned);
+      }
+    }
+  }, [state.tasks, state.userId, isResourcePinned, togglePin, setLocalPin, invalidateTasksNexus]);
+
+  const toggleTaskReminder = useCallback(async (id: string, enabled: boolean) => {
+    try {
+      const { toggleTaskReminder: toggleAction } = await import('@/lib/actions/client-ops');
+      const updatedDoc = await toggleAction(id, enabled);
+      if (updatedDoc) {
+        dispatch({
+          type: 'UPDATE_TASK',
+          payload: {
+            id,
+            updates: {
+              scheduled: updatedDoc.scheduled}
+          }
+        });
+        invalidateTasksNexus(state.userId || 'guest');
+      }
+    } catch (error: any) {
+      console.error('Failed to toggle task reminder', error);
+      throw error;
+    }
+  }, [state.userId, invalidateTasksNexus]);
+
+  const togglePinProject = useCallback(async (id: string) => {
+    const project = state.projects.find(p => p.id === id);
+    if (!project || !state.userId) return;
+    const ownerId = project.ownerId || state.userId;
+    const currentlyPinned = isResourcePinned('calendar', id, ownerId, project.isPinned);
+    const isOwner = state.userId === ownerId;
+
+    if (isOwner) {
+      dispatch({ type: 'TOGGLE_PIN_PROJECT', payload: id });
+    }
+
+    try {
+      await togglePin({
+        resourceType: 'calendar',
+        resourceId: id,
+        ownerId,
+        rowIsPinned: project.isPinned,
+        setOwnerRowPin: async (pinned) => {
+          await calendarApi.update(id, { isPinned: pinned } as any);
+        },
+      });
+      invalidateTasksNexus(state.userId);
+    } catch (err) {
+      console.error('Failed to toggle project pin', err);
+      if (isOwner) {
+        dispatch({ type: 'TOGGLE_PIN_PROJECT', payload: id });
+      } else {
+        setLocalPin('calendar', id, currentlyPinned);
+      }
+    }
+  }, [state.projects, state.userId, isResourcePinned, togglePin, setLocalPin, invalidateTasksNexus]);
+
+  const deleteTask = useCallback(async (id: string) => {
+    const uid = state.userId || 'guest';
+    void LocalEngine.markDeleted(id, uid);
+    dispatch({ type: 'DELETE_TASK', payload: id });
+    autonomicSyncEngine.cancelPending(id);
+    autonomicSyncEngine.cancelPending(goalPendingKey(id));
+    try {
+      const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+      const db = await getRxDB();
+      await db.cache.findOne(`goal_${id}`).remove().catch(() => {});
+    } catch {}
+
+    try {
+      const collectDescendants = (taskId: string): string[] => {
+        const directChildren = state.tasks.filter(task => task.parentTaskId === taskId).map(task => task.id);
+        const descendantIds: string[] = [];
+        directChildren.forEach((childId) => {
+          descendantIds.push(childId, ...collectDescendants(childId));
+        });
+        return descendantIds;
+      };
+
+      const descendantIds = collectDescendants(id);
+      for (const childId of descendantIds) {
+        dispatch({ type: 'DELETE_TASK', payload: childId });
+        autonomicSyncEngine.cancelPending(childId);
+        autonomicSyncEngine.cancelPending(goalPendingKey(childId));
+        try {
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB();
+          await db.cache.findOne(`goal_${childId}`).remove().catch(() => {});
+        } catch {}
+        const childCollaborators = await taskCollaborators.list(childId).catch(() => []);
+        await Promise.all(childCollaborators.map((collaborator) => taskCollaborators.delete(collaborator.id).catch(() => {})));
+        await taskApi.delete(childId).catch(() => {});
+      }
+
+      const currentCollaborators = await taskCollaborators.list(id).catch(() => []);
+      await Promise.all(currentCollaborators.map((collaborator) => taskCollaborators.delete(collaborator.id).catch(() => {})));
+      await taskApi.delete(id).catch(() => {});
+      void import('@/lib/actions/turso-ops').then(({ deleteGoalTurso }) => {
+        void deleteGoalTurso(id);
+      }).catch(() => {});
+      invalidateTasksNexus(state.userId || 'guest');
+      dispatch({ type: 'DELETE_TASK', payload: id });
+    } catch (error: unknown) {
+      console.error('Failed to delete task', error);
+    }
+  }, [state.tasks, state.userId, invalidateTasksNexus]);
+
+  const completeTask = useCallback(async (id: string) => {
+    const task = state.tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const newStatus: TaskStatus = task.status === 'done' ? 'todo' : 'done';
+    const completedAt = newStatus === 'done' ? new Date() : undefined;
+
+    registerPendingStatus(id, newStatus, completedAt);
+    const updatedTask: Task = {
+      ...task,
+      status: newStatus,
+      completedAt,
+      updatedAt: new Date(),
+    };
+    pushLiveGoal(updatedTask);
+
+    if (newStatus === 'done') {
+      const collectDescendants = (taskId: string): string[] => {
+        const directChildren = state.tasks.filter(t => t.parentTaskId === taskId).map(t => t.id);
+        const descendantIds: string[] = [];
+        directChildren.forEach((childId) => {
+          descendantIds.push(childId, ...collectDescendants(childId));
+        });
+        return descendantIds;
+      };
+      const descendantIds = collectDescendants(id);
+      for (const childId of descendantIds) {
+        const childTask = state.tasks.find(t => t.id === childId);
+        if (childTask && childTask.status !== 'done') {
+          pushLiveGoal({
+            ...childTask,
+            status: 'done',
+            completedAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      }
+    }
+  }, [state.tasks, pushLiveGoal, registerPendingStatus]);
+
+  const selectTask = useCallback((id: string | null) => {
+    dispatch({ type: 'SELECT_TASK', payload: id });
+  }, []);
+
+  // Subtask actions (Local only for now)
+  const addSubtask = useCallback(async (taskId: string, title: string, description: string = '') => {
+    const parentTask = state.tasks.find(task => task.id === taskId);
+    if (!parentTask) return;
+
+    try {
+      const creatorId = state.userId || parentTask.creatorId || 'guest';
+      const childTask = await taskApi.create({
+        title,
+        description,
+        status: 'todo',
+        priority: parentTask.priority,
+        dueDate: parentTask.dueDate ? parentTask.dueDate.toISOString() : null,
+        userId: creatorId,
+        tags: [
+          ...(parentTask.labels || []),
+          ...(parentTask.projectId && parentTask.projectId !== 'inbox' ? [`project:${parentTask.projectId}`] : [])],
+        assigneeIds: parentTask.assigneeIds || [],
+        attachmentIds: [],
+        eventId: '',
+        parentId: parentTask.id,
+        recurrenceRule: '',
+      }, buildTaskPermissions(creatorId, parentTask.assigneeIds || []));
+
+      await syncTaskAccess(childTask.$id, creatorId, parentTask.assigneeIds || [], parentTask.title, []);
+      invalidateTasksNexus(state.userId || 'guest');
+      dispatch({ type: 'ADD_TASK', payload: mapAppwriteTaskToTask(childTask) });
+    } catch (error: unknown) {
+      console.error('Failed to create subtask', error);
+    }
+  }, [state.tasks, state.userId, invalidateTasksNexus]);
+
+  const updateSubtask = useCallback(async (_taskId: string, subtaskId: string, updates: Partial<Subtask>) => {
+    const payload: Partial<Task> = {};
+    if (updates.title !== undefined) payload.title = updates.title;
+    if (updates.completed !== undefined) {
+      payload.status = updates.completed ? 'done' : 'todo';
+    }
+    await updateTask(subtaskId, payload);
+  }, [updateTask]);
+
+  const deleteSubtask = useCallback(async (_taskId: string, subtaskId: string) => {
+    await deleteTask(subtaskId);
+  }, [deleteTask]);
+
+  const toggleSubtask = useCallback(async (_taskId: string, subtaskId: string) => {
+    const task = state.tasks.find(t => t.id === subtaskId);
+    if (!task) return;
+    await updateTask(subtaskId, { status: task.status === 'done' ? 'todo' : 'done' });
+  }, [state.tasks, updateTask]);
+
+  const addComment = useCallback(async (taskId: string, content: string) => {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const comment: Comment = {
+      id: crypto.randomUUID(),
+      content,
+      authorId: state.userId || task.creatorId || 'user',
+      authorName: 'You',
+      createdAt: new Date()};
+
+    await updateTask(taskId, {
+      comments: [...(task.comments || []), comment]});
+  }, [state.tasks, state.userId, updateTask]);
+
+  const listTaskCollaborators = useCallback(async (taskId: string) => {
+    return await taskCollaborators.list(taskId);
+  }, []);
+
+  const addTaskCollaborator = useCallback(async (taskId: string, userId: string, permission: CollaboratorPermission) => {
+    const task = state.tasks.find((item) => item.id === taskId);
+    if (!task) return null;
+
+    const created = await taskCollaborators.create(taskId, userId, permission, task.creatorId);
+    const nextAssigneeIds = permission === 'read'
+      ? (task.assigneeIds || [])
+      : (task.assigneeIds || []).filter((id) => id !== userId);
+
+    await syncTaskAccess(taskId, task.creatorId, nextAssigneeIds, task.title, task.assigneeIds || []);
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: {
+        id: taskId,
+        updates: { assigneeIds: nextAssigneeIds },
+      },
+    });
+    return created;
+  }, [state.tasks]);
+
+  const updateTaskCollaborator = useCallback(async (taskId: string, collaboratorId: string, permission: CollaboratorPermission) => {
+    const task = state.tasks.find((item) => item.id === taskId);
+    if (!task) return null;
+
+    const collaborator = await taskCollaborators.update(collaboratorId, { permission }, task.creatorId, taskId);
+    const nextAssigneeIds = permission === 'read'
+      ? (task.assigneeIds || [])
+      : (task.assigneeIds || []).filter((id) => id !== collaborator.userId);
+
+    await syncTaskAccess(taskId, task.creatorId, nextAssigneeIds, task.title, task.assigneeIds || []);
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: {
+        id: taskId,
+        updates: { assigneeIds: nextAssigneeIds },
+      },
+    });
+    return collaborator;
+  }, [state.tasks]);
+
+  const deleteTaskCollaborator = useCallback(async (taskId: string, collaboratorId: string) => {
+    const task = state.tasks.find((item) => item.id === taskId);
+    if (!task) return;
+
+    const collaborator = await taskCollaborators.list(taskId).then((rows) => rows.find((row) => row.id === collaboratorId));
+    await taskCollaborators.delete(collaboratorId);
+
+    const nextAssigneeIds = collaborator
+      ? (task.assigneeIds || []).filter((id) => id !== collaborator.userId)
+      : task.assigneeIds || [];
+
+    await syncTaskAccess(taskId, task.creatorId, nextAssigneeIds, task.title, task.assigneeIds || []);
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: {
+        id: taskId,
+        updates: { assigneeIds: nextAssigneeIds },
+      },
+    });
+  }, [state.tasks]);
+
+  // Project actions
+  const addProject = useCallback(
+    async (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'position'>) => {
+      try {
+        const userId = state.userId || 'guest';
+        const newCalendar = await calendarApi.create({
+          name: project.name,
+          color: project.color,
+          isDefault: false,
+          userId: userId});
+        invalidateCalendarsNexus(userId);
+        dispatch({ type: 'ADD_PROJECT', payload: mapAppwriteCalendarToProject(newCalendar) });
+      } catch (error: unknown) {
+        console.error('Failed to create project', error);
+      }
+    },
+    [state.userId, invalidateCalendarsNexus]
+  );
+
+  const updateProject = useCallback(async (id: string, updates: Partial<Project>) => {
+    try {
+      dispatch({ type: 'UPDATE_PROJECT', payload: { id, updates } });
+      
+      const apiUpdates: any = {};
+      if (updates.name) apiUpdates.name = updates.name;
+      if (updates.color) apiUpdates.color = updates.color;
+      
+      await calendarApi.update(id, apiUpdates);
+      invalidateCalendarsNexus(state.userId || 'guest');
+    } catch (error: unknown) {
+      console.error('Failed to update project', error);
+    }
+  }, [state.userId, invalidateCalendarsNexus]);
+
+  const deleteProject = useCallback(async (id: string) => {
+    try {
+      await calendarApi.delete(id);
+      invalidateCalendarsNexus(state.userId || 'guest');
+      dispatch({ type: 'DELETE_PROJECT', payload: id });
+    } catch (error: unknown) {
+      console.error('Failed to delete project', error);
+    }
+  }, [state.userId, invalidateCalendarsNexus]);
+
+  const selectProject = useCallback((id: string | null) => {
+    dispatch({ type: 'SELECT_PROJECT', payload: id });
+  }, []);
+
+  // Label actions (Local only)
+  const addLabel = useCallback((label: Omit<Label, 'id'>) => {
+    const newLabel: Label = {
+      ...label,
+      id: crypto.randomUUID()};
+    dispatch({ type: 'ADD_LABEL', payload: newLabel });
+  }, []);
+
+  const updateLabel = useCallback((id: string, updates: Partial<Label>) => {
+    dispatch({ type: 'UPDATE_LABEL', payload: { id, updates } });
+  }, []);
+
+  const deleteLabel = useCallback((id: string) => {
+    dispatch({ type: 'DELETE_LABEL', payload: id });
+  }, []);
+
+  // Filter and sort
+  const setFilter = useCallback((filter: TaskFilter) => {
+    dispatch({ type: 'SET_FILTER', payload: filter });
+  }, []);
+
+  const setSort = useCallback((sort: TaskSort) => {
+    dispatch({ type: 'SET_SORT', payload: sort });
+  }, []);
+
+  const setViewMode = useCallback((mode: ViewMode) => {
+    dispatch({ type: 'SET_VIEW_MODE', payload: mode });
+  }, []);
+
+  // UI
+  const toggleSidebar = useCallback(() => {
+    dispatch({ type: 'TOGGLE_SIDEBAR' });
+  }, []);
+
+  const setSidebarOpen = useCallback((open: boolean) => {
+    dispatch({ type: 'SET_SIDEBAR_OPEN', payload: open });
+  }, []);
+
+  const setTaskDialogOpen = useCallback((open: boolean) => {
+    dispatch({ type: 'SET_TASK_DIALOG_OPEN', payload: open });
+  }, []);
+
+  const setSearchQuery = useCallback((query: string) => {
+    dispatch({ type: 'SET_SEARCH_QUERY', payload: query });
+  }, []);
+
+  // Computed values
+  const getFilteredTasks = useCallback(() => {
+    const activeUid = state.userId || 'guest';
+    let sourceTasks = state.tasks.filter((t: any) => !t.isTrash && !t.isDeleted && String(t.isTrash) !== 'true' && String(t.isDeleted) !== 'true' && !LocalEngine.isDeleted(t.id, activeUid));
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      sourceTasks = sourceTasks.filter(isDefaultWorkspaceObject);
+    } else {
+      // Real workspace: filter by project_objects join table (same as notes/vault pattern)
+      const registeredIds = goalProjectObjectIdsRef.current;
+      const pid = activeWorkspace.id;
+      sourceTasks = sourceTasks.filter(
+        (t) => registeredIds.has(t.id) || t.projectId === pid
+      );
+    }
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      const activeId = state.userId;
+      sourceTasks = sourceTasks.filter((t) => {
+        if (!activeId || activeId === 'guest') return true;
+        return (
+          !t.userId ||
+          t.userId === 'guest' ||
+          t.userId === activeId ||
+          !t.creatorId ||
+          t.creatorId === 'guest' ||
+          t.creatorId === activeId ||
+          (Array.isArray(t.assigneeIds) && t.assigneeIds.includes(activeId))
+        );
+      });
+    }
+    let filtered = buildTaskHierarchy(sourceTasks);
+
+    // Apply filters
+    if (state.filter.status?.length) {
+      filtered = filtered.filter(t => state.filter.status!.includes(t.status));
+    }
+    if (state.filter.priority?.length) {
+      filtered = filtered.filter(t => state.filter.priority!.includes(t.priority));
+    }
+    if (state.filter.projectId !== undefined) {
+      filtered = filtered.filter(t => t.projectId === state.filter.projectId);
+    }
+    if (state.filter.labels?.length) {
+      filtered = filtered.filter(t => {
+        const userLabels = t.labels || [];
+        const extractedTags = Array.isArray((t as any).tags)
+          ? (t as any).tags.filter((tag: string) => !String(tag).startsWith('project:') && !String(tag).startsWith('source:'))
+          : [];
+        const allTaskTags = [...userLabels, ...extractedTags];
+        return allTaskTags.some(l => state.filter.labels!.includes(l));
+      });
+    }
+    if (!state.filter.showCompleted) {
+      filtered = filtered.filter(t => t.status !== 'done');
+    }
+    if (!state.filter.showArchived) {
+      filtered = filtered.filter(t => !t.isArchived);
+    }
+    if (state.searchQuery) {
+      const query = state.searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        t =>
+          t.title.toLowerCase().includes(query) ||
+          t.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sorting
+    const { field, direction } = state.sort;
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (field) {
+        case 'dueDate':
+          const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+          const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+          comparison = aDate - bDate;
+          break;
+        case 'priority':
+          const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+          comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+          break;
+        case 'createdAt':
+          const aCreated = new Date((a as any).$createdAt || a.createdAt || (a as any).$updatedAt || a.updatedAt || 0).getTime();
+          const bCreated = new Date((b as any).$createdAt || b.createdAt || (b as any).$updatedAt || b.updatedAt || 0).getTime();
+          comparison = aCreated - bCreated;
+          break;
+        case 'updatedAt':
+          const aUpdated = new Date((a as any).$updatedAt || a.updatedAt || (a as any).$createdAt || a.createdAt || 0).getTime();
+          const bUpdated = new Date((b as any).$updatedAt || b.updatedAt || (b as any).$createdAt || b.createdAt || 0).getTime();
+          comparison = aUpdated - bUpdated;
+          break;
+        case 'title':
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case 'status':
+          const statusOrder = { todo: 0, 'in-progress': 1, blocked: 2, done: 3, cancelled: 4 };
+          comparison = statusOrder[a.status] - statusOrder[b.status];
+          break;
+        case 'position':
+          comparison = a.position - b.position;
+          break;
+      }
+
+      return direction === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [state.tasks, state.filter, state.sort, state.searchQuery, isResourcePinned, activeWorkspace?.isPersonal, activeWorkspace?.id, state.userId]);
+
+  const getTasksByProject = useCallback(
+    (projectId: string) => {
+      return buildTaskHierarchy(state.tasks).filter(t => t.projectId === projectId && !t.isArchived);
+    },
+    [state.tasks]
+  );
+
+  const getTaskStats = useCallback(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const activeTasks = buildTaskHierarchy(state.tasks).filter(t => !t.isArchived);
+    const completed = activeTasks.filter(t => t.status === 'done').length;
+    const overdue = activeTasks.filter(
+      t => t.dueDate && new Date(t.dueDate) < now && t.status !== 'done'
+    ).length;
+    const dueToday = activeTasks.filter(t => {
+      if (!t.dueDate || t.status === 'done') return false;
+      const due = new Date(t.dueDate);
+      return due >= today && due < tomorrow;
+    }).length;
+
+    return {
+      total: activeTasks.length,
+      completed,
+      overdue,
+      dueToday};
+  }, [state.tasks]);
+
+  const getSelectedTask = useCallback(() => {
+    return buildTaskHierarchy(state.tasks).find(t => t.id === state.selectedTaskId) || state.tasks.find(t => t.id === state.selectedTaskId) || null;
+  }, [state.tasks, state.selectedTaskId]);
+
+  const getSelectedProject = useCallback(() => {
+    return state.projects.find(p => p.id === state.selectedProjectId) || null;
+  }, [state.projects, state.selectedProjectId]);
+
+  const getTagFilterOptions = useCallback((): string[] => {
+    const fromTasks = state.tasks.flatMap((task) => {
+      const userLabels = task.labels || [];
+      const extractedTags = Array.isArray((task as any).tags)
+        ? (task as any).tags.filter((t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'))
+        : [];
+      return [...userLabels, ...extractedTags];
+    });
+    const fromEcosystem = state.ecosystemTags.map((tag) => tag.name);
+    return Array.from(new Set([...fromEcosystem, ...fromTasks].filter((name): name is string => Boolean(name)))).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' }),
+    );
+  }, [state.tasks, state.ecosystemTags]);
+
+  const value = useMemo<TaskContextType>(() => ({
+    ...state,
+    addTask,
+    pushLiveGoal,
+    updateTask,
+    deleteTask,
+    completeTask,
+    selectTask,
+    togglePinTask,
+    toggleTaskReminder,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
+    toggleSubtask,
+    addComment,
+    listTaskCollaborators,
+    addTaskCollaborator,
+    updateTaskCollaborator,
+    deleteTaskCollaborator,
+    addProject,
+    updateProject,
+    deleteProject,
+    selectProject,
+    togglePinProject,
+    addLabel,
+    updateLabel,
+    deleteLabel,
+    setFilter,
+    setSort,
+    setViewMode,
+    toggleSidebar,
+    setSidebarOpen,
+    setTaskDialogOpen,
+    setSearchQuery,
+    getFilteredTasks,
+    getTasksByProject,
+    getTaskStats,
+    getSelectedTask,
+    getSelectedProject,
+    ecosystemTags: state.ecosystemTags,
+    pushLiveTag,
+    refreshEcosystemTags,
+    getTagFilterOptions,
+    refreshTasks,
+  }), [
+    state,
+    addTask,
+    pushLiveGoal,
+    pushLiveTag,
+    updateTask,
+    deleteTask,
+    completeTask,
+    selectTask,
+    togglePinTask,
+    toggleTaskReminder,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
+    toggleSubtask,
+    addComment,
+    listTaskCollaborators,
+    addTaskCollaborator,
+    updateTaskCollaborator,
+    deleteTaskCollaborator,
+    addProject,
+    updateProject,
+    deleteProject,
+    selectProject,
+    togglePinProject,
+    addLabel,
+    updateLabel,
+    deleteLabel,
+    setFilter,
+    setSort,
+    setViewMode,
+    toggleSidebar,
+    setSidebarOpen,
+    setTaskDialogOpen,
+    setSearchQuery,
+    getFilteredTasks,
+    getTasksByProject,
+    getTaskStats,
+    getSelectedTask,
+    getSelectedProject,
+    pushLiveTag,
+    refreshEcosystemTags,
+    getTagFilterOptions,
+    refreshTasks]);
+
+  return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
+}

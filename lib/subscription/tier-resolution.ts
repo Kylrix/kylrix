@@ -1,0 +1,63 @@
+export type BillingUiTier = 'FREE' | 'CONTRIBUTOR' | 'PRO' | 'TEAMS' | 'ORG' | 'LIFETIME';
+
+export function normalizeBillingPrefsTier(prefs: Record<string, unknown> | null | undefined): BillingUiTier {
+  if (!prefs) return 'FREE';
+
+  const raw = prefs.subscriptionTier ?? prefs.tier;
+  const tier = String(raw ?? 'FREE').trim().toUpperCase();
+  const expRaw = prefs.subscriptionExpiresAt;
+  const expMs = typeof expRaw === 'string' && expRaw ? new Date(expRaw).getTime() : Number.NaN;
+  const expiryValid = () => Number.isFinite(expMs) && expMs > Date.now();
+
+  if (tier === 'LIFETIME') return 'LIFETIME';
+  if (tier === 'CONTRIBUTOR') {
+    if (expiryValid()) return 'CONTRIBUTOR';
+    return 'FREE';
+  }
+  if (tier === 'TEAMS') {
+    if (expiryValid()) return 'TEAMS';
+    return 'FREE';
+  }
+  if (tier === 'ORG') {
+    if (expiryValid()) return 'ORG';
+    return 'FREE';
+  }
+  if (tier === 'PRO') {
+    if (expiryValid()) return 'PRO';
+    return 'FREE';
+  }
+  return 'FREE';
+}
+
+/** CONTRIBUTOR, PRO, TEAMS, ORG, and LIFETIME unlock Pro-gated UX. */
+export function billingTierHasPaidAccess(tier: BillingUiTier | string): boolean {
+  const t = String(tier || 'FREE').toUpperCase();
+  return t === 'CONTRIBUTOR' || t === 'PRO' || t === 'TEAMS' || t === 'ORG' || t === 'LIFETIME';
+}
+
+const TIER_RANK: Record<BillingUiTier, number> = {
+  FREE: 0,
+  CONTRIBUTOR: 1,
+  PRO: 2,
+  TEAMS: 3,
+  ORG: 4,
+  LIFETIME: 5};
+
+/** Map subscription ledger plan labels to a normalized UI tier. */
+export function planLabelToUiTier(plan: string | null | undefined): BillingUiTier {
+  const p = String(plan || '').trim().toUpperCase().replace(/-/g, '_');
+  if (!p || p === 'FREE') return 'FREE';
+  if (p.includes('LIFETIME')) return 'LIFETIME';
+  if (p === 'ORG' || p.includes('ORG')) return 'ORG';
+  if (p.includes('TEAMS') || p === 'TEAM') return 'TEAMS';
+  if (p.includes('CONTRIBUTOR')) return 'CONTRIBUTOR';
+  if (p.includes('PRO')) return 'PRO';
+  return 'PRO';
+}
+
+export function maxBillingUiTier(...tiers: BillingUiTier[]): BillingUiTier {
+  return tiers.reduce(
+    (best, tier) => ((TIER_RANK[tier] ?? 0) > (TIER_RANK[best] ?? 0) ? tier : best),
+    'FREE');
+}
+

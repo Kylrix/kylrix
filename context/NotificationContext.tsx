@@ -1,0 +1,241 @@
+"use client";
+
+import React, { createContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { 
+  realtime, 
+  listActivityLogs, 
+  updateRow,
+  APPWRITE_DATABASE_ID, 
+  APPWRITE_TABLE_ID_ACTIVITYLOG 
+} from '@/lib/appwrite';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { useAuth } from '@/context/auth/AuthContext';
+import type { ActivityLog } from '@/types/appwrite';
+
+interface NotificationMetadata {
+  read?: boolean;
+  readAt?: string;
+  originalDetails?: string | null;
+  priority?: 'low' | 'medium' | 'high';
+  actionUrl?: string;
+}
+
+interface NotificationContextType {
+  notifications: ActivityLog[];
+  unreadCount: number;
+  isLoading: boolean;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  clearNotifications: () => void;
+}
+
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  const [notifications, setNotifications] = useState<ActivityLog[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Make useAuth optional - try to use it if available
+  let user = null;
+  let isAuthenticated = false;
+  
+  try {
+    const authContext = useAuth();
+    user = authContext.user;
+    isAuthenticated = authContext.isAuthenticated;
+  } catch (_e) {
+    // AuthProvider not available yet, that's fine
+  }
+
+  const parseMetadata = (details: string | null): NotificationMetadata => {
+    if (!details) return { read: false, originalDetails: null };
+    try {
+      if (details.startsWith('{')) {
+        return JSON.parse(details);
+      }
+    } catch (_err: any) {
+      // Not JSON, treat as raw string
+    }
+    return { read: false, originalDetails: details };
+  };
+
+  const calculateUnread = useCallback((logs: ActivityLog[]) => {
+    const safeLogs = Array.isArray(logs) ? logs : [];
+    return safeLogs.filter(log => !parseMetadata(log.details).read).length;
+  }, []);
+
+  const localCacheKey = useMemo(() => user?.$id ? `f_notifications_${user.$id}` : 'f_notifications_guest', [user?.$id]);
+
+  // 1. Instant 0ms LocalEngine Hydration
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let active = true;
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = await LocalEngine.cacheGet<ActivityLog[]>(localCacheKey).catch(() => null);
+        if (active && Array.isArray(cached) && cached.length > 0) {
+          setNotifications(cached);
+          setUnreadCount(calculateUnread(cached));
+          setIsLoading(false);
+        }
+      } catch {}
+    })();
+    return () => { active = false; };
+  }, [localCacheKey, calculateUnread]);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!isAuthenticated || !user?.$id) {
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      const res = await listActivityLogs() as any;
+      const logs = (Array.isArray(res?.rows) ? res.rows : Array.isArray(res) ? res : []) as unknown as ActivityLog[];
+      setNotifications(logs);
+      setUnreadCount(calculateUnread(logs));
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      void LocalEngine.cacheSet(localCacheKey, logs).catch(() => {});
+    } catch (error: any) {
+      console.warn('Failed to fetch notifications remotely:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, user?.$id, calculateUnread, localCacheKey]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.$id) return;
+
+    const channel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.app_activity.documents`;
+    
+    const unsub = realtime.subscribe(channel, (response: any) => {
+      const payload = response.payload as ActivityLog;
+      if (payload.userId !== user.$id) return;
+
+      const isCreate = response.events.some((e: string) => e.includes('.create'));
+      const isUpdate = response.events.some((e: string) => e.includes('.update'));
+      const isDelete = response.events.some((e: string) => e.includes('.delete'));
+
+      if (isCreate) {
+        setNotifications(prev => {
+          const next = [payload, ...prev];
+          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+            void LocalEngine.cacheSet(localCacheKey, next).catch(() => {});
+          });
+          return next;
+        });
+        if (!parseMetadata(payload.details).read) {
+          setUnreadCount(prev => prev + 1);
+        }
+        
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification(`Kylrix ${payload.targetType}`, {
+            body: payload.action,
+            icon: '/logo.svg'
+          });
+        }
+      } else if (isUpdate) {
+        setNotifications(prev => {
+          const updated = prev.map(n => n.$id === payload.$id ? payload : n);
+          setUnreadCount(calculateUnread(updated));
+          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+            void LocalEngine.cacheSet(localCacheKey, updated).catch(() => {});
+          });
+          return updated;
+        });
+      } else if (isDelete) {
+        setNotifications(prev => {
+          const filtered = prev.filter(n => n.$id !== payload.$id);
+          setUnreadCount(calculateUnread(filtered));
+          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+            void LocalEngine.cacheSet(localCacheKey, filtered).catch(() => {});
+          });
+          return filtered;
+        });
+      }
+    });
+
+    return () => {
+      if (typeof unsub === 'function') {
+        (unsub as any)();
+      } else if (unsub && typeof (unsub as any).unsubscribe === 'function') {
+        (unsub as any).unsubscribe();
+      }
+    };
+  }, [isAuthenticated, user?.$id, calculateUnread]);
+
+  const markAsRead = useCallback(async (id: string) => {
+    const notification = notifications.find(n => n.$id === id);
+    if (!notification) return;
+
+    const meta = parseMetadata(notification.details);
+    if (meta.read) return;
+
+    const newMetadata: NotificationMetadata = {
+      ...meta,
+      read: true,
+      readAt: new Date().toISOString()
+    };
+
+    try {
+      // Pessimistic UI update for immediate feedback
+      setNotifications(prev => prev.map(n => n.$id === id ? { ...n, details: JSON.stringify(newMetadata) } : n));
+
+      await updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, id, {
+        details: JSON.stringify(newMetadata)
+      });
+    } catch (error: any) {
+      console.error('Failed to sync read state to cloud:', error);
+      // Revert on failure if necessary, or just rely on next fetch
+    }
+  }, [notifications]);
+
+  const markAllAsRead = useCallback(async () => {
+    const unreadNotifications = notifications.filter(n => !parseMetadata(n.details).read);
+    if (unreadNotifications.length === 0) return;
+
+    // Update local state first for performance
+    setNotifications(prev => prev.map(n => ({
+      ...n,
+      details: JSON.stringify({ ...parseMetadata(n.details), read: true, readAt: new Date().toISOString() })
+    })));
+    setUnreadCount(0);
+
+    // Sync to cloud in background
+    Promise.all(unreadNotifications.map(n => markAsRead(n.$id)))
+      .catch (_err => console.error('Bulk mark as read failed:', _err));
+  }, [notifications, markAsRead]);
+
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+    setUnreadCount(0);
+  }, []);
+
+  /**
+   * Memoize so notification consumers (HUDs, dropdowns, badges) don't re-render
+   * whenever NotificationProvider re-renders for unrelated reasons.
+   */
+  const contextValue = useMemo<NotificationContextType>(
+    () => ({
+      notifications,
+      unreadCount,
+      isLoading,
+      markAsRead,
+      markAllAsRead,
+      clearNotifications}),
+    [notifications, unreadCount, isLoading, markAsRead, markAllAsRead, clearNotifications]
+  );
+
+  return (
+    <NotificationContext.Provider value={contextValue}>
+      {children}
+    </NotificationContext.Provider>
+  );
+}
+

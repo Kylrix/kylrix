@@ -1,0 +1,12 @@
+{
+	email {$LETSENCRYPT_EMAIL:internal}
+	auto_https disable_redirects
+}
+
+{$DOMAIN:localhost} {
+	reverse_proxy kylrix:3000
+}
+
+{$APPWRITE_DOMAIN:appwrite.localhost} {
+	reverse_proxy appwrite:80
+}

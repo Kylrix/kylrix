@@ -1,0 +1,340 @@
+import { systemTables } from '@/lib/data/system-tables';
+import { Query, ID, createSystemClient } from '@/lib/appwrite/types';
+
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
+import { type SubscriptionRow } from '@/lib/billing/subscription-helpers';
+import {
+  maxBillingUiTier,
+  normalizeBillingPrefsTier,
+  planLabelToUiTier,
+  type BillingUiTier} from '@/lib/subscription/tier-resolution';
+
+const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
+const SUBSCRIPTIONS_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
+
+export type SubscriptionEntitlementSource =
+  | 'subscription_row'
+  | 'prefs_lifetime'
+  | 'prefs_org'
+  | 'prefs_sync'
+  | 'none';
+
+function readUserPrefs(user: { prefs?: unknown }): Record<string, unknown> {
+  if (!user.prefs) return {};
+  if (typeof user.prefs === 'string') {
+    try {
+      return JSON.parse(user.prefs) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  return user.prefs as Record<string, unknown>;
+}
+
+function pickBestSubscriptionRow(rows: SubscriptionRow[]): SubscriptionRow | null {
+  if (!rows.length) return null;
+  const rank = (tier: BillingUiTier) => {
+    if (tier === 'LIFETIME' || tier === 'ORG') return 4;
+    if (tier === 'TEAMS') return 3;
+    if (tier === 'PRO') return 2;
+    return 0;
+  };
+  return [...rows].sort((a: any, b: any) => {
+    const byTier = rank(planLabelToUiTier(b.plan)) - rank(planLabelToUiTier(a.plan));
+    if (byTier !== 0) return byTier;
+
+    const endA = a.currentPeriodEnd ? new Date(a.currentPeriodEnd).getTime() : 0;
+    const endB = b.currentPeriodEnd ? new Date(b.currentPeriodEnd).getTime() : 0;
+    return endB - endA;
+  })[0] || null;
+}
+
+const entitlementCache = new Map<string, {
+  data: {
+    active: boolean;
+    expiresAt: string | null;
+    source: SubscriptionEntitlementSource;
+    uiTier: BillingUiTier;
+  };
+  ts: number;
+  ttlMs: number;
+}>();
+
+export function invalidateEntitlementCache(userId?: string) {
+  if (userId) entitlementCache.delete(userId);
+  else entitlementCache.clear();
+}
+
+/**
+ * Modular Account Suspension & Fraud Defense
+ * Instantly disables an Appwrite user account and logs security audit records.
+ * Zero resource wastage — no emails or notifications dispatched.
+ */
+export async function suspendAccountAndLogIpSecure(params: {
+  userId: string;
+  ipAddress?: string;
+  userAgent?: string;
+  reason?: string;
+}): Promise<boolean> {
+  if (!params.userId) return false;
+  try {
+    const { users } = createSystemClient();
+    // 1. Instantly disable user account natively in Appwrite
+    await users.updateStatus(params.userId, false);
+
+    // 2. Log incident to securityLogs table
+    try {
+      const tables = systemTables();
+      const dbId = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
+      const tableId = APPWRITE_CONFIG.TABLES.VAULT.SECURITY_LOGS || 'securityLogs';
+
+      await tables.createRow({
+        databaseId: dbId,
+        tableId: tableId,
+        rowId: ID.unique(),
+        data: {
+          userId: params.userId,
+          eventType: 'account_suspended_fraud',
+          ipAddress: params.ipAddress || null,
+          userAgent: params.userAgent || null,
+          details: params.reason || 'Account suspended due to fraudulent/spoofed paid access attempt',
+          success: false,
+          severity: 'critical',
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (logErr) {
+      console.error('[suspendAccountAndLogIpSecure] Failed to log security incident:', logErr);
+    }
+
+    // Clear entitlement cache for suspended user
+    invalidateEntitlementCache(params.userId);
+    return true;
+  } catch (err) {
+    console.error('[suspendAccountAndLogIpSecure] Failed to suspend account:', err);
+    return false;
+  }
+}
+
+/**
+ * Trusted billing entitlement — merges subscription ledger + synced prefs and
+ * always picks the highest active tier (TEAMS wins over PRO).
+ */
+export async function getVerifiedProEntitlementForUser(userId: string): Promise<{
+  active: boolean;
+  expiresAt: string | null;
+  source: SubscriptionEntitlementSource;
+  uiTier: BillingUiTier;
+}> {
+  if (isSelfHostedDeployment()) {
+    const open = getOpenSuiteEntitlement();
+    return {
+      active: open.active,
+      expiresAt: open.expiresAt,
+      source: 'prefs_lifetime',
+      uiTier: open.uiTier};
+  }
+
+  const cached = entitlementCache.get(userId);
+  if (cached && Date.now() - cached.ts < cached.ttlMs) {
+    return cached.data;
+  }
+
+  // Check dynamic rolling GitHub contributor status in Turso/GitHub
+  try {
+    const { verifyAndApplyContributorStatus } = await import('@/lib/actions/contributor-ops');
+    const contrib = await verifyAndApplyContributorStatus(userId).catch(() => null);
+    if (contrib?.isContributor) {
+      const res = {
+        active: true,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        source: 'prefs_sync' as SubscriptionEntitlementSource,
+        uiTier: 'CONTRIBUTOR' as BillingUiTier,
+      };
+      entitlementCache.set(userId, { data: res, ts: Date.now(), ttlMs: 1000 * 60 * 60 });
+      return res;
+    }
+  } catch {}
+
+  const { databases, users } = createSystemClient();
+  const now = new Date();
+
+  let ledgerTier: BillingUiTier = 'FREE';
+  let ledgerExpiresAt: string | null = null;
+  let ledgerSource: SubscriptionEntitlementSource = 'none';
+
+  // 1. Primary: Check Turso SQLite subscriptions table (sub-millisecond fast)
+  try {
+    const { db } = await import('@/lib/db');
+    const { subscriptions: subsTable } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    const tursoSub = await db
+      .select()
+      .from(subsTable)
+      .where(eq(subsTable.userId, userId))
+      .limit(1);
+    if (tursoSub && tursoSub.length > 0 && tursoSub[0].status === 'active') {
+      const tierUpper = String(tursoSub[0].tier || 'free').toUpperCase();
+      if (tierUpper !== 'FREE') {
+        const resTier = (tierUpper === 'PRO' || tierUpper === 'TEAMS' || tierUpper === 'LIFETIME' || tierUpper === 'CONTRIBUTOR')
+          ? (tierUpper as BillingUiTier)
+          : 'PRO';
+        ledgerTier = maxBillingUiTier(ledgerTier, resTier);
+        ledgerExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        ledgerSource = 'subscription_row';
+      }
+    }
+  } catch {
+    // fall through
+  }
+
+  // 2. Secondary: If not found in Turso, query Appwrite with 1s timeout race
+  if (ledgerTier === 'FREE') {
+    try {
+      const appwritePromise = databases.listRows(NOTE_DB_ID, SUBSCRIPTIONS_TABLE_ID, [
+        Query.equal('userId', userId),
+        Query.equal('status', 'active'),
+        Query.limit(100),
+        Query.select(['$id', 'userId', 'status', 'currentPeriodEnd', 'currentPeriodStart', 'createdAt', 'updatedAt', 'plan']),
+      ]).catch(() => null);
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+      const res: any = await Promise.race([appwritePromise, timeoutPromise]);
+
+      const rows = (res?.rows || []) as SubscriptionRow[];
+      const unexpired = rows.filter((row) => {
+        if (String(row.status || '').toLowerCase() !== 'active') return false;
+        if (!row.currentPeriodEnd) return false;
+        const end = new Date(row.currentPeriodEnd);
+        return !Number.isNaN(end.getTime()) && end > now;
+      });
+
+      if (unexpired.length) {
+        const bestRow = pickBestSubscriptionRow(unexpired);
+        if (bestRow) {
+          ledgerTier = planLabelToUiTier(bestRow.plan);
+          ledgerExpiresAt = bestRow.currentPeriodEnd || null;
+          ledgerSource = 'subscription_row';
+        } else {
+          ledgerTier = maxBillingUiTier(...unexpired.map((row: any) => planLabelToUiTier(row.plan)));
+          const fallbackRow = unexpired[0];
+          ledgerExpiresAt = fallbackRow?.currentPeriodEnd || null;
+          ledgerSource = 'subscription_row';
+        }
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  let prefsTier: BillingUiTier = 'FREE';
+  let prefsExpiresAt: string | null = null;
+  let prefsSource: SubscriptionEntitlementSource = 'none';
+
+  try {
+    const user = await users.get(userId);
+    const prefs = readUserPrefs(user);
+    const rawPrefsTier = normalizeBillingPrefsTier(prefs);
+    if (rawPrefsTier !== 'FREE') {
+      const { verifySubscriptionSig } = await import('@/lib/services/internal/subscription-prefs-merge');
+      const expRaw = prefs.subscriptionExpiresAt;
+      const expStr = typeof expRaw === 'string' ? expRaw : '';
+      const sig = typeof prefs.subscriptionSig === 'string' ? prefs.subscriptionSig : '';
+      const isSigValid = Boolean(sig && verifySubscriptionSig(userId, rawPrefsTier, expStr, sig));
+
+      // In Cloud, user prefs can be edited client-side via account.updatePrefs().
+      // If there is no active subscription ledger row, an unverified paid tier claim in prefs is spoofed.
+      if (ledgerTier !== 'FREE' || isSigValid) {
+        prefsTier = rawPrefsTier;
+        prefsExpiresAt = expStr || null;
+        prefsSource = prefsTier === 'LIFETIME'
+          ? 'prefs_lifetime'
+          : prefsTier === 'ORG'
+            ? 'prefs_org'
+            : 'prefs_sync';
+      } else {
+        console.warn(`[getVerifiedProEntitlementForUser] Detected unverified paid prefs claim (${rawPrefsTier}) for user ${userId}. Rejecting and enforcing FREE.`);
+        prefsTier = 'FREE';
+        prefsSource = 'none';
+      }
+    }
+  } catch {
+    // fall through
+  }
+
+  const uiTier = maxBillingUiTier(ledgerTier, prefsTier);
+  if (uiTier === 'FREE') {
+    const res = {
+      active: false,
+      expiresAt: null,
+      source: 'none' as SubscriptionEntitlementSource,
+      uiTier: 'FREE' as BillingUiTier};
+    // Cache FREE resolution for 10 minutes to prevent repeat DB trips for free users
+    entitlementCache.set(userId, { data: res, ts: Date.now(), ttlMs: 1000 * 60 * 10 });
+    return res;
+  }
+
+  const expiresAt = uiTier === prefsTier && prefsExpiresAt
+    ? prefsExpiresAt
+    : ledgerExpiresAt || prefsExpiresAt;
+
+  const source = uiTier === prefsTier && tierRank(uiTier) >= tierRank(ledgerTier)
+    ? prefsSource
+    : ledgerSource;
+
+  const result = {
+    active: true,
+    expiresAt,
+    source: source === 'none' ? ('prefs_sync' as SubscriptionEntitlementSource) : source,
+    uiTier};
+
+  // Cache verified paid status up to the period expiration date (max 30 days)
+  let ttlMs = 1000 * 60 * 60 * 24; // Default 24 hours
+  if (expiresAt) {
+    const expTime = new Date(expiresAt).getTime();
+    if (!Number.isNaN(expTime) && expTime > Date.now()) {
+      const remainingMs = expTime - Date.now();
+      const maxMs = 1000 * 60 * 60 * 24 * 30; // 30 days max
+      ttlMs = Math.min(remainingMs, maxMs);
+    }
+  }
+
+  entitlementCache.set(userId, { data: result, ts: Date.now(), ttlMs });
+  return result;
+}
+
+function tierRank(tier: BillingUiTier): number {
+  if (tier === 'LIFETIME' || tier === 'ORG') return 4;
+  if (tier === 'TEAMS') return 3;
+  if (tier === 'PRO') return 2;
+  return 0;
+}
+
+export async function hasPaidKylrixPlanServer(userId: string): Promise<boolean> {
+  if (isSelfHostedDeployment()) {
+    return true;
+  }
+  const ent = await getVerifiedProEntitlementForUser(userId).catch(() => null);
+  return !!(ent && ent.active && ent.uiTier !== 'FREE');
+}
+
+
+/** Server-authoritative tier for collaboration and billing gates (ledger + prefs). */
+export async function getUserSubscriptionTierServer(userId: string): Promise<BillingUiTier> {
+  if (isSelfHostedDeployment()) {
+    return getOpenSuiteEntitlement().uiTier;
+  }
+
+  const ent = await getVerifiedProEntitlementForUser(userId).catch(() => null);
+  if (ent?.active && ent.uiTier !== 'FREE') {
+    return ent.uiTier;
+  }
+
+  try {
+    const { users } = createSystemClient();
+    const user = await users.get(userId);
+    return normalizeBillingPrefsTier(readUserPrefs(user));
+  } catch {
+    return 'FREE';
+  }
+}

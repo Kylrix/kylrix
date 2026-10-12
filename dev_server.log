@@ -1,0 +1,17 @@
+
+> kylrix@1.0.0 dev /app
+> next dev --turbopack -H localhost -p ${PORT:-3005}
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3005
+- Network:       http://localhost:3005
+- Experiments (use with caution):
+  · optimizePackageImports
+  ✓ taint
+
+✓ Starting...
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 1765ms
+○ Compiling /forms ...
+ GET /forms 200 in 412ms (compile: 29ms, proxy.ts: 41ms, render: 341ms)
+✓ Finished writing to filesystem cache in 19.8s

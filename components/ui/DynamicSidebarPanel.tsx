@@ -1,0 +1,215 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Box, IconButton, Typography } from '@/lib/openbricks/primitives';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { X as CloseIcon, ArrowLeft as BackIcon } from 'lucide-react';
+
+/** Panels that manage their own fixed header/footer + internal scroll. */
+const SELF_CONTAINED_PANEL_KEYS = new Set([
+  'project-discussion',
+  'note-detail',
+  'task-detail',
+  'event-detail',
+  'pinned-notes',
+  'ecosystem-porter',
+]);
+
+const FULLSCREEN_PANEL_KEYS = new Set([
+  'note-detail',
+  'task-detail',
+  'event-detail',
+  'pinned-notes',
+  'ecosystem-porter',
+]);
+
+function panelTypeName(content: React.ReactNode): string | null {
+  if (!content || !React.isValidElement(content)) return null;
+  const t = content.type as { name?: string; displayName?: string; type?: { name?: string } };
+  if (typeof content.type === 'function') {
+    return content.type.name || (content.type as { displayName?: string }).displayName || null;
+  }
+  if (typeof content.type === 'object' && content.type !== null) {
+    return t?.name || t?.displayName || t?.type?.name || null;
+  }
+  return null;
+}
+
+export function DynamicSidebar() {
+  const { isOpen, content, closeSidebar, options, activeContentKey } = useDynamicSidebar();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      if (typeof window !== 'undefined') {
+        document.body.style.overflow = 'hidden';
+      }
+    } else {
+      const timer = setTimeout(() => setMounted(false), 300);
+      document.body.style.overflow = '';
+      return () => clearTimeout(timer);
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [isOpen, closeSidebar]);
+
+  if (!isOpen && !mounted) return null;
+
+  const typeName = panelTypeName(content);
+  const isObjectDetail =
+    typeName === 'NoteDetailSidebar' ||
+    typeName === 'NoteObjectDetail' ||
+    typeName === 'GoalObjectDetail' ||
+    typeName === 'CommObjectDetail' ||
+    typeName === 'TaskDetails' ||
+    typeName === 'EventDetails' ||
+    typeName === 'EcosystemPorter' ||
+    typeName === 'PricingDrawer' ||
+    typeName === 'TagObjectDetail' ||
+    typeName === 'TrashObjectDetail' ||
+    (content &&
+      React.isValidElement(content) &&
+      ((content.props as { note?: unknown })?.note !== undefined ||
+        (content.props as { taskId?: unknown })?.taskId !== undefined ||
+        (content.props as { eventId?: unknown })?.eventId !== undefined));
+
+  const shouldHideHeader = options?.hideHeader || isObjectDetail;
+  const isSelfContained =
+    isObjectDetail ||
+    shouldHideHeader ||
+    Boolean(activeContentKey && SELF_CONTAINED_PANEL_KEYS.has(activeContentKey));
+
+  const isFullscreen =
+    options?.fullscreen === true ||
+    isObjectDetail ||
+    Boolean(activeContentKey && FULLSCREEN_PANEL_KEYS.has(activeContentKey));
+
+  const sheet = (
+    <>
+      {/* Light scrim behind focused drawer — unblurred */}
+      <Box
+        onClick={closeSidebar}
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 10000,
+          bgcolor: 'rgba(0, 0, 0, 0.2)',
+          opacity: isOpen ? 1 : 0,
+          pointerEvents: isOpen ? 'auto' : 'none',
+          transition: 'opacity 0.3s ease',
+        }}
+      />
+
+      {/* Side sheet — positioned cleanly below topbar on desktop (top: 57px) */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: isFullscreen ? 0 : { xs: 0, md: '57px' },
+          right: 0,
+          bottom: 0,
+          left: isFullscreen ? 0 : 'auto',
+          height: isFullscreen ? '100dvh' : { xs: '100dvh', md: 'calc(100vh - 57px)' },
+          width: isFullscreen ? '100%' : { xs: '100%', md: 480, lg: 520 },
+          maxWidth: isFullscreen ? '100%' : undefined,
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 10001,
+          bgcolor: '#161412',
+          borderLeft: isFullscreen ? 'none' : '1px solid #1C1A18',
+          boxShadow: isFullscreen ? 'none' : '-12px 0 48px rgba(0, 0, 0, 0.55)',
+          transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)',
+          overflow: 'hidden',
+          '&::before': isFullscreen
+            ? undefined
+            : {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: '1px',
+                bgcolor: 'rgba(255, 255, 255, 0.04)',
+                pointerEvents: 'none'}}}
+      >
+        {!shouldHideHeader && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              px: 2,
+              py: 1.5,
+              flexShrink: 0,
+              bgcolor: '#161412',
+              borderBottom: '1px solid #1C1A18'}}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <IconButton
+                onClick={closeSidebar}
+                sx={{
+                  display: { xs: 'inline-flex', md: 'none' },
+                  color: 'rgba(255,255,255,0.55)',
+                  '&:hover': { color: '#fff', bgcolor: '#1C1A18' }}}
+                size="small"
+              >
+                <BackIcon size={20} />
+              </IconButton>
+              <Typography
+                sx={{
+                  fontWeight: 900,
+                  fontFamily: 'var(--font-clash)',
+                  color: '#6366F1',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  fontSize: '0.8rem'}}
+              >
+                Details
+              </Typography>
+            </Box>
+            <IconButton
+              onClick={closeSidebar}
+              sx={{
+                display: { xs: 'none', md: 'inline-flex' },
+                color: 'rgba(255,255,255,0.55)',
+                '&:hover': { color: '#fff', bgcolor: '#1C1A18' }}}
+              size="small"
+            >
+              <CloseIcon size={18} />
+            </IconButton>
+          </Box>
+        )}
+
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: '#0A0908',
+            overflow: isSelfContained ? 'hidden' : 'auto'}}
+          className={isSelfContained ? undefined : 'scrollbar-thin'}
+        >
+          {content}
+        </Box>
+      </Box>
+    </>
+  );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(sheet, document.body);
+}

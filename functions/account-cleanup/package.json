@@ -1,0 +1,13 @@
+{
+  "name": "@kylrix/account-cleanup",
+  "version": "1.0.0",
+  "description": "Cross-ecosystem data wipe on user deletion",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.1.0"
+  }
+}

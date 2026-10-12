@@ -1,0 +1,43 @@
+{
+  "name": "@kylrix/cli",
+  "version": "1.0.18",
+  "mcpName": "io.github.kylrix/cli",
+  "description": "Zero-leak vault, local notes, and native MCP bridge for Cursor and Claude Code.",
+  "homepage": "https://www.kylrix.space",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kylrix/kylrix"
+  },
+  "publishConfig": {
+    "access": "public",
+    "git-checks": false
+  },
+  "type": "module",
+  "bin": {
+    "kylrix": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepublishOnly": "tsup"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.9.1",
+    "commander": "^13.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "AGPL-3.0-or-later"
+}

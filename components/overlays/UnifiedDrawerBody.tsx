@@ -1,0 +1,515 @@
+'use client';
+
+import React from 'react';
+import dynamic from 'next/dynamic';
+import { Trash2, X } from 'lucide-react';
+import type { DrawerContent } from '@/context/UnifiedDrawerContext';
+
+const LoginDrawer = dynamic(() => import('./LoginDrawer').then((m) => m.LoginDrawer), { ssr: false });
+const NoteDrawer = dynamic(() => import('./NoteDrawer').then((m) => m.NoteDrawer), { ssr: false });
+const ShareNoteDrawer = dynamic(() => import('./ShareNoteDrawer').then((m) => m.ShareNoteDrawer), {
+  ssr: false,
+});
+const ShareContextDrawer = dynamic(() => import('./ShareContextDrawer').then((m) => m.ShareContextDrawer), {
+  ssr: false,
+});
+const DeleteNoteDrawer = dynamic(() => import('./DeleteNoteDrawer').then((m) => m.DeleteNoteDrawer), {
+  ssr: false,
+});
+const ChatCreateDrawer = dynamic(
+  () => import('@/components/objects/ChatCreateDrawer').then((m) => m.ChatCreateDrawer),
+  { ssr: false },
+);
+const NewChannelDrawer = dynamic(() => import('./NewChannelDrawer').then((m) => m.NewChannelDrawer), {
+  ssr: false,
+});
+const NewTagDrawer = dynamic(() => import('./NewTagDrawer').then((m) => m.NewTagDrawer), {
+  ssr: false,
+});
+const TagSelectorDrawer = dynamic(() => import('./TagSelectorDrawer').then((m) => m.TagSelectorDrawer), {
+  ssr: false,
+});
+const NewProjectDrawer = dynamic(() => import('./NewProjectDrawer').then((m) => m.NewProjectDrawer), {
+  ssr: false,
+});
+const AgentCreateDrawer = dynamic(() => import('./AgentCreateDrawer').then((m) => m.AgentCreateDrawer), {
+  ssr: false,
+});
+const SecureChatSetupDrawer = dynamic(
+  () => import('./SecureChatSetupDrawer').then((m) => m.SecureChatSetupDrawer),
+  { ssr: false },
+);
+const PasskeySetupPanel = dynamic(() => import('./PasskeySetup').then((m) => m.PasskeySetupPanel), {
+  ssr: false,
+});
+const SecurityConfirmDrawer = dynamic(
+  () => import('./SecurityConfirmDrawer').then((m) => m.SecurityConfirmDrawer),
+  { ssr: false },
+);
+const ProjectInviteDrawer = dynamic(
+  () => import('./ProjectInviteDrawer').then((m) => m.ProjectInviteDrawer),
+  { ssr: false },
+);
+const UnifiedFormContent = dynamic(
+  () => import('../forms/UnifiedFormContent').then((m) => m.UnifiedFormContent),
+  { ssr: false },
+);
+const AddToProjectDrawerHost = dynamic(
+  () => import('./AddToProjectDrawer').then((m) => m.AddToProjectDrawerHost),
+  { ssr: false },
+);
+const MoveToWorkspaceDrawer = dynamic(
+  () => import('./MoveToWorkspaceDrawer').then((m) => m.MoveToWorkspaceDrawer),
+  { ssr: false },
+);
+const ResponseDetailDrawer = dynamic(
+  () => import('../forms/ResponseDetailDrawer').then((m) => m.ResponseDetailDrawer),
+  { ssr: false },
+);
+const ProfilePreviewDrawer = dynamic(
+  () => import('./ProfilePreviewDrawer').then((m) => m.ProfilePreviewDrawer),
+  { ssr: false },
+);
+const AgenticPreviewDrawer = dynamic(
+  () => import('../agentic/AgenticPreviewDrawer').then((m) => m.AgenticPreviewDrawer),
+  { ssr: false },
+);
+
+const ProjectSettingsDrawer = dynamic(() => import('../projects/ProjectSettingsDrawer'), { ssr: false });
+const ProjectVisibilityDrawer = dynamic(() => import('../projects/ProjectVisibilityDrawer'), {
+  ssr: false,
+});
+const ProjectAutoSweepDrawer = dynamic(() => import('../projects/ProjectAutoSweepDrawer'), {
+  ssr: false,
+});
+const WorkspaceOptionsDrawer = dynamic(
+  () => import('../projects/WorkspaceOptionsDrawer').then((m) => m.WorkspaceOptionsDrawer),
+  { ssr: false },
+);
+const JoinRequestConfirmDrawer = dynamic(
+  () => import('./JoinRequestConfirmDrawer').then((m) => m.JoinRequestConfirmDrawer),
+  { ssr: false },
+);
+const AccessControlDrawer = dynamic(
+  () => import('./AccessControlDrawer').then((m) => m.AccessControlDrawer),
+  { ssr: false },
+);
+const EcosystemSendDrawer = dynamic(
+  () => import('./EcosystemSendDrawer').then((m) => m.EcosystemSendDrawer),
+  { ssr: false },
+);
+const ReactionDetailDrawer = dynamic(
+  () => import('./ReactionDetailDrawer').then((m) => m.ReactionDetailDrawer),
+  { ssr: false },
+);
+const HangoutsDrawer = dynamic(
+  () => import('../hangout/HangoutsDrawer').then((m) => m.HangoutsDrawer),
+  { ssr: false },
+);
+
+const FlowsDrawer = dynamic(
+  () => import('../flows/FlowsDrawer').then((m) => m.FlowsDrawer),
+  { ssr: false },
+);
+const TaskDetails = dynamic(() => import('../tasks/TaskDetails'), { ssr: false });
+
+
+const AgenticPanelContent = dynamic(
+  () => import('./AgenticPanelContent').then((m) => m.AgenticPanelContent),
+  { ssr: false },
+);
+
+const FollowListDrawer = dynamic(() => import('./FollowListDrawer').then((m) => m.FollowListDrawer), { ssr: false });
+const ZapDrawer = dynamic(() => import('./ZapDrawer').then((m) => m.ZapDrawer), { ssr: false });
+const SanitizeDrawer = dynamic(() => import('./SanitizeDrawer').then((m) => m.SanitizeDrawer), { ssr: false });
+const PricingDrawer = dynamic(() => import('../objects/PricingDrawer').then((m) => m.PricingDrawer), { ssr: false });
+const TagObjectDetail = dynamic(() => import('../objects/TagObjectDetail').then((m) => m.TagObjectDetail), { ssr: false });
+const TrashObjectDetail = dynamic(() => import('../objects/TrashObjectDetail').then((m) => m.TrashObjectDetail), { ssr: false });
+
+export function unifiedDrawerWidth(content: DrawerContent): number {
+  switch (content) {
+    case 'delete-confirm':
+    case 'delete-note':
+    case 'security-confirm':
+    case 'project-join-request-confirm':
+      return 400;
+    case 'form':
+    case 'form-response-detail':
+    case 'sanitize':
+    case 'milestone-details':
+    case 'agentic-preview':
+    case 'pricing':
+    case 'tags':
+    case 'trash':
+      return 560;
+    case 'agentic':
+      return 440;
+    case 'flows':
+      return 560;
+    case 'follow-list':
+      return 460;
+    case 'zap':
+      return 420;
+    default:
+      return 420;
+  }
+}
+
+/** Surfaces that stay as true modal overlays (auth + bottom-sheet composers). */
+export function isUnifiedOverlayOnly(content: DrawerContent): boolean {
+  return (
+    content === 'navbar' ||
+    content === 'login' ||
+    content === 'new-chat' ||
+    content === 'note'  // NoteDrawer manages its own sidebar + overlay — no Drawer shell needed
+  );
+}
+
+type Props = {
+  activeContent: DrawerContent;
+  drawerData: any;
+  onClose: () => void;
+};
+
+/** Shared body for bottom-drawer legacy + native sidebar host. */
+export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props) {
+  switch (activeContent) {
+    case 'login':
+      return <LoginDrawer />;
+    case 'agentic':
+      return (
+        <AgenticPanelContent
+          isDesktop
+          data-agentic
+          onClose={onClose}
+        />
+      );
+    case 'note':
+      return <NoteDrawer />;
+    case 'new-tag':
+      return <NewTagDrawer />;
+    case 'tag-selector':
+      return <TagSelectorDrawer />;
+    case 'new-project':
+      return <NewProjectDrawer />;
+    case 'agent-create':
+      return <AgentCreateDrawer />;
+    case 'share-context':
+      return <ShareContextDrawer />;
+    case 'share-note':
+      return (
+        <ShareNoteDrawer
+          isOpen
+          onClose={onClose}
+          noteId={drawerData?.noteId || drawerData?.resourceId}
+          noteTitle={drawerData?.noteTitle || drawerData?.resourceTitle}
+          resourceType={drawerData?.resourceType || 'note'}
+        />
+      );
+    case 'assign-goal':
+      return (
+        <ShareNoteDrawer
+          isOpen
+          onClose={onClose}
+          noteId={drawerData?.taskId || drawerData?.resourceId}
+          noteTitle={drawerData?.taskTitle || drawerData?.resourceTitle}
+          resourceType="goal"
+        />
+      );
+    case 'task-add-to-project':
+    case 'add-to-project':
+      return <AddToProjectDrawerHost />;
+    case 'move-to-workspace':
+      return <MoveToWorkspaceDrawer />;
+    case 'delete-confirm':
+      return (
+        <div className="px-6 pb-6 pt-3 bg-[#161412] flex flex-col justify-between gap-5 select-none">
+          <div className="flex flex-col gap-4">
+            {/* Header */}
+            <div className="flex justify-between items-center gap-3 border-b border-white/5 pb-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border border-red-500/20 bg-[#0A0908] text-red-400">
+                  <Trash2 size={16} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-white text-base font-clash leading-tight truncate">
+                    {drawerData?.title || 'Move to Trash?'}
+                  </h3>
+                  <span className="text-[11px] font-mono text-white/40 uppercase tracking-wider block mt-0.5">
+                    Permanent Action Confirmation
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-xl bg-[#0A0908] border border-white/8 text-white/40 hover:text-white flex items-center justify-center transition-colors shrink-0"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Description Well */}
+            <div className="p-4 bg-[#0A0908] border border-white/6 rounded-2xl">
+              <p className="text-white/70 text-xs font-satoshi leading-relaxed">
+                {drawerData?.description || `Are you sure you want to delete ${drawerData?.resourceName || 'this item'}? Trashed items can be restored anytime from Trash.`}
+              </p>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3 rounded-xl border border-white/8 bg-[#0A0908] hover:bg-[#1C1A18] text-white font-satoshi font-bold text-xs transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // Close immediately — never block UI on remote call.
+                // onConfirm must handle optimistic local removal itself before returning.
+                onClose();
+                void drawerData?.onConfirm?.();
+              }}
+              className="flex-1 py-3 rounded-xl border border-red-500/30 bg-red-600 hover:bg-red-700 text-white font-satoshi font-bold text-xs transition-all shadow-[0_4px_16px_rgba(220,38,38,0.3)] cursor-pointer"
+            >
+              {drawerData?.confirmLabel || 'Confirm Delete'}
+            </button>
+          </div>
+        </div>
+      );
+    case 'delete-note':
+      return (
+        <DeleteNoteDrawer
+          isOpen
+          onClose={onClose}
+          onConfirm={drawerData?.onConfirm}
+          noteTitle={drawerData?.noteTitle}
+        />
+      );
+    case 'new-chat':
+      return (
+        <ChatCreateDrawer
+          open
+          onClose={onClose}
+          legacyMode={drawerData?.mode === 'thread' || drawerData?.mode === 'secure' ? drawerData.mode : undefined}
+          initialMode={drawerData?.mode === 'hangout' ? 'hangout' : 'chat'}
+        />
+      );
+    case 'new-channel':
+      return <NewChannelDrawer isOpen onClose={onClose} />;
+    case 'secure-chat-setup':
+      return <SecureChatSetupDrawer />;
+    case 'passkey-setup':
+      return (
+        <PasskeySetupPanel
+          onClose={onClose}
+          userId={drawerData?.userId || ''}
+          onSuccess={() => {
+            drawerData?.onSuccess?.();
+            onClose();
+          }}
+          trustUnlocked={drawerData?.trustUnlocked ?? true}
+        />
+      );
+    case 'security-confirm':
+      return <SecurityConfirmDrawer />;
+    case 'project-invite':
+      return <ProjectInviteDrawer />;
+    case 'form':
+      return <UnifiedFormContent formId={drawerData?.formId} onClose={onClose} />;
+    case 'form-response-detail':
+      return (
+        <ResponseDetailDrawer
+          isOpen
+          onClose={onClose}
+          submission={drawerData?.submission}
+          schemaMap={drawerData?.schemaMap}
+        />
+      );
+    case 'sanitize':
+      return (
+        <SanitizeDrawer
+          targetKind={drawerData?.targetKind || 'form'}
+          targetId={drawerData?.targetId || drawerData?.resourceId || drawerData?.formId}
+          targetTitle={drawerData?.targetTitle || drawerData?.resourceTitle || drawerData?.formTitle}
+          onClose={onClose}
+          onSanitized={drawerData?.onSanitized}
+        />
+      );
+    case 'agentic-preview':
+      return (
+        <AgenticPreviewDrawer
+          previewId={String(drawerData?.previewId || '')}
+          kind={drawerData?.kind as string | undefined}
+          title={drawerData?.title as string | undefined}
+          onClose={onClose}
+          onCommitted={drawerData?.onCommitted as (() => void) | undefined}
+        />
+      );
+    case 'workspace-options':
+      return (
+        <WorkspaceOptionsDrawer
+          isOpen
+          onClose={onClose}
+          workspace={drawerData?.workspace || drawerData?.project}
+        />
+      );
+    case 'project-settings':
+      return (
+        <ProjectSettingsDrawer
+          isOpen
+          onClose={onClose}
+          project={drawerData?.project}
+          onSave={drawerData?.onSave}
+        />
+      );
+    case 'project-visibility':
+      return (
+        <ProjectVisibilityDrawer
+          isOpen
+          onClose={onClose}
+          project={drawerData?.project}
+          onSave={drawerData?.onSave}
+        />
+      );
+    case 'project-auto-sweep':
+      return (
+        <ProjectAutoSweepDrawer
+          isOpen
+          onClose={onClose}
+          projectId={drawerData?.projectId as string}
+          projectTitle={drawerData?.projectTitle as string}
+          onSaved={drawerData?.onSaved}
+        />
+      );
+    case 'project-join-request-confirm':
+      return <JoinRequestConfirmDrawer />;
+    case 'access-control':
+      return (
+        <AccessControlDrawer
+          isOpen
+          onClose={onClose}
+          resourceType={drawerData?.resourceType}
+          resourceId={drawerData?.resourceId}
+          isPublic={drawerData?.isPublic}
+          isGuest={drawerData?.isGuest}
+          resourceTitle={drawerData?.resourceTitle}
+          projectId={drawerData?.projectId}
+          onUpdate={drawerData?.onUpdate}
+        />
+      );
+    case 'ecosystem-send':
+      return (
+        <EcosystemSendDrawer
+          isOpen
+          onClose={onClose}
+          resourceType={drawerData?.resourceType}
+          resourceId={drawerData?.resourceId}
+          resourceTitle={drawerData?.resourceTitle}
+          kind={drawerData?.kind}
+          isPublic={drawerData?.isPublic}
+          isGuest={drawerData?.isGuest}
+          projectId={drawerData?.projectId}
+          resolveShareUrl={drawerData?.resolveShareUrl}
+          onUpdate={drawerData?.onUpdate}
+        />
+      );
+    case 'hangouts':
+      return (
+        <HangoutsDrawer
+          mode={drawerData?.mode || 'browse'}
+          workspaceId={drawerData?.workspaceId}
+          workspaceTitle={drawerData?.workspaceTitle}
+          initialConversationId={drawerData?.initialConversationId || drawerData?.conversationId}
+          object={drawerData?.object}
+          onClose={onClose}
+        />
+      );
+    case 'flows':
+      return (
+        <FlowsDrawer
+          onClose={onClose}
+          initialTab={drawerData?.initialTab}
+        />
+      );
+    case 'milestone-details':
+
+
+      return <TaskDetails taskId={drawerData?.taskId} onBack={onClose} />;
+    case 'profile-preview':
+      return (
+        <ProfilePreviewDrawer
+          isOpen
+          onClose={onClose}
+          userId={drawerData?.userId}
+          username={drawerData?.username}
+          name={drawerData?.name}
+          avatar={drawerData?.avatar}
+          bio={drawerData?.bio}
+          source={drawerData?.source}
+        />
+      );
+    case 'follow-list':
+      return (
+        <FollowListDrawer
+          userId={drawerData?.userId}
+          type={drawerData?.type}
+          targetName={drawerData?.targetName}
+          onClose={onClose}
+        />
+      );
+    case 'pricing':
+      return (
+        <PricingDrawer
+          onClose={onClose}
+          initialTier={drawerData?.tier || 'PRO'}
+          featureHighlight={drawerData?.featureHighlight}
+          giftRecipientId={drawerData?.giftRecipientId}
+          giftRecipientName={drawerData?.giftRecipientName}
+          isGift={drawerData?.isGift}
+        />
+      );
+    case 'tags':
+      return (
+        <TagObjectDetail
+          onClose={onClose}
+          initialTagId={drawerData?.tagId}
+          embedded
+        />
+      );
+    case 'trash':
+      return (
+        <TrashObjectDetail
+          onClose={onClose}
+          embedded
+        />
+      );
+    case 'zap':
+      return (
+        <ZapDrawer
+          isOpen
+          onClose={onClose}
+          targetId={drawerData?.targetId || drawerData?.noteId || ''}
+          source="ecosystem"
+          ecosystemTargetId={drawerData?.ecosystemTargetId}
+          targetKind={drawerData?.targetKind || 'note'}
+          targetOwnerId={drawerData?.targetOwnerId}
+          authorName={drawerData?.authorName || drawerData?.recipientName || 'Creator'}
+          onZapSuccess={drawerData?.onZapSuccess}
+        />
+      );
+    case 'reaction-detail':
+      return (
+        <ReactionDetailDrawer
+          data={drawerData}
+          onClose={onClose}
+        />
+      );
+    default:
+      return null;
+  }
+}

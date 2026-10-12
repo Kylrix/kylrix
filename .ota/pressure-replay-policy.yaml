@@ -1,0 +1,6 @@
+policies:
+  replay_inputs:
+    identity:
+      workflows:
+        verify:
+          on_insufficient: deny

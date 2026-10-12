@@ -1,0 +1,617 @@
+'use client';
+
+import React, { useCallback, useEffect, useState } from 'react';
+import { Copy, KeyRound, BookOpen, AppWindow, Plus, Terminal } from 'lucide-react';
+import Link from 'next/link';
+import toast from 'react-hot-toast';
+import { useWebMcpContext } from '@/context/WebMcpContext';
+import {
+  KYLRIX_SKILLS_INSTALL,
+  KYLRIX_API_SKILL_INSTALL,
+  KYLRIX_OAUTH2_SKILL_INSTALL,
+  KYLRIX_AGENTS_SKILL_INSTALL,
+} from '@/lib/api/public';
+import { listPats, revokePat } from '@/lib/actions/client-ops';
+import { account } from '@/lib/appwrite/client';
+import { listMyApps, type OauthApp } from '@/lib/oauth2/apps';
+import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
+import { CreateOAuthAppDrawer } from '@/components/settings/CreateOAuthAppDrawer';
+import { ManageOAuthAppDrawer } from '@/components/settings/ManageOAuthAppDrawer';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import { CloudSyncSection } from '@/components/settings/CloudSyncSection';
+
+type PatItem = {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  scopes: string[];
+  status: string;
+  category?: string;
+  expiresAt?: string | null;
+};
+
+function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-[22px] bg-[#161412] border-2 border-white/20 p-5 space-y-3.5 shadow-xl">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/70 font-satoshi">
+          {title}
+        </h3>
+        {action}
+      </div>
+      <div className="space-y-2.5">{children}</div>
+    </section>
+  );
+}
+
+function SkillRow({
+  title,
+  install,
+  docsHref,
+  docsLabel,
+}: {
+  title: string;
+  install: string;
+  docsHref: string;
+  docsLabel: string;
+}) {
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(install);
+      toast.success('Copied');
+    } catch {
+      toast.success(install);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl bg-[#0A0908] border-2 border-white/15 p-3.5 space-y-2.5 hover:border-white/30 transition-colors">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold text-white">{title}</p>
+        <Link
+          href={docsHref}
+          className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-[#A5B4FC] hover:text-white shrink-0"
+        >
+          <BookOpen size={12} />
+          {docsLabel}
+        </Link>
+      </div>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 min-w-0 text-[11px] font-mono text-white/70 bg-[#161412] border-2 border-white/15 rounded-xl px-3 py-2.5 break-all select-all">
+          {install}
+        </code>
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer shrink-0 border-2 border-[#6366F1]"
+        >
+          <Copy size={14} />
+          Copy
+        </button>
+      </div>
+    </div>
+  );
+}
+
+import { LocalEngine } from '@/lib/services/LocalEngine';
+
+export const WEBMCP_TOPBAR_STORAGE_KEY = 'setting_show_webmcp_topbar';
+export const WEBMCP_TOPBAR_EVENT = 'kylrix:webmcp-topbar-changed';
+
+export function DevelopersTab() {
+  const { user: authUser } = useAuth();
+  const { open: openDrawer } = useUnifiedDrawer();
+  const { tools: webMcpTools, openInspector: openWebMcpInspector } = useWebMcpContext();
+  const { currentTier } = useSubscription();
+  const { openProUpgrade } = useProUpgrade();
+  const isTeams = currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
+
+  const [developerMode, setDeveloperMode] = useState(false);
+  const [showWebMcpTopbar, setShowWebMcpTopbar] = useState(false);
+  const [pats, setPats] = useState<PatItem[]>([]);
+  const [apps, setApps] = useState<OauthApp[]>([]);
+  const [loadingPats, setLoadingPats] = useState(true);
+  const [loadingApps, setLoadingApps] = useState(true);
+  const [patDrawerOpen, setPatDrawerOpen] = useState(false);
+  const [oauthDrawerOpen, setOauthDrawerOpen] = useState(false);
+  const [manageAppId, setManageAppId] = useState<string | null>(null);
+  const [tokenFilter, setTokenFilter] = useState<'all' | 'pats' | 'cli'>('all');
+
+  const handleOpenOauthSetup = () => {
+    if (!isTeams) {
+      openProUpgrade('Sign in with Kylrix (OAuth 2.1 Provider)');
+      return;
+    }
+    setOauthDrawerOpen(true);
+  };
+
+  const refreshPats = useCallback(async () => {
+    setLoadingPats(true);
+    try {
+      // 1. Check local engine first for offline-first responsiveness
+      const cachedTopbar = await LocalEngine.cacheGet<boolean>(WEBMCP_TOPBAR_STORAGE_KEY);
+      if (typeof cachedTopbar === 'boolean') {
+        setShowWebMcpTopbar(cachedTopbar);
+      }
+
+      const prefs = await account.getPrefs().catch(() => ({} as any));
+      setDeveloperMode(!!(prefs as any)?.developerMode);
+      if (typeof (prefs as any)?.showWebMcpTopbar === 'boolean') {
+        setShowWebMcpTopbar((prefs as any).showWebMcpTopbar);
+        void LocalEngine.cacheSet(WEBMCP_TOPBAR_STORAGE_KEY, (prefs as any).showWebMcpTopbar);
+      }
+
+      const res = await listPats({ isWorkspace: false });
+      if (res?.success) setPats((res.data || []) as PatItem[]);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to load tokens');
+    } finally {
+      setLoadingPats(false);
+    }
+  }, []);
+
+  const refreshApps = useCallback(async () => {
+    setLoadingApps(true);
+    try {
+      const uid = authUser?.$id || (await Promise.race([
+        account.get().then((u: any) => u.$id),
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('User timeout')), 800)),
+      ]).catch(() => 'guest'));
+      if (uid && uid !== 'guest') {
+        setApps(await listMyApps(uid));
+      } else {
+        setApps([]);
+      }
+    } catch (err: any) {
+      setApps([]);
+      if (err?.message) {
+        console.error('[Developers OAuth apps]', err);
+      }
+    } finally {
+      setLoadingApps(false);
+    }
+  }, [authUser?.$id]);
+
+  useEffect(() => {
+    void refreshPats();
+    void refreshApps();
+  }, [refreshPats, refreshApps]);
+
+  const toggleDeveloperMode = async () => {
+    try {
+      const prefs = (await account.getPrefs().catch(() => ({}))) as Record<string, unknown>;
+      const next = !developerMode;
+      await account.updatePrefs({ ...prefs, developerMode: next });
+      setDeveloperMode(next);
+      toast.success(next ? 'Developer mode on' : 'Developer mode off');
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not update');
+    }
+  };
+
+  const toggleWebMcpTopbar = async () => {
+    const next = !showWebMcpTopbar;
+    setShowWebMcpTopbar(next);
+    // Instant offline-first persistence & window notification
+    await LocalEngine.cacheSet(WEBMCP_TOPBAR_STORAGE_KEY, next);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(WEBMCP_TOPBAR_EVENT, { detail: next }));
+    }
+    toast.success(next ? 'WebMCP tools added to topbar' : 'WebMCP tools removed from topbar');
+    // Asynchronous background sync to account prefs
+    account
+      .getPrefs()
+      .then((prefs: any) => account.updatePrefs({ ...(prefs as any), showWebMcpTopbar: next }))
+      .catch((e: any) => console.warn('[Developers] failed background sync of showWebMcpTopbar', e));
+  };
+
+  const confirmRevokePat = (pat: PatItem) => {
+    openDrawer('delete-confirm', {
+      title: `Revoke “${pat.name}”?`,
+      description:
+        'This personal access token will stop working immediately. Anything using it will lose access.',
+      confirmLabel: 'Revoke token',
+      resourceName: pat.name,
+      onConfirm: async () => {
+        await revokePat(pat.id);
+        toast.success('Token revoked');
+        await refreshPats();
+      },
+    });
+  };
+
+  const activePats = pats.filter((p) => p.status === 'active').length;
+
+  return (
+    <div className="space-y-4 pb-24 max-w-3xl font-satoshi">
+      <h2 className="text-xl font-black font-clash text-white tracking-tight">Developers</h2>
+
+      <Section title="Agent skills">
+        <SkillRow
+          title="Kylrix skills bundle (MCP + REST + agents)"
+          install={KYLRIX_SKILLS_INSTALL}
+          docsHref="/docs/integrations"
+          docsLabel="Integrations"
+        />
+        <SkillRow
+          title="HTTP API only"
+          install={KYLRIX_API_SKILL_INSTALL}
+          docsHref="/docs/api"
+          docsLabel="API docs"
+        />
+        <SkillRow
+          title="Sign in with Kylrix (OAuth)"
+          install={KYLRIX_OAUTH2_SKILL_INSTALL}
+          docsHref="/docs/oauth2"
+          docsLabel="OAuth docs"
+        />
+        <SkillRow
+          title="Autonomous agents only"
+          install={KYLRIX_AGENTS_SKILL_INSTALL}
+          docsHref="/docs/agents"
+          docsLabel="Agent docs"
+        />
+      </Section>
+
+      <Section
+        title="WebMCP (Browser-Native Agent Tools)"
+        action={
+          <button
+            type="button"
+            onClick={openWebMcpInspector}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors"
+          >
+            <Terminal size={12} strokeWidth={2.5} />
+            Inspect tools ({webMcpTools.length})
+          </button>
+        }
+      >
+        <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <p className="text-xs font-bold text-white">W3C WebMCP Standard Active</p>
+            </div>
+            <Link
+              href="/docs/webmcp"
+              className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 hover:text-emerald-300 shrink-0"
+            >
+              <BookOpen size={12} />
+              WebMCP Docs
+            </Link>
+          </div>
+          <p className="text-xs text-white/50 leading-relaxed">
+            Visiting AI agents in Chrome (with <code className="text-emerald-300 font-mono">#enable-webmcp-testing</code>) or ChatGPT’s in-app browser automatically discover and invoke Kylrix tools directly in the browser with your active session permissions.
+          </p>
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={openWebMcpInspector}
+              className="flex-1 py-2 px-3 rounded-xl bg-[#1c1917] hover:bg-[#262626] border border-white/[0.08] text-xs font-mono text-emerald-400 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Terminal size={13} />
+              Open WebMCP Playground & Logs
+            </button>
+          </div>
+        </div>
+      </Section>
+
+      <Section
+        title="Personal access tokens"
+        action={
+          <button
+            type="button"
+            onClick={() => setPatDrawerOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-[#6366F1] text-white cursor-pointer"
+          >
+            <Plus size={12} strokeWidth={3} />
+            Set up
+          </button>
+        }
+      >
+        <div className="flex items-center justify-between gap-2 px-0.5">
+          <p className="text-[11px] text-white/40">
+            For scripts and agents that call the HTTP API
+          </p>
+          <span className="text-[10px] font-extrabold text-white/30 uppercase tracking-wider shrink-0">
+            {activePats} active
+          </span>
+        </div>
+
+        {pats.length > 0 && (
+          <div className="flex items-center gap-1.5 px-0.5">
+            <button
+              type="button"
+              onClick={() => setTokenFilter('all')}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
+                tokenFilter === 'all'
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/40 hover:text-white/70'
+              }`}
+            >
+              All ({pats.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setTokenFilter('pats')}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
+                tokenFilter === 'pats'
+                  ? 'bg-indigo-500/20 text-indigo-300'
+                  : 'text-white/40 hover:text-white/70'
+              }`}
+            >
+              API Keys ({pats.filter((p) => p.category !== 'punch_token' && !p.name.includes('(Punch Grant)') && !p.name.toLowerCase().startsWith('cli')).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setTokenFilter('cli')}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
+                tokenFilter === 'cli'
+                  ? 'bg-emerald-500/20 text-emerald-300'
+                  : 'text-white/40 hover:text-white/70'
+              }`}
+            >
+              CLI Sessions ({pats.filter((p) => p.category === 'punch_token' || p.name.includes('(Punch Grant)') || p.name.toLowerCase().startsWith('cli')).length})
+            </button>
+          </div>
+        )}
+
+        {loadingPats ? (
+          <p className="text-xs text-white/40 px-1">Loading…</p>
+        ) : pats.length === 0 ? (
+          <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] px-4 py-7 text-center space-y-3">
+            <div className="mx-auto w-fit p-3 rounded-2xl bg-[#161412] border border-white/[0.06] text-[#6366F1]">
+              <KeyRound size={20} />
+            </div>
+            <p className="text-sm font-bold text-white/50">No tokens yet</p>
+            <button
+              type="button"
+              onClick={() => setPatDrawerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer"
+            >
+              <Plus size={14} strokeWidth={3} />
+              Set up token
+            </button>
+          </div>
+        ) : (
+          pats
+            .filter((p) => {
+              const isCli = p.category === 'punch_token' || p.name.includes('(Punch Grant)') || p.name.toLowerCase().startsWith('cli');
+              if (tokenFilter === 'pats') return !isCli;
+              if (tokenFilter === 'cli') return isCli;
+              return true;
+            })
+            .map((pat) => {
+              const isCli = pat.category === 'punch_token' || pat.name.includes('(Punch Grant)') || pat.name.toLowerCase().startsWith('cli');
+              const prefix = isCli
+                ? 'kyl_punch_'
+                : pat.category === 'agent_provisioning_key'
+                  ? 'kyl_apk_'
+                  : pat.category === 'agentic_pat'
+                    ? 'kyl_apat_'
+                    : pat.category === 'workspace_pat'
+                      ? 'kyl_wpat_'
+                      : 'kyl_pat_';
+
+              return (
+                <div
+                  key={pat.id}
+                  className="flex flex-col gap-2.5 rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`p-2 rounded-xl border shrink-0 ${
+                        isCli
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                          : 'bg-[#161412] border-white/[0.06] text-[#6366F1]'
+                      }`}
+                    >
+                      {isCli ? <Terminal size={16} /> : <KeyRound size={16} />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-white truncate">{pat.name}</p>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                            isCli
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                          }`}
+                        >
+                          {isCli ? 'CLI Session' : 'API Key'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-white/40 font-mono truncate">
+                        {prefix}{pat.tokenPrefix}_… · {pat.status}
+                        {pat.scopes?.length ? ` · ${pat.scopes.length} perms` : ''}
+                        {pat.expiresAt ? ` · Exp: ${pat.expiresAt.substring(0, 10)}` : ' · No TTL'}
+                      </p>
+                    </div>
+                  </div>
+                  {pat.status === 'active' && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => confirmRevokePat(pat)}
+                        className="px-3 py-2 rounded-xl text-[11px] font-extrabold bg-[#161412] border border-red-500/25 text-red-300 cursor-pointer"
+                      >
+                        {isCli ? 'Revoke session' : 'Revoke token'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+        )}
+      </Section>
+
+      <Section
+        title="Sign in with Kylrix"
+        action={
+          <button
+            type="button"
+            onClick={handleOpenOauthSetup}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-[#6366F1] text-white cursor-pointer"
+          >
+            <Plus size={12} strokeWidth={3} />
+            Set up
+          </button>
+        }
+      >
+        <p className="text-[11px] text-white/40 px-0.5">
+          OAuth apps for third-party Sign in with Kylrix
+        </p>
+
+        {loadingApps ? (
+          <p className="text-xs text-white/40 px-1">Loading…</p>
+        ) : apps.length === 0 ? (
+          <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] px-4 py-7 text-center space-y-3">
+            <div className="mx-auto w-fit p-3 rounded-2xl bg-[#161412] border border-white/[0.06] text-[#6366F1]">
+              <AppWindow size={20} />
+            </div>
+            <p className="text-sm font-bold text-white/50">No OAuth apps yet</p>
+            <button
+              type="button"
+              onClick={handleOpenOauthSetup}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer"
+            >
+              <Plus size={14} strokeWidth={3} />
+              Set up app
+            </button>
+          </div>
+        ) : (
+          apps.map((app) => (
+            <div
+              key={app.$id}
+              className="flex flex-col gap-2.5 rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0 overflow-hidden">
+                  {app.logoUri ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={app.logoUri} alt="" className="h-4 w-4 object-cover rounded" />
+                  ) : (
+                    <AppWindow size={16} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white truncate">{app.name}</p>
+                  <p className="text-[11px] text-white/40 font-mono truncate">
+                    {app.$id} · {app.type === 'public' ? 'public (PKCE)' : 'server (secret)'} ·{' '}
+                    {(app.redirectUris || []).length} redirect
+                    {(app.redirectUris || []).length === 1 ? '' : 's'}
+                  </p>
+                  {(app.redirectUris || []).length === 0 ? (
+                    <p className="text-[11px] text-amber-300/90 mt-0.5">
+                      No redirect URLs saved — Manage → add one or authorize will fail
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setManageAppId(app.$id)}
+                  className="px-3 py-2 rounded-xl text-[11px] font-extrabold bg-[#6366F1] text-white cursor-pointer"
+                >
+                  Manage
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </Section>
+
+      <Section title="Developer mode">
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] px-3.5 py-3.5">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-white">Developer mode</p>
+            <p className="text-[11px] text-white/40">Advanced tooling and demo helpers</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void toggleDeveloperMode()}
+            className={`relative h-7 w-12 rounded-full border transition-colors cursor-pointer shrink-0 ${
+              developerMode ? 'bg-[#6366F1] border-[#6366F1]' : 'bg-[#161412] border-white/15'
+            }`}
+            aria-pressed={developerMode}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                developerMode ? 'left-6' : 'left-0.5'
+              }`}
+            />
+          </button>
+        </div>
+
+        {developerMode && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] px-3.5 py-3.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <Terminal size={14} className="text-emerald-400 shrink-0" />
+                <p className="text-sm font-bold text-white">Show WebMCP tools on topbar</p>
+              </div>
+              <p className="text-[11px] text-white/40 mt-0.5">
+                Quick-access shortcut on the desktop topbar to launch the WebMCP Inspector
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void toggleWebMcpTopbar()}
+              className={`relative h-7 w-12 rounded-full border transition-colors cursor-pointer shrink-0 ${
+                showWebMcpTopbar ? 'bg-emerald-600 border-emerald-600' : 'bg-[#161412] border-white/15'
+              }`}
+              aria-pressed={showWebMcpTopbar}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                  showWebMcpTopbar ? 'left-6' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+        )}
+      </Section>
+
+      {patDrawerOpen && (
+        <CreatePatDrawer
+          open={patDrawerOpen}
+          onClose={() => setPatDrawerOpen(false)}
+          onCreated={() => void refreshPats()}
+        />
+      )}
+      {oauthDrawerOpen && (
+        <CreateOAuthAppDrawer
+          open={oauthDrawerOpen}
+          onClose={() => setOauthDrawerOpen(false)}
+          onCreated={() => void refreshApps()}
+        />
+      )}
+      {manageAppId && (
+        <ManageOAuthAppDrawer
+          open={!!manageAppId}
+          appId={manageAppId}
+          onClose={() => setManageAppId(null)}
+          onChanged={() => void refreshApps()}
+        />
+      )}
+      {/* Cloud Replication & Sync for Self-Hosted Nodes */}
+      <CloudSyncSection />
+    </div>
+  );
+}
+

@@ -1,0 +1,131 @@
+'use client';
+
+import { ReactNode } from 'react';
+import dynamic from 'next/dynamic';
+import { AppwriteProvider } from '@/app/(app)/vault/appwrite-provider';
+import { ThemeProvider } from '@/lib/theme-context';
+import { ToastProvider } from '@/components/ui/Toast';
+import { UnifiedDrawerProvider } from '@/context/UnifiedDrawerContext';
+import { ProUpgradeProvider } from '@/context/ProUpgradeContext';
+import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
+import { ResourcePinProvider } from '@/context/ResourcePinContext';
+import { SelectionProvider } from '@/context/SelectionContext';
+import { WorkspaceProvider } from '@/context/WorkspaceContext';
+import { NotesProvider } from '@/context/NotesContext';
+import { TaskProvider } from '@/context/TaskContext';
+import { OverlayProvider } from '@/components/ui/OverlayContext';
+import { DynamicSidebarProvider } from '@/components/ui/DynamicSidebar';
+import { SidebarProvider } from '@/components/ui/SidebarContext';
+import { NativeSidebarProvider } from '@/context/RightRailContext';
+import { SectionProvider } from '@/context/SectionContext';
+import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
+import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
+import { TokenOpsProvider } from '@/context/TokenOpsContext';
+import { PresenceProvider } from '@/components/providers/PresenceProvider';
+import { AIProvider } from '@/context/AIContext';
+import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
+import { SudoProvider } from '@/context/SudoContext';
+import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
+import { LocalContextProvider } from '@/lib/context-engine';
+import { SetupProvider } from '@/context/SetupContext';
+import { TrashPurgeProvider } from '@/context/TrashPurgeContext';
+import { PaymentReminderProvider } from '@/context/PaymentReminderContext';
+
+import { SpineProvider } from '@/context/SpineContext';
+import { NeuralProvider } from '@/context/NeuralContext';
+
+const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
+
+import { WebMcpProvider } from '@/context/WebMcpContext';
+import { WebMcpInspectorDrawer } from '@/components/webmcp/WebMcpInspectorDrawer';
+import { CloudSyncProvider } from '@/components/providers/CloudSyncProvider';
+
+interface ComposeProvidersProps {
+  providers: Array<React.ComponentType<{ children: ReactNode }>>;
+  children: ReactNode;
+}
+
+function ComposeProviders({ providers, children }: ComposeProvidersProps) {
+  return (
+    <>
+      {providers.reduceRight((acc, Provider) => {
+        return <Provider>{acc}</Provider>;
+      }, children)}
+    </>
+  );
+}
+
+import { SecurityProvider } from '@/context/SecurityContext';
+import { UnifiedFileDrawerProvider } from '@/context/UnifiedFileDrawerContext';
+import { EventsProvider } from '@/context/EventsContext';
+
+/**
+ * Tier 1: Root Providers
+ * Mandatory for GlobalShell and UI orchestration. 
+ * Lightweight UI-state providers that don't block hydration with heavy data fetching.
+ */
+import { ContextIntelligenceProvider } from '@/context/ContextIntelligenceContext';
+import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
+import { WorkspaceIntelAmbientProvider } from '@/components/providers/WorkspaceIntelAmbientProvider';
+
+import { UniversalScrollRestoration } from '@/components/providers/UniversalScrollRestoration';
+import { UnifiedMediaProvider } from '@/context/UnifiedMediaContext';
+import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
+import { GlobalContextMenu } from '@/components/ui/GlobalContextMenu';
+
+const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
+  SpineProvider,
+  NeuralProvider,
+  ContextIntelligenceProvider,
+  SecurityProvider,
+  ChatNotificationProvider,
+  UnifiedMediaProvider,
+  UnifiedFileDrawerProvider,
+  DrawerStateProvider,
+  AppwriteProvider,
+  LocalContextProvider,
+  AppChromeProvider,
+  ThemeProvider,
+  ToastProvider,
+  UnifiedDrawerProvider,
+  ContextMenuProvider,
+  ProUpgradeProvider,
+  SubscriptionProvider,
+  ResourcePinProvider,
+  SelectionProvider,
+  WorkspaceProvider,
+  WorkspaceIntelAmbientProvider,
+  NotesProvider,
+  EventsProvider,
+  TaskProvider,
+  OverlayProvider,
+  DynamicSidebarProvider,
+  SidebarProvider,
+  NativeSidebarProvider,
+  SudoProvider,
+  SectionProvider,
+  WalletOverlayProvider,
+  AgenticDrawerProvider,
+  PresenceProvider,
+  TokenOpsProvider,
+  AIProvider,
+  SetupProvider,
+  TrashPurgeProvider,
+  PaymentReminderProvider,
+  WebMcpProvider,
+  CloudSyncProvider,
+];
+
+export function ClientProviders({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <UniversalScrollRestoration />
+      <ComposeProviders providers={rootProvidersList}>
+        {children}
+        <GlobalContextMenu />
+        <WebMcpInspectorDrawer />
+      </ComposeProviders>
+      <ClientToaster />
+    </>
+  );
+}

@@ -1,0 +1,642 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Box, Typography, Drawer, alpha } from '@/lib/openbricks/primitives';
+import { usePathname } from 'next/navigation';
+import { PanelType } from '@/components/layout/panel-types';
+
+// Object detail components imports
+import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
+import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
+import EventDetails from '@/components/events/EventDetails';
+import { FormDetail } from '@/components/forms/FormDetail';
+import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
+import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
+import { ChatWindow } from '@/components/chat/ChatWindow';
+
+// Helper imports for note detail (live-copy plugin — no open-path getNote)
+import { useAuth } from '@/context/auth/AuthContext';
+import { Notes } from '@/types/appwrite';
+import { deleteNote } from '@/lib/actions/client-ops';
+import { useDataNexus } from '@/context/DataNexusContext';
+import { useToast } from '@/components/ui/Toast';
+import CommentsSection from '@/app/(app)/app/(app)/notes/Comments';
+import NoteReactions from '@/app/(app)/app/(app)/notes/NoteReactions';
+import { useNotes } from '@/context/NotesContext';
+
+export interface ActiveDetail {
+  type: 'note' | 'goal' | 'form' | 'event' | 'tag' | 'secret' | 'chat';
+  id: string;
+  data?: any; // Extra initial payload if we have it
+}
+
+export interface SectionConfig {
+  columnsCount: number; // 1, 2, 3, or 4 columns
+  sections: Array<{
+    id: string;
+    type: 'original' | 'panel';
+    width: string; // e.g. '1fr', '400px'
+    panels?: PanelType[];
+  }>;
+}
+
+export interface PageState {
+  activeDetail: ActiveDetail | null;
+  scrollPositions: Record<string, number>;
+  activeDrawers: Record<string, boolean>;
+  routePaths: Record<string, string>;
+  extra: Record<string, any>;
+}
+
+interface SectionContextType {
+  getLayoutForRoute: (route: string) => SectionConfig;
+  updateRouteOverride: (route: string, override: Partial<SectionConfig>) => void;
+  resetOverrides: () => void;
+  screenWidth: number;
+  activeDetail: ActiveDetail | null;
+  setActiveDetail: (detail: ActiveDetail | null) => void;
+  pageState: PageState;
+  updatePageState: (updater: Partial<PageState> | ((prev: PageState) => PageState)) => void;
+  persistScrollPosition: (key: string, scrollY: number) => void;
+  getScrollPosition: (key: string) => number;
+}
+
+const SectionContext = createContext<SectionContextType | undefined>(undefined);
+
+// Core default layouts for flagged routes in Kylrix
+const DEFAULT_LAYOUTS: Record<string, PanelType[]> = {
+  '/app': ['note', 'huddles', 'projects'],
+  '/tags': ['note', 'huddles', 'projects'],
+  '/idea': ['tags', 'huddles', 'projects'],
+  '/goals': ['forms', 'huddles', 'projects'],
+  '/flows': ['forms', 'huddles', 'projects'],
+  '/forms': ['projects', 'huddles', 'goals'],
+  '/events': ['note', 'huddles', 'goals'],
+  '/vault': ['note', 'totp', 'projects'],
+  '/vault/totp': ['secrets', 'secret_chat'],
+  '/send': ['stash'],
+};
+
+import { getSettings, updateSettings, createSettings } from '@/lib/appwrite/note';
+
+export function SectionProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [activeDetail, setActiveDetail] = useState<ActiveDetail | null>(null);
+  const { user } = useAuth();
+
+  const [pageState, setPageState] = useState<PageState>({
+    activeDetail: null,
+    scrollPositions: {},
+    activeDrawers: {},
+    routePaths: {},
+    extra: {},
+  });
+
+  const updatePageState = useCallback((updater: Partial<PageState> | ((prev: PageState) => PageState)) => {
+    setPageState(prev => (typeof updater === 'function' ? updater(prev) : { ...prev, ...updater }));
+  }, []);
+
+  const persistScrollPosition = useCallback((key: string, scrollY: number) => {
+    setPageState(prev => ({
+      ...prev,
+      scrollPositions: { ...prev.scrollPositions, [key]: scrollY },
+    }));
+  }, []);
+
+  const getScrollPosition = useCallback((key: string) => {
+    return pageState.scrollPositions[key] || 0;
+  }, [pageState.scrollPositions]);
+
+  const handleSetActiveDetail = useCallback((detail: ActiveDetail | null) => {
+    setActiveDetail(detail);
+    updatePageState({ activeDetail: detail });
+  }, [updatePageState]);
+
+  // Sync cloud pageState to local state when user logs in
+  useEffect(() => {
+    if (!user?.$id) return;
+
+    const loadCloudState = async () => {
+      try {
+        const userId = user.$id;
+        const row = await getSettings(userId);
+        if (row && row.settings) {
+          const config = JSON.parse(row.settings);
+          if (config.pageState) {
+            setPageState(prev => {
+              const merged = {
+                ...prev,
+                ...config.pageState,
+                scrollPositions: { ...prev.scrollPositions, ...config.pageState.scrollPositions },
+                activeDrawers: { ...prev.activeDrawers, ...config.pageState.activeDrawers },
+                routePaths: { ...prev.routePaths, ...config.pageState.routePaths },
+                extra: { ...prev.extra, ...config.pageState.extra },
+              };
+              return merged;
+            });
+            if (config.pageState.activeDetail) {
+              setActiveDetail(config.pageState.activeDetail);
+            }
+          }
+        }
+      } catch (_err) {
+        // Safe to ignore
+      }
+    };
+    loadCloudState();
+  }, [user?.$id]);
+
+  // Debounced cloud sync of pageState
+  useEffect(() => {
+    if (!user?.$id) return;
+
+    const handler = setTimeout(async () => {
+      try {
+        const userId = user.$id;
+        let existingConfig: any = {};
+        try {
+          const row = await getSettings(userId);
+          existingConfig = row.settings ? JSON.parse(row.settings) : {};
+        } catch {
+          // Row doesn't exist
+        }
+
+        existingConfig.pageState = pageState;
+
+        try {
+          await updateSettings(userId, { settings: JSON.stringify(existingConfig) });
+        } catch {
+          await createSettings({
+            userId,
+            settings: JSON.stringify(existingConfig)
+          });
+        }
+      } catch (err) {
+        console.error('Failed to sync page state to cloud:', err);
+      }
+    }, 1500);
+
+    return () => clearTimeout(handler);
+  }, [pageState, user?.$id]);
+
+  // Restore initial active detail on mount
+  useEffect(() => {
+    if (pageState.activeDetail) {
+      setActiveDetail(pageState.activeDetail);
+    }
+  }, []);
+  
+  const [overrides, setOverrides] = useState<Record<string, Partial<SectionConfig>>>({});
+
+  // Mobile-first default — never SSR a desktop multi-column shell that squishes content.
+  const [screenWidth, setScreenWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 390);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close details panel automatically on path navigation for a calm experience
+  const lastPathnameRef = useRef(pathname);
+  useEffect(() => {
+    if (lastPathnameRef.current !== pathname) {
+      lastPathnameRef.current = pathname;
+      handleSetActiveDetail(null);
+    }
+  }, [pathname, handleSetActiveDetail]);
+
+  const updateRouteOverride = useCallback((route: string, override: Partial<SectionConfig>) => {
+    setOverrides((prev) => ({ ...prev, [route]: { ...prev[route], ...override } }));
+  }, []);
+
+  const resetOverrides = useCallback(() => {
+    setOverrides({});
+  }, []);
+
+  // Intelligent fallback: auto-partitions data/sections for non-configured routes
+  const analyzeAndPartitionRoute = useCallback((route: string): PanelType[] => {
+    let cleanRoute = route.split('?')[0];
+    if (cleanRoute.length > 1 && cleanRoute.endsWith('/')) {
+      cleanRoute = cleanRoute.slice(0, -1);
+    }
+
+    // /send: stash history only — no notes, vault, or huddles in the sidebar
+    if (cleanRoute.startsWith('/send')) {
+      return ['stash'];
+    }
+
+    // Workspace share link /workspace/[id] redirects to /app — no dedicated layout
+    if (cleanRoute.startsWith('/workspace/')) {
+      return ['note', 'huddles', 'goals'];
+    }
+
+    // Default dynamic fallback
+    if (cleanRoute.includes('settings')) {
+      return ['totp'];
+    }
+
+    return ['note', 'projects'];
+  }, []);
+
+  // Computes the dynamic layout depending on screen width and route preferences
+  const getLayoutForRoute = useCallback((route: string): SectionConfig => {
+    let cleanRoute = route.split('?')[0];
+    if (cleanRoute.length > 1 && cleanRoute.endsWith('/')) {
+      cleanRoute = cleanRoute.slice(0, -1);
+    }
+    const userOverride = overrides[cleanRoute];
+
+    // Find predefined panels or fetch dynamic partition fallback
+    const routePanels = DEFAULT_LAYOUTS[cleanRoute] || analyzeAndPartitionRoute(cleanRoute);
+
+    // Dynamic Section breakdown according to screen real estate
+    let columnsCount = 2;
+    let sections: SectionConfig['sections'] = [];
+
+    if (screenWidth < 900) {
+      // Mobile / narrow tablet: single column — never reserve empty sidebar tracks
+      columnsCount = 1;
+      sections = [{ id: 'original', type: 'original', width: '1fr' }];
+    } else if (screenWidth >= 900 && screenWidth < 1440) {
+      // Laptop: Standard 2-column sidebar layout
+      columnsCount = 2;
+      sections = [
+        { id: 'original', type: 'original', width: '1fr' },
+        { id: 'sidebar-1', type: 'panel', width: '320px', panels: routePanels },
+      ];
+    } else if (screenWidth >= 1440 && screenWidth < 1920) {
+      // Ultra-Wide Desktop: 3-column screen partition
+      columnsCount = 3;
+      // Extract the first panel into its own column, keep rest in column 3
+      const firstPanel = routePanels[0] ? [routePanels[0]] : [];
+      const remainingPanels = routePanels.slice(1);
+      
+      sections = [
+        { id: 'original', type: 'original', width: '1fr' },
+        { id: 'column-first', type: 'panel', width: '310px', panels: firstPanel },
+        { id: 'column-rest', type: 'panel', width: '310px', panels: remainingPanels },
+      ];
+    } else {
+      // Double Ultra-Wide: 4-column display setup
+      columnsCount = Math.min(4, routePanels.length + 1);
+      sections = [{ id: 'original', type: 'original', width: '1fr' }];
+      
+      // Auto-partition each panel to its own dedicated column
+      routePanels.slice(0, 3).forEach((panel, index) => {
+        sections.push({
+          id: `column-dedicated-${index}`,
+          type: 'panel',
+          width: '300px',
+          panels: [panel]
+        });
+      });
+    }
+
+    // Apply any active overrides
+    const finalConfig = {
+      columnsCount: userOverride?.columnsCount ?? columnsCount,
+      sections: userOverride?.sections ?? sections};
+
+    return finalConfig;
+    }, [overrides, screenWidth, analyzeAndPartitionRoute]);
+
+  const contextValue = useMemo<SectionContextType>(() => ({
+    getLayoutForRoute,
+    updateRouteOverride,
+    resetOverrides,
+    screenWidth,
+    activeDetail,
+    setActiveDetail: handleSetActiveDetail,
+    pageState,
+    updatePageState,
+    persistScrollPosition,
+    getScrollPosition
+  }), [screenWidth, activeDetail, handleSetActiveDetail, pageState, updatePageState, persistScrollPosition, getScrollPosition, getLayoutForRoute, updateRouteOverride, resetOverrides]);
+
+  return (
+    <SectionContext.Provider value={contextValue}>
+      {children}
+    </SectionContext.Provider>
+  );
+}
+
+export function useSection() {
+  const context = useContext(SectionContext);
+  if (!context) {
+    throw new Error('useSection must be used within a SectionProvider');
+  }
+  return context;
+}
+
+// ---------------------------------------------------------
+// REUSABLE CONTAINERS FOR ROUTE-LEVEL INTEGRATION
+// ---------------------------------------------------------
+
+/**
+ * NoteDetailContainer
+ * Stateful plugin on the notes live copy — no open-path getNote.
+ */
+function NoteDetailContainer({
+  noteId,
+  onBack,
+  seed = null}: {
+  noteId: string;
+  onBack: () => void;
+  seed?: Notes | null;
+}) {
+  const { showSuccess, showError } = useToast();
+  const { setCachedData, invalidate, getCachedData } = useDataNexus();
+  const { notes, pushLiveNote, removeNote } = useNotes();
+
+  const liveNote = useMemo(() => {
+    const fromLive = (notes || []).find((n) => n.$id === noteId);
+    if (fromLive) return fromLive;
+    if (seed?.$id === noteId) return seed;
+    return getCachedData<Notes>(`note_${noteId}`) || null;
+  }, [notes, noteId, seed, getCachedData]);
+
+  // Seed live copy from card/cache once — network hydrate belongs to NotesContext sync.
+  useEffect(() => {
+    if (!noteId) return;
+    if ((notes || []).some((n) => n.$id === noteId)) return;
+    const seedNote = (seed?.$id === noteId ? seed : null) || getCachedData<Notes>(`note_${noteId}`);
+    if (!seedNote?.$id) return;
+    pushLiveNote(seedNote);
+    setCachedData(`note_${noteId}`, seedNote);
+  }, [noteId, notes, seed, pushLiveNote, setCachedData, getCachedData]);
+
+  const handleUpdate = useCallback(
+    (updated: Notes) => {
+      // Sidebar already pushLiveNote'd; keep per-id cache aligned.
+      if (updated?.$id) setCachedData(`note_${updated.$id}`, updated);
+    },
+    [setCachedData],
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await deleteNote(id);
+        removeNote(id);
+        invalidate(`note_${id}`);
+        showSuccess('Deleted', 'Note removed');
+        onBack();
+      } catch {
+        showError('Delete failed', 'Could not delete the note.');
+      }
+    },
+    [invalidate, onBack, removeNote, showError, showSuccess],
+  );
+
+  if (!liveNote) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 8, height: '100%' }}>
+        <Typography color="text.secondary">
+          {noteId ? 'Opening note…' : 'Note not found.'}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ height: '100%', overflowY: 'auto', p: 3 }}>
+      <NoteDetailSidebar
+        note={liveNote}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+        onBack={onBack}
+        showExpandButton={false}
+        showHeaderDeleteButton={false}
+      />
+      <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ p: 2, bgcolor: alpha('#161412', 0.02), borderRadius: '24px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+          <NoteReactions targetId={noteId} />
+        </Box>
+        <Box sx={{ p: 2, bgcolor: alpha('#161412', 0.02), borderRadius: '24px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+          <CommentsSection noteId={noteId} />
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * ChatDetailContainer
+ * Unified loader for Chats / Huddle chats thread routing inside E2E and public flows.
+ */
+function ChatDetailContainer({ conversationId, onBack }: { conversationId: string; onBack: () => void }) {
+  return (
+    <Box sx={{ pointerEvents: 'auto', height: '100%' }}>
+      <ChatWindow conversationId={conversationId} onBack={onBack} />
+    </Box>
+  );
+}
+
+/**
+ * DetailSectionWrapper
+ * Maps dynamic detail types to unified responsive components.
+ */
+function DetailSectionWrapper({ detail, onClose }: { detail: ActiveDetail; onClose: () => void }) {
+  switch (detail.type) {
+    case 'note':
+      return <NoteDetailContainer noteId={detail.id} seed={detail.data || null} onBack={onClose} />;
+    case 'goal':
+      return <GoalObjectDetail taskId={detail.id} onClose={onClose} embedded />;
+    case 'event':
+      return <EventDetails eventId={detail.id} initialData={detail.data} onBack={onClose} />;
+    case 'form':
+      return <FormDetail formId={detail.id} onClose={onClose} />;
+    case 'secret':
+      return <CredentialDetail credential={detail.data} onClose={onClose} isMobile={false} inline={true} />;
+    case 'tag':
+      return (
+        <TagNotesListSidebar
+          tag={detail.data}
+          onBack={onClose}
+          onNoteUpdate={() => {}}
+          onNoteDelete={() => {}}
+        />
+      );
+    case 'chat':
+      return <ChatDetailContainer conversationId={detail.id} onBack={onClose} />;
+    default:
+      return null;
+  }
+}
+
+/**
+ * GlobalDetailDrawer
+ * 100dvh full-screen drawer overlay representing target screens.
+ * Overlays EVERYTHING including Topbar.
+ */
+function GlobalDetailDrawer({ activeDetail, onClose }: { activeDetail: ActiveDetail | null; onClose: () => void }) {
+  const isOpen = activeDetail !== null;
+
+  return (
+    <Drawer
+      anchor="bottom"
+      open={isOpen}
+      onClose={onClose}
+      variant="temporary"
+      ModalProps={{
+        keepMounted: false,
+        disablePortal: true}}
+      PaperProps={{
+        sx: {
+          height: '100dvh',
+          width: '100%',
+          bgcolor: '#000000',
+          backgroundImage: 'none',
+          boxShadow: 'none',
+          boxSizing: 'border-box',
+          overflowY: 'auto',
+          zIndex: 9999, // Overlay Topbar
+        }
+      }}
+    >
+      {activeDetail && (
+        <Box sx={{ height: '100%', position: 'relative', bgcolor: '#000000' }}>
+          <DetailSectionWrapper detail={activeDetail} onClose={onClose} />
+        </Box>
+      )}
+    </Drawer>
+  );
+}
+
+// ---------------------------------------------------------
+// MAIN CONTAINER COMPONENT
+// ---------------------------------------------------------
+
+interface MultiSectionContainerProps {
+  children: React.ReactNode;
+  panels?: PanelType[];
+  contextId?: string;
+}
+
+export function MultiSectionContainer({ children, panels}: MultiSectionContainerProps) {
+  const pathname = usePathname();
+  const { getLayoutForRoute, activeDetail, setActiveDetail } = useSection();
+
+  // Desktop (>=768px) embeds details in native right sidebar column below topbar.
+  // Mobile (<768px) uses full-screen drawer overlay.
+  const isFullScreenDetail = useMemo(() => {
+    if (!activeDetail) return false;
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return true;
+    }
+    return false;
+  }, [activeDetail]);
+
+  const showSideRail = Boolean(activeDetail && !isFullScreenDetail);
+
+  const layout = useMemo(() => {
+    if (!showSideRail) {
+      return {
+        columnsCount: 1,
+        sections: [{ id: 'original', type: 'original' as const, width: '1fr' }],
+      };
+    }
+
+    const calculated = getLayoutForRoute(pathname);
+    if (panels && calculated.columnsCount > 1) {
+      if (calculated.columnsCount === 2) {
+        calculated.sections[1].panels = panels;
+      } else if (calculated.columnsCount === 3) {
+        calculated.sections[1].panels = [panels[0]];
+        calculated.sections[2].panels = panels.slice(1);
+      } else if (calculated.columnsCount === 4) {
+        calculated.sections[1].panels = [panels[0]];
+        calculated.sections[2].panels = [panels[1]];
+        if (calculated.sections[3]) {
+          calculated.sections[3].panels = [panels[2]];
+        }
+      }
+    }
+    return calculated;
+  }, [pathname, getLayoutForRoute, panels, showSideRail]);
+
+  // Compute CSS Grid columns style
+  const gridTemplateColumns = useMemo(() => {
+    return layout.sections.map(s => s.width).join(' ');
+  }, [layout]);
+
+  if (layout.columnsCount === 1) {
+    return (
+      <Box sx={{ width: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
+        {children}
+        <GlobalDetailDrawer activeDetail={activeDetail} onClose={() => setActiveDetail(null)} />
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ position: 'relative', width: '100%' }}>
+      <Box 
+        sx={{ 
+          display: 'grid', 
+          // Always single track under md for a calm, consistent layout
+          gridTemplateColumns: { xs: '1fr', md: gridTemplateColumns },
+          gap: { xs: 0, md: 4 }, 
+          alignItems: 'flex-start',
+          width: '100%',
+          maxWidth: '100%',
+          margin: '0 auto',
+          px: { xs: 1, lg: 2, xl: 3 },
+          boxSizing: 'border-box'
+        }}
+      >
+        {layout.sections.map((section, index) => {
+          if (section.type === 'original') {
+            return (
+              <Box key={section.id} sx={{ minWidth: 0, width: '100%', gridColumn: { xs: '1 / -1', md: 'auto' } }}>
+                {children}
+              </Box>
+            );
+          }
+
+          const isRightmostPanel = index === layout.sections.length - 1;
+          const hasDetail = isRightmostPanel && activeDetail && !isFullScreenDetail;
+
+          if (!hasDetail && (!section.panels || section.panels.length === 0)) return null;
+
+          return (
+            <Box 
+              key={section.id} 
+              sx={{ 
+                display: { xs: 'none', md: 'block' },
+                position: 'sticky',
+                top: '108px',
+                height: 'auto',
+                maxHeight: 'calc(100vh - 120px)',
+                overflowY: 'hidden',
+                width: section.width || '380px',
+                minWidth: section.width || '380px',
+                boxSizing: 'border-box'
+              }}
+            >
+              {hasDetail ? (
+                <Box sx={{ 
+                  height: '100%', 
+                  bgcolor: '#161412', 
+                  border: '1px solid rgba(255,255,255,0.08)', 
+                  borderRadius: '26px',
+                  overflow: 'hidden'
+                }}>
+                  <DetailSectionWrapper detail={activeDetail} onClose={() => setActiveDetail(null)} />
+                </Box>
+              ) : null}
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* Full-screen detail overlay (z-index 9999) */}
+      {isFullScreenDetail && (
+        <GlobalDetailDrawer activeDetail={activeDetail} onClose={() => setActiveDetail(null)} />
+      )}
+    </Box>
+  );
+}

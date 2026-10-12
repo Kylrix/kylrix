@@ -1,0 +1,1858 @@
+'use client';
+
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Notes } from '@/types/appwrite';
+
+import { AgenticDiffViewer } from '@/components/agentic/AgenticDiffViewer';
+import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
+
+import {
+  Trash2 as TrashIcon,
+  ExternalLink as OpenIcon,
+  Pin as PinIcon,
+  EyeOff as EyeOffIcon,
+  ArrowLeft as BackIcon,
+  Link2 as LinkIcon,
+  X as CloseIcon,
+  Sparkles as ActionIcon,
+  CheckSquare as TaskIcon,
+  Copy as CopyIcon,
+  Tag as TagIcon,
+  Plus,
+  Clipboard,
+  MoreVertical,
+  Zap,
+} from 'lucide-react';
+import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
+
+import { 
+  Drawer, 
+  Box, 
+  Typography, 
+  Stack, 
+  IconButton, 
+  List, 
+  ListItem, 
+  ListItemButton, 
+  ListItemText,
+  alpha 
+} from '@/lib/openbricks/primitives';
+import { useTask } from '@/context/TaskContext';
+import { useToast } from '@/components/ui/Toast';
+import { useSudo } from '@/context/SudoContext';
+import { useInstantNoteInput } from '@/lib/note/useInstantNoteInput';
+import { BareMetalInput } from '@/components/ui/BareMetalInput';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { exportToMarkdown, exportToPDF, exportToDOCX } from '@/lib/utils/export';
+import { useAuth } from '@/lib/auth';
+import { getUserSubscriptionTier } from '@/lib/utils';
+import { userCanUseProjects } from '@/lib/projects/feature-gate-client';
+import { IdentityAvatar } from '@/components/common/IdentityBadge';
+import { useNotes } from '@/context/NotesContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { isEphemeralComposeNoteId } from '@/lib/notes/compose-draft-registry';
+import { useDataNexus } from '@/context/DataNexusContext';
+import { useSection } from '@/context/SectionContext';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
+import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
+import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
+import { 
+  listFlowTasks, 
+  listFlowEvents, 
+  listKeepCredentials, 
+  Query, 
+  toggleNoteVisibility, 
+  rotatePublicNoteLink, 
+  getShareableUrl, 
+  getCurrentPublicNoteShareUrl, 
+  getNotePublicState, 
+  decryptPublicEncryptedNote
+} from '@/lib/appwrite';
+import { convertNoteToGoalAgentic } from '@/lib/ai-actions';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { StorageService } from '@/lib/services/storage';
+import { ShareLockButton } from '@/components/share/ShareLockButton';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { isValidAppwriteRowId } from '@/lib/utils/resource-ids';
+import { attachObject } from '@/lib/actions/client-ops';
+import ProjectLinker from '@/components/projects/ProjectLinker';
+import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
+import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
+import {
+  getRemovedObjectBlocks,
+  serializeObjectBlock,
+  type ParsedObjectBlock} from '@/lib/note-object-secondary';
+import { storage } from '@/lib/appwrite/client';
+import CommentsSection from '@/app/(app)/app/(app)/notes/Comments';
+
+export type NoteAccessRole = 'owner' | 'write-collab' | 'read-collab' | 'guest' | 'public';
+
+export interface NoteDetailSidebarProps {
+  note: Notes;
+  onUpdate: (updatedNote: Notes) => void;
+  onDelete: (noteId: string) => void;
+  onClose?: () => void;
+  onBack?: () => void;
+  layout?: 'page' | 'drawer';
+  showExpandButton?: boolean;
+  showHeaderDeleteButton?: boolean;
+  isLoading?: boolean;
+  /** When true, hides all write/edit/delete controls and forces preview mode */
+  readOnly?: boolean;
+  /** The resolved access role for this viewer */
+  accessRole?: NoteAccessRole;
+  /** Decryption key for encrypted note comments if available */
+  decryptionKey?: string;
+}
+
+export function NoteDetailSidebar({
+  note,
+  onUpdate,
+  onDelete,
+  onClose,
+  onBack,
+  layout = 'drawer',
+  showExpandButton = true,
+  showHeaderDeleteButton = true,
+  isLoading: _isLoading = false,
+  readOnly: readOnlyProp = false,
+  accessRole,
+  decryptionKey}: NoteDetailSidebarProps) {
+  const { open: openUnified } = useUnifiedDrawer();
+  const { openProUpgrade } = useProUpgrade();
+  const { user } = useAuth();
+  const { promptSudo } = useSudo();
+  const { setIsDrawerOpen } = useDrawerState();
+  const { showSuccess, showError } = useToast();
+  const { closeSidebar } = useDynamicSidebar();
+  const { closeOverlay } = useOverlay();
+  const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
+  const { ecosystemTags, refreshEcosystemTags } = useTask();
+  const { persistScrollPosition, getScrollPosition } = useSection();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const { setCachedData } = useDataNexus();
+  const { activeWorkspace } = useWorkspace();
+  const isWorkspaceReadOnly = Boolean(
+    activeWorkspace &&
+      !activeWorkspace.isPersonal &&
+      (activeWorkspace.role === 'viewer' ||
+        (!activeWorkspace.role && (activeWorkspace.isPublic || activeWorkspace.isShared))) &&
+      activeWorkspace.role !== 'owner' &&
+      activeWorkspace.role !== 'admin' &&
+      activeWorkspace.role !== 'editor' &&
+      activeWorkspace.role !== 'member'
+  );
+  const readOnly = readOnlyProp || isWorkspaceReadOnly;
+  const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote, registerComposeSession } = useNotes();
+  const isPinnedFunc = useMemo(() => typeof isPinned === 'function' ? isPinned : () => false, [isPinned]);
+  const pinNoteFunc = useMemo(() => typeof pinNote === 'function' ? pinNote : async () => {}, [pinNote]);
+  const unpinNoteFunc = useMemo(() => typeof unpinNote === 'function' ? unpinNote : async () => {}, [unpinNote]);
+  const noteRef = useRef(note);
+  const allNotesRef = useRef<Notes[]>([]);
+  /** Single source of truth: NotesContext local copy; prop is only a fallback seed. */
+  const liveNote = useMemo(
+    () => (allNotes || []).find((candidate: any) => candidate.$id === note.$id) || note,
+    [allNotes, note]
+  );
+  const awaitingLocalCopy = useMemo(() => {
+    if (!note?.$id || isEphemeralComposeNoteId(note.$id)) return false;
+    const inContext = (allNotes || []).some((candidate) => candidate.$id === note.$id);
+    if (inContext) return false;
+    // Prop may already carry a seed (card / idea page). Only wait when we truly have an empty stub.
+    const hasSeedBody = Boolean(String(note.title || '').trim() || String(note.content || '').trim());
+    return !hasSeedBody;
+  }, [allNotes, note]);
+
+  useEffect(() => {
+    allNotesRef.current = Array.isArray(allNotes) ? allNotes : [];
+  }, [allNotes]);
+
+  // Realtime: detail view subscribes via LocalEngine — creator edits pull instantly while user looks at it
+  useEffect(() => {
+    if (!note?.$id || readOnly) return;
+    if ((note as any).isTrash === true || (note as any).isDeleted === true) {
+      onDelete?.(note.$id);
+      onClose?.();
+      return;
+    }
+    let unsub: (() => void) | null = null;
+    void (async () => {
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      const channel = `databases.${APPWRITE_CONFIG.DATABASE_ID}.collections.${APPWRITE_CONFIG.TABLES.NOTES}.documents.${note.$id}`;
+      unsub = await LocalEngine.subscribeRealtime(channel, (payload: any) => {
+        if (payload?.$id === note.$id) {
+          if (payload.isTrash === true || payload.isDeleted === true) {
+            onDelete?.(payload.$id);
+            onClose?.();
+            return;
+          }
+          updateLocalAndParentNote(payload as Notes);
+          try {
+            autonomicSyncEngine.markConfirmed(payload.$id);
+          } catch {}
+        }
+      });
+    })();
+    return () => { try { unsub?.(); } catch {} };
+  }, [note?.$id, readOnly, onUpdate, onDelete, onClose]);
+
+  // Restore scroll once per note id — not on every liveNote update to avoid jitter
+  const hasRestoredScrollRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!scrollContainerRef.current || !liveNote?.$id) return;
+    if (hasRestoredScrollRef.current === liveNote.$id) return;
+    hasRestoredScrollRef.current = liveNote.$id;
+    const saved = getScrollPosition(`note_detail:${liveNote.$id}`);
+    // Use rAF to avoid layout thrash during initial mount; do not re-apply on content/attachment re-renders
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = saved;
+    });
+  }, [liveNote?.$id, getScrollPosition]);
+
+  const updateLocalAndParentNote = useCallback((updated: Notes) => {
+    if (updated?.$id) {
+      const existing = liveNoteRef.current;
+      const targetProjectId = (updated as any).projectId || (existing as any)?.projectId || undefined;
+      const isExplicitPersonal = targetProjectId === 'inbox' || targetProjectId === 'personal' || targetProjectId === 'default';
+      const isWorkspace = !isExplicitPersonal && (
+        (updated as any).isWorkspace === true ||
+        (existing as any)?.isWorkspace === true ||
+        Boolean(targetProjectId && !isExplicitPersonal)
+      );
+      const safeUpdated = {
+        ...existing,
+        ...updated,
+        projectId: isExplicitPersonal ? undefined : targetProjectId,
+        isWorkspace: isExplicitPersonal ? false : isWorkspace,
+      } as Notes;
+      pushLiveNote(safeUpdated, { pending: false });
+      void setCachedData(`note_${safeUpdated.$id}`, safeUpdated);
+      onUpdate(safeUpdated);
+      return;
+    }
+    onUpdate(updated);
+  }, [onUpdate, pushLiveNote, setCachedData]);
+
+  useEffect(() => {
+    noteRef.current = note;
+  }, [note]);
+
+  const { markDirty, getLastEditAt, resetEditClock } = useInstantNoteInput(liveNote.$id, readOnly);
+
+  // Seed local copy once per id when sync has not delivered it yet (no network in detail).
+  useEffect(() => {
+    const seed = noteRef.current;
+    if (!seed?.$id || isEphemeralComposeNoteId(seed.$id)) return;
+    const exists = allNotesRef.current.some((candidate) => candidate.$id === seed.$id);
+    if (!exists) {
+      pushLiveNote(seed, { pending: false });
+      void setCachedData(`note_${seed.$id}`, seed);
+    }
+  }, [note.$id, pushLiveNote, setCachedData]);
+
+  useEffect(() => {
+    if (liveNote?.$id) {
+      void refreshEcosystemTags();
+      autonomicSyncEngine.requestObjectFreshness('note', liveNote.$id, (refreshed) => {
+        // Guarded freshness: never clobber local dirty typing (pending queue is SoT)
+        const lastEdit = getLastEditAt();
+        const isDirty = Date.now() - lastEdit < 2500;
+        const remoteNewer = new Date(refreshed.$updatedAt || refreshed.updatedAt || 0).getTime() > new Date(liveNoteRef.current.$updatedAt || liveNoteRef.current.updatedAt || 0).getTime();
+        if (isDirty) return;
+        if (!remoteNewer) return;
+        // Only update if not currently focused typing
+        if (typeof document !== 'undefined' && document.hasFocus() && (
+          document.activeElement?.tagName === 'INPUT' ||
+          document.activeElement?.tagName === 'TEXTAREA' ||
+          document.activeElement?.closest?.('.cm-content') ||
+          document.activeElement?.closest?.('.kylrix-cm-container')
+        )) {
+          // Defer to next blur
+          return;
+        }
+        resetEditClock();
+        updateLocalAndParentNote(refreshed);
+      });
+    }
+  }, [liveNote?.$id, refreshEcosystemTags, updateLocalAndParentNote, getLastEditAt, resetEditClock]);
+  
+  const noteMeta = useMemo(() => {
+    try {
+      return JSON.parse(liveNote.metadata || '{}');
+    } catch {
+      return {};
+    }
+  }, [liveNote.metadata]);
+
+  // REACTIVE VAULT STATUS
+  const [vaultUnlocked, setVaultUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
+  useEffect(() => {
+    return ecosystemSecurity.onStatusChange((s) => setVaultUnlocked(s.isUnlocked));
+  }, []);
+
+  const { openFileDrawer } = useUnifiedFileDrawer();
+
+  const liveNoteRef = useRef(liveNote);
+  liveNoteRef.current = liveNote;
+
+  const [title, setTitle] = useState(liveNote.title || '');
+  const [content, setContent] = useState(liveNote.content || '');
+  const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
+  const [isPublic, _setIsPublic] = useState(getNotePublicState(liveNote));
+
+  // Guarded sync from liveNote -> local fields: never clobber dirty typing or focused textarea (cursor)
+  useEffect(() => {
+    const isDirty = Date.now() - getLastEditAt() < 2000;
+    if (isDirty) return;
+    // Never clobber while user is typing — preserves cursor/selection
+    const active = typeof document !== 'undefined' ? document.activeElement : null;
+    if (active === contentTextareaRef.current) return;
+    const isEditingInCM = Boolean(active && (active.closest?.('.cm-content') || active.closest?.('.kylrix-cm-container') || active.getAttribute?.('contenteditable') === 'true'));
+    if (isEditingInCM) return;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+      // Also guard title tag input focus
+      const titleActive = active.getAttribute?.('placeholder') === 'Untitled note';
+      if (titleActive) return;
+    }
+    setTitle(liveNote.title || '');
+    setContent(liveNote.content || '');
+    setTags(liveNote.tags?.join(', ') || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveNote.$id, liveNote.tags, liveNote.title, liveNote.content]);
+
+  // Hardcore instant handlers — flow.realtime-input-rxdb-sync (direct interception, no useEffect queue)
+  const handleTitleChange = useCallback((next: string) => {
+    if (readOnly) return;
+    setTitle(next);
+    const noteId = liveNoteRef.current?.$id;
+    if (!noteId) return;
+    registerComposeSession(noteId);
+    const draft: Notes = { ...liveNoteRef.current, title: next, $updatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Notes;
+    markDirty(draft);
+    onUpdate(draft);
+  }, [readOnly, registerComposeSession, markDirty, onUpdate]);
+
+  const pendingSelRef = useRef<{ start: number; end: number } | null>(null);
+  // Bare-metal content handler — no useLayoutEffect cursor restore needed for typing (uncontrolled DOM is SoT)
+  const handleContentChange = useCallback((next: string) => {
+    if (readOnly) return;
+    setContent(next);
+    const noteId = liveNoteRef.current?.$id;
+    if (!noteId) return;
+    registerComposeSession(noteId);
+    const draft: Notes = { ...liveNoteRef.current, content: next, $updatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Notes;
+    markDirty(draft);
+    onUpdate(draft);
+  }, [readOnly, registerComposeSession, markDirty, onUpdate]);
+
+  const handleTagsChange = useCallback((nextRaw: string) => {
+    if (readOnly) return;
+    setTags(nextRaw);
+    const noteId = liveNoteRef.current?.$id;
+    if (!noteId) return;
+    registerComposeSession(noteId);
+    const normalizedTags = nextRaw.split(',').map((t: string) => t.trim()).filter(Boolean);
+    const draft: Notes = { ...liveNoteRef.current, tags: normalizedTags as any, $updatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Notes;
+    markDirty(draft);
+    onUpdate(draft);
+  }, [readOnly, registerComposeSession, markDirty, onUpdate]);
+
+  const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
+  const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
+  const [_isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [_linkedTasks, setLinkedTasks] = useState<any[]>([]);
+  const [_isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [_linkedEvents, setLinkedEvents] = useState<any[]>([]);
+  const [_isLoadingSecrets, setIsLoadingSecrets] = useState(false);
+  const [_linkedSecrets, setLinkedSecrets] = useState<any[]>([]);
+
+  const [showRotateConfirm, setShowRotateConfirm] = useState(false);
+  const [showProjectLinker, setShowProjectLinker] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
+  const [_isCreatingTaskFromNote, _setIsCreatingTaskFromNote] = useState(false);
+  const [_crossSuggestions, setCrossSuggestions] = useState<any[]>([]);
+  const [_isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [isLocallyDecrypted, setIsLocallyDecrypted] = useState(false);
+  const [_attachedObjects, setAttachedObjects] = useState<any[]>([]);
+
+  // ENCRYPTION LOGIC
+  const isT4Encrypted = useMemo(
+    () =>
+      !!liveNote.dek ||
+      ((noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') &&
+        noteMeta?.encryptionVersion === 'T4'),
+    [noteMeta, liveNote.dek],
+  );
+  const isEncryptedNote = useMemo(() => isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted, [isT4Encrypted, noteMeta, isLocallyDecrypted]);
+  const shouldMaskEncrypted = useMemo(() => isEncryptedNote && !vaultUnlocked, [isEncryptedNote, vaultUnlocked]);
+
+
+
+  // Automatically heal T4 encrypted state if vault is unlocked
+  useEffect(() => {
+    if (isEncryptedNote && vaultUnlocked) {
+      const healDecryption = async () => {
+        try {
+          const decrypted = await decryptPublicEncryptedNote(liveNote);
+          if (decrypted) {
+            setTitle(decrypted.title || '');
+            setContent(decrypted.content || '');
+            setTags(decrypted.tags?.join(', ') || '');
+            setIsLocallyDecrypted(true);
+            updateLocalAndParentNote(decrypted);
+            showSuccess('Note decrypted', 'Content is now visible.');
+          }
+        } catch (err) {
+          console.error('[NoteSidebar] Auto-decryption failed:', err);
+        }
+      };
+      void healDecryption();
+    }
+  }, [isEncryptedNote, vaultUnlocked, liveNote, updateLocalAndParentNote, showSuccess]);
+
+  // Sync drawer state
+  useEffect(() => {
+    setIsDrawerOpen(showRotateConfirm);
+    return () => setIsDrawerOpen(false);
+  }, [showRotateConfirm, setIsDrawerOpen]);
+
+  // Automatically prompt for vault unlock if opening an encrypted note
+  useEffect(() => {
+    if (isEncryptedNote && !vaultUnlocked) {
+      promptSudo();
+    }
+  }, [isEncryptedNote, vaultUnlocked, promptSudo]);
+
+  // Linked Content Effects
+  const noteLinks = liveNote as Notes & {
+    linkedTaskIds?: string[] | null;
+    linkedTaskId?: string | null;
+    linkedEventIds?: string[] | null;
+    linkedEventId?: string | null;
+    linkedCredentialIds?: string[] | null;
+    linkedCredentialId?: string | null;
+  };
+  const linkedTaskIds = useMemo(() => noteLinks.linkedTaskIds || (noteLinks.linkedTaskId ? [noteLinks.linkedTaskId] : []), [noteLinks]);
+  const linkedEventIds = useMemo(() => noteLinks.linkedEventIds || (noteLinks.linkedEventId ? [noteLinks.linkedEventId] : []), [noteLinks]);
+  const linkedCredentialIds = useMemo(() => noteLinks.linkedCredentialIds || (noteLinks.linkedCredentialId ? [noteLinks.linkedCredentialId] : []), [noteLinks]);
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (!linkedTaskIds.length) { setLinkedTasks([]); return; }
+      setIsLoadingTasks(true);
+      try {
+        const resolved = await Promise.all(linkedTaskIds.map((id: string) => 
+          getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'tasks', rowId: id },
+          () => listFlowTasks([Query.equal('$id', id)]).then(res => res.rows[0] || null))
+        ));
+        setLinkedTasks(resolved.filter(Boolean));
+      } finally { setIsLoadingTasks(false); }
+    };
+    fetchTasks();
+  }, [linkedTaskIds]);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      if (!linkedEventIds.length) { setLinkedEvents([]); return; }
+      setIsLoadingEvents(true);
+      try {
+        const resolved = await Promise.all(linkedEventIds.map((id: string) => 
+          getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'events', rowId: id },
+          () => listFlowEvents([Query.equal('$id', id)]).then(res => res.rows[0] || null))
+        ));
+        setLinkedEvents(resolved.filter(Boolean));
+      } finally { setIsLoadingEvents(false); }
+    };
+    fetchEvents();
+  }, [linkedEventIds]);
+
+  useEffect(() => {
+    const fetchSecrets = async () => {
+      if (!linkedCredentialIds.length) { setLinkedSecrets([]); return; }
+      setIsLoadingSecrets(true);
+      try {
+        const resolved = await Promise.all(linkedCredentialIds.map((id: string) => 
+          getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.VAULT, tableId: 'credentials', rowId: id },
+          () => listKeepCredentials([Query.equal('$id', id)]).then(res => res.rows[0] || null))
+        ));
+        setLinkedSecrets(resolved.filter(Boolean));
+      } finally { setIsLoadingSecrets(false); }
+    };
+    fetchSecrets();
+  }, [linkedCredentialIds]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchCollaborators = async () => {
+      if (!liveNote.$id || !isValidAppwriteRowId(liveNote.$id)) return;
+      setIsLoadingCollaborators(true);
+      try {
+        const { getResourceCollaborators } = await import('@/lib/actions/client-ops');
+        const { collaborators } = await getResourceCollaborators({ resourceId: liveNote.$id, resourceType: 'note' });
+        if (active) setCollaboratorProfiles(collaborators);
+      } catch (err) {
+        console.error('Failed to fetch collaborators:', err);
+      } finally {
+        if (active) setIsLoadingCollaborators(false);
+      }
+    };
+    fetchCollaborators();
+    return () => { active = false; };
+  }, [liveNote.$id]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchObjects = async () => {
+      if (!liveNote.$id) return;
+      try {
+        const { getObjectsByParent } = await import('@/lib/actions/client-ops');
+        const rows = await getObjectsByParent(liveNote.$id, 'note');
+        if (active) setAttachedObjects(rows);
+      } catch (err) {
+        console.warn('[NoteDetailSidebar] Failed to load attached objects:', err);
+      }
+    };
+    fetchObjects();
+    return () => { active = false; };
+  }, [liveNote.$id]);
+
+  const getCursorLineNumber = useCallback(() => {
+    const textarea = contentTextareaRef.current;
+    if (!textarea) return 1;
+    const value = textarea.value;
+    const selectionStart = textarea.selectionStart;
+    const beforeCursor = value.substring(0, selectionStart);
+    return beforeCursor.split('\n').length;
+  }, []);
+
+  // hasCollaborators kept for external consumers if needed (no longer gates realtime)
+  const _hasCollaborators = useMemo(() => collaboratorProfiles.length > 0, [collaboratorProfiles]);
+
+
+
+  useEffect(() => {
+    let active = true;
+    const fetchSuggest = async () => {
+      if (!liveNote.$id) return;
+      setIsLoadingSuggestions(true);
+      try {
+        const { getCrossSuggestions } = await import('@/lib/actions/client-ops');
+        const data = await getCrossSuggestions({
+          sourceApp: 'note',
+          sourceType: 'note',
+          sourceId: liveNote.$id
+        });
+        if (active) setCrossSuggestions(data?.suggestions || []);
+      } finally { if (active) setIsLoadingSuggestions(false); }
+    };
+    fetchSuggest();
+    return () => { active = false; };
+  }, [liveNote.$id]);
+
+  // Handlers
+  const handlePinToggle = useCallback(async () => {
+    const pinned = isPinnedFunc(liveNote.$id);
+    try {
+      if (pinned) await unpinNoteFunc(liveNote.$id);
+      else await pinNoteFunc(liveNote.$id);
+      showSuccess(pinned ? 'Note unpinned' : 'Note pinned');
+    } catch (err: any) {
+      if (err.message?.includes('limit reached')) {
+        openProUpgrade('Pinned Notes');
+        return;
+      }
+      showError('Failed to update pin');
+    }
+  }, [isPinnedFunc, liveNote.$id, unpinNoteFunc, pinNoteFunc, showSuccess, openProUpgrade, showError]);
+
+  const handleTogglePublic = useCallback(async () => {
+    try {
+      const updated = await toggleNoteVisibility(liveNote.$id);
+      if (updated) {
+        updateLocalAndParentNote(updated);
+        showSuccess(updated.isPublic ? 'Note is now Public' : 'Note is now Private');
+      }
+    } catch (err: any) {
+      if (err.message === 'VAULT_LOCKED') {
+        showError('Vault Locked', 'Unlock vault to change visibility.');
+        const unlocked = await promptSudo();
+        if (unlocked) handleTogglePublic();
+      } else {
+        showError('Failed to update visibility');
+      }
+    }
+  }, [liveNote.$id, toggleNoteVisibility, updateLocalAndParentNote, showSuccess, showError, promptSudo]);
+
+  const _rotateNoteLink = useCallback(() => setShowRotateConfirm(true), []);
+
+  const handleConfirmedRotate = useCallback(async () => {
+    setIsRotating(true);
+    try {
+      const unlocked = await promptSudo("unlock");
+      if (unlocked) {
+        const updated = await rotatePublicNoteLink(liveNote.$id);
+        if (updated) {
+          updateLocalAndParentNote(updated);
+          if (updated.decryptionKey) {
+            const shareUrl = getShareableUrl(liveNote.$id, updated.decryptionKey);
+            navigator.clipboard.writeText(shareUrl);
+          }
+          setShowRotateConfirm(false);
+        }
+      }
+    } catch (error: any) {
+      showError('Rotate Failed', error.message || 'Failed to rotate link.');
+    } finally {
+      setIsRotating(false);
+    }
+  }, [promptSudo, liveNote.$id, rotatePublicNoteLink, updateLocalAndParentNote, getShareableUrl, showSuccess, showError]);
+
+  const handleCopyShareLink = useCallback(async () => {
+    if (!isPublic) {
+      showError('Note is private', 'Make the note public before copying its link.');
+      return;
+    }
+
+    const url = isT4Encrypted
+      ? await getCurrentPublicNoteShareUrl(liveNote.$id, liveNote as any)
+      : getShareableUrl(liveNote.$id);
+
+    if (url) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      showError('Shared link unavailable', 'Could not resolve the shared note URL.');
+    }
+  }, [isPublic, isT4Encrypted, liveNote.$id, liveNote, getCurrentPublicNoteShareUrl, getShareableUrl, showSuccess, showError]);
+
+  const handleDelete = useCallback(() => {
+    onDelete(liveNote.$id);
+    closeSidebar();
+    closeOverlay();
+  }, [onDelete, liveNote.$id, closeSidebar, closeOverlay]);
+
+  const { setActiveDetail } = useSection();
+
+  const handleBackClick = useCallback(() => {
+    // Create persists on close; detail keeps compose session registered — sync engine flushes.
+    if (onBack) {
+      onBack();
+    }
+    closeSidebar();
+    closeOverlay();
+    setActiveDetail(null);
+  }, [onBack, closeSidebar, closeOverlay, setActiveDetail]);
+
+  const handleDismiss = useCallback(() => {
+    closeSidebar();
+  }, [closeSidebar]);
+
+  const _handleCreateTaskFromNote = useCallback(async () => {
+    _setIsCreatingTaskFromNote(true);
+    try {
+      const task = await convertNoteToGoalAgentic(liveNote as any);
+      if (task) {
+        updateLocalAndParentNote({ ...liveNote, linkedTaskId: task.$id } as any);
+        showSuccess('Goal created from note');
+      }
+    } catch (_err) {
+      showError('Failed to create goal');
+    } finally {
+      _setIsCreatingTaskFromNote(false);
+    }
+  }, [liveNote, updateLocalAndParentNote, showSuccess, showError]);
+
+  const _handleAddToProject = useCallback(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      showError('Switch to a workspace first');
+      return;
+    }
+    if (!userCanUseProjects(getUserSubscriptionTier(user))) {
+      openProUpgrade('Projects');
+      return;
+    }
+    openUnified('add-to-project', {
+      entityKind: 'note',
+      entityId: liveNote.$id,
+      entityTitle: liveNote.title || 'Note',
+      workspaceId: activeWorkspace.id,
+    });
+  }, [activeWorkspace, user, liveNote, openUnified, openProUpgrade, showError]);
+
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isContextDrawerOpen, setIsContextDrawerOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const m = window.matchMedia('(min-width: 768px)');
+    const on = () => setIsDesktop(m.matches);
+    on();
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  const { openSidebar: openNativeSidebar, closeSidebar: closeNativeSidebar } = useDynamicSidebar();
+  const closeContextActions = useCallback(() => {
+    setIsContextDrawerOpen(false);
+    // Desktop context was stacked on the native right rail — pop it without closing the note.
+    if (isDesktop) closeNativeSidebar();
+  }, [isDesktop, closeNativeSidebar]);
+  const [isExportDrawerOpen, setIsExportDrawerOpen] = useState(false);
+  const [isAttachObjectPickerOpen, setIsAttachObjectPickerOpen] = useState(false);
+  const [isObjectPermissionInfoOpen, setIsObjectPermissionInfoOpen] = useState(false);
+  const [pendingBlockDelete, setPendingBlockDelete] = useState<ParsedObjectBlock | null>(null);
+  const [_isAttachingObject, setIsAttachingObject] = useState(false);
+  const objectUploadInputRef = useRef<HTMLInputElement | null>(null);
+  // Allow attachment when: not readOnly AND (no role set = own-notes drawer context, OR explicitly owner/write-collab).
+  // accessRole is only set by IdeaPageClient for shared/public note views — undefined means user is in their own notes.
+  const canAttachSecondaryObject = !readOnly && (!accessRole || accessRole === 'owner' || accessRole === 'write-collab');
+  const previousContentRef = useRef(content);
+  const isPageLayout = layout === 'page';
+
+  const renderContextActionsContent = useCallback(() => (
+    <div className="flex flex-col gap-3 p-5 md:p-6 bg-[#161412] text-white select-none max-h-[60vh] md:max-h-none md:h-full overflow-y-auto">
+      {/* Mobile drawer handle only */}
+      <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-2 md:hidden" aria-hidden />
+
+      {/* Header */}
+      <div className="flex items-center justify-between pb-2.5 border-b border-white/5">
+        <div className="flex items-center gap-2">
+          <ActionIcon className="w-4 h-4 text-[#6366F1]" />
+          <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash">
+            Text Actions
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={closeContextActions}
+          className="w-7 h-7 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white transition-colors flex items-center justify-center cursor-pointer"
+        >
+          <CloseIcon size={14} />
+        </button>
+      </div>
+
+      {/* Actions List */}
+      <div className="flex flex-col gap-2.5 pt-1">
+        {/* Zap Idea — hidden if current user is the owner/creator of the note */}
+        {user?.$id && ((liveNote as any).userId || (note as any).userId) !== user.$id && (
+          <button
+            type="button"
+            onClick={() => {
+              closeContextActions();
+              openUnified('zap', {
+                targetId: liveNote.$id,
+                source: 'ecosystem',
+                targetKind: 'note',
+                targetOwnerId: (liveNote as any).userId || (note as any).userId,
+                authorName: (liveNote as any).userName || (liveNote as any).title || 'Creator',
+              });
+            }}
+            className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-amber-400/20 hover:border-amber-400/40 hover:bg-amber-400/5 transition-all text-left cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
+              <Zap size={18} className="fill-current" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold text-amber-300">Zap Idea (Send rix)</span>
+              <span className="text-[11px] font-semibold text-amber-400/60">Tip creator with instant tokens</span>
+            </div>
+          </button>
+        )}
+
+        {/* Copy All Content */}
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard.writeText(content);
+            closeContextActions();
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 group-hover:scale-105 transition-transform shrink-0">
+            <CopyIcon size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white group-hover:text-pink-300 transition-colors">Copy All Content</span>
+            <span className="text-[11px] font-semibold text-[#9B9691]">Copy markdown body to clipboard</span>
+          </div>
+        </button>
+
+        {/* Select All */}
+        <button
+          type="button"
+          onClick={() => {
+            closeContextActions();
+            setTimeout(() => {
+              const textarea = contentTextareaRef.current;
+              if (textarea) {
+                textarea.focus();
+                textarea.select();
+              }
+            }, 100);
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform shrink-0">
+            <TaskIcon size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">Select All</span>
+            <span className="text-[11px] font-semibold text-[#9B9691]">Highlight entire editor buffer</span>
+          </div>
+        </button>
+
+        {/* Paste Clipboard */}
+        <button
+          type="button"
+          onClick={async () => {
+            closeContextActions();
+            try {
+              const text = await navigator.clipboard.readText();
+              const textarea = contentTextareaRef.current;
+              if (textarea) {
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                if (start === 0 && end === textarea.value.length) {
+                  setContent(text);
+                } else {
+                  const nextContent = content.substring(0, start) + text + content.substring(end);
+                  setContent(nextContent);
+                  setTimeout(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + text.length, start + text.length);
+                  }, 50);
+                }
+                showSuccess('Pasted', 'Text pasted from clipboard.');
+              }
+            } catch (_err) {
+              showError('Paste Failed', 'Could not read from clipboard.');
+            }
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
+            <Clipboard size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">Paste Clipboard</span>
+            <span className="text-[11px] font-semibold text-[#9B9691]">Insert text at current cursor</span>
+          </div>
+        </button>
+
+        {/* Attach Object or Media */}
+        {canAttachSecondaryObject && (
+          <button
+            type="button"
+            onClick={() => {
+              closeContextActions();
+              openFileDrawer({
+                title: 'Attach Object or Media',
+                onSelectFile: (file) => {
+                  const block = file.fileUrl?.startsWith('[[kylrix-object:')
+                    ? file.fileUrl
+                    : serializeObjectBlock({
+                        childId: file.$id,
+                        childKind: file.mimeType?.startsWith('image/') ? 'image' : 'file',
+                        bucketId: file.bucketId,
+                        label: file.name,
+                        appTheme: 'idea',
+                        metadata: { mimeType: file.mimeType, fileName: file.name, fileUrl: file.fileUrl },
+                      });
+                  insertObjectBlockAtCursor(block);
+                },
+              });
+            }}
+            className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-[#6366F1]/20 hover:border-[#6366F1]/40 hover:bg-[#6366F1]/5 transition-all text-left cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center text-[#6366F1] group-hover:scale-105 transition-transform shrink-0">
+              <Plus size={18} />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold text-white group-hover:text-[#6366F1] transition-colors">Attach Object</span>
+              <span className="text-[11px] font-semibold text-[#9B9691]">Link media, files, or ecosystem items</span>
+            </div>
+          </button>
+        )}
+
+        {/* Disable/Enable Previews */}
+        <button
+          type="button"
+          onClick={async () => {
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            const userId = (liveNote as any).userId || (note as any).userId || 'guest';
+            try {
+              const { getDisablePreviews, setDisablePreviews } = await import('@/lib/link-preview/settings');
+              const cur = await getDisablePreviews(userId);
+              await setDisablePreviews(userId, !cur);
+              showSuccess(
+                cur ? 'Previews enabled' : 'Previews disabled',
+                cur ? 'External link previews will show again.' : 'External previews hidden. Kylrix previews still show.'
+              );
+            } catch {
+              const raw = await LocalEngine.cacheGet<boolean>('kylrix_disable_link_previews').catch(() => null);
+              const next = !raw;
+              await LocalEngine.cacheSet('kylrix_disable_link_previews', next);
+              (window as any).__KylrixDisableLinkPreviews = next;
+            }
+            closeContextActions();
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-slate-500/10 border border-slate-500/20 flex items-center justify-center text-slate-400 group-hover:scale-105 transition-transform shrink-0">
+            <EyeOffIcon size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white group-hover:text-slate-300 transition-colors">Toggle Previews</span>
+            <span className="text-[11px] font-semibold text-[#9B9691]">Show or hide external web preview cards</span>
+          </div>
+        </button>
+
+        {/* Export Document */}
+        <button
+          type="button"
+          onClick={() => {
+            closeContextActions();
+            setIsExportDrawerOpen(true);
+          }}
+          className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0A0908] border border-white/5 hover:border-white/10 hover:bg-white/[0.03] transition-all text-left cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
+            <OpenIcon size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">Export Note</span>
+            <span className="text-[11px] font-semibold text-[#9B9691]">Download or share markdown file</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  ), [content, liveNote, note, canAttachSecondaryObject, openFileDrawer, openUnified, showSuccess, showError, closeContextActions]);
+
+  useEffect(() => {
+    // Mobile bottom drawer only — desktop opens native right rail directly from the More button.
+    if (isDesktop) return;
+    setIsDrawerOpen(isContextDrawerOpen);
+    return () => setIsDrawerOpen(false);
+  }, [isContextDrawerOpen, setIsDrawerOpen, isDesktop]);
+
+  useEffect(() => {
+    setIsDrawerOpen(isObjectPermissionInfoOpen);
+    return () => setIsDrawerOpen(false);
+  }, [isObjectPermissionInfoOpen, setIsDrawerOpen]);
+
+  const displayTags = useMemo(() => tags.split(',').map((t: string) => t.trim()).filter(Boolean), [tags]);
+
+
+
+
+
+  const replaceContentWithSave = useCallback(async (nextContent: string) => {
+    handleContentChange(nextContent);
+  }, [handleContentChange]);
+
+  const insertObjectBlockAtCursor = useCallback(async (block: string) => {
+    const textarea = contentTextareaRef.current;
+    const start = textarea ? textarea.selectionStart : content.length;
+    const end = textarea ? textarea.selectionEnd : content.length;
+    const needsLeadingBreak = start > 0 && !content.slice(Math.max(0, start - 2), start).includes('\n\n');
+    const needsTrailingBreak = end < content.length && !content.slice(end, Math.min(content.length, end + 2)).includes('\n\n');
+    const insertion = `${needsLeadingBreak ? '\n\n' : ''}${block}${needsTrailingBreak ? '\n\n' : '\n'}`;
+    const nextContent = content.substring(0, start) + insertion + content.substring(end);
+    const cursor = start + insertion.length;
+    pendingSelRef.current = { start: cursor, end: cursor };
+    await replaceContentWithSave(nextContent);
+    if (textarea) {
+      requestAnimationFrame(() => {
+        try { textarea.focus(); textarea.setSelectionRange(cursor, cursor); } catch {}
+      });
+    }
+  }, [content, replaceContentWithSave]);
+
+
+  const attachPickedObject = useCallback(async (payload: { kind: string; entityId: string; item: any }) => {
+    if (!canAttachSecondaryObject) {
+      showError('No access', 'Only owners and write collaborators can attach objects.');
+      return;
+    }
+    const kindToChildKind: Record<string, 'note' | 'task' | 'vault' | 'form' | 'event' | 'tag' | 'totp' | 'moment' | 'call'> = {
+      note: 'note',
+      goal: 'task',
+      password: 'vault',
+      form: 'form',
+      event: 'event',
+      tag: 'tag',
+      totp: 'totp',
+      moment: 'moment',
+      call: 'call'};
+    const childKind = kindToChildKind[payload.kind] || 'note';
+    const theme = childKind === 'vault' || childKind === 'totp' ? 'vault' : childKind === 'task' || childKind === 'event' || childKind === 'form' ? 'flow' : 'idea';
+    await attachObject({
+      parentId: liveNote.$id,
+      parentKind: 'note',
+      childId: payload.entityId,
+      childKind,
+      metadata: { insertLine: getCursorLineNumber(), sourceKind: payload.kind }});
+    await insertObjectBlockAtCursor(serializeObjectBlock({
+      childId: payload.entityId,
+      childKind: childKind as any,
+      line: getCursorLineNumber(),
+      appTheme: theme as any,
+      label: payload.item?.title || payload.item?.name || payload.item?.issuer || payload.item?.caption || undefined}));
+    const { getObjectsByParent } = await import('@/lib/actions/client-ops');
+    setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
+  }, [canAttachSecondaryObject, showError, liveNote.$id, getCursorLineNumber, insertObjectBlockAtCursor]);
+
+  const onPickExternalFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = '';
+    if (!canAttachSecondaryObject) {
+      showError('No access', 'Only owners and write collaborators can attach objects.');
+      return;
+    }
+    setIsAttachingObject(true);
+    try {
+      const bucketId = APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE;
+      const uploaded = await StorageService.uploadFile(file, bucketId);
+      const childKind = file.type.startsWith('image/') ? 'image' : 'file';
+      const relation = await attachObject({
+        parentId: liveNote.$id,
+        parentKind: 'note',
+        childId: uploaded.$id,
+        childKind,
+        metadata: { bucketId, fileName: file.name, mimeType: file.type, size: file.size, insertLine: getCursorLineNumber() }});
+      await insertObjectBlockAtCursor(serializeObjectBlock({
+        objectId: relation?.$id,
+        childId: uploaded.$id,
+        childKind,
+        bucketId,
+        label: file.name,
+        line: getCursorLineNumber(),
+        appTheme: 'idea',
+        metadata: { mimeType: file.type, fileName: file.name }}));
+      const { getObjectsByParent } = await import('@/lib/actions/client-ops');
+      setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
+      showSuccess('Attachment added');
+    } catch (err: any) {
+      showError('Attach failed', err?.message || 'Unable to upload and attach file.');
+    } finally {
+      setIsAttachingObject(false);
+      closeContextActions();
+    }
+  }, [canAttachSecondaryObject, showError, liveNote.$id, getCursorLineNumber, insertObjectBlockAtCursor, showSuccess, closeContextActions]);
+
+  useEffect(() => {
+    const previous = previousContentRef.current;
+    if (previous === content) return;
+    previousContentRef.current = content;
+    const removedBlocks = getRemovedObjectBlocks(previous, content);
+    if (!removedBlocks.length) return;
+
+    void (async () => {
+      try {
+        const { detachObjectByRelation } = await import('@/lib/actions/client-ops');
+        await Promise.all(
+          removedBlocks.map(async (block) => {
+            await detachObjectByRelation({
+              parentId: liveNote.$id,
+              childId: block.payload.childId,
+            });
+            if (block.payload.childKind === 'file' || block.payload.childKind === 'image') {
+              const bucketId = block.payload.bucketId || APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE;
+              try {
+                await storage.deleteFile(bucketId, block.payload.childId);
+              } catch {
+                // Ignore delete races; relation cleanup is authoritative.
+              }
+            }
+          })
+        );
+        const { getObjectsByParent } = await import('@/lib/actions/client-ops');
+        setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
+      } catch (err) {
+        console.warn('Failed object reconciliation after markdown update:', err);
+      }
+    })();
+  }, [content, liveNote.$id]);
+
+  // --- RENDER ---
+  if (awaitingLocalCopy) {
+    return (
+      <div
+        className={`note-detail-sidebar-root flex flex-col overflow-hidden text-white w-full ${
+          isPageLayout ? 'min-h-0 bg-[#000000]' : 'h-full bg-[#161412]'
+        }`}
+      >
+        <div className="flex-1 flex flex-col gap-3 p-5 animate-pulse">
+          <div className="h-8 w-2/3 rounded-xl bg-white/[0.06]" />
+          <div className="h-4 w-full rounded-lg bg-white/[0.04]" />
+          <div className="h-4 w-5/6 rounded-lg bg-white/[0.04]" />
+          <div className="h-4 w-4/6 rounded-lg bg-white/[0.04]" />
+          <p className="mt-4 text-[#9B9691] text-xs font-semibold">Waiting for local copy…</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`note-detail-sidebar-root flex flex-col text-white w-full ${
+        isPageLayout
+          ? 'min-h-screen overflow-visible bg-[#000000]'
+          : 'h-full overflow-hidden bg-[#161412]'
+      }`}
+    >
+      {/* Header */}
+      <div
+        className={`flex flex-col gap-3 border-b-2 border-white/20 bg-[#161412] shrink-0 ${
+          isPageLayout ? 'px-4 md:px-5 pt-1 pb-3' : 'p-4 pb-3'
+        }`}
+      >
+        {/* Row 1: Back + title */}
+        <div className="flex items-center justify-between gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={handleBackClick}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white/55 hover:text-white hover:bg-white/[0.05] border border-white/5 flex-shrink-0 transition-colors"
+              aria-label="Back to ideas"
+            >
+              <BackIcon className="w-4 h-4" />
+            </button>
+
+            {isEncryptedNote ? (
+              <button
+                type="button"
+                onClick={() => !vaultUnlocked && promptSudo()}
+                className="min-w-0 flex-1 text-left"
+              >
+                <span className="text-[#6366F1] font-extrabold font-clash text-lg leading-tight truncate block">
+                  {vaultUnlocked ? 'Decrypting secure note…' : 'Locked note'}
+                </span>
+              </button>
+            ) : readOnly ? (
+              <span className="w-full min-w-0 text-[#6366F1] font-extrabold text-lg font-clash tracking-tight leading-tight truncate block">
+                {title || 'Untitled note'}
+              </span>
+            ) : (
+              <BareMetalInput
+                key={`title-${liveNote.$id}`}
+                defaultValue={title}
+                value={title}
+                onValueChange={handleTitleChange}
+                enableLocalEngine={false}
+                className="w-full min-w-0 bg-transparent text-[#6366F1] font-extrabold text-lg font-clash tracking-tight leading-tight border-none focus:outline-none placeholder:text-white/25"
+                placeholder="Untitled note"
+                aria-label="Note title"
+              />
+            )}
+          </div>
+
+          {!onBack && !isPageLayout && (
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white/55 hover:text-white hover:bg-white/[0.05] border border-white/5 hidden sm:inline-flex shrink-0 transition-colors"
+              title="Close"
+            >
+              <CloseIcon className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Row 2: Action Buttons Row */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Copyable Object ID & Workspace ID Badges */}
+          {liveNote?.$id && (
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(liveNote.$id);
+              }}
+              className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-white/70 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+              title="Click to copy Object ID"
+            >
+              <span className="text-white/40 select-none">ID:</span>
+              <span className="truncate max-w-[100px]">{liveNote.$id}</span>
+            </button>
+          )}
+
+          {activeWorkspace && !activeWorkspace.isPersonal && (
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(activeWorkspace.id);
+              }}
+              className="px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-[11px] font-mono text-indigo-300 hover:text-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
+              title="Click to copy Workspace ID"
+            >
+              <span className="text-indigo-400/50 select-none">WS:</span>
+              <span className="truncate max-w-[100px]">{activeWorkspace.id}</span>
+            </button>
+          )}
+          {/* Public/Private visibility status toggle — only for owner */}
+          {!readOnly && (
+            <ShareLockButton 
+              resourceType="note"
+              resourceId={note.$id}
+              isPublic={!!isPublic}
+              isGuest={!!(note as any).isGuest}
+              accentColor={isPublic ? '#10B981' : '#A855F7'}
+              onPublished={({ isPublic, isGuest }) => {
+                  const updated = { ...note, isPublic, isGuest };
+                  onUpdate(updated);
+              }}
+              canPublish={true}
+            />
+          )}
+
+          {/* Sidekick Companion */}
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent('kylrix:open-sidekick', {
+                  detail: {
+                    type: 'note',
+                    id: liveNote.$id,
+                    title: liveNote.title || title || 'Untitled note',
+                    content: liveNote.content || content || '',
+                    tags: liveNote.tags || [],
+                  },
+                })
+              );
+            }}
+            className="p-1.5 rounded-lg bg-purple-500/15 border border-purple-500/25 text-purple-400 hover:bg-purple-500/25 transition-colors flex items-center justify-center cursor-pointer"
+            title="Sidekick Companion"
+          >
+            <ActionIcon className="w-4 h-4" />
+          </button>
+
+          {/* Agentic Diff Badge indicator when object has agentic edits */}
+          {liveNote && (liveNote as any).agenticDiffs && (liveNote as any).agenticDiffs.length > 0 ? (
+            <div className="w-full mt-2">
+              <AgenticDiffViewer changes={(liveNote as any).agenticDiffs} />
+            </div>
+          ) : null}
+
+          {/* Copy link — available to all (share link reading) */}
+          {showExpandButton && isPublic && (
+            <button
+              type="button"
+              onClick={handleCopyShareLink}
+              className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+              title="Copy Share Link"
+            >
+              <LinkIcon className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Pin — only for editors */}
+          {!readOnly && (
+            <button 
+              type="button"
+              onClick={handlePinToggle} 
+              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                isPinnedFunc(liveNote.$id) 
+                  ? 'bg-indigo-500/15 border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/25' 
+                  : 'bg-white/5 border-white/5 text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+              title={isPinnedFunc(liveNote.$id) ? 'Unpin' : 'Pin'}
+            >
+              <PinIcon className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* More actions — always available for export / details */}
+          <button 
+            type="button"
+            onClick={() => {
+              if (isDesktop) {
+                openNativeSidebar(renderContextActionsContent(), 'note-context-actions', { hideHeader: true });
+              } else {
+                setIsContextDrawerOpen(true);
+              }
+            }} 
+            className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+            title="More Actions"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+
+          {/* Read-only badge */}
+          {readOnly && (
+            <span className="ml-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-[10px] font-black text-white/40 tracking-wider uppercase">
+              Read only
+            </span>
+          )}
+
+          {/* Header Delete — only for owner */}
+          {!readOnly && showHeaderDeleteButton && (
+            <button 
+              type="button"
+              onClick={() => openUnified('delete-confirm', {
+                title: `Delete "${title || 'Untitled'}"?`,
+                description: 'Are you sure you want to delete this idea? This action is permanent and cannot be undone.',
+                resourceName: 'this idea',
+                confirmLabel: 'Delete Idea',
+                onConfirm: async () => { await handleDelete(); },
+              })}
+              className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-colors flex items-center justify-center ml-auto"
+              title="Delete"
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content Scroll Area — stable, isolated scroll; local-copy-first, no jitter on attachment/preview loads */}
+      <div
+        ref={scrollContainerRef}
+        onScroll={(e) => {
+          if (liveNote?.$id) {
+            persistScrollPosition(`note_detail:${liveNote.$id}`, e.currentTarget.scrollTop);
+          }
+        }}
+        style={{ overflowAnchor: 'none' } as React.CSSProperties}
+        className={`flex flex-col gap-5 ${
+          isPageLayout
+            ? 'flex-1 overflow-visible px-4 md:px-5 py-4'
+            : 'flex-1 min-h-0 overflow-y-auto scrollbar-thin overscroll-contain p-4 gap-4'
+        }`}
+      >
+        {/* Unified WYSIWYG Editor */}
+        <div className="flex flex-col rounded-[24px] bg-[#000000] border-2 border-white/20 overflow-hidden flex-shrink-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-5 pt-4 pb-3 border-b border-white/5">
+            <div className="min-w-0 flex flex-col gap-0.5">
+              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash">
+                Content
+              </span>
+              {!readOnly && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <SyncStatusDot noteId={liveNote.$id} kind="note" row={liveNote as unknown as Record<string, unknown>} />
+                  <SyncStatusLabel noteId={liveNote.$id} kind="note" row={liveNote as unknown as Record<string, unknown>} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Copy button — always visible */}
+              {!shouldMaskEncrypted && content && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(content);
+                  }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0B0A09] border border-white/8 text-white/55 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer"
+                  title="Copy content"
+                >
+                  <CopyIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="px-4 md:px-5 py-4 md:py-5 min-h-[280px]">
+            {isEncryptedNote ? (
+              <button
+                type="button"
+                onClick={() => !vaultUnlocked && promptSudo()}
+                className="min-h-[200px] w-full text-left cursor-pointer"
+              >
+                <p className="text-[#9B9691] text-sm font-semibold leading-relaxed">
+                  {vaultUnlocked
+                    ? 'Decrypting secure note, please wait…'
+                    : 'Secure content hidden. Unlock your vault to view and edit this note.'}
+                </p>
+              </button>
+            ) : (
+              <KylrixWYSIWYGEditor
+                value={content}
+                onChange={handleContentChange}
+                parentId={liveNote.$id}
+                parentKind="note"
+                readOnly={readOnly || shouldMaskEncrypted}
+                placeholder="Write in markdown — headings, lists, links, voice notes, and attachments are rendered live."
+                minHeight="280px"
+              />
+            )}
+
+            {!shouldMaskEncrypted && (
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/5 text-[10px] text-[#9B9691] font-semibold select-none">
+                <span>{liveNote.article ? 'Article' : 'Note'} · Live Markdown</span>
+                <span>{content.length.toLocaleString()} characters</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="shrink-0">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash">Tags</span>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => setIsTagSelectorOpen(true)}
+                className="w-7 h-7 rounded-lg hover:bg-white/[0.04] text-[#6366F1]/60 hover:text-[#6366F1] transition-colors flex items-center justify-center"
+                title="Edit tags"
+              >
+                <Plus size={14} />
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {displayTags.length > 0 ? (
+              displayTags.map((tag: string) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#6366F1] text-xs font-extrabold"
+                >
+                  {tag}
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newTags = displayTags.filter((t) => t !== tag);
+                        handleTagsChange(newTags.join(', '));
+                      }}
+                      className="hover:text-white"
+                    >
+                      <CloseIcon size={10} />
+                    </button>
+                  )}
+                </span>
+              ))
+            ) : (
+              <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">No tags yet</span>
+            )}
+          </div>
+        </div>
+
+        {/* Collaborators */}
+        <div className="shrink-0 min-h-[44px]">
+          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-pink-400 font-clash block mb-2.5">
+            Collaborators
+          </span>
+          {isLoadingCollaborators ? (
+            <div className="h-[44px] text-xs text-[#9B9691] font-semibold flex items-center gap-2">
+              <div className="w-3.5 h-3.5 border border-pink-500 border-t-transparent rounded-full animate-spin" />
+              <span>Loading…</span>
+            </div>
+          ) : collaboratorProfiles.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {collaboratorProfiles.map((p: any) => (
+                <button
+                  key={p.$id || p.userId}
+                  type="button"
+                  onClick={() =>
+                    openUnified('share-note', {
+                      noteId: liveNote.$id,
+                      noteTitle: liveNote.title,
+                      initialCollaborator: p})
+                  }
+                  className="w-full p-3 rounded-[16px] bg-[#161412] border border-white/5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors text-left min-w-0"
+                >
+                  <IdentityAvatar
+                    fileId={p.avatar}
+                    alt={p.username}
+                    fallback={p.username?.[0]?.toUpperCase()}
+                    size={34}
+                    verified={p.tier === 'admin' || p.verified}
+                  />
+                  <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                    <span className="text-sm font-extrabold text-white leading-tight truncate">
+                      {p.displayName || p.username}
+                    </span>
+                    <span className="text-[11px] font-semibold text-[#9B9691] leading-snug truncate">
+                      @{p.username}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-pink-500/10 text-pink-400 flex-shrink-0">
+                    {p.permissionLevel || 'Viewer'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">No collaborators</span>
+          )}
+        </div>
+
+        {/* Timestamps */}
+        <div className="pt-3 border-t border-white/5 text-[11px] font-semibold text-[#9B9691] flex flex-col gap-1 shrink-0">
+          <span>Created {formatNoteCreatedDate(liveNote)}</span>
+          <span>Updated {formatNoteUpdatedDate(liveNote)}</span>
+        </div>
+
+        {/* Comments section — only for notes that are made public or published */}
+        {(getNotePublicState(liveNote) === true || liveNote?.isPublic === true || (liveNote as any)?.published === true) && (
+          <div className="pt-4 border-t border-white/10 shrink-0">
+            <CommentsSection noteId={liveNote.$id} decryptionKey={decryptionKey} />
+          </div>
+        )}
+      </div>
+
+
+      {/* Delete uses unified chrome: bottom drawer on mobile, right sidebar on desktop (ui.chrome-surfaces) — local fixed modal retired */}
+
+      <ConfirmationDialog 
+        open={showRotateConfirm} 
+        title="Rotate public link?" 
+        message="The previous link will become permanently invalid. Anyone with the old link will lose access." 
+        confirmLabel={isRotating ? "Rotating..." : "Rotate Link"} 
+        isDestructive={true} 
+        isLoading={isRotating} 
+        onClose={() => setShowRotateConfirm(false)} 
+        onConfirm={handleConfirmedRotate} 
+      />
+      
+      <ProjectLinker 
+        open={showProjectLinker} 
+        onClose={() => setShowProjectLinker(false)} 
+        entityId={liveNote.$id} 
+        entityKind="note" 
+      />
+
+      {/* Tag Selector Sub-Drawer */}
+      <Drawer
+        anchor="bottom"
+        open={isTagSelectorOpen}
+        onClose={() => setIsTagSelectorOpen(false)}
+        disablePortal={false}
+        keepMounted={false}
+        ModalProps={{ keepMounted: false, disableScrollLock: false }}
+        sx={{
+          zIndex: 11000,
+          '& .ob-drawer-panel': {
+            bgcolor: '#161412',
+            borderTopLeftRadius: '24px',
+            borderTopRightRadius: '24px',
+            border: '1px solid #34322F',
+            borderBottom: 0,
+            pb: 'max(24px, env(safe-area-inset-bottom))',
+            pt: 2,
+            px: { xs: 2.25, sm: 2.75 },
+            maxWidth: '600px',
+            mx: 'auto'}
+        }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <TagIcon size={20} color="#6366F1" />
+            <Typography sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
+              Select Tags
+            </Typography>
+          </Stack>
+          <IconButton
+            onClick={() => setIsTagSelectorOpen(false)}
+            sx={{
+              color: '#E8E6E3',
+              bgcolor: '#0A0908',
+              border: '1px solid #34322F',
+              '&:hover': { bgcolor: '#1C1A18' }}}
+          >
+            <CloseIcon size={18} />
+          </IconButton>
+        </Stack>
+
+        <Box sx={{ maxHeight: '40dvh', overflowY: 'auto', pr: 0.5 }}>
+          <List sx={{ py: 0 }}>
+            <ListItem disablePadding sx={{ mb: 1 }}>
+              <ListItemButton 
+                onClick={() => {
+                  setIsTagSelectorOpen(false);
+                  openUnified('new-tag', { 
+                    onSuccess: async () => {
+                      await refreshEcosystemTags();
+                    } 
+                    // @ts-ignore
+                  });
+                }}
+                sx={{ 
+                  borderRadius: '12px', 
+                  bgcolor: alpha('#6366F1', 0.1),
+                  border: `1px dashed ${alpha('#6366F1', 0.3)}`,
+                  py: 1.5,
+                  '&:hover': { bgcolor: alpha('#6366F1', 0.15) }
+                }}
+              >
+                <Plus size={18} color="#6366F1" style={{ marginRight: '12px' }} />
+                <ListItemText 
+                  primary="Create New Tag" 
+                  primaryTypographyProps={{ sx: { color: '#6366F1', fontWeight: 800, fontSize: '0.9rem' } }}
+                />
+              </ListItemButton>
+            </ListItem>
+
+            {(() => {
+              const seenLower = new Set<string>();
+              const uniqueTags = (ecosystemTags || []).filter((tag) => {
+                const key = String(tag.name || '').trim().toLowerCase();
+                if (!key || seenLower.has(key)) return false;
+                seenLower.add(key);
+                return true;
+              });
+
+              return uniqueTags.map((tag) => {
+                const currentTagsArray = tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+                const tagLower = (tag.name || '').trim().toLowerCase();
+                const isSelected = currentTagsArray.some((t) => t.toLowerCase() === tagLower);
+                const color = (tag as any).color || '#9B9691';
+
+                return (
+                  <ListItem key={tag.$id} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton 
+                      onClick={() => {
+                        let nextTagsArray = [...currentTagsArray];
+                        if (!isSelected && tag.name) {
+                          nextTagsArray.push(tag.name.trim());
+                        } else if (isSelected && tag.name) {
+                          nextTagsArray = nextTagsArray.filter((n) => n.toLowerCase() !== tagLower);
+                        }
+                        setTags(nextTagsArray.join(', '));
+                        setIsTagSelectorOpen(false);
+                      }}
+                    sx={{ 
+                      borderRadius: '12px', 
+                      py: 1.5,
+                      border: '1px solid transparent',
+                      borderColor: isSelected ? color : 'transparent',
+                      bgcolor: isSelected ? alpha(color, 0.1) : 'transparent',
+                      '&:hover': { bgcolor: '#1C1A18' }
+                    }}
+                  >
+                    <Box 
+                      sx={{ 
+                        width: 12, 
+                        height: 12, 
+                        borderRadius: '4px', 
+                        bgcolor: color, 
+                        mr: 2,
+                        boxShadow: `0 0 10px ${alpha(color, 0.4)}`
+                      }} 
+                    />
+                    <ListItemText 
+                      primary={(tag.name || '').toUpperCase()} 
+                      primaryTypographyProps={{ 
+                        sx: { 
+                          color: isSelected ? 'white' : '#9B9691', 
+                          fontWeight: 900, 
+                          fontSize: '0.8rem',
+                          fontFamily: 'var(--font-mono)',
+                          letterSpacing: '0.05em'
+                        } 
+                      }}
+                    />
+                    {isSelected && (
+                      <Typography sx={{ color: color, fontWeight: 900, fontSize: '0.7rem', opacity: 0.8 }}>
+                        SELECTED
+                      </Typography>
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              );
+            })
+          })()}
+          </List>
+        </Box>
+      </Drawer>
+
+      {!isDesktop && isContextDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isContextDrawerOpen}
+          onClose={closeContextActions}
+          disablePortal={false}
+          keepMounted={false}
+          sx={{ zIndex: 11000 }}
+          PaperProps={{
+            sx: {
+              position: 'fixed !important',
+              bottom: '0 !important',
+              left: '0 !important',
+              right: '0 !important',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              bgcolor: '#161412',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              backgroundImage: 'none',
+              maxWidth: 580,
+              width: '100%',
+              maxHeight: '60vh',
+              mx: 'auto',
+              p: 0,
+              overflow: 'hidden',
+              pointerEvents: 'auto',
+            },
+          }}
+          ModalProps={{
+            keepMounted: false,
+            disableScrollLock: false,
+          }}
+        >
+          {renderContextActionsContent()}
+        </Drawer>
+      )}
+
+      {isExportDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isExportDrawerOpen}
+          onClose={() => setIsExportDrawerOpen(false)}
+          disablePortal={false}
+          keepMounted={false}
+          sx={{ zIndex: 11000 }}
+          PaperProps={{
+            sx: {
+              position: 'fixed !important',
+              bottom: '0 !important',
+              left: '0 !important',
+              right: '0 !important',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              bgcolor: '#161412',
+              borderTop: '1px solid #34322F',
+              backgroundImage: 'none',
+              maxWidth: 720,
+              width: '100%',
+              mx: 'auto',
+              p: 2,
+              pb: 4,
+              pointerEvents: 'auto'}
+          }}
+          ModalProps={{
+            keepMounted: false,
+            disableScrollLock: false}}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pointerEvents: 'auto' }}>
+            <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36', mx: 'auto', mb: 1 }} aria-hidden />
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', tracking: '0.05em', fontFamily: 'var(--font-mono)', mb: 1, textAlign: 'center' }}>
+              Export
+            </Typography>
+            <button
+              type="button"
+              onClick={() => {
+                setIsExportDrawerOpen(false);
+                exportToMarkdown(liveNote.title || 'Note', content || '');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <span>Markdown (.md)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsExportDrawerOpen(false);
+                exportToPDF(liveNote.title || 'Note', content || '');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <span>PDF (.pdf)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsExportDrawerOpen(false);
+                exportToDOCX(liveNote.title || 'Note', content || '');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <span>Word (.doc)</span>
+            </button>
+          </Box>
+        </Drawer>
+      )}
+
+      <ProjectAddObjectModal
+        open={isAttachObjectPickerOpen}
+        onClose={() => setIsAttachObjectPickerOpen(false)}
+        mode="resource"
+        title="Attach object"
+        onAttachResource={attachPickedObject}
+        initialTab={0}
+      />
+
+      {pendingBlockDelete && (
+        <Drawer
+          anchor={isDesktop ? 'right' : 'bottom'}
+          open={Boolean(pendingBlockDelete)}
+          onClose={() => setPendingBlockDelete(null)}
+          ModalProps={{ keepMounted: false, disablePortal: false }}
+          slotProps={{ backdrop: { sx: { bgcolor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' } } } as any}
+          PaperProps={{ sx: isDesktop ? { bgcolor: '#161412', borderLeft: '1px solid #34322F', width: 420, maxWidth: '92vw', height: '100%', p: 2.5, zIndex: 1400 } as any : { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2, zIndex: 1400 } as any }}
+        >
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-white">Remove this {pendingBlockDelete.payload.childKind} object?</p>
+            <p className="text-xs text-white/60">This removes the object block from markdown and detaches the relation row.</p>
+            <div className="flex items-center gap-2">
+              <button type="button" className="h-9 px-3 rounded-lg border border-white/10 text-white/80" onClick={() => setPendingBlockDelete(null)}>Cancel</button>
+              <button
+                type="button"
+                className="h-9 px-3 rounded-lg bg-red-500/15 border border-red-500/35 text-red-300"
+                onClick={async () => {
+                  const block = pendingBlockDelete;
+                  if (!block) return;
+                  const next = content.slice(0, block.start) + content.slice(block.end);
+                  await replaceContentWithSave(next);
+                  try {
+                    const { detachObjectByRelation, getObjectsByParent } = await import('@/lib/actions/client-ops');
+                    await detachObjectByRelation({ parentId: liveNote.$id, childId: block.payload.childId });
+                    setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
+                  } catch {}
+                  setPendingBlockDelete(null);
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </Drawer>
+      )}
+
+      {isObjectPermissionInfoOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isObjectPermissionInfoOpen}
+          onClose={() => setIsObjectPermissionInfoOpen(false)}
+          ModalProps={{ keepMounted: false, disablePortal: true }}
+          PaperProps={{ sx: { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2.25 } }}
+        >
+          <div className="space-y-2.5">
+            <p className="text-sm font-black text-white">Attached object permissions</p>
+            <p className="text-xs text-white/70 leading-relaxed">
+              Every secondary object attached to this note keeps the permission system of its own primary object.
+              If someone cannot access that primary object, they will see no access here too.
+            </p>
+            <p className="text-xs text-white/55 leading-relaxed">
+              Projects are the only place with granular overrides. Notes do not override attached object permissions.
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                className="h-9 px-3 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5"
+                onClick={() => setIsObjectPermissionInfoOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Drawer>
+      )}
+
+      <input
+        ref={objectUploadInputRef}
+        type="file"
+        className="hidden"
+        onChange={onPickExternalFile}
+      />
+
+    </div>
+  );
+}

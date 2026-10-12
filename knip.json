@@ -1,0 +1,49 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "app/**/{page,layout,loading,error,global-error,not-found,route,default,template,opengraph-image,twitter-image}.{ts,tsx,js,jsx}",
+    "app/{manifest,robots,sitemap}.{ts,tsx,js,jsx}",
+    "middleware.ts",
+    "next.config.js",
+    "instrumentation.ts"
+  ],
+  "project": [
+    "app/**/*.{ts,tsx,js,jsx}",
+    "components/**/*.{ts,tsx,js,jsx}",
+    "context/**/*.{ts,tsx,js,jsx}",
+    "hooks/**/*.{ts,tsx,js,jsx}",
+    "lib/**/*.{ts,tsx,js,jsx}",
+    "types/**/*.{ts,tsx,d.ts}",
+    "constants/**/*.{ts,tsx,js,jsx}",
+    "utils/**/*.{ts,tsx,js,jsx}",
+    "theme/**/*.{ts,tsx,js,jsx}"
+  ],
+  "ignore": [
+    "generated/**",
+    "functions/**",
+    ".agents/**",
+    "**/*.test.{ts,tsx}",
+    "**/*.spec.{ts,tsx}",
+    "lib/billing/subscription-service.ts",
+    "lib/services/web3-wallets.ts",
+    "lib/app-origin.ts",
+    "lib/services/internal/admin-guard.ts"
+  ],
+  "ignoreDependencies": [
+    "@types/*",
+    "cross-env",
+    "dexie",
+    "knip",
+    "tailwindcss"
+  ],
+  "ignoreBinaries": [
+    "scc",
+    "appwrite"
+  ],
+  "next": {
+    "entry": [
+      "next.config.js",
+      "middleware.ts"
+    ]
+  }
+}

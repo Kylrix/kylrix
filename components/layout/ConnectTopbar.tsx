@@ -1,0 +1,2805 @@
+/* eslint-disable react-hooks/rules-of-hooks */
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  alpha,
+  AppBar,
+  Box,
+  Button,
+  ButtonBase,
+  IconButton,
+  InputBase,
+  Paper,
+  Stack,
+  Tooltip,
+  Typography,
+  CircularProgress,
+  Drawer,
+  useMediaQuery,
+  useTheme} from '@/lib/openbricks/primitives';
+import { isFlowPath } from '@/lib/routing/app-paths';
+import { searchLocalEngine, type GlobalResult } from '@/lib/search/globalLocalSearch';
+import {
+  Bot,
+  Terminal,
+  Wallet,
+  Copy as CopyIcon,
+  Search,
+  X as CloseIcon,
+  Bell,
+  Sparkles,
+  Keyboard,
+  Target,
+  FileText,
+  Lock,
+  MessageCircle,
+  GitFork,
+  Tag as TagIcon,
+  Trash2 as TrashIcon,
+  Share2 as ShareIcon,
+  MoreVertical as MoreIcon,
+  Check,
+  LogOut,
+  Settings,
+  Users,
+} from 'lucide-react';
+
+import Logo from '@/components/common/Logo';
+import { useAuth } from '@/context/auth/AuthContext';
+import { getUserProfilePicId, getEffectiveUsername, hasEffectivePaidAccess } from '@/lib/utils';
+import { getCachedIdentityById } from '@/lib/identity-cache';
+import { APP_BASE_PATHS } from '@/lib/constants';
+import { type KylrixApp } from '@/sdk/design';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
+import { createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtTop } from '@/sdk/topbar';
+import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/sdk/appwrite';
+import { stageProfileView } from '@/lib/profile-handoff';
+import { getAppColor } from '@/lib/ecosystem-app-colors';
+import { searchGlobalUsers } from '@/lib/ecosystem/identity';
+import { IdentityAvatar } from '@/components/common/IdentityBadge';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import { useWebMcpContext } from '@/context/WebMcpContext';
+import { useNativeSidebarApiOptional } from '@/context/RightRailContext';
+import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
+import { useProfile } from '@/components/providers/ProfileProvider';
+import { useLocalContext } from '@/lib/context-engine';
+import { useNotes } from '@/context/NotesContext';
+import { useTask } from '@/context/TaskContext';
+import { useSidebar } from '@/components/ui/SidebarContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useSection } from '@/context/SectionContext';
+import { executeInstantShare } from '@/lib/share/instant-share';
+import { AccountSwitcher } from '@/components/auth/AccountSwitcher';
+
+import {
+  renderShortcutsList,
+  searchOnPage,
+  highlightElement,
+  type PageMatch,
+} from './connect-topbar-utils';
+import { SyncIndicator } from './SyncIndicator';
+import { NotificationDrawer, CompactNotificationPill, type KylrixNotification } from './NotificationDrawer';
+import { useLayout } from '@/context/LayoutContext';
+import { executeNotificationAction } from '@/lib/notifications/resolve-notification-action';
+import { toast } from 'react-hot-toast';
+
+
+
+interface ConnectTopbarProps {
+  className?: string;
+}
+
+export default function ConnectTopbar({
+  className}: ConnectTopbarProps) {
+  const { user, logout, isAuthenticating, updatePreferences } = useAuth();
+  const { openWallet } = useWalletOverlay();
+  const { openAgenticDrawer, closeAgenticDrawer } = useAgenticDrawer();
+  const { toggleInspector: toggleWebMcp, isInspectorOpen: isWebMcpOpen } = useWebMcpContext();
+  const { open: openUnified } = useUnifiedDrawer();
+  const nativeSidebar = useNativeSidebarApiOptional();
+  const { openProUpgrade } = useProUpgrade();
+  const { currentTier } = useSubscription();
+  const isPro = hasEffectivePaidAccess(user, currentTier);
+  const router = useRouter();
+  const navPush = useCallback((href: string) => router.push(href), [router]);
+  const pathname = usePathname();
+  const { setIsCollapsed } = useSidebar();
+  const { activeWorkspace, workspaces, setActiveWorkspaceId, markWorkspacePublic, loadingWorkspaces } = useWorkspace();
+  const isWorkspacePrivacyMode = Boolean(activeWorkspace?.privacyMode);
+  const { notes = [] } = useNotes();
+  const { tasks = [], projects = [], selectTask } = useTask();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
+  const { setActiveDetail } = useSection();
+  // To let any drawer communicate full state expansion globally:
+  const isDrawerExpanded = typeof window !== 'undefined' && document.body.classList.contains('drawer-expanded');
+  
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+
+  const activeApp = useMemo<KylrixApp>(() => {
+    if (pathname?.startsWith('/app')) return 'note';
+    if (isFlowPath(pathname)) return 'flow';
+    if (pathname?.startsWith('/vault')) return 'vault';
+    if (pathname?.startsWith('/connect')) return 'connect';
+    if (pathname?.startsWith('/accounts')) return 'accounts';
+    if (pathname?.startsWith('/send')) return 'send';
+    if (pathname?.startsWith('/workspace')) return 'projects';
+    return 'kylrix';
+  }, [pathname]);
+
+  const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  const [showWebMcpTopbar, setShowWebMcpTopbar] = useState(false);
+
+  useEffect(() => {
+    // 1. Initial check from LocalEngine (offline-first)
+    import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+      LocalEngine.cacheGet<boolean>('setting_show_webmcp_topbar').then((val) => {
+        if (typeof val === 'boolean') {
+          setShowWebMcpTopbar(val);
+        }
+      }).catch(() => {});
+    });
+
+    // 2. Event listener for live updates
+    const handleTopbarChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail === 'boolean') {
+        setShowWebMcpTopbar(detail);
+      }
+    };
+    window.addEventListener('kylrix:webmcp-topbar-changed', handleTopbarChange);
+    return () => {
+      window.removeEventListener('kylrix:webmcp-topbar-changed', handleTopbarChange);
+    };
+  }, []);
+
+  const { secondarySidebar, openSecondarySidebar, closeSecondarySidebar } = useLayout();
+  const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username' | 'copied-referral'>('idle');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [passiveNotification, setPassiveNotification] = useState<KylrixNotification | null>(null);
+  const [notifHint, setNotifHint] = useState<{ id: string; title: string; description: string; accent: string } | null>(null);
+  const [dismissedHintId, setDismissedHintId] = useState<string | null>(null);
+  // Track dismissed passive notification IDs via a ref so the suggestions effect
+  // can read the latest value without being listed as a dependency (prevents re-creation loop).
+  const dismissedPassiveIdsRef = useRef<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [peopleResults, setPeopleResults] = useState<any[]>([]);
+  const [searchingPeople, setSearchingPeople] = useState(false);
+  const [searchShortcutsView, setSearchShortcutsView] = useState(false);
+  const [onPageResults, setOnPageResults] = useState<PageMatch[]>([]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const query = debouncedSearchQuery.trim();
+    if (query.length < 2) {
+      setOnPageResults([]);
+      return;
+    }
+    const matches = searchOnPage(query);
+    setOnPageResults(matches);
+  }, [debouncedSearchQuery]);
+
+  const [localTags, setLocalTags] = useState<any[]>([]);
+  const [localTrash, setLocalTrash] = useState<any[]>([]);
+  const [localForms, setLocalForms] = useState<any[]>([]);
+  const [localVaultCreds, setLocalVaultCreds] = useState<any[]>([]);
+  const [localVaultTotp, setLocalVaultTotp] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const uid = user?.$id || 'guest';
+    import('@/lib/data').then(({ readLocalTagRows }) => {
+      readLocalTagRows(uid === 'guest' ? null : uid)
+        .then((tagsData) => {
+          if (tagsData.length) setLocalTags(tagsData);
+        })
+        .catch(() => {});
+      Promise.all([
+        import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
+          LocalEngine.cacheGet<any[]>(`trash_all_${uid}`).catch(() => []),
+        ),
+        import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
+          LocalEngine.cacheGet<any[]>(`f_forms_${uid}`).catch(() => []),
+        ),
+        import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
+          LocalEngine.cacheGet<any[]>('f_vault_creds').catch(() => []),
+        ),
+        import('@/lib/services/LocalEngine').then(({ LocalEngine }) =>
+          LocalEngine.cacheGet<any[]>('f_vault_totp').catch(() => []),
+        ),
+      ]).then(([trashData, formsData, credsData, totpData]) => {
+        if (Array.isArray(trashData) && trashData.length) setLocalTrash(trashData);
+        if (Array.isArray(formsData) && formsData.length) setLocalForms(formsData);
+        if (Array.isArray(credsData) && credsData.length) setLocalVaultCreds(credsData);
+        if (Array.isArray(totpData) && totpData.length) setLocalVaultTotp(totpData);
+      });
+    });
+  }, [searchOpen, user?.$id]);
+
+  const { events: localEvents } = useLocalContext();
+  const globalResults = useMemo(() => {
+    return searchLocalEngine(debouncedSearchQuery, {
+      notes,
+      tasks,
+      workspaces: projects,
+      events: localEvents,
+      forms: localForms,
+      flows: [],
+      vaultCreds: localVaultCreds,
+      vaultTotp: localVaultTotp,
+      moments: [],
+      chats: [],
+      threads: [],
+      tags: localTags,
+      trash: localTrash,
+    });
+  }, [debouncedSearchQuery, notes, tasks, projects, localEvents, localForms, localVaultCreds, localVaultTotp, localTags, localTrash]);
+  const groupedGlobalResults = useMemo(() => {
+    const byKind: Record<string, GlobalResult[]> = {};
+    for (const r of globalResults) {
+      byKind[r.kind] = byKind[r.kind] || [];
+      byKind[r.kind].push(r);
+    }
+    return byKind;
+  }, [globalResults]);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+
+  const { suggestions } = useLocalContext();
+
+  // Listen for local notifications dispatched unprompted across ecosystem
+  useEffect(() => {
+    const onLocal = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { userId?: string; notification?: KylrixNotification } | undefined;
+      if (detail?.userId && user?.$id && detail.userId !== user.$id) return;
+      const row = detail?.notification;
+      if (row && !notificationsOpen && (!secondarySidebar.isOpen || (secondarySidebar.type !== 'notification' && secondarySidebar.type !== 'notifications'))) {
+        setPassiveNotification(row);
+      }
+    };
+    window.addEventListener('kylrix:local-notifications', onLocal as EventListener);
+    return () => window.removeEventListener('kylrix:local-notifications', onLocal as EventListener);
+  }, [user?.$id, notificationsOpen, secondarySidebar]);
+
+  // Watch for new intelligence pulses (suggestions).
+  // We intentionally do NOT include passiveNotification in the dep array here —
+  // adding it would cause the effect to re-run whenever the notification is
+  // dismissed (set to null) and immediately recreate it, making Cancel/View
+  // appear to do nothing. Instead we use dismissedPassiveIdsRef (a ref) to
+  // check whether the user already dismissed this particular suggestion.
+  useEffect(() => {
+    if (suggestions.length > 0) {
+      const latest = suggestions[0];
+      if (latest.id !== dismissedHintId && !dismissedPassiveIdsRef.current.has(latest.id)) {
+        setPassiveNotification((prev) => {
+          // Don't recreate if the same notification is already shown.
+          if (prev && prev.id === latest.id) return prev;
+          return {
+            id: latest.id,
+            category: 'system',
+            title: latest.title,
+            message: latest.description,
+            time: 'Just now',
+            timestamp: Date.now(),
+            read: false,
+            accent: latest.niche === 'intelligence' ? '#6366F1' : '#10B981',
+            source: 'system',
+          };
+        });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestions, dismissedHintId]);
+
+  // Auto-dismiss passive notifications on mobile after 6 seconds
+  useEffect(() => {
+    if (passiveNotification && !isDesktop) {
+      const timer = setTimeout(() => {
+        if (passiveNotification?.source === 'system') {
+          dismissedPassiveIdsRef.current.add(passiveNotification.id);
+          setDismissedHintId(passiveNotification.id);
+        }
+        setPassiveNotification(null);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [passiveNotification, isDesktop]);
+
+  const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
+  const appAccent = getAppColor(activeApp);
+  const { profile: myProfile } = useProfile();
+  const cachedIdentity = (user as any)?.$id ? getCachedIdentityById((user as any).$id) : null;
+  const rawUsername =
+    myProfile?.username ||
+    (user as any)?.prefs?.username ||
+    (user as any)?.prefs?.user_name ||
+    (user as any)?.username ||
+    (user as any)?.profile?.username ||
+    cachedIdentity?.username ||
+    getEffectiveUsername(user) ||
+    null;
+
+  const profileUsername = rawUsername ? String(rawUsername).replace(/^@+/, '').trim() : null;
+  const profileDisplayName =
+    myProfile?.displayName ||
+    user?.name ||
+    (user as any)?.prefs?.name ||
+    cachedIdentity?.displayName ||
+    (user?.email ? user.email.split('@')[0] : 'User');
+  const profileName = profileDisplayName;
+  
+  const [_isClient, setIsClient] = useState(true);
+  useEffect(() => setIsClient(true), []);
+
+  const profileSeed = useMemo(
+    () => ({
+      username: profileUsername ? String(profileUsername).replace(/^@+/, '').toLowerCase() : null,
+      displayName: profileDisplayName,
+      avatar: profileAvatarUrl || profilePicId || null,
+      userId: (user as any)?.$id || null}),
+    [profileAvatarUrl, profileDisplayName, profilePicId, profileUsername, user]);
+
+  const previewManager = useMemo(
+    () =>
+      createProfilePreviewManager(async (fileId, width, height) => {
+        const { fetchProfilePreview } = await import('@/lib/profile-preview');
+        const preview = await fetchProfilePreview(fileId, width, height);
+        return typeof preview === 'string' ? preview : null;
+      }),
+    []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const resolveProfilePreview = async () => {
+      if (!profilePicId) {
+        if (mounted) setProfileAvatarUrl(null);
+        return;
+      }
+
+      const cached = previewManager.getCachedProfilePreview(profilePicId);
+      if (cached !== undefined) {
+        if (mounted) setProfileAvatarUrl(cached ?? null);
+        return;
+      }
+
+      try {
+        const url = await previewManager.fetchProfilePreview(profilePicId, 64, 64);
+        if (mounted) setProfileAvatarUrl(url);
+      } catch {
+        if (mounted) setProfileAvatarUrl(null);
+      }
+    };
+
+    void resolveProfilePreview();
+    return () => {
+      mounted = false;
+    };
+  }, [previewManager, profilePicId]);
+
+  const openSearch = useCallback(() => {
+    setProfileMenuAnchorEl(null);
+    setAppMenuAnchorEl(null);
+    setSearchShortcutsView(false);
+    setSearchOpen(true);
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 10);
+  }, []);
+
+  const isNotificationOpenOnDesktop = isDesktop && secondarySidebar.isOpen && (secondarySidebar.type === 'notification' || secondarySidebar.type === 'notifications');
+  const isNotificationOpenActive = isDesktop ? isNotificationOpenOnDesktop : notificationsOpen;
+
+  const handleCloseAll = useCallback(() => {
+    setProfileMenuAnchorEl(null);
+    setAppMenuAnchorEl(null);
+    setSearchOpen(false);
+    setSearchShortcutsView(false);
+    setNotificationsOpen(false);
+    setNotifHint(null);
+    setPassiveNotification(null);
+    closeAgenticDrawer();
+    if (secondarySidebar.type === 'notification' || secondarySidebar.type === 'notifications') {
+      closeSecondarySidebar();
+    }
+  }, [closeAgenticDrawer, secondarySidebar, closeSecondarySidebar]);
+
+  const handleNotificationClick = useCallback((notif: KylrixNotification) => {
+    // Record dismissed ID before clearing, so the suggestions effect
+    // does not immediately recreate the pill after dismiss.
+    if (notif?.source === 'system') {
+      dismissedPassiveIdsRef.current.add(notif.id);
+      setDismissedHintId(notif.id);
+    }
+    setPassiveNotification(null);
+    handleCloseAll();
+    executeNotificationAction(notif, {
+      workspaces,
+      setActiveWorkspaceId,
+      notes,
+      tasks,
+      selectTask,
+      events: localEvents,
+      openSidebar,
+      closeSidebar,
+      openOverlay,
+      closeOverlay,
+      setActiveDetail,
+      openUnified,
+      router,
+    });
+  }, [
+    workspaces,
+    setActiveWorkspaceId,
+    notes,
+    tasks,
+    selectTask,
+    localEvents,
+    openSidebar,
+    closeSidebar,
+    openOverlay,
+    closeOverlay,
+    setActiveDetail,
+    openUnified,
+    router,
+    handleCloseAll,
+    setDismissedHintId,
+  ]);
+
+  const openAgenticFromTopbar = useCallback(() => {
+    if (activeWorkspace?.privacyMode) {
+      toast.error('AI is disabled in this workspace (Privacy Mode active)');
+      return;
+    }
+    setProfileMenuAnchorEl(null);
+    setAppMenuAnchorEl(null);
+    setSearchOpen(false);
+    setSearchShortcutsView(false);
+    setNotificationsOpen(false);
+    setNotifHint(null);
+    openAgenticDrawer();
+  }, [openAgenticDrawer, activeWorkspace?.privacyMode]);
+
+  const openSearchShortcuts = useCallback(() => {
+    setProfileMenuAnchorEl(null);
+    setAppMenuAnchorEl(null);
+    setNotificationsOpen(false);
+    setNotifHint(null);
+    setSearchOpen(true);
+    setSearchShortcutsView(true);
+  }, []);
+
+  const toggleNotifications = useCallback(() => {
+    if (isDesktop) {
+      if (secondarySidebar.isOpen && (secondarySidebar.type === 'notification' || secondarySidebar.type === 'notifications')) {
+        closeSecondarySidebar();
+      } else {
+        handleCloseAll();
+        openSecondarySidebar('notification', 'notifications');
+      }
+    } else {
+      if (!notificationsOpen) {
+        handleCloseAll();
+        setNotificationsOpen(true);
+      } else {
+        setNotificationsOpen(false);
+      }
+    }
+    setNotifHint(null);
+    setPassiveNotification(null);
+  }, [isDesktop, secondarySidebar, openSecondarySidebar, closeSecondarySidebar, notificationsOpen, handleCloseAll]);
+
+  const openAppMenu = useCallback((event: MouseEvent<HTMLElement>) => {
+    setAppMenuAnchorEl(event.currentTarget);
+  }, []);
+
+  const openProfileMenu = useCallback((_event?: MouseEvent<HTMLElement>) => {
+    handleCloseAll();
+    const effectiveUsername = user?.prefs?.username || user?.username || undefined;
+    openUnified('profile-preview', {
+      userId: user?.$id,
+      username: effectiveUsername,
+      name: user?.name,
+      avatar: profileAvatarUrl,
+    });
+  }, [user, profileAvatarUrl, openUnified, handleCloseAll]);
+
+
+  useEffect(() => {
+    const query = debouncedSearchQuery.trim();
+    if (query.length < 2) {
+      setPeopleResults([]);
+      return;
+    }
+
+    let mounted = true;
+    const searchPeople = async () => {
+      setSearchingPeople(true);
+      try {
+        const results = await searchGlobalUsers(query);
+        if (mounted) setPeopleResults(results);
+      } catch (err) {
+        console.error('Failed to search people', err);
+      } finally {
+        if (mounted) setSearchingPeople(false);
+      }
+    };
+
+    searchPeople();
+    return () => {
+      mounted = false;
+    };
+  }, [debouncedSearchQuery]);
+
+  const searchSurface = useMemo(
+    () =>
+      createTopbarSearchSurface({
+        query: searchQuery,
+        routeLabel: activeApp.charAt(0).toUpperCase() + activeApp.slice(1),
+        currentApp: activeApp,
+        snippets: [],
+        resolveUrl: (app, path = '') => {
+          return (APP_BASE_PATHS[app as keyof typeof APP_BASE_PATHS] || '/') + path;
+        }}),
+    [searchQuery, activeApp]);
+
+  const dynamicQuickActions = useMemo(() => {
+    // 1. Dynamic recommendations based on current app route
+    const routeSuggestions = {
+      note: [
+        { id: 'create-note', title: 'Write a New Idea', description: 'Create a private idea inside your workspace', href: '/app', kind: 'note', accent: '#EC4899' },
+        { id: 'view-settings', title: 'Security Preferences', description: 'Adjust your ideas security & encryption rules', href: '/settings', kind: 'system', accent: '#6366F1' }
+      ],
+      projects: [
+        { id: 'create-proj', title: 'Start Fresh Project', description: 'Spin up outcome-aware container', href: '/app', kind: 'flow', accent: '#6366F1' },
+        { id: 'view-wf', title: 'Manage Action Workflows', description: 'Automate repetitive workflows', href: '/flows', kind: 'note', accent: '#A855F7' }
+      ],
+      flow: [
+        { id: 'manage-tasks', title: 'View Outstanding Tasks', description: 'Review scheduled deliverables and actions', href: '/flows', kind: 'flow', accent: '#A855F7' }
+      ],
+      vault: [
+        { id: 'share-secrets', title: 'Audit Ephemeral Secrets', description: 'Review sharing keychains and rules', href: '/vault', kind: 'vault', accent: '#10B981' }
+      ],
+      connect: [
+        { id: 'start-huddle', title: 'Open Agent Inbox', description: 'Inbound agent logs, messages, and collaborative sessions', href: '/app', kind: 'connect', accent: '#F59E0B' }
+      ]
+    };
+
+    const currentAppSuggestions = routeSuggestions[activeApp as keyof typeof routeSuggestions] || [];
+
+    // 2. Historical recommendations based on past user actions (most frequent niches in cache)
+    const nicheCounts: Record<string, number> = {};
+    localEvents.forEach(e => {
+      nicheCounts[e.niche] = (nicheCounts[e.niche] || 0) + 1;
+    });
+
+    let topNiche = '';
+    let maxCount = 0;
+    Object.entries(nicheCounts).forEach(([niche, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        topNiche = niche;
+      }
+    });
+
+    const historicalSuggestions = [];
+    if (topNiche === 'workspace' && activeApp !== 'note') {
+      historicalSuggestions.push({
+        id: 'hist-note',
+        title: 'Review Recent Ideas',
+        description: 'You spent a lot of time in workspace ideas recently. Resume writing?',
+        href: '/app',
+        kind: 'note',
+        accent: '#EC4899'
+      });
+    } else if (topNiche === 'productivity' && activeApp !== 'flow') {
+      historicalSuggestions.push({
+        id: 'hist-flow',
+        title: 'Coordinate Action Items',
+        description: 'Manage outstanding roadmaps and deliverables',
+        href: '/flows',
+        kind: 'flow',
+        accent: '#A855F7'
+      });
+    }
+ else if (topNiche === 'security' && activeApp !== 'vault') {
+      historicalSuggestions.push({
+        id: 'hist-vault',
+        title: 'Audit Vault Keychain',
+        description: 'Manage passwords and TOTP codes safely',
+        href: '/vault',
+        kind: 'vault',
+        accent: '#10B981'
+      });
+    }
+
+    return [...currentAppSuggestions, ...historicalSuggestions].slice(0, 3);
+  }, [activeApp, localEvents]);
+
+  const [isGeneratingUsername, setIsGeneratingUsername] = useState(false);
+
+  const handleGenerateUsername = useCallback(async () => {
+    if (isGeneratingUsername) return;
+    setIsGeneratingUsername(true);
+    try {
+      const { generateUsernameOnTheFlyAction } = await import('@/lib/actions/referrals');
+      const res = await generateUsernameOnTheFlyAction(profileName);
+      if (res.ok && res.username) {
+        if (updatePreferences) {
+          await updatePreferences({ username: res.username }).catch(() => null);
+        }
+      }
+    } catch {} finally {
+      setIsGeneratingUsername(false);
+    }
+  }, [isGeneratingUsername, profileName, updatePreferences]);
+
+  const handleCopyUsername = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    const textToCopy = profileUsername ? `@${profileUsername}` : profileDisplayName || profileSeed.userId || '';
+    if (!textToCopy) return;
+    await navigator.clipboard.writeText(textToCopy);
+    setCopyState('copied-username');
+    window.setTimeout(() => setCopyState('idle'), 1600);
+  }, [profileUsername, profileDisplayName, profileSeed.userId]);
+
+  const handleCopyReferralLink = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    const base = window.location.origin;
+    const refCode = profileUsername
+      ? `u_${String(profileUsername).replace(/^@+/, '')}`
+      : `id_${profileSeed.userId || ''}`;
+    const refLink = `${base}/?ref=${refCode}`;
+    await navigator.clipboard.writeText(refLink);
+    setCopyState('copied-referral');
+    window.setTimeout(() => setCopyState('idle'), 1600);
+  }, [profileUsername, profileSeed.userId]);
+
+  const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
+
+  const activePanel = searchOpen ? 'search' : notificationsOpen ? 'notifications' : profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
+
+  useEffect(() => {
+    if (!activePanel) return;
+
+    const isInsideTopbarSurface = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return false;
+      if (headerRef.current?.contains(target)) return true;
+      return Boolean(
+        target.closest(
+          '[data-kylrix-topbar-panel], [data-kylrix-native-sidebar], .ob-drawer-root, .ob-drawer-panel, .kylrix-sidebar'));
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (isInsideTopbarSurface(event.target)) return;
+      handleCloseAll();
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown, true);
+    return () => window.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [activePanel, handleCloseAll]);
+
+  const [_searchMode, setSearchMode] = useState<'global' | 'feed'>('global');
+
+  useEffect(() => {
+    const handleOpenTopbarSearch = (event?: any) => {
+      const detail = event?.detail;
+      if (detail?.mode === 'feed') {
+        setSearchMode('feed');
+      } else {
+        setSearchMode('global');
+      }
+      openSearch();
+    };
+    window.addEventListener('kylrix:open-topbar-search' as any, handleOpenTopbarSearch);
+    return () => window.removeEventListener('kylrix:open-topbar-search' as any, handleOpenTopbarSearch);
+  }, [openSearch]);
+
+  useEffect(() => {
+    const handleGlobalEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        handleCloseAll();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalEscape, true);
+    return () => window.removeEventListener('keydown', handleGlobalEscape, true);
+  }, [handleCloseAll]);
+
+  useEffect(() => {
+    const handleGlobalShortcuts = (event: KeyboardEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      
+      const key = event.key.toLowerCase();
+
+      // Leave Ctrl/Cmd+A for native select-all — never bind or preventDefault it.
+      if (key === 'a') return;
+
+      if (event.shiftKey && key === 'v') {
+        event.preventDefault();
+        handleCloseAll();
+        router.push('/vault');
+        return;
+      }
+      
+      // Load user-defined custom shortcuts if any
+      let customShortcuts: any[] = [];
+      try {
+        const stored = localStorage.getItem('user-shortcuts');
+        if (stored) customShortcuts = JSON.parse(stored);
+      } catch (e) {
+        console.error('Failed to parse user-shortcuts:', e);
+      }
+
+      const customMatch = customShortcuts.find(
+        (s: any) => s.key.toLowerCase() === key && (s.ctrlKey ?? true)
+      );
+
+      if (customMatch) {
+        event.preventDefault();
+        handleCloseAll();
+        if (customMatch.action === 'navigate' && customMatch.targetUrl) {
+          router.push(customMatch.targetUrl);
+        } else if (customMatch.action === 'custom') {
+          window.dispatchEvent(new CustomEvent('custom-shortcut-triggered', { detail: customMatch }));
+        } else {
+          triggerBuiltInAction(customMatch.action);
+        }
+        return;
+      }
+
+      // Default system shortcuts
+      const builtInActions: Record<string, string> = {
+        f: 'search',
+        k: 'agent',
+        s: 'apps',
+        u: 'profile',
+        p: '/app',
+        n: '/app',
+        t: '/tags',
+        x: '/settings',
+        g: '/goals',
+        q: '/forms',
+        e: '/events',
+        h: 'hangouts',
+      };
+
+      const action = builtInActions[key];
+      if (action) {
+        event.preventDefault();
+        handleCloseAll();
+        if (action.startsWith('/')) {
+          router.push(action);
+        } else {
+          triggerBuiltInAction(action);
+        }
+      }
+    };
+
+    const triggerBuiltInAction = (action: string) => {
+      switch (action) {
+        case 'search':
+          openSearch();
+          break;
+        case 'apps':
+          setAppMenuAnchorEl(document.body);
+          break;
+        case 'profile':
+          setProfileMenuAnchorEl(document.body);
+          break;
+        case 'agent':
+          openAgenticFromTopbar();
+          break;
+        case 'hangouts':
+          openUnified('hangouts');
+          break;
+        default:
+          break;
+      }
+    };
+
+
+    window.addEventListener('keydown', handleGlobalShortcuts, true);
+    return () => window.removeEventListener('keydown', handleGlobalShortcuts, true);
+  }, [handleCloseAll, openSearch, openAgenticFromTopbar, router]);
+
+  const renderNotificationDrawer = () => {
+    if (isDesktop) return null;
+    return (
+      <NotificationDrawer
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        appAccent={appAccent}
+        isDesktop={false}
+      />
+    );
+  };
+
+  const renderSearchPanel = () => {
+    if (!searchOpen) return null;
+
+    const query = searchQuery.trim().toLowerCase();
+    const hasQuery = query.length >= 2;
+
+    const searchContent = (
+      <Box
+        onWheel={(event: React.WheelEvent) => {
+          if (isDesktop) return;
+          const node = event.currentTarget;
+          if (event.deltaY < 0 && isTopbarScrollAtTop(node as HTMLElement)) {
+            event.preventDefault();
+            handleCloseAll();
+          }
+        }}
+        sx={{
+          width: '100%',
+          px: isDesktop ? 0 : { xs: 1, sm: 2 },
+          py: isDesktop ? 1 : 1.25,
+          flex: isDesktop ? 'none' : 1,
+          minHeight: 0,
+          maxHeight: isDesktop ? 'none' : 'calc(60dvh - 120px)',
+          overflowY: 'auto',
+          boxSizing: 'border-box',
+        }}
+      >
+        <Stack spacing={2.5}>
+              {searchShortcutsView ? (
+            <Box sx={{ display: 'grid', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Keyboard size={18} style={{ color: '#fff', flexShrink: 0 }} />
+                  <Box>
+                    <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1rem', lineHeight: 1.1 }}>
+                      Keyboard shortcuts
+                    </Typography>
+                    <Typography sx={{ color: '#fff', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Quick keys
+                    </Typography>
+                  </Box>
+                </Box>
+                <Button
+                  onClick={() => setSearchShortcutsView(false)}
+                  sx={{
+                    minWidth: 0,
+                    borderRadius: '12px',
+                    bgcolor: '#161412',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    color: '#fff',
+                    px: 1.5,
+                    py: 0.75,
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    textTransform: 'none',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)', color: '#fff' }}}
+                >
+                  Back to search
+                </Button>
+              </Box>
+              {renderShortcutsList()}
+            </Box>
+          ) : !hasQuery ? (
+            <>
+              {/* Keyboard shortcuts — top so keys are easy to find */}
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                <Typography sx={{ color: '#fff', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                  Keyboard shortcuts
+                </Typography>
+                <Box
+                  component="button"
+                  onClick={openSearchShortcuts}
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    px: 2,
+                    py: 1.25,
+                    borderRadius: '16px',
+                    bgcolor: '#161412',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#fff',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    '&:hover': {
+                      bgcolor: '#1C1917',
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                      transform: 'translateX(2px)'}}}
+                >
+                  <Keyboard size={18} style={{ color: '#fff', flexShrink: 0 }} />
+                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                    <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }}>
+                      View all shortcuts
+                    </Typography>
+                    <Typography component="span" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.72rem', lineHeight: 1.3 }}>
+                      Quick keys · Ctrl+F to search
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Applications section */}
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                <Typography sx={{ color: '#fff', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                  Apps
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+                  {[
+                    { name: 'note', label: 'Ideas', color: '#EC4899', href: '/app', Icon: FileText },
+                    { name: 'goals', label: 'Goals', color: '#A855F7', href: '/goals', Icon: Target },
+                    { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault', Icon: Lock },
+                    { name: 'tags', label: 'Tags', color: '#F87171', action: () => openUnified('tags'), Icon: TagIcon },
+                    { name: 'trash', label: 'Trash', color: '#EF4444', action: () => openUnified('trash'), Icon: TrashIcon },
+                  ].map((app) => {
+                    const AppIcon = app.Icon;
+                    return (
+                    <ButtonBase
+                      key={app.name}
+                      onClick={() => {
+                        handleCloseAll();
+                        if (app.action) {
+                          app.action();
+                        } else if (app.href) {
+                          router.push(app.href);
+                        }
+                      }}
+                      sx={{
+                        borderRadius: '16px',
+                        bgcolor: '#161412',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        px: 1.5,
+                        py: 1.25,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        transition: 'all 0.15s ease',
+                        '&:hover': {
+                          bgcolor: '#1C1917',
+                          borderColor: alpha(app.color, 0.4),
+                          transform: 'translateY(-1px)'
+                        }
+                      }}
+                    >
+                      <AppIcon size={18} strokeWidth={2} style={{ color: app.color, flexShrink: 0 }} />
+                      <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {app.label}
+                      </Typography>
+                    </ButtonBase>
+                    );
+                  })}
+                </Box>
+              </Box>
+
+              {/* Quick Actions */}
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                <Typography sx={{ color: '#fff', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                  Quick Actions
+                </Typography>
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Box
+                    component="button"
+                    onClick={() => {
+                      handleCloseAll();
+                      router.push('/flows');
+                    }}
+                    sx={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.25,
+                      px: 2,
+                      py: 1.25,
+                      borderRadius: '16px',
+                      bgcolor: '#161412',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      color: '#fff',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        bgcolor: '#1C1917',
+                        borderColor: 'rgba(168, 85, 247, 0.4)',
+                        transform: 'translateX(2px)'}}}
+                  >
+                    <GitFork size={18} strokeWidth={2} style={{ color: '#A855F7', flexShrink: 0 }} />
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                      <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }}>
+                        Workflows
+                      </Typography>
+                      <Typography component="span" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.72rem', lineHeight: 1.3 }}>
+                        Open flows and automations
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Rest of the dynamic quick actions */}
+                  {dynamicQuickActions.filter(a => a.id !== 'hist-note' && a.id !== 'hist-flow').map((action) => (
+                    <Box
+                      key={action.id}
+                      component="button"
+                      onClick={() => {
+                        handleCloseAll();
+                        router.push(action.href);
+                      }}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        px: 2,
+                        py: 1.25,
+                        borderRadius: '16px',
+                        bgcolor: '#161412',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        color: '#fff',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        '&:hover': {
+                          bgcolor: '#1C1917',
+                          borderColor: alpha(action.accent, 0.4),
+                          transform: 'translateX(2px)'
+                        }
+                      }}
+                    >
+                      {action.kind === 'note' ? (
+                        <FileText size={18} strokeWidth={2} style={{ color: action.accent, flexShrink: 0 }} />
+                      ) : action.kind === 'vault' ? (
+                        <Lock size={18} strokeWidth={2} style={{ color: action.accent, flexShrink: 0 }} />
+                      ) : action.kind === 'connect' ? (
+                        <MessageCircle size={18} strokeWidth={2} style={{ color: action.accent, flexShrink: 0 }} />
+                      ) : action.kind === 'flow' ? (
+                        <GitFork size={18} strokeWidth={2} style={{ color: action.accent, flexShrink: 0 }} />
+                      ) : (
+                        <Sparkles size={18} strokeWidth={2} style={{ color: action.accent, flexShrink: 0 }} />
+                      )}
+                      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                        <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                          {action.title}
+                        </Typography>
+                        <Typography component="span" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.72rem', lineHeight: 1.3 }}>
+                          {action.description}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </>
+          ) : (
+            /* Results View */
+            <Box sx={{ display: 'grid', gap: 2 }}>
+
+              {/* Global LocalEngine Results — miniature cards, desktop uses sidebar grid */}
+              {globalResults.length > 0 && (
+                <Box sx={{ display: 'grid', gap: 1.25 }}>
+                  {Object.entries(groupedGlobalResults).map(([kind, items]) => (
+                    <Box key={kind} sx={{ display: 'grid', gap: 0.75 }}>
+                      <Typography sx={{ color: '#fff', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                        {kind} · {items.length}
+                      </Typography>
+                      <Box sx={{ display: 'grid', gap: 0.75, gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr' }}>
+                        {items.slice(0, isDesktop ? 6 : 4).map((r) => (
+                          <Box
+                            key={`${r.kind}-${r.id}`}
+                            component="button"
+                            onClick={() => {
+                              handleCloseAll();
+                              if (r.kind === 'note' && r.raw) {
+                                const noteItem = r.raw;
+                                setActiveDetail({ type: 'note', id: r.id, data: noteItem });
+                                const isWide = typeof window !== 'undefined' && window.innerWidth >= 900;
+                                const NoteDetailSidebarComp = require('@/components/ui/NoteDetailSidebar').NoteDetailSidebar;
+                                if (isWide) {
+                                  openSidebar(
+                                    <NoteDetailSidebarComp note={noteItem} onClose={closeSidebar} />,
+                                    r.id,
+                                    { hideHeader: true }
+                                  );
+                                } else {
+                                  openOverlay(
+                                    <NoteDetailSidebarComp note={noteItem} onClose={closeOverlay} />
+                                  );
+                                }
+                                return;
+                              }
+                              if (r.kind === 'goal') {
+                                selectTask(r.id);
+                                const isWide = typeof window !== 'undefined' && window.innerWidth >= 900;
+                                const GoalObjectDetailComp = require('@/components/objects/GoalObjectDetail').GoalObjectDetail;
+                                if (isWide) {
+                                  openSidebar(
+                                    <GoalObjectDetailComp taskId={r.id} embedded onClose={closeSidebar} />,
+                                    r.id,
+                                    { hideHeader: true }
+                                  );
+                                } else {
+                                  openOverlay(
+                                    <GoalObjectDetailComp taskId={r.id} onClose={closeOverlay} embedded />
+                                  );
+                                }
+                                return;
+                              }
+                              if (r.kind === 'chat' || r.kind === 'thread') {
+                                const CommObjectDetailComp = require('@/components/objects/CommObjectDetail').CommObjectDetail;
+                                const isWide = typeof window !== 'undefined' && window.innerWidth >= 900;
+                                const commKind = r.kind === 'thread' ? 'thread' : 'chat';
+                                if (isWide) {
+                                  openSidebar(
+                                    <CommObjectDetailComp conversationId={r.id} kind={commKind} embedded title={r.title} onClose={closeSidebar} />,
+                                    r.id,
+                                    { hideHeader: true }
+                                  );
+                                } else {
+                                  openOverlay(
+                                    <CommObjectDetailComp conversationId={r.id} kind={commKind} title={r.title} onClose={closeOverlay} embedded />
+                                  );
+                                }
+                                return;
+                              }
+                              if (r.kind === 'event') {
+                                const EventDetailsComp = require('@/components/events/EventDetails').default;
+                                const isWide = typeof window !== 'undefined' && window.innerWidth >= 900;
+                                if (isWide) {
+                                  openSidebar(
+                                    <EventDetailsComp eventId={r.id} initialData={r.raw} onClose={closeSidebar} onBack={closeSidebar} />,
+                                    r.id,
+                                    { hideHeader: true }
+                                  );
+                                } else {
+                                  openOverlay(
+                                    <EventDetailsComp eventId={r.id} initialData={r.raw} onClose={closeOverlay} onBack={closeOverlay} />
+                                  );
+                                }
+                                return;
+                              }
+                              if (r.kind === 'tag') {
+                                openUnified('tags', { tagId: r.id });
+                                return;
+                              }
+                              if (r.kind === 'trash') {
+                                openUnified('trash');
+                                return;
+                              }
+                              navPush(r.href);
+                            }}
+                            sx={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1.25,
+                              px: 2,
+                              py: 1.25,
+                              borderRadius: '16px',
+                              bgcolor: '#161412',
+                              border: '1px solid rgba(255, 255, 255, 0.12)',
+                              color: '#fff',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              '&:hover': { bgcolor: '#1C1917', borderColor: alpha(r.accent, 0.4) },
+                            }}
+                          >
+                            {r.kind === 'note' ? <FileText size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'goal' ? <Target size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'secret' || r.kind === 'totp' ? <Lock size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'flow' ? <GitFork size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'event' ? <Sparkles size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'form' ? <FileText size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'tag' ? <TagIcon size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             r.kind === 'trash' ? <TrashIcon size={18} style={{ color: r.accent, flexShrink: 0 }} /> :
+                             <MessageCircle size={18} style={{ color: r.accent, flexShrink: 0 }} />}
+                            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.15 }}>
+                              <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.84rem', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {r.title}
+                              </Typography>
+                              <Typography component="span" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.72rem', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {r.subtitle || r.kind}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+              {globalResults.length === 0 && searchQuery.trim().length >= 2 && !searchingPeople && (
+                <Typography sx={{ color: '#fff', fontSize: '0.84rem', px: 0.5, fontWeight: 500 }}>No local matches — try people or check spelling.</Typography>
+              )}
+
+              {/* On-Page Results Matches */}
+              {onPageResults.length > 0 && (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Typography sx={{ color: '#fff', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                    On-Page Matches ({onPageResults.length})
+                  </Typography>
+                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+                    {onPageResults.map((match, idx) => (
+                      <Box
+                        key={idx}
+                        component="button"
+                        onClick={() => {
+                          handleCloseAll();
+                          highlightElement(match.element);
+                        }}
+                        sx={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.25,
+                          px: 2,
+                          py: 1.25,
+                          borderRadius: '16px',
+                          bgcolor: '#161412',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          color: '#fff',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: '#1C1917', borderColor: 'rgba(255, 255, 255, 0.3)' }
+                        }}
+                      >
+                        <Search size={18} style={{ color: '#fff', flexShrink: 0 }} />
+                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                          <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                            {match.text}
+                          </Typography>
+                          <Typography component="span" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            element: &lt;{match.tag}&gt;
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* People Search Results */}
+              {(searchingPeople || peopleResults.length > 0) && (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Typography sx={{ color: '#fff', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                    People
+                  </Typography>
+                  {searchingPeople ? (
+                    <Typography sx={{ color: '#fff', fontSize: '0.8rem', px: 0.5, fontWeight: 500 }}>
+                      Searching users...
+                    </Typography>
+                  ) : (
+                    <Box sx={{ display: 'grid', gap: 0.75 }}>
+                      {peopleResults.slice(0, 3).map((person) => (
+                        <Box
+                          key={person.$id || person.id}
+                          component="button"
+                          onClick={() => {
+                            const username = person.username || person.prefs?.username;
+                            if (username) {
+                              stageProfileView(person, person.avatar || null);
+                              handleCloseAll();
+                              router.push(`/u/${encodeURIComponent(username.replace(/^@+/, ''))}?transition=profile`);
+                            }
+                          }}
+                          sx={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.25,
+                            px: 2,
+                            py: 1.25,
+                            borderRadius: '16px',
+                            bgcolor: '#161412',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            color: '#fff',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            '&:hover': { bgcolor: '#1C1917', borderColor: 'rgba(255, 255, 255, 0.3)' }
+                          }}
+                        >
+                          <IdentityAvatar
+                            userId={person.userId || person.$id}
+                            size={36}
+                            fallback={(person.displayName || person.name || String(person.username || 'U').replace(/^@+/, '') || 'U')[0].toUpperCase()}
+                            borderRadius="10px"
+                          />
+                          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                            <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                              {person.displayName || person.name}
+                            </Typography>
+                            <Typography component="span" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.72rem', lineHeight: 1.3 }} noWrap>
+                              @{String(person.username || person.prefs?.username || 'user').replace(/^@+/, '')}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              )}
+
+              {/* Fallback Search Targets */}
+              <Box sx={{ display: 'grid', gap: 0.75 }}>
+                <Typography sx={{ color: '#fff', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                  Ecosystem Search
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', sm: '1fr 1fr' }, gap: 0.75 }}>
+                  {searchSurface.searchTargets.slice(0, 4).map((action) => (
+                    <Box
+                      key={action.id}
+                      component="button"
+                      onClick={() => {
+                        handleCloseAll();
+                        router.push(action.href);
+                      }}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        px: 2,
+                        py: 1.25,
+                        borderRadius: '16px',
+                        bgcolor: '#161412',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        color: '#fff',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: '#1C1917', borderColor: 'rgba(255, 255, 255, 0.3)' }
+                      }}
+                    >
+                      <Logo app={action.kind as any} size={18} variant="icon" />
+                      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                        <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                          {action.title}
+                        </Typography>
+                        <Typography component="span" sx={{ color: '#fff', fontWeight: 500, fontSize: '0.72rem', lineHeight: 1.3 }} noWrap>
+                          {action.description}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </Stack>
+      </Box>
+    );
+
+    if (isDesktop) {
+      if (nativeSidebar) {
+        return (
+          <NativeSidebarMount
+            active={searchOpen}
+            sidebarKey="topbar-search"
+            width={560}
+            title="Search"
+          >
+            <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#000000', boxSizing: 'border-box' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+                <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
+                        Search & Sidekick
+                </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <IconButton
+                          onClick={() => {
+                            const searchId = activeWorkspace?.id ? `search-${activeWorkspace.id}` : `search-${user?.$id || 'personal'}`;
+                            window.dispatchEvent(
+                              new CustomEvent('kylrix:open-sidekick', {
+                                detail: {
+                                  type: 'search',
+                                  id: searchId,
+                                  title: 'Search Assistant',
+                                  content: searchQuery ? `Query: ${searchQuery}` : 'Search surface query context',
+                                },
+                              })
+                            );
+                          }}
+                          sx={{ color: '#A855F7', '&:hover': { bgcolor: 'rgba(168,85,247,0.15)' }, width: 30, height: 30 }}
+                          title="Open Search Sidekick"
+                        >
+                          <Sparkles size={15} />
+                        </IconButton>
+                        <IconButton onClick={handleCloseAll} sx={{ color: '#fff', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' }, width: 30, height: 30 }}>
+                          <CloseIcon size={15} />
+                        </IconButton>
+                      </Box>
+              </Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  bgcolor: '#161412',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '16px',
+                  px: 2,
+                  py: 1.25,
+                  mb: 2.5,
+                  transition: 'all 0.15s ease',
+                  '&:focus-within': {
+                    borderColor: '#6366F1',
+                    boxShadow: '0 0 0 1px #6366F1',
+                  }
+                }}
+              >
+                <Search size={16} style={{ color: '#fff', marginRight: 10, flexShrink: 0 }} />
+                <InputBase
+                  inputRef={searchInputRef}
+                  value={searchQuery}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
+                  placeholder="Search globally..."
+                  fullWidth
+                  autoFocus
+                  sx={{
+                    color: '#fff',
+                    fontFamily: 'var(--font-satoshi)',
+                    fontWeight: 600,
+                    fontSize: '0.88rem',
+                    '& input::placeholder': { color: '#fff', opacity: 0.4 }}}
+                  onKeyDown={(event: React.KeyboardEvent) => {
+                    if (event.key === 'Escape') handleCloseAll();
+                  }}
+                />
+                {searchQuery && (
+                  <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: '#fff', ml: 0.5, p: 0.25 }}>
+                    <CloseIcon size={13} />
+                  </IconButton>
+                )}
+              </Box>
+              <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>{searchContent}</Box>
+            </Box>
+          </NativeSidebarMount>
+        );
+      }
+      return (
+        <Drawer
+          anchor="right"
+          open={searchOpen}
+          onClose={handleCloseAll}
+          keepMounted={false}
+          disablePortal={true}
+          slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
+          PaperProps={{
+            sx: {
+              bgcolor: '#000000',
+              width: 480,
+              height: '100vh',
+              borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
+              p: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box'}
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
+              Search
+            </Typography>
+            <IconButton onClick={handleCloseAll} sx={{ color: '#fff', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' }, width: 30, height: 30 }}>
+              <CloseIcon size={15} />
+            </IconButton>
+          </Box>
+          
+          {/* Search Input for Desktop */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: '#161412',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '16px',
+              px: 2,
+              py: 1.25,
+              mb: 2.5,
+              transition: 'all 0.15s ease',
+              '&:focus-within': {
+                borderColor: '#6366F1',
+                boxShadow: '0 0 0 1px #6366F1',
+              }
+            }}
+          >
+            <Search size={16} style={{ color: '#fff', marginRight: 10, flexShrink: 0 }} />
+            <InputBase
+              inputRef={searchInputRef}
+              value={searchQuery}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
+              placeholder="Search globally..."
+              fullWidth
+              autoFocus
+              sx={{
+                color: '#fff',
+                fontFamily: 'var(--font-satoshi)',
+                fontWeight: 600,
+                fontSize: '0.88rem',
+                '& input::placeholder': { color: '#fff', opacity: 0.4 }}}
+              onKeyDown={(event: React.KeyboardEvent) => {
+                if (event.key === 'Escape') {
+                  handleCloseAll();
+                } else if (event.key === 'Enter' && searchQuery.trim()) {
+                  const query = searchQuery.trim();
+                  // In feed search mode or in connect routes: apply filter directly to live feed and close search drawer instantly
+                  if (typeof window !== 'undefined') {
+                    const words = query.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) || [];
+                    if (words.length) {
+                      void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) => {
+                        recordFeedInteraction({ topics: words, searchWeight: 3 });
+                      });
+                    }
+                    window.dispatchEvent(new CustomEvent('kylrix:feed-search-submit', { detail: { query } }));
+                  }
+                  handleCloseAll();
+                }
+              }}
+            />
+            {searchQuery && (
+              <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: '#fff', ml: 0.5, p: 0.25 }}>
+                <CloseIcon size={13} />
+              </IconButton>
+            )}
+          </Box>
+          
+          <Box sx={{ flex: 1, overflowY: 'auto' }}>
+            {searchContent}
+          </Box>
+        </Drawer>
+      );
+    }
+
+    return (
+      <Box
+        data-kylrix-topbar-panel
+        data-note-search-surface="true"
+        sx={{
+          width: '100%',
+          maxWidth: '100vw',
+          height: '60dvh',
+          maxHeight: '60dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          borderTop: '1px solid rgba(255,255,255,0.15)',
+          borderBottom: '1px solid rgba(255,255,255,0.2)',
+          borderRadius: '0 0 28px 28px',
+          bgcolor: '#000000',
+          overflow: 'hidden',
+          boxShadow: '0 16px 42px rgba(0,0,0,0.6)',
+          p: { xs: 2, sm: 2.5 },
+          boxSizing: 'border-box',
+        }}
+      >
+        {/* Mobile Search Header & Input */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 1.5, px: { xs: 0.5, sm: 1 }, shrink: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.15)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Logo app={activeApp} size={18} variant="icon" />
+              <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '0.95rem' }}>
+                Search
+              </Typography>
+            </Box>
+            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: 'white' }, width: 28, height: 28 }}>
+              <CloseIcon size={14} />
+            </IconButton>
+          </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: '#161412',
+              border: '2px solid rgba(255, 255, 255, 0.22)',
+              borderRadius: '16px',
+              px: 2,
+              py: 1,
+              mx: { xs: 0.5, sm: 1 },
+              boxSizing: 'border-box',
+              transition: 'all 0.15s ease',
+              '&:focus-within': {
+                borderColor: '#6366F1',
+                boxShadow: '0 0 0 1px #6366F1',
+              }
+            }}
+          >
+            <Search size={16} style={{ color: '#fff', opacity: 0.8, marginRight: 10, flexShrink: 0 }} />
+            <InputBase
+              id="topbar-search-field"
+              inputRef={searchInputRef}
+              value={searchQuery}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
+              placeholder="Search globally..."
+              fullWidth
+              autoFocus
+              sx={{
+                color: '#fff',
+                fontFamily: 'var(--font-satoshi)',
+                fontWeight: 600,
+                fontSize: '0.88rem',
+                '& input': { px: 0.5, py: 0.25 },
+                '& input::placeholder': { color: '#fff', opacity: 0.45 }}}
+              onKeyDown={(event: React.KeyboardEvent) => {
+                if (event.key === 'Escape') {
+                  handleCloseAll();
+                }
+              }}
+            />
+            {searchQuery && (
+              <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.6)', ml: 0.5, p: 0.25 }}>
+                <CloseIcon size={13} />
+              </IconButton>
+            )}
+          </Box>
+        </Box>
+        {searchContent}
+      </Box>
+    );
+  };
+
+  const renderProfilePanel = () => {
+    if (!profileMenuAnchorEl || !user) return null;
+
+    const referralCode = profileUsername
+      ? `u_${String(profileUsername).replace(/^@+/, '')}`
+      : `id_${profileSeed.userId || ''}`;
+
+    const primaryHandle = profileUsername ? `@${profileUsername}` : profileDisplayName;
+
+    const profileBody = (
+      <Box sx={{ display: 'grid', gap: 2, minWidth: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+        {/* 1. Identity Tile */}
+        <Box
+          sx={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1.75,
+            px: 2.25,
+            py: 1.75,
+            borderRadius: '20px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            bgcolor: 'rgba(255,255,255,0.03)',
+            minWidth: 0,
+            boxSizing: 'border-box',
+          }}
+        >
+          {/* Avatar slot */}
+          <Box sx={{ flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+            <IdentityAvatar
+              userId={user?.$id}
+              size={48}
+              pro={isPro}
+              fallback={(profileUsername || profileDisplayName || 'U')[0].toUpperCase()}
+            />
+          </Box>
+
+          {/* Stacked copy column */}
+          <Box
+            sx={{
+              minWidth: 0,
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0.5,
+              pr: 0.5,
+            }}
+          >
+            <Box
+              component="button"
+              type="button"
+              onClick={handleCopyUsername}
+              title="Click to copy handle"
+              sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0, bgcolor: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', minWidth: 0, maxWidth: '100%' }}
+            >
+              <Typography
+                component="span"
+                sx={{
+                  color: 'white',
+                  fontWeight: 900,
+                  fontSize: '0.98rem',
+                  lineHeight: 1.25,
+                  fontFamily: 'var(--font-clash)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0,
+                  flex: 1,
+                  '&:hover': { color: '#818CF8' },
+                }}
+              >
+                {primaryHandle}
+              </Typography>
+              <Box sx={{ p: 0.5, borderRadius: '6px', color: copyState === 'copied-username' ? '#10B981' : 'rgba(255,255,255,0.35)', bgcolor: copyState === 'copied-username' ? 'rgba(16,185,129,0.15)' : 'transparent', flexShrink: 0 }}>
+                {copyState === 'copied-username' ? <Check size={13} /> : <CopyIcon size={13} />}
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+              <Box component="span" sx={{ fontSize: '9px', fontFamily: 'monospace', px: 1.25, py: 0.3, borderRadius: '999px', bgcolor: 'rgba(236,72,153,0.15)', color: '#EC4899', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, lineHeight: 1.2 }}>
+                {currentTier} PLAN
+              </Box>
+              {profileUsername && profileDisplayName && profileDisplayName !== profileUsername && (
+                <Typography component="span" sx={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
+                  {profileDisplayName}
+                </Typography>
+              )}
+              {!profileUsername && (
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={handleGenerateUsername}
+                  disabled={isGeneratingUsername}
+                  sx={{ px: 1.25, py: 0.3, borderRadius: '8px', bgcolor: 'rgba(99,102,241,0.2)', color: '#818cf8', fontSize: '10px', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, lineHeight: 1.2 }}
+                >
+                  <Sparkles size={10} />
+                  <span>{isGeneratingUsername ? '...' : 'Claim @name'}</span>
+                </Box>
+              )}
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+            <Tooltip title="Switch or add account">
+              <IconButton
+                onClick={() => {
+                  openUnified('login', { mode: 'add-account', isAddAccount: true });
+                  handleCloseAll();
+                }}
+                size="small"
+                sx={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: '999px',
+                  color: '#EC4899',
+                  bgcolor: 'rgba(236,72,153,0.12)',
+                  border: '1px solid rgba(236,72,153,0.25)',
+                  flexShrink: 0,
+                  '&:hover': { bgcolor: 'rgba(236,72,153,0.25)', color: 'white' },
+                }}
+              >
+                <Users size={14} />
+              </IconButton>
+            </Tooltip>
+            {/* Close Action slot */}
+            <IconButton onClick={handleCloseAll} size="small" sx={{ width: 30, height: 30, borderRadius: '999px', color: alpha('#fff', 0.6), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
+              <CloseIcon size={15} />
+            </IconButton>
+          </Box>
+        </Box>
+
+        {/* 2. Referral Outlined Tile */}
+        <Box
+          sx={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1.5,
+            px: 2.25,
+            py: 2,
+            borderRadius: '20px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            bgcolor: 'rgba(255,255,255,0.03)',
+            minWidth: 0,
+            boxSizing: 'border-box',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0, px: 0.5 }}>
+            <Typography component="span" sx={{ color: 'rgba(255,255,255,0.65)', fontSize: '11px', fontWeight: 900, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, flex: 1, overflow: 'hidden', lineHeight: 1.3 }}>
+              <Users size={13} color="#10B981" style={{ flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>Referral Link</span>
+            </Typography>
+            <Box component="span" sx={{ fontSize: '9.5px', fontFamily: 'monospace', color: '#10B981', bgcolor: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.2)', px: 1.25, py: 0.35, borderRadius: '6px', fontWeight: 800, flexShrink: 0, lineHeight: 1.2 }}>
+              +1.5 $KYL / join
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.25,
+              bgcolor: 'rgba(0,0,0,0.5)',
+              px: 1.75,
+              py: 1.25,
+              borderRadius: '14px',
+              border: '1px solid rgba(255,255,255,0.06)',
+              minWidth: 0,
+              maxWidth: '100%',
+              overflow: 'hidden',
+              boxSizing: 'border-box',
+            }}
+          >
+            <Typography component="span" sx={{ color: 'rgba(255,255,255,0.9)', fontFamily: 'monospace', fontSize: '11.5px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0, userSelect: 'all' }}>
+              {typeof window !== 'undefined' ? `${window.location.host}/?ref=${referralCode}` : '/?ref=...'}
+            </Typography>
+            <Box
+              component="button"
+              type="button"
+              onClick={handleCopyReferralLink}
+              sx={{ px: 2.25, py: 0.75, borderRadius: '9px', fontSize: '11.5px', fontWeight: 900, color: 'white', bgcolor: copyState === 'copied-referral' ? '#10B981' : '#6366F1', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5, transition: 'all 0.2s', flexShrink: 0, lineHeight: 1.2, '&:hover': { bgcolor: copyState === 'copied-referral' ? '#10B981' : '#5254E8' } }}
+            >
+              {copyState === 'copied-referral' ? <Check size={12} /> : <CopyIcon size={12} />}
+              <span>{copyState === 'copied-referral' ? 'Copied' : 'Copy'}</span>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Multi-Account Switcher */}
+        <Box sx={{ width: '100%', minWidth: 0, pt: 0.5 }}>
+          <AccountSwitcher onSwitched={handleCloseAll} compact />
+        </Box>
+
+        {/* 3. Action Buttons (Wallet & Settings side-by-side, Sign Out below) */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, pt: 0.25, minWidth: 0, width: '100%' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25, minWidth: 0, width: '100%' }}>
+            <Button
+              onClick={() => {
+                handleCloseAll();
+                openWallet();
+              }}
+              sx={{ minHeight: 46, borderRadius: '16px', bgcolor: alpha(appAccent, 0.08), border: `1px solid ${alpha(appAccent, 0.16)}`, color: appAccent, px: 2, py: 1.25, fontSize: '0.86rem', textTransform: 'none', fontWeight: 800, minWidth: 0, overflow: 'hidden', '&:hover': { bgcolor: alpha(appAccent, 0.15) } }}
+              startIcon={<Wallet size={15} style={{ flexShrink: 0 }} />}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, lineHeight: 1.3 }}>Wallet</span>
+            </Button>
+            <Button
+              onClick={() => {
+                handleCloseAll();
+                router.push('/settings');
+              }}
+              sx={{ minHeight: 46, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.03)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', px: 2, py: 1.25, fontSize: '0.86rem', textTransform: 'none', fontWeight: 800, minWidth: 0, overflow: 'hidden', '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' } }}
+              startIcon={<Settings size={15} style={{ flexShrink: 0 }} />}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, lineHeight: 1.3 }}>Settings</span>
+            </Button>
+          </Box>
+
+          {!isPro && (
+            <Button
+              onClick={() => {
+                handleCloseAll();
+                openProUpgrade();
+              }}
+              sx={{ minHeight: 44, borderRadius: '16px', bgcolor: 'rgba(236,72,153,0.08)', color: '#EC4899', border: '1px solid rgba(236,72,153,0.22)', px: 2, py: 1.1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, minWidth: 0, overflow: 'hidden', '&:hover': { bgcolor: 'rgba(236,72,153,0.15)' } }}
+              startIcon={<Sparkles size={14} style={{ flexShrink: 0 }} />}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, lineHeight: 1.3 }}>Sync</span>
+            </Button>
+          )}
+
+          <Button
+            onClick={() => {
+              handleCloseAll();
+              void logout();
+            }}
+            sx={{ minHeight: 46, borderRadius: '16px', bgcolor: 'rgba(255,77,77,0.06)', color: '#FF4D4D', border: '1px solid rgba(255,77,77,0.14)', px: 2, py: 1.25, fontSize: '0.86rem', textTransform: 'none', fontWeight: 800, minWidth: 0, overflow: 'hidden', '&:hover': { bgcolor: 'rgba(255,77,77,0.12)' } }}
+            startIcon={<LogOut size={15} style={{ flexShrink: 0 }} />}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, lineHeight: 1.3 }}>Sign out</span>
+          </Button>
+        </Box>
+      </Box>
+    );
+
+    if (isDesktop) {
+      if (nativeSidebar) {
+        return (
+          <NativeSidebarMount
+            active={Boolean(profileMenuAnchorEl)}
+            sidebarKey="topbar-profile"
+            width={380}
+            title="Profile"
+          >
+            <Box sx={{ p: 2, overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+              {profileBody}
+            </Box>
+          </NativeSidebarMount>
+        );
+      }
+      return (
+        <Drawer
+          anchor="right"
+          open={Boolean(profileMenuAnchorEl)}
+          onClose={() => setProfileMenuAnchorEl(null)}
+          keepMounted={false}
+          disablePortal={true}
+          slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              backgroundImage: 'none',
+              width: { xs: '100vw', sm: 380 },
+              maxWidth: '100vw',
+              borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
+              boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
+              height: '100vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box',
+              overflowX: 'hidden',
+              p: { xs: 2, sm: 2.75 },
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
+              Profile
+            </Typography>
+            <IconButton onClick={() => setProfileMenuAnchorEl(null)} sx={{ color: 'rgba(255, 255, 255, 0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+              <CloseIcon size={16} />
+            </IconButton>
+          </Box>
+
+          <Paper
+            elevation={0}
+            sx={{
+              width: '100%',
+              maxWidth: '100%',
+              borderRadius: '26px',
+              bgcolor: '#161412',
+              border: `1px solid ${alpha(appAccent, 0.22)}`,
+              overflow: 'hidden',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box',
+            }}
+          >
+            <Box sx={{ p: { xs: 1.5, sm: 2 }, overflowY: 'auto', overflowX: 'hidden', flex: 1, boxSizing: 'border-box' }}>
+              {profileBody}
+            </Box>
+          </Paper>
+        </Drawer>
+      );
+    }
+
+    return (
+      <Box
+        data-kylrix-topbar-panel
+        sx={{
+          width: '100%',
+          maxWidth: '100vw',
+          boxSizing: 'border-box',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '0 0 28px 28px',
+          bgcolor: '#161412',
+          overflow: 'hidden',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+        }}
+      >
+        <Box
+          onWheel={(event: React.WheelEvent) => {
+            const node = event.currentTarget;
+            if (event.deltaY < 0 && isTopbarScrollAtTop(node as HTMLElement)) {
+              event.preventDefault();
+              handleCloseAll();
+            }
+          }}
+          sx={{ px: { xs: 1.5, sm: 2.25, md: 4 }, py: { xs: 1.5, sm: 2 }, maxHeight: '45vh', overflowY: 'auto', overflowX: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              width: '100%',
+              maxWidth: '100%',
+              borderRadius: '24px',
+              bgcolor: '#161412',
+              border: `1px solid ${alpha(appAccent, 0.22)}`,
+              overflow: 'hidden',
+              boxSizing: 'border-box',
+            }}
+          >
+            <Box sx={{ p: { xs: 1.5, sm: 2.25 }, overflowX: 'hidden', boxSizing: 'border-box' }}>
+              {profileBody}
+            </Box>
+          </Paper>
+        </Box>
+      </Box>
+    );
+  };
+
+  const renderAppPanel = () => {
+    if (!appMenuAnchorEl) return null;
+
+    const workspaceSwitcher = (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5, width: '100%', minWidth: 0 }}>
+          <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, color: '#9B9691', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            Workspaces
+          </Typography>
+          <Button
+            size="small"
+            onClick={() => {
+              handleCloseAll();
+              openUnified('new-project');
+            }}
+            sx={{ color: '#6366F1', fontWeight: 800, fontSize: '0.75rem', textTransform: 'none', minWidth: 0, px: 1, py: 0.25, borderRadius: '8px', bgcolor: 'rgba(99, 102, 241, 0.1)', '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.2)' } }}
+          >
+            + New
+          </Button>
+        </Box>
+
+        {loadingWorkspaces && workspaces.length <= 1 ? (
+          <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', px: 0.5 }}>
+            Loading workspaces…
+          </Typography>
+        ) : null}
+
+        {workspaces.map((w) => {
+          const isActive = activeWorkspace?.id === w.id;
+          const subtitle = w.isPersonal
+            ? 'Default workspace'
+            : w.isAgentic
+              ? 'Agent workspace'
+              : w.isShared
+                ? (w.role ? `Shared (${w.role})` : 'Shared with you')
+                : 'Workspace';
+
+          return (
+            <Box
+              key={w.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                setActiveWorkspaceId(w.id);
+                handleCloseAll();
+              }}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveWorkspaceId(w.id);
+                  handleCloseAll();
+                }
+              }}
+              sx={{
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: { xs: 1.25, sm: 2 },
+                py: 1.25,
+                borderRadius: '14px',
+                bgcolor: isActive ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid',
+                borderColor: isActive ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.04)',
+                color: 'white',
+                textAlign: 'left',
+                cursor: 'pointer',
+                minWidth: 0,
+                overflow: 'hidden',
+                '&:hover': {
+                  bgcolor: isActive ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255,255,255,0.04)',
+                },
+              }}
+            >
+              <Box sx={{ minWidth: 0, flex: '1 1 0%', pr: 1, overflow: 'hidden' }}>
+                <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? (w.isAgentic ? '#818CF8' : '#6366F1') : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
+                  {w.title}
+                </Typography>
+                <Typography sx={{ fontSize: '0.72rem', color: isActive ? 'rgba(99, 102, 241, 0.8)' : 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', maxWidth: '100%', width: '100%' }} noWrap>
+                  {subtitle}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, flexGrow: 0 }}>
+                {!w.isPersonal && (
+                  <>
+                    <IconButton
+                      size="small"
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation();
+                        handleCloseAll();
+                        markWorkspacePublic(w.id);
+                        void executeInstantShare('project', w.id, {
+                          resourceTitle: w.title,
+                          isPublic: true,
+                          isGuest: true,
+                        });
+                        openUnified('share-context', {
+                          resourceType: 'project',
+                          resourceId: w.id,
+                          resourceTitle: w.title,
+                          isPublic: true,
+                          isGuest: true,
+                          accentColor: '#10B981',
+                        });
+                      }}
+                      sx={{
+                        color: w.isPublic ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
+                        bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                        p: 0.75,
+                        borderRadius: '8px',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          color: w.isPublic ? '#10B981' : '#6366F1',
+                          bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.22)' : 'rgba(99, 102, 241, 0.15)',
+                          transform: 'scale(1.08)',
+                        },
+                      }}
+                      title={w.isPublic ? 'Public sharing enabled (click to manage)' : 'Share workspace'}
+                    >
+                      <ShareIcon size={14} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation();
+                        handleCloseAll();
+                        openUnified('workspace-options', { workspace: w });
+                      }}
+                      sx={{
+                        color: 'rgba(255, 255, 255, 0.35)',
+                        p: 0.75,
+                        borderRadius: '8px',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          color: '#FFFFFF',
+                          bgcolor: 'rgba(255, 255, 255, 0.1)',
+                          transform: 'scale(1.08)',
+                        },
+                      }}
+                      title="Workspace settings"
+                    >
+                      <MoreIcon size={14} />
+                    </IconButton>
+                  </>
+                )}
+                {isActive ? (
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: w.isAgentic ? '#818CF8' : '#6366F1', boxShadow: `0 0 8px ${w.isAgentic ? '#818CF8' : '#6366F1'}`, flexShrink: 0 }} />
+                ) : null}
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+    );
+
+    const githubCta = (
+      <a
+        href="https://github.com/Kylrix/kylrix"
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => handleCloseAll()}
+        className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all font-satoshi text-xs font-bold text-white/90 min-w-0 flex-1 overflow-hidden"
+      >
+        <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+          <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+        </svg>
+        <span className="truncate">GitHub</span>
+      </a>
+    );
+
+    const discordCta = !user?.prefs?.discordJoined ? (
+      <a
+        href="https://discord.gg/YjF5yCBCmx"
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => {
+          handleCloseAll();
+          if (typeof updatePreferences === 'function') {
+            void updatePreferences({ discordJoined: true }).catch(() => {});
+          }
+        }}
+        className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-2xl border border-[#5865F2]/20 bg-[#5865F2]/5 hover:bg-[#5865F2]/10 transition-all font-satoshi text-xs font-bold text-[#5865F2] min-w-0 flex-1 overflow-hidden"
+      >
+        <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 127.14 96.36">
+          <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36c2.65-3.6,5-7.46,7-11.5a68.88,68.88,0,0,1-11-5.26c.92-.68,1.82-1.39,2.69-2.13A75.14,75.14,0,0,0,96.5,77.47c.87.74,1.77,1.45,2.69,2.13a68.88,68.88,0,0,1-11,5.26c2,4,4.35,7.9,7,11.5a105.73,105.73,0,0,0,31-18.83C129,54.65,122.68,31.58,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.9,46,53.9,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.14,46,96.14,53,91,65.69,84.69,65.69Z"/>
+        </svg>
+        <span className="truncate">Discord</span>
+      </a>
+    ) : null;
+
+    const ecosystemBody = (
+      <Box sx={{ display: 'grid', gap: 1.5, width: '100%', minWidth: 0 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: discordCta ? '1fr 1fr' : '1fr', gap: 1.25, width: '100%', minWidth: 0 }}>
+          {githubCta}
+          {discordCta}
+        </Box>
+        {workspaceSwitcher}
+      </Box>
+    );
+
+    if (isDesktop) {
+      if (nativeSidebar) {
+        return (
+          <NativeSidebarMount
+            active={Boolean(appMenuAnchorEl)}
+            sidebarKey="topbar-ecosystem"
+            width={380}
+            title="Ecosystem"
+          >
+            <Box sx={{ p: 2 }}>
+              {ecosystemBody}
+            </Box>
+          </NativeSidebarMount>
+        );
+      }
+      return (
+        <Drawer
+          anchor="left"
+          open={Boolean(appMenuAnchorEl)}
+          onClose={() => setAppMenuAnchorEl(null)}
+          keepMounted={false}
+          disablePortal={true}
+          slotProps={{
+            backdrop: {
+              sx: {
+                top: `88px`,
+                backdropFilter: 'none',
+                WebkitBackdropFilter: 'none',
+                bgcolor: 'rgba(0,0,0,0.4)'
+              }
+            }
+          }}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              width: 340,
+              height: '100vh',
+              borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+              p: 2.75,
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box'}
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.75 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
+              Ecosystem
+            </Typography>
+            <IconButton onClick={() => setAppMenuAnchorEl(null)} sx={{ color: 'rgba(255, 255, 255, 0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+              <CloseIcon size={16} />
+            </IconButton>
+          </Box>
+
+          <Paper
+            elevation={0}
+            sx={{
+              width: '100%',
+              borderRadius: '26px',
+              bgcolor: '#161412',
+              border: `1px solid ${alpha(appAccent, 0.22)}`,
+              overflow: 'hidden',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Box sx={{ p: 1.25, overflowY: 'auto', flex: 1 }}>
+              {ecosystemBody}
+            </Box>
+          </Paper>
+        </Drawer>
+      );
+    }
+
+    return (
+      <motion.div
+        key="app-panel"
+        initial={appPanelMotion.initial}
+        animate={appPanelMotion.animate}
+        exit={appPanelMotion.exit}
+        transition={appPanelMotion.transition}
+        style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden', transformOrigin: 'top center' }}
+      >
+        <Box
+          data-kylrix-topbar-panel
+          sx={{
+            width: '100%',
+            maxWidth: '100vw',
+            bgcolor: '#161412',
+            overflowX: 'hidden',
+            overflowY: 'hidden',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '0 0 28px 28px',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+            boxSizing: 'border-box',
+          }}
+        >
+          <Box
+            onWheel={(event: React.WheelEvent) => {
+              const node = event.currentTarget;
+              if (event.deltaY < 0 && isTopbarScrollAtTop(node as HTMLElement)) {
+                event.preventDefault();
+                handleCloseAll();
+              }
+            }}
+            sx={{ px: { xs: 1.5, sm: 2.25, md: 4 }, py: 1.25, maxHeight: '55vh', overflowY: 'auto', overflowX: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+          >
+            <Paper
+              elevation={0}
+              sx={{
+                width: '100%',
+                maxWidth: '100%',
+                borderRadius: '26px',
+                bgcolor: '#161412',
+                border: `1px solid ${alpha(appAccent, 0.22)}`,
+                overflowX: 'hidden',
+                overflowY: 'hidden',
+                boxSizing: 'border-box',
+              }}
+            >
+              <Box sx={{ p: { xs: 1.25, sm: 2 }, width: '100%', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1.25 }}>
+                  <IconButton onClick={handleCloseAll} size="small" sx={{ width: 28, height: 28, borderRadius: '999px', color: alpha('#fff', 0.6), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
+                    <CloseIcon size={14} />
+                  </IconButton>
+                </Box>
+                {ecosystemBody}
+              </Box>
+            </Paper>
+          </Box>
+        </Box>
+      </motion.div>
+    );
+  };
+
+  return (
+    <>
+      <AppBar
+        ref={headerRef}
+        className={`${className} kylrix-topbar`}
+        position="fixed"
+        elevation={0}
+        sx={{
+          display: isDrawerExpanded ? 'none' : 'block',
+          zIndex: 1201,
+          bgcolor: '#000000',
+          borderBottom: '2px solid rgba(255,255,255,0.25)',
+          borderRadius: '0 0 28px 28px',
+          boxShadow: '0 16px 42px rgba(0,0,0,0.5)',
+          backgroundImage: 'none',
+          overflow: 'visible',
+          pointerEvents: 'auto',
+          height: isDesktop ? '88px' : (activePanel ? 'auto' : '88px')}}
+      >
+        <SyncIndicator />
+        <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, width: '100%', height: '88px', display: activePanel ? 'none' : 'flex', alignItems: 'center' }}>
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: { xs: 'auto 1fr auto', md: '1fr auto 1fr' }, 
+            alignItems: 'center', 
+            width: '100%', 
+            gap: 2 
+          }}>
+            
+            {/* Left: App Logo / Menu Trigger */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', pointerEvents: 'auto' }}>
+              <Box 
+                onClick={(e: React.MouseEvent<HTMLElement>) => {
+                  e.stopPropagation();
+                  if (!user) {
+                    openUnified('login');
+                    return;
+                  }
+                  if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+                    setIsCollapsed((prev: boolean) => !prev);
+                  } else {
+                    openAppMenu(e);
+                  }
+                }} 
+                sx={{ cursor: 'pointer', flexShrink: 0, pointerEvents: 'auto' }}
+              >
+                <Logo app={activeApp} size={32} variant="full" />
+              </Box>
+            </Box>
+
+            {/* Center: Search — compact, not obstructing; Bell is separate */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1, minWidth: 0 }}>
+              {user ? (
+                <AnimatePresence mode="wait">
+                  {searchOpen ? (
+                    <motion.div 
+                      key="search-active"
+                      initial={{ width: 44, opacity: 0 }} 
+                      animate={{ width: isDesktop ? 520 : 'calc(100vw - 120px)', opacity: 1 }} 
+                      exit={{ width: 44, opacity: 0 }} 
+                      transition={{ type: 'spring', damping: 25, stiffness: 200 }} 
+                      style={{ position: 'relative', maxWidth: '100%', zIndex: 10 }}
+                    >
+                      <Paper elevation={0} sx={{ height: 44, display: 'flex', alignItems: 'center', gap: 1.25, px: 1.5, border: '1px solid rgba(99, 102, 241, 0.35)', bgcolor: '#161412', color: 'white', borderRadius: '24px', boxShadow: '0 0 26px rgba(99, 102, 241, 0.08), 0 0 0 4px rgba(99, 102, 241, 0.12)', overflow: 'hidden' }}>
+                        <Search size={16} strokeWidth={2.5} style={{ opacity: 0.8, flexShrink: 0 }} />
+                        <InputBase 
+                            id="topbar-search-input"
+                            inputRef={searchInputRef} 
+                            value={searchQuery} 
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)} 
+                            placeholder="Search ecosystem..." 
+                            sx={{ flex: 1, color: '#FFFFFF', fontWeight: 800, fontSize: '0.9rem', '& input::placeholder': { color: 'rgba(255,255,255,0.4)' } }} 
+                        />
+                        
+                        <Tooltip title="Keyboard shortcuts">
+                          <IconButton
+                            onClick={(e: React.MouseEvent) => {
+                              e.stopPropagation();
+                              openSearchShortcuts();
+                            }}
+                            sx={{
+                              color: searchShortcutsView ? '#6366F1' : '#FFFFFF',
+                              opacity: searchShortcutsView ? 1 : 0.6,
+                              p: 1,
+                              bgcolor: searchShortcutsView ? 'rgba(255,255,255,0.08)' : 'transparent',
+                              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: '#FFFFFF', opacity: 1 }}}
+                          >
+                            <Keyboard size={17} strokeWidth={2.25} />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Box sx={{ width: 1, height: 20, bgcolor: 'rgba(255,255,255,0.12)', mx: 0.5 }} />
+                        
+                        <IconButton size="small" onClick={() => { setSearchOpen(false); setSearchQuery(''); }} sx={{ color: '#FFFFFF', opacity: 0.6, '&:hover': { opacity: 1 } }}><CloseIcon size={16} /></IconButton>
+                      </Paper>
+                    </motion.div>
+                  ) : isMounted ? (
+                    <motion.div 
+                      key="island-rest"
+                      initial={{ scale: 0.8, opacity: 0 }} 
+                      animate={{ scale: 1, opacity: 1 }} 
+                      whileHover={{ scale: 1.02 }} 
+                      onClick={openSearch} 
+                      style={{ cursor: 'pointer', position: 'relative', zIndex: 10 }}
+                    >
+                      <Box sx={{ 
+                        width: { xs: 44, md: 160 }, 
+                        height: 44, 
+                        borderRadius: '999px', 
+                        bgcolor: '#161412', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        gap: 1, 
+                        color: 'white', 
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          borderColor: 'rgba(99, 102, 241, 0.4)',
+                          bgcolor: '#1C1917',
+                          boxShadow: '0 0 20px rgba(99, 102, 241, 0.15)'
+                        }
+                      }}>
+                        <Box sx={{ display: 'grid', placeItems: 'center' }}>
+                          <Search size={18} strokeWidth={2.5} />
+                        </Box>
+                        <Typography sx={{ display: { xs: 'none', md: 'block' }, fontFamily: 'var(--font-satoshi)', fontWeight: 700, fontSize: '0.8rem', color: '#FFFFFF' }}>Search</Typography>
+                      </Box>
+                    </motion.div>
+                  ) : (
+                    <div 
+                      onClick={openSearch} 
+                      style={{ cursor: 'pointer', position: 'relative', zIndex: 10 }}
+                    >
+                      <Box sx={{ 
+                        width: { xs: 44, md: 160 }, 
+                        height: 44, 
+                        borderRadius: '999px', 
+                        bgcolor: '#161412', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        gap: 1, 
+                        color: 'white', 
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          borderColor: 'rgba(99, 102, 241, 0.4)',
+                          bgcolor: '#1C1917',
+                          boxShadow: '0 0 20px rgba(99, 102, 241, 0.15)'
+                        }
+                      }}>
+                        <Box sx={{ display: 'grid', placeItems: 'center' }}>
+                          <Search size={18} strokeWidth={2.5} />
+                        </Box>
+                        <Typography sx={{ display: { xs: 'none', md: 'block' }, fontFamily: 'var(--font-satoshi)', fontWeight: 700, fontSize: '0.8rem', color: '#FFFFFF' }}>Search</Typography>
+                      </Box>
+                    </div>
+                  )}
+                </AnimatePresence>
+              ) : <Box sx={{ height: 44 }} />}
+
+              {/* Desktop Flush Passive Notification Pill Trigger */}
+              {passiveNotification && isDesktop && !searchOpen && (
+                <motion.div
+                  key="passive-pill-desktop"
+                  initial={{ scale: 0.95, opacity: 0, x: 10 }}
+                  animate={{ scale: 1, opacity: 1, x: 0 }}
+                  exit={{ scale: 0.95, opacity: 0, x: 10 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  style={{ position: 'relative', zIndex: 10, maxWidth: 360 }}
+                >
+                  <CompactNotificationPill
+                    notification={passiveNotification}
+                    onExpand={() => {
+                      if (passiveNotification?.source === 'system') {
+                        dismissedPassiveIdsRef.current.add(passiveNotification.id);
+                        setDismissedHintId(passiveNotification.id);
+                      }
+                      setPassiveNotification(null);
+                      handleCloseAll();
+                      openSecondarySidebar('notification', 'notifications');
+                    }}
+                    onDismiss={() => {
+                      if (passiveNotification?.source === 'system') {
+                        dismissedPassiveIdsRef.current.add(passiveNotification.id);
+                        setDismissedHintId(passiveNotification.id);
+                      }
+                      setPassiveNotification(null);
+                    }}
+                    onApply={() => handleNotificationClick(passiveNotification)}
+                    appAccent={appAccent}
+                    isDesktop={true}
+                  />
+                </motion.div>
+              )}
+
+              {user && (
+                <IconButton
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    toggleNotifications();
+                  }}
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '999px',
+                    bgcolor: isNotificationOpenActive ? 'rgba(99,102,241,0.18)' : '#161412',
+                    border: '1px solid',
+                    borderColor: isNotificationOpenActive ? 'rgba(99,102,241,0.45)' : 'rgba(255,255,255,0.1)',
+                    color: (suggestions.length > 0 || notifHint || passiveNotification) ? '#6366F1' : '#FFFFFF',
+                    position: 'relative',
+                    flexShrink: 0,
+                    '&:hover': { bgcolor: '#1C1917', borderColor: 'rgba(255,255,255,0.18)', color: '#FFFFFF' }
+                  }}
+                >
+                  <Bell size={18} strokeWidth={2.2} />
+                  {(suggestions.length > 0 || notifHint || passiveNotification) && (
+                    <Box sx={{ position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: '50%', bgcolor: '#EC4899', border: '1.5px solid #000' }} />
+                  )}
+                </IconButton>
+              )}
+            </Box>
+
+            {/* Right: Smart Systems & Profile */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flexShrink: 0 }}>
+                {user ? (
+                  <>
+                    {showWebMcpTopbar && isDesktop && (
+                      <Tooltip title="WebMCP Tools (Browser-Native Inspector)">
+                        <IconButton
+                          onClick={() => {
+                            setProfileMenuAnchorEl(null);
+                            setAppMenuAnchorEl(null);
+                            setSearchOpen(false);
+                            setSearchShortcutsView(false);
+                            setNotificationsOpen(false);
+                            setNotifHint(null);
+                            // Single toggle — do not also dispatch kylrix:toggle-webmcp (double-toggles closed).
+                            toggleWebMcp();
+                          }}
+                          sx={{
+                            color: isWebMcpOpen ? '#34D399' : '#10B981',
+                            bgcolor: isWebMcpOpen ? '#000000' : '#161412',
+                            border: '1px solid',
+                            borderColor: isWebMcpOpen ? '#10B981' : alpha('#10B981', 0.35),
+                            borderRadius: '14px',
+                            width: 44,
+                            height: 44,
+                            boxShadow: `0 8px 24px ${alpha('#10B981', 0.25)}`,
+                            '&:hover': { bgcolor: '#201D1A', transform: 'scale(1.05)' },
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          }}
+                        >
+                          <Terminal size={19} strokeWidth={2.2} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+
+                    {!isWorkspacePrivacyMode && (
+                      <IconButton onClick={openAgenticFromTopbar} sx={{ color: appAccent, bgcolor: '#161412', border: '1px solid', borderColor: alpha(appAccent, 0.35), borderRadius: '14px', width: 44, height: 44, boxShadow: `0 8px 24px ${alpha(appAccent, 0.25)}`, '&:hover': { bgcolor: '#201D1A', transform: 'scale(1.05)' }, transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                        <Bot size={20} strokeWidth={2.2} />
+                      </IconButton>
+                    )}
+
+
+                    <ButtonBase onClick={openProfileMenu} sx={{ borderRadius: '50%', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>
+                      <IdentityAvatar 
+                        userId={user?.$id}
+                        size={38} 
+                        pro={isPro} 
+                        fallback={profileName[0]} 
+                      />
+                    </ButtonBase>
+                  </>
+                ) : (
+                  <Button onClick={() => openUnified('login')} sx={{ bgcolor: '#6366F1', color: 'white', fontWeight: 900, borderRadius: '12px', px: 2.5, py: 1, '&:hover': { bgcolor: '#5254E8' } }}>{isAuthenticating ? <CircularProgress size={16} color="inherit" /> : 'Sync'}</Button>
+                )}
+              </Stack>
+            </Box>
+          </Box>
+        </Box>
+
+      </AppBar>
+      {!isDrawerExpanded && (
+        <>
+          {/* Mobile Topbar Takeover Top Drawer for Passive Notifications */}
+          <AnimatePresence>
+            {passiveNotification && !isDesktop && (
+              <motion.div
+                key="mobile-passive-topdrawer"
+                initial={{ y: '-100%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '-100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  zIndex: 1300,
+                  width: '100%',
+                  height: '88px',
+                  pointerEvents: 'auto',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    bgcolor: '#000000',
+                    borderBottom: '2px solid rgba(255,255,255,0.25)',
+                    borderRadius: '0 0 28px 28px',
+                    boxShadow: '0 16px 42px rgba(0,0,0,0.7)',
+                    px: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1.5,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '12px',
+                      bgcolor: alpha(passiveNotification.accent || appAccent, 0.16),
+                      color: passiveNotification.accent || appAccent,
+                      border: `1px solid ${alpha(passiveNotification.accent || appAccent, 0.3)}`,
+                      display: 'grid',
+                      placeItems: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Sparkles size={18} strokeWidth={2.4} />
+                  </Box>
+
+                  <Box
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      handleNotificationClick(passiveNotification);
+                    }}
+                    sx={{
+                      minWidth: 0,
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 0.25,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontFamily: 'var(--font-clash)',
+                        fontWeight: 800,
+                        fontSize: '0.88rem',
+                        color: '#FFFFFF',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {passiveNotification.title}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontFamily: 'var(--font-satoshi)',
+                        fontWeight: 500,
+                        fontSize: '0.76rem',
+                        color: 'rgba(255,255,255,0.75)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {passiveNotification.message}
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                    <Button
+                      size="small"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleNotificationClick(passiveNotification);
+                      }}
+                      sx={{
+                        minWidth: 0,
+                        px: 1.5,
+                        py: 0.5,
+                        height: 32,
+                        borderRadius: '999px',
+                        bgcolor: alpha(appAccent, 0.22),
+                        color: appAccent,
+                        border: `1px solid ${alpha(appAccent, 0.4)}`,
+                        fontSize: '0.74rem',
+                        fontWeight: 800,
+                        textTransform: 'none',
+                        lineHeight: 1,
+                        '&:hover': {
+                          bgcolor: alpha(appAccent, 0.35),
+                        },
+                      }}
+                    >
+                      {passiveNotification.actionHref ? 'Open' : 'View'}
+                    </Button>
+
+                    <IconButton
+                      size="small"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        if (passiveNotification?.source === 'system') {
+                          dismissedPassiveIdsRef.current.add(passiveNotification.id);
+                          setDismissedHintId(passiveNotification.id);
+                        }
+                        setPassiveNotification(null);
+                      }}
+                      sx={{
+                        width: 30,
+                        height: 30,
+                        color: 'rgba(255,255,255,0.6)',
+                        '&:hover': { color: '#FF4D4D', bgcolor: 'rgba(255,77,77,0.15)' },
+                      }}
+                    >
+                      <CloseIcon size={15} />
+                    </IconButton>
+                  </Box>
+                </Box>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {renderSearchPanel()}
+          {renderNotificationDrawer()}
+          {renderAppPanel()}
+          {renderProfilePanel()}
+        </>
+      )}
+    </>
+  );
+}
+

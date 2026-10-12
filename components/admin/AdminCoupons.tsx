@@ -1,0 +1,1025 @@
+'use client';
+
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import Link from 'next/link';
+import { Copy, RefreshCw, Ticket, Search, Check, X, Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import AdminLayout from '@/components/admin/components/AdminLayout';
+import { createCouponAction, listCouponsAction, invalidateCouponAction, deleteCouponByIdAction, deleteCouponsBulkAction } from '@/lib/actions/billing/coupons';
+import { getAdminUserByIdAction, searchAdminUserByIdAction, searchAdminUserByEmailAction } from '@/lib/actions/billing/admin';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { AppwriteService } from '@/lib/appwrite';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import { getAdminCouponsCacheKey } from '@/lib/admin/admin-cache';
+import { getCachedIdentityById, resolveIdentityById, seedIdentityCache, CachedIdentity } from '@/lib/identity-cache';
+
+type CouponRow = {
+  $id: string;
+  userId?: string | null;
+  targetUserId?: string | null;
+  relatedUserId?: string | null;
+  actorId?: string | null;
+  status?: string | null;
+  discountPercent?: number | null;
+  expiresAt?: string | null;
+  metadata?: string | null;
+  $createdAt?: string;
+};
+
+function CouponTargetBadge({ targetUserId }: { targetUserId: string }) {
+  const { getJWT } = useAuth();
+  const [identity, setIdentity] = useState<CachedIdentity | null>(() => getCachedIdentityById(targetUserId));
+  const [loading, setLoading] = useState(!identity);
+
+  useEffect(() => {
+    let active = true;
+    const sync = getCachedIdentityById(targetUserId);
+    if (sync) {
+      setIdentity(sync);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    void resolveIdentityById(targetUserId, async () => {
+      try {
+        const jwt = await getJWT();
+        const res = await searchAdminUserByIdAction(targetUserId, jwt || undefined);
+        if (!res) return null;
+        return {
+          userId: res.id,
+          $id: res.id,
+          username: res.username || null,
+          displayName: res.displayName || res.name || null,
+        };
+      } catch {
+        return null;
+      }
+    }).then((res) => {
+      if (active) {
+        setIdentity(res);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [targetUserId, getJWT]);
+
+  if (loading && !identity) {
+    return (
+      <span className="flex items-center gap-1 text-[11px] font-mono text-white/50 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+        <Loader2 size={11} className="animate-spin text-[#818CF8]" />
+        <span>Target: {targetUserId.slice(0, 8)}...</span>
+      </span>
+    );
+  }
+
+  const label = identity?.username
+    ? `@${identity.username}`
+    : identity?.displayName
+    ? identity.displayName
+    : targetUserId;
+
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#818CF8] bg-[#6366F1]/10 px-2.5 py-1 rounded-lg border border-[#6366F1]/30">
+      <span className="text-white/40 uppercase tracking-wider text-[9px]">Target:</span>
+      <span className="truncate max-w-[160px]">{label}</span>
+    </div>
+  );
+}
+
+function parseMetadata(value: unknown): Record<string, any> {
+  if (!value) return {};
+  if (typeof value === 'object') return value as Record<string, any>;
+  if (typeof value !== 'string') return {};
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+}
+
+function formatScope(row: CouponRow) {
+  const metadata = parseMetadata(row.metadata);
+  const scope = metadata?.coupon?.scope || (row.relatedUserId ? 'targeted' : 'open');
+  return String(scope);
+}
+
+export default function AdminCouponsPage() {
+  const { open: openUnified } = useUnifiedDrawer();
+  const [coupons, setCoupons] = useState<CouponRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const { user, getJWT } = useAuth();
+  
+  const [profileQuery, setProfileQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchingProfiles, setSearchingProfiles] = useState(false);
+  const [selectedTargets, setSelectedTargets] = useState<any[]>([]);
+  type SearchMode = 'username' | 'userid' | 'email';
+  const [searchMode, setSearchMode] = useState<SearchMode>('username');
+
+  // Delete drawer state
+  const [deleteDrawerOpen, setDeleteDrawerOpen] = useState(false);
+  type DeleteMode = 'open' | 'active' | 'used' | 'username' | 'single';
+  const [deleteMode, setDeleteMode] = useState<DeleteMode>('open');
+  const [singleCouponId, setSingleCouponId] = useState<string | null>(null);
+  const [deleteUsernameQuery, setDeleteUsernameQuery] = useState('');
+  const [resolvedUserForDelete, setResolvedUserForDelete] = useState<any | null>(null);
+  const [resolvingDeleteUser, setResolvingDeleteUser] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const [form, setForm] = useState({
+    discountPercent: '50',
+    status: 'active',
+    expiresAt: '',
+    title: '',
+    note: '',
+    redemptionLimit: '1',
+    months: '1',
+    planId: 'PRO_MONTH'});
+
+  const loadCoupons = useCallback(async (force = false) => {
+    const cacheKey = getAdminCouponsCacheKey(user?.$id);
+    if (!cacheKey) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const jwt = await getJWT();
+      const rows = await LocalEngine.query(
+        cacheKey,
+        async () => await listCouponsAction(jwt || undefined),
+        { ttl: 5 * 60 * 1000, force }
+      );
+      setCoupons(rows as any[]);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load coupons');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.$id, getJWT]);
+
+  useEffect(() => {
+    loadCoupons();
+  }, [loadCoupons]);
+
+  useEffect(() => {
+    let active = true;
+    if (!profileQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    if (searchMode !== 'username') {
+      // userid and email modes use manual trigger – clear dropdown
+      setSearchResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setSearchingProfiles(true);
+      try {
+        let docs: any[] = [];
+        try {
+          docs = await AppwriteService.searchGlobalProfiles(profileQuery.trim(), 5);
+        } catch {}
+        if (!docs || docs.length === 0) {
+          const { searchGlobalProfilesAction } = await import('@/lib/actions/billing/admin');
+          const jwt = await getJWT();
+          docs = await searchGlobalProfilesAction(profileQuery.trim(), 5, jwt || undefined);
+        }
+        if (active) setSearchResults(docs || []);
+      } catch (err) {
+        console.error('Failed to search profiles:', err);
+      } finally {
+        if (active) setSearchingProfiles(false);
+      }
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(t);
+    };
+  }, [profileQuery, searchMode]);
+
+  /** Manually trigger search for userid/email modes */
+  const handleManualSearch = async () => {
+    const q = profileQuery.trim();
+    if (!q) return;
+    setSearchingProfiles(true);
+    setError(null);
+    try {
+      const jwt = await getJWT();
+      if (searchMode === 'userid') {
+        const result = await searchAdminUserByIdAction(q, jwt || undefined);
+        seedIdentityCache({
+          userId: result.id,
+          $id: result.id,
+          username: result.username || null,
+          displayName: result.displayName || result.name || null,
+        });
+        setSelectedTargets(prev => {
+          if (prev.some(t => t.id === result.id)) return prev;
+          return [...prev, {
+            id: result.id,
+            name: result.name || result.displayName || result.username || 'User',
+            email: result.email,
+            username: result.username}];
+        });
+        setProfileQuery('');
+      } else if (searchMode === 'email') {
+        const result = await searchAdminUserByEmailAction(q, jwt || undefined);
+        if (!result) {
+          setError('No account found for that email address.');
+          return;
+        }
+        seedIdentityCache({
+          userId: result.id,
+          $id: result.id,
+          username: result.username || null,
+          displayName: result.displayName || result.name || null,
+        });
+        setSelectedTargets(prev => {
+          if (prev.some(t => t.id === result.id)) return prev;
+          return [...prev, {
+            id: result.id,
+            name: result.name || result.displayName || result.username || 'User',
+            email: result.email,
+            username: result.username}];
+        });
+        setProfileQuery('');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'User not found.');
+    } finally {
+      setSearchingProfiles(false);
+    }
+  };
+
+  const selectProfile = async (profile: any) => {
+    seedIdentityCache({
+      userId: profile.userId,
+      $id: profile.userId,
+      username: profile.username || null,
+      displayName: profile.displayName || profile.username || null,
+    });
+    if (selectedTargets.some(t => t.id === profile.userId)) {
+      setProfileQuery('');
+      setSearchResults([]);
+      return;
+    }
+    setError(null);
+    try {
+      const jwt = await getJWT();
+      const userData = await getAdminUserByIdAction(profile.userId, jwt || undefined);
+      setSelectedTargets(prev => [...prev, {
+        id: userData.id,
+        name: userData.name || profile.displayName || profile.username || 'User',
+        email: userData.email,
+        username: profile.username
+      }]);
+      setProfileQuery('');
+      setSearchResults([]);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to fetch target user details');
+    }
+  };
+
+  const removeProfile = (userId: string) => {
+    setSelectedTargets(prev => prev.filter(t => t.id !== userId));
+  };
+
+  const createCoupon = async () => {
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const jwt = await getJWT();
+      const targetUserIds = selectedTargets.map(t => t.id);
+      const data = await createCouponAction({
+        userIds: targetUserIds.length > 0 ? targetUserIds : undefined,
+        discountPercent: Number.parseInt(form.discountPercent, 10) || 0,
+        status: form.status,
+        expiresAt: form.expiresAt || undefined,
+        title: form.title || undefined,
+        note: form.note || undefined,
+        redemptionLimit: Number.parseInt(form.redemptionLimit, 10) || 1,
+        months: form.planId === 'LIFETIME' ? undefined : (Number.parseInt(form.months, 10) || 1),
+        planId: form.planId || 'PRO_MONTH',
+        metadata: {
+          scope: targetUserIds.length > 0 ? 'targeted' : 'open'}}, jwt || undefined);
+      if (data) {
+        setSuccess(`Created ${data.count || 1} coupon(s).`);
+      }
+      setForm((prev) => ({ 
+        ...prev, 
+        title: '', 
+        note: '', 
+        redemptionLimit: '1',
+        months: '1',
+        planId: 'PRO_MONTH'
+      }));
+      setSelectedTargets([]);
+      const cacheKey = getAdminCouponsCacheKey(user?.$id);
+      if (cacheKey) await LocalEngine.cacheDelete(cacheKey);
+      await loadCoupons(true);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create coupon');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const presetLifetime = () => {
+    setForm({
+      discountPercent: '100',
+      status: 'active',
+      expiresAt: '',
+      title: 'Kylrix Lifetime Sovereign Pass',
+      note: 'In-house sovereign lifetime access — permanent license',
+      redemptionLimit: '1',
+      months: '',
+      planId: 'LIFETIME',
+    });
+    setSuccess('Form populated for Lifetime Sovereign Pass (100% discount, permanent access).');
+  };
+
+  const copyLink = async (id: string) => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(`${window.location.origin}/billing/coupon/${id}`);
+    setSuccess('Coupon link copied.');
+  };
+
+  const revokeCoupon = (id: string) => {
+    openUnified('delete-confirm', {
+      title: 'Revoke Coupon?',
+      description: 'This will invalidate the coupon and prevent any future claims. Existing subscriptions created with this coupon will not be affected.',
+      resourceName: 'this coupon',
+      confirmLabel: 'Revoke Coupon',
+      onConfirm: async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const jwt = await getJWT();
+          await invalidateCouponAction(id, jwt || undefined);
+          setSuccess('Coupon revoked successfully.');
+          const cacheKey = getAdminCouponsCacheKey(user?.$id);
+          if (cacheKey) await LocalEngine.cacheDelete(cacheKey);
+          await loadCoupons(true);
+        } catch (err: any) {
+          setError(err?.message || 'Failed to revoke coupon');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
+  const totalCoupons = useMemo(() => coupons.length, [coupons]);
+
+  const handleResolveDeleteUsername = async () => {
+    const q = deleteUsernameQuery.trim();
+    if (!q) return;
+    setResolvingDeleteUser(true);
+    setError(null);
+    try {
+      const docs = await AppwriteService.searchGlobalProfiles(q, 1);
+      if (docs && docs.length > 0) {
+        const p = docs[0];
+        seedIdentityCache({
+          userId: p.userId,
+          $id: p.userId,
+          username: p.username || null,
+          displayName: p.displayName || p.username || null,
+        });
+        setResolvedUserForDelete({
+          id: p.userId,
+          username: p.username,
+          displayName: p.displayName,
+        });
+        return;
+      }
+      const jwt = await getJWT();
+      const res = await searchAdminUserByIdAction(q, jwt || undefined);
+      if (res) {
+        seedIdentityCache({
+          userId: res.id,
+          $id: res.id,
+          username: res.username || null,
+          displayName: res.displayName || res.name || null,
+        });
+        setResolvedUserForDelete({
+          id: res.id,
+          username: res.username || res.name || 'User',
+          displayName: res.displayName || res.name,
+        });
+        return;
+      }
+      setError('User not found for deletion query');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to resolve user');
+    } finally {
+      setResolvingDeleteUser(false);
+    }
+  };
+
+  const handleExecuteDelete = async () => {
+    setDeleting(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const jwt = await getJWT();
+      if (deleteMode === 'single') {
+        if (!singleCouponId) return;
+        await deleteCouponByIdAction(singleCouponId, jwt || undefined);
+        setSuccess('Coupon deleted successfully.');
+      } else if (deleteMode === 'username') {
+        if (!resolvedUserForDelete?.id) {
+          setError('Please search and select a user first.');
+          setDeleting(false);
+          return;
+        }
+        const res = await deleteCouponsBulkAction({ mode: 'user', targetUserId: resolvedUserForDelete.id }, jwt || undefined);
+        setSuccess(`Deleted ${res.count || 0} coupon(s) for @${resolvedUserForDelete.username}.`);
+      } else {
+        const res = await deleteCouponsBulkAction({ mode: deleteMode as 'open' | 'active' | 'used' }, jwt || undefined);
+        setSuccess(`Deleted ${res.count || 0} ${deleteMode} coupon(s).`);
+      }
+      setDeleteDrawerOpen(false);
+      setSingleCouponId(null);
+      setDeleteUsernameQuery('');
+      setResolvedUserForDelete(null);
+      const cacheKey = getAdminCouponsCacheKey(user?.$id);
+      if (cacheKey) await LocalEngine.cacheDelete(cacheKey);
+      await loadCoupons(true);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to execute deletion');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openDeleteDrawerForSingle = (id: string) => {
+    setSingleCouponId(id);
+    setDeleteMode('single');
+    setDeleteDrawerOpen(true);
+  };
+
+  const openDeleteDrawerForBulk = () => {
+    setSingleCouponId(null);
+    setDeleteMode('open');
+    setDeleteUsernameQuery('');
+    setResolvedUserForDelete(null);
+    setDeleteDrawerOpen(true);
+  };
+
+  return (
+    <AdminLayout>
+      <div className="flex flex-col gap-6 text-white font-satoshi">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-black font-clash text-white tracking-tight leading-tight">
+              Coupons
+            </h2>
+            <p className="text-sm font-bold text-white/60 mt-1">
+              Create open or targeted coupons. Open coupons are first-claim wins, targeted coupons are restricted to named users.
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={openDeleteDrawerForBulk}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 font-extrabold text-xs transition-all cursor-pointer shadow-lg"
+            >
+              <Trash2 size={14} />
+              <span>Delete Controls</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => loadCoupons(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-white/20 bg-[#000000] text-white font-extrabold text-xs hover:bg-white/10 hover:border-white/40 transition-all cursor-pointer shadow-lg"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-4 rounded-xl bg-rose-500/15 border-2 border-rose-500/30 text-rose-400 text-sm font-extrabold">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="p-4 rounded-xl bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-400 text-sm font-extrabold">
+            {success}
+          </div>
+        )}
+
+        {/* Coupon Creator Card */}
+        <div className="p-6 md:p-8 rounded-[28px] bg-[#000000] border-2 border-white/20 flex flex-col gap-5 shadow-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-1.5 relative col-span-1 md:col-span-2">
+              <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">Target Users</span>
+              {/* Search mode toggle */}
+              <div className="flex gap-1.5 mb-2">
+                {(['username', 'userid', 'email'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => { setSearchMode(mode); setProfileQuery(''); setSearchResults([]); }}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-black font-mono uppercase tracking-wider transition-all cursor-pointer ${
+                      searchMode === mode
+                        ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_8px_rgba(99,102,241,0.35)]'
+                        : 'bg-[#000000] border-2 border-white/20 text-white/60 hover:border-white/40 hover:text-white'
+                    }`}
+                  >
+                    {mode === 'username' ? 'Username' : mode === 'userid' ? 'User ID' : 'Email'}
+                  </button>
+                ))}
+              </div>
+              <div className="relative flex gap-2">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
+                    {searchingProfiles ? (
+                      <Loader2 size={14} className="text-[#818CF8] animate-spin" />
+                    ) : (
+                      <Search size={14} className="text-white/50" />
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder={
+                      searchMode === 'username' ? 'Search username or display name...'
+                      : searchMode === 'userid' ? 'Paste exact user ID...'
+                      : 'Enter email address...'
+                    }
+                    value={profileQuery}
+                    onChange={(e) => setProfileQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && searchMode !== 'username') handleManualSearch(); }}
+                    className="w-full bg-[#000000] pl-10 pr-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono"
+                  />
+                </div>
+                {searchMode !== 'username' && (
+                  <button
+                    type="button"
+                    onClick={handleManualSearch}
+                    disabled={!profileQuery.trim() || searchingProfiles}
+                    className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] disabled:opacity-40 text-white font-black text-xs transition-all cursor-pointer border-2 border-[#6366F1]"
+                  >
+                    {searchingProfiles ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                  </button>
+                )}
+              </div>
+              <span className="text-[10px] text-white/40 font-mono font-bold block">Leave blank for open claim</span>
+              
+              {/* Search Results Dropdown */}
+              {searchResults.length > 0 && (
+                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 mt-2">
+                  {searchResults.map((p) => (
+                    <div
+                      key={p.$id}
+                      onClick={() => selectProfile(p)}
+                      className={`flex items-center justify-between gap-4 p-3.5 rounded-xl border-2 transition-all cursor-pointer ${
+                        selectedTargets.some(t => t.id === p.userId)
+                          ? 'bg-[#6366F1]/20 border-[#6366F1]'
+                          : 'bg-[#000000] border-white/20 hover:border-[#6366F1]/50 hover:bg-[#6366F1]/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-[#6366F1] text-white font-black flex items-center justify-center text-xs flex-shrink-0 border-2 border-[#6366F1]">
+                          {(p.displayName || p.username || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-xs font-black text-white truncate">
+                            {p.displayName || p.username}
+                          </span>
+                          <span className="block text-[11px] text-white/50 font-bold font-mono truncate">
+                            @{p.username}
+                          </span>
+                        </div>
+                      </div>
+                      {selectedTargets.some(t => t.id === p.userId) ? (
+                        <span className="flex items-center gap-1 px-3 py-1.5 bg-[#6366F1]/30 text-white font-black text-[10px] rounded-lg shrink-0 border border-[#6366F1]">
+                          <Check size={12} />
+                          <span>Added</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            selectProfile(p);
+                          }}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-[10px] rounded-lg transition-all cursor-pointer shrink-0 border border-[#6366F1]"
+                        >
+                          <Check size={12} />
+                          <span>Select</span>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Selected Targets Chips */}
+              {selectedTargets.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-3 max-h-28 overflow-y-auto">
+                  {selectedTargets.map((t) => (
+                    <div key={t.id} className="flex items-center gap-2 pl-2 pr-2 py-1 rounded-lg bg-[#000000] border-2 border-[#6366F1]/50">
+                      <div className="w-5 h-5 rounded-md bg-[#6366F1] text-white font-black flex items-center justify-center text-[8px] flex-shrink-0">
+                        {(t.name || t.username || '?').charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-[10px] font-black font-mono text-[#818CF8]">@{t.username}</span>
+                      <span className="text-[9px] text-white/50 font-mono truncate max-w-[90px]" title={t.email}>{t.email}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeProfile(t.id)}
+                        className="p-0.5 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-all cursor-pointer"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">Discount %</span>
+              <input
+                type="number"
+                value={form.discountPercent}
+                onChange={(event) => setForm((prev) => ({ ...prev, discountPercent: event.target.value }))}
+                className="w-full bg-[#000000] px-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">Status</span>
+              <input
+                type="text"
+                value={form.status}
+                onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
+                className="w-full bg-[#000000] px-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">Max Redemptions</span>
+              <input
+                type="number"
+                value={form.redemptionLimit}
+                onChange={(event) => setForm((prev) => ({ ...prev, redemptionLimit: event.target.value }))}
+                className="w-full bg-[#000000] px-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono"
+              />
+              <span className="text-[10px] text-white/40 font-mono block">Required for open links</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">Title</span>
+              <input
+                type="text"
+                value={form.title}
+                onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                className="w-full bg-[#000000] px-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">Note</span>
+              <input
+                type="text"
+                value={form.note}
+                onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
+                className="w-full bg-[#000000] px-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">Expires At</span>
+              <input
+                type="datetime-local"
+                value={form.expiresAt}
+                onChange={(event) => setForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
+                className="w-full bg-[#000000] px-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">Active Months</span>
+              <input
+                type={form.planId === 'LIFETIME' ? 'text' : 'number'}
+                value={form.planId === 'LIFETIME' ? 'Permanent (N/A)' : form.months}
+                disabled={form.planId === 'LIFETIME'}
+                onChange={(event) => setForm((prev) => ({ ...prev, months: event.target.value }))}
+                className="w-full bg-[#000000] px-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono disabled:opacity-50 disabled:bg-white/[0.02]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">Target Plan</span>
+              <select
+                value={form.planId}
+                onChange={(event) => setForm((prev) => ({ ...prev, planId: event.target.value }))}
+                className="w-full bg-[#000000] px-4 py-3 rounded-xl border-2 border-white/20 text-white text-xs font-bold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/20 focus:outline-none transition-all font-mono"
+              >
+                <option value="PRO_MONTH">Pro Monthly (default)</option>
+                <option value="PRO_YEAR">Pro Yearly</option>
+                <option value="TEAMS_MONTH">Teams Monthly</option>
+                <option value="TEAMS_YEAR">Teams Yearly</option>
+                <option value="LIFETIME">👑 Lifetime Access (In-House)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={createCoupon}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all duration-200 cursor-pointer disabled:opacity-50 border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]"
+            >
+              <Ticket size={16} />
+              <span>{saving ? 'Creating...' : 'Create Coupon'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={presetLifetime}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-purple-500/20 hover:from-amber-500/30 hover:to-purple-500/30 text-amber-300 font-black text-xs transition-all duration-200 cursor-pointer border-2 border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]"
+            >
+              <span>👑</span>
+              <span>Preset Lifetime Pass</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-white/60 font-mono font-bold text-xs">{totalCoupons} coupons registered</span>
+        </div>
+
+        {/* Coupons List */}
+        <div className="space-y-4">
+          {loading && coupons.length === 0 ? (
+            <div className="flex justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1]" />
+            </div>
+          ) : coupons.length ? (
+            coupons.map((coupon) => (
+              <div key={coupon.$id} className="p-6 rounded-[28px] bg-[#000000] border-2 border-white/20 flex flex-col gap-4 shadow-2xl">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h4 className="font-black text-base text-white">
+                      {parseMetadata(coupon.metadata)?.coupon?.title || coupon.$id}
+                    </h4>
+                    <p className="text-xs text-white/50 mt-1 font-mono font-bold">
+                      /billing/coupon/{coupon.$id}
+                    </p>
+                    {coupon.$createdAt && (
+                      <p className="text-[10px] text-white/40 mt-1 font-mono">
+                        Issued: {new Date(coupon.$createdAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(coupon.targetUserId || coupon.relatedUserId || (coupon as any).userId) && formatScope(coupon) !== 'open' && (
+                      <CouponTargetBadge targetUserId={(coupon.targetUserId || coupon.relatedUserId || (coupon as any).userId)!} />
+                    )}
+                    {String(parseMetadata(coupon.metadata)?.planId || '').toUpperCase().includes('LIFETIME') && (
+                      <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-gradient-to-r from-amber-500/20 to-purple-500/20 border-amber-500/50 text-amber-300 flex items-center gap-1 shadow-sm">
+                        <span>👑</span>
+                        <span>LIFETIME PASS</span>
+                      </span>
+                    )}
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-white/10 border-white/20 text-white/70">
+                      {(coupon as any).redemptionCount || 0} / {(coupon as any).redemptionLimit || 1} uses
+                    </span>
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 ${
+                      formatScope(coupon) === 'open' 
+                        ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                        : 'bg-white/10 border-white/20 text-white/60'
+                    }`}>
+                      {formatScope(coupon)}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-[#6366F1]/15 border-[#6366F1]/30 text-[#818CF8]">
+                      {coupon.discountPercent || parseMetadata(coupon.metadata)?.coupon?.discountPercent || 0}% Off
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-amber-500/15 border-amber-500/30 text-amber-400">
+                      {parseMetadata(coupon.metadata)?.planId || 'PRO_MONTH'}
+                    </span>
+                    {String(parseMetadata(coupon.metadata)?.planId || '').toUpperCase().includes('LIFETIME') ? (
+                      <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-amber-500/15 border-amber-500/30 text-amber-300">
+                        👑 Permanent (Lifetime)
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-emerald-500/15 border-emerald-500/30 text-emerald-400">
+                        {parseMetadata(coupon.metadata)?.months || 1} Month(s)
+                      </span>
+                    )}
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-black font-mono uppercase tracking-wider border-2 bg-white/10 border-white/20 text-white/70">
+                      {String(coupon.status || 'active')}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs font-bold text-white/70 leading-relaxed font-mono">
+                  {parseMetadata(coupon.metadata)?.note || 'No note provided.'}
+                </p>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => copyLink(coupon.$id)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl border-2 border-white/20 text-white font-extrabold text-xs hover:bg-white/10 hover:border-white/40 transition-all cursor-pointer bg-[#000000]"
+                  >
+                    <Copy size={14} />
+                    <span>Copy Link</span>
+                  </button>
+                  <Link
+                    href={`/billing/coupon/${coupon.$id}`}
+                    className="px-4 py-2 rounded-xl text-xs font-black text-[#818CF8] hover:text-white transition-colors cursor-pointer font-mono uppercase tracking-wider"
+                  >
+                    Open Coupon Page
+                  </Link>
+                  <div className="flex items-center gap-2 ml-auto">
+                    {String(coupon.status || 'active') !== 'revoked' && (
+                      <button
+                        type="button"
+                        onClick={() => revokeCoupon(coupon.$id)}
+                        className="px-4 py-2 rounded-xl text-xs font-black text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors cursor-pointer border-2 border-amber-500/30"
+                      >
+                        Revoke
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openDeleteDrawerForSingle(coupon.$id)}
+                      className="p-2 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors cursor-pointer border-2 border-rose-500/30"
+                      title="Delete Coupon"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-8 rounded-[28px] bg-[#000000] border-2 border-white/20 text-center text-xs font-black font-mono text-white/50 shadow-2xl">
+              No coupons yet.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* OpenBricks 4.0 Delete Confirmation Bottom Drawer */}
+      {deleteDrawerOpen && (
+        <div className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-[#161412] border-t-2 border-x-2 border-white/20 rounded-t-[28px] h-[60dvh] flex flex-col overflow-hidden shadow-2xl animate-slide-up">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#161412] shrink-0">
+              <div className="flex items-center gap-2.5 text-rose-400">
+                <AlertTriangle size={18} />
+                <h3 className="font-black font-clash text-lg text-white">Delete Coupon Controls</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteDrawerOpen(false)}
+                className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white transition-all cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Inner Well */}
+            <div className="flex-1 p-6 bg-[#000000] overflow-y-auto space-y-5">
+              {singleCouponId ? (
+                <div className="p-4 rounded-xl bg-rose-500/10 border-2 border-rose-500/30 text-rose-300 text-xs font-mono font-bold leading-relaxed">
+                  Are you sure you want to permanently delete coupon ID: <span className="text-white">{singleCouponId}</span>? This operation cannot be undone.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <span className="text-xs font-mono font-black uppercase text-white/50 tracking-wider block">
+                    Select Deletion Target Scope:
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setDeleteMode('open')}
+                      className={`p-4 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${
+                        deleteMode === 'open'
+                          ? 'bg-[#6366F1]/20 border-[#6366F1] text-white'
+                          : 'bg-[#161412] border-white/10 text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <span className="font-black text-sm text-white">Delete All Open Coupons</span>
+                      <span className="text-[11px] text-white/50 mt-1">Purge all open/unassigned coupon links</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeleteMode('active')}
+                      className={`p-4 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${
+                        deleteMode === 'active'
+                          ? 'bg-[#6366F1]/20 border-[#6366F1] text-white'
+                          : 'bg-[#161412] border-white/10 text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <span className="font-black text-sm text-white">Delete All Active Coupons</span>
+                      <span className="text-[11px] text-white/50 mt-1">Remove all active unclaimed coupons</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeleteMode('used')}
+                      className={`p-4 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${
+                        deleteMode === 'used'
+                          ? 'bg-[#6366F1]/20 border-[#6366F1] text-white'
+                          : 'bg-[#161412] border-white/10 text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <span className="font-black text-sm text-white">Delete All Used Coupons</span>
+                      <span className="text-[11px] text-white/50 mt-1">Purge coupons that reached redemption limit</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeleteMode('username')}
+                      className={`p-4 rounded-xl border-2 text-left font-mono transition-all cursor-pointer flex flex-col justify-between ${
+                        deleteMode === 'username'
+                          ? 'bg-[#6366F1]/20 border-[#6366F1] text-white'
+                          : 'bg-[#161412] border-white/10 text-white/70 hover:border-white/30'
+                      }`}
+                    >
+                      <span className="font-black text-sm text-white">Delete Coupon By Username</span>
+                      <span className="text-[11px] text-white/50 mt-1">Target all coupons allocated to a specific user</span>
+                    </button>
+                  </div>
+
+                  {deleteMode === 'username' && (
+                    <div className="p-4 rounded-xl bg-[#161412] border-2 border-white/20 space-y-3">
+                      <span className="text-[10px] text-white/50 font-black font-mono uppercase tracking-wider block">
+                        Target Username or User ID
+                      </span>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter username or account ID..."
+                          value={deleteUsernameQuery}
+                          onChange={(e) => setDeleteUsernameQuery(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleResolveDeleteUsername(); }}
+                          className="flex-1 bg-[#000000] px-4 py-2.5 rounded-xl border-2 border-white/20 text-white text-xs font-mono font-bold focus:border-[#6366F1] focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleResolveDeleteUsername}
+                          disabled={resolvingDeleteUser || !deleteUsernameQuery.trim()}
+                          className="px-4 py-2.5 bg-[#6366F1] hover:bg-[#5254E8] disabled:opacity-40 text-white font-black text-xs rounded-xl transition-all cursor-pointer border-2 border-[#6366F1]"
+                        >
+                          {resolvingDeleteUser ? <Loader2 size={14} className="animate-spin" /> : 'Search'}
+                        </button>
+                      </div>
+
+                      {resolvedUserForDelete && (
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-[#000000] border border-emerald-500/40 text-emerald-400 font-mono text-xs font-bold">
+                          <span>Target Selected: @{resolvedUserForDelete.username} ({resolvedUserForDelete.id})</span>
+                          <Check size={14} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Non-scrolling Footer */}
+            <div className="p-4 sm:p-6 border-t border-white/10 bg-[#161412] flex items-center justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setDeleteDrawerOpen(false)}
+                className="px-5 py-2.5 rounded-xl border-2 border-white/20 text-white font-black text-xs hover:bg-white/10 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                disabled={deleting}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black text-xs transition-all cursor-pointer border-2 border-rose-500 shadow-lg"
+              >
+                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                <span>{deleting ? 'Deleting...' : 'Confirm Deletion'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AdminLayout>
+  );
+}

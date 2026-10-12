@@ -1,0 +1,158 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { 
+  Drawer,
+  Box, 
+  Fade
+} from '@/lib/openbricks/primitives';
+import { useOverlay } from './OverlayContext';
+
+function isHangoutsDrawerContent(content: React.ReactNode): boolean {
+  if (!React.isValidElement(content)) return false;
+  const type = content.type as { name?: string; displayName?: string };
+  return type?.displayName === 'HangoutsDrawer' || type?.name === 'HangoutsDrawer';
+}
+
+const Overlay: React.FC = () => {
+  const { isOpen, content, closeOverlay } = useOverlay();
+  const [isMobile, setIsMobile] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsExpanded(false);
+      return;
+    }
+    setIsExpanded(isHangoutsDrawerContent(content));
+  }, [isOpen, content]);
+
+  const hasOwnDrawer = React.isValidElement(content) && (content.props as any).open !== undefined;
+
+  if (hasOwnDrawer) {
+    return <>{content}</>;
+  }
+
+  const isProfileSidebar = React.isValidElement(content) && (
+    (content.type as any).name === 'ProfileSidebar' ||
+    (content.type as any).name === 'ChatSettingsPanel' ||
+    (content.props as any).isProfilePeek === true ||
+    ((content.props as any).conversationId !== undefined && (content.props as any).seed !== undefined)
+  );
+
+  const isWalletOverlay = React.isValidElement(content) && (
+    (content.props as any).isWallet !== undefined ||
+    (content.type as any).name === 'WalletSidebar' ||
+    (content.type as any).name === 'WalletDetail'
+  );
+
+  const isHangout = isHangoutsDrawerContent(content) || (React.isValidElement(content) && (
+    (content.type as any).name === 'HangoutsDrawer' ||
+    (content.type as any).displayName === 'HangoutsDrawer'
+  ));
+
+  const isFlapover = isHangout || (!isProfileSidebar && !isWalletOverlay && React.isValidElement(content) && (
+    (content.props as any).note !== undefined ||
+    (content.props as any).taskId !== undefined ||
+    (content.props as any).formId !== undefined ||
+    (content.props as any).form !== undefined ||
+    (content.props as any).eventId !== undefined ||
+    (content.props as any).conversationId !== undefined ||
+    (content.props as any)['data-porter'] === true ||
+    (content.type as any).name === 'NoteDetailSidebar' ||
+    (content.type as any).name === 'NoteObjectDetail' ||
+    (content.type as any).name === 'TaskDetails' ||
+    (content.type as any).name === 'GoalObjectDetail' ||
+    (content.type as any).name === 'FormDetail' ||
+    (content.type as any).name === 'CommObjectDetail' ||
+    (content.type as any).name === 'EventDetails' ||
+    (content.type as any).name === 'EcosystemPorter' ||
+    (content.type as any).displayName === 'EcosystemPorter' ||
+    (content.type as any).name === 'AgenticPanelContent' ||
+    (content.type as any).displayName === 'AgenticPanelContent' ||
+    (content.props as any)['data-agentic'] === true ||
+    (content.type as any).name === 'PricingDrawer' ||
+    (content.type as any).name === 'TagObjectDetail' ||
+    (content.type as any).name === 'TrashObjectDetail'
+  ));
+
+  const drawerHeight = isMobile && !isFlapover
+    ? (isWalletOverlay ? (isExpanded ? '100dvh' : '65dvh') : isProfileSidebar ? (isExpanded ? '100dvh' : '60vh') : (isExpanded ? '100dvh' : '60dvh'))
+    : '100dvh';
+  const paperWidth = isFlapover ? '100%' : isMobile ? '100%' : 'min(100vw, 720px)';
+
+  return (
+    <Drawer
+      anchor={isFlapover ? 'right' : isMobile ? 'bottom' : 'right'}
+      open={isOpen}
+      onClose={closeOverlay}
+      ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
+      sx={isFlapover ? { zIndex: 9999 } : undefined}
+      PaperProps={{
+        sx: {
+          width: paperWidth,
+          maxWidth: isFlapover ? '100vw' : isMobile ? '100%' : '720px',
+          left: isFlapover ? 0 : undefined,
+          right: isFlapover ? 0 : undefined,
+          height: drawerHeight,
+          maxHeight: isMobile && !isFlapover ? (isProfileSidebar ? (isExpanded ? '100dvh' : '60vh') : (isExpanded ? '100dvh' : '60dvh')) : '100dvh',
+          overflowX: 'hidden',
+          overflowY: 'hidden',
+          borderTopLeftRadius: isMobile && !isFlapover ? '28px' : 0,
+          borderTopRightRadius: isMobile && !isFlapover ? '28px' : 0,
+          borderTop: isMobile && !isFlapover ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
+          borderLeft: isMobile || isFlapover ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
+          backgroundImage: 'none',
+          bgcolor: isFlapover ? '#000000' : '#161412',
+          boxShadow: isFlapover ? 'none' : '0 24px 48px rgba(0,0,0,0.45)',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'height 0.3s ease-out'}
+      }}
+      slotProps={{
+        backdrop: {
+          sx: {
+            bgcolor: 'rgba(0, 0, 0, 0.72)'}
+        }
+      }}
+    >
+      <Fade in={isOpen}>
+        <Box
+          sx={{
+            outline: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            maxWidth: '100%',
+            minWidth: 0,
+            minHeight: 0,
+            flex: 1,
+            maxHeight: '100dvh',
+            overflowX: 'hidden',
+            overflowY: 'hidden'}}
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        >
+          {React.isValidElement(content)
+            ? React.cloneElement(content as React.ReactElement<any>, {
+                isExpanded,
+                onToggleExpand: () => setIsExpanded(prev => !prev),
+                onClose: closeOverlay
+              })
+            : content}
+        </Box>
+      </Fade>
+    </Drawer>
+  );
+};
+
+export default Overlay;
+

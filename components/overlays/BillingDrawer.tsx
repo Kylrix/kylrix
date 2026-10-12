@@ -1,0 +1,328 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  CreditCard,
+  Gift,
+  Tag,
+  Check,
+  ArrowRight,
+  Sparkles,
+  ChevronUp,
+  ChevronDown,
+  X} from 'lucide-react';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { AppwriteService } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
+import { getMyCouponsAction } from '@/lib/actions/billing/coupons';
+
+interface BillingDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function BillingContent() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { open: openUnified } = useUnifiedDrawer();
+  const { currentTier, expiresAt, isLoading: planLoading } = useSubscription();
+
+  // Coupon states
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(true);
+
+  // Gift states
+  const [giftUsername, setGiftUsername] = useState('');
+  const [giftLoading, setGiftLoading] = useState(false);
+  const [giftError, setGiftError] = useState<string | null>(null);
+
+  const loadCoupons = useCallback(async () => {
+    if (!user?.$id) return;
+    try {
+      setLoadingCoupons(true);
+      const jwtRes = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
+      const list = await getMyCouponsAction(jwtRes);
+      const active = (list || []).filter((c: any) => {
+        const s = String(c.status || '').toLowerCase();
+        return s === 'active';
+      });
+      setCoupons(active);
+    } catch (err) {
+      console.warn('Failed to load coupons:', err);
+    } finally {
+      setLoadingCoupons(false);
+    }
+  }, [user?.$id]);
+
+  useEffect(() => {
+    if (user) {
+      loadCoupons();
+    }
+  }, [user, loadCoupons]);
+
+  const handleGiftCheckout = useCallback(async () => {
+    const recipientQuery = giftUsername.trim();
+    if (!recipientQuery) {
+      setGiftError('Enter a recipient username or user ID.');
+      return;
+    }
+    setGiftLoading(true);
+    setGiftError(null);
+    try {
+      const matches = await AppwriteService.searchGlobalProfiles(recipientQuery, 1);
+      const recipient = (matches[0] as any) || null;
+      let recipientUserId = recipient?.userId || null;
+      let recipientLabel = recipient?.displayName || recipient?.username || null;
+      if (!recipientUserId) {
+        const directLookup = await AppwriteService.getGlobalProfileStatus(recipientQuery);
+        recipientUserId = directLookup?.profile?.userId || null;
+        recipientLabel = directLookup?.profile?.displayName || directLookup?.profile?.username || recipientLabel;
+      }
+      if (!recipientUserId) throw new Error('No matching account found for that username or user ID.');
+
+      openUnified('pricing', {
+        isGift: true,
+        giftRecipientId: recipientUserId,
+        giftRecipientName: recipientLabel || recipientUserId,
+        tier: 'PRO',
+      });
+    } catch (error) {
+      setGiftError((error as Error)?.message || 'Failed to find recipient.');
+    } finally {
+      setGiftLoading(false);
+    }
+  }, [giftUsername, openUnified]);
+
+  const isContributor = currentTier === 'CONTRIBUTOR';
+  const isPro = currentTier === 'PRO' || currentTier === 'LIFETIME' || currentTier === 'ORG' || isContributor;
+  const isTeams = currentTier === 'TEAMS';
+
+  const tierBadgeColor =
+    isContributor ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' :
+    isTeams ? 'text-amber-400 bg-amber-500/10' :
+    isPro ? 'text-[#6366F1] bg-[#6366F1]/10' :
+    'text-white/40 bg-white/5';
+
+  const parseMeta = (val: any) => { try { return JSON.parse(val || '{}'); } catch { return {}; } };
+
+  return (
+    <div className="space-y-4 pb-8">
+
+          {/* Active Plan Card */}
+          <div className="bg-[#000000] border-2 border-white/20 rounded-2xl p-5 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CreditCard size={16} className={isContributor ? "text-emerald-400" : "text-[#6366F1]"} />
+                <div>
+                  <h4 className="font-extrabold text-sm text-white">Your Plan</h4>
+                  <p className="text-[10px] text-white/40">Active subscription privileges</p>
+                </div>
+              </div>
+              <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 border border-white/10 ${tierBadgeColor}`}>
+                <Sparkles size={9} />
+                {planLoading ? '…' : isContributor ? 'CONTRIBUTOR' : currentTier}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <div>
+                <span className="text-[9px] text-white/40 font-black tracking-widest uppercase block">Active Plan</span>
+                <span className="text-2xl font-black text-white">
+                  {planLoading ? 'Resolving…' : isContributor ? 'CONTRIBUTOR PLAN' : `${currentTier} PLAN`}
+                </span>
+                {!planLoading && isContributor && (
+                  <span className="text-[11px] text-emerald-400 font-mono block mt-0.5 font-bold">
+                    100% Free Forever · Merged PR in past 30 days
+                  </span>
+                )}
+                {!planLoading && !isContributor && (isPro || isTeams) && (
+                  <span className="text-[10px] text-white/40 font-mono block mt-0.5">
+                    {isTeams ? '$50/mo' : '$10/mo'}
+                  </span>
+                )}
+                {expiresAt && (isPro || isTeams) && (
+                  <span className="text-[10px] text-white/40 font-mono block mt-0.5">
+                    {isContributor ? 'Active via rolling contributions · Re-evaluates every 30 days' : `Active until ${new Date(expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                  </span>
+                )}
+              </div>
+              {!isPro && !isTeams && !planLoading && (
+                <button
+                  type="button"
+                  onClick={() => { openUnified('pricing'); }}
+                  className="px-4 py-2 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer border-2 border-[#6366F1] shadow-md"
+                >
+                  <span>Upgrade</span>
+                  <ArrowRight size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Pricing Reference */}
+            {!isPro && !isTeams && !planLoading && (
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t-2 border-white/10">
+                <div className="p-3 rounded-xl bg-[#161412] border-2 border-[#6366F1]/30">
+                  <span className="text-[10px] font-black text-[#6366F1] uppercase tracking-wider block">Pro</span>
+                  <span className="text-lg font-black text-white">$10</span>
+                  <span className="text-[9px] text-white/40 block">/month</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#161412] border-2 border-amber-500/30">
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">Teams</span>
+                  <span className="text-lg font-black text-white">$50</span>
+                  <span className="text-[9px] text-white/40 block">/month</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Coupons — active only, clickable */}
+          <div className="bg-[#000000] border-2 border-white/20 rounded-2xl p-5 space-y-4 shadow-xl">
+            <div className="flex items-center gap-3">
+              <Tag size={16} className="text-[#10B981]" />
+              <div>
+                <h4 className="font-extrabold text-sm text-white">Your Coupons</h4>
+                <p className="text-[10px] text-white/40">Active promotional codes — click to claim</p>
+              </div>
+            </div>
+
+            {loadingCoupons ? (
+              <div className="animate-pulse h-10 bg-white/5 rounded-xl" />
+            ) : coupons.length === 0 ? (
+              <p className="text-xs text-white/40 font-medium">No active coupons on this account.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {coupons.map((coupon, idx) => {
+                  const meta = parseMeta(coupon.metadata);
+                  const title = meta.coupon?.title || coupon.title || coupon.$id;
+                  const discountPercent = coupon.discountPercent ?? coupon.discountPercentage ?? 0;
+                  const months = meta.months || 1;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        router.push(`/billing/coupon/${coupon.$id}`);
+                      }}
+                      className="flex justify-between items-center bg-[#161412] border-2 border-[#10B981]/30 hover:border-[#10B981] hover:bg-[#10B981]/5 p-3.5 rounded-xl transition-all text-left cursor-pointer group w-full"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-white font-mono uppercase tracking-wider truncate block">{title}</span>
+                        <span className="block text-[9px] text-[#10B981] font-extrabold mt-0.5 uppercase tracking-wider font-mono">
+                          {discountPercent}% Off · {months} Month(s)
+                        </span>
+                        {coupon.$createdAt && (
+                          <span className="block text-[8px] text-white/30 font-medium mt-0.5">
+                            Issued: {new Date(coupon.$createdAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-3">
+                        <span className="text-[9px] bg-emerald-500/10 text-emerald-400 font-extrabold uppercase px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1">
+                          <Check size={8} /> Active
+                        </span>
+                        <span className="text-[9px] text-[#10B981] font-black group-hover:underline">Claim →</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Gift Pro Tier */}
+          <div className="bg-[#000000] border-2 border-white/20 rounded-2xl p-5 space-y-4 shadow-xl">
+            <div className="flex items-center gap-3">
+              <Gift size={16} className="text-[#EC4899]" />
+              <div>
+                <h4 className="font-extrabold text-sm text-white">Gift Pro Access</h4>
+                <p className="text-[10px] text-white/40">Activate Pro privileges directly on another account</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] text-white/40 font-black uppercase tracking-wider block mb-1">Recipient Username or User ID</label>
+                <input
+                  type="text"
+                  placeholder="e.g. janesmith or 65f3..."
+                  value={giftUsername}
+                  onChange={e => setGiftUsername(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleGiftCheckout();
+                    }
+                  }}
+                  className="w-full bg-[#161412] border-2 border-white/15 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#6366F1] transition-all font-mono"
+                />
+              </div>
+              {giftError && <p className="text-xs text-red-500 font-bold font-mono">{giftError}</p>}
+              <button
+                type="button"
+                onClick={handleGiftCheckout}
+                disabled={giftLoading || !giftUsername.trim()}
+                className="w-full py-3 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs transition-all disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2 border-2 border-[#6366F1] shadow-md"
+              >
+                <span>{giftLoading ? 'Finding Recipient…' : 'Gift Pro Access'}</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+
+        </div>
+  );
+}
+
+export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => { if (!isOpen) setIsExpanded(false); }, [isOpen]);
+  useEffect(() => {
+    if (isOpen) { document.body.style.overflow = 'hidden'; }
+    else { document.body.style.overflow = ''; }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/70" style={{ zIndex: 99998 }} onClick={onClose} aria-hidden="true" />
+      <div
+        className="fixed bottom-0 left-0 right-0 flex flex-col bg-[#0A0908] border border-white/8 border-b-0 rounded-t-[28px] overflow-hidden"
+        style={{ zIndex: 99999, height: isExpanded ? '100dvh' : '60dvh', maxHeight: '100dvh', transition: 'height 0.3s cubic-bezier(0.4,0,0.2,1)' }}
+      >
+        <div className="flex-shrink-0">
+          <div className="flex justify-center pt-3 pb-1 cursor-pointer" onClick={() => setIsExpanded(v => !v)} role="button" aria-label={isExpanded ? 'Collapse' : 'Expand'}>
+            <div className="w-10 h-1 rounded-full bg-white/20" />
+          </div>
+          <div className="flex items-center justify-between px-6 py-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center">
+                <CreditCard size={16} className="text-[#6366F1]" />
+              </div>
+              <div>
+                <h3 className="text-base font-black font-clash text-white leading-tight">Billing & Subscriptions</h3>
+                <p className="text-[10px] text-white/40 font-mono">Manage your plan and coupons</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setIsExpanded(v => !v)} className="p-2 rounded-xl hover:bg-white/5 text-white/40 hover:text-white transition-all cursor-pointer" aria-label={isExpanded ? 'Collapse' : 'Expand to full screen'}>
+                {isExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+              </button>
+              <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-white/5 text-white/40 hover:text-white transition-all cursor-pointer" aria-label="Close">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 min-h-0">
+          <BillingContent />
+        </div>
+      </div>
+    </>
+  );
+}

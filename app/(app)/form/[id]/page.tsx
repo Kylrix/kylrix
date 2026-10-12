@@ -1,0 +1,774 @@
+'use client';
+
+import React, { useEffect, useState, use } from 'react';
+import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ArrowLeft, Crown } from 'lucide-react';
+import { FormsService } from '@/lib/services/forms';
+import { Forms } from '@/types/appwrite';
+import { getEnabledGhostFields, resolveGhostFields } from '@/lib/forms/ghost-fields';
+import { GhostFieldsNotice } from '@/components/forms/GhostFieldsNotice';
+import { secureUploadFile, createthreadNoteChat } from '@/lib/actions/client-ops';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
+import UserSearch from '@/components/UserSearch';
+import { UsersService } from '@/lib/services/users';
+import { ChatService } from '@/lib/services/chat';
+import { createComment, getNote } from '@/lib/appwrite/note';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import toast from 'react-hot-toast';
+
+export default function PublicFormPage({ params }: { params: Promise<{ id: string }> }) {
+    const resolvedParams = use(params);
+    const [form, setForm] = useState<Forms | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [formData, setFormData] = useState<Record<string, any>>({});
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [showSendSelector, setShowSendSelector] = useState(false);
+    const [isSendingResponse, setIsSendingResponse] = useState(false);
+    const [isContributor, setIsContributor] = useState(false);
+
+    const isFeatureRequestForm = resolvedParams?.id === '6aae3dab003a7247b90a' || resolvedParams?.id === process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID;
+
+    useEffect(() => {
+        let cancelled = false;
+        const checkContrib = async () => {
+            if (!currentUser) return;
+            const prefs = currentUser.prefs || {};
+            if (prefs.currentTier === 'CONTRIBUTOR' || prefs.tier === 'CONTRIBUTOR' || currentUser.isContributor) {
+                if (!cancelled) setIsContributor(true);
+                return;
+            }
+            try {
+                const uid = currentUser.$id || currentUser.id;
+                if (uid) {
+                    const { verifyAndApplyContributorStatus } = await import('@/lib/actions/contributor-ops');
+                    const res = await verifyAndApplyContributorStatus(uid).catch(() => null);
+                    if (res?.isContributor && !cancelled) {
+                        setIsContributor(true);
+                        return;
+                    }
+                }
+                const name = currentUser.name || currentUser.username || prefs.username;
+                if (name) {
+                    const { getContributorStatusByUsernameAction } = await import('@/lib/actions/contributor-ops');
+                    const res = await getContributorStatusByUsernameAction(name).catch(() => null);
+                    if (res?.isContributor && !cancelled) {
+                        setIsContributor(true);
+                    }
+                }
+            } catch {}
+        };
+        void checkContrib();
+        return () => { cancelled = true; };
+    }, [currentUser]);
+
+    useEffect(() => {
+        const fetchForm = async () => {
+            try {
+                if (!resolvedParams?.id) {
+                    setError('Invalid form reference.');
+                    return;
+                }
+
+                const { hasAuthSessionHint, getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
+                let user = getCurrentUserSnapshot();
+
+                if (!user && hasAuthSessionHint()) {
+                    void FormsService.getCurrentUser().then((u) => {
+                        if (u) {
+                            setCurrentUser(u);
+                            // Check for remote draft if user is populated later
+                            FormsService.getDraft(resolvedParams.id, u.$id).then((draft) => {
+                                if (draft && draft.payload) {
+                                    try {
+                                        setFormData(JSON.parse(draft.payload));
+                                    } catch (_e) {}
+                                }
+                            }).catch(() => {});
+                        }
+                    }).catch(() => {});
+                } else if (user) {
+                    setCurrentUser(user);
+                }
+
+                const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
+                const { getPublicFormData } = await import('@/lib/actions/client-ops');
+
+                await SharedOfflineSubstrate.syncSharedRoute<Forms>({
+                    kind: 'form',
+                    id: resolvedParams.id,
+                    currentUserId: user?.$id,
+                    onLocalHit: (cachedData) => {
+                        setForm(cachedData);
+                        setLoading(false);
+                    },
+                    fetchRemote: async () => {
+                        const publicForm = await getPublicFormData(resolvedParams.id).catch(() => null);
+                        if (publicForm) return publicForm as unknown as Forms;
+                        return await FormsService.getForm(resolvedParams.id);
+                    },
+                    isAccessibleRemote: (data, uid) => {
+                        let settings: any = {};
+                        try {
+                            settings = JSON.parse(data.settings || '{}');
+                        } catch (_e) {}
+
+                        const isOwner = Boolean(uid && uid === data.userId);
+                        if (!isOwner && data.status !== 'published' && data.isPublic !== true) {
+                            return false;
+                        }
+                        if (!isOwner && settings.expiresAt && new Date(settings.expiresAt) < new Date()) {
+                            return false;
+                        }
+                        return true;
+                    },
+                    onRemoteSuccess: (data) => {
+                        setForm(data);
+                        setError(null);
+                        setLoading(false);
+                    },
+                    onAccessRevoked: (reason) => {
+                        setForm(null);
+                        setError(reason === 'not-found' ? 'Form not found or inaccessible.' : 'This form is private and not currently accepting responses.');
+                        setLoading(false);
+                    },
+                });
+
+                // Load existing draft/local data from RxDB LocalEngine
+                const localKey = `form_draft_${resolvedParams.id}`;
+                const localData = await LocalEngine.cacheGet<Record<string, any>>(localKey);
+                if (localData && typeof localData === 'object') {
+                    setFormData(localData);
+                }
+
+            } catch (err: any) {
+                setError(err.message || 'Form not found or inaccessible.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchForm();
+    }, [resolvedParams.id]);
+
+    // Live realtime subscription for recipient of shared form
+    useEffect(() => {
+        if (!resolvedParams.id) return;
+        let unsub: any;
+        void (async () => {
+            try {
+                const { realtime } = await import('@/lib/appwrite/client');
+                const channels = [
+                    `forms:${resolvedParams.id}`,
+                    `forms`,
+                ];
+                unsub = realtime.subscribe(channels, (response: any) => {
+                    const rowId = response.payload?.$id || response.payload?.id;
+                    if (rowId && rowId !== resolvedParams.id) return;
+                    if (response.events?.some((e: string) => e.endsWith('.delete')) || response.payload?.isTrash || response.payload?.isDeleted) {
+                        setError('This form is no longer available.');
+                        setForm(null);
+                        return;
+                    }
+                    if (response.events?.some((e: string) => e.endsWith('.update') || e.endsWith('.create'))) {
+                        if (response.payload) {
+                            if (response.payload.isPublic === false && response.payload.isGuest === false && response.payload.status !== 'published') {
+                                setError('This form is private and not currently accepting responses.');
+                                setForm(null);
+                                return;
+                            }
+                            setForm((prev: any) => ({ ...prev, ...response.payload }));
+                        }
+                    }
+                });
+            } catch {}
+        })();
+        return () => {
+            if (typeof unsub === 'function') unsub();
+            else if (unsub?.unsubscribe) unsub.unsubscribe();
+        };
+    }, [resolvedParams.id]);
+
+    // Local-only draft autosave with RxDB LocalEngine
+    useEffect(() => {
+        if (!form || Object.keys(formData).length === 0 || submitted) return;
+
+        const timer = setTimeout(async () => {
+            // Local save into RxDB
+            const localKey = `form_draft_${resolvedParams.id}`;
+            await LocalEngine.cacheSet(localKey, formData);
+        }, 1500);
+
+        return () => clearTimeout(timer);
+    }, [formData, resolvedParams.id, form, submitted]);
+
+    const isFieldVisible = (field: any) => {
+        if (!field.logic || !field.logic.enabled) return true;
+        const parentId = field.logic.showIfFieldId;
+        const expectedVal = field.logic.showIfValue;
+        if (!parentId) return true;
+        
+        const actualVal = formData[parentId];
+        if (Array.isArray(actualVal)) {
+            return actualVal.includes(expectedVal);
+        }
+        return actualVal === expectedVal;
+    };
+
+    let schema: any[] = [];
+    if (form?.schema) {
+        try {
+            schema = JSON.parse(form.schema);
+        } catch (_e) {
+            console.error("Failed to parse form schema", _e);
+        }
+    }
+
+    const visibleFields = schema.filter(isFieldVisible);
+    const formatResponseMarkdown = () => {
+        let md = `# Form Submission: ${form?.title || 'Form'}\n\n`;
+        md += `**Submitted At:** ${new Date().toLocaleString()}\n\n`;
+        md += `## Responses\n\n`;
+        
+        schema.forEach((field: any) => {
+            const val = formData[field.id];
+            if (val !== undefined && val !== null) {
+                md += `### ${field.label || 'Question'}\n`;
+                if (typeof val === 'object' && val.originalName) {
+                    md += `Uploaded File: ${val.originalName}\n\n`;
+                } else if (Array.isArray(val)) {
+                    md += `${val.join(', ')}\n\n`;
+                } else {
+                    md += `${val}\n\n`;
+                }
+            }
+        });
+        return md;
+    };
+    const [currentStep, setCurrentStep] = useState(0);
+
+    // Adjust step if out of bounds due to conditional changes
+    useEffect(() => {
+        if (currentStep >= visibleFields.length && visibleFields.length > 0) {
+            setCurrentStep(visibleFields.length - 1);
+        }
+    }, [visibleFields, currentStep]);
+
+    const handleFieldChange = (fieldId: string, value: any) => {
+        setFormData(prev => ({ ...prev, [fieldId]: value }));
+        setError(null);
+    };
+
+    const handleCheckboxChange = (fieldId: string, option: string, checked: boolean) => {
+        const currentValues = formData[fieldId] || [];
+        const nextValues = checked 
+            ? [...currentValues, option]
+            : currentValues.filter((v: string) => v !== option);
+        handleFieldChange(fieldId, nextValues);
+    };
+
+    const handleSingleChoiceSelect = (fieldId: string, value: string) => {
+        handleFieldChange(fieldId, value);
+        setTimeout(() => {
+            if (currentStep < visibleFields.length - 1) {
+                setCurrentStep(prev => prev + 1);
+            }
+        }, 300);
+    };
+
+    const activeField = visibleFields[currentStep];
+
+    const handleNext = () => {
+        if (!activeField) return;
+        if (activeField.required && (formData[activeField.id] === undefined || formData[activeField.id] === null || formData[activeField.id] === '' || (Array.isArray(formData[activeField.id]) && formData[activeField.id].length === 0))) {
+            setError('This field is required.');
+            return;
+        }
+        setError(null);
+        if (currentStep < visibleFields.length - 1) {
+            setCurrentStep(prev => prev + 1);
+        } else {
+            triggerSubmit();
+        }
+    };
+
+    const handleBack = () => {
+        setError(null);
+        if (currentStep > 0) {
+            setCurrentStep(prev => prev - 1);
+        }
+    };
+
+    const triggerSubmit = async () => {
+        setSubmitting(true);
+        setError(null);
+
+        try {
+            const enabledGhost = getEnabledGhostFields(form?.settings);
+            const effectiveGhostKeys = isFeatureRequestForm
+                ? Array.from(new Set([...enabledGhost, 'subscription_tier', 'contributor_status', 'identity_id']))
+                : enabledGhost;
+
+            let submissionPayload = { ...formData };
+            if (effectiveGhostKeys.length > 0) {
+                const ghostData = await resolveGhostFields(effectiveGhostKeys, currentUser);
+                if (isFeatureRequestForm) {
+                    const tierStr = String(ghostData.subscription_tier || '').toUpperCase();
+                    if (tierStr === 'CONTRIBUTOR' || isContributor || String(ghostData.contributor_status || '').includes('Contributor')) {
+                        ghostData.priority = 'HIGH';
+                        ghostData.isContributor = true;
+                        ghostData.contributorPriority = true;
+                        ghostData.routing = 'ROADMAP_TODO_REVIEW';
+                    }
+                }
+                submissionPayload._ghost = ghostData;
+            }
+
+            await FormsService.submitForm(resolvedParams.id, JSON.stringify(submissionPayload));
+            setSubmitted(true);
+            // Clear local draft from RxDB
+            await LocalEngine.cacheDelete(`form_draft_${resolvedParams.id}`);
+        } catch (err: any) {
+            setError(err.message || 'Failed to submit form. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // Keyboard navigation (Enter key)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                if (activeField && activeField.type !== 'textarea') {
+                    e.preventDefault();
+                    handleNext();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [currentStep, formData, visibleFields, activeField]);
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-screen bg-[#050505]">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#6366F1] border-t-transparent" />
+            </div>
+        );
+    }
+
+    if (error && !form) {
+        return (
+            <div className="max-w-md w-full mx-auto px-4 py-20 font-satoshi">
+                <div className="p-4 bg-red-500/10 border border-red-500/20 text-[#ff1744] rounded-2xl font-semibold text-center leading-relaxed">
+                    {error}
+                </div>
+            </div>
+        );
+    }
+
+    const renderField = (field: any) => {
+        if (!field) return null;
+        switch (field.type) {
+            case 'select':
+                return (
+                    <div className="grid gap-3 w-full">
+                        {(field.options || []).map((opt: string) => (
+                            <button
+                                key={opt}
+                                type="button"
+                                onClick={() => handleSingleChoiceSelect(field.id, opt)}
+                                className={`w-full text-left px-5 py-4 rounded-2xl border text-sm md:text-base font-satoshi font-semibold transition-all flex items-center justify-between ${
+                                    formData[field.id] === opt 
+                                        ? 'bg-[#6366F1]/10 border-[#6366F1] text-white shadow-[0_0_20px_rgba(99,102,241,0.15)]' 
+                                        : 'bg-[#0B0A09] border-white/5 text-zinc-400 hover:border-white/10 hover:text-white'
+                                }`}
+                            >
+                                <span>{opt}</span>
+                                {formData[field.id] === opt && <div className="w-2.5 h-2.5 rounded-full bg-[#6366F1]" />}
+                            </button>
+                        ))}
+                    </div>
+                );
+            case 'radio':
+                return (
+                    <div className="grid gap-3 w-full">
+                        {(field.options || []).map((opt: string) => (
+                            <button
+                                key={opt}
+                                type="button"
+                                onClick={() => handleSingleChoiceSelect(field.id, opt)}
+                                className={`w-full text-left px-5 py-4 rounded-2xl border text-sm md:text-base font-satoshi font-semibold transition-all flex items-center justify-between ${
+                                    formData[field.id] === opt 
+                                        ? 'bg-[#6366F1]/10 border-[#6366F1] text-white shadow-[0_0_20px_rgba(99,102,241,0.15)]' 
+                                        : 'bg-[#0B0A09] border-white/5 text-zinc-400 hover:border-white/10 hover:text-white'
+                                }`}
+                            >
+                                <span>{opt}</span>
+                                {formData[field.id] === opt && <div className="w-2.5 h-2.5 rounded-full bg-[#6366F1]" />}
+                            </button>
+                        ))}
+                    </div>
+                );
+            case 'checkbox':
+                return (
+                    <div className="grid gap-3 w-full">
+                        {(field.options || []).map((opt: string) => {
+                            const isChecked = (formData[field.id] || []).includes(opt);
+                            return (
+                                <button
+                                    key={opt}
+                                    type="button"
+                                    onClick={() => handleCheckboxChange(field.id, opt, !isChecked)}
+                                    className={`w-full text-left px-5 py-4 rounded-2xl border text-sm md:text-base font-satoshi font-semibold transition-all flex items-center justify-between ${
+                                        isChecked 
+                                            ? 'bg-[#6366F1]/10 border-[#6366F1] text-white shadow-[0_0_20px_rgba(99,102,241,0.15)]' 
+                                            : 'bg-[#0B0A09] border-white/5 text-zinc-400 hover:border-white/10 hover:text-white'
+                                    }`}
+                                >
+                                    <span>{opt}</span>
+                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                                        isChecked ? 'bg-[#6366F1] border-[#6366F1]' : 'border-white/10'
+                                    }`}>
+                                        {isChecked && (
+                                            <svg className="w-3.5 h-3.5 text-[#050505] stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                );
+            case 'textarea':
+                return (
+                    <textarea
+                        rows={5}
+                        required={field.required}
+                        value={formData[field.id] || ''}
+                        onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                        className="w-full px-5 py-4 rounded-2xl bg-[#0B0A09] border border-white/5 text-white focus:outline-none focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]/30 hover:border-white/10 transition-all resize-none font-satoshi leading-relaxed text-base md:text-lg"
+                        placeholder="Type your response here..."
+                    />
+                );
+            case 'file':
+                const selectedFile = formData[field.id];
+                return (
+                    <div className="flex flex-col gap-3 w-full">
+                        {selectedFile ? (
+                            <div className="flex items-center justify-between p-5 rounded-2xl bg-[#0B0A09] border border-white/5 transition-all">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+                                    <span className="text-sm font-bold text-zinc-200 truncate max-w-[240px] font-satoshi">
+                                        {selectedFile.originalName || 'File uploaded'}
+                                    </span>
+                                </div>
+                                <button 
+                                    type="button" 
+                                    onClick={() => handleFieldChange(field.id, null)} 
+                                    className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors"
+                                >
+                                    <XIcon size={18} />
+                                </button>
+                            </div>
+                        ) : (
+                            <label
+                                className={`w-full py-5 px-6 rounded-2xl border border-dashed border-white/10 bg-[#0B0A09] hover:bg-white/[0.02] hover:border-[#6366F1] transition-all cursor-pointer flex items-center justify-center gap-3 text-sm font-bold text-zinc-400 hover:text-white font-satoshi ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {submitting ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+                                ) : (
+                                    <UploadIcon size={20} />
+                                )}
+                                <span>{submitting ? 'Uploading...' : 'Choose File (Max 5MB)'}</span>
+                                {!submitting && (
+                                    <input
+                                        type="file"
+                                        className="hidden"
+                                        required={field.required && !selectedFile}
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            if (file.size > 5 * 1024 * 1024) {
+                                                alert('File exceeds 5MB limit.');
+                                                return;
+                                            }
+                                            setSubmitting(true);
+                                            try {
+                                                const fData = new FormData();
+                                                fData.append('file', file);
+                                                fData.append('bucketId', APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS);
+                                                const uploaded = await secureUploadFile(fData);
+                                                handleFieldChange(field.id, {
+                                                    fileId: uploaded.$id,
+                                                    bucketId: APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS,
+                                                    originalName: file.name
+                                                });
+                                            } catch (err: any) {
+                                                alert(err.message || 'Failed to upload file.');
+                                            } finally {
+                                                setSubmitting(false);
+                                            }
+                                        }}
+                                    />
+                                )}
+                            </label>
+                        )}
+                    </div>
+                );
+            default:
+                return (
+                    <input
+                        type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'}
+                        required={field.required}
+                        value={formData[field.id] || ''}
+                        onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                        className="w-full px-5 py-4 rounded-2xl bg-[#0B0A09] border border-white/5 text-white focus:outline-none focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]/30 hover:border-white/10 transition-all font-satoshi text-base md:text-lg"
+                        placeholder="Type response..."
+                    />
+                );
+        }
+    };
+
+    const completionProgress = visibleFields.length > 0 ? ((currentStep) / visibleFields.length) * 100 : 0;
+
+    return (
+        <div 
+            className="min-h-screen bg-[#000000] text-white flex flex-col items-center justify-between"
+            style={{ backgroundImage: 'radial-gradient(circle at 50% -20%, rgba(99, 102, 241, 0.08) 0%, transparent 60%)' }}
+        >
+            {/* Top Progress Bar */}
+            <div className="w-full h-1.5 bg-white/5 fixed top-0 left-0 z-50">
+                <div 
+                    className="h-full bg-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.5)] transition-all duration-300 ease-out"
+                    style={{ width: `${completionProgress}%` }}
+                />
+            </div>
+
+            {/* Empty Header spacing */}
+            <div className="w-full py-6 flex justify-center items-center relative px-6 z-10 shrink-0">
+                {currentStep > 0 && !submitted && (
+                    <button 
+                        onClick={handleBack}
+                        className="absolute left-6 text-zinc-400 hover:text-white flex items-center gap-1.5 font-bold font-satoshi text-sm bg-white/5 border border-white/5 px-3 py-1.5 rounded-xl transition-all"
+                    >
+                        <ArrowLeft size={16} />
+                        Back
+                    </button>
+                )}
+                <span className="text-xs font-bold font-mono tracking-widest text-zinc-500">
+                    {visibleFields.length > 0 && !submitted ? `${currentStep + 1} OF ${visibleFields.length}` : ''}
+                </span>
+            </div>
+
+            {/* Main Content card */}
+            <div className="max-w-2xl w-full mx-auto px-6 py-8 flex-1 flex flex-col justify-center relative z-10">
+                {submitted ? (
+                    <div className="p-8 md:p-12 text-center rounded-[28px] bg-[#161412] border border-white/5 flex flex-col items-center w-full">
+                        <div className="w-16 h-16 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center mb-6">
+                            <CheckCircle2 className="w-8 h-8 text-[#6366F1]" />
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-bold font-clash text-white mb-3">Transmission Complete</h2>
+                        <p className="text-[#9B9691] mb-8 font-medium font-satoshi text-sm md:text-base">
+                            Your data has been securely injected into the Kylrix Flow nexus.
+                        </p>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mb-6">
+                            <button 
+                                type="button" 
+                                onClick={() => window.location.reload()}
+                                className="px-5 py-2.5 rounded-xl bg-[#6366F1] border border-transparent text-white font-bold hover:bg-[#4F46E5] transition-all font-satoshi text-xs"
+                            >
+                                Submit New Entry
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    exportToMarkdown(form?.title || 'Form Response', formatResponseMarkdown());
+                                }}
+                                className="px-5 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] text-zinc-300 font-bold hover:bg-white/5 transition-all font-satoshi text-xs"
+                            >
+                                Export MD
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    exportToPDF(form?.title || 'Form Response', formatResponseMarkdown());
+                                }}
+                                className="px-5 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] text-zinc-300 font-bold hover:bg-white/5 transition-all font-satoshi text-xs"
+                            >
+                                Export PDF
+                            </button>
+                            {currentUser && (
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowSendSelector(!showSendSelector)}
+                                    className="px-5 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] text-zinc-300 font-bold hover:bg-white/5 hover:border-[#6366F1]/40 transition-all font-satoshi text-xs"
+                                >
+                                    Send Response
+                                </button>
+                            )}
+                        </div>
+
+                        {showSendSelector && currentUser && (
+                            <div className="w-full mt-4 p-4 border border-white/5 bg-black/40 rounded-2xl text-left">
+                                {isSendingResponse ? (
+                                    <div className="flex items-center justify-center py-6 gap-2 text-zinc-400 font-satoshi text-xs">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-400 border-t-transparent" />
+                                        <span>Injecting response into recipient stream...</span>
+                                    </div>
+                                ) : (
+                                    <UserSearch
+                                        label="SEND TO KYLRIX USER"
+                                        placeholder="Type @username to search..."
+                                        selectedUsers={[]}
+                                        inlineResults={true}
+                                        onSelect={async (targetUser) => {
+                                            setIsSendingResponse(true);
+                                            try {
+                                                const responseMarkdown = formatResponseMarkdown();
+                                                const targetProfile = await UsersService.getProfileById(targetUser.id).catch(() => null);
+                                                
+                                                if (targetProfile) {
+                                                    const hasLocalKeys = ecosystemSecurity.status.hasIdentity && ecosystemSecurity.status.isUnlocked;
+                                                    const targetHasPublicKey = !!targetProfile.publicKey;
+
+                                                    if (hasLocalKeys && targetHasPublicKey) {
+                                                        // E2EE Chat
+                                                        const conv = await ChatService.createConversation([currentUser.$id, targetProfile.$id]);
+                                                        if (conv) {
+                                                            await ChatService.sendMessage(conv.$id || conv.id, currentUser.$id, responseMarkdown, 'text');
+                                                            toast.success(`Response transmitted to @${targetProfile.username}'s secure chat!`);
+                                                            setShowSendSelector(false);
+                                                            return;
+                                                        }
+                                                    }
+                                                }
+
+                                                // Discussion thread fallback
+                                                const sorted = [currentUser.$id, targetUser.id].sort();
+                                                const deterministicId = `gchat-${sorted[0].slice(0, 14)}-${sorted[1].slice(0, 14)}`;
+
+                                                let threadExists = false;
+                                                try {
+                                                    await getNote(deterministicId);
+                                                    threadExists = true;
+                                                } catch {}
+
+                                                if (!threadExists) {
+                                                    await createthreadNoteChat(
+                                                        `@${targetUser.title || 'user'}'s Discussion`,
+                                                        [currentUser.$id, targetUser.id],
+                                                        deterministicId
+                                                    );
+                                                }
+
+                                                await createComment(deterministicId, responseMarkdown);
+                                                toast.success(`Response injected into @${targetUser.title || 'user'}'s discussion thread!`);
+                                                setShowSendSelector(false);
+                                            } catch (err: any) {
+                                                console.error('Send failed:', err);
+                                                toast.error(err.message || 'Transmission failed.');
+                                            } finally {
+                                                setIsSendingResponse(false);
+                                            }
+                                        }}
+                                        onRemove={() => {}}
+                                    />
+                                )}
+                            </div>
+                        )}
+                    </div>
+                ) : visibleFields.length === 0 ? (
+                    <div className="p-8 text-center rounded-[28px] bg-[#161412] border border-white/5">
+                        <h2 className="text-xl font-bold font-clash text-white mb-2">No Questions Defined</h2>
+                        <p className="text-zinc-400 font-satoshi text-sm">
+                            This form doesn&apos;t contain any visible logic fields.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-8">
+                        {/* Title and description on the very first question */}
+                        {currentStep === 0 && (
+                            <div className="mb-4 space-y-3">
+                                <div>
+                                    <h1 className="text-3xl md:text-4.5xl font-extrabold font-clash text-white tracking-tight leading-tight">
+                                        {form?.title}
+                                    </h1>
+                                    {form?.description && (
+                                        <p className="text-zinc-400 font-satoshi font-normal leading-relaxed text-sm md:text-base mt-2">
+                                            {form.description}
+                                        </p>
+                                    )}
+                                </div>
+                                <GhostFieldsNotice ghostFields={getEnabledGhostFields(form?.settings)} />
+                                {isFeatureRequestForm && isContributor && (
+                                    <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5 mt-2">
+                                        <Crown size={16} className="text-emerald-400 shrink-0" />
+                                        <div className="text-xs">
+                                            <span className="font-bold text-emerald-400 font-mono block">Contributor Priority Routing Active</span>
+                                            <span className="text-white/80 text-[11px] block mt-0.5 leading-relaxed">
+                                                Your submission is tagged as High Priority and will be directly evaluated for inclusion in <strong className="text-emerald-300 font-mono">TODO.md</strong> & <strong className="text-emerald-300 font-mono">ROADMAP.md</strong>.
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="flex flex-col gap-6">
+                            <div className="flex flex-col gap-3">
+                                <label className="text-xl md:text-2xl font-bold text-white font-satoshi tracking-wide leading-snug">
+                                    {activeField.label} {activeField.required && <span className="text-rose-500 font-bold ml-1">*</span>}
+                                </label>
+                            </div>
+                            
+                            <div className="w-full">
+                                {renderField(activeField)}
+                            </div>
+                        </div>
+
+                        {error && (
+                            <div className="p-4 bg-red-500/10 border border-red-500/20 text-[#ff1744] rounded-xl text-sm font-semibold font-satoshi leading-relaxed text-center">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="flex items-center gap-4 mt-2">
+                            <button
+                                onClick={handleNext}
+                                disabled={submitting}
+                                className="px-8 py-3.5 rounded-2xl font-bold bg-[#6366F1] text-zinc-950 hover:bg-[#5254E8] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed text-base font-clash tracking-wide"
+                            >
+                                {submitting ? (
+                                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-zinc-950 border-t-transparent" />
+                                ) : currentStep === visibleFields.length - 1 ? (
+                                    <Send size={16} />
+                                ) : (
+                                    <span>OK</span>
+                                )}
+                                <span>{submitting ? 'Transmitting...' : currentStep === visibleFields.length - 1 ? 'Submit' : 'Next'}</span>
+                            </button>
+                            
+                            {activeField.type !== 'textarea' && (
+                                <span className="text-xs font-medium text-zinc-500 font-satoshi hidden sm:inline">
+                                    press <strong className="text-zinc-400 font-bold">Enter ↵</strong>
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Bottom Footer Info */}
+            <div className="w-full py-8 text-center shrink-0">
+                <span className="text-[10px] md:text-xs font-mono font-bold tracking-[0.3em] text-[#9B9691] opacity-25">
+                    Secured by Kylrix Neural Flow
+                </span>
+            </div>
+        </div>
+    );
+}

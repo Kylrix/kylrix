@@ -1,0 +1,344 @@
+'use client';
+
+import React, { useCallback, useEffect, useState } from 'react';
+import { Plus, Trash2, Sparkles, ChevronDown, ChevronUp, Tag, X } from 'lucide-react';
+import GoalObjectRow from './GoalObjectRow';
+import { useTask } from '@/context/TaskContext';
+import { useFAB } from '@/context/FABContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
+import { useResourcePins } from '@/context/ResourcePinContext';
+import { toast } from 'react-hot-toast';
+
+import { sortByDeadlineThenUpdatedAt } from '@/lib/sync/local-copy-sync';
+
+export default function TaskList() {
+  const {
+    getFilteredTasks,
+    filter,
+    setFilter,
+    deleteTask,
+    projects,
+    selectedProjectId,
+    getTagFilterOptions,
+    labels,
+    ecosystemTags,
+    refreshEcosystemTags,
+  } = useTask();
+  const { setConfiguration, resetConfiguration } = useFAB();
+  const { open } = useUnifiedDrawer();
+  useEffect(() => {
+    if (!ecosystemTags || ecosystemTags.length === 0) {
+      void refreshEcosystemTags();
+    }
+  }, [ecosystemTags, refreshEcosystemTags]);
+
+  const [showCompletedSection, setShowCompletedSection] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const openCreateGoal = useCallback(() => {
+    setCreateOpen(true);
+  }, []);
+
+  useEffect(() => {
+    const handleOpen = () => setCreateOpen(true);
+    window.addEventListener('kylrix:open-create-goal', handleOpen);
+    return () => window.removeEventListener('kylrix:open-create-goal', handleOpen);
+  }, []);
+
+  useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#A855F7',
+      mainIcon: <Plus size={26} strokeWidth={3} />,
+      onMainClick: openCreateGoal,
+      suppressWorkflow: true,
+      actions: [],
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, openCreateGoal]);
+
+  const { isPinned: isResourcePinned } = useResourcePins();
+
+  const tasks = getFilteredTasks();
+  const activeTasks = tasks.filter(t => t.status !== 'done');
+  const completedTasks = tasks.filter(t => t.status === 'done');
+
+  const sortTasksByDeadline = (rows: typeof activeTasks) => {
+    const order = sortByDeadlineThenUpdatedAt(
+      rows.map((t) => ({
+        $id: t.id,
+        dueDate: t.dueDate,
+        priority: t.priority,
+        createdAt: t.createdAt instanceof Date && !isNaN(t.createdAt.getTime()) ? t.createdAt.toISOString() : String(t.createdAt ?? ''),
+        updatedAt: t.updatedAt instanceof Date && !isNaN(t.updatedAt.getTime()) ? t.updatedAt.toISOString() : String(t.updatedAt ?? ''),
+        isPinned: isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned),
+      })),
+    ).map((row) => row.$id);
+    const byId = new Map(rows.map((t) => [t.id, t]));
+    return order.map((id) => byId.get(id)).filter((t): t is (typeof activeTasks)[number] => Boolean(t));
+  };
+
+  const pinnedTasks = sortTasksByDeadline(
+    activeTasks.filter((t) => isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned)),
+  );
+  const unpinnedTasks = sortTasksByDeadline(
+    activeTasks.filter((t) => !isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned)),
+  );
+  const sortedCompletedTasks = sortTasksByDeadline(completedTasks);
+
+  const rawTagOptions = getTagFilterOptions();
+  const directTaskTags = Array.from(
+    new Set([
+      ...rawTagOptions,
+      ...(ecosystemTags || []).map((t) => t.name).filter(Boolean),
+      ...tasks.flatMap((t) => {
+        const userLabels = t.labels || [];
+        const extractedTags = Array.isArray((t as any).tags)
+          ? (t as any).tags.filter((tag: string) => !String(tag).startsWith('project:') && !String(tag).startsWith('source:'))
+          : [];
+        return [...userLabels, ...extractedTags];
+      })
+    ].filter((item): item is string => Boolean(item)))
+  ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  const tagFilterOptions = directTaskTags;
+  const activeTagFilter = filter.labels?.[0] ?? null;
+
+  const handleTagFilterToggle = (tag: string) => {
+    if (activeTagFilter === tag) {
+      setFilter({ ...filter, labels: [] });
+      return;
+    }
+    setFilter({ ...filter, labels: [tag] });
+  };
+
+  const getTagColor = (tagName: string) =>
+    labels.find((label) => label.name === tagName)?.color || '#9B9691';
+
+  const GOAL_PAGE_SIZE = 20;
+  const [goalPage, setGoalPage] = useState(1);
+  const [goalSentinelNode, setGoalSentinelNode] = useState<HTMLDivElement | null>(null);
+  const goalSentinelRef = useCallback((node: HTMLDivElement | null) => setGoalSentinelNode(node), []);
+  const visibleUnpinnedTasks = unpinnedTasks.slice(0, goalPage * GOAL_PAGE_SIZE);
+  const hasMoreGoals = visibleUnpinnedTasks.length < unpinnedTasks.length;
+  useEffect(() => {
+    setGoalPage(1);
+  }, [filter.search, filter.status, filter.labels]);
+  useEffect(() => {
+    if (!goalSentinelNode || !hasMoreGoals) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) setGoalPage((p) => p + 1);
+      },
+      { rootMargin: '400px', threshold: 0.1 }
+    );
+    obs.observe(goalSentinelNode);
+    return () => obs.disconnect();
+  }, [goalSentinelNode, hasMoreGoals, activeTasks.length]);
+
+  const handleBulkDeleteCompleted = () => {
+    if (completedTasks.length === 0) return;
+
+    open('delete-confirm', {
+      title: `Purge ${completedTasks.length} Completed Goals?`,
+      description: 'This will authoritatively erase all finished goals, including their sub-objects (subtasks, comments, attachments, and project links). This operation is final and irreversible.',
+      resourceName: 'completed goals',
+      confirmLabel: 'Purge Finished Goals',
+      onConfirm: async () => {
+        const total = completedTasks.length;
+        try {
+          const results = await Promise.allSettled(
+            completedTasks.map((task) => deleteTask(task.id))
+          );
+          const fulfilledCount = results.filter((r) => r.status === 'fulfilled').length;
+          const rejectedCount = results.length - fulfilledCount;
+
+          if (rejectedCount === 0) {
+            toast.success(`Workspace cleansed: ${total} goals removed.`);
+          } else if (fulfilledCount > 0) {
+            console.warn(`[Purge] ${rejectedCount} tasks failed to delete during purge.`);
+            toast.error(`Partial purge completed (${fulfilledCount}/${total} removed). Check connection.`);
+          } else {
+            toast.error('Failed to purge completed goals. Check connection.');
+          }
+        } catch (err) {
+          console.error('[Purge] Bulk delete error:', err);
+          toast.error('Purge failed. Check connection.');
+        }
+      }
+    });
+  };
+
+  const selectedProject = projects.find((p) => p.id === selectedProjectId);
+  void selectedProject;
+
+
+  return (
+    <>
+      <div className="animate-fadeIn pointer-events-auto w-full">
+
+        {tagFilterOptions.length > 0 && (
+          <div className="overflow-x-auto scrollbar-none mb-6 p-2 bg-[#000000] border-2 border-white/20 rounded-[24px] flex items-center gap-2 select-none shadow-md">
+            <Tag size={14} className="text-[#A855F7] ml-2 shrink-0" />
+            {tagFilterOptions.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                aria-pressed={activeTagFilter === tag}
+                onClick={() => handleTagFilterToggle(tag)}
+                className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                  activeTagFilter === tag
+                    ? 'bg-[#A855F7] border-2 border-[#FFFFFF] text-white shadow-[0_4px_12px_rgba(168,85,247,0.2)]'
+                    : 'bg-[#161412] border border-white/25 text-white hover:border-white/60 hover:bg-[#201D1A]'
+                }`}
+                style={
+                  activeTagFilter !== tag
+                    ? { borderColor: `${getTagColor(tag)}99`, color: '#FFFFFF' }
+                    : undefined
+                }
+              >
+                {tag}
+              </button>
+            ))}
+            {activeTagFilter && (
+              <button
+                type="button"
+                onClick={() => setFilter({ ...filter, labels: [] })}
+                className="ml-1 px-3 py-1.5 text-xs text-[#A855F7] hover:text-[#c084fc] font-mono font-bold tracking-wider flex items-center gap-1 shrink-0"
+              >
+                <X size={12} />
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Grid Content */}
+        <div className="min-h-[60vh]">
+          <div className="space-y-8">
+            {tasks.length === 0 ? (
+              <div className="text-center py-24 text-[#9B9691]">
+                <h3 className="font-clash font-extrabold text-[#F5F2ED] text-xl tracking-tight mb-2">
+                  A Clear Void
+                </h3>
+                <p className="font-satoshi text-sm mb-6 text-[#9B9691]">
+                  {filter.search
+                    ? 'No action items match your parameters.'
+                    : 'Establish order. Bring structure to your goals.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={openCreateGoal}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 border border-[#1C1A18] hover:border-[#34322F] text-[#F5F2ED] font-bold rounded-xl hover:bg-[#161412] transition-colors font-satoshi text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Your First Goal</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Pinned Goals Section */}
+                {pinnedTasks.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 px-1 mb-2">
+                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-[0.2em] font-mono flex items-center gap-1.5">
+                        <span>Pinned ({pinnedTasks.length})</span>
+                      </span>
+                      <div className="flex-1 h-px bg-gradient-to-r from-amber-400/20 to-transparent" />
+                    </div>
+                    <div className="grid gap-4 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+                      {pinnedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Goals Section */}
+                {unpinnedTasks.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 px-1 mb-2">
+                      <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-[0.2em] font-mono">
+                        {pinnedTasks.length > 0 ? `Other Goals (${unpinnedTasks.length})` : `Active Goals (${unpinnedTasks.length})`}
+                      </span>
+                      <div className="flex-1 h-px bg-gradient-to-r from-[#A855F7]/20 to-transparent" />
+                    </div>
+                    <div className="grid gap-4 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+                      {visibleUnpinnedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
+                    </div>
+                    {hasMoreGoals && (
+                      <div ref={goalSentinelRef} className="flex justify-center py-6">
+                        <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
+                      </div>
+                    )}
+                    {!hasMoreGoals && visibleUnpinnedTasks.length > 0 && unpinnedTasks.length > GOAL_PAGE_SIZE && (
+                      <div className="flex justify-center py-4">
+                        <span className="text-[10px] font-bold tracking-widest uppercase text-white/15">End of list</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Completed Goals Section */}
+                {completedTasks.length > 0 && (
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-center justify-between px-1 mb-2">
+                      <button 
+                        onClick={() => setShowCompletedSection(!showCompletedSection)}
+                        className="flex items-center gap-2 group cursor-pointer"
+                      >
+                        <span className="text-[10px] font-black text-[#9B9691] uppercase tracking-[0.2em] font-mono group-hover:text-white transition-colors">
+                          Completed ({completedTasks.length})
+                        </span>
+                        {showCompletedSection ? <ChevronUp size={12} className="text-[#9B9691]" /> : <ChevronDown size={12} className="text-[#9B9691]" />}
+                      </button>
+                      <div className="flex-1 mx-4 h-px bg-[#1C1A18]" />
+                    </div>
+
+                    {showCompletedSection && (
+                      <>
+                        {/* Cleanup Pulse Card */}
+                        <div className="bg-[#000000] border border-white/[0.08] rounded-[28px] p-5 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all hover:border-[#A855F7]/30 relative overflow-hidden group/cleanup">
+                           <div className="absolute top-0 right-0 w-32 h-32 bg-[#A855F7]/5 rounded-full blur-3xl pointer-events-none group-hover/cleanup:bg-[#A855F7]/10 transition-all duration-500" />
+                           <div className="flex items-center gap-4 relative z-10">
+                              <div className="w-12 h-12 rounded-xl bg-[#A855F7]/10 text-[#A855F7] flex items-center justify-center flex-shrink-0">
+                                  <Sparkles size={22} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                  <h4 className="text-white font-black text-sm uppercase tracking-tight">Workspace Integrity</h4>
+                                  <p className="text-white opacity-80 text-[11px] font-bold uppercase tracking-wider mt-0.5 leading-normal">
+                                      Purge finished goals to maintain a lean, high-fidelity environment.
+                                  </p>
+                              </div>
+                           </div>
+                           <button
+                              onClick={handleBulkDeleteCompleted}
+                              className="relative z-10 px-5 py-2.5 rounded-xl bg-[#161412] border border-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all active:scale-[0.98] flex items-center gap-2"
+                           >
+                              <Trash2 size={14} />
+                              Purge All
+                           </button>
+                        </div>
+
+                        <div className="grid gap-4 items-stretch opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500 [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+                          {sortedCompletedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <ObjectCreateDrawer
+        open={createOpen}
+        kind="goal"
+        onClose={() => setCreateOpen(false)}
+        onGoalCreated={() => {
+          toast.success('Goal saved locally');
+        }}
+      />
+    </>
+  );
+}

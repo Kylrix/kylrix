@@ -1,0 +1,13 @@
+{
+  "name": "@kylrix/notify-on-social-activity",
+  "version": "1.0.0",
+  "description": "Real-time social alerts for the Kylrix Connect social layer",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.1.0"
+  }
+}

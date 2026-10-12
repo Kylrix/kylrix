@@ -1,0 +1,903 @@
+'use server';
+
+import { systemTables } from '@/lib/data/system-tables';
+
+import { Query, createSystemClient } from '@/lib/appwrite/types';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+
+import { withSystemTransaction } from '@/lib/services/internal/transaction';
+
+/**
+ * Helper to wipe both key mappings and polymorphic collaborators for any resource.
+ */
+async function deleteRowsTransactional(txId: string, databaseId: string, tableId: string, rowIds: string[]) {
+  const unique = Array.from(new Set(rowIds.filter(Boolean)));
+  if (!unique.length) return;
+  const t: any = systemTables();
+  for (let i = 0; i < unique.length; i += 10) {
+    const batch = unique.slice(i, i + 10);
+    await Promise.all(batch.map((rid: string) => t.deleteRow({ databaseId, tableId, rowId: rid, transactionId: txId })));
+  }
+}
+
+async function wipeCollaboratorsAndKeys(
+  tables: any,
+  resourceId: string,
+  resourceType: string
+) {
+  const VAULT_DB = APPWRITE_CONFIG.DATABASES.VAULT;
+  const FLOW_DB = APPWRITE_CONFIG.DATABASES.FLOW;
+  const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+
+  // 1. Wipe key mappings — transactional (VAULT DB)
+  try {
+    const mappingsRes = await tables.listRows({
+      databaseId: VAULT_DB,
+      tableId: 'key_mapping',
+      queries: [
+        Query.equal('resourceType', resourceType),
+        Query.equal('resourceId', resourceId),
+        Query.limit(1000),
+      ] as any});
+
+    const ids = (mappingsRes.rows || []).map((m: any) => m.$id).filter(Boolean);
+    if (ids.length) {
+      try {
+        await withSystemTransaction(async (txId) => { await deleteRowsTransactional(txId, VAULT_DB, 'key_mapping', ids); }, { ttl: 60 });
+      } catch {
+        await Promise.all(ids.map((id: string) => tables.deleteRow({ databaseId: VAULT_DB, tableId: 'key_mapping', rowId: id })));
+      }
+    }
+    console.log(`[Cascade Delete] Wiped ${mappingsRes.rows?.length || 0} key mappings for resource ${resourceId} (${resourceType})`);
+  } catch (err: any) {
+    console.error(`[Cascade Delete] Key mapping cleanup failed for ${resourceType} ${resourceId}:`, err);
+  }
+
+  // 2. Wipe polymorphic collaborators — transactional (FLOW DB)
+  try {
+    const polyCollabsRes = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+      queries: [
+        Query.equal('resourceId', resourceId),
+        Query.equal('resourceType', resourceType),
+        Query.limit(1000),
+      ] as any});
+
+    const ids = (polyCollabsRes.rows || []).map((c: any) => c.$id).filter(Boolean);
+    if (ids.length) {
+      try {
+        await withSystemTransaction(async (txId) => { await deleteRowsTransactional(txId, FLOW_DB, POLYMORPHIC_COLLABORATORS_TABLE, ids); }, { ttl: 60 });
+      } catch {
+        await Promise.all(ids.map((id: string) => tables.deleteRow({ databaseId: FLOW_DB, tableId: POLYMORPHIC_COLLABORATORS_TABLE, rowId: id })));
+      }
+    }
+    console.log(`[Cascade Delete] Wiped ${polyCollabsRes.rows?.length || 0} polymorphic collaborators for resource ${resourceId} (${resourceType})`);
+  } catch (err) {
+    console.error(`[Cascade Delete] Polymorphic collaborators cleanup failed for ${resourceType} ${resourceId}:`, err);
+  }
+}
+
+/**
+ * Helper to dynamically resolve database and table IDs based on resource entity kind.
+ */
+function getResourceDbAndTable(entityKind: string) {
+  const lower = entityKind.toLowerCase();
+  if (lower === 'note') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.NOTE, tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES };
+  }
+  if (lower === 'goal' || lower === 'task') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.FLOW, tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS };
+  }
+  if (lower === 'password' || lower === 'credential' || lower === 'secret') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.VAULT, tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS };
+  }
+  if (lower === 'totp') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'totpSecrets' };
+  }
+  if (lower === 'event') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'events' };
+  }
+  if (lower === 'form') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.FLOW, tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS };
+  }
+  return null;
+}
+
+import { getActor } from './secure-ops';
+
+// ... (rest of imports)
+
+/**
+ * Centrally and recursively deletes all connected, linked, or owned child resources
+ * when a parent row is deleted.
+ * Follows "The Golden Rule of Server Action Security".
+ */
+export async function executeCascadeDeleteSecure(
+  databaseId: string,
+  tableId: string,
+  rowId: string,
+  projectDeleteMode: 'detach' | 'created_within' | 'all' = 'detach',
+  jwt?: string
+): Promise<void> {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const tables = systemTables();
+
+  // Authorization check: Verify if the user owns the resource or is an admin
+  try {
+    const row = await tables.getRow<any>({ databaseId, tableId, rowId });
+    if (!row) return; // Already deleted
+    
+    const isOwner = row.userId === actor.$id || row.creatorId === actor.$id || row.ownerId === actor.$id;
+    const { isUserAdmin } = await import('./admin/check-admin');
+    const isAdmin = await isUserAdmin(jwt);
+
+    if (!isOwner && !isAdmin) {
+      throw new Error('Forbidden: You do not have permission to delete this resource.');
+    }
+  } catch (e: any) {
+    if (e.message?.includes('Forbidden')) throw e;
+    // If we can't fetch the row to check ownership, we might be in a recursion where the parent was already checked.
+    // However, for a public entry point, we must be strict.
+  }
+
+  const { storage } = createSystemClient();
+
+  const NOTE_DB = APPWRITE_CONFIG.DATABASES.NOTE;
+  const NOTE_TABLE = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+  const COMMENTS_TABLE = APPWRITE_CONFIG.TABLES.NOTE.COMMENTS;
+  const REACTIONS_TABLE = APPWRITE_CONFIG.TABLES.NOTE.REACTIONS;
+  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.NOTE.COLLABORATORS || 'Collaborators';
+  const NOTE_TAGS_TABLE = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+  const TAGS_TABLE = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
+
+  const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
+  const CALL_LINKS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS;
+
+  const FLOW_DB = APPWRITE_CONFIG.DATABASES.FLOW;
+  const FORMS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.FORMS;
+  const EVENTS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.EVENTS;
+  const GUESTS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.GUESTS;
+
+  const VOICE_BUCKET = APPWRITE_CONFIG.BUCKETS.VOICE || 'voice';
+
+  // --- 0. AUTHORITATIVE OBJECTS CLEANUP (Unified Attachments) ---
+  try {
+    const objectsTable = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
+    const objectsRes = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: objectsTable,
+      queries: [Query.equal('parentId', rowId), Query.limit(1000)] as any});
+
+    const linkedObjects = (objectsRes.rows as any[]) || [];
+    if (linkedObjects.length > 0) {
+      console.log(`[Cascade Delete] Found ${linkedObjects.length} linked objects for parent ${rowId}`);
+      // Storage purge first (cannot be transactional)
+      await Promise.all(linkedObjects.map(async (obj) => {
+        if (obj.childKind === 'voice') {
+          await storage.deleteFile(VOICE_BUCKET, obj.childId).catch(() => null);
+        } else if (obj.childKind === 'file') {
+          const buckets = [APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS, APPWRITE_CONFIG.BUCKETS.CHAT_UPLOADS, APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS];
+          for (const b of buckets) {
+            try { await storage.deleteFile(b, obj.childId); break; } catch {}
+          }
+        }
+      }));
+      // Transactional deletes for FLOW objects (same DB)
+      const objectIds = linkedObjects.map((o: any) => o.$id).filter(Boolean);
+      try {
+        await withSystemTransaction(async (txId) => { await deleteRowsTransactional(txId, FLOW_DB, objectsTable, objectIds); }, { ttl: 60 });
+      } catch {
+        await Promise.all(objectIds.map((id: string) => tables.deleteRow({ databaseId: FLOW_DB, tableId: objectsTable, rowId: id }).catch(() => null)));
+      }
+    }
+
+    // Also remove any links where THIS resource is the child (preventing dead links) — transactional
+    const reverseLinksRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: objectsTable,
+        queries: [Query.equal('childId', rowId), Query.limit(1000)] as any});
+    const reverseIds = (reverseLinksRes.rows || []).map((o: any) => o.$id).filter(Boolean);
+    if (reverseIds.length) {
+      try {
+        await withSystemTransaction(async (txId) => { await deleteRowsTransactional(txId, FLOW_DB, objectsTable, reverseIds); }, { ttl: 60 });
+      } catch {
+        await Promise.all(reverseIds.map((id: string) => tables.deleteRow({ databaseId: FLOW_DB, tableId: objectsTable, rowId: id }).catch(() => null)));
+      }
+    }
+  } catch (err) {
+    console.error(`[Cascade Delete] Authoritative objects cleanup failed for ${rowId}:`, err);
+  }
+
+  // --- 1. CASCADE FOR NOTES ---
+  if (databaseId === NOTE_DB && tableId === NOTE_TABLE) {
+    console.log(`[Cascade Delete] Triggered note cascade cleanup for: ${rowId}`);
+
+    // A. Delete Comments & Comment Reactions & Voice Files
+    try {
+      const commentsRes = await tables.listRows({
+        databaseId,
+        tableId: COMMENTS_TABLE,
+        queries: [Query.equal('noteId', rowId), Query.limit(1000)] as any});
+
+      const rows = (commentsRes.rows as any[]) || [];
+      const commentIds = rows.map((c: any) => c.$id).filter(Boolean);
+
+      if (commentIds.length > 0) {
+        // --- 1.1 Handle Voice Note Cleanup ---
+        const voiceFileIds: string[] = [];
+        for (const row of rows) {
+            let voiceFileId = null;
+            if (row.isVoice === true) {
+                // If it has the new flag, extract from metadata or content
+                try {
+                    const meta = JSON.parse(row.metadata || '{}');
+                    voiceFileId = meta.voiceFileId;
+                } catch {}
+                if (!voiceFileId && row.content?.startsWith('__voice_note__:')) {
+                    voiceFileId = row.content.substring('__voice_note__:'.length);
+                }
+            } else {
+                // Legacy check
+                try {
+                    const meta = JSON.parse(row.metadata || '{}');
+                    if (meta.type === 'voice') voiceFileId = meta.voiceFileId;
+                } catch {}
+                if (!voiceFileId && row.content?.startsWith('__voice_note__:')) {
+                    voiceFileId = row.content.substring('__voice_note__:'.length);
+                }
+            }
+
+            if (voiceFileId) voiceFileIds.push(voiceFileId);
+        }
+
+        if (voiceFileIds.length > 0) {
+            console.log(`[Cascade Delete] Purging ${voiceFileIds.length} voice notes...`);
+            await Promise.all(voiceFileIds.map(fid => 
+                storage.deleteFile(VOICE_BUCKET, fid).catch(err => {
+                    console.warn(`[Cascade Delete] Failed to delete voice file ${fid}:`, err?.message);
+                })
+            ));
+        }
+
+        // --- 1.2 Delete Reactions attached to these comments — transactional (NOTE DB)
+        let commentReactionIds: string[] = [];
+        try {
+          const reactionsRes = await tables.listRows({
+            databaseId,
+            tableId: REACTIONS_TABLE,
+            queries: [
+              Query.equal('targetType', 'comment'),
+              Query.equal('targetId', commentIds),
+              Query.limit(1000),
+            ] as any});
+          commentReactionIds = (reactionsRes.rows || []).map((r: any) => r.$id).filter(Boolean);
+        } catch (err) {
+          console.error('[Cascade Delete] Note comments reactions cleanup failed:', err);
+        }
+
+        // Transactional batch: reactions + comments together (same DB, atomic)
+        try {
+          await withSystemTransaction(async (txId) => {
+            await deleteRowsTransactional(txId, databaseId, REACTIONS_TABLE, commentReactionIds);
+            await deleteRowsTransactional(txId, databaseId, COMMENTS_TABLE, commentIds);
+          }, { ttl: 60 });
+        } catch {
+          await Promise.all(commentReactionIds.map((rid: string) => tables.deleteRow({ databaseId, tableId: REACTIONS_TABLE, rowId: rid }).catch(() => null)));
+          await Promise.all(commentIds.map((cid: string) => tables.deleteRow({ databaseId, tableId: COMMENTS_TABLE, rowId: cid }).catch(() => null)));
+        }
+      }
+    } catch (err) {
+      console.error('[Cascade Delete] Note comments cleanup failed:', err);
+    }
+
+    // B. Delete Reactions on the Note itself
+    try {
+      const reactionsRes = await tables.listRows({
+        databaseId,
+        tableId: REACTIONS_TABLE,
+        queries: [Query.equal('targetId', rowId), Query.limit(1000)] as any});
+
+      await Promise.all(
+        reactionsRes.rows.map((r: any) =>
+          tables.deleteRow({
+            databaseId,
+            tableId: REACTIONS_TABLE,
+            rowId: r.$id})
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Note direct reactions cleanup failed:', err);
+    }
+
+    // C. Delete Collaborators (Legacy and Polymorphic)
+    try {
+      const collaboratorsRes = await tables.listRows({
+        databaseId,
+        tableId: COLLABORATORS_TABLE,
+        queries: [Query.equal('noteId', rowId), Query.limit(1000)] as any});
+
+      await Promise.all(
+        collaboratorsRes.rows.map((collab: any) =>
+          tables.deleteRow({
+            databaseId,
+            tableId: COLLABORATORS_TABLE,
+            rowId: collab.$id})
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Note legacy collaborators cleanup failed:', err);
+    }
+
+    try {
+      const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+      const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+      const polyCollabsRes = await tables.listRows({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+        queries: [
+          Query.equal('resourceId', rowId),
+          Query.equal('resourceType', 'note'),
+          Query.limit(1000),
+        ] as any});
+      await Promise.all(
+        polyCollabsRes.rows.map((collab: any) =>
+          tables.deleteRow({
+            databaseId: FLOW_DATABASE_ID,
+            tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+            rowId: collab.$id})
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Note polymorphic collaborators cleanup failed:', err);
+    }
+
+    // D. Delete Note Tags Pivots & Decrement Tag usageCount
+    try {
+      const pivotsRes = await tables.listRows({
+        databaseId,
+        tableId: NOTE_TAGS_TABLE,
+        queries: [Query.equal('resourceId', rowId), Query.equal('resourceType', 'note'), Query.limit(1000)] as any});
+
+      for (const pivot of pivotsRes.rows as any[]) {
+        if (pivot.tag) {
+          try {
+            const tagsRes = await tables.listRows({
+              databaseId,
+              tableId: TAGS_TABLE,
+              queries: [Query.equal('name', pivot.tag), Query.limit(1)] as any});
+
+            if (tagsRes.rows.length > 0) {
+              const tagDoc = tagsRes.rows[0];
+              const current = typeof tagDoc.usageCount === 'number' ? tagDoc.usageCount : 0;
+              await tables.updateRow({
+                databaseId,
+                tableId: TAGS_TABLE,
+                rowId: tagDoc.$id,
+                data: { usageCount: Math.max(0, current - 1) }});
+            }
+          } catch (_) {}
+        }
+
+        // Delete the pivot entry
+        await tables.deleteRow({
+          databaseId,
+          tableId: NOTE_TAGS_TABLE,
+          rowId: pivot.$id});
+      }
+    } catch (err) {
+      console.error('[Cascade Delete] Note tags cleanup failed:', err);
+    }
+
+    // E. Delete Vault Key Mappings
+    try {
+      const mappingsRes = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: 'key_mapping',
+        queries: [
+          Query.equal('resourceType', 'note'),
+          Query.equal('resourceId', rowId),
+          Query.limit(1000),
+        ] as any});
+
+      await Promise.all(
+        mappingsRes.rows.map((m: any) =>
+          tables.deleteRow({
+            databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+            tableId: 'key_mapping',
+            rowId: m.$id})
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Note vault key mapping cleanup failed:', err);
+    }
+
+    // F. Delete Ephemeral Files for Send (isFile)
+    try {
+      const note = await tables.getRow<any>({ databaseId, tableId, rowId });
+      if (note.isFile === true || (note.isthread === true && note.metadata?.includes('fileId'))) {
+        const meta = (() => {
+            try { return typeof note.metadata === 'string' ? JSON.parse(note.metadata) : note.metadata; } catch { return {}; }
+        })();
+        const bucketId = meta?.send_object?.bucketId || APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL;
+        const fileId = meta?.send_object?.fileId;
+        if (bucketId && fileId) {
+            console.log(`[Cascade Delete] Purging ephemeral file: ${fileId} from bucket: ${bucketId}`);
+            await storage.deleteFile(bucketId, fileId).catch(err => {
+                console.warn(`[Cascade Delete] Failed to delete ephemeral file ${fileId}:`, err?.message);
+            });
+        }
+      }
+    } catch (err) {
+      console.error('[Cascade Delete] thread file cleanup failed:', err);
+    }
+  }
+
+  // --- 2. CASCADE FOR PROJECTS ---
+  else if (databaseId === CHAT_DB && tableId === 'projects') {
+    console.log(`[Cascade Delete] Triggered project cascade cleanup for: ${rowId} (mode: ${projectDeleteMode})`);
+
+    // A. Fetch project metadata to find discussion thread note
+    let discussionNoteId = '';
+    try {
+      const projectDoc = await tables.getRow<any>({ databaseId: CHAT_DB, tableId: 'projects', rowId });
+      if (projectDoc?.metadata) {
+        const meta = JSON.parse(projectDoc.metadata);
+        discussionNoteId = meta.discussionNoteId;
+      }
+    } catch (err) {
+      console.warn(`[Cascade Delete] Failed to fetch project metadata for discussion check:`, err);
+    }
+
+    // B. Purge discussion note (comments, reactions, voice, etc.) recursively
+    if (discussionNoteId) {
+      console.log(`[Cascade Delete] Purging linked project discussion thread note: ${discussionNoteId}`);
+      try {
+        await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, discussionNoteId);
+        await tables.deleteRow({
+          databaseId: NOTE_DB,
+          tableId: NOTE_TABLE,
+          rowId: discussionNoteId});
+      } catch (err: any) {
+        console.warn(`[Cascade Delete] Failed to delete project discussion note ${discussionNoteId}:`, err?.message);
+      }
+    }
+
+    try {
+      const objectsRes = await tables.listRows({
+        databaseId,
+        tableId: 'project_objects',
+        queries: [Query.equal('projectId', rowId), Query.limit(1000)] as any});
+
+      const linkedObjects = (objectsRes.rows as any[]) || [];
+
+      if (projectDeleteMode === 'created_within' || projectDeleteMode === 'all') {
+        await Promise.all(
+          linkedObjects.map(async (obj) => {
+            const info = getResourceDbAndTable(obj.entityKind);
+            if (!info) return;
+
+            try {
+              // 1. Fetch the actual resource row
+              const resourceRow = await tables.getRow<any>({ databaseId: info.databaseId, tableId: info.tableId, rowId: obj.entityId });
+              
+              // 2. Check if we should delete it
+              const isCreatedWithin = resourceRow && resourceRow.source === 'project';
+              const shouldDelete = projectDeleteMode === 'all' || isCreatedWithin;
+
+              if (shouldDelete) {
+                console.log(`[Cascade Delete] Project cascade deleting linked resource: ${obj.entityId} of kind ${obj.entityKind}`);
+                
+                // Recurse cascade delete child elements of this resource first
+                await executeCascadeDeleteSecure(info.databaseId, info.tableId, obj.entityId);
+
+                // Delete the resource row itself
+                await tables.deleteRow({
+                  databaseId: info.databaseId,
+                  tableId: info.tableId,
+                  rowId: obj.entityId});
+              }
+            } catch (err: any) {
+              console.warn(`[Cascade Delete] Failed to fetch or delete linked resource ${obj.entityId} (${obj.entityKind}):`, err?.message);
+            }
+          })
+        );
+      }
+
+      // In all cases, we delete the project object links (detaching them if they weren't deleted)
+      await Promise.all(
+        linkedObjects.map((obj: any) =>
+          tables.deleteRow({
+            databaseId,
+            tableId: 'project_objects',
+            rowId: obj.$id})
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Project objects cleanup failed:', err);
+    }
+
+    // Wipe collaborators and key mappings for the project itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'project');
+  }
+
+  // --- 3. CASCADE FOR FORMS ---
+  else if (databaseId === FLOW_DB && tableId === FORMS_TABLE) {
+    console.log(`[Cascade Delete] Triggered form cascade cleanup for: ${rowId}`);
+
+    // A. Trash and delete Form Submissions (responses)
+    try {
+      const submissionsRes = await tables.listRows({
+        databaseId,
+        tableId: 'formSubmissions',
+        queries: [Query.equal('formId', rowId), Query.limit(1000)] as any});
+
+      if (submissionsRes.rows.length > 0) {
+        // Trash responses first
+        await Promise.all(
+          submissionsRes.rows.map((sub: any) =>
+            tables.updateRow({
+              databaseId,
+              tableId: 'formSubmissions',
+              rowId: sub.$id,
+              data: { isTrash: true }
+            }).catch(() => null)
+          )
+        );
+
+        // Delete responses
+        await Promise.all(
+          submissionsRes.rows.map((sub: any) =>
+            tables.deleteRow({
+              databaseId,
+              tableId: 'formSubmissions',
+              rowId: sub.$id})
+          )
+        );
+      }
+    } catch (err) {
+      console.error('[Cascade Delete] Form submissions cleanup failed:', err);
+    }
+
+    // B. Find, trash, and cascade delete Form Forks
+    try {
+      const [forksRes, childObjectsRes] = await Promise.all([
+        tables.listRows({
+          databaseId,
+          tableId: FORMS_TABLE,
+          queries: [Query.equal('source', `fork:${rowId}`), Query.limit(500)] as any
+        }).catch(() => ({ rows: [] })),
+        tables.listRows({
+          databaseId: FLOW_DB,
+          tableId: APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects',
+          queries: [
+            Query.equal('parentId', rowId),
+            Query.equal('childKind', 'form'),
+            Query.limit(500)
+          ] as any
+        }).catch(() => ({ rows: [] }))
+      ]);
+
+      const forkFormIds = new Set<string>();
+      (forksRes.rows || []).forEach((f: any) => f.$id && forkFormIds.add(f.$id));
+      (childObjectsRes.rows || []).forEach((o: any) => o.childId && forkFormIds.add(o.childId));
+
+      try {
+        const containsForks = await tables.listRows({
+          databaseId,
+          tableId: FORMS_TABLE,
+          queries: [Query.contains('source', rowId), Query.limit(500)] as any
+        }).catch(() => ({ rows: [] }));
+        (containsForks.rows || []).forEach((f: any) => {
+          if (f.$id && f.$id !== rowId) forkFormIds.add(f.$id);
+        });
+      } catch {}
+
+      const forkIds = Array.from(forkFormIds);
+      if (forkIds.length > 0) {
+        console.log(`[Cascade Delete] Trashing and cascade deleting ${forkIds.length} form forks for form ${rowId}`);
+        for (const forkId of forkIds) {
+          // Trash fork first
+          await tables.updateRow({
+            databaseId,
+            tableId: FORMS_TABLE,
+            rowId: forkId,
+            data: { isTrash: true }
+          }).catch(() => null);
+
+          // Recurse cascade delete on fork
+          await executeCascadeDeleteSecure(databaseId, tableId, forkId, projectDeleteMode, jwt);
+
+          // Delete fork row
+          await tables.deleteRow({
+            databaseId,
+            tableId: FORMS_TABLE,
+            rowId: forkId
+          }).catch(() => null);
+        }
+      }
+    } catch (err) {
+      console.error('[Cascade Delete] Form forks cleanup failed:', err);
+    }
+
+    // Wipe collaborators and key mappings for the form itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'form');
+  }
+
+  // --- 4. CASCADE FOR EVENTS ---
+  else if (databaseId === FLOW_DB && tableId === EVENTS_TABLE) {
+    console.log(`[Cascade Delete] Triggered event cascade cleanup for: ${rowId}`);
+
+    let _meetingUrl = '';
+    let coverImageId = '';
+    try {
+      const eventDoc = await tables.getRow<any>({ databaseId: FLOW_DB, tableId: EVENTS_TABLE, rowId });
+      _meetingUrl = eventDoc?.meetingUrl || '';
+      coverImageId = eventDoc?.coverImageId || '';
+    } catch (err) {
+      console.warn(`[Cascade Delete] Failed to fetch event row ${rowId} for meetingUrl/cover:`, err);
+    }
+
+    // A. Clean up cover image from storage
+    if (coverImageId) {
+      console.log(`[Cascade Delete] Purging event cover: ${coverImageId}`);
+      await storage.deleteFile(APPWRITE_CONFIG.BUCKETS.EVENT_COVERS, coverImageId).catch(err => {
+        console.warn(`[Cascade Delete] Failed to delete event cover file ${coverImageId}:`, err?.message);
+      });
+    }
+
+    // B. Clean up linked thread Note (Discussion Thread)
+    try {
+      console.log(`[Cascade Delete] Cleaning up linked event thread huddle: ${rowId}`);
+      await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, rowId);
+      await tables.deleteRow({
+        databaseId: NOTE_DB,
+        tableId: NOTE_TABLE,
+        rowId: rowId});
+    } catch (_err: any) {
+      // It's normal for many events to not have initialized discussions
+    }
+
+    // D. Clean up Guests/Participants
+    try {
+      const guestsRes = await tables.listRows({
+        databaseId,
+        tableId: GUESTS_TABLE,
+        queries: [Query.equal('eventId', rowId), Query.limit(1000)] as any});
+
+      await Promise.all(
+        guestsRes.rows.map((guest: any) =>
+          tables.deleteRow({
+            databaseId,
+            tableId: GUESTS_TABLE,
+            rowId: guest.$id})
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Event guests cleanup failed:', err);
+    }
+
+    // E. Clean up Project Object Links
+    try {
+        const objectsRes = await tables.listRows({
+            databaseId: CHAT_DB,
+            tableId: 'project_objects',
+            queries: [
+                Query.equal('entityId', rowId),
+                Query.equal('entityKind', 'event'),
+                Query.limit(100)
+            ] as any});
+        await Promise.all(
+            objectsRes.rows.map((obj: any) =>
+                tables.deleteRow({
+                    databaseId: CHAT_DB,
+                    tableId: 'project_objects',
+                    rowId: obj.$id})
+            )
+        );
+    } catch (err) {
+        console.error('[Cascade Delete] Event project objects cleanup failed:', err);
+    }
+
+    // F. Wipe collaborators and key mappings for the event itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'event');
+  }
+
+  // --- 5. CASCADE FOR CALLS (HUDDLES) ---
+  else if (databaseId === CHAT_DB && tableId === CALL_LINKS_TABLE) {
+    console.log(`[Cascade Delete] Triggered call cascade cleanup for: ${rowId}`);
+
+    try {
+      // Find all thread notes associated with this call
+      const threadNotesRes = await tables.listRows({
+        databaseId: NOTE_DB,
+        tableId: NOTE_TABLE,
+        queries: [Query.contains('metadata', rowId), Query.limit(100)] as any});
+
+      for (const thread of threadNotesRes.rows as any[]) {
+        // Recursive deletion for the note's own child items
+        await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, thread.$id);
+
+        // Delete the thread note itself
+        await tables.deleteRow({
+          databaseId: NOTE_DB,
+          tableId: NOTE_TABLE,
+          rowId: thread.$id});
+      }
+    } catch (err) {
+      console.error('[Cascade Delete] Call thread notes cleanup failed:', err);
+    }
+
+    // Wipe collaborators and key mappings for the huddle/call itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'call');
+  }
+
+  // --- 6. CASCADE FOR TASKS ---
+  else if (databaseId === FLOW_DB && tableId === APPWRITE_CONFIG.TABLES.FLOW.TASKS) {
+    console.log(`[Cascade Delete] Triggered task cascade cleanup for: ${rowId}`);
+
+    // A. Fetch task to get attachments and discussion links
+    let attachmentIds: string[] = [];
+    try {
+      const taskDoc = await tables.getRow<any>({ databaseId: FLOW_DB, tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS, rowId });
+      if (taskDoc && Array.isArray(taskDoc.attachmentIds)) {
+        attachmentIds = taskDoc.attachmentIds;
+      }
+    } catch (err) {
+      console.warn(`[Cascade Delete] Failed to fetch task row ${rowId} for cleanup:`, err);
+    }
+
+    // B. Clean up attachments from storage
+    if (attachmentIds.length > 0) {
+      console.log(`[Cascade Delete] Purging ${attachmentIds.length} task attachments`);
+      await Promise.all(
+        attachmentIds.map((fileId: any) =>
+          storage.deleteFile(APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS, fileId).catch((err: any) => {
+            console.warn(`[Cascade Delete] Failed to delete task attachment ${fileId}:`, err?.message);
+          })
+        )
+      );
+    }
+
+    // C. Clean up Subtasks (Recursive Jump)
+    try {
+      const subtasksRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+        queries: [Query.equal('parentId', rowId), Query.limit(1000)] as any});
+
+      await Promise.all(
+        subtasksRes.rows.map((subtask: any) =>
+          executeCascadeDeleteSecure(FLOW_DB, APPWRITE_CONFIG.TABLES.FLOW.TASKS, subtask.$id, projectDeleteMode, jwt)
+        )
+      );
+      
+      // Physically delete subtask rows (parent task deletion will happen in main deleteRowSecure)
+      await Promise.all(
+        subtasksRes.rows.map((subtask: any) =>
+          tables.deleteRow({
+            databaseId: FLOW_DB,
+            tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+            rowId: subtask.$id})
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Task subtasks cleanup failed:', err);
+    }
+
+    // D. Clean up linked thread Note (Discussion Thread)
+    try {
+      console.log(`[Cascade Delete] Cleaning up linked task thread discussion: ${rowId}`);
+      await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, rowId);
+      await tables.deleteRow({
+        databaseId: NOTE_DB,
+        tableId: NOTE_TABLE,
+        rowId: rowId}).catch(() => null);
+    } catch (_err) {
+        // Safe to ignore if not present
+    }
+
+    // E. Clean up Project Object Links
+    try {
+        const objectsRes = await tables.listRows({
+            databaseId: CHAT_DB,
+            tableId: 'project_objects',
+            queries: [
+                Query.equal('entityId', rowId),
+                Query.equal('entityKind', 'goal'),
+                Query.limit(100)
+            ] as any});
+        await Promise.all(
+            objectsRes.rows.map((obj: any) =>
+                tables.deleteRow({
+                    databaseId: CHAT_DB,
+                    tableId: 'project_objects',
+                    rowId: obj.$id})
+            )
+        );
+    } catch (err) {
+        console.error('[Cascade Delete] Task project objects cleanup failed:', err);
+    }
+
+    // F. Wipe collaborators and key mappings for the task/goal itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'task');
+  }
+
+  // --- 7. CASCADE FOR CREDENTIALS/SECRETS ---
+  else if (databaseId === APPWRITE_CONFIG.DATABASES.VAULT && tableId === APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS) {
+    console.log(`[Cascade Delete] Triggered credential cascade cleanup for: ${rowId}`);
+
+    try {
+      const credential = await tables.getRow<any>({ databaseId, tableId, rowId });
+      if (credential && credential.attachments) {
+        let attachmentsList: any[] = [];
+        try {
+          attachmentsList = typeof credential.attachments === 'string' ? JSON.parse(credential.attachments) : credential.attachments || [];
+        } catch {}
+        if (Array.isArray(attachmentsList)) {
+          await Promise.all(
+            attachmentsList.map((file: any) =>
+              storage.deleteFile('vault_attachments', file.id || file.fileId).catch((err: any) => {
+                console.warn(`[Cascade Delete] Failed to delete credential attachment file ${file.id}:`, err?.message);
+              })
+            )
+          );
+        }
+      }
+    } catch (err) {
+      console.error('[Cascade Delete] Credential attachments cleanup failed:', err);
+    }
+
+    // Wipe collaborators and key mappings for the credential itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'credential');
+  }
+
+  // --- 8. CASCADE AGENTIC SESSIONS AND RUN LOGS ---
+  try {
+    const sessionsRes = await tables.listRows({
+      databaseId: 'passwordManagerDb',
+      tableId: 'agentic_sessions',
+      queries: [
+        Query.equal('targetId', rowId),
+        Query.limit(100),
+      ] as any,
+    }).catch(() => ({ rows: [] }));
+
+    const sessionRows = (sessionsRes as any)?.rows || [];
+    if (sessionRows.length > 0) {
+      await Promise.all(
+        sessionRows.map(async (sess: any) => {
+          // Delete tool calls linked to this session
+          try {
+            const tcRes = await tables.listRows({
+              databaseId: 'passwordManagerDb',
+              tableId: 'agent_tool_calls',
+              queries: [Query.equal('sessionId', sess.$id), Query.limit(500)] as any,
+            }).catch(() => ({ rows: [] }));
+            const tcRows = (tcRes as any)?.rows || [];
+            await Promise.all(
+              tcRows.map((tc: any) =>
+                tables.deleteRow({
+                  databaseId: 'passwordManagerDb',
+                  tableId: 'agent_tool_calls',
+                  rowId: tc.$id,
+                }).catch(() => null)
+              )
+            );
+          } catch {}
+
+          // Delete session row
+          await tables.deleteRow({
+            databaseId: 'passwordManagerDb',
+            tableId: 'agentic_sessions',
+            rowId: sess.$id,
+          }).catch(() => null);
+        })
+      );
+    }
+  } catch (err) {
+    console.warn('[Cascade Delete] Agentic session cleanup skipped/non-blocking:', err);
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@kylrix/github-issue-bot",
+  "version": "1.0.0",
+  "description": "Kylrix GitHub Bot — Automates issue triage, PR linking, task creation, and community engagement for the Kylrix ecosystem",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "@octokit/core": "^6.1.2",
+    "@octokit/rest": "^20.1.2",
+    "@octokit/webhooks-methods": "^5.1.1",
+    "node-appwrite": "^14.1.0"
+  }
+}

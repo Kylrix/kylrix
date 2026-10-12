@@ -1,0 +1,298 @@
+import { exec } from 'node:child_process';
+import pc from 'picocolors';
+import { getClient } from '../client';
+import {
+  saveConfig,
+  clearConfig,
+  resolveEnvironment,
+  removeAccount,
+  clearServerAccounts,
+} from '../config';
+import { printError, printInfo, printJson, printSuccess } from '../formatter';
+import { handlePostLoginAutoSync } from '../local/sync-resolver';
+
+function tryOpenBrowser(url: string) {
+  const start =
+    process.platform === 'darwin'
+      ? 'open'
+      : process.platform === 'win32'
+      ? 'start'
+      : 'xdg-open';
+  exec(`${start} "${url}"`, () => {});
+}
+
+export async function loginCommand(opts: {
+  url?: string;
+  token?: string;
+  workspace?: string;
+  workspaceKey?: string;
+  agentKey?: string;
+}) {
+  const env = resolveEnvironment(opts);
+  const effectiveToken = opts.token || opts.workspaceKey || opts.agentKey;
+
+  if (effectiveToken) {
+    const client = getClient({ url: env.apiUrl, token: effectiveToken });
+    try {
+      const profile = await client.auth.me();
+      let contextLevel = 'Account Context (Full Workspace Access)';
+      let isJailedWorkspace = false;
+      let detectedWorkspaceId = opts.workspace;
+
+      if (effectiveToken.startsWith('kyl_wpat_')) {
+        contextLevel = 'Workspace Jailed PAT';
+        isJailedWorkspace = true;
+      } else if (effectiveToken.startsWith('kyl_apk_')) {
+        contextLevel = 'Agent Provisioning Key (Multi-Workspace Spawning)';
+      } else if (effectiveToken.startsWith('kyl_apat_')) {
+        contextLevel = 'Agent Workspace PAT';
+        isJailedWorkspace = true;
+      } else if (effectiveToken.startsWith('kyl_pat_')) {
+        contextLevel = 'Personal Account PAT';
+      }
+
+      // Check token info if available
+      try {
+        const tokenInfo = await client.auth.tokenInfo();
+        if (tokenInfo.workspaceId) {
+          detectedWorkspaceId = tokenInfo.workspaceId;
+        }
+        if (tokenInfo.category === 'workspace_pat') {
+          contextLevel = 'Workspace Jailed PAT';
+          isJailedWorkspace = true;
+        }
+      } catch {}
+
+      saveConfig(
+        {
+          apiUrl: env.apiUrl,
+          token: effectiveToken,
+          userId: profile.id,
+          email: profile.email,
+          tier: profile.tier,
+          workspaceId: detectedWorkspaceId,
+        },
+        env.apiUrl
+      );
+      printSuccess(`Logged in as ${pc.bold(profile.email || profile.id)}`);
+      printInfo(`Context:   ${pc.magenta(contextLevel)}`);
+      if (detectedWorkspaceId) {
+        printInfo(`Workspace: ${pc.green(detectedWorkspaceId)}${isJailedWorkspace ? pc.yellow(' (jailed)') : ''}`);
+      } else {
+        printInfo(`Workspace: ${pc.dim('Personal Virtual Workspace (account level)')}`);
+      }
+      printInfo(`Server:    ${pc.cyan(env.apiUrl)}`);
+      printInfo(`Partition: ${pc.yellow(env.partitionKey)}`);
+      printInfo(`Data Silo: ${pc.dim(env.siloDir)}`);
+      await handlePostLoginAutoSync(env.apiUrl, profile.id, effectiveToken);
+      return;
+    } catch (err: any) {
+      printError('Invalid token provided', err);
+      process.exit(1);
+    }
+  }
+
+  // Instant 1-Click Browser Pairing flow targeting env.apiUrl
+  await pairCommand(opts);
+}
+
+export async function pairCommand(opts: { url?: string; json?: boolean }) {
+  const env = resolveEnvironment({ url: opts.url });
+  const client = getClient({ url: env.apiUrl });
+
+  try {
+    const session = await client.pairing.requestPairing({
+      clientName: 'Kylrix CLI',
+      clientType: 'cli',
+      requestedScopes: ['*'],
+    });
+
+    if (opts.json) {
+      printJson(session);
+      return;
+    }
+
+    const baseWebUrl = env.apiUrl.replace(/\/api\/v1$/, '');
+    const directLoginUrl = session.verificationUriComplete || `${baseWebUrl}/pair?code=${encodeURIComponent(session.userCode)}`;
+
+    console.log();
+    console.log(pc.cyan('╭────────────────────────────────────────────────────────╮'));
+    console.log(pc.cyan('│') + pc.bold('  Kylrix 1-Click Web Authorization                      ') + pc.cyan('│'));
+    console.log(pc.cyan('├────────────────────────────────────────────────────────┤'));
+    console.log(pc.cyan('│') + '  Target Server: ' + pc.yellow(env.apiUrl.slice(0, 40).padEnd(40)) + pc.cyan('│'));
+    console.log(pc.cyan('│') + '  Partition:     ' + pc.dim(env.partitionKey.slice(0, 40).padEnd(40)) + pc.cyan('│'));
+    console.log(pc.cyan('│') + '                                                         ' + pc.cyan('│'));
+    console.log(pc.cyan('│') + '  1. Open browser URL:                                  ' + pc.cyan('│'));
+    console.log(pc.cyan('│') + '     ' + pc.underline(pc.cyan(directLoginUrl.padEnd(51))) + pc.cyan('│'));
+    console.log(pc.cyan('│') + '                                                         ' + pc.cyan('│'));
+    const codeDisplay = ` ${session.userCode} `;
+    const codePad = ' '.repeat(Math.max(0, 48 - codeDisplay.length));
+    console.log(pc.cyan('│') + '  2. Authorization Code:                                 ' + pc.cyan('│'));
+    console.log(pc.cyan('│') + '     ' + pc.bgYellow(pc.black(pc.bold(codeDisplay))) + codePad + pc.cyan('│'));
+    console.log(pc.cyan('╰────────────────────────────────────────────────────────╯'));
+    console.log();
+
+    // Auto-open browser
+    tryOpenBrowser(directLoginUrl);
+
+    if (process.stdout.isTTY) {
+      process.stdout.write(pc.dim('⏳ Waiting for approval in browser...'));
+    } else {
+      console.log(pc.dim('Waiting for approval in browser...'));
+    }
+
+    let pollCount = 0;
+    const result = await client.pairing.pollExchange(session.deviceCode, {
+      intervalSeconds: Math.max(session.interval || 5, 5),
+      timeoutSeconds: session.expiresIn || 600,
+      onPoll: () => {
+        if (process.stdout.isTTY) {
+          pollCount++;
+          const dots = '.'.repeat((pollCount % 3) + 1);
+          process.stdout.write(`\r${pc.dim(`⏳ Waiting for approval in browser${dots.padEnd(3)}`)}`);
+        }
+      },
+    });
+
+    if (process.stdout.isTTY) {
+      process.stdout.write('\r' + ' '.repeat(50) + '\r');
+    }
+
+    // Try fetching full profile with newly minted token
+    let profileEmail: string | undefined;
+    let profileTier: string | undefined;
+    try {
+      const authClient = getClient({ url: env.apiUrl, token: result.token });
+      const profile = await authClient.auth.me();
+      profileEmail = profile.email;
+      profileTier = profile.tier;
+    } catch {}
+
+    saveConfig(
+      {
+        apiUrl: env.apiUrl,
+        token: result.token,
+        userId: result.userId,
+        email: profileEmail,
+        tier: profileTier,
+      },
+      env.apiUrl
+    );
+
+    const updatedEnv = resolveEnvironment({ url: env.apiUrl });
+
+    printSuccess(`Logged in successfully as user ${pc.bold(profileEmail || result.userId)}`);
+    printInfo(`Server:    ${pc.cyan(env.apiUrl)}`);
+    printInfo(`Partition: ${pc.yellow(env.partitionKey)}`);
+    printInfo(`Data Silo: ${pc.dim(updatedEnv.siloDir)}`);
+
+    // Automatic sync of existing offline container data if eligible
+    await handlePostLoginAutoSync(env.apiUrl, result.userId, result.token);
+  } catch (err: any) {
+    if (process.stdout.isTTY) {
+      process.stdout.write('\r' + ' '.repeat(50) + '\r');
+    }
+    printError('Authentication failed', err);
+    process.exit(1);
+  }
+}
+
+export async function whoamiCommand(opts: { url?: string; token?: string; json?: boolean }) {
+  try {
+    const client = getClient(opts);
+    const env = resolveEnvironment(opts);
+
+    if (!env.token) {
+      if (opts.json) {
+        printJson({ authenticated: false, message: 'Not authenticated', server: env.apiUrl, partition: env.partitionKey });
+      } else {
+        printInfo(`Not currently logged in on ${pc.cyan(env.apiUrl)}.`);
+        printInfo(`Run \`kylrix login\` or \`kylrix login --url ${env.apiUrl}\` to authenticate.`);
+        printInfo(`Local-first SQLite silo: ${pc.dim(env.siloDbPath)}`);
+      }
+      return;
+    }
+
+    const profile = await client.auth.me();
+
+    if (opts.json) {
+      printJson({
+        ...profile,
+        apiUrl: env.apiUrl,
+        partitionKey: env.partitionKey,
+        siloDir: env.siloDir,
+        siloDbPath: env.siloDbPath,
+      });
+      return;
+    }
+
+    console.log('\n' + pc.bold('Kylrix Session Info:'));
+    console.log(`  ${pc.dim('User ID:')}      ${pc.bold(profile.id)}`);
+    console.log(`  ${pc.dim('Email:')}        ${profile.email || 'N/A'}`);
+    console.log(`  ${pc.dim('Tier:')}         ${pc.cyan(profile.tier || 'FREE')}`);
+
+    let contextType = 'Account Context (Can switch to all workspaces)';
+    if (env.token?.startsWith('kyl_wpat_')) contextType = 'Workspace Jailed PAT';
+    else if (env.token?.startsWith('kyl_apk_')) contextType = 'Agent Provisioning Key';
+    else if (env.token?.startsWith('kyl_apat_')) contextType = 'Agent Workspace PAT';
+    else if (env.token?.startsWith('kyl_pat_')) contextType = 'Personal PAT (Account Level)';
+
+    console.log(`  ${pc.dim('Context:')}      ${pc.magenta(contextType)}`);
+    if (env.workspaceId) {
+      console.log(`  ${pc.dim('Workspace:')}    ${pc.green(env.workspaceId)}`);
+    } else {
+      console.log(`  ${pc.dim('Workspace:')}    ${pc.dim('Personal Virtual Workspace (all account items)')}`);
+    }
+    console.log(`  ${pc.dim('API URL:')}      ${pc.cyan(env.apiUrl)}`);
+    console.log(`  ${pc.dim('Partition:')}    ${pc.yellow(env.partitionKey)}`);
+    console.log(`  ${pc.dim('Data Silo:')}    ${pc.dim(env.siloDir)}`);
+    console.log(`  ${pc.dim('Scopes:')}       ${profile.scopes?.join(', ') || 'all'}`);
+    console.log();
+  } catch (err: any) {
+    printError('Failed to fetch profile', err);
+    process.exit(1);
+  }
+}
+
+export async function logoutCommand(opts: { all?: boolean; purge?: boolean; url?: string } = {}) {
+  const env = resolveEnvironment({ url: opts.url });
+
+  if (opts.purge) {
+    if (env.token) {
+      try {
+        await getClient({ url: env.apiUrl, token: env.token }).auth.logout();
+      } catch {}
+    }
+    clearConfig();
+    printSuccess('Purged all stored servers, account profiles, and local sessions (server token revoked).');
+    return;
+  }
+
+  if (opts.all) {
+    if (env.token) {
+      try {
+        await getClient({ url: env.apiUrl, token: env.token }).auth.logout();
+      } catch {}
+    }
+    clearServerAccounts(env.apiUrl);
+    printSuccess(`Removed all stored accounts for server ${pc.cyan(env.apiUrl)} (server token revoked).`);
+    return;
+  }
+
+  if (env.activeAccountId) {
+    const targetId = env.activeAccountId;
+    if (env.token) {
+      try {
+        await getClient({ url: env.apiUrl, token: env.token }).auth.logout();
+      } catch {}
+    }
+    removeAccount(targetId, env.apiUrl);
+    const updated = resolveEnvironment({ url: env.apiUrl });
+    printSuccess(`Logged out active account ${pc.bold(targetId)} from ${pc.cyan(env.apiUrl)} (server token revoked).`);
+    if (updated.activeAccountId) {
+      printInfo(`Active account switched to ${pc.bold(updated.email || updated.activeAccountId)}.`);
+    }
+  } else {
+    printInfo(`No active account session found on ${pc.cyan(env.apiUrl)}.`);
+  }
+}

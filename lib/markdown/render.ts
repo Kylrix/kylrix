@@ -1,0 +1,144 @@
+import { isFlowInstalled } from '@/lib/flows/installed';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+import type { Config as DomPurifyConfig } from 'dompurify';
+import { preProcessMarkdown } from '@/lib/markdown/preprocess';
+import {
+  defaultMathModeContext,
+  runMarkdownPipeline,
+  type MarkdownTransformContext,
+} from '@/lib/markdown/pipeline';
+import { registerMathTransforms } from '@/lib/markdown/math';
+
+let layersReady = false;
+let serverPurify: typeof DOMPurify | null = null;
+
+function sanitizeHtml(html: string): string {
+  let output = '';
+  if (typeof window !== 'undefined') {
+    output = String(DOMPurify.sanitize(html, MATH_PURIFY));
+  } else {
+    if (!serverPurify) {
+      // Dynamic require happy-dom on Node server-side only so it won't be bundled into client browser bundles
+      const req = (globalThis as any).__non_webpack_require__ ?? eval('require');
+      const { Window } = req('happy-dom');
+      const win = new Window();
+      serverPurify = DOMPurify(win as unknown as Window & typeof globalThis);
+    }
+    output = String(serverPurify.sanitize(html, MATH_PURIFY));
+  }
+
+  // Sanitization pass: strip inline script tags, inline event handlers, and javascript: pseudo-URLs
+  if (output) {
+    output = output
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|\x27[^\x27]*\x27|[^\s>]+)/gi, '')
+      .replace(/(href|src)\s*=\s*(?:"javascript:[^"]*"|\x27javascript:[^\x27]*\x27|javascript:[^\s>]+)/gi, '');
+  }
+
+  return output;
+}
+
+export function ensureMarkdownLayers() {
+  if (layersReady) return;
+  registerMathTransforms();
+  layersReady = true;
+}
+
+marked.setOptions({ gfm: true, breaks: true });
+
+const MATH_PURIFY: DomPurifyConfig = {
+  ADD_TAGS: [
+    '',
+    'a',
+    'img',
+    'math',
+    'annotation',
+    'semantics',
+    'mrow',
+    'mi',
+    'mo',
+    'mn',
+    'msup',
+    'msub',
+    'mfrac',
+    'msqrt',
+    'mroot',
+    'mtable',
+    'mtr',
+    'mtd',
+    'mtext',
+    'svg',
+    'path',
+    'g',
+    'line',
+    'polyline',
+    'circle',
+    'rect',
+    'text',
+    'figure',
+  ],
+  ADD_ATTR: [
+    'href',
+    'src',
+    'alt',
+    'class',
+    'style',
+    'viewBox',
+    'xmlns',
+    'd',
+    'cx',
+    'cy',
+    'r',
+    'x',
+    'y',
+    'x1',
+    'y1',
+    'x2',
+    'y2',
+    'width',
+    'height',
+    'fill',
+    'stroke',
+    'stroke-width',
+    'stroke-dasharray',
+    'points',
+    'opacity',
+    'rx',
+    'ry',
+    'text-anchor',
+    'font-size',
+    'font-weight',
+    'font-family',
+    'role',
+    'aria-label',
+    'aria-hidden',
+    'data-kylrix-html-preview',
+    'data-quote',
+    'data-copy',
+    'title',
+    'type',
+  ],
+  RETURN_TRUSTED_TYPE: false,
+};
+
+/**
+ * Full markdown → safe HTML with optional Math Mode layers.
+ */
+export function renderMarkdownHtml(
+  source: string,
+  ctx?: MarkdownTransformContext,
+): string {
+  ensureMarkdownLayers();
+  const context = ctx || defaultMathModeContext(false);
+  const prepped = preProcessMarkdown(source || '');
+  const pre = runMarkdownPipeline(prepped, 'pre', context);
+  const raw = marked.parse(pre) as string;
+  const post = runMarkdownPipeline(raw, 'post', context);
+  return sanitizeHtml(post);
+}
+
+export function isMathModeFlowInstalled(): boolean {
+  if (typeof window === 'undefined') return false;
+  return isFlowInstalled('kylrix-math-mode');
+}

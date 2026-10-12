@@ -1,0 +1,276 @@
+'use server';
+
+import {
+  getActor} from './secure-ops/shared';
+
+import {
+  grantPermissionSecure,
+  revokePermissionSecure,
+  getResourceCollaboratorsSecure,
+  addProjectCollaboratorSecure,
+  removeProjectCollaboratorSecure,
+  addFormCollaboratorSecure,
+  removeFormCollaboratorSecure} from './secure-ops/permissions';
+
+import {
+  getSharedNoteDataSecure,
+  getNoteSecondaryObjectPreviewSecure,
+  getNoteInheritedFileBlobSecure,
+  getPublicNoteCommentsSecure,
+  getPublicNoteReactionsSecure,
+  getCrossSuggestionsSecure,
+  syncNotesDeltaSecure,
+  pullNotesDeltaSecure,
+  pushNotesDeltaSecure,
+  createNoteSecure,
+  updateNoteSecure,
+  deleteNoteSecure,
+  createthreadNoteSecure,
+  createthreadNoteForCallSecure,
+  createthreadNoteForProjectSecure,
+  createthreadNoteForResourceSecure,
+  createthreadNoteChatSecure,
+  listthreadNoteChatsSecure,
+  listTagsSecure} from './secure-ops/notes';
+
+import {
+  getOrCreateThreadSecure,
+  findThreadSecure,
+  listThreadMessagesSecure,
+  postThreadMessageSecure,
+  deleteThreadSecure,
+} from './secure-ops/threads';
+
+import {
+  getPublicFormDataSecure,
+  submitPublicFormDataSecure,
+  getPublicGoalDataSecure,
+  createAccountEventSecure,
+  listProjectsWithCollaborationsSecure,
+  createProjectSecure,
+  updateProjectSecure,
+  deleteProjectSecure,
+  rotateWorkspaceInviteCodeSecure,
+  joinWorkspaceByInviteCodeSecure,
+  requestProjectAccessSecure,
+  acceptProjectInviteSecure,
+  addObjectToProjectSecure,
+  listProjectTaggedResourcesSecure,
+  getSweptConfigSecure,
+  upsertSweptConfigSecure,
+  removeObjectFromProjectSecure,
+  createFormSecure,
+  listUserFormsSecure,
+  updateFormSecure,
+  deleteFormSecure,
+  createEventSecure,
+  updateEventSecure,
+  deleteEventSecure,
+  addEventManagerSecure,
+  removeEventManagerSecure,
+  convertResponseToGoalSecure,
+  initGoalDiscussionSecure,
+  approveProjectJoinRequestSecure,
+  createGoalSecure,
+  updateGoalSecure,
+  deleteGoalSecure,
+  resolveWorkspaceShareAccessSecure,
+  getSharedWorkspaceEntitiesSecure,
+} from './secure-ops/projects';
+
+import {
+  mintDailyLoginSecure,
+  runTokenOperationSecure,
+  recordAnonymizedTelemetrySecure,
+  dispatchEmailSecure,
+  getSharedProfilesSecure,
+  executeMasterPurgeSecure,
+  createReportSecure,
+  getUsersByIdsSecure,
+  createSendthreadObjectSecure,
+  createRowSecure,
+  updateRowSecure,
+  deleteRowSecure,
+  batchTrashFormSubmissionsSecure,
+  searchGlobalUsersSecure,
+  getProfileByUsernameSecure,
+  listRowsSecure,
+  getRowSecure,
+  promotethreadResourceThreadToStorySecure,
+  deletethreadThreadSecure,
+  getGlobalProfileStatusSecure,
+  toggleResourcePublicGuestSecure,
+  attachObjectSecure,
+  detachObjectByRelationSecure,
+  getProfilePicturePreviewSecure,
+  getObjectsByParentSecure,
+  syncMasterpassToAccountPasswordAction,
+  upgradeKeychainToArgonAction,
+  createStandaloneTagSecure,
+  toggleTaskReminderSecure,
+  purgeExpiredTrashSecure} from './secure-ops/misc';
+
+import {
+  installFlowSecure,
+  listMyFlowInstallsSecure,
+  revokeFlowInstallSecure,
+  requestFlowPublishSecure,
+} from './secure-ops/flows';
+
+import {
+  createPatSecure,
+  listPatsSecure,
+  revokePatSecure,
+  listOAuthAppInstallsSecure,
+} from './secure-ops/pats';
+
+
+
+import {
+  listAgentByokKeysAction,
+  saveAgentByokKeyAction,
+  deleteAgentByokKeyAction,
+  hasAgentByokKeyAction,
+  getDecryptedAgentByokKey,
+  enableConvenienceModeAction,
+  disableConvenienceModeAction,
+  resolveConvenienceMekAction} from './secure-ops/byok-convenience';
+
+export {
+  
+  
+  getActor,
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  grantPermissionSecure,
+  revokePermissionSecure,
+  getResourceCollaboratorsSecure,
+  addProjectCollaboratorSecure,
+  removeProjectCollaboratorSecure,
+  addFormCollaboratorSecure,
+  removeFormCollaboratorSecure,
+  getSharedNoteDataSecure,
+  getNoteSecondaryObjectPreviewSecure,
+  getNoteInheritedFileBlobSecure,
+  
+  getPublicNoteCommentsSecure,
+  getPublicNoteReactionsSecure,
+  getCrossSuggestionsSecure,
+  syncNotesDeltaSecure,
+  pullNotesDeltaSecure,
+  pushNotesDeltaSecure,
+  createNoteSecure,
+  updateNoteSecure,
+  deleteNoteSecure,
+  createthreadNoteSecure,
+  createthreadNoteForCallSecure,
+  createthreadNoteForProjectSecure,
+  createthreadNoteForResourceSecure,
+  createthreadNoteChatSecure,
+  listthreadNoteChatsSecure,
+  listTagsSecure,
+  getPublicFormDataSecure,
+  submitPublicFormDataSecure,
+  getPublicGoalDataSecure,
+  createAccountEventSecure,
+  listProjectsWithCollaborationsSecure,
+  createProjectSecure,
+  updateProjectSecure,
+  deleteProjectSecure,
+  rotateWorkspaceInviteCodeSecure,
+  joinWorkspaceByInviteCodeSecure,
+  requestProjectAccessSecure,
+  acceptProjectInviteSecure,
+  addObjectToProjectSecure,
+  listProjectTaggedResourcesSecure,
+  getSweptConfigSecure,
+  upsertSweptConfigSecure,
+  removeObjectFromProjectSecure,
+  createFormSecure,
+  listUserFormsSecure,
+  updateFormSecure,
+  deleteFormSecure,
+  createEventSecure,
+  updateEventSecure,
+  deleteEventSecure,
+  addEventManagerSecure,
+  removeEventManagerSecure,
+  convertResponseToGoalSecure,
+  initGoalDiscussionSecure,
+  getOrCreateThreadSecure,
+  findThreadSecure,
+  listThreadMessagesSecure,
+  postThreadMessageSecure,
+  deleteThreadSecure,
+  approveProjectJoinRequestSecure,
+  mintDailyLoginSecure,
+  runTokenOperationSecure,
+  recordAnonymizedTelemetrySecure,
+  dispatchEmailSecure,
+  
+  getSharedProfilesSecure,
+  
+  
+  executeMasterPurgeSecure,
+  createReportSecure,
+  getUsersByIdsSecure,
+  createSendthreadObjectSecure,
+  
+  createRowSecure,
+  updateRowSecure,
+  deleteRowSecure,
+  createGoalSecure,
+  updateGoalSecure,
+  deleteGoalSecure,
+  resolveWorkspaceShareAccessSecure,
+  getSharedWorkspaceEntitiesSecure,
+  batchTrashFormSubmissionsSecure,
+  searchGlobalUsersSecure,
+  getProfileByUsernameSecure,
+  listRowsSecure,
+  getRowSecure,
+  promotethreadResourceThreadToStorySecure,
+  deletethreadThreadSecure,
+  
+  getGlobalProfileStatusSecure,
+  toggleResourcePublicGuestSecure,
+  attachObjectSecure,
+  detachObjectByRelationSecure,
+  getProfilePicturePreviewSecure,
+  getObjectsByParentSecure,
+  syncMasterpassToAccountPasswordAction,
+  upgradeKeychainToArgonAction,
+  
+  createStandaloneTagSecure,
+  toggleTaskReminderSecure,
+  purgeExpiredTrashSecure,
+  installFlowSecure,
+  listMyFlowInstallsSecure,
+  revokeFlowInstallSecure,
+  requestFlowPublishSecure,
+  createPatSecure,
+  listPatsSecure,
+  revokePatSecure,
+  listOAuthAppInstallsSecure,
+  listAgentByokKeysAction,
+  saveAgentByokKeyAction,
+  deleteAgentByokKeyAction,
+  hasAgentByokKeyAction,
+  getDecryptedAgentByokKey,
+  enableConvenienceModeAction,
+  disableConvenienceModeAction,
+  resolveConvenienceMekAction};
+
+export type { PermissionLevel } from './secure-ops/shared';
+export type { AgentByokKeySummary } from './secure-ops/byok-convenience';

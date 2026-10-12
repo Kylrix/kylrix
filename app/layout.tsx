@@ -1,0 +1,123 @@
+import type { Metadata, Viewport } from 'next';
+import { JetBrains_Mono, Outfit, Space_Grotesk } from 'next/font/google';
+import { getProductName, getProductSiteUrl } from '@/lib/config/product';
+import './globals.css';
+import './chrome.css';
+import './lists.css';
+import ThemeRegistry from '@/theme/ThemeProvider';
+import { DataNexusProvider } from '@/context/DataNexusContext';
+import { LayoutProvider } from '@/context/LayoutContext';
+import { ClientProviders } from './ClientProviders';
+import { AuthProvider } from '@/context/auth/AuthContext';
+import { AuthErrorBoundary } from '@/components/ui/ErrorBoundary';
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap"});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  display: 'swap'});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
+  display: 'swap'});
+
+import GlobalShell from '@/components/GlobalShell';
+
+const productName = getProductName();
+const productSiteUrl = getProductSiteUrl();
+
+export const metadata: Metadata = {
+  metadataBase: new URL(productSiteUrl),
+  title: {
+    default: `${productName} — Zero-knowledge secrets and persistent memory for AI agents.`,
+    template: `%s · ${productName}`},
+  description: 'Let Claude Code, Cursor, and local agents use credentials and carry context without ever seeing plaintext secrets. Client-side encrypted vault, sovereign SQLite memory, and native MCP bridge.',
+  keywords: ['AI agent secrets', 'zero-knowledge vault', 'MCP server', 'Claude Code', 'Cursor', 'local-first', 'persistent agent memory', 'Argon2id', 'AES-256-GCM'],
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png'},
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: productSiteUrl,
+    siteName: productName,
+    title: `${productName} — Zero-knowledge secrets and persistent memory for AI agents.`,
+    description: 'Let Claude Code, Cursor, and local agents use credentials and carry context without ever seeing plaintext secrets. Client-side encrypted vault and native MCP bridge.',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: `${productName} — Zero-knowledge secrets and persistent memory for AI agents.`},
+    ]},
+  twitter: {
+    card: 'summary_large_image',
+    title: `${productName} — Zero-knowledge secrets and persistent memory for AI agents.`,
+    description: 'Let Claude Code, Cursor, and local agents use credentials and carry context without ever seeing plaintext secrets. Client-side encrypted vault and native MCP bridge.',
+    images: ['/opengraph-image']},
+  other: {
+    'ory-verify': 'orynth-9809db1def8b427d8c82b09db6ae2bac',
+  }};
+
+export const viewport: Viewport = {
+  themeColor: '#161412',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning className={`${mono.variable} ${outfit.variable} ${spaceGrotesk.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              var match = document.cookie.match(new RegExp('(^| )kylrix_pulse_v2=([^;]+)'));
+              if (match) {
+                var d = JSON.parse(decodeURIComponent(match[2]));
+                var storage = (typeof window !== 'undefined' && window.localStorage) ? window.localStorage : null;
+                d.avatarBase64 = storage ? storage.getItem('kylrix_avatar_pulse_v2_' + d.$id) : null;
+                window.__KYLRIX_PULSE__ = d;
+                document.documentElement.setAttribute('data-kylrix-pulse', 'true');
+                var s = document.createElement('style');
+                s.innerHTML = '[data-kylrix-pulse="true"] #navbar-connect-btn { display: none !important; }';
+                document.head.appendChild(s);
+              }
+            } catch(e) {}
+          })();
+        `}} />
+        
+        <link 
+          href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&f[]=satoshi@300,400,500,700,900&display=swap" 
+          rel="stylesheet" 
+          crossOrigin="anonymous"
+        />
+      </head>
+      <body className={mono.className}>
+        <AuthErrorBoundary>
+          <AuthProvider>
+              <ThemeRegistry>
+                <DataNexusProvider>
+                  <LayoutProvider>
+                    <ClientProviders>
+                      <GlobalShell>
+                        {children}
+                      </GlobalShell>
+                    </ClientProviders>
+                  </LayoutProvider>
+                </DataNexusProvider>
+              </ThemeRegistry>
+          </AuthProvider>
+        </AuthErrorBoundary>
+      </body>
+    </html>
+  );
+}

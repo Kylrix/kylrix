@@ -1,0 +1,137 @@
+export interface TotpParseResult {
+  secretKey: string;
+  issuer: string;
+  accountName: string;
+  algorithm: string;
+  digits: number;
+  period: number;
+}
+
+function parseTotpUri(totpUri: string): TotpParseResult | null {
+  try {
+    const trimmed = String(totpUri || '').trim();
+    // otpauth://totp/... and otpauth://hotp/... (import hotp as timed code seed)
+    if (/^otpauth:\/\//i.test(trimmed)) {
+      return parseOtpauthUri(trimmed);
+    }
+
+    // If it's just a base32 (or hex) secret, use defaults
+    if (isBase32Secret(trimmed) || isHexSecret(trimmed)) {
+      return {
+        secretKey: trimmed.replace(/\s+/g, '').toUpperCase(),
+        issuer: "Unknown",
+        accountName: "Unknown",
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+      };
+    }
+
+    return null;
+  } catch (error: unknown) {
+    console.error("Error parsing TOTP URI:", error);
+    return null;
+  }
+}
+
+function parseOtpauthUri(uri: string): TotpParseResult | null {
+  try {
+    const url = new URL(uri);
+
+    if (url.protocol !== "otpauth:") {
+      return null;
+    }
+    const kind = (url.hostname || '').toLowerCase();
+    if (kind !== "totp" && kind !== "hotp") {
+      return null;
+    }
+
+    const pathParts = url.pathname.slice(1).split(":"); // Remove leading slash
+    let issuer = "Unknown";
+    let accountName = "Unknown";
+
+    if (pathParts.length === 2) {
+      issuer = decodeURIComponent(pathParts[0]);
+      accountName = decodeURIComponent(pathParts[1]);
+    } else if (pathParts.length === 1) {
+      accountName = decodeURIComponent(pathParts[0]);
+    }
+
+    const secret = url.searchParams.get("secret");
+    if (!secret) {
+      return null;
+    }
+
+    // Override issuer if provided as parameter
+    const issuerParam = url.searchParams.get("issuer");
+    if (issuerParam) {
+      issuer = decodeURIComponent(issuerParam);
+    }
+
+    const algorithm = url.searchParams.get("algorithm") || "SHA1";
+    const digits = parseInt(url.searchParams.get("digits") || "6", 10);
+    const period = parseInt(url.searchParams.get("period") || "30", 10);
+
+    return {
+      secretKey: secret.replace(/\s+/g, '').toUpperCase(),
+      issuer,
+      accountName,
+      algorithm,
+      digits,
+      period,
+    };
+  } catch (error: unknown) {
+    console.error("Error parsing otpauth URI:", error);
+    return null;
+  }
+}
+
+function isBase32Secret(input: string): boolean {
+  // Base32 alphabet: A-Z, 2-7 — allow short seeds (≥ 8) used by some authenticators
+  const cleaned = input.replace(/\s+/g, '').toUpperCase();
+  const base32Regex = /^[A-Z2-7]+=*$/;
+  return base32Regex.test(cleaned) && cleaned.length >= 8;
+}
+
+function isHexSecret(input: string): boolean {
+  const cleaned = input.replace(/\s+/g, '').toUpperCase();
+  return /^[0-9A-F]+$/.test(cleaned) && cleaned.length >= 16 && cleaned.length % 2 === 0;
+}
+
+export function extractTotpFromBitwardenLogin(
+  login: { totp?: string | null; username?: string | null },
+  itemName: string,
+): TotpParseResult | null {
+  if (!login.totp) {
+    return null;
+  }
+
+  const parsed = parseTotpUri(login.totp);
+  if (!parsed) {
+    return null;
+  }
+
+  // Enhance with context from the item
+  if (parsed.issuer === "Unknown") {
+    parsed.issuer = extractIssuerFromName(itemName);
+  }
+
+  if (parsed.accountName === "Unknown" && login.username) {
+    parsed.accountName = login.username;
+  }
+
+  return parsed;
+}
+
+function extractIssuerFromName(name: string): string {
+  // Try to extract a reasonable issuer name from the item name
+  // Common patterns: "Google", "GitHub - Personal", "Amazon AWS", etc.
+  const cleanName = name.replace(/\s*-\s*.*/g, "").trim(); // Remove everything after " - "
+  return cleanName || name;
+}
+
+/** Public parser for otpauth URIs and bare base32 secrets. */
+export function parseTotpData(input: string): TotpParseResult | null {
+  return parseTotpUri(String(input || '').trim());
+}
+

@@ -1,0 +1,422 @@
+import { account, databases, tablesDB, getCurrentUser } from './client';
+import { APPWRITE_CONFIG } from './config';
+import type { Models } from '@/types/appwrite';
+
+export const CONNECT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
+export const CONNECT_TABLE_ID_USERS = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
+const VAULT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
+const VAULT_TABLE_ID_KEYCHAIN = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
+const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+
+type ProfileRow = Models.Row & {
+  userId?: string | null;
+  username?: string | null;
+  displayName?: string | null;
+  avatar?: string | null;
+  preferences?: string | null;
+};
+
+function parsePreferences(raw: unknown): Record<string, any> {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw as Record<string, any>;
+  if (typeof raw !== 'string') return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, any>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function buildReferralLink(username: string): string {
+  const clean = String(username || '').replace(/^@+/, '').trim();
+  const path = `/?ref=u_${encodeURIComponent(clean)}`;
+  return typeof window !== 'undefined' ? new URL(path, window.location.origin).toString() : `https://www.kylrix.space${path}`;
+}
+
+export class AppwriteService {
+  /**
+   * Universal Identity Hook: Ensures the user is linked in the global directory.
+   */
+  static async ensureGlobalProfile(user: any, force = false) {
+    if (!user?.$id || typeof window === 'undefined') return null;
+
+    const SYNC_CACHE_KEY = 'kylrix_identity_synced_v3';
+    const SESSION_SYNC_KEY = 'kylrix_session_identity_ok_v3';
+
+    if (!force && sessionStorage.getItem(SESSION_SYNC_KEY)) return null;
+    const lastSync = localStorage.getItem(SYNC_CACHE_KEY);
+    if (!force && lastSync && (Date.now() - parseInt(lastSync)) < 24 * 60 * 60 * 1000) {
+      sessionStorage.setItem(SESSION_SYNC_KEY, '1');
+      return null;
+    }
+
+    try {
+      const [prefs, profileStatus] = await Promise.all([
+        account.getPrefs(),
+        this.getGlobalProfileStatus(user.$id)
+      ]);
+      const profile = profileStatus.exists ? profileStatus.profile : null;
+
+      const email = user.email || (user as any).email;
+      const name = user.name || (user as any).name;
+      let derivedUsername = prefs?.username || '';
+      
+      if (!derivedUsername && name) {
+        derivedUsername = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 32);
+      }
+      if (!derivedUsername && email) {
+        derivedUsername = email.split('@')[0].replace(/[^a-z0-9]/g, '').slice(0, 32);
+      }
+
+      if (!derivedUsername) return null;
+
+      const baseData: any = {
+        username: derivedUsername,
+        displayName: name || derivedUsername,
+        userId: user.$id,
+        tier: prefs?.tier || 'FREE'
+      };
+
+      if (!profile) {
+        await databases.createRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, crypto.randomUUID(), baseData, ['read("role:all")']);
+      } else if (profile.username !== derivedUsername || profile.tier !== baseData.tier) {
+        await databases.updateRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, profile.$id, baseData);
+      }
+
+      localStorage.setItem(SYNC_CACHE_KEY, Date.now().toString());
+      sessionStorage.setItem(SESSION_SYNC_KEY, '1');
+      return { success: true, username: derivedUsername };
+    } catch (e) {
+      console.warn('[Identity] Sync deferred:', e);
+      return null;
+    }
+  }
+
+  static async getGlobalProfileStatus(userId: string) {
+    try {
+      const res = await databases.listRows(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, [
+        `equal("userId", ${JSON.stringify(userId)})`,
+        'limit(1)'
+      ]);
+      if (res.total > 0) {
+        return { exists: true, profile: res.rows[0] };
+      }
+      return { exists: false, error: 'Not Found' };
+    } catch (e: unknown) {
+      return { exists: false, error: (e as any).message };
+    }
+  }
+
+  static async hasMasterpass(userId: string): Promise<boolean> {
+    const { SecurityEnclave } = await import('@/lib/security/enclave');
+    const probe = await SecurityEnclave.probeCapabilities(userId);
+    if (probe.hasMasterpass || probe.hasPasskey) return true;
+
+    try {
+      const entries = await this.listKeychainEntries(userId);
+      if (entries.some((e: any) => e.type === 'password' || e.type === 'passkey')) return true;
+
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return false;
+      }
+
+      const USERS_TABLE = 'users';
+      const res = await tablesDB.listRows<any>({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: USERS_TABLE,
+        queries: [`equal("userId", ${JSON.stringify(userId)})`]
+      });
+
+      return res.total > 0 && !!res.rows[0].hasMasterpass;
+    } catch (e: any) {
+      console.error('hasMasterpass error', e);
+      return probe.hasMasterpass || probe.hasPasskey;
+    }
+  }
+
+  static async listKeychainEntries(userId: string): Promise<any[]> {
+    const { SecurityEnclave, raceNetworkOrLocal } = await import('@/lib/security/enclave');
+    const cached = await SecurityEnclave.getKeychain(userId);
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return cached;
+    }
+
+    try {
+      const { value, source } = await raceNetworkOrLocal({
+        timeoutMs: 2500,
+        network: async () => {
+          const response = await databases.listRows(
+            VAULT_DATABASE_ID,
+            VAULT_TABLE_ID_KEYCHAIN,
+            [`equal("userId", ${JSON.stringify(userId)})`]);
+          return response.rows || [];
+        },
+        local: async () => cached});
+
+      if (source === 'network' && Array.isArray(value) && value.length > 0) {
+        await SecurityEnclave.setKeychain(userId, value);
+        return value;
+      }
+      return cached.length > 0 ? cached : (Array.isArray(value) ? value : []);
+    } catch (e: any) {
+      console.error('listKeychainEntries error', e);
+      return cached;
+    }
+  }
+
+  static async createKeychainEntry(data: any): Promise<any> {
+    const created = await databases.createRow(
+      VAULT_DATABASE_ID,
+      VAULT_TABLE_ID_KEYCHAIN,
+      crypto.randomUUID(),
+      data
+    );
+    if (data?.userId) {
+      const { SecurityEnclave } = await import('@/lib/security/enclave');
+      const existing = await SecurityEnclave.getKeychain(data.userId);
+      await SecurityEnclave.setKeychain(
+        data.userId,
+        [created, ...existing.filter((e: any) => e.$id !== created.$id)]);
+      await SecurityEnclave.markDirty(data.userId);
+    }
+    return created;
+  }
+
+  static async updateKeychainEntry(id: string, data: any): Promise<any> {
+    const updated = await databases.updateRow(
+      VAULT_DATABASE_ID,
+      VAULT_TABLE_ID_KEYCHAIN,
+      id,
+      data
+    );
+    const userId = (updated as any)?.userId || data?.userId;
+    if (userId) {
+      const { SecurityEnclave } = await import('@/lib/security/enclave');
+      const existing = await SecurityEnclave.getKeychain(userId);
+      await SecurityEnclave.setKeychain(
+        userId,
+        existing.map((e: any) => (e.$id === id ? { ...e, ...updated } : e)));
+      await SecurityEnclave.markDirty(userId);
+    }
+    return updated;
+  }
+
+  static async deleteKeychainEntry(id: string): Promise<void> {
+    await databases.deleteRow(
+      VAULT_DATABASE_ID,
+      VAULT_TABLE_ID_KEYCHAIN,
+      id
+    );
+  }
+
+  static async searchGlobalProfiles(query: string, limit = 8): Promise<any[]> {
+    const text = query.trim().replace(/^@/, '');
+    if (!text) return [];
+
+    try {
+      const tableId = APPWRITE_CONFIG.TABLES.CONNECT.PROFILES;
+      
+      const [byUsername, byDisplayName] = await Promise.all([
+        tablesDB.listRows<ProfileRow>({
+          databaseId: CONNECT_DATABASE_ID,
+          tableId,
+          queries: [`startsWith("username", ${JSON.stringify(text.toLowerCase())})`, `limit(${limit})`]}),
+        tablesDB.listRows<ProfileRow>({
+          databaseId: CONNECT_DATABASE_ID,
+          tableId,
+          queries: [`startsWith("displayName", ${JSON.stringify(text)})`, `limit(${limit})`]})]);
+
+      const merged = new Map<string, ProfileRow>();
+      for (const row of [...byUsername.rows, ...byDisplayName.rows]) {
+        const key = row.userId || row.$id;
+        if (key && !merged.has(key)) merged.set(key, row);
+      }
+      return Array.from(merged.values()).slice(0, limit);
+    } catch (err) {
+      console.warn('[Identity] Global profile search failed:', err);
+      return [];
+    }
+  }
+
+  static async getReferralStatus(): Promise<any> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.$id) {
+      return {
+        success: false,
+        hasReferral: false,
+        referralLink: null,
+        referrer: null,
+        currentUsername: null};
+    }
+
+    const profileStatus = await this.getGlobalProfileStatus(currentUser.$id);
+    const profile = (profileStatus.exists ? profileStatus.profile : null) as ProfileRow | null;
+    const prefs = parsePreferences(profile?.preferences || currentUser?.prefs?.preferences || null);
+    const referralSource = prefs.referral || prefs.referrer || {};
+    const currentUsername = profile?.username || currentUser?.prefs?.username || currentUser?.username || null;
+    const referrerUsername =
+      referralSource.username ||
+      referralSource.referrerUsername ||
+      prefs.referrerUsername ||
+      prefs.referralUsername ||
+      null;
+    const referrerUserId =
+      referralSource.userId ||
+      referralSource.referrerUserId ||
+      prefs.referrerUserId ||
+      null;
+
+    let referrer: any = null;
+    if (referrerUsername) {
+      const matches = await this.searchGlobalProfiles(String(referrerUsername), 1);
+      referrer = matches[0] || {
+        username: String(referrerUsername),
+        userId: referrerUserId,
+        displayName: referralSource.displayName || null,
+        avatar: referralSource.avatar || null};
+    }
+
+    return {
+      success: true,
+      hasReferral: Boolean(referrerUsername || referrerUserId),
+      referralLink: currentUsername ? buildReferralLink(String(currentUsername).replace(/^@+/, '')) : null,
+      referrer,
+      currentUsername};
+  }
+
+  static async applyReferral(referrerUsername: string, referrerUserId?: string): Promise<any> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.$id) return { success: false, error: 'Not signed in.' };
+
+    const profileStatus = await this.getGlobalProfileStatus(currentUser.$id);
+    const profile = (profileStatus.exists ? profileStatus.profile : null) as ProfileRow | null;
+    if (!profile?.$id) return { success: false, error: 'Profile not found.' };
+
+    const currentPrefs = parsePreferences(profile.preferences || currentUser?.prefs?.preferences || null);
+    if (currentPrefs.referral || currentPrefs.referrer) {
+      return await this.getReferralStatus();
+    }
+
+    const candidate = String(referrerUsername || '').trim().replace(/^@+/, '');
+    if (!candidate) return { success: false, error: 'Referral username is required.' };
+
+    const matches = await this.searchGlobalProfiles(candidate, 8);
+    const referrer =
+      matches.find((row) => row.userId === referrerUserId) ||
+      matches.find((row) => String(row.username || '').replace(/^@+/, '') === candidate) ||
+      matches[0] ||
+      null;
+
+    if (!referrer) {
+      return { success: false, error: `Could not find @${candidate}.` };
+    }
+
+    const nextPrefs = {
+      ...currentPrefs,
+      referral: {
+        username: String(referrer.username || candidate).replace(/^@+/, ''),
+        userId: referrer.userId || referrerUserId || null,
+        displayName: referrer.displayName || null,
+        avatar: referrer.avatar || null,
+        linkedAt: new Date().toISOString()}};
+
+    await tablesDB.updateRow(CONNECT_DATABASE_ID, APPWRITE_CONFIG.TABLES.CONNECT.PROFILES, profile.$id, {
+      preferences: JSON.stringify(nextPrefs)});
+
+    return {
+      success: true,
+      hasReferral: true,
+      referralLink: buildReferralLink(String(profile.username || currentUser?.prefs?.username || currentUser?.username || '').replace(/^@+/, '')),
+      referrer: {
+        userId: referrer.userId || referrerUserId || referrer.$id,
+        username: String(referrer.username || candidate).replace(/^@+/, ''),
+        displayName: referrer.displayName || null,
+        avatar: referrer.avatar || null},
+      referralEvent: nextPrefs.referral,
+      currentUsername: profile.username || currentUser?.prefs?.username || currentUser?.username || null};
+  }
+
+  static async createthreadNote(data: {
+    title: string;
+    content: string;
+    format?: string;
+    threadSecret: string;
+    expiresAt?: string;
+    isEncrypted?: boolean;
+    creatorDeletionProofHash?: string;
+  }): Promise<any> {
+    if (typeof window !== 'undefined') {
+      const { createthreadNote } = await import('@/lib/actions/client-ops');
+      return await createthreadNote(data);
+    } else {
+      const { createthreadNoteSecure } = await import('@/lib/actions/secure-ops');
+      return await createthreadNoteSecure(data);
+    }
+  }
+
+  /**
+   * Send by Kylrix: same storage as thread notes (no userId, public read) but metadata includes
+   * `send_object` so clients render password / TOTP / task payloads instead of plain notes.
+   * Coexists with classic thread notes (those omit `send_object`).
+   */
+  static async createSendthreadObject(data: {
+    title: string;
+    content: string;
+    format?: string;
+    threadSecret: string;
+    expiresAt?: string;
+    isEncrypted?: boolean;
+    creatorDeletionProofHash?: string;
+    sendObject: { kind: string; bucketId?: string; fileId?: string };
+  }): Promise<any> {
+    if (typeof window !== 'undefined') {
+      const { createSendthreadObject } = await import('@/lib/actions/client-ops');
+      return await createSendthreadObject(data);
+    } else {
+      const { createSendthreadObjectSecure } = await import('@/lib/actions/secure-ops');
+      return await createSendthreadObjectSecure(data);
+    }
+  }
+
+  /**
+   * Resiliently logs profile events (such as name or username updates)
+   * into the activity logging tables.
+   */
+  static async recordProfileEvent(data: {
+    type: string;
+    userId: string;
+    newUsername?: string;
+    profilePatch?: any;
+    metadata?: any;
+  }): Promise<void> {
+    try {
+      console.log('[AppwriteService.recordProfileEvent] Event details:', data);
+      
+      // Safe write to the central activity logs table
+      if (databases && APPWRITE_CONFIG.TABLES.NOTE.ACTIVITY_LOG) {
+        await databases.createRow(
+          APPWRITE_CONFIG.DATABASES.NOTE,
+          APPWRITE_CONFIG.TABLES.NOTE.ACTIVITY_LOG,
+          crypto.randomUUID(),
+          {
+            userId: data.userId,
+            action: data.type === 'username_change' ? 'username_change' : 'profile_update',
+            targetType: 'profile',
+            targetId: data.userId,
+            timestamp: new Date().toISOString(),
+            details: JSON.stringify({
+              patch: data.profilePatch,
+              metadata: data.metadata,
+              newUsername: data.newUsername
+            }).slice(0, 990)}
+        ).catch((dbErr: any) => {
+          console.warn('[recordProfileEvent] Gracefully skipped database logging:', dbErr?.message || dbErr);
+        });
+      }
+    } catch (e: any) {
+      console.warn('[recordProfileEvent] Resilient failure fallback:', e?.message || e);
+    }
+  }
+}

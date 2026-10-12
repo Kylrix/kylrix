@@ -1,0 +1,13 @@
+{
+  "name": "@kylrix/sync-subscription-status",
+  "version": "1.0.0",
+  "description": "Unified subscription and tier management across apps",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.1.0"
+  }
+}

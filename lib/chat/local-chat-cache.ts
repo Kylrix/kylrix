@@ -1,0 +1,323 @@
+/**
+ * Local-copy cache keys for communicative surfaces (chats, threads, later calls).
+ * UI hydrates from memory → LocalEngine first; network refresh writes through.
+ *
+ * Security: never persist decrypted ciphertext payloads at rest.
+ * Encrypted message bodies / previews stay as ciphertext (or redacted).
+ */
+import { LocalEngine } from '@/lib/services/LocalEngine';
+
+export const CHATS_LIST_CACHE_KEY = 'f_chats_list';
+export const THREADS_LIST_CACHE_KEY = 'f_threads_list';
+
+export function chatsListCacheKey(userId?: string | null): string {
+  return userId ? `f_chats_list_${userId}` : CHATS_LIST_CACHE_KEY;
+}
+
+export function threadsListCacheKey(userId?: string | null): string {
+  return userId ? `f_threads_list_${userId}` : THREADS_LIST_CACHE_KEY;
+}
+
+/** Sync in-memory mirrors — remount / tab switch paint at 0ms without waiting on RxDB. */
+let memoryChatsList: any[] | null = null;
+let memoryThreadsList: any[] | null = null;
+let memoryChatsUserId: string | null = null;
+let memoryThreadsUserId: string | null = null;
+
+export function chatConversationCacheKey(conversationId: string) {
+  return `f_chat_conv_${conversationId}`;
+}
+
+export function chatMessagesCacheKey(conversationId: string) {
+  return `f_chat_messages_${conversationId}`;
+}
+
+/** In-memory message mirrors — open chat paints at 0ms before RxDB/network. */
+const memoryMessagesByConv = new Map<string, any[]>();
+
+export function peekMessagesMemory(conversationId: string): any[] {
+  if (!conversationId) return [];
+  const rows = memoryMessagesByConv.get(conversationId);
+  return rows?.length ? [...rows] : [];
+}
+
+export async function readMessagesLocal(conversationId: string): Promise<any[]> {
+  if (!conversationId) return [];
+  const mem = memoryMessagesByConv.get(conversationId);
+  if (mem?.length) return [...mem];
+  const cached = await LocalEngine.cacheGet<any[]>(chatMessagesCacheKey(conversationId));
+  if (cached?.length) {
+    memoryMessagesByConv.set(conversationId, cached);
+    return [...cached];
+  }
+  return [];
+}
+
+/**
+ * Persist messages for a conversation.
+ * Encrypted chats: never write decrypted plaintext — sanitizeMessagesForRest strips it.
+ */
+export function writeMessagesLocal(
+  conversationId: string,
+  messages: any[],
+  isEncrypted: boolean,
+): void {
+  if (!conversationId) return;
+  const safe = sanitizeMessagesForRest(messages || [], isEncrypted);
+  memoryMessagesByConv.set(conversationId, safe);
+  void LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), safe);
+}
+
+/** Patch hangout list preview from latest local message (ciphertext-safe). */
+export function patchConversationListPreview(
+  conversationId: string,
+  preview: {
+    lastMessageText?: string;
+    lastMessageAt?: string;
+    lastMessageId?: string;
+    isEncrypted?: boolean;
+  },
+  userId?: string | null,
+): void {
+  if (!conversationId) return;
+  const list = memoryChatsList ? [...memoryChatsList] : [];
+  const idx = list.findIndex((c: any) => (c.$id || c.id) === conversationId);
+  if (idx < 0) return;
+  const row = { ...list[idx] };
+  if (preview.lastMessageAt) row.lastMessageAt = preview.lastMessageAt;
+  if (preview.lastMessageId) row.lastMessageId = preview.lastMessageId;
+  if (typeof preview.lastMessageText === 'string') {
+    // Encrypted: only keep ciphertext (or empty) at rest
+    if (preview.isEncrypted || row.isEncrypted) {
+      if (!preview.lastMessageText || isLikelyCiphertext(preview.lastMessageText)) {
+        row.lastMessageText = preview.lastMessageText || '';
+      }
+      // else leave prior ciphertext / empty — never store plaintext
+    } else {
+      row.lastMessageText = preview.lastMessageText;
+    }
+  }
+  list[idx] = row;
+  list.sort(
+    (a: any, b: any) =>
+      new Date(b.lastMessageAt || b.updatedAt || 0).getTime() -
+      new Date(a.lastMessageAt || a.updatedAt || 0).getTime(),
+  );
+  writeChatsListLocal(list, userId || memoryChatsUserId);
+}
+
+function isLikelyCiphertext(val: unknown): boolean {
+  if (typeof val !== 'string' || !val.trim()) return false;
+  const trimmed = val.trim();
+  // Fast negative checks for URLs, protocols, and standard text patterns
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('ftp://') ||
+    trimmed.startsWith('mailto:')
+  ) {
+    return false;
+  }
+  if (
+    trimmed.startsWith('{"iv"') ||
+    trimmed.startsWith('{"data"') ||
+    trimmed.startsWith('{"ct"') ||
+    trimmed.startsWith('{"ciphertext"') ||
+    trimmed.startsWith('[DECRYPTION_')
+  ) {
+    return true;
+  }
+  // Pure base64 or hex ciphertext (never containing slashes after scheme or standard punctuation like :// or ?=)
+  if (trimmed.includes('://') || trimmed.includes('/') || trimmed.includes('?')) {
+    return false;
+  }
+  return trimmed.length >= 32 && !trimmed.includes(' ') && /^[A-Za-z0-9+/=_-]+$/.test(trimmed);
+}
+
+/** Strip decrypted secure fields before LocalEngine write. */
+export function sanitizeConversationListForRest<T extends Record<string, any>>(rows: T[]): T[] {
+  return rows.map((row) => {
+    if (!row?.isEncrypted) return row;
+    const next: Record<string, any> = { ...row };
+    if (typeof next.lastMessageText === 'string' && next.lastMessageText && !isLikelyCiphertext(next.lastMessageText)) {
+      next.lastMessageText = '';
+    }
+    return next as T;
+  });
+}
+
+/** Only persist ciphertext (or non-secure plaintext) message bodies. */
+export function sanitizeMessagesForRest<T extends Record<string, any>>(
+  messages: T[],
+  isEncrypted: boolean,
+): T[] {
+  if (!isEncrypted) return messages.map((m) => ({ ...m }));
+  return messages.map((m) => {
+    const next: Record<string, any> = { ...m };
+    if (typeof next.content === 'string' && next.content && !isLikelyCiphertext(next.content)) {
+      next.content = '';
+    }
+    if (next.metadata && typeof next.metadata === 'object') {
+      next.metadata = null;
+    } else if (typeof next.metadata === 'string' && next.metadata && !isLikelyCiphertext(next.metadata)) {
+      next.metadata = null;
+    }
+    return next as T;
+  });
+}
+
+export function peekChatsListMemory(userId?: string | null): any[] {
+  if (userId && memoryChatsUserId && memoryChatsUserId !== userId) {
+    return [];
+  }
+  return memoryChatsList ? [...memoryChatsList] : [];
+}
+
+export function peekThreadsListMemory(userId?: string | null): any[] {
+  if (userId && memoryThreadsUserId && memoryThreadsUserId !== userId) {
+    return [];
+  }
+  return memoryThreadsList ? [...memoryThreadsList] : [];
+}
+
+export async function readChatsListLocal(userId?: string | null): Promise<any[]> {
+  if (userId && memoryChatsUserId && memoryChatsUserId !== userId) {
+    memoryChatsList = null;
+    memoryChatsUserId = null;
+  }
+  if (memoryChatsList?.length) return [...memoryChatsList];
+  const key = chatsListCacheKey(userId);
+  const cached = await LocalEngine.cacheGet<any[]>(key);
+  if (cached?.length) {
+    memoryChatsList = cached;
+    memoryChatsUserId = userId || null;
+    return [...cached];
+  }
+  return [];
+}
+
+export async function readThreadsListLocal(userId?: string | null): Promise<any[]> {
+  if (userId && memoryThreadsUserId && memoryThreadsUserId !== userId) {
+    memoryThreadsList = null;
+    memoryThreadsUserId = null;
+  }
+  if (memoryThreadsList?.length) return [...memoryThreadsList];
+  const key = threadsListCacheKey(userId);
+  const cached = await LocalEngine.cacheGet<any[]>(key);
+  if (cached?.length) {
+    memoryThreadsList = cached;
+    memoryThreadsUserId = userId || null;
+    return [...cached];
+  }
+  return [];
+}
+
+export function writeChatsListLocal(rows: any[], userId?: string | null): void {
+  const safe = sanitizeConversationListForRest(rows || []);
+  memoryChatsList = safe;
+  memoryChatsUserId = userId || null;
+  const key = chatsListCacheKey(userId);
+  void LocalEngine.cacheSet(key, safe);
+  if (key !== CHATS_LIST_CACHE_KEY) {
+    void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, safe);
+  }
+}
+
+export function writeThreadsListLocal(rows: any[], userId?: string | null): void {
+  const safe = rows || [];
+  memoryThreadsList = safe;
+  memoryThreadsUserId = userId || null;
+  const key = threadsListCacheKey(userId);
+  void LocalEngine.cacheSet(key, safe);
+  if (key !== THREADS_LIST_CACHE_KEY) {
+    void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, safe);
+  }
+}
+
+export function clearChatsListMemory(): void {
+  memoryChatsList = null;
+  memoryChatsUserId = null;
+}
+
+export function clearThreadsListMemory(): void {
+  memoryThreadsList = null;
+  memoryThreadsUserId = null;
+}
+
+export function clearAllChatMemory(): void {
+  memoryChatsList = null;
+  memoryThreadsList = null;
+  memoryChatsUserId = null;
+  memoryThreadsUserId = null;
+  memoryMessagesByConv.clear();
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('kylrix:auth:logout', () => {
+    clearAllChatMemory();
+  });
+}
+
+export { isLikelyCiphertext as isLikelyChatCiphertext };
+
+// ---------------------------------------------------------------------------
+// Nuclear wipe pending state — local-only, never synced to DB
+// ---------------------------------------------------------------------------
+const NUCLEAR_PENDING_CACHE_KEY = 'f_nuclear_pending';
+const MAX_NUCLEAR_RETRIES = 3;
+
+export interface NuclearPendingEntry {
+  conversationId: string;
+  tries: number;
+  lastAttemptAt: string; // ISO
+  isPendingNuclear: true;
+}
+
+/** In-memory map: conversationId → entry */
+let nuclearPendingMap: Map<string, NuclearPendingEntry> = new Map();
+let nuclearPendingLoaded = false;
+
+async function loadNuclearPending(): Promise<void> {
+  if (nuclearPendingLoaded) return;
+  nuclearPendingLoaded = true;
+  const stored = await LocalEngine.cacheGet<NuclearPendingEntry[]>(NUCLEAR_PENDING_CACHE_KEY).catch(() => null);
+  if (stored?.length) {
+    for (const entry of stored) nuclearPendingMap.set(entry.conversationId, entry);
+  }
+}
+
+function persistNuclearPending(): void {
+  void LocalEngine.cacheSet(NUCLEAR_PENDING_CACHE_KEY, Array.from(nuclearPendingMap.values()));
+}
+
+export async function markNuclearPending(conversationId: string): Promise<NuclearPendingEntry> {
+  await loadNuclearPending();
+  const existing = nuclearPendingMap.get(conversationId);
+  const entry: NuclearPendingEntry = {
+    conversationId,
+    tries: (existing?.tries ?? 0) + 1,
+    lastAttemptAt: new Date().toISOString(),
+    isPendingNuclear: true,
+  };
+  nuclearPendingMap.set(conversationId, entry);
+  persistNuclearPending();
+  return entry;
+}
+
+export async function clearNuclearPending(conversationId: string): Promise<void> {
+  await loadNuclearPending();
+  nuclearPendingMap.delete(conversationId);
+  persistNuclearPending();
+}
+
+export async function getNuclearPending(conversationId: string): Promise<NuclearPendingEntry | null> {
+  await loadNuclearPending();
+  return nuclearPendingMap.get(conversationId) ?? null;
+}
+
+export async function getAllNuclearPending(): Promise<NuclearPendingEntry[]> {
+  await loadNuclearPending();
+  return Array.from(nuclearPendingMap.values());
+}
+
+export { MAX_NUCLEAR_RETRIES };

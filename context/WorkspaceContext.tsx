@@ -1,0 +1,1146 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+
+import { useAuth } from '@/context/auth/AuthContext';
+import { useDataNexus } from '@/context/DataNexusContext';
+import { ProjectsService } from '@/lib/appwrite/projects';
+import { attachObjectToProject } from '@/lib/projects/object-attachment';
+import { getSessionProjectsList, projectObjectsCacheKey, projectObjectsKindCacheKey } from '@/lib/projects/projects-cache';
+import { normalizeProjectsList, warmProjectsList } from '@/lib/projects/warm-projects-list';
+import { isWorkspaceRecord } from '@/lib/projects/sub-projects';
+import { sortWorkspacesByActive } from '@/lib/workspaces/sort-workspaces';
+import type { ProjectObjects } from '@/types/appwrite';
+
+export interface WorkspaceItem {
+  id: string;
+  title: string;
+  ownerId: string;
+  isPersonal: boolean;
+  isShared?: boolean;
+  isPublic?: boolean;
+  isAgentic?: boolean;
+  isExternal?: boolean;
+  externalClient?: string | null;
+  agentId?: string | null;
+  role?: string;
+  inviteCode?: string | null;
+  privacyMode?: boolean;
+  metadata?: string | null;
+}
+
+interface WorkspaceContextType {
+  activeWorkspace: WorkspaceItem;
+  workspaces: WorkspaceItem[];
+  ownedWorkspaces: WorkspaceItem[];
+  sharedWorkspaces: WorkspaceItem[];
+  agentWorkspaces: WorkspaceItem[];
+  externalWorkspaces: WorkspaceItem[];
+  loadingWorkspaces: boolean;
+  setActiveWorkspaceId: (id: string) => void;
+  registerSharedWorkspace: (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean; role?: string }) => Promise<void>;
+  removeSharedWorkspace: (workspaceId: string) => Promise<void>;
+  updateWorkspacePrivacyMode: (workspaceId: string, enabled: boolean) => Promise<void>;
+  markWorkspacePublic: (workspaceId: string) => void;
+  refreshWorkspaces: () => Promise<void>;
+  createWorkspace: (title: string, summary?: string) => Promise<WorkspaceItem | null>;
+  pushLiveWorkspace: (project: any) => Promise<WorkspaceItem | null>;
+  attachEntityToActiveWorkspace: (entityKind: string, entityId: string) => Promise<void>;
+  setEntityPersonalWorkspaceState: (entityKind: string, entityId: string, inPersonal: boolean) => Promise<void>;
+  isEntityPendingInActiveWorkspace: (entityKind: string, entityId: string) => boolean;
+}
+
+const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
+
+export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const { getCachedDataAsync, fetchOptimized } = useDataNexus();
+  const userId = user?.$id || 'guest';
+  // Derive a clean display name for the personal workspace label.
+  // Avoid "My's Workspace" — if name contains an apostrophe already or is absent,
+  // we use the raw name but strip a trailing "'s" to prevent double-possessive.
+  const rawName = (user?.name || user?.email?.split('@')[0] || '').trim();
+  // Build title: "<Name>'s Workspace" when we have a name, otherwise "My Workspace"
+  const personalWorkspaceTitle = rawName
+    ? `${rawName}'s Workspace`
+    : 'My Workspace';
+
+  const personalWorkspace = useMemo<WorkspaceItem>(
+    () => ({
+      id: userId,
+      title: personalWorkspaceTitle,
+      ownerId: userId,
+      isPersonal: true,
+      isShared: false,
+      role: 'owner',
+    }),
+    [userId, personalWorkspaceTitle]
+  );
+
+  const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string>(userId);
+  const hydratedRef = useRef(false);
+  const lastSetIdRef = useRef<string | null>(null);
+  const pendingPrefSyncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastUserIdRef = useRef<string | null>(userId);
+  const pendingProjectObjectsRef = useRef<Map<string, Set<string>>>(new Map());
+  const isEntityPendingInActiveWorkspace = useCallback(
+    (entityKind: string, entityId: string) => {
+      if (!activeWorkspaceId || activeWorkspaceId === userId) return false;
+      const key = `${activeWorkspaceId}:${entityKind}`;
+      const set = pendingProjectObjectsRef.current.get(key);
+      return set ? set.has(entityId) : false;
+    },
+    [activeWorkspaceId, userId]
+  );
+
+  const mapProjectRows = useCallback(
+    (rows: unknown): WorkspaceItem[] =>
+      normalizeProjectsList(rows)
+        .filter((p: any) => {
+          // Switcher-shaped LocalEngine rows (id, not $id) — never treat as nested projects
+          if (p && typeof p.isPersonal === 'boolean' && p.id && !p.$id && !p.kind && !p.parentProjectId) {
+            return p.isPersonal !== true;
+          }
+          return isWorkspaceRecord(p);
+        })
+        .map((p: any) => {
+          const id = String(p.$id || p.id || '').trim();
+          const ownerId = p.ownerId || p.userId || '';
+          const isAgentic = p.isAgentic === true || String(p.isAgentic) === 'true';
+          const isExternal = p.isExternal === true || String(p.isExternal) === 'true';
+          const externalClient = p.externalClient || null;
+          const isOwned = !ownerId || ownerId === userId || userId === 'guest';
+          const isShared =
+            Boolean(p.isShared === true && !isOwned) ||
+            Boolean(!isOwned && !isAgentic && !isExternal) ||
+            Boolean(p.collabStatus && p.collabStatus !== 'owner' && !isOwned);
+          let privacyMode = false;
+          try {
+            if (p.metadata) {
+              const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+              privacyMode = Boolean(meta?.privacyMode);
+            }
+          } catch {}
+          if (p.privacyMode !== undefined) privacyMode = Boolean(p.privacyMode);
+
+          return {
+            id,
+            title: p.title || p.name || 'Untitled Workspace',
+            ownerId: ownerId || userId,
+            isPersonal: false as const,
+            isShared: Boolean(isShared && !isAgentic && !isExternal),
+            isAgentic,
+            isExternal,
+            externalClient,
+            agentId: p.agentId || null,
+            isPublic: !!p.isPublic,
+            role: p.role || (isOwned ? 'owner' : 'viewer'),
+            inviteCode: p.inviteCode || null,
+            privacyMode,
+            metadata: p.metadata || null,
+          };
+        })
+        .filter((w) => w.id && w.id !== personalWorkspace.id),
+    [personalWorkspace.id, userId],
+  );
+
+  const getSynchronousOfflineWorkspaces = useCallback((uid: string): WorkspaceItem[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const keys = [
+        `kylrix_workspaces_${uid}`,
+        'kylrix_workspaces',
+        `f_projects_list_${uid}`,
+        'f_projects_list',
+        'kylrix_all_cached_workspaces',
+      ];
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const list = Array.isArray(parsed) ? parsed : (parsed?.rows || parsed?.workspaces || []);
+          if (Array.isArray(list) && list.length > 0) {
+            return mapProjectRows(list);
+          }
+        }
+      }
+    } catch {}
+    return [];
+  }, [mapProjectRows]);
+
+  const initialItems = useMemo<WorkspaceItem[]>(() => {
+    const sessionItems = mapProjectRows(getSessionProjectsList(userId) || []);
+    const localCached = getSynchronousOfflineWorkspaces(userId);
+    const byId = new Map<string, WorkspaceItem>();
+    byId.set(personalWorkspace.id, personalWorkspace);
+    for (const w of localCached) byId.set(w.id, w);
+    for (const w of sessionItems) byId.set(w.id, w);
+    return Array.from(byId.values());
+  }, [personalWorkspace, mapProjectRows, userId, getSynchronousOfflineWorkspaces]);
+
+  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>(initialItems);
+  const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
+
+  const persistWorkspacesOffline = useCallback((items: WorkspaceItem[], uid: string) => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`kylrix_workspaces_${uid}`, JSON.stringify(items));
+        localStorage.setItem('kylrix_all_cached_workspaces', JSON.stringify(items));
+      }
+      // Never write WorkspaceItem[] into f_projects_list — that pollutes project rows and
+      // can cascade-filter the switcher down to personal-only after a bad refresh.
+      import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+        LocalEngine.cacheSet(`kylrix_workspaces_${uid}`, items).catch(() => {});
+        LocalEngine.cacheSet('kylrix_all_cached_workspaces', items).catch(() => {});
+      }).catch(() => {});
+    } catch {}
+  }, []);
+
+  const refreshWorkspaces = useCallback(async () => {
+    setLoadingWorkspaces(true);
+    try {
+      const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
+      clearSessionProjectsList();
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      const [rowsInitial, localShared, directUserProjects, globalProjects, customCached] = await Promise.all([
+        warmProjectsList({
+          userId: userId || 'guest',
+          getCachedDataAsync,
+          fetchOptimized,
+        }).catch(() => []),
+        LocalEngine.cacheGet<WorkspaceItem[]>(`visited_shared_workspaces_${userId}`).catch(() => []),
+        LocalEngine.cacheGet<any[]>(`f_projects_list_${userId}`).catch(() => []),
+        LocalEngine.cacheGet<any[]>('f_projects_list').catch(() => []),
+        LocalEngine.cacheGet<any[]>(`kylrix_workspaces_${userId}`).catch(() => []),
+      ]);
+
+      let rows = rowsInitial;
+      // Heal: empty/poisoned LocalEngine (bad sub-project filter wrote [] or WorkspaceItem[])
+      if (!Array.isArray(rows) || rows.length === 0 || !rows.some((p: any) => p?.$id)) {
+        rows = await warmProjectsList({
+          userId: userId || 'guest',
+          getCachedDataAsync,
+          fetchOptimized,
+          force: true,
+        }).catch(() => rowsInitial);
+      }
+
+      // Prefer real project rows; switcher cache is last resort (may be personal-only after a bad filter)
+      const candidateRows = (Array.isArray(rows) && rows.length > 0)
+        ? rows
+        : (Array.isArray(directUserProjects) && directUserProjects.length > 0 && directUserProjects.some((p) => p?.$id))
+          ? directUserProjects
+          : (Array.isArray(globalProjects) && globalProjects.some((p) => p?.$id))
+            ? globalProjects
+            : (Array.isArray(customCached) && customCached.length > 0)
+              ? customCached
+              : [];
+
+      const mapped = mapProjectRows(candidateRows);
+      const mappedLocal = Array.isArray(localShared)
+        ? localShared.filter((s) => s.id && s.id !== personalWorkspace.id)
+        : [];
+
+      const byId = new Map<string, WorkspaceItem>();
+      byId.set(personalWorkspace.id, personalWorkspace);
+      for (const w of mapped) byId.set(w.id, w);
+      for (const w of mappedLocal) {
+        if (!byId.has(w.id)) byId.set(w.id, { ...w, isShared: true, isPersonal: false });
+      }
+
+      setWorkspaces((prev) => {
+        for (const existing of prev) {
+          if (existing.id && existing.id !== personalWorkspace.id && !byId.has(existing.id)) {
+            byId.set(existing.id, existing);
+          }
+        }
+        const finalWorkspaces = [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+        persistWorkspacesOffline(finalWorkspaces, userId);
+        return finalWorkspaces;
+      });
+    } catch (err) {
+      console.warn('[WorkspaceContext] Failed to load workspaces:', err);
+    } finally {
+      setLoadingWorkspaces(false);
+    }
+  }, [personalWorkspace, getCachedDataAsync, fetchOptimized, mapProjectRows, userId, persistWorkspacesOffline]);
+
+  const registerSharedWorkspace = useCallback(
+    async (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean; role?: string }) => {
+      if (!workspace.id || workspace.id === personalWorkspace.id) return;
+      if (workspace.ownerId && workspace.ownerId === userId) return;
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const userProjects = await LocalEngine.cacheGet<any[]>(`f_projects_list_${userId}`);
+        if (Array.isArray(userProjects) && userProjects.some((p) => (p.$id === workspace.id || p.id === workspace.id) && !workspace.role)) {
+          return;
+        }
+        const cacheKey = `visited_shared_workspaces_${userId}`;
+        const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
+        const effectiveRole = workspace.role || 'editor';
+        const item: WorkspaceItem = {
+          id: workspace.id,
+          title: workspace.title || 'Shared Workspace',
+          ownerId: workspace.ownerId || '',
+          isPersonal: false,
+          isShared: true,
+          isPublic: workspace.isPublic !== undefined ? workspace.isPublic : true,
+          role: effectiveRole,
+        };
+        const filtered = existing.filter((w) => w.id !== workspace.id);
+        const updated = [item, ...filtered].slice(0, 30);
+        await LocalEngine.cacheSet(cacheKey, updated);
+        setWorkspaces((prev) => {
+          const existingItem = prev.find((w) => w.id === workspace.id);
+          if (existingItem && !existingItem.isShared && !workspace.role) return prev;
+
+          const byId = new Map(prev.map((w) => [w.id, w]));
+          byId.set(item.id, { ...existingItem, ...item, role: effectiveRole });
+          const next = [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+          persistWorkspacesOffline(next, userId);
+          return next;
+        });
+      } catch (err) {
+        console.warn('[WorkspaceContext] Failed to register visited shared workspace:', err);
+      }
+    },
+    [personalWorkspace, userId, persistWorkspacesOffline]
+  );
+
+  const removeSharedWorkspace = useCallback(
+    async (workspaceId: string) => {
+      if (!workspaceId || workspaceId === personalWorkspace.id) return;
+      // 1. Immediately update local state
+      setWorkspaces((prev) => {
+        const next = prev.filter((w) => w.id !== workspaceId);
+        persistWorkspacesOffline(next, userId);
+        return next;
+      });
+
+      // If active workspace was the removed one, reset to personal workspace
+      if (activeWorkspaceId === workspaceId) {
+        setActiveWorkspaceIdState(userId);
+      }
+
+      // 2. Remove from LocalEngine visited cache & purge workspace caches
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cacheKey = `visited_shared_workspaces_${userId}`;
+        const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
+        const filtered = existing.filter((w) => w.id !== workspaceId);
+        await LocalEngine.cacheSet(cacheKey, filtered);
+
+        await Promise.allSettled([
+          LocalEngine.cacheDelete(`ws_details_${workspaceId}`),
+          LocalEngine.cacheDelete(`project_objects_${workspaceId}`),
+          LocalEngine.cacheDelete(`f_shared_ws_${workspaceId}`),
+        ]);
+        const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
+        for (const kind of kinds) {
+          await LocalEngine.cacheDelete(projectObjectsKindCacheKey(workspaceId, kind)).catch(() => {});
+        }
+      } catch (e) {
+        console.warn('[WorkspaceContext] Failed to purge removed workspace cache:', e);
+      }
+
+      // 3. Notify remote backend (remove collaborator if joined)
+      try {
+        await ProjectsService.removeCollaborator(workspaceId, userId).catch(() => {});
+      } catch {}
+
+      // 4. Background refresh
+      void refreshWorkspaces();
+    },
+    [personalWorkspace.id, userId, activeWorkspaceId, persistWorkspacesOffline, setActiveWorkspaceIdState, refreshWorkspaces]
+  );
+
+  const updateWorkspacePrivacyMode = useCallback(
+    async (workspaceId: string, enabled: boolean) => {
+      if (!workspaceId || workspaceId === personalWorkspace.id) return;
+      // 1. Optimistically update local React state
+      setWorkspaces((prev) => {
+        const next = prev.map((w) => {
+          if (w.id === workspaceId) {
+            let metaObj: any = {};
+            try {
+              if (w.metadata) {
+                metaObj = typeof w.metadata === 'string' ? JSON.parse(w.metadata) : w.metadata;
+              }
+            } catch {}
+            metaObj.privacyMode = enabled;
+            return {
+              ...w,
+              privacyMode: enabled,
+              metadata: JSON.stringify(metaObj),
+            };
+          }
+          return w;
+        });
+        persistWorkspacesOffline(next, userId);
+        return next;
+      });
+
+      // 2. Update LocalEngine cached projects
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const userProjects = (await LocalEngine.cacheGet<any[]>(`f_projects_list_${userId}`)) || [];
+        const updated = userProjects.map((p) => {
+          if (p.$id === workspaceId || p.id === workspaceId) {
+            let metaObj: any = {};
+            try {
+              if (p.metadata) {
+                metaObj = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+              }
+            } catch {}
+            metaObj.privacyMode = enabled;
+            return {
+              ...p,
+              privacyMode: enabled,
+              metadata: JSON.stringify(metaObj),
+            };
+          }
+          return p;
+        });
+        await LocalEngine.cacheSet(`f_projects_list_${userId}`, updated);
+      } catch {}
+
+      // 3. Persist to Appwrite backend
+      try {
+        let metaObj: any = {};
+        const currentItem = workspaces.find((w) => w.id === workspaceId);
+        if (currentItem?.metadata) {
+          try {
+            metaObj = typeof currentItem.metadata === 'string' ? JSON.parse(currentItem.metadata) : currentItem.metadata;
+          } catch {}
+        }
+        metaObj.privacyMode = enabled;
+        await ProjectsService.updateProject(workspaceId, {
+          metadata: JSON.stringify(metaObj),
+        });
+      } catch (err) {
+        console.warn('[WorkspaceContext] Failed to persist privacyMode to backend:', err);
+      }
+    },
+    [personalWorkspace.id, userId, persistWorkspacesOffline, workspaces]
+  );
+
+  const markWorkspacePublic = useCallback(
+    async (workspaceId: string) => {
+      setWorkspaces((prev) => {
+        const next = prev.map((w) =>
+          w.id === workspaceId ? { ...w, isPublic: true, isGuest: true } : w
+        );
+        persistWorkspacesOffline(next, userId);
+        return next;
+      });
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const [userProjects, globalProjects] = await Promise.all([
+          LocalEngine.cacheGet<any[]>(`f_projects_list_${userId}`),
+          LocalEngine.cacheGet<any[]>('f_projects_list'),
+        ]);
+        if (Array.isArray(userProjects)) {
+          const updated = userProjects.map((p) =>
+            (p.$id === workspaceId || p.id === workspaceId) ? { ...p, isPublic: true, isGuest: true } : p
+          );
+          await LocalEngine.cacheSet(`f_projects_list_${userId}`, updated);
+        }
+        if (Array.isArray(globalProjects)) {
+          const updated = globalProjects.map((p) =>
+            (p.$id === workspaceId || p.id === workspaceId) ? { ...p, isPublic: true, isGuest: true } : p
+          );
+          await LocalEngine.cacheSet('f_projects_list', updated);
+        }
+      } catch {}
+    },
+    [userId, persistWorkspacesOffline]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleLogout = () => {
+      hydratedRef.current = false;
+      lastSetIdRef.current = 'personal';
+      lastUserIdRef.current = null;
+      setActiveWorkspaceIdState('personal');
+      setWorkspaces([personalWorkspace]);
+      try {
+        const { clearSessionProjectsList } = require('@/lib/projects/projects-cache');
+        clearSessionProjectsList();
+      } catch {}
+    };
+    window.addEventListener('kylrix:auth:logout', handleLogout);
+    return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
+  }, [personalWorkspace.id]);
+
+  const refreshWorkspacesRef = useRef(refreshWorkspaces);
+  useEffect(() => {
+    refreshWorkspacesRef.current = refreshWorkspaces;
+  }, [refreshWorkspaces]);
+
+  const personalWorkspaceRef = useRef(personalWorkspace);
+  useEffect(() => {
+    personalWorkspaceRef.current = personalWorkspace;
+  }, [personalWorkspace]);
+
+  useEffect(() => {
+    const pw = personalWorkspaceRef.current;
+    if (lastUserIdRef.current !== userId) {
+      hydratedRef.current = false;
+      lastSetIdRef.current = userId;
+      lastUserIdRef.current = userId;
+      setActiveWorkspaceIdState(userId);
+      // Synchronously load offline cached workspaces on user transition
+      const cached = getSynchronousOfflineWorkspaces(userId);
+      setWorkspaces((prev) => {
+        const byId = new Map<string, WorkspaceItem>();
+        byId.set(pw.id, pw);
+        for (const w of cached) byId.set(w.id, w);
+        for (const w of prev) {
+          if (w.id && w.id !== pw.id && !byId.has(w.id)) {
+            byId.set(w.id, w);
+          }
+        }
+        return [pw, ...Array.from(byId.values()).filter((w) => w.id !== pw.id)];
+      });
+      try {
+        const { clearSessionProjectsList } = require('@/lib/projects/projects-cache');
+        clearSessionProjectsList();
+      } catch {}
+    } else {
+      setActiveWorkspaceIdState((prev) => (prev === 'guest' && userId !== 'guest' ? userId : prev));
+    }
+    void refreshWorkspacesRef.current();
+  }, [userId, getSynchronousOfflineWorkspaces]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const [userProjects, localShared, customCached] = await Promise.all([
+          LocalEngine.cacheGet(`f_projects_list_${userId}`),
+          LocalEngine.cacheGet<WorkspaceItem[]>(`visited_shared_workspaces_${userId}`).catch(() => []),
+          LocalEngine.cacheGet<any[]>(`kylrix_workspaces_${userId}`).catch(() => []),
+        ]);
+        const mapped = mapProjectRows(userProjects || customCached || []);
+        const mappedLocal = Array.isArray(localShared)
+          ? localShared.filter((s) => s.id && s.id !== personalWorkspace.id)
+          : [];
+        if (!mapped.length && !mappedLocal.length) return;
+        setWorkspaces((prev) => {
+          const byId = new Map(prev.map((w) => [w.id, w]));
+          byId.set(personalWorkspace.id, personalWorkspace);
+          for (const w of mapped) byId.set(w.id, w);
+          for (const w of mappedLocal) {
+            if (!byId.has(w.id)) byId.set(w.id, { ...w, isShared: true, isPersonal: false });
+          }
+          const next = [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+          persistWorkspacesOffline(next, userId);
+          return next;
+        });
+      } catch {
+        /* optional */
+      }
+    })();
+  }, [personalWorkspace, mapProjectRows, userId, persistWorkspacesOffline]);
+
+
+  const ACTIVE_WORKSPACE_CACHE_KEY = `kylrix_active_workspace_${userId}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const saved = await LocalEngine.cacheGet(ACTIVE_WORKSPACE_CACHE_KEY);
+        if (cancelled) return;
+        if (hydratedRef.current) return;
+        if (saved && typeof saved === 'string' && saved.trim()) {
+          const trimmed = saved.trim();
+          hydratedRef.current = true;
+          lastSetIdRef.current = trimmed;
+          setActiveWorkspaceIdState(trimmed);
+          return;
+        }
+        if (user?.prefs?.activeWorkspaceId && typeof user.prefs.activeWorkspaceId === 'string') {
+          const prefId = (user.prefs.activeWorkspaceId as string).trim();
+          if (prefId) {
+            hydratedRef.current = true;
+            lastSetIdRef.current = prefId;
+            setActiveWorkspaceIdState(prefId);
+            try {
+              await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, prefId);
+            } catch {}
+            return;
+          }
+        }
+        hydratedRef.current = true;
+      } catch {
+        hydratedRef.current = true;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, ACTIVE_WORKSPACE_CACHE_KEY]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingPrefSyncRef.current) clearTimeout(pendingPrefSyncRef.current);
+    };
+  }, []);
+
+  const { updatePreferences } = useAuth();
+
+  const setActiveWorkspaceId = useCallback((id: string) => {
+    const trimmed = String(id || '').trim();
+    if (!trimmed) return;
+    if (trimmed === lastSetIdRef.current) return;
+    const previousId = lastSetIdRef.current;
+    lastSetIdRef.current = trimmed;
+    hydratedRef.current = true;
+    setActiveWorkspaceIdState(trimmed);
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, trimmed);
+      } catch {}
+    })();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('kylrix:workspace-changed', {
+          detail: { previousId, workspaceId: trimmed }
+        })
+      );
+    }
+    if (pendingPrefSyncRef.current) clearTimeout(pendingPrefSyncRef.current);
+    pendingPrefSyncRef.current = setTimeout(async () => {
+      if (user?.$id && typeof updatePreferences === 'function') {
+        try {
+          const { effectiveTierHasPaidAccess } = await import('@/lib/entitlements');
+          if (effectiveTierHasPaidAccess(user?.prefs?.tier)) {
+            await updatePreferences({ activeWorkspaceId: trimmed });
+          }
+        } catch {}
+      }
+    }, 800);
+  }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, user?.prefs?.tier, updatePreferences]);
+
+  // High-performance background prewarming for active workspace objects
+  useEffect(() => {
+    if (!activeWorkspaceId || activeWorkspaceId === userId || activeWorkspaceId === 'guest') return;
+    const targetId = activeWorkspaceId;
+    let cancelled = false;
+
+    void (async () => {
+      const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
+      for (const kind of kinds) {
+        if (cancelled) break;
+        try {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cacheKey = projectObjectsKindCacheKey(targetId, kind);
+          const res = await ProjectsService.listProjectObjectsByKind(targetId, kind).catch(() => null);
+          const rows = Array.isArray(res) ? res : Array.isArray((res as any)?.rows) ? (res as any).rows : [];
+          if (rows.length > 0 && !cancelled) {
+            await LocalEngine.cacheSet(cacheKey, rows).catch(() => {});
+          }
+        } catch {
+          /* optional background warm */
+        }
+      }
+
+      // Fetch and warm actual workspace entities (notes, goals, events, forms)
+      try {
+        const tagged = await ProjectsService.listTaggedResources(targetId).catch(() => null);
+        if (tagged && !cancelled) {
+          if (Array.isArray(tagged.notes) && tagged.notes.length > 0) {
+            for (const note of tagged.notes) {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('kylrix:live-note-saved', { detail: { note: { ...note, projectId: targetId, isWorkspace: true } } }));
+              }
+            }
+          }
+          if (Array.isArray(tagged.tasks) && tagged.tasks.length > 0) {
+            for (const task of tagged.tasks) {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('kylrix:live-task-saved', { detail: { task: { ...task, projectId: targetId, isWorkspace: true } } }));
+              }
+            }
+          }
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspaceId, userId]);
+
+  // When switching to a workspace, verify ownership and public access in the background
+  useEffect(() => {
+    if (!activeWorkspaceId || activeWorkspaceId === userId || activeWorkspaceId === 'guest') return;
+    const targetId = activeWorkspaceId;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { resolveWorkspaceShareAccessSecure } = await import('@/lib/actions/secure-ops');
+        const { account } = await import('@/lib/appwrite/client');
+        let jwt: string | undefined = undefined;
+        try {
+          const res = await Promise.race([
+            account.createJWT(),
+            new Promise<null>((r) => setTimeout(() => r(null), 800)),
+          ]);
+          jwt = res?.jwt;
+        } catch {}
+        const access = await resolveWorkspaceShareAccessSecure(targetId, jwt);
+        if (cancelled || !access.success || !access.workspace) return;
+
+        const isOwner = access.workspace.ownerId === userId && userId !== 'guest';
+        const isAgentic = Boolean(access.workspace.isAgentic);
+        const agentId = access.workspace.agentId || null;
+        setWorkspaces((prev) => {
+          const existing = prev.find((w) => w.id === targetId);
+          const effectiveIsAgentic = isAgentic || Boolean(existing?.isAgentic);
+          const item: WorkspaceItem = {
+            id: targetId,
+            title: access.workspace!.title || existing?.title || 'Shared Workspace',
+            ownerId: access.workspace!.ownerId || existing?.ownerId || '',
+            isPersonal: false,
+            isShared: !isOwner && !effectiveIsAgentic,
+            isAgentic: effectiveIsAgentic,
+            agentId: agentId || existing?.agentId || null,
+            isPublic: !!access.workspace!.isPublic,
+            role: isOwner ? 'owner' : 'viewer',
+          };
+          const byId = new Map(prev.map((w) => [w.id, w]));
+          byId.set(item.id, item);
+          return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+        });
+      } catch {
+        /* no-op */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspaceId, userId, personalWorkspace]);
+
+  // Active workspace validation: if current active workspace ID does not exist in the active user's workspaces list, reset to personal
+  // Live realtime sync for workspace creations, updates, deletions, and object attachments
+  useEffect(() => {
+    let unsub: any;
+    void (async () => {
+      try {
+        const { realtime } = await import('@/lib/appwrite/client');
+        const channels = ['projects', 'project_objects', 'Collaborators'];
+        unsub = realtime.subscribe(channels, (response: any) => {
+          if (response?.events?.some((evt: string) => evt.includes('.create') || evt.includes('.update') || evt.includes('.delete'))) {
+            void refreshWorkspaces();
+          }
+        });
+      } catch {}
+    })();
+    return () => {
+      if (typeof unsub === 'function') unsub();
+      else if (unsub?.unsubscribe) unsub.unsubscribe();
+    };
+  }, [refreshWorkspaces]);
+
+  useEffect(() => {
+    if (!loadingWorkspaces && workspaces.length > 0 && activeWorkspaceId && activeWorkspaceId !== userId && activeWorkspaceId !== 'guest' && activeWorkspaceId !== 'personal') {
+      const exists = workspaces.some((w) => w.id === activeWorkspaceId);
+      if (!exists) {
+        setActiveWorkspaceIdState(userId);
+        lastSetIdRef.current = userId;
+        void (async () => {
+          try {
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, userId);
+          } catch {}
+        })();
+      }
+    }
+  }, [loadingWorkspaces, workspaces, activeWorkspaceId, userId, ACTIVE_WORKSPACE_CACHE_KEY]);
+
+  const sortedWorkspaces = useMemo(
+    () => sortWorkspacesByActive(workspaces, activeWorkspaceId, personalWorkspace.id),
+    [workspaces, activeWorkspaceId, personalWorkspace.id]
+  );
+
+  const activeWorkspace = useMemo<WorkspaceItem>(() => {
+    const found = sortedWorkspaces.find((w) => w.id === activeWorkspaceId);
+    if (found) return found;
+    return personalWorkspace;
+  }, [sortedWorkspaces, activeWorkspaceId, personalWorkspace]);
+
+  const agentWorkspaces = useMemo(
+    () => sortedWorkspaces.filter((w) => !w.isPersonal && w.isAgentic === true),
+    [sortedWorkspaces]
+  );
+
+  const externalWorkspaces = useMemo(
+    () => sortedWorkspaces.filter((w) => !w.isPersonal && w.isExternal === true),
+    [sortedWorkspaces]
+  );
+
+  const ownedWorkspaces = useMemo(
+    () => sortedWorkspaces.filter((w) => !w.isPersonal && !w.isAgentic && !w.isExternal && (!w.isShared || w.ownerId === userId || !w.ownerId)),
+    [sortedWorkspaces, userId]
+  );
+
+  const sharedWorkspaces = useMemo(
+    () => sortedWorkspaces.filter((w) => !w.isPersonal && !w.isAgentic && !w.isExternal && w.isShared && w.ownerId && w.ownerId !== userId),
+    [sortedWorkspaces, userId]
+  );
+
+  const pushLiveWorkspace = useCallback(
+    async (created: any): Promise<WorkspaceItem | null> => {
+      if (!created || (!created.$id && !created.id)) return null;
+      const id = String(created.$id || created.id).trim();
+      const ownerId = created.ownerId || created.userId || userId;
+      const isAgentic = created.isAgentic === true || String(created.isAgentic) === 'true';
+      const isOwned = !ownerId || ownerId === userId || userId === 'guest';
+      const isShared =
+        Boolean(created.isShared === true && !isOwned) ||
+        Boolean(!isOwned && !isAgentic) ||
+        Boolean(created.collabStatus && created.collabStatus !== 'owner' && !isOwned);
+
+      const newItem: WorkspaceItem = {
+        id,
+        title: created.title || created.name || 'Untitled Workspace',
+        ownerId,
+        isPersonal: false,
+        isShared: Boolean(isShared && !isAgentic),
+        isAgentic,
+        agentId: created.agentId || null,
+        isPublic: !!created.isPublic,
+        role: created.role || (isOwned ? 'owner' : 'viewer'),
+      };
+
+      // 1. Immediately update React state so UI updates with zero latency
+      setWorkspaces((prev) => {
+        const next = [
+          personalWorkspace,
+          newItem,
+          ...prev.filter((w) => w.id !== personalWorkspace.id && w.id !== newItem.id),
+        ];
+        persistWorkspacesOffline(next, userId);
+        return next;
+      });
+
+      // 2. Switch active workspace to new workspace and dispatch event
+      setActiveWorkspaceId(id);
+
+      // 3. Write instantly to LocalEngine and session cache so warmProjectsList sees it immediately
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { setSessionProjectsList, getSessionProjectsList } = await import('@/lib/projects/projects-cache');
+        const cacheKey = `f_projects_list_${userId}`;
+        const currentCached = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
+        const currentSession = getSessionProjectsList(userId) || [];
+        
+        const updatedProjects = [
+          created,
+          ...currentCached.filter((p: any) => (p.$id || p.id) !== id),
+        ];
+        const updatedSession = [
+          created,
+          ...currentSession.filter((p: any) => (p.$id || p.id) !== id),
+        ];
+
+        await LocalEngine.cacheSet(cacheKey, updatedProjects);
+        await LocalEngine.cacheSet('f_projects_list', updatedProjects);
+        await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, id);
+        setSessionProjectsList(updatedSession, userId);
+      } catch (e) {
+        console.warn('[WorkspaceContext] LocalEngine cacheSet failed in pushLiveWorkspace:', e);
+      }
+
+      // 4. Background refresh to confirm remote state without blocking
+      void refreshWorkspaces();
+      return newItem;
+    },
+    [userId, personalWorkspace, persistWorkspacesOffline, setActiveWorkspaceId, ACTIVE_WORKSPACE_CACHE_KEY, refreshWorkspaces]
+  );
+
+  const createWorkspace = useCallback(
+    async (title: string, summary?: string): Promise<WorkspaceItem | null> => {
+      try {
+        let created: any = null;
+        const inviteCode = crypto.randomUUID();
+        try {
+          created = await ProjectsService.createProject({
+            title,
+            summary: summary || '',
+            ownerId: userId,
+            kind: 'workspace',
+            parentProjectId: null,
+            inviteCode,
+          });
+        } catch (netErr) {
+          console.warn('[WorkspaceContext] Network create failed, creating offline workspace:', netErr);
+          created = {
+            $id: `ws_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            title,
+            summary: summary || '',
+            ownerId: userId,
+            kind: 'workspace',
+            inviteCode,
+            $createdAt: new Date().toISOString(),
+            $updatedAt: new Date().toISOString(),
+          };
+        }
+        return await pushLiveWorkspace(created);
+      } catch (err) {
+        console.error('[WorkspaceContext] Create workspace failed:', err);
+        return null;
+      }
+    },
+    [userId, pushLiveWorkspace]
+  );
+
+
+  const attachEntityToActiveWorkspace = useCallback(
+    async (entityKind: string, entityId: string) => {
+      if (!activeWorkspace || activeWorkspace.isPersonal) return;
+      // Track in-memory pending attachment
+      const key = `${activeWorkspace.id}:${entityKind}`;
+      if (!pendingProjectObjectsRef.current.has(key)) {
+        pendingProjectObjectsRef.current.set(key, new Set());
+      }
+      pendingProjectObjectsRef.current.get(key)!.add(entityId);
+      // Fast optimistic update in LocalEngine
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cacheKey = projectObjectsKindCacheKey(activeWorkspace.id, entityKind);
+        const overallCacheKey = projectObjectsCacheKey(activeWorkspace.id);
+        const existing = (await LocalEngine.cacheGet<ProjectObjects[]>(cacheKey)) || [];
+        const existingOverall = (await LocalEngine.cacheGet<ProjectObjects[]>(overallCacheKey)) || [];
+        const optimisticRow = {
+          $id: `${activeWorkspace.id}:${entityKind}:${entityId}`,
+          entityId,
+          entityKind,
+          projectId: activeWorkspace.id,
+          $createdAt: new Date().toISOString(),
+        } as unknown as ProjectObjects;
+
+        if (!existing.some((r) => r.entityId === entityId && r.entityKind === entityKind)) {
+          await LocalEngine.cacheSet(cacheKey, [...existing, optimisticRow]);
+        }
+        if (!existingOverall.some((r) => r.entityId === entityId && r.entityKind === entityKind)) {
+          await LocalEngine.cacheSet(overallCacheKey, [...existingOverall, optimisticRow]);
+        }
+      } catch {}
+      // Execute network attachment in non-blocking background task
+      void (async () => {
+        try {
+          await attachObjectToProject({
+            projectId: activeWorkspace.id,
+            entityKind,
+            entityId,
+          });
+          // Mark row as workspace-scoped in background
+          try {
+            const { databases } = await import('@/lib/appwrite/client');
+            const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+            const tableByKind: Record<string, string> = {
+              note: APPWRITE_CONFIG.TABLES.NOTES,
+              idea: APPWRITE_CONFIG.TABLES.NOTES,
+              goal: APPWRITE_CONFIG.TABLES.TASKS,
+              task: APPWRITE_CONFIG.TABLES.TASKS,
+              form: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+              event: APPWRITE_CONFIG.TABLES.EVENTS,
+              credential: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+              totp: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+              agent_session: 'agentic_sessions',
+              agentic_session: 'agentic_sessions',
+            };
+            const tableId = tableByKind[entityKind];
+            if (tableId) {
+              let existingMetadata: any = {};
+              try {
+                const getRowPromise = databases.getRow(APPWRITE_CONFIG.DATABASE_ID, tableId, entityId);
+                const timeoutPromise = new Promise<null>((r) => setTimeout(() => r(null), 800));
+                const row = (await Promise.race([getRowPromise, timeoutPromise]).catch(() => null)) as any;
+                if (row?.metadata) {
+                  existingMetadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+                }
+              } catch {}
+              const newMeta = {
+                ...existingMetadata,
+                projectId: activeWorkspace.id,
+                isWorkspace: true,
+              };
+              try {
+                await databases.updateRow(
+                  APPWRITE_CONFIG.DATABASE_ID,
+                  tableId,
+                  entityId,
+                  { isWorkspace: true, metadata: JSON.stringify(newMeta) },
+                );
+              } catch {
+                await databases.updateRow(
+                  APPWRITE_CONFIG.DATABASE_ID,
+                  tableId,
+                  entityId,
+                  { isWorkspace: true },
+                ).catch(() => null);
+              }
+            }
+          } catch (flagErr) {
+            console.warn('[WorkspaceContext] isWorkspace flag update failed:', flagErr);
+          }
+        } catch (err) {
+          console.warn(`[WorkspaceContext] Auto-attach entity ${entityKind} ${entityId} failed:`, err);
+        }
+      })();
+    },
+    [activeWorkspace]
+  );
+
+  const setEntityPersonalWorkspaceState = useCallback(
+    async (entityKind: string, entityId: string, inPersonal: boolean) => {
+      try {
+        const { databases } = await import('@/lib/appwrite/client');
+        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const tableByKind: Record<string, string> = {
+          note: APPWRITE_CONFIG.TABLES.NOTES,
+          idea: APPWRITE_CONFIG.TABLES.NOTES,
+          goal: APPWRITE_CONFIG.TABLES.TASKS,
+          task: APPWRITE_CONFIG.TABLES.TASKS,
+          form: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+          event: APPWRITE_CONFIG.TABLES.EVENTS,
+          credential: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+          totp: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+          agent_session: 'agentic_sessions',
+          agentic_session: 'agentic_sessions',
+        };
+        const tableId = tableByKind[entityKind];
+        if (tableId) {
+          let existingMetadata: any = {};
+          try {
+            const row = (await databases.getRow(APPWRITE_CONFIG.DATABASE_ID, tableId, entityId).catch(() => null)) as any;
+            if (row?.metadata) {
+              existingMetadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+            }
+          } catch {}
+          const newMeta = {
+            ...existingMetadata,
+            projectId: inPersonal ? null : activeWorkspace.id,
+            isWorkspace: !inPersonal,
+          };
+          try {
+            await databases.updateRow(
+              APPWRITE_CONFIG.DATABASE_ID,
+              tableId,
+              entityId,
+              { isWorkspace: !inPersonal, metadata: JSON.stringify(newMeta) },
+            );
+          } catch {
+            await databases.updateRow(
+              APPWRITE_CONFIG.DATABASE_ID,
+              tableId,
+              entityId,
+              { isWorkspace: !inPersonal },
+            ).catch(() => null);
+          }
+        }
+      } catch (err) {
+        console.warn(`[WorkspaceContext] Failed to update isWorkspace flag for ${entityKind} ${entityId}:`, err);
+      }
+      if (!userId || userId === 'guest') return;
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const key = `personal_ws_${entityKind}_${userId}`;
+        const existing = (await LocalEngine.cacheGet<string[]>(key)) || [];
+        const set = new Set(existing);
+        if (inPersonal) set.add(entityId);
+        else set.delete(entityId);
+        await LocalEngine.cacheSet(key, Array.from(set));
+      } catch {}
+    },
+    [userId, activeWorkspace]
+  );
+
+  const value = useMemo<WorkspaceContextType>(
+    () => ({
+      activeWorkspace,
+      workspaces: sortedWorkspaces,
+      ownedWorkspaces,
+      sharedWorkspaces,
+      agentWorkspaces,
+      externalWorkspaces,
+      loadingWorkspaces,
+      setActiveWorkspaceId,
+      registerSharedWorkspace,
+      removeSharedWorkspace,
+      updateWorkspacePrivacyMode,
+      markWorkspacePublic,
+      refreshWorkspaces,
+      createWorkspace,
+      pushLiveWorkspace,
+      attachEntityToActiveWorkspace,
+      setEntityPersonalWorkspaceState,
+      isEntityPendingInActiveWorkspace,
+    }),
+    [
+      activeWorkspace,
+      sortedWorkspaces,
+      ownedWorkspaces,
+      sharedWorkspaces,
+      agentWorkspaces,
+      externalWorkspaces,
+      loadingWorkspaces,
+      setActiveWorkspaceId,
+      registerSharedWorkspace,
+      removeSharedWorkspace,
+      updateWorkspacePrivacyMode,
+      markWorkspacePublic,
+      refreshWorkspaces,
+      createWorkspace,
+      pushLiveWorkspace,
+      attachEntityToActiveWorkspace,
+      setEntityPersonalWorkspaceState,
+      isEntityPendingInActiveWorkspace,
+    ]
+  );
+
+  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
+}
+
+const fallbackPersonalWorkspace: WorkspaceItem = {
+  id: 'guest',
+  title: 'My Workspace',
+  ownerId: 'guest',
+  isPersonal: true,
+  isShared: false,
+  role: 'owner',
+};
+
+const fallbackWorkspaceContext: WorkspaceContextType = {
+  activeWorkspace: fallbackPersonalWorkspace,
+  workspaces: [fallbackPersonalWorkspace],
+  ownedWorkspaces: [],
+  sharedWorkspaces: [],
+  agentWorkspaces: [],
+  externalWorkspaces: [],
+  loadingWorkspaces: false,
+  setActiveWorkspaceId: () => {},
+  registerSharedWorkspace: async () => {},
+  removeSharedWorkspace: async () => {},
+  updateWorkspacePrivacyMode: async () => {},
+  markWorkspacePublic: () => {},
+  refreshWorkspaces: async () => {},
+  createWorkspace: async () => null,
+  pushLiveWorkspace: async () => null,
+  attachEntityToActiveWorkspace: async () => {},
+  setEntityPersonalWorkspaceState: async () => {},
+  isEntityPendingInActiveWorkspace: () => false,
+};
+
+export function useWorkspace() {
+  const context = useContext(WorkspaceContext);
+  return context || fallbackWorkspaceContext;
+}

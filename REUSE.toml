@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 kylrix
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+version = 1
+SPDX-PackageName = "Kylrix"
+SPDX-PackageSupplier = "kylrix"
+SPDX-PackageDownloadLocation = "https://github.com/Kylrix/kylrix"
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 kylrix"
+SPDX-License-Identifier = "AGPL-3.0-or-later"

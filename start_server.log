@@ -1,0 +1,39 @@
+
+> kylrix@1.0.0 start /app
+> next start
+
+▲ Next.js 16.1.6
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+
+✓ Starting...
+⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+✓ Ready in 502ms
+⨯ Error: Unauthorized
+    at G (.next/server/chunks/ssr/lib_actions_16e7c2d5._.js:20:36222)
+    at async n (.next/server/chunks/ssr/_c3d75194._.js:1:8607)
+    at async q (.next/server/chunks/ssr/_c3d75194._.js:2:2713)
+    at async Module.M (.next/server/chunks/ssr/_c3d75194._.js:2:7928) {
+  digest: '1436917034'
+}
+⨯ Error: Unauthorized
+    at B (.next/server/chunks/ssr/lib_actions_16e7c2d5._.js:9:66802)
+    at async n (.next/server/chunks/ssr/_c3d75194._.js:1:8607)
+    at async q (.next/server/chunks/ssr/_c3d75194._.js:2:2713)
+    at async Module.M (.next/server/chunks/ssr/_c3d75194._.js:2:7928) {
+  digest: '3401036217'
+}
+⨯ Error: Unauthorized
+    at B (.next/server/chunks/ssr/lib_actions_16e7c2d5._.js:9:66802)
+    at async n (.next/server/chunks/ssr/_c3d75194._.js:1:8607)
+    at async q (.next/server/chunks/ssr/_c3d75194._.js:2:2713)
+    at async Module.M (.next/server/chunks/ssr/_c3d75194._.js:2:7928) {
+  digest: '3401036217'
+}
+⨯ Error: Unauthorized
+    at B (.next/server/chunks/ssr/lib_actions_16e7c2d5._.js:9:66802)
+    at async n (.next/server/chunks/ssr/_c3d75194._.js:1:8607)
+    at async q (.next/server/chunks/ssr/_c3d75194._.js:2:2713)
+    at async Module.M (.next/server/chunks/ssr/_c3d75194._.js:2:7928) {
+  digest: '3401036217'
+}

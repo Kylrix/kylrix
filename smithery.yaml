@@ -1,0 +1,31 @@
+# Smithery Configuration for Kylrix MCP Server
+displayName: "Kylrix"
+description: "Model Context Protocol (MCP) server for Kylrix — the sovereign, local-first agentic workspace. Access workspaces, notes, goals, calendar events, forms, flows, chats, and vault objects with full parity."
+homepage: "https://www.kylrix.space"
+iconUrl: "https://www.kylrix.space/apple-touch-icon.png"
+repository: "https://github.com/Kylrix/kylrix"
+categories:
+  - "productivity"
+  - "collaboration"
+  - "agentic"
+  - "workspace"
+  - "developer-tools"
+
+startCommand:
+  type: "http"
+  url: "https://www.kylrix.space/api/v1/mcp"
+
+configSchema:
+  type: "object"
+  description: "Configuration options for connecting to the Kylrix MCP server."
+  properties:
+    apiKey:
+      type: "string"
+      description: "Kylrix Personal Access Token (PAT) with appropriate scopes (starts with 'kyl_pat_...')"
+      title: "API Key / PAT"
+    baseUrl:
+      type: "string"
+      description: "Base URL of the Kylrix deployment instance"
+      default: "https://www.kylrix.space"
+      title: "Instance URL"
+  required: []

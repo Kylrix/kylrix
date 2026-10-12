@@ -1,0 +1,96 @@
+import { ID, Permission, Query, Role, type Models } from '@/lib/appwrite/types';
+
+import { tablesDB } from '@/lib/appwrite/client';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { getNamedListCache } from './list-cache';
+
+export type AgentFramework = 'kylrix' | 'openclaw' | 'hermes';
+export type AgentStatus = 'idle' | 'working';
+
+export interface AgentRecord extends Models.Row {
+  ownerId: string;
+  parentId?: string | null;
+  publicKey?: string | null;
+  config?: string;
+  status?: string;
+}
+
+const agentsCache = getNamedListCache<AgentRecord[]>('agents', 45000);
+
+function agentPermissions(userId: string) {
+  return [
+    Permission.read(Role.user(userId))];
+}
+
+export const AgenticService = {
+  async listMyAgents(userId: string, force = false): Promise<AgentRecord[]> {
+    return agentsCache.fetch(async () => {
+      const res = await tablesDB.listRows<AgentRecord>({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
+        queries: [Query.equal('ownerId', userId), Query.orderDesc('$updatedAt'), Query.limit(100)]});
+
+      return res.rows ?? [];
+    }, force);
+  },
+
+  async createMyAgent(input: {
+    userId: string;
+    name: string;
+    goal?: string;
+    framework?: AgentFramework;
+  }) {
+    const framework = input.framework === 'openclaw' || input.framework === 'hermes' ? input.framework : 'kylrix';
+    const agentId = ID.unique();
+    const res = await tablesDB.createRow(
+      APPWRITE_CONFIG.DATABASES.FLOW,
+      APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
+      agentId,
+      {
+        ownerId: input.userId,
+        parentId: null,
+        publicKey: `pending:${Date.now().toString(36)}`,
+        status: 'idle',
+        config: JSON.stringify({
+          name: input.name.trim(),
+          goal: input.goal?.trim() || null,
+          framework})},
+      agentPermissions(input.userId));
+    agentsCache.invalidate();
+
+    // Mint Agentic Wallet & Sync Profile in profiles table
+    void (async () => {
+      try {
+        const { AgentIdentityService } = await import('./agent-identity');
+        await AgentIdentityService.syncAgentProfile({
+          agentId: res.$id,
+          ownerId: input.userId,
+          name: input.name.trim(),
+          goal: input.goal?.trim(),
+          framework,
+        });
+      } catch (err) {
+        console.warn('[AgenticService] Background profile sync failed:', err);
+      }
+    })();
+
+    return res;
+  },
+
+  async setMyAgentStatus(userId: string, agentId: string, status: AgentStatus) {
+    const agent = await tablesDB.getRow<AgentRecord>(
+      APPWRITE_CONFIG.DATABASES.FLOW,
+      APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
+      agentId);
+    if (!agent || agent.ownerId !== userId) {
+      throw new Error('Forbidden');
+    }
+
+    const res = await tablesDB.updateRow(
+      APPWRITE_CONFIG.DATABASES.FLOW,
+      APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
+      agentId,
+      { status });
+    agentsCache.invalidate();
+    return res;
+  }};
