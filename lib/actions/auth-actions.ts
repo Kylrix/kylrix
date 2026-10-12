@@ -151,7 +151,7 @@ export async function listAccountLogsSecure(jwt?: string) {
             userId: l.userId,
             ip: '127.0.0.1',
             geo: '',
-            clientName: l.targetType || 'Kylrix System',
+            clientName: l.resourceType || 'Kylrix System',
             deviceType: 'desktop',
             time: l.createdAt,
             $createdAt: l.createdAt,

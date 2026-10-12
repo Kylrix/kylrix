@@ -15,11 +15,13 @@ class ServerClientStub {
 
 class ServerAccountStub {
   constructor(_client?: any) {}
-  async get() { return null; }
+  async get(): Promise<any> { return null; }
   async createJWT() { return { jwt: '' }; }
   async listSessions() { return { sessions: [] }; }
   async deleteSession(_id: string) { return {}; }
   async deleteSessions() { return {}; }
+  async getPrefs(): Promise<Record<string, any>> { return {}; }
+  async updatePrefs(prefs: Record<string, any>): Promise<Record<string, any>> { return prefs; }
 }
 
 export const createServerClient = cache(async (_jwt?: string) => {

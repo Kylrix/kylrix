@@ -242,10 +242,10 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
     // Sorting algorithms
     result.sort((a, b) => {
       if (sortBy === 'newest') {
-        return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
+          return new Date(b.$createdAt || Date.now()).getTime() - new Date(a.$createdAt || Date.now()).getTime();
       }
       if (sortBy === 'oldest') {
-        return new Date(a.$createdAt).getTime() - new Date(b.$createdAt).getTime();
+          return new Date(a.$createdAt || Date.now()).getTime() - new Date(b.$createdAt || Date.now()).getTime();
       }
       if (sortBy === 'submitter') {
         const nameA = ((a as any).submitterName || 'Anonymous').toLowerCase();

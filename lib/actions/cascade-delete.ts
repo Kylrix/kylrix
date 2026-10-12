@@ -2,7 +2,7 @@
 
 import { systemTables } from '@/lib/data/system-tables';
 
-import { Query } from '@/lib/appwrite/types';
+import { Query, createSystemClient } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 import { withSystemTransaction } from '@/lib/services/internal/transaction';
@@ -49,7 +49,7 @@ async function wipeCollaboratorsAndKeys(
       }
     }
     console.log(`[Cascade Delete] Wiped ${mappingsRes.rows?.length || 0} key mappings for resource ${resourceId} (${resourceType})`);
-  } catch (err) {
+  } catch (err: any) {
     console.error(`[Cascade Delete] Key mapping cleanup failed for ${resourceType} ${resourceId}:`, err);
   }
 
@@ -127,7 +127,7 @@ export async function executeCascadeDeleteSecure(
 
   // Authorization check: Verify if the user owns the resource or is an admin
   try {
-    const row = await tables.getRow<any>(databaseId, tableId, rowId);
+    const row = await tables.getRow<any>({ databaseId, tableId, rowId });
     if (!row) return; // Already deleted
     
     const isOwner = row.userId === actor.$id || row.creatorId === actor.$id || row.ownerId === actor.$id;
@@ -416,7 +416,7 @@ export async function executeCascadeDeleteSecure(
 
     // F. Delete Ephemeral Files for Send (isFile)
     try {
-      const note = await tables.getRow<any>(databaseId, tableId, rowId);
+      const note = await tables.getRow<any>({ databaseId, tableId, rowId });
       if (note.isFile === true || (note.isthread === true && note.metadata?.includes('fileId'))) {
         const meta = (() => {
             try { return typeof note.metadata === 'string' ? JSON.parse(note.metadata) : note.metadata; } catch { return {}; }
@@ -442,7 +442,7 @@ export async function executeCascadeDeleteSecure(
     // A. Fetch project metadata to find discussion thread note
     let discussionNoteId = '';
     try {
-      const projectDoc = await tables.getRow<any>(CHAT_DB, 'projects', rowId);
+      const projectDoc = await tables.getRow<any>({ databaseId: CHAT_DB, tableId: 'projects', rowId });
       if (projectDoc?.metadata) {
         const meta = JSON.parse(projectDoc.metadata);
         discussionNoteId = meta.discussionNoteId;
@@ -481,7 +481,7 @@ export async function executeCascadeDeleteSecure(
 
             try {
               // 1. Fetch the actual resource row
-              const resourceRow = await tables.getRow<any>(info.databaseId, info.tableId, obj.entityId);
+              const resourceRow = await tables.getRow<any>({ databaseId: info.databaseId, tableId: info.tableId, rowId: obj.entityId });
               
               // 2. Check if we should delete it
               const isCreatedWithin = resourceRow && resourceRow.source === 'project';
@@ -633,7 +633,7 @@ export async function executeCascadeDeleteSecure(
     let _meetingUrl = '';
     let coverImageId = '';
     try {
-      const eventDoc = await tables.getRow<any>(FLOW_DB, EVENTS_TABLE, rowId);
+      const eventDoc = await tables.getRow<any>({ databaseId: FLOW_DB, tableId: EVENTS_TABLE, rowId });
       _meetingUrl = eventDoc?.meetingUrl || '';
       coverImageId = eventDoc?.coverImageId || '';
     } catch (err) {
@@ -741,7 +741,7 @@ export async function executeCascadeDeleteSecure(
     // A. Fetch task to get attachments and discussion links
     let attachmentIds: string[] = [];
     try {
-      const taskDoc = await tables.getRow<any>(FLOW_DB, APPWRITE_CONFIG.TABLES.FLOW.TASKS, rowId);
+      const taskDoc = await tables.getRow<any>({ databaseId: FLOW_DB, tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS, rowId });
       if (taskDoc && Array.isArray(taskDoc.attachmentIds)) {
         attachmentIds = taskDoc.attachmentIds;
       }
@@ -830,7 +830,7 @@ export async function executeCascadeDeleteSecure(
     console.log(`[Cascade Delete] Triggered credential cascade cleanup for: ${rowId}`);
 
     try {
-      const credential = await tables.getRow<any>(databaseId, tableId, rowId);
+      const credential = await tables.getRow<any>({ databaseId, tableId, rowId });
       if (credential && credential.attachments) {
         let attachmentsList: any[] = [];
         try {

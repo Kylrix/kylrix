@@ -485,7 +485,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       if (!user?.$id) return null;
       if ((user as any).authProvider === 'better-auth') return null;
-      const jwtPromise = account.createJWT().then((res) => res.jwt).catch(() => null);
+      const jwtPromise = account.createJWT().then((res: any) => res.jwt).catch(() => null);
       const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200));
       return await Promise.race([jwtPromise, timeoutPromise]);
     } catch {

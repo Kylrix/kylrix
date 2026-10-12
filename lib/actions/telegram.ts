@@ -41,13 +41,13 @@ export async function initializeTelegramConnection(
     const databases = systemTables();
 
     // Check if the record already exists
-    let existingDoc = null;
+    let existingDoc: any = null;
     try {
-      existingDoc = await databases.getRow(
-        APPWRITE_CONFIG.DATABASES.CONNECT,
-        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-        userId
-      );
+      existingDoc = await databases.getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+        tableId: APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+        rowId: userId
+      });
     } catch (_e) {
       // Document doesn't exist, which is fine
     }
@@ -88,32 +88,32 @@ export async function initializeTelegramConnection(
       }
     }
 
-    let updatedDoc;
+    let updatedDoc: any;
     if (existingDoc) {
       // Overwrite/update if it exists, resetting pairing state
-      updatedDoc = await databases.updateRow(
-        APPWRITE_CONFIG.DATABASES.CONNECT,
-        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-        userId,
-        {
+      updatedDoc = await databases.updateRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+        tableId: APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+        rowId: userId,
+        data: {
           pair_code: pairCode,
           is_verified: false,
           tg_chat_id: null,
           tg_username: null}
-      );
+      });
     } else {
       // Create a new document with the document ID explicitly set to the user ID.
       // Set access control permissions: only read and delete for the resource owner.
-      updatedDoc = await databases.createRow(
-        APPWRITE_CONFIG.DATABASES.CONNECT,
-        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-        userId,
-        {
+      updatedDoc = await databases.createRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+        tableId: APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+        rowId: userId,
+        data: {
           pair_code: pairCode,
           is_verified: false},
-        [
+        permissions: [
           Permission.read(Role.user(userId))]
-      );
+      });
     }
 
     const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'KylrixBot';
@@ -187,11 +187,11 @@ export async function checkTelegramConnection(jwt?: string) {
     }
 
     try {
-      const doc = await databases.getRow(
-        APPWRITE_CONFIG.DATABASES.CONNECT,
-        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-        userId
-      );
+      const doc: any = await databases.getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+        tableId: APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+        rowId: userId
+      });
       if (doc?.is_verified) {
         // Sync to Turso opportunistically
         const { upsertTelegramConnectionTurso } = await import('@/lib/actions/turso-ops');
@@ -316,13 +316,13 @@ async function syncServerTelegramListener(jwt?: string) {
 
   // Check if there are any active pending (unverified) connections
   try {
-    const listRes = await databases.listRows(
-      APPWRITE_CONFIG.DATABASES.CONNECT,
-      APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-      [Query.equal('is_verified', false)]
-    );
+    const listRes = await databases.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+      tableId: APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+      queries: [Query.equal('is_verified', false)]
+    });
 
-    const pendingDocs = listRes.rows.filter(doc => {
+    const pendingDocs = listRes.rows.filter((doc: any) => {
       const createdTime = new Date(doc.$updatedAt || doc.$createdAt).getTime();
       const threeMinutesInMs = 3 * 60 * 1000;
       return Date.now() - createdTime < threeMinutesInMs;
@@ -402,13 +402,13 @@ function runPollerLoop(botToken: string) {
       }
 
       const databasesInstance = systemTables();
-      const listRes = await databasesInstance.listRows(
-        APPWRITE_CONFIG.DATABASES.CONNECT,
-        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-        [Query.equal('is_verified', false)]
-      );
+      const listRes = await databasesInstance.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+        tableId: APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+        queries: [Query.equal('is_verified', false)]
+      });
 
-      const pendingDocs = listRes.rows.filter(doc => {
+      const pendingDocs = listRes.rows.filter((doc: any) => {
         const createdTime = new Date(doc.$updatedAt || doc.$createdAt).getTime();
         const threeMinutesInMs = 3 * 60 * 1000;
         return Date.now() - createdTime < threeMinutesInMs;

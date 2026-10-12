@@ -278,7 +278,7 @@ export async function POST(req: Request) {
     const targetUserId = meta.giftRecipientId || meta.payerUserId;
     const isGift = Boolean(meta.giftRecipientId && meta.giftRecipientId !== meta.payerUserId);
 
-    const { currentPeriodStart, currentPeriodEnd, creditMs } = await calculateStackedSubscriptionCredit(
+    const { currentPeriodEnd, creditMs } = await calculateStackedSubscriptionCredit(
       null,
       targetUserId,
       meta.planId,

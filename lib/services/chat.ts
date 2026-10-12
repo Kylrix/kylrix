@@ -2073,6 +2073,6 @@ export const ChatService = {
             Query.limit(100)
         ]);
 
-        return Promise.all(unreadMessages.rows.map(msg => this.markAsRead(msg.$id, userId)));
+        return Promise.all(unreadMessages.rows.map((msg: any) => this.markAsRead(msg.$id, userId)));
     },
 };

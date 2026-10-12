@@ -34,11 +34,11 @@ export async function createPaymentIntentAction(input: PaymentIntentInput) {
     const intentId = ID.unique();
     const payloadStr = JSON.stringify(input.contextPayload || {});
 
-    const newIntent = await tablesDB.createRow(
-        APPWRITE_CONFIG.DATABASE_ID,
-        APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
-        intentId,
-        {
+    const newIntent: any = await tablesDB.createRow({
+        databaseId: APPWRITE_CONFIG.DATABASE_ID,
+        tableId: APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
+        rowId: intentId,
+        data: {
             userId: actor.$id,
             agentId: input.agentId,
             amount: input.amount,
@@ -47,7 +47,7 @@ export async function createPaymentIntentAction(input: PaymentIntentInput) {
             chainId: input.chainId,
             txHash: ''
         }
-    );
+    });
 
     return {
         success: true,
@@ -84,11 +84,11 @@ export async function submitGasRelayAction(input: {
     const tablesDB = systemTables();
 
     // Retrieve the active payment intent row
-    const intent = await tablesDB.getRow(
-        APPWRITE_CONFIG.DATABASE_ID,
-        APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
-        input.intentId
-    );
+    const intent = await tablesDB.getRow({
+        databaseId: APPWRITE_CONFIG.DATABASE_ID,
+        tableId: APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
+        rowId: input.intentId
+    });
 
     if (!intent || intent.userId !== actor.$id) {
         throw new Error('Intent not found or unauthorized access');
@@ -155,15 +155,15 @@ export async function submitGasRelayAction(input: {
         });
 
         // 3. Update payment intent database record to complete
-        await tablesDB.updateRow(
-            APPWRITE_CONFIG.DATABASE_ID,
-            APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
-            input.intentId,
-            {
+        await tablesDB.updateRow({
+            databaseId: APPWRITE_CONFIG.DATABASE_ID,
+            tableId: APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
+            rowId: input.intentId,
+            data: {
                 status: 'completed',
                 txHash: txHash
             }
-        );
+        });
 
         return {
             success: true,
@@ -171,14 +171,14 @@ export async function submitGasRelayAction(input: {
             status: 'completed'
         };
     } catch (err: any) {
-        await tablesDB.updateRow(
-            APPWRITE_CONFIG.DATABASE_ID,
-            APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
-            input.intentId,
-            {
+        await tablesDB.updateRow({
+            databaseId: APPWRITE_CONFIG.DATABASE_ID,
+            tableId: APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
+            rowId: input.intentId,
+            data: {
                 status: 'failed'
             }
-        );
+        });
         throw new Error(`Gas relay submission failed: ${err.message}`);
     }
 }

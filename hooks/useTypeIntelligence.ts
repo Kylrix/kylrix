@@ -142,7 +142,7 @@ export function useTypeIntelligence(opts: {
         setBusy(true);
         try {
           await recordAiInference(scope);
-          const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+          const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
           const { completeTypeIntelDraftAction } = await import('@/lib/actions/type-intel');
           const res = await completeTypeIntelDraftAction({
             kind,
@@ -226,7 +226,7 @@ export function useTypeIntelligence(opts: {
         setAcceptStreak(0);
         return;
       }
-      const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+      const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
       const { generateTypeIntelTakeoverAction } = await import('@/lib/actions/type-intel');
       await recordAiInference(scope);
       const res = await generateTypeIntelTakeoverAction({

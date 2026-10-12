@@ -6,6 +6,7 @@ import { formatTime } from '@/lib/time-util';
 import { useLayout } from '@/context/LayoutContext';
 import { exportToICS } from '@/lib/utils/export';
 import { events as eventApi, eventGuests as guestApi } from '@/lib/kylrixflow';
+import { Query } from '@/lib/appwrite/types';
 import { generateEventPattern } from '@/utils/patternGenerator';
 import { Event as AppwriteEvent } from '@/types/kylrixflow';
 import { Event as LocalEvent } from '@/types';

@@ -526,7 +526,7 @@ export const SocialService = {
         const momentsChannel = `databases.${DB_ID}.tables.${MOMENTS_TABLE}.rows`;
         const interactionsChannel = `databases.${DB_ID}.tables.${INTERACTIONS_TABLE}.rows`;
 
-        const unsubMomentsPromise = realtime.subscribe(momentsChannel, (response) => {
+        const unsubMomentsPromise = realtime.subscribe(momentsChannel, (response: any) => {
             const payload = response.payload;
             let type: 'create' | 'update' | 'delete' | null = null;
 
@@ -539,7 +539,7 @@ export const SocialService = {
             }
         });
 
-        const unsubInteractionsPromise = realtime.subscribe(interactionsChannel, (response) => {
+        const unsubInteractionsPromise = realtime.subscribe(interactionsChannel, (response: any) => {
             if (response.events.some((e: string) => e.includes('.create') || e.includes('.delete'))) {
                 const payload = response.payload;
                 callback({ type: 'update', payload: { $id: payload.messageId, _interactionUpdate: true } });
@@ -1074,14 +1074,14 @@ export const SocialService = {
         ]).catch(() => ({ rows: [] as any[] }));
 
         const replies = moments.rows.length
-            ? await Promise.all(moments.rows.map(m => this.enrichMoment(m, currentUserId)))
+                ? await Promise.all(moments.rows.map((m: any) => this.enrichMoment(m, currentUserId)))
             : await Promise.all((await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
                 Query.select(MOMENT_LIST_SELECT),
                 Query.orderDesc('$createdAt'),
                 Query.limit(100)
             ]).catch(() => ({ rows: [] as any[] }))).rows
                 .filter((m: any) => getMomentKind(m) === 'reply' && getMomentSourceId(m) === momentId)
-                .map(m => this.enrichMoment(m, currentUserId)));
+                    .map((m: any) => this.enrichMoment(m, currentUserId)));
 
         return replies;
     }

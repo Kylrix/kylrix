@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { systemTables } from '@/lib/data/system-tables';
 import { ApiResources } from '@/lib/api/resources';
 import type { ApiActor } from '@/lib/api/guard';
 
@@ -732,11 +733,12 @@ export async function handleTelegramUpdate(body: any): Promise<{
       // Fallback check in Appwrite
       let doc: any = null;
       try {
-        doc = await databases.getRow(
-          APPWRITE_CONFIG.DATABASES.CONNECT,
-          APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-          userId
-        );
+        const databases = systemTables();
+        doc = await databases.getRow({
+          databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+          tableId: APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+          rowId: userId
+        });
       } catch (_err: any) {
         // Not fatal
       }
@@ -780,17 +782,18 @@ export async function handleTelegramUpdate(body: any): Promise<{
 
       // Mirror to Appwrite
       try {
-        await databases.updateRow(
-          APPWRITE_CONFIG.DATABASES.CONNECT,
-          APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-          userId,
-          {
+        const databases = systemTables();
+        await databases.updateRow({
+          databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+          tableId: APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+          rowId: userId,
+          data: {
             is_verified: true,
             tg_chat_id: chatId.toString(),
             tg_username: tgUsername || null,
             pair_code: null,
           }
-        );
+        });
       } catch {}
 
       await sendTelegramMessage(

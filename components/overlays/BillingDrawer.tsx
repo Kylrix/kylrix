@@ -43,7 +43,7 @@ export function BillingContent() {
     if (!user?.$id) return;
     try {
       setLoadingCoupons(true);
-      const jwtRes = await account.createJWT().then(r => r.jwt).catch(() => undefined);
+      const jwtRes = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
       const list = await getMyCouponsAction(jwtRes);
       const active = (list || []).filter((c: any) => {
         const s = String(c.status || '').toLowerCase();

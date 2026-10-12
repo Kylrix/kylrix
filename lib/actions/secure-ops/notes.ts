@@ -1,5 +1,6 @@
 'use server';
 
+import { systemTables } from '@/lib/data/system-tables';
 import * as shared from './shared';
 import {
   ID, Permission, Query, Role, createSystemClient
@@ -1113,7 +1114,7 @@ export async function createthreadNoteSecure(data: {
     ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {})});
 
   const tables = systemTables();
-  const result = await tables.createRow({
+  const result: any = await tables.createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
     rowId: ID.unique(),
@@ -1302,7 +1303,7 @@ export async function createthreadNoteChatSecure(data: {
     participants: data.participants});
 
   const tables = systemTables();
-  const result = await tables.createRow({
+  const result: any = await tables.createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
     rowId: data.customRowId || ID.unique(),

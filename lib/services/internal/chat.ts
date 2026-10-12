@@ -101,7 +101,7 @@ async function listAllDocuments(
   databases: any,
   databaseId: string,
   tableId: string,
-  queries: any[] = []) {
+  queries: any[] = []): Promise<any[]> {
   const rows: any[] = [];
   let offset = 0;
 

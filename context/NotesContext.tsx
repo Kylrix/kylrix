@@ -922,7 +922,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents`
     ];
     
-    const sub = realtime.subscribe(channels, (response) => {
+    const sub = realtime.subscribe(channels, (response: any) => {
       const payload = normalizeVisibility(response.payload as Notes);
       const isKnownNote = notesRef.current.some(n => n.$id === payload.$id);
       const isWorkspaceNote = Boolean(payload.isWorkspace || (payload as any).projectId);
