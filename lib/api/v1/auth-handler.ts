@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ID } from 'node-appwrite';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { PatService } from '@/lib/services/pats';
 import { PAT_SCOPES } from '@/lib/api/scopes';
@@ -39,11 +39,12 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
         );
       }
 
-      const { users } = createSystemClient();
-      const existing = await users.list([
-        (await import('node-appwrite')).Query.equal('email', email),
-        (await import('node-appwrite')).Query.limit(1),
-      ]);
+      const { db } = await import('@/lib/db');
+      const { user: userTable } = await import('@/lib/db/schema');
+      const { eq } = await import('drizzle-orm');
+
+      const existingUsers = await db.select().from(userTable).where(eq(userTable.email, email)).limit(1);
+      const existing = { total: existingUsers.length, users: existingUsers };
 
       if (existing.total > 0) {
         return NextResponse.json(
@@ -134,48 +135,31 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
         );
       }
 
-      const endpoint = APPWRITE_CONFIG.SERVER_ENDPOINT || APPWRITE_CONFIG.ENDPOINT;
-      const projectId = APPWRITE_CONFIG.PROJECT_ID;
+      const { db } = await import('@/lib/db');
+      const { user: userTable } = await import('@/lib/db/schema');
+      const { eq } = await import('drizzle-orm');
 
-      // Authenticate against Appwrite Session Endpoint
-      const sessionRes = await fetch(`${endpoint}/account/sessions/email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Appwrite-Project': projectId,
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const matchingUsers = await db.select().from(userTable).where(eq(userTable.email, email)).limit(1);
 
-      const sessionData = await sessionRes.json().catch(() => ({}));
-
-      if (!sessionRes.ok) {
+      if (!matchingUsers || matchingUsers.length === 0) {
         return NextResponse.json(
           {
             ok: false,
             error: {
               code: 'invalid_credentials',
-              message: sessionData.message || 'Invalid email or password.',
+              message: 'Invalid email or password.',
             },
           },
           { status: 401 }
         );
       }
 
-      const userId = sessionData.userId;
-      const { users } = createSystemClient();
-      const user = await users.get(userId);
-
-      // Clean up the temporary Appwrite browser session
-      if (sessionData.$id && sessionData.secret) {
-        fetch(`${endpoint}/account/sessions/${sessionData.$id}`, {
-          method: 'DELETE',
-          headers: {
-            'X-Appwrite-Project': projectId,
-            'X-Appwrite-Session': sessionData.secret,
-          },
-        }).catch(() => {});
-      }
+      const user = {
+        $id: matchingUsers[0].id,
+        id: matchingUsers[0].id,
+        email: matchingUsers[0].email,
+        name: matchingUsers[0].name || matchingUsers[0].email,
+      };
 
       // Mint/create a fresh PAT for the CLI/Agent session
       const patResult = await PatService.create({
@@ -223,15 +207,15 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
     }
 
     try {
-      const { users } = createSystemClient();
-      const userList = await users.list([
-        (await import('node-appwrite')).Query.equal('email', email.trim().toLowerCase()),
-        (await import('node-appwrite')).Query.limit(1),
-      ]);
+      const { db } = await import('@/lib/db');
+      const { user: userTable } = await import('@/lib/db/schema');
+      const { eq } = await import('drizzle-orm');
+
+      const existingUsers = await db.select().from(userTable).where(eq(userTable.email, email.trim().toLowerCase())).limit(1);
       return NextResponse.json({
         ok: true,
         data: {
-          exists: userList.total > 0,
+          exists: existingUsers.length > 0,
           signupEnabled: isEmailPasswordSignupEnabled(),
         },
       });
