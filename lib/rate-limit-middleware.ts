@@ -48,7 +48,7 @@ function getClientIp(req: NextRequest): string {
 
 // Cleanup old entries periodically (run every hour)
 if (typeof window === 'undefined') {
-  setInterval(() => {
+  const cleanupTimer = setInterval(() => {
     const now = Date.now();
     for (const key in store) {
       if (now > store[key].resetTime + 3600000) {
@@ -56,4 +56,7 @@ if (typeof window === 'undefined') {
       }
     }
   }, 3600000);
+  if (cleanupTimer && typeof cleanupTimer.unref === 'function') {
+    cleanupTimer.unref();
+  }
 }

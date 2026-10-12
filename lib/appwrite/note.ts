@@ -138,13 +138,16 @@ async function loadNoteRowFromOrigin(noteId: string): Promise<Notes> {
 
 // Cleanup old cache entries every 10 minutes
 if (typeof window === 'undefined') {
-  setInterval(() => {
+  const queryCacheTimer = setInterval(() => {
     for (const [key, entry] of queryCache.entries()) {
       if (isCacheExpired(entry.expiresAt)) {
         queryCache.delete(key);
       }
     }
   }, 10 * 60 * 1000);
+  if (queryCacheTimer && typeof queryCacheTimer.unref === 'function') {
+    queryCacheTimer.unref();
+  }
 }
 
 export function cleanRowData<T>(data: Partial<T>): Record<string, unknown> {
