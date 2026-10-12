@@ -1,4 +1,4 @@
-import { ID, Permission, Query, Role, type Models } from 'appwrite';
+import { ID, Permission, Query, Role, type Models } from '@/lib/appwrite/types';
 
 import { tablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';

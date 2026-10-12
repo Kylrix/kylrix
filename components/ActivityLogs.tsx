@@ -21,7 +21,7 @@ import {
   TablePagination,
   TextField} from '@/lib/openbricks/primitives';
 import { Refresh as RefreshIcon } from '@/lib/openbricks/icons';
-import { Models } from 'appwrite';
+import { Models } from '@/lib/appwrite/types';
 
 interface Log extends Models.Log {
   eventType?: string;

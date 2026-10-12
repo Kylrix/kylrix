@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect, useRef, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
-import { ID, Query } from 'appwrite';
+
 import { tasks as taskApi, calendars as calendarApi, taskCollaborators, subscribeToTable, buildTaskPermissions } from '@/lib/kylrixflow';
 import { getCurrentUser, getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -280,7 +280,7 @@ const parseCommentEntry = (entry: any): Comment => {
       return parseCommentEntry(JSON.parse(entry));
     } catch (_e) {
       return {
-        id: ID.unique(),
+        id: crypto.randomUUID(),
         content: entry,
         authorId: 'system',
         authorName: 'System',
@@ -289,7 +289,7 @@ const parseCommentEntry = (entry: any): Comment => {
   }
 
   return {
-    id: ID.unique(),
+    id: crypto.randomUUID(),
     content: '',
     authorId: 'system',
     authorName: 'System',
@@ -1602,7 +1602,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'position'>) => {
       try {
         const userId = state.userId || 'guest';
-        const id = ID.unique();
+        const id = crypto.randomUUID();
         const inCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
         const mappedTask: Task = {
           id,
@@ -1932,7 +1932,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     if (!task) return;
 
     const comment: Comment = {
-      id: ID.unique(),
+      id: crypto.randomUUID(),
       content,
       authorId: state.userId || task.creatorId || 'user',
       authorName: 'You',
@@ -2059,7 +2059,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const addLabel = useCallback((label: Omit<Label, 'id'>) => {
     const newLabel: Label = {
       ...label,
-      id: ID.unique()};
+      id: crypto.randomUUID()};
     dispatch({ type: 'ADD_LABEL', payload: newLabel });
   }, []);
 

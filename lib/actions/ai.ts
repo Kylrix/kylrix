@@ -6,15 +6,15 @@ import { getActor } from "@/lib/actions/secure-ops";
 import { hasPaidKylrixPlan } from "@/lib/utils";
 import { userHasPaidAiAccess } from "@/lib/server/ai-subscription-gate";
 import { AI_REQUIRES_PRO_MESSAGE } from "@/lib/agentic/access";
-import { createSystemClient, createSystemTablesDB } from "@/lib/appwrite-admin";
-import { Query, ID } from "node-appwrite";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { TelemetryService } from "@/lib/services/telemetry";
 import { getAgenticUserMessage } from "@/lib/agentic/errors";
 
 const MODEL_NAME = process.env.GEMINI_MODEL_NAME || "gemini-2.0-flash";
 
 export async function generateAIContent(payload: AIRequestPayload): Promise<AIResponse> {
-  // Input Validation & Sanitization
   if (!payload || typeof payload !== 'object') {
     return { success: false, error: "Invalid request payload." };
   }
@@ -24,7 +24,6 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
     return { success: false, error: "Invalid analysis mode." };
   }
 
-  // Workspace Privacy Mode Guard: zero data leaves for AI processing
   if (
     payload.localContext?.workspacePrivacyMode === true ||
     payload.localContext?.privacyMode === true ||
@@ -67,42 +66,34 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
     return { success: false, error: "AI Service not configured. Please supply your own private API Key in Settings." };
   }
 
-  // Pro/Teams required for all AI (ecosystem key and BYOK).
   const paidLedger = await userHasPaidAiAccess(actor.$id);
   if (!paidLedger && !hasPaidKylrixPlan(actor)) {
     return { success: false, error: AI_REQUIRES_PRO_MESSAGE };
   }
 
-  let tables: any = null;
   let balanceRow: any = null;
 
-  // Compute checking for ecosystem users (non-BYOK)
   if (!isBYOK) {
     try {
-      tables = createSystemTablesDB();
-      const res = await tables.listRows({
-        databaseId: 'passwordManagerDb',
-        tableId: 'compute_balances',
-        queries: [
-          Query.equal('userId', actor.$id),
-          Query.limit(1)
-        ]
-      });
+      const rows = await db
+        .select()
+        .from(schema.computeBalances)
+        .where(eq(schema.computeBalances.userId, actor.$id))
+        .limit(1);
 
-      if (res.rows.length === 0) {
-        balanceRow = await tables.createRow({
-          databaseId: 'passwordManagerDb',
-          tableId: 'compute_balances',
-          rowId: ID.unique(),
-          data: {
-            userId: actor.$id,
-            tier: 'pro',
-            balance: 100000,
-            lastResetAt: new Date().toISOString()
-          }
+      if (rows.length === 0) {
+        const newId = crypto.randomUUID();
+        const now = new Date().toISOString();
+        await db.insert(schema.computeBalances).values({
+          id: newId,
+          userId: actor.$id,
+          tier: 'pro',
+          balance: 100000,
+          lastResetAt: now,
         });
+        balanceRow = { id: newId, userId: actor.$id, tier: 'pro', balance: 100000 };
       } else {
-        balanceRow = res.rows[0];
+        balanceRow = rows[0];
       }
 
       if (balanceRow.balance <= 0) {
@@ -110,7 +101,6 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
       }
     } catch (err: any) {
       console.error('[AI Billing Check Exception]', err);
-      // Fail-safe: log but do not block users if there's a transient database issue
     }
   }
 
@@ -122,7 +112,6 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
     });
     let prompt = "";
 
-    // Prompt Engineering Layer
     switch (payload.mode) {
       case 'VAULT_ORGANIZE':
         prompt = `
@@ -241,11 +230,9 @@ Please utilize this contextual memory to optimize your recommendations if releva
       text = response.text();
     }
     
-    // Cleanup markdown if Gemini adds it despite instructions
     text = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
-    // Debit tokens for ecosystem users (non-BYOK)
-    if (!isBYOK && tables && balanceRow) {
+    if (!isBYOK && balanceRow) {
       try {
         const promptLength = prompt.length || 0;
         const estimatedPromptTokens = Math.ceil(promptLength / 4) + 120;
@@ -253,33 +240,23 @@ Please utilize this contextual memory to optimize your recommendations if releva
         const totalTokens = estimatedPromptTokens + estimatedCompletionTokens;
 
         const newBalance = Math.max(0, balanceRow.balance - totalTokens);
-        await tables.updateRow({
-          databaseId: 'passwordManagerDb',
-          tableId: 'compute_balances',
-          rowId: balanceRow.$id,
-          data: {
-            balance: newBalance
-          }
-        });
+        await db
+          .update(schema.computeBalances)
+          .set({ balance: newBalance })
+          .where(eq(schema.computeBalances.id, balanceRow.id || balanceRow.$id));
 
-        await tables.createRow({
-          databaseId: 'passwordManagerDb',
-          tableId: 'compute_ledger',
-          rowId: ID.unique(),
-          data: {
-            userId: actor.$id,
-            tokensConsumed: totalTokens,
-            timestamp: new Date().toISOString()
-          }
+        await db.insert(schema.computeLedger).values({
+          id: crypto.randomUUID(),
+          userId: actor.$id,
+          tokensConsumed: totalTokens,
+          timestamp: new Date().toISOString(),
         });
       } catch (err) {
         console.error('[AI Billing Debit Exception]', err);
       }
     }
 
-    // Record Telemetry and Activity Logs
     try {
-      // 1. Anonymized Telemetry
       await TelemetryService.recordTelemetry({
         niche: 'intelligence',
         app: 'gemini',
@@ -292,7 +269,6 @@ Please utilize this contextual memory to optimize your recommendations if releva
         }
       });
 
-      // 2. Identified User Activity
       if (actor?.$id) {
         await TelemetryService.recordActivity({
           userId: actor.$id,
@@ -373,24 +349,14 @@ export async function getComputeBalanceAction(jwt?: string) {
   if (!actor) return null;
 
   try {
-    const systemClient = createSystemClient();
-    const { users: systemUsers } = systemClient;
-    
-    // Fetch latest user data including prefs to ensure tier accuracy
-    const fullUser = await systemUsers.get(actor.$id);
-    const isPro = hasPaidKylrixPlan(fullUser);
+    const isPro = hasPaidKylrixPlan(actor);
+    const res = await db
+      .select()
+      .from(schema.computeBalances)
+      .where(eq(schema.computeBalances.userId, actor.$id))
+      .limit(1);
 
-    const tables = createSystemTablesDB();
-    const res = await tables.listRows({
-      databaseId: 'passwordManagerDb',
-      tableId: 'compute_balances',
-      queries: [
-        Query.equal('userId', actor.$id),
-        Query.limit(1)
-      ]
-    });
-
-    if (res.rows.length === 0) {
+    if (res.length === 0) {
       return {
         balance: isPro ? 100000 : 0,
         maxBalance: isPro ? 100000 : 0,
@@ -399,7 +365,7 @@ export async function getComputeBalanceAction(jwt?: string) {
       };
     }
 
-    const row = res.rows[0];
+    const row = res[0];
     const maxBalance = row.tier === 'pro' ? 100000 : 10000;
     const currentBalance = Number(row.balance);
     const percent = Math.min(100, Math.max(0, (currentBalance / maxBalance) * 100));

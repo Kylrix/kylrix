@@ -2,7 +2,7 @@ import * as secp256k1 from '@noble/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { tablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Permission, Role, Query } from 'appwrite';
+import { Permission, Role, Query } from '@/lib/appwrite/types';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 function bytesToHex(bytes: Uint8Array): string {

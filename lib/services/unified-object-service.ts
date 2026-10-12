@@ -7,7 +7,7 @@
  * Used directly by LocalEngine; UI never touches backend.
  */
 
-import { Query, Permission, Role, Models } from 'appwrite';
+import { Query, Permission, Role, Models } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 // ── Kind → table config (extend without touching service logic) ──

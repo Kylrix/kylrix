@@ -1,6 +1,7 @@
+import { systemTables } from '@/lib/data/system-tables';
 import { NextRequest, NextResponse } from 'next/server';
-import { ID } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { ID } from '@/lib/appwrite/types';
+
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { PatService } from '@/lib/services/pats';
 import { PAT_SCOPES } from '@/lib/api/scopes';
@@ -69,7 +70,7 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
 
       // Initialize default user profile in CHAT.PROFILES
       try {
-        const tables = createSystemTablesDB();
+        const tables = systemTables();
         await tables.createRow({
           databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
           tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,

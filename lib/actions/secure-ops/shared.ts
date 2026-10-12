@@ -1,9 +1,9 @@
 export { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
-import { Query } from 'node-appwrite';
+import { Query } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getUserSubscriptionTierServer } from '@/lib/services/internal/subscription-entitlement';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+
 import { Registry } from '@/lib/core/di/registry';
 
 /**
@@ -508,7 +508,7 @@ export async function verifyResourcePermissionSecure(params: {
     // Dynamic Admin RLS Bypass Fallback (Second Gate)
     if (!row) {
       try {
-        const systemTables = createSystemTablesDB();
+        const systemTables = systemTables();
         row = await systemTables.getRow({
           databaseId,
           tableId,
@@ -652,7 +652,7 @@ export async function verifyResourcePermissionSecure(params: {
   let isInheritedGeneralRead = false;
   if (action === 'read' && rowId) {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const objLinks = await tables.listRows({
         databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
         tableId: 'project_objects',
@@ -721,7 +721,7 @@ export async function verifyResourcePermissionSecure(params: {
     }
   } else if (actorId && rowId) {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
       const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
       const resourceTypeFilter = resolveCollaboratorTypeFilter(tableId);
@@ -853,7 +853,7 @@ export async function verifyFormPermission(formId: string, actorId: string, minL
 }
 
 export async function verifyEventPermission(eventId: string, actorId: string, minLevel: 'viewer' | 'editor' | 'admin') {
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const event = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,

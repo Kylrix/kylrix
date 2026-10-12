@@ -1,7 +1,7 @@
-import { Query as TablesQuery, TablesDB } from 'appwrite';
+import { Query as TablesQuery, TablesDB } from '@/lib/appwrite/types';
 import { createHash } from 'node:crypto';
-import { ID, Query, type Users, Client as NodeAppwriteClient } from 'node-appwrite';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { ID, Query, type Users, Client as NodeAppwriteClient } from '@/lib/appwrite/types';
+import { createSystemClient } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { configureInternalAppwriteClient } from '@/lib/appwrite/internal-headers';
 

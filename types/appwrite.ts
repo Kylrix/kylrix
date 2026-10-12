@@ -1,11 +1,71 @@
-import type { Models } from 'appwrite';
+export interface ModelsRow {
+    $id: string;
+    $collectionId?: string;
+    $databaseId?: string;
+    $createdAt?: string;
+    $updatedAt?: string;
+    $permissions?: string[];
+    [key: string]: any;
+}
+
+export namespace Models {
+    export interface Row extends ModelsRow {}
+    export interface Document extends ModelsRow {}
+    export interface User<T = any> {
+        $id: string;
+        $createdAt: string;
+        $updatedAt: string;
+        name: string;
+        email: string;
+        phone?: string;
+        status?: boolean;
+        labels?: string[];
+        prefs: T;
+    }
+    export interface Log {
+        $id?: string;
+        event?: string;
+        eventType?: string;
+        userId?: string;
+        userEmail?: string;
+        userName?: string;
+        mode?: string;
+        ip?: string;
+        time?: string;
+        countryCode?: string;
+        $createdAt?: string;
+    }
+    export interface Session {
+        $id: string;
+        $createdAt: string;
+        $updatedAt: string;
+        userId: string;
+        expire: string;
+        provider?: string;
+        providerUid?: string;
+        current?: boolean;
+        ip?: string;
+        clientName?: string;
+    }
+    export interface Preferences {
+        [key: string]: any;
+    }
+}
+
+export enum OAuthProvider {
+    Google = 'google',
+    Github = 'github',
+    Apple = 'apple',
+    Discord = 'discord',
+    Spotify = 'spotify',
+}
 
 export enum TargetType {
     NOTE = "note",
     COMMENT = "comment"
 }
 
-export type Users = Models.Row & {
+export type Users = ModelsRow & {
     id: string | null;
     email: string | null;
     name: string | null;
@@ -27,7 +87,7 @@ export type Users = Models.Row & {
     prefs?: any;
 }
 
-export type Notes = Models.Row & {
+export type Notes = ModelsRow & {
     id: string | null;
     createdAt: string | null;
     updatedAt: string | null;
@@ -46,7 +106,6 @@ export type Notes = Models.Row & {
     format: string | null;
     attachments: string[] | null;
     article?: boolean | null;
-    // Virtual attributes (hydrated from metadata)
     linkedTaskId?: string | null;
     linkedTaskIds?: string[] | null;
     linkedEventId?: string | null;
@@ -65,11 +124,10 @@ export type Notes = Models.Row & {
     source?: string | null;
     dek?: string | null;
     isDeleted?: boolean;
-    /** True when this object lives outside the default (no-workspace) view. */
     isWorkspace?: boolean | null;
-    }
+}
 
-    export type Tags = Models.Row & {
+export type Tags = ModelsRow & {
     id: string | null;
     name: string | null;
     notes: string[] | null;
@@ -81,7 +139,7 @@ export type Notes = Models.Row & {
     nameLower: string | null;
 };
 
-export type Comments = Models.Row & {
+export type Comments = ModelsRow & {
     noteId: string;
     userId: string;
     content: string;
@@ -89,7 +147,7 @@ export type Comments = Models.Row & {
     parentCommentId: string | null;
 }
 
-export type Reactions = Models.Row & {
+export type Reactions = ModelsRow & {
     targetType: TargetType;
     emoji: string;
     createdAt: string;
@@ -97,7 +155,7 @@ export type Reactions = Models.Row & {
     userId: string;
 }
 
-export type ActivityLog = Models.Row & {
+export type ActivityLog = ModelsRow & {
     userId: string;
     action: string;
     targetType: string;
@@ -106,7 +164,7 @@ export type ActivityLog = Models.Row & {
     details: string | null;
 }
 
-export type Settings = Models.Row & {
+export type Settings = ModelsRow & {
     userId: string;
     settings: string;
     createdAt: string | null;
@@ -114,17 +172,17 @@ export type Settings = Models.Row & {
     mode: string | null;
 }
 
-export type SecurityLogs = Models.Row & { userId: string; eventType: string; ipAddress: string | null; userAgent: string | null; deviceFingerprint: string | null; details: string | null; success: boolean; severity: string; timestamp: string; }
+export type SecurityLogs = ModelsRow & { userId: string; eventType: string; ipAddress: string | null; userAgent: string | null; deviceFingerprint: string | null; details: string | null; success: boolean; severity: string; timestamp: string; }
 
-export type Credentials = Models.Row & { userId: string; itemType: string; name: string; url: string | null; notes: string | null; totpId: string | null; username: string | null; password: string | null; cardNumber: string | null; cardholderName: string | null; cardExpiry: string | null; cardCVV: string | null; cardPIN: string | null; cardType: string | null; folderId: string | null; tags: string[] | null; customFields: string | null; faviconUrl: string | null; isFavorite: boolean; isDeleted: boolean; deletedAt: string | null; lastAccessedAt: string | null; passwordChangedAt: string | null; createdAt: string | null; updatedAt: string | null; attachments: string | null; isPinned?: boolean | null; isPublic?: boolean | null; isGuest?: boolean | null; sharedFrom?: string | null; dek?: string | null; keepPermission?: boolean | null; source?: string | null; isWorkspace?: boolean | null; isEnv?: boolean | null; }
+export type Credentials = ModelsRow & { userId: string; itemType: string; name: string; url: string | null; notes: string | null; totpId: string | null; username: string | null; password: string | null; cardNumber: string | null; cardholderName: string | null; cardExpiry: string | null; cardCVV: string | null; cardPIN: string | null; cardType: string | null; folderId: string | null; tags: string[] | null; customFields: string | null; faviconUrl: string | null; isFavorite: boolean; isDeleted: boolean; deletedAt: string | null; lastAccessedAt: string | null; passwordChangedAt: string | null; createdAt: string | null; updatedAt: string | null; attachments: string | null; isPinned?: boolean | null; isPublic?: boolean | null; isGuest?: boolean | null; sharedFrom?: string | null; dek?: string | null; keepPermission?: boolean | null; source?: string | null; isWorkspace?: boolean | null; isEnv?: boolean | null; }
 
-export type User = Models.Row & { userId: string; email: string | null; masterpass: boolean | null; twofa: boolean | null; salt: string | null; twofaSecret: string | null; backupCodes: string | null; isPasskey: boolean | null; check: string | null; passkeyBlob: string | null; credentialId: string | null; publicKey: string | null; counter: number | null; authVersion: number; v2Migrated: boolean; mustCreatePasskey: boolean; sessionFingerprint: string | null; lastLoginAt: string | null; lastPasswordChangeAt: string | null; createdAt: string | null; updatedAt: string | null; }
+export type User = ModelsRow & { userId: string; email: string | null; masterpass: boolean | null; twofa: boolean | null; salt: string | null; twofaSecret: string | null; backupCodes: string | null; isPasskey: boolean | null; check: string | null; passkeyBlob: string | null; credentialId: string | null; publicKey: string | null; counter: number | null; authVersion: number; v2Migrated: boolean; mustCreatePasskey: boolean; sessionFingerprint: string | null; lastLoginAt: string | null; lastPasswordChangeAt: string | null; createdAt: string | null; updatedAt: string | null; }
 
-export type Folders = Models.Row & { userId: string; name: string; parentFolderId: string | null; icon: string | null; color: string | null; sortOrder: number; isDeleted: boolean; deletedAt: string | null; createdAt: string | null; updatedAt: string | null; }
+export type Folders = ModelsRow & { userId: string; name: string; parentFolderId: string | null; icon: string | null; color: string | null; sortOrder: number; isDeleted: boolean; deletedAt: string | null; createdAt: string | null; updatedAt: string | null; }
 
-export type TotpSecrets = Models.Row & { userId: string; issuer: string; accountName: string; secretKey: string; algorithm: string; digits: number; period: number; url: string | null; folderId: string | null; tags: string[] | null; isFavorite: boolean; isDeleted: boolean; deletedAt: string | null; lastUsedAt: string | null; createdAt: string | null; updatedAt: string | null; isPinned?: boolean | null; isPublic?: boolean | null; isGuest?: boolean | null; sharedFrom?: string | null; dek?: string | null; keepPermission?: boolean | null; source?: string | null; isWorkspace?: boolean | null; }
+export type TotpSecrets = ModelsRow & { userId: string; issuer: string; accountName: string; secretKey: string; algorithm: string; digits: number; period: number; url: string | null; folderId: string | null; tags: string[] | null; isFavorite: boolean; isDeleted: boolean; deletedAt: string | null; lastUsedAt: string | null; createdAt: string | null; updatedAt: string | null; isPinned?: boolean | null; isPublic?: boolean | null; isGuest?: boolean | null; sharedFrom?: string | null; dek?: string | null; keepPermission?: boolean | null; source?: string | null; isWorkspace?: boolean | null; }
 
-export type EventGuests = Models.Row & {
+export type EventGuests = ModelsRow & {
     eventId: string;
     userId: string | null;
     email: string | null;
@@ -132,7 +190,7 @@ export type EventGuests = Models.Row & {
     role: string;
 }
 
-export type Events = Models.Row & {
+export type Events = ModelsRow & {
     title: string;
     description: string | null;
     startTime: string;
@@ -156,14 +214,14 @@ export type Events = Models.Row & {
     isWorkspace?: boolean | null;
 }
 
-export type Calendars = Models.Row & {
+export type Calendars = ModelsRow & {
     name: string;
     color: string;
     isDefault: boolean;
     userId: string;
 }
 
-export type Tasks = Models.Row & {
+export type Tasks = ModelsRow & {
     title: string;
     description: string | null;
     status: string;
@@ -190,7 +248,7 @@ export type Tasks = Models.Row & {
     isWorkspace?: boolean | null;
 }
 
-export type Projects = Models.Row & {
+export type Projects = ModelsRow & {
     title: string;
     summary: string | null;
     description: string | null;
@@ -210,7 +268,7 @@ export type Projects = Models.Row & {
     privacyMode?: boolean;
 }
 
-export type ProjectObjects = Models.Row & {
+export type ProjectObjects = ModelsRow & {
     projectId: string;
     entityKind: string;
     entityId: string;
@@ -223,5 +281,50 @@ export type ProjectObjects = Models.Row & {
     isPinned?: boolean;
 }
 
-// Keychain / KeyMapping — from generated SoT (not duplicated here)
-export type { Keychain, KeyMapping } from '@/generated/appwrite/types';
+export type Forms = ModelsRow & {
+    $id: string;
+    userId: string;
+    title: string;
+    description?: string | null;
+    schema?: string | null;
+    status?: string | null;
+    settings?: string | null;
+    isPublic?: boolean | null;
+    isGuest?: boolean | null;
+    isPinned?: boolean | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+};
+
+export enum FormSubmissionsStatus {
+    UNREAD = "unread",
+    READ = "read",
+    ARCHIVED = "archived"
+}
+
+export type FormSubmissions = ModelsRow & {
+    $id: string;
+    formId: string;
+    submitterId?: string | null;
+    payload: string;
+    status: string;
+    metadata?: string | null;
+    submitterName?: string;
+    createdAt?: string | null;
+};
+
+export type Keychain = ModelsRow & {
+  userId: string;
+  type: string;
+  value: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+export type KeyMapping = ModelsRow & {
+  userId: string;
+  keyId: string;
+  targetId: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};

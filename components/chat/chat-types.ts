@@ -1,4 +1,4 @@
-import type { Models } from 'appwrite';
+import type { Models } from '@/lib/appwrite/types';
 
 export type ChatMessage = Models.Row & Record<string, any>;
 export type ChatReaction = Models.Row & {

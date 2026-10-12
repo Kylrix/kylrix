@@ -1,4 +1,4 @@
-import { Query } from 'appwrite';
+import { Query } from '@/lib/appwrite/types';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { getNamedListCache } from './list-cache';

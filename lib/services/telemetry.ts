@@ -1,5 +1,6 @@
-import { ID, Query } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { systemTables } from '@/lib/data/system-tables';
+import { ID, Query } from '@/lib/appwrite/types';
+
 
 // 1. Core Future-Proof Niches
 export type TelemetryNiche = 
@@ -36,7 +37,7 @@ export const TelemetryService = {
     parentThreadId?: string | null;
   }): Promise<string> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const threadId = ID.unique();
 
       await tables.createRow({
@@ -64,7 +65,7 @@ export const TelemetryService = {
    */
   async completeThread(threadId: string): Promise<void> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const res = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLES.THREADS,
@@ -90,7 +91,7 @@ export const TelemetryService = {
    */
   async failThread(threadId: string): Promise<void> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const res = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLES.THREADS,
@@ -123,7 +124,7 @@ export const TelemetryService = {
     metadata?: Record<string, any> | null;
   }): Promise<void> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
 
       await tables.createRow({
         databaseId: DATABASE_ID,
@@ -155,7 +156,7 @@ export const TelemetryService = {
     metadata?: Record<string, any> | null;
   }): Promise<void> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
 
       await tables.createRow({
         databaseId: DATABASE_ID,
@@ -186,7 +187,7 @@ export const TelemetryService = {
     metadata?: Record<string, any> | null;
   }): Promise<void> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const type = params.type || 'direct';
 
       await tables.createRow({
@@ -213,7 +214,7 @@ export const TelemetryService = {
    */
   async readNotification(notificationId: string, userId: string): Promise<void> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const row = await tables.getRow<any>({
         databaseId: DATABASE_ID,
         tableId: TABLES.NOTIFICATIONS,
@@ -252,7 +253,7 @@ export const TelemetryService = {
    */
   async loadSession(userId: string, sessionId?: string): Promise<{ context: string; chatHistory: string; seen: boolean; rowId?: string }> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       if (sessionId) {
         try {
           const row = await tables.getRow({
@@ -311,7 +312,7 @@ export const TelemetryService = {
    */
   async saveSession(userId: string, context: string, chatHistory: string, seen = true, sessionId?: string): Promise<string | undefined> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const isEmpty = !chatHistory || chatHistory === '[]';
 
       // If user wants to start/save an empty session without explicit ID, scan for existing empty sessions to reuse & prune duplicates
@@ -401,7 +402,7 @@ export const TelemetryService = {
    */
   async loadMemory(userId: string): Promise<{ context: string; rowId?: string }> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const res = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: 'agentic_sessions',
@@ -430,7 +431,7 @@ export const TelemetryService = {
    */
   async saveMemory(userId: string, context: string): Promise<void> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const memory = await this.loadMemory(userId);
       const payload = {
         userId,
@@ -470,7 +471,7 @@ export const TelemetryService = {
     metadata?: Record<string, any>;
   }): Promise<void> {
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       // Strips any potential user identifying tags from metadata object
       const cleanMeta: Record<string, any> = { ...params.metadata };
       delete cleanMeta.userId;
@@ -510,7 +511,7 @@ export const TelemetryService = {
   }): Promise<void> {
     try {
       if (!params.userId || !params.sessionId || !params.objectId || !params.objectType) return;
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       await tables.createRow({
         databaseId: DATABASE_ID,
         tableId: 'session_objects',
@@ -537,7 +538,7 @@ export const TelemetryService = {
     limit = 40): Promise<Array<{ objectId: string; objectType: string; title: string | null; toolKey: string | null; createdAt: string | null }>> {
     try {
       if (!userId || !sessionId) return [];
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const res = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: 'session_objects',
@@ -582,7 +583,7 @@ export const TelemetryService = {
   }): Promise<string | null> {
     try {
       if (!params.userId || !params.sessionId || !params.conversationId || !params.toolKey) return null;
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const rowId = ID.unique();
       await tables.createRow({
         databaseId: DATABASE_ID,
@@ -620,7 +621,7 @@ export const TelemetryService = {
   }>> {
     try {
       if (!userId || !sessionId) return [];
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const res = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: 'tool_calls',

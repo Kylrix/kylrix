@@ -1,5 +1,5 @@
-import { ID, Permission, Query, Role } from 'node-appwrite';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
+import { createSystemClient } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   BadgeTier,

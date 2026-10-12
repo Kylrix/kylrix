@@ -1,14 +1,11 @@
-import { Query } from 'node-appwrite';
-import type { Databases } from 'node-appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
-
-const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-const SUB_COLLECTION_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
 
 /** Stack new paid time after latest active subscription end (ratio 1 = full term). */
 export async function calculateStackedSubscriptionCredit(
-  databases: Databases,
+  _databases: any,
   userId: string,
   planId: string,
   months: number,
@@ -17,12 +14,14 @@ export async function calculateStackedSubscriptionCredit(
   let currentPeriodStart = now;
 
   try {
-    const existingSubs = await databases.listRows(NOTE_DB_ID, SUB_COLLECTION_ID, [
-      Query.equal('userId', userId),
-      Query.limit(100),
-      Query.select(['$id', 'currentPeriodStart', 'currentPeriodEnd', 'createdAt', 'updatedAt', 'status', 'plan'])]);
+    const existingSubs = await db
+      .select()
+      .from(schema.subscriptions)
+      .where(eq(schema.subscriptions.userId, userId))
+      .orderBy(desc(schema.subscriptions.createdAt))
+      .limit(100);
 
-    const activeSubscriptions = (existingSubs.rows as SubscriptionRow[]).filter(
+    const activeSubscriptions = (existingSubs as unknown as SubscriptionRow[]).filter(
       (row) => String(row.status || '').toLowerCase() === 'active');
     const latestSubscription = pickLatestSubscription(activeSubscriptions);
     if (latestSubscription?.currentPeriodEnd) {

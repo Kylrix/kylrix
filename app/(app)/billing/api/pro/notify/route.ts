@@ -1,6 +1,6 @@
-import { createSystemClient } from '@/lib/appwrite-admin';
-import { ID, Query, Permission, Role } from 'node-appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { calculateStackedSubscriptionCredit } from '@/lib/billing/subscription-stack';
 import { notifySubscriptionActivated, notifyGiftSubscriptionActivated } from '@/lib/billing/subscription-notifications';
@@ -17,13 +17,6 @@ import {
 import { SponsorshipService } from '@/lib/services/sponsorship-service';
 import { BadgeTier } from '@/lib/types/badges';
 
-const DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-const SUB_COLLECTION_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
-
-const CHAT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-const PROFILES_COLLECTION_ID = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
-const ACCOUNT_EVENTS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS;
-
 function parseMetadata(value: unknown): Record<string, any> {
   if (!value) return {};
   if (typeof value === 'object') return value as Record<string, any>;
@@ -36,7 +29,6 @@ function parseMetadata(value: unknown): Record<string, any> {
 }
 
 async function recordCompletedTransactionLedger(params: {
-  databases: ReturnType<typeof createSystemClient>['databases'];
   paymentId: string;
   userId: string;
   planId: string;
@@ -45,14 +37,13 @@ async function recordCompletedTransactionLedger(params: {
   couponId?: string | null;
   metadata?: Record<string, any>;
 }) {
-  const { databases, paymentId, userId, planId, months, amountUsd, couponId, metadata } = params;
+  const { paymentId, userId, planId, months, amountUsd, couponId, metadata } = params;
   try {
-    let existingTx = null;
-    try {
-      existingTx = await databases.getRow(DATABASE_ID, 'billing_transactions', paymentId);
-    } catch {
-      // Ignore not found
-    }
+    const existingTx = await db
+      .select()
+      .from(schema.billingTransactions)
+      .where(eq(schema.billingTransactions.paymentId, paymentId))
+      .limit(1);
 
     const txPayload = {
       paymentId,
@@ -67,29 +58,19 @@ async function recordCompletedTransactionLedger(params: {
       metadata: JSON.stringify({
         completedAt: new Date().toISOString(),
         ...(metadata || {})}),
-      createdAt: existingTx ? undefined : new Date().toISOString(),
       updatedAt: new Date().toISOString()};
 
-    if (existingTx) {
-      await databases.updateRow(
-        DATABASE_ID,
-        'billing_transactions',
-        existingTx.$id,
-        {
-          status: 'completed',
-          amountCents: txPayload.amountCents,
-          amountUsd: txPayload.amountUsd,
-          metadata: txPayload.metadata,
-          updatedAt: txPayload.updatedAt}
-      );
+    if (existingTx.length > 0) {
+      await db
+        .update(schema.billingTransactions)
+        .set(txPayload)
+        .where(eq(schema.billingTransactions.id, existingTx[0].id));
     } else {
-      await databases.createRow(
-        DATABASE_ID,
-        'billing_transactions',
-        paymentId,
-        txPayload,
-        [Permission.read(Role.user(userId))]
-      );
+      await db.insert(schema.billingTransactions).values({
+        id: crypto.randomUUID(),
+        ...txPayload,
+        createdAt: new Date().toISOString(),
+      });
     }
   } catch (err) {
     console.error('[BlockBee IPN] Failed to log billing_transactions ledger entry:', err);
@@ -106,22 +87,17 @@ async function logBillingWebhookCall(params: {
   metadata?: Record<string, any>;
 }) {
   try {
-    const { databases } = createSystemClient();
-    await databases.createRow(
-      DATABASE_ID,
-      'billing_webhook_logs',
-      ID.unique(),
-      {
-        paymentId: params.paymentId || null,
-        provider: params.provider,
-        payload: params.payload.slice(0, 65530),
-        headers: params.headers ? JSON.stringify(params.headers).slice(0, 4990) : null,
-        status: params.status,
-        errorMessage: params.errorMessage || null,
-        metadata: params.metadata ? JSON.stringify(params.metadata).slice(0, 4990) : null,
-        createdAt: new Date().toISOString()},
-      []
-    );
+    await db.insert(schema.billingWebhookLogs).values({
+      id: crypto.randomUUID(),
+      paymentId: params.paymentId || null,
+      provider: params.provider,
+      payload: params.payload.slice(0, 65530),
+      headers: params.headers ? JSON.stringify(params.headers).slice(0, 4990) : null,
+      status: params.status,
+      errorMessage: params.errorMessage || null,
+      metadata: params.metadata ? JSON.stringify(params.metadata).slice(0, 4990) : null,
+      createdAt: new Date().toISOString(),
+    });
   } catch (err) {
     console.error('[Billing Logs] Failed to create billing_webhook_logs document:', err);
   }
@@ -175,9 +151,6 @@ function paymentLooksComplete(params: URLSearchParams): boolean {
   return paidOk && (checkoutDone || legacyNumeric || confirmed === '1');
 }
 
-/**
- * BlockBee checkout IPN — verified RSA signature + server-side pending checkout registry.
- */
 export async function POST(req: Request) {
   const reqUrl = new URL(req.url);
   let rawBody = '';
@@ -238,17 +211,17 @@ export async function POST(req: Request) {
 
   let expectedPrice = calculateSubscriptionPrice(meta.planId, meta.countryCode, 'CRYPTO', meta.months);
   if (meta.couponId) {
-    const { databases } = createSystemClient();
-    const coupon = await databases.getRow(CHAT_DATABASE_ID, ACCOUNT_EVENTS_TABLE_ID, meta.couponId).catch(() => null);
-    if (!coupon || String(coupon.type || '').toLowerCase() !== 'coupon') {
-      console.warn('[BlockBee IPN] Pending checkout referenced invalid coupon');
-      return new Response('*ok*', { status: 200 });
-    }
-    const md = parseMetadata(coupon.metadata);
-    const couponMeta = parseMetadata(md.coupon);
-    const couponDiscount = Number(coupon.discountPercent ?? coupon.discountPercentage ?? couponMeta.discountPercent ?? couponMeta.discountPercentage ?? 0);
-    if (Number.isFinite(couponDiscount) && couponDiscount >= 0 && couponDiscount <= 100) {
-      expectedPrice = expectedPrice * (1 - couponDiscount / 100);
+    const coupons = await db
+      .select()
+      .from(schema.coupons)
+      .where(eq(schema.coupons.id, meta.couponId))
+      .limit(1);
+    if (coupons.length > 0) {
+      const coupon = coupons[0];
+      const couponDiscount = Number(coupon.discountPercent ?? 0);
+      if (Number.isFinite(couponDiscount) && couponDiscount >= 0 && couponDiscount <= 100) {
+        expectedPrice = expectedPrice * (1 - couponDiscount / 100);
+      }
     }
   }
 
@@ -267,7 +240,6 @@ export async function POST(req: Request) {
     return new Response('retry', { status: 503 });
   }
 
-  // Handle Sponsorship payment fulfillment
   if (meta.planId?.startsWith('SPONSOR_') || params.get('is_sponsorship') === '1') {
     try {
       let sponsorCouponMeta: any = {};
@@ -314,13 +286,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { databases, users } = createSystemClient();
-
     const targetUserId = meta.giftRecipientId || meta.payerUserId;
     const isGift = Boolean(meta.giftRecipientId && meta.giftRecipientId !== meta.payerUserId);
 
     const { currentPeriodStart, currentPeriodEnd, creditMs } = await calculateStackedSubscriptionCredit(
-      databases,
+      null,
       targetUserId,
       meta.planId,
       meta.months,
@@ -333,77 +303,56 @@ export async function POST(req: Request) {
       return new Response('*ok*', { status: 200 });
     }
 
-    const payer = await users.get(meta.payerUserId).catch(() => null);
-    const payerName = payer?.name || meta.payerUserId;
+    const users = await db.select().from(schema.user).where(eq(schema.user.id, meta.payerUserId)).limit(1);
+    const payerName = users[0]?.name || meta.payerUserId;
 
-    const subData = {
+    const subId = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    await db.insert(schema.subscriptions).values({
+      id: subId,
       userId: targetUserId,
       plan: 'pro',
       status: 'active',
       currentPeriodStart: currentPeriodStart.toISOString(),
       currentPeriodEnd: currentPeriodEnd.toISOString(),
       seats: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()};
-
-    const permissions = [Permission.read(Role.user(targetUserId))];
-    if (isGift) {
-      permissions.push(Permission.read(Role.user(meta.payerUserId)));
-    }
-
-    const subscription = await databases.createRow(DATABASE_ID, SUB_COLLECTION_ID, ID.unique(), subData, permissions);
-
-    if (meta.couponId) {
-      try {
-        const coupon = await databases.getRow(CHAT_DATABASE_ID, ACCOUNT_EVENTS_TABLE_ID, meta.couponId).catch(() => null);
-        if (coupon && String(coupon.type || '').toLowerCase() === 'coupon') {
-          const couponMetadata = parseMetadata(coupon.metadata);
-          const couponDetails = parseMetadata(couponMetadata.coupon);
-          await databases.updateRow(CHAT_DATABASE_ID, ACCOUNT_EVENTS_TABLE_ID, meta.couponId, {
-            status: 'applied',
-            relatedUserId: targetUserId,
-            metadata: JSON.stringify({
-              ...couponMetadata,
-              coupon: {
-                ...couponDetails,
-                claimedBy: targetUserId,
-                appliedAt: new Date().toISOString(),
-                claimState: 'applied',
-                subscriptionId: subscription.$id}})});
-        }
-      } catch (error) {
-        console.error('[BlockBee IPN] Failed to seal coupon claim:', error);
-      }
-    }
+      createdAt: now,
+      updatedAt: now,
+    });
 
     const planTier = String(meta.planId || 'PRO').toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO';
 
-    // 1. Update user preferences for active Pro status
     try {
-      const prefs = (await users.getPrefs(targetUserId)) as Record<string, unknown>;
-      await users.updatePrefs(
-        targetUserId,
-        applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), planTier));
+      const settings = await db.select().from(schema.userSettings).where(eq(schema.userSettings.userId, targetUserId)).limit(1);
+      let prefs: Record<string, unknown> = {};
+      if (settings.length > 0 && settings[0].preferences) {
+        try { prefs = JSON.parse(settings[0].preferences); } catch {}
+      }
+      const updatedPrefs = applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), planTier);
+      if (settings.length > 0) {
+        await db.update(schema.userSettings).set({ preferences: JSON.stringify(updatedPrefs), updatedAt: now }).where(eq(schema.userSettings.userId, targetUserId));
+      } else {
+        await db.insert(schema.userSettings).values({
+          id: `settings-${targetUserId}`,
+          userId: targetUserId,
+          preferences: JSON.stringify(updatedPrefs),
+          securityFlags: '{}',
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
     } catch (err) {
       console.error('[BlockBee IPN] Failed to update user prefs:', err);
     }
 
-    // 2. Sync tier to profile
     try {
-      const profileRes = await databases.listRows(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, [
-        Query.equal('userId', targetUserId)]);
-
-      if (profileRes.total > 0) {
-        await databases.updateRow(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, profileRes.rows[0].$id, {
-          tier: planTier});
-      }
+      await db.update(schema.profiles).set({ status: planTier, updatedAt: now }).where(eq(schema.profiles.userId, targetUserId));
     } catch (err) {
       console.error('[BlockBee IPN] Failed to sync to profiles:', err);
     }
 
-    // 3. Record transaction ledger
     await recordCompletedTransactionLedger({
-      databases,
       paymentId,
       userId: meta.payerUserId,
       planId: meta.planId,
@@ -415,9 +364,8 @@ export async function POST(req: Request) {
         giftRecipientId: meta.giftRecipientId || null,
         giftRecipientName: meta.giftRecipientName || null,
         giftMessage: meta.giftMessage || null,
-        subscriptionId: subscription.$id}});
+        subscriptionId: subId}});
 
-    // 4. Send Notifications
     if (isGift && meta.giftRecipientId) {
       await notifyGiftSubscriptionActivated({
         recipientUserId: meta.giftRecipientId,
@@ -452,7 +400,7 @@ export async function POST(req: Request) {
       kind: 'subscription',
       isGift,
       targetUserId,
-      subscriptionId: subscription.$id});
+      subscriptionId: subId});
     await markBlockBeePendingCheckoutConsumed(paymentId);
 
     await logBillingWebhookCall({
@@ -465,7 +413,7 @@ export async function POST(req: Request) {
         isGift,
         targetUserId,
         giftRecipientId: meta.giftRecipientId || null,
-        subscriptionId: subscription.$id}});
+        subscriptionId: subId}});
 
     return new Response('*ok*', { status: 200 });
   } catch (error: any) {

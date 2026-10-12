@@ -1,7 +1,7 @@
 'use server';
 
-import { createSystemClient } from '@/lib/appwrite-admin';
-import { ID, Query } from 'node-appwrite';
+import { createSystemClient } from '@/lib/appwrite/types';
+import { ID, Query } from '@/lib/appwrite/types';
 import { resolveEffectiveBillingTier } from '@/lib/entitlements/policy';
 import { getActor } from './secure-ops/shared';
 

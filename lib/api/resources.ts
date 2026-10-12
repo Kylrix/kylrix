@@ -1,4 +1,4 @@
-import { ID, Permission, Query, Role } from 'node-appwrite';
+import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
 import { systemTables, type SystemTablesPort } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import type { ApiActor } from '@/lib/api/guard';
@@ -4002,7 +4002,7 @@ export const ApiResources = {
 
     const sysClient = createSystemClient();
     const sysUsers = sysClient.users;
-    const sysTables: any = createSystemTablesDB();
+    const sysTables: any = systemTables();
 
     let targetUserId = actor.userId;
     let replicatedAccount = false;

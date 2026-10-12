@@ -3,9 +3,9 @@
 import * as shared from './shared';
 import {
   ID, Permission, Query, Role
-} from 'node-appwrite';
+} from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+
 import { validatePublicNoteAccess } from '@/lib/appwrite/note';
 import { broadcastRealtimeEvent } from '@/lib/realtime/partykit';
 import { inferAttachmentMimeType, resolveAttachmentVisualKind } from '@/lib/note-object-visual';
@@ -27,7 +27,7 @@ const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 const NOTES_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
 
 async function hydrateSharedNoteRow(noteId: string) {
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   let doc: any = await tables.getRow({
     databaseId: NOTE_DB_ID,
     tableId: NOTES_TABLE_ID,
@@ -92,7 +92,7 @@ async function hydrateSharedNoteRow(noteId: string) {
 }
 
 async function canReadSharedNoteSecure(noteId: string, actorId?: string | null) {
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   let doc: any = null;
   try {
     doc = await tables.getRow({
@@ -205,7 +205,7 @@ export async function getNoteSecondaryObjectPreviewSecure(
   }
 
   try {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = await tables.getRow({
       databaseId: target.db,
       tableId: target.table,
@@ -545,7 +545,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
   // Idempotent compose: if the reserved ID already exists for this actor, update instead of create.
   if (reservedRowId) {
     try {
-      const tablesProbe = createSystemTablesDB();
+      const tablesProbe = systemTables();
       const existing = await tablesProbe.getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
         tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
@@ -590,7 +590,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
     throw new Error(`Content exceeds maximum allowed limit for ${noteData.article === true ? 'articles' : 'standard notes'}`);
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
   const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
   const APPWRITE_TABLE_ID_TAGS = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
@@ -800,7 +800,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
     // Check if the note actually exists — if it doesn't, delegate to create instead of throwing Forbidden.
     // This handles the sync race where a new note's first sync attempt hits updateNoteSecure before the row exists on Appwrite.
     try {
-      const probeTables = createSystemTablesDB();
+      const probeTables = systemTables();
       const existing = await probeTables.getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
         tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
@@ -830,7 +830,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
     throw new Error(`Content exceeds maximum allowed limit for ${data.article === true ? 'articles' : 'standard notes'}`);
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
   const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
   const APPWRITE_TABLE_ID_TAGS = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
@@ -1063,7 +1063,7 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
     return { success: true, offline: true };
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
   const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
 
@@ -1112,7 +1112,7 @@ export async function createthreadNoteSecure(data: {
     isEncrypted: data.isEncrypted || false,
     ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {})});
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const result = await tables.createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
@@ -1145,7 +1145,7 @@ export async function createthreadNoteForCallSecure(callId: string, title?: stri
     expiresAt: expiresAt,
     version: 'v2'});
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const result = await tables.createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
@@ -1175,7 +1175,7 @@ export async function createthreadNoteForProjectSecure(projectId: string, title?
     throw new Error('Unauthorized');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const project = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
@@ -1301,7 +1301,7 @@ export async function createthreadNoteChatSecure(data: {
     linkedResourceType: 'chat',
     participants: data.participants});
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const result = await tables.createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
@@ -1368,7 +1368,7 @@ export async function listthreadNoteChatsSecure(jwt?: string) {
     throw new Error('Unauthorized');
   }
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const actorId = actor.$id;
 
   // 1. Fetch resources the user is a collaborator for
@@ -1431,7 +1431,7 @@ export async function listTagsSecure(userId?: string, jwt?: string) {
   } catch (_) {}
 
   const targetUserId = userId || actor?.$id;
-  const systemTables = createSystemTablesDB();
+  const systemTables = systemTables();
 
   const result = await systemTables.listRows({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,

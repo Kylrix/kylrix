@@ -1,11 +1,7 @@
-import { ID, Query, Permission, Role } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, or, desc } from 'drizzle-orm';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
-
-const DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
-const REFERRALS_TABLE = 'referrals';
-const PROFILES_TABLE = APPWRITE_CONFIG.TABLES.CONNECT.PROFILES;
 
 export type AttributionPayload = {
   ref: string;
@@ -31,10 +27,6 @@ export type ReferralStats = {
 export const ReferralService = {
   /**
    * Generates the canonical, RFC-compliant referral URL.
-   * Format: 
-   * - Usernames: https://www.kylrix.space/?ref=u_<username>
-   * - User IDs: https://www.kylrix.space/?ref=id_<userId>
-   * - Agents: https://www.kylrix.space/?ref=agt_<agentId>
    */
   buildReferralLink(identifier: string, src = 'user', origin?: string, isUserId?: boolean): string {
     const base = typeof window !== 'undefined' ? window.location.origin : 'https://www.kylrix.space';
@@ -64,28 +56,20 @@ export const ReferralService = {
    */
   async resolveReferrer(ref: string): Promise<{ referrerUserId: string; src: string } | null> {
     if (!ref) return null;
-    const tables = createSystemTablesDB();
     const cleanCode = ref.trim();
 
     // 1. Agent Referrals: agt_<agentId>
     if (cleanCode.startsWith('agt_')) {
       const agentId = cleanCode.replace(/^agt_/, '');
       try {
-        const agentRows = await tables.listRows({
-          databaseId: DB,
-          tableId: APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-          queries: [
-            Query.or([
-              Query.equal('$id', agentId),
-              Query.equal('agentId', agentId),
-              Query.equal('name', agentId)
-            ]),
-            Query.limit(1)
-          ]
-        });
-        if (agentRows.rows.length > 0) {
-          const agent = agentRows.rows[0];
-          return { referrerUserId: agent.ownerId || agent.userId || agent.$id, src: 'agent' };
+        const agentRows = await db
+          .select()
+          .from(schema.agents)
+          .where(or(eq(schema.agents.id, agentId), eq(schema.agents.name, agentId)))
+          .limit(1);
+        if (agentRows.length > 0) {
+          const agent = agentRows[0];
+          return { referrerUserId: agent.ownerId || agent.userId || agent.id, src: 'agent' };
         }
       } catch {}
       return null;
@@ -95,20 +79,13 @@ export const ReferralService = {
     if (cleanCode.startsWith('id_') || cleanCode.startsWith('uid_')) {
       const targetUserId = cleanCode.replace(/^(id_|uid_)/, '');
       try {
-        const profileRows = await tables.listRows({
-          databaseId: DB,
-          tableId: PROFILES_TABLE,
-          queries: [
-            Query.or([
-              Query.equal('userId', targetUserId),
-              Query.equal('$id', targetUserId)
-            ]),
-            Query.limit(1)
-          ]
-        });
-        if (profileRows.rows.length > 0) {
-          const profile = profileRows.rows[0];
-          return { referrerUserId: profile.userId || profile.$id, src: 'userid' };
+        const profileRows = await db
+          .select()
+          .from(schema.profiles)
+          .where(eq(schema.profiles.userId, targetUserId))
+          .limit(1);
+        if (profileRows.length > 0) {
+          return { referrerUserId: profileRows[0].userId, src: 'userid' };
         }
       } catch {}
 
@@ -123,20 +100,13 @@ export const ReferralService = {
       const targetUsername = cleanCode.replace(/^(@|u_)/, '').toLowerCase().trim();
       if (!targetUsername) return null;
       try {
-        const profileRows = await tables.listRows({
-          databaseId: DB,
-          tableId: PROFILES_TABLE,
-          queries: [
-            Query.or([
-              Query.equal('username', targetUsername),
-              Query.equal('username', `@${targetUsername}`),
-            ]),
-            Query.limit(1)
-          ]
-        });
-        if (profileRows.rows.length > 0) {
-          const profile = profileRows.rows[0];
-          return { referrerUserId: profile.userId || profile.$id, src: 'username' };
+        const profileRows = await db
+          .select()
+          .from(schema.profiles)
+          .where(or(eq(schema.profiles.username, targetUsername), eq(schema.profiles.username, `@${targetUsername}`)))
+          .limit(1);
+        if (profileRows.length > 0) {
+          return { referrerUserId: profileRows[0].userId, src: 'username' };
         }
       } catch {}
       return null;
@@ -144,22 +114,14 @@ export const ReferralService = {
 
     // 4. Legacy fallback: attempt both username and direct user ID
     try {
-      const profileRows = await tables.listRows({
-        databaseId: DB,
-        tableId: PROFILES_TABLE,
-        queries: [
-          Query.or([
-            Query.equal('username', cleanCode.toLowerCase()),
-            Query.equal('userId', cleanCode),
-            Query.equal('$id', cleanCode)
-          ]),
-          Query.limit(1)
-        ]
-      });
+      const profileRows = await db
+        .select()
+        .from(schema.profiles)
+        .where(or(eq(schema.profiles.username, cleanCode.toLowerCase()), eq(schema.profiles.userId, cleanCode)))
+        .limit(1);
 
-      if (profileRows.rows.length > 0) {
-        const profile = profileRows.rows[0];
-        return { referrerUserId: profile.userId || profile.$id, src: 'user' };
+      if (profileRows.length > 0) {
+        return { referrerUserId: profileRows[0].userId, src: 'user' };
       }
     } catch {}
 
@@ -172,7 +134,6 @@ export const ReferralService = {
 
   /**
    * Claims a referral for a newly registered or converting user.
-   * Guaranteed: A user can only ever be referred ONCE.
    */
   async claimReferral(newUserId: string, payload: AttributionPayload): Promise<{
     ok: boolean;
@@ -185,18 +146,16 @@ export const ReferralService = {
       return { ok: false, error: 'Missing newUserId or ref payload' };
     }
 
-    const tables = createSystemTablesDB();
-
     try {
       // 1. Check if user was already referred
-      const existing = await tables.listRows({
-        databaseId: DB,
-        tableId: REFERRALS_TABLE,
-        queries: [Query.equal('userId', newUserId), Query.limit(1)]
-      });
+      const existing = await db
+        .select()
+        .from(schema.referrals)
+        .where(eq(schema.referrals.userId, newUserId))
+        .limit(1);
 
-      if (existing.rows.length > 0) {
-        return { ok: true, alreadyReferred: true, referrerId: existing.rows[0].referrerId };
+      if (existing.length > 0) {
+        return { ok: true, alreadyReferred: true, referrerId: existing[0].referrerId };
       }
 
       // 2. Resolve referrer
@@ -207,32 +166,26 @@ export const ReferralService = {
 
       const referrerId = resolved.referrerUserId;
 
-      // Prevent self-referral
       if (referrerId === newUserId) {
         return { ok: false, error: 'Self-referral is disallowed' };
       }
 
       const src = payload.src || resolved.src || 'user';
       const origin = payload.origin || 'direct';
+      const rowId = crypto.randomUUID();
+      const now = new Date().toISOString();
 
       // 3. Create unique referral row
-      const row = await tables.createRow({
-        databaseId: DB,
-        tableId: REFERRALS_TABLE,
-        rowId: ID.unique(),
-        data: {
-          userId: newUserId,
-          referrerId,
-          refCode: payload.ref.slice(0, 128),
-          src: src.slice(0, 32),
-          origin: origin.slice(0, 64),
-          status: 'completed',
-          tokensRewarded: false,
-        },
-        permissions: [
-          Permission.read(Role.user(newUserId)),
-          Permission.read(Role.user(referrerId)),
-        ]
+      await db.insert(schema.referrals).values({
+        id: rowId,
+        userId: newUserId,
+        referrerId,
+        refCode: payload.ref.slice(0, 128),
+        src: src.slice(0, 32),
+        origin: origin.slice(0, 64),
+        status: 'completed',
+        tokensRewarded: false,
+        createdAt: now,
       });
 
       // 4. Reward token minting to referrer (1.5 tokens for referral signup)
@@ -247,13 +200,10 @@ export const ReferralService = {
           sourceId: newUserId,
         });
 
-        // Update tokensRewarded flag
-        await tables.updateRow({
-          databaseId: DB,
-          tableId: REFERRALS_TABLE,
-          rowId: row.$id,
-          data: { tokensRewarded: true }
-        });
+        await db
+          .update(schema.referrals)
+          .set({ tokensRewarded: true })
+          .where(eq(schema.referrals.id, rowId));
 
         return { ok: true, rewarded: true, referrerId };
       } catch (mintErr: any) {
@@ -261,8 +211,7 @@ export const ReferralService = {
         return { ok: true, rewarded: false, referrerId };
       }
     } catch (err: any) {
-      // Catch unique index collision (already referred)
-      if (err?.code === 409 || err?.message?.includes('already exists') || err?.message?.includes('unique')) {
+      if (err?.message?.includes('UNIQUE constraint') || err?.message?.includes('PRIMARY KEY')) {
         return { ok: true, alreadyReferred: true };
       }
       console.error('[ReferralService.claimReferral]', err);
@@ -274,38 +223,25 @@ export const ReferralService = {
    * Retrieves aggregate referral statistics and list for a user.
    */
   async getReferralStats(userId: string, username?: string | null): Promise<ReferralStats> {
-    const tables = createSystemTablesDB();
     const cleanUsername = String(username || '').replace(/^@+/, '').trim();
     const referralLink = cleanUsername
       ? this.buildReferralLink(cleanUsername, 'user')
       : this.buildReferralLink(userId, 'userid', undefined, true);
 
-    const baseQueries = [Query.equal('referrerId', userId), Query.limit(100)];
-    const queryAttempts = [
-      [...baseQueries, Query.orderDesc('$createdAt')],
-      [...baseQueries, Query.orderDesc('createdAt')],
-      baseQueries,
-    ];
-
     let rows: any[] = [];
-    let totalCount = 0;
-
-    for (const queries of queryAttempts) {
-      try {
-        const res = await tables.listRows({
-          databaseId: DB,
-          tableId: REFERRALS_TABLE,
-          queries,
-        });
-        rows = res.rows ?? [];
-        totalCount = Math.max(res.total ?? 0, rows.length);
-        break;
-      } catch (err) {
-        console.warn('[ReferralService.getReferralStats] Query attempt failed, trying fallback query:', err);
-      }
+    try {
+      rows = await db
+        .select()
+        .from(schema.referrals)
+        .where(eq(schema.referrals.referrerId, userId))
+        .orderBy(desc(schema.referrals.createdAt))
+        .limit(100);
+    } catch (err) {
+      console.warn('[ReferralService.getReferralStats] Query failed:', err);
     }
 
-    const rewardedCount = rows.filter((r: any) => r.tokensRewarded === true || Boolean(r.tokensRewarded)).length;
+    const totalCount = rows.length;
+    const rewardedCount = rows.filter((r: any) => Boolean(r.tokensRewarded)).length;
     const totalTokensEarned = (rewardedCount * 1.5).toFixed(1);
 
     return {
@@ -313,12 +249,12 @@ export const ReferralService = {
       totalTokensEarned,
       referralLink,
       referrals: rows.map((r: any) => ({
-        id: r.$id,
+        id: r.id,
         userId: r.userId,
         refCode: r.refCode || '',
         src: r.src || 'user',
         origin: r.origin || 'direct',
-        createdAt: r.$createdAt || r.createdAt || '',
+        createdAt: r.createdAt || '',
       })),
     };
   },
@@ -327,52 +263,45 @@ export const ReferralService = {
    * Generates a clean, unique username on the fly for users who don't have one yet.
    */
   async generateUsernameOnTheFly(userId: string, name?: string | null): Promise<string> {
-    const tables = createSystemTablesDB();
     let base = 'user';
     if (name && typeof name === 'string') {
       const clean = name.toLowerCase().replace(/[^a-z0-9]/g, '');
       if (clean.length >= 3) base = clean.slice(0, 10);
     }
 
-    // Try up to 5 unique combinations
     for (let i = 0; i < 5; i++) {
       const suffix = Math.floor(1000 + Math.random() * 9000);
       const candidate = `${base}${suffix}`;
       try {
-        const existing = await tables.listRows({
-          databaseId: DB,
-          tableId: PROFILES_TABLE,
-          queries: [Query.equal('username', candidate), Query.limit(1)]
-        });
-        if (existing.rows.length === 0) {
-          // Found available username, update profile if exists
-          try {
-            const userProfile = await tables.listRows({
-              databaseId: DB,
-              tableId: PROFILES_TABLE,
-              queries: [Query.equal('userId', userId), Query.limit(1)]
+        const existing = await db
+          .select()
+          .from(schema.profiles)
+          .where(eq(schema.profiles.username, candidate))
+          .limit(1);
+
+        if (existing.length === 0) {
+          const userProfile = await db
+            .select()
+            .from(schema.profiles)
+            .where(eq(schema.profiles.userId, userId))
+            .limit(1);
+
+          const now = new Date().toISOString();
+          if (userProfile.length > 0) {
+            await db
+              .update(schema.profiles)
+              .set({ username: candidate, updatedAt: now })
+              .where(eq(schema.profiles.id, userProfile[0].id));
+          } else {
+            await db.insert(schema.profiles).values({
+              id: crypto.randomUUID(),
+              userId,
+              username: candidate,
+              displayName: name || candidate,
+              createdAt: now,
+              updatedAt: now,
             });
-            if (userProfile.rows.length > 0) {
-              await tables.updateRow({
-                databaseId: DB,
-                tableId: PROFILES_TABLE,
-                rowId: userProfile.rows[0].$id,
-                data: { username: candidate }
-              });
-            } else {
-              await tables.createRow({
-                databaseId: DB,
-                tableId: PROFILES_TABLE,
-                rowId: ID.unique(),
-                data: {
-                  userId,
-                  username: candidate,
-                  displayName: name || candidate,
-                },
-                permissions: [Permission.read(Role.any()), Permission.update(Role.user(userId))]
-              });
-            }
-          } catch {}
+          }
           return candidate;
         }
       } catch {}

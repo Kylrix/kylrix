@@ -1,16 +1,10 @@
-import { createSystemClient } from '../appwrite-admin';
-import { ID, Query, Permission, Role } from 'node-appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { notifySubscriptionActivated } from './subscription-notifications';
 import { calculateStackedSubscriptionCredit } from './subscription-stack';
 import { applyProSubscriptionWindowToPrefs } from '@/lib/services/internal/subscription-prefs-merge';
 import { assertEmailIsBillingAdmin } from '@/lib/services/internal/admin-guard';
-
-const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-const SUB_COLLECTION_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
-const ACTIVITY_LOG_COLLECTION_ID = APPWRITE_CONFIG.TABLES.NOTE.ACTIVITY_LOG;
-const CHAT_DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-const PROFILES_COLLECTION_ID = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 
 export class SubscriptionService {
   /**
@@ -21,10 +15,8 @@ export class SubscriptionService {
     planId: string,
     months: number,
     ratio = 1) {
-    const { databases, users } = createSystemClient();
-
     const { currentPeriodStart, currentPeriodEnd } = await calculateStackedSubscriptionCredit(
-      databases,
+      null,
       targetUserId,
       planId,
       months,
@@ -32,34 +24,61 @@ export class SubscriptionService {
 
     const planTier = String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO';
 
-    const subData = {
+    const subId = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    await db.insert(schema.subscriptions).values({
+      id: subId,
       userId: targetUserId,
       plan: planTier.toLowerCase(),
       status: 'active',
       currentPeriodStart: currentPeriodStart.toISOString(),
       currentPeriodEnd: currentPeriodEnd.toISOString(),
       seats: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()};
-
-    await databases.createRow(NOTE_DB_ID, SUB_COLLECTION_ID, ID.unique(), subData, [
-      Permission.read(Role.user(targetUserId))]);
+      createdAt: now,
+      updatedAt: now,
+    });
 
     try {
-      const prefs = (await users.getPrefs(targetUserId)) as Record<string, unknown>;
-      await users.updatePrefs(targetUserId, applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), planTier));
+      const userSettings = await db
+        .select()
+        .from(schema.userSettings)
+        .where(eq(schema.userSettings.userId, targetUserId))
+        .limit(1);
+
+      let prefs: Record<string, unknown> = {};
+      if (userSettings.length > 0 && userSettings[0].preferences) {
+        try {
+          prefs = JSON.parse(userSettings[0].preferences);
+        } catch {}
+      }
+
+      const updatedPrefs = applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), planTier);
+
+      if (userSettings.length > 0) {
+        await db
+          .update(schema.userSettings)
+          .set({ preferences: JSON.stringify(updatedPrefs), updatedAt: now })
+          .where(eq(schema.userSettings.userId, targetUserId));
+      } else {
+        await db.insert(schema.userSettings).values({
+          id: `settings-${targetUserId}`,
+          userId: targetUserId,
+          preferences: JSON.stringify(updatedPrefs),
+          securityFlags: '{}',
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
     } catch (err) {
       console.warn('[SubscriptionService] Failed to update user prefs:', err);
     }
 
     try {
-      const profileRes = await databases.listRows(CHAT_DB_ID, PROFILES_COLLECTION_ID, [
-        Query.equal('userId', targetUserId),
-        Query.limit(2)]);
-      if (profileRes.total > 0) {
-        await databases.updateRow(CHAT_DB_ID, PROFILES_COLLECTION_ID, profileRes.rows[0].$id, {
-          tier: planTier});
-      }
+      await db
+        .update(schema.profiles)
+        .set({ status: planTier, updatedAt: now })
+        .where(eq(schema.profiles.userId, targetUserId));
     } catch (err) {
       console.warn('[SubscriptionService] Failed to sync profile tier:', err);
     }
@@ -98,9 +117,9 @@ export class SubscriptionService {
       console.warn('[SubscriptionService] Failed to send manual activation email:', error);
     });
 
-    const { databases } = createSystemClient();
     try {
-      await databases.createRow(NOTE_DB_ID, ACTIVITY_LOG_COLLECTION_ID, ID.unique(), {
+      await db.insert(schema.activityLog).values({
+        id: crypto.randomUUID(),
         userId: actorUserId,
         action: 'MANUAL_ENABLE_PRO',
         targetType: 'subscription',
@@ -142,9 +161,9 @@ export class SubscriptionService {
       });
     }
 
-    const { databases } = createSystemClient();
     try {
-      await databases.createRow(NOTE_DB_ID, ACTIVITY_LOG_COLLECTION_ID, ID.unique(), {
+      await db.insert(schema.activityLog).values({
+        id: crypto.randomUUID(),
         userId: actorUserId,
         action: 'GRANT_CATEGORY_ACCESS',
         targetType: 'subscription_batch',

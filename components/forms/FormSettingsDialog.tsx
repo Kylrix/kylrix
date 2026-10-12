@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { GHOST_FIELDS_REGISTRY, getEnabledGhostFields } from '@/lib/forms/ghost-fields';
-import { Forms, FormsStatus } from '@/generated/appwrite/types';
+import { Forms } from '@/types/appwrite';
+type FormsStatus = 'draft' | 'published' | 'archived';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/auth';
 import { useProUpgrade } from '@/context/ProUpgradeContext';

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ID } from 'appwrite';
+
 import { Calendar, Check, ChevronDown, ChevronUp, MapPin, Video } from 'lucide-react';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
 import { useAuth } from '@/lib/auth';
@@ -154,7 +154,7 @@ export function CreateEventComposer({
   const ensureId = useCallback(() => {
     const existing = resolvedId || liveIdRef.current;
     if (existing) return existing;
-    const id = ID.unique();
+    const id = crypto.randomUUID();
     liveIdRef.current = id;
     setResolvedId(id);
     return id;

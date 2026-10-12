@@ -1,5 +1,6 @@
-import { Query, ID } from 'node-appwrite';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+import { systemTables } from '@/lib/data/system-tables';
+import { Query, ID } from '@/lib/appwrite/types';
+
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
 import { type SubscriptionRow } from '@/lib/billing/subscription-helpers';
@@ -84,7 +85,7 @@ export async function suspendAccountAndLogIpSecure(params: {
 
     // 2. Log incident to securityLogs table
     try {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       const dbId = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
       const tableId = APPWRITE_CONFIG.TABLES.VAULT.SECURITY_LOGS || 'securityLogs';
 

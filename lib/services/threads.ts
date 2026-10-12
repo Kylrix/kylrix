@@ -1,3 +1,4 @@
+import { systemTables } from '@/lib/data/system-tables';
 /**
  * ThreadService — canonical discussion substrate.
  *
@@ -9,8 +10,8 @@
  * legacyNoteId when a thread was linked; new writes go here only.
  */
 
-import { ID, Permission, Query, Role } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
+
 import { tablesDB as clientTablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
@@ -101,7 +102,7 @@ export const ThreadService = {
   async findByScopeKey(scopeKey: string) {
     try {
       if (typeof window === 'undefined') {
-        const tables = createSystemTablesDB();
+        const tables = systemTables();
         const res = await tables.listRows({
           databaseId: DB,
           tableId: THREADS,
@@ -127,7 +128,7 @@ export const ThreadService = {
     // Client-safe: try system (server) first, fall back to client tablesDB when APPWRITE_API missing
     try {
       if (typeof window === 'undefined') {
-        const tables = createSystemTablesDB();
+        const tables = systemTables();
         const row = (await tables
           .getRow({ databaseId: DB, tableId: THREADS, rowId: threadId })
           .catch(() => null)) as any;
@@ -171,11 +172,11 @@ export const ThreadService = {
 
     const existing = await this.findByScopeKey(scopeKey);
     if (existing) {
-      await stampPrimaryThreadId(createSystemTablesDB(), parentKind, parentId, existing.id);
+      await stampPrimaryThreadId(systemTables(), parentKind, parentId, existing.id);
       return { thread: existing, created: false };
     }
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const now = new Date().toISOString();
     const title =
       params.title?.trim() ||
@@ -220,7 +221,7 @@ export const ThreadService = {
   },
 
   async listForOwner(ownerId: string, limit = 50) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: DB,
       tableId: THREADS,
@@ -234,7 +235,7 @@ export const ThreadService = {
   },
 
   async listForParent(parentKind: string, parentId: string, limit = 25) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: DB,
       tableId: THREADS,
@@ -260,7 +261,7 @@ export const ThreadService = {
       includeLegacyComments?: boolean;
     },
   ) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const lim = Math.min(200, Math.max(1, opts?.limit ?? 50));
     const queries: any[] = [
       Query.equal('threadId', threadId),
@@ -350,7 +351,7 @@ export const ThreadService = {
       throw err;
     }
 
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const threadRow = (await tables
       .getRow({ databaseId: DB, tableId: THREADS, rowId: params.threadId })
       .catch(() => null)) as any;
@@ -446,7 +447,7 @@ export const ThreadService = {
       (err as any).status = 400;
       throw err;
     }
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = await tables.listRows({
       databaseId: DB,
       tableId: REACTIONS,
@@ -492,7 +493,7 @@ export const ThreadService = {
   },
 
   async removeReaction(params: { messageId: string; userId: string; emoji: string }) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const existing = await tables.listRows({
       databaseId: DB,
       tableId: REACTIONS,
@@ -513,7 +514,7 @@ export const ThreadService = {
   },
 
   async listReactions(messageId: string) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: DB,
       tableId: REACTIONS,
@@ -546,7 +547,7 @@ export const ThreadService = {
       legacyNoteId: params.legacyNoteId,
     });
     if (!created && !thread.legacyNoteId) {
-      const tables = createSystemTablesDB();
+      const tables = systemTables();
       await tables.updateRow({
         databaseId: DB,
         tableId: THREADS,

@@ -21,7 +21,7 @@ import { tablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { BUILTIN_FLOWS } from '@/lib/flows/builtins';
 import { listInstalledFlowIds } from '@/lib/flows/installed';
-import { Query } from 'appwrite';
+import { Query } from '@/lib/appwrite/types';
 
 /** Helper to format standard JSON content results for WebMCP agents */
 function formatResult(data: any, summary?: string) {

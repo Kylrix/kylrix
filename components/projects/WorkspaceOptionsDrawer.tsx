@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Settings, UserPlus, Link2, LogOut, Check, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { ID } from 'appwrite';
+
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -38,7 +38,7 @@ export function WorkspaceOptionsDrawer({
   const handleCopyInviteLink = async () => {
     let code = workspace.inviteCode;
     if (!code) {
-      code = ID.unique();
+      code = crypto.randomUUID();
       workspace.inviteCode = code;
       void ProjectsService.rotateInviteCode(wsId, code).catch((err) => {
         console.warn('[WorkspaceOptionsDrawer] Failed to sync generated inviteCode:', err);

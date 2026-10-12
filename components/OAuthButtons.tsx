@@ -1,7 +1,7 @@
 'use client';
 
 import { account } from '@/lib/appwrite/client';
-import { OAuthProvider } from 'appwrite';
+import { OAuthProvider } from '@/lib/appwrite/types';
 import { useState, useEffect } from 'react';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
 import { getEnabledOAuthProvidersAction } from '@/lib/actions/auth-actions';

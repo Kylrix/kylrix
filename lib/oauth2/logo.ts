@@ -1,6 +1,6 @@
 'use client';
 
-import { ID, Permission, Role } from 'appwrite';
+import { ID, Permission, Role } from '@/lib/appwrite/types';
 import { account, storage } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { compressImageToWebP, validateFileUploadLimit } from '@/lib/storage/framework';

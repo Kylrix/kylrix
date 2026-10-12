@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ID } from 'appwrite';
+
 import { 
   Check, 
   ArrowLeft,
@@ -163,7 +163,7 @@ export default function CreateNoteForm({
   const ensureLiveDraftId = useCallback(() => {
     const existingId = resolvedNoteId || liveDraftIdRef.current;
     if (existingId) return existingId;
-    const noteId = ID.unique();
+    const noteId = crypto.randomUUID();
     liveDraftIdRef.current = noteId;
     registerComposeSession(noteId);
     setResolvedNoteId(noteId);
@@ -286,7 +286,7 @@ export default function CreateNoteForm({
   const flushLiveNote = useCallback(() => {
     let draftId = resolvedNoteId || liveDraftIdRef.current;
     if (!draftId) {
-      draftId = ID.unique();
+      draftId = crypto.randomUUID();
       liveDraftIdRef.current = draftId;
       registerComposeSession(draftId);
       setResolvedNoteId(draftId);
@@ -554,7 +554,7 @@ export default function CreateNoteForm({
     if (!hasContent) return;
 
     hasBootstrappedDraftRef.current = true;
-    const id = ID.unique();
+    const id = crypto.randomUUID();
     liveDraftIdRef.current = id;
     setResolvedNoteId(id);
     registerComposeSession(id);

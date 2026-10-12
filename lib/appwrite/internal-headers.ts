@@ -1,4 +1,3 @@
-import type { Client } from 'node-appwrite';
 import { APPWRITE_CONFIG } from './config';
 
 function resolveAppwriteRouterHost(): string {
@@ -20,15 +19,11 @@ function isInternalAppwriteEndpoint(endpoint: string): boolean {
   }
 }
 
-/**
- * Appwrite router-protection rejects internal Docker hostnames unless the
- * request carries the public Appwrite domain as Host.
- */
 export function configureInternalAppwriteClient(
-  client: Client,
+  client: any,
   endpoint = APPWRITE_CONFIG.SERVER_ENDPOINT
-): Client {
-  if (isInternalAppwriteEndpoint(endpoint)) {
+): any {
+  if (isInternalAppwriteEndpoint(endpoint) && client && typeof client.addHeader === 'function') {
     client.addHeader('host', resolveAppwriteRouterHost());
   }
   return client;

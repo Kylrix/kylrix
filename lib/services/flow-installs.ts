@@ -1,5 +1,6 @@
-import { ID, Permission, Query, Role } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { systemTables } from '@/lib/data/system-tables';
+import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
+
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   buildFlowScopeKey,
@@ -35,7 +36,7 @@ function serializeGrants(grants?: Record<string, unknown> | string | null) {
 
 export const FlowInstallService = {
   async findActive(flowId: string, installerId: string, scopeKey: string) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: DATABASE_ID,
       tableId: INSTALLS_TABLE,
@@ -68,7 +69,7 @@ export const FlowInstallService = {
     created: boolean;
     installCount: number | null;
   }> {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const scopeKey = buildFlowScopeKey(params.scope);
     const scopeType = params.scope.type as FlowScopeType;
     const now = new Date().toISOString();
@@ -173,7 +174,7 @@ export const FlowInstallService = {
     installId: string;
     scopeKey: string;
   }) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     let parentKind = 'user';
     let parentId = params.installerId;
 
@@ -231,7 +232,7 @@ export const FlowInstallService = {
   },
 
   async listForInstaller(installerId: string) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const res = await tables.listRows({
       databaseId: DATABASE_ID,
       tableId: INSTALLS_TABLE,
@@ -245,7 +246,7 @@ export const FlowInstallService = {
   },
 
   async revoke(params: { installId: string; installerId: string }) {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const row = await tables.getRow({
       databaseId: DATABASE_ID,
       tableId: INSTALLS_TABLE,
@@ -276,7 +277,7 @@ export const FlowInstallService = {
   async checkAndApplyUpdates(installerId: string): Promise<
     Record<string, { steps: unknown[]; version: number; contentHash: string }>
   > {
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const installs = await this.listForInstaller(installerId);
     const updates: Record<string, { steps: unknown[]; version: number; contentHash: string }> = {};
 

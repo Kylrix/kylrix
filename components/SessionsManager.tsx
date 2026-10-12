@@ -22,7 +22,7 @@ import {
   Delete as DeleteIcon,
   PhoneIcon} from '@/lib/openbricks/icons';
 import { Laptop, Tablet, RefreshCw } from 'lucide-react';
-import { Models } from 'appwrite';
+import { Models } from '@/lib/appwrite/types';
 import { AccountSwitcher } from '@/components/auth/AccountSwitcher';
 
 interface Session extends Models.Session {

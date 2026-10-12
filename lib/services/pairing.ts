@@ -1,3 +1,4 @@
+import { systemTables } from '@/lib/data/system-tables';
 /**
  * Pairing Service — RFC 8628-inspired Device Authorization & Punch Grant Engine.
  * 
@@ -11,8 +12,8 @@
  */
 
 import { randomBytes } from 'crypto';
-import { ID, Query } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { ID, Query } from '@/lib/appwrite/types';
+
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { PatService } from '@/lib/services/pats';
 import { normalizeScopes } from '@/lib/api/scopes';
@@ -136,7 +137,7 @@ export const PairingService = {
 
     try {
       if (process.env.APPWRITE_API_KEY) {
-        const tables = createSystemTablesDB();
+        const tables = systemTables();
         await tables.createRow({
           databaseId: DB,
           tableId: REQUESTS_TABLE,
@@ -214,7 +215,7 @@ export const PairingService = {
 
     try {
       if (process.env.APPWRITE_API_KEY) {
-        const tables = createSystemTablesDB();
+        const tables = systemTables();
         const codesToTry = [normalized];
         if (rawClean !== normalized) codesToTry.push(rawClean);
 
@@ -316,7 +317,7 @@ export const PairingService = {
 
     try {
       if (process.env.APPWRITE_API_KEY) {
-        const tables = createSystemTablesDB();
+        const tables = systemTables();
         const codesToTry = [normalized];
         if (rawClean !== normalized) codesToTry.push(rawClean);
 
@@ -466,7 +467,7 @@ export const PairingService = {
 
     try {
       if (process.env.APPWRITE_API_KEY) {
-        const tables = createSystemTablesDB();
+        const tables = systemTables();
         const res = await tables.listRows({
           databaseId: DB,
           tableId: REQUESTS_TABLE,

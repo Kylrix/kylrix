@@ -1,8 +1,9 @@
+import { systemTables } from '@/lib/data/system-tables';
 'use server';
 
-import { Query } from 'node-appwrite';
+import { Query } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+
 import { withSystemTransaction } from '@/lib/services/internal/transaction';
 
 /**
@@ -11,7 +12,7 @@ import { withSystemTransaction } from '@/lib/services/internal/transaction';
 async function deleteRowsTransactional(txId: string, databaseId: string, tableId: string, rowIds: string[]) {
   const unique = Array.from(new Set(rowIds.filter(Boolean)));
   if (!unique.length) return;
-  const t: any = createSystemTablesDB();
+  const t: any = systemTables();
   for (let i = 0; i < unique.length; i += 10) {
     const batch = unique.slice(i, i + 10);
     await Promise.all(batch.map((rid: string) => t.deleteRow({ databaseId, tableId, rowId: rid, transactionId: txId })));
@@ -121,7 +122,7 @@ export async function executeCascadeDeleteSecure(
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   // Authorization check: Verify if the user owns the resource or is an admin
   try {

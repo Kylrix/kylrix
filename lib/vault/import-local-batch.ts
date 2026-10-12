@@ -8,7 +8,7 @@
  */
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { ID } from 'appwrite';
+import { ID } from '@/lib/appwrite/types';
 
 export type ImportEarmarkStatus = 'local' | 'syncing' | 'synced' | 'error';
 

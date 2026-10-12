@@ -1,4 +1,4 @@
-import { Query } from 'appwrite';
+import { Query } from '@/lib/appwrite/types';
 import { tablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { peekChatsListMemory, writeChatsListLocal } from '@/lib/chat/local-chat-cache';

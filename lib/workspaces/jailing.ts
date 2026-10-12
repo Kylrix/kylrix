@@ -1,5 +1,5 @@
 import type { ApiActor } from '@/lib/api/guard';
-import { Query } from 'node-appwrite';
+import { Query } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import type { SystemTablesPort } from '@/lib/data';
 

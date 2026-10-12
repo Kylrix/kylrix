@@ -2,7 +2,7 @@ import { describe, it, vi, beforeEach } from 'vitest';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { POST, GET, syncTelegramBot, TELEGRAM_BOT_COMMANDS } from './route';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { createSystemClient } from '@/lib/appwrite/types';
 import { ApiResources } from '@/lib/api/resources';
 
 vi.mock('@/lib/db', () => ({

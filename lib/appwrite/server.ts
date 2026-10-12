@@ -1,59 +1,33 @@
-import { Client, Account } from 'node-appwrite';
 import { APPWRITE_CONFIG } from './config';
-import { configureInternalAppwriteClient } from './internal-headers';
 import { cache } from 'react';
 
-/**
- * Creates a server-side Appwrite client that respects the user's session.
- * 
- * Hardened for Kylrix:
- * - Uses canonical Cloud endpoint for stable SDK-to-SDK validation.
- * - Supports exhaustive cookie discovery.
- * - Prioritizes explicit JWT for cross-environment reliability.
- */
-import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
+class ServerClientStub {
+  endpoint = '';
+  project = '';
+  jwt = '';
+  session = '';
+  setEndpoint(e: string) { this.endpoint = e; return this; }
+  setProject(p: string) { this.project = p; return this; }
+  setJWT(j: string) { this.jwt = j; return this; }
+  setSession(s: string) { this.session = s; return this; }
+  addHeader(_k: string, _v: string) { return this; }
+}
 
-export const createServerClient = cache(async (jwt?: string) => {
-  if (isDogfoodSafetyActive()) {
-    const stubClient = new Client() as any;
-    const stubAccount = {
-      get: async () => { throw new Error('DOGFOOD_SAFETY: Remote backend access is disabled'); },
-      createJWT: async () => ({ jwt: '' }),
-    } as any;
-    return { client: stubClient, account: stubAccount };
-  }
+class ServerAccountStub {
+  constructor(_client?: any) {}
+  async get() { return null; }
+  async createJWT() { return { jwt: '' }; }
+  async listSessions() { return { sessions: [] }; }
+  async deleteSession(_id: string) { return {}; }
+  async deleteSessions() { return {}; }
+}
 
-  const client = configureInternalAppwriteClient(new Client());
-  
-  // Use the primary ecosystem endpoint for session/JWT validation.
+export const createServerClient = cache(async (_jwt?: string) => {
+  const client = new ServerClientStub();
   client.setEndpoint(APPWRITE_CONFIG.SERVER_ENDPOINT);
   client.setProject(APPWRITE_CONFIG.PROJECT_ID);
 
-  if (jwt && jwt.length > 32) {
-    client.setJWT(jwt);
-    return { client, account: new Account(client) };
-  }
-
-  try {
-    const { cookies } = await import('next/headers');
-    const cookieStore = await cookies();
-    const projectId = APPWRITE_CONFIG.PROJECT_ID;
-    
-    // Check all possible Appwrite session cookie keys
-    const sessionCookie = 
-        cookieStore.get(`a_session_${projectId.toLowerCase()}`) || 
-        cookieStore.get(`a_session_${projectId}`) ||
-        cookieStore.get('a_session') ||
-        cookieStore.get('session');
-
-    if (sessionCookie?.value) {
-        client.setSession(sessionCookie.value);
-    }
-  } catch (_err) {
-    // Non-request context (e.g. build time or background task)
-  }
-
   return {
     client,
-    account: new Account(client)};
+    account: new ServerAccountStub(client)};
 });

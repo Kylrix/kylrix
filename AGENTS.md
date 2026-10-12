@@ -1,3 +1,10 @@
+# CRITICAL ARCHITECTURAL CONSTRAINTS (APPWRITE DELETION & SHIM PURGE)
+
+1. **APPWRITE IS PERMANENTLY DEAD:** The Appwrite project, API keys, console project, and SDK packages are completely gone.
+2. **DO NOT PRESERVE LEGACY SHIMS:** Because Appwrite was deeply integrated, temporary shims and mock types were created during package removal to stop builds from breaking. These shims and generated directories (e.g., `generated/`) are now toxic dead-ends causing 20-minute request hangs and serverless CPU exhaustion.
+3. **PERMISSION TO DELETE:** Kylrix is local-first and modular. You do not need to nurse dead Appwrite types or legacy wrappers. **Delete the legacy modules, delete the shims, and delete the Appwrite-owned `generated/` directory.** Do not fear deleting dead code.
+4. **DIRECT INTERACTION RULE:** All data fetching and authentication must wire directly into **Better Auth** and **Turso / libSQL**. Apply common sense to avoid creating a cascade of lint errors, but prioritize ruthless deletion of dead Appwrite-dependent layers over preserving non-functional wrappers.
+
 # KylrixOrganization - Organizaion Local Agent Guide
 
 # AGENTS.md - System Orchestration

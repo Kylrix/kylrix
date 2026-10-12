@@ -1,25 +1,20 @@
-import { APPWRITE_CONFIG } from '../../appwrite/config';
-import { internalAppwriteFetchHeaders } from '../../appwrite/internal-headers';
-import { Forms } from '../../../generated/appwrite/types';
-
-const DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-const FORMS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.FORMS;
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { Forms } from '@/types/appwrite';
 
 export const FormsServerService = {
     async getFormPublic(formId: string): Promise<Forms | null> {
         try {
-            const url = `${APPWRITE_CONFIG.SERVER_ENDPOINT}/databases/${DATABASE_ID}/collections/${FORMS_TABLE}/documents/${formId}`;
-            const res = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'X-Appwrite-Project': APPWRITE_CONFIG.PROJECT_ID,
-                    'Content-Type': 'application/json',
-                    ...internalAppwriteFetchHeaders()},
-                next: { revalidate: 60 } // Cache for 1 minute
-            });
-
-            if (!res.ok) return null;
-            return await res.json();
+            const rows = await db.select().from(schema.forms).where(eq(schema.forms.id, formId)).limit(1);
+            if (rows.length === 0) return null;
+            const row = rows[0];
+            return {
+                ...row,
+                $id: row.id,
+                $createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
+                $updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
+            } as unknown as Forms;
         } catch (error) {
             console.error('getFormPublic error:', error);
             return null;

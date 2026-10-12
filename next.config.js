@@ -50,12 +50,6 @@ const _nextConfig = {
       'date-fns'],
   },
   webpack: (config, { isServer }) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'appwrite$': _path.resolve(__dirname, 'lib/shims/appwrite.ts'),
-      'node-appwrite$': _path.resolve(__dirname, 'lib/shims/node-appwrite.ts'),
-      'node-appwrite/file$': _path.resolve(__dirname, 'lib/shims/node-appwrite-file.ts'),
-    };
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,

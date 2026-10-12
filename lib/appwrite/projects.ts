@@ -1,4 +1,4 @@
-import { Query } from 'appwrite';
+import { Query } from './types';
 import { databases, getCurrentUser } from './client';
 import { APPWRITE_CONFIG } from './config';
 import type { Projects } from '@/types/appwrite';

@@ -4,7 +4,7 @@
  * LocalEngine — Decoupled universal local storage substrate for local copy & RxDB IndexedDB.
  * Independent of SyncEngine, readable and writable by all application engines (Sync, Spine, Neural).
  */
-import type { Models } from 'appwrite';
+import type { Models } from '@/lib/appwrite/types';
 
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
 import { isDogfoodSafetyActive } from '@/lib/deployment/surface';

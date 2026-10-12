@@ -1,6 +1,6 @@
 'use client';
 
-import { Query } from 'appwrite';
+
 import React, { useEffect, useState, useRef, useTransition, useMemo } from 'react';
 import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';

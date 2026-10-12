@@ -5,7 +5,6 @@
  * Unlock (non-vault objects only) restores plaintext and clears `dek`.
  */
 
-import { Permission, Role } from 'appwrite';
 import { databases, getCurrentUser } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -54,7 +53,7 @@ export async function lockGoal(goalId: string): Promise<AppwriteTask> {
     ? await ecosystemSecurity.encryptWithKey(row.description, dek)
     : '';
 
-  const permissions = [Permission.read(Role.user(ownerId))];
+  const permissions = [`read("user:${ownerId}")`];
 
   const updated = await databases.updateRow(
     DB,

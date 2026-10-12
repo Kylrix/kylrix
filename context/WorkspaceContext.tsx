@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ID } from 'appwrite';
+
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -869,7 +869,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     async (title: string, summary?: string): Promise<WorkspaceItem | null> => {
       try {
         let created: any = null;
-        const inviteCode = ID.unique();
+        const inviteCode = crypto.randomUUID();
         try {
           created = await ProjectsService.createProject({
             title,

@@ -3,7 +3,6 @@ import type { SystemTablesPort } from '@/lib/data/system-tables.port';
 
 const SYSTEM = { forceSystem: true as const };
 
-/** Registry-backed system tables facade (Appwrite today; swappable via Registry.overrideDatabase). */
 export function createRegistrySystemTables(): SystemTablesPort {
   const db = Registry.getDatabase();
 
@@ -26,13 +25,11 @@ export function createRegistrySystemTables(): SystemTablesPort {
 
 let cached: SystemTablesPort | null = null;
 
-/** Privileged system tables access — use instead of createSystemTablesDB() in domain code. */
 export function systemTables(): SystemTablesPort {
   if (!cached) cached = createRegistrySystemTables();
   return cached;
 }
 
-/** Test / multi-backend hook. */
 export function overrideSystemTables(port: SystemTablesPort | null) {
   cached = port;
 }

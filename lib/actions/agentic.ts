@@ -1,8 +1,9 @@
+import { systemTables } from '@/lib/data/system-tables';
 'use server';
 
-import { ID, Query } from 'node-appwrite';
+import { ID, Query } from '@/lib/appwrite/types';
 
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { createSystemClient } from '@/lib/appwrite/types';
 import { createServerClient } from '@/lib/appwrite/server';
 import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
 import { AI_REQUIRES_PRO_MESSAGE } from '@/lib/agentic/access';
@@ -709,7 +710,7 @@ export async function getAgentSession(jwt?: string, projectId?: string) {
 
   if (!session || !session.rowId) {
     const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
-    const tables = createSystemTablesDB();
+    const tables = systemTables();
     const queries = [
       Query.equal('userId', user.$id),
       Query.notEqual('isMemory', true),
@@ -930,7 +931,7 @@ export async function listAgentToolCallsAction(sessionId: string, jwt?: string) 
 export async function listAgentSessions(jwt?: string, projectId?: string) {
   const user = await requireUser(jwt);
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const queries = [
     Query.equal('userId', user.$id),
     Query.notEqual('isMemory', true),
@@ -980,7 +981,7 @@ export async function setAgentSessionPinnedAction(
   jwt?: string) {
   const user = await requireUser(jwt);
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   const row = await tables.getRow({
     databaseId: 'passwordManagerDb',
@@ -1006,7 +1007,7 @@ export async function toggleAgentConversationShareAction(
   jwt?: string) {
   const user = await requireUser(jwt);
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
 
   const row = await tables.getRow({
     databaseId: 'passwordManagerDb',
@@ -1073,7 +1074,7 @@ function parseSessionChatHistory(raw: unknown): any[] {
 export async function getPublicAgentSessionSecure(sessionId: string) {
   if (!sessionId) return null;
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const row = await tables
     .getRow({
       databaseId: 'passwordManagerDb',
@@ -1116,7 +1117,7 @@ export async function getPublicAgentConversationSecure(compositeId: string) {
   if (!sessionId || !messageId) return null;
 
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const row = await tables
     .getRow({
       databaseId: 'passwordManagerDb',
@@ -1146,7 +1147,7 @@ export async function getPublicAgentConversationSecure(compositeId: string) {
 export async function deleteAgentSession(sessionId: string, jwt?: string) {
   const user = await requireUser(jwt);
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   
   const row = await tables.getRow({
     databaseId: 'passwordManagerDb',
@@ -1201,7 +1202,7 @@ export async function deleteAgentSession(sessionId: string, jwt?: string) {
 export async function selectAgentSession(sessionId: string, jwt?: string) {
   const user = await requireUser(jwt);
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   
   const row = await tables.getRow({
     databaseId: 'passwordManagerDb',

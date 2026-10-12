@@ -1,6 +1,6 @@
 import { dispatchEmail } from './emailDispatch';
 import { dispatchTelegramNotification } from './telegram-dispatch';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { createSystemClient } from '@/lib/appwrite/types';
 
 export interface SecureNotificationInput {
   targetUserId: string;

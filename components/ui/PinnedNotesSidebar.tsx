@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Query } from 'appwrite';
+
 import { Box, Typography, Stack, IconButton, useTheme, CircularProgress, useMediaQuery } from '@/lib/openbricks/primitives';
 import { Close as CloseIcon, PushPin as PinIcon } from '@/lib/openbricks/icons';
 import { useNotes } from '@/context/NotesContext';

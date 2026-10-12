@@ -1,7 +1,8 @@
+import { systemTables } from '@/lib/data/system-tables';
 'use server';
 
-import { Query, Permission, Role, ID } from 'node-appwrite';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { Query, Permission, Role, ID } from '@/lib/appwrite/types';
+
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getActor } from '@/lib/actions/secure-ops/shared';
 import { ContextObject, KnowledgeGraphEdge, PatternMatch } from './types';
@@ -15,7 +16,7 @@ export async function saveContextSecure(data: Partial<ContextObject>, jwt?: stri
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) throw new Error('Unauthorized: Session expired');
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const contextId = data.id || ID.unique();
   const now = new Date().toISOString();
 
@@ -74,7 +75,7 @@ export async function listContextsSecure(workspaceId?: string, jwt?: string): Pr
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) return [];
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const queries = [Query.equal('userId', actor.$id), Query.limit(50)];
   if (workspaceId) {
     queries.push(Query.equal('workspaceId', workspaceId));
@@ -112,7 +113,7 @@ export async function syncGraphEdgeSecure(edge: KnowledgeGraphEdge, jwt?: string
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const edgeId = edge.id || ID.unique();
   const now = new Date().toISOString();
 
@@ -155,7 +156,7 @@ export async function syncPatternSecure(pattern: PatternMatch, jwt?: string): Pr
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) return null;
 
-  const tables = createSystemTablesDB();
+  const tables = systemTables();
   const patternId = pattern.id || ID.unique();
   const now = new Date().toISOString();
 

@@ -1,4 +1,4 @@
-import { ID, Query } from 'appwrite';
+import { ID, Query } from './types';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from './config';
 import { SecurityEnclave, raceNetworkOrLocal } from '@/lib/security/enclave';

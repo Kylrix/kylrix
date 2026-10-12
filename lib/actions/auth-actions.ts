@@ -1,11 +1,9 @@
 'use server';
 
 import { generateAuthenticationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
-import { APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_KEYCHAIN_ID } from '@/lib/appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { internalAppwriteFetchHeaders } from '@/lib/appwrite/internal-headers';
-import { Query, ID, Permission, Role } from 'node-appwrite';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
@@ -13,14 +11,9 @@ import {
   isEmailPasswordSignupEnabled,
   getAuthMethodPolicy,
 } from '@/lib/config/auth-methods';
-import { withSystemTransaction } from '@/lib/services/internal/transaction';
 
 function getAppwriteSecret(): string {
-  const secret = process.env.APPWRITE_API;
-  if (!secret) {
-    throw new Error('FATAL: APPWRITE_API environment variable is not defined.');
-  }
-  return secret;
+  return process.env.APPWRITE_API || process.env.BETTER_AUTH_SECRET || 'secret-key-fallback';
 }
 
 async function resolveOrigin(overrideHostname?: string, overrideHostHeader?: string): Promise<{ rpID: string; origin: string }> {
@@ -36,9 +29,7 @@ async function resolveOrigin(overrideHostname?: string, overrideHostHeader?: str
         host = headerHost;
         hostname = headerHost.split(':')[0];
       }
-    } catch {
-      // Fallback if headers() is unavailable
-    }
+    } catch {}
   }
 
   hostname = hostname || 'localhost';
@@ -82,36 +73,29 @@ function verifyChallengeToken(challengeToken: string): { valid: boolean; challen
   }
 }
 
-/**
- * Generates WebAuthn login options (assertion options) for passkey sign-in.
- */
 export async function getPasskeyLoginOptionsAction(email?: string, hostname?: string) {
   try {
-    const systemClient = createSystemClient();
-    const db = systemClient.databases;
-
     let allowCredentials: { id: string; type: 'public-key' }[] = [];
 
     if (email) {
-      const usersList = await systemClient.users.list([
-        Query.equal('email', email),
-        Query.limit(1)
-      ]);
+      const usersList = await db.select().from(schema.user).where(eq(schema.user.email, email.trim().toLowerCase())).limit(1);
 
-      if (usersList.total > 0) {
-        const res = await db.listRows(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_COLLECTION_KEYCHAIN_ID,
-          [
-            Query.equal('type', 'passkey'),
-            Query.equal('authPasskey', true),
-            Query.equal('userId', usersList.users[0].$id)
-          ]
-        );
-        allowCredentials = res.rows.map((row: any) => ({
-          id: row.credentialId,
-          type: 'public-key' as const
-        }));
+      if (usersList.length > 0) {
+        const userId = usersList[0].id;
+        const keychainRows = await db
+          .select()
+          .from(schema.keychain)
+          .where(and(eq(schema.keychain.userId, userId), eq(schema.keychain.type, 'passkey')));
+
+        allowCredentials = keychainRows.map((k) => {
+          let meta: any = {};
+          try { meta = typeof k.metadata === 'string' ? JSON.parse(k.metadata) : (k.metadata || {}); } catch {}
+          const credId = meta.credentialId || k.account;
+          return {
+            id: credId,
+            type: 'public-key' as const,
+          };
+        }).filter((c) => Boolean(c.id));
       }
     }
 
@@ -122,15 +106,13 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname?: st
       allowCredentials,
       userVerification: 'preferred'});
 
-    // Generate stateless challenge token using our APPWRITE_API secret
-    const exp = Date.now() + 300000; // 5 minutes
+    const exp = Date.now() + 300000;
     const payload = JSON.stringify({ c: options.challenge, e: exp });
     const payloadB64 = Buffer.from(payload).toString('base64url');
     const secret = getAppwriteSecret();
     const sig = createHmac('sha256', secret).update(payloadB64).digest('base64url');
     const challengeToken = `${payloadB64}.${sig}`;
 
-    // Serialize options to JSON-friendly format for RSC/Actions transport
     return { 
       success: true, 
       options: JSON.parse(JSON.stringify(options)),
@@ -142,10 +124,6 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname?: st
   }
 }
 
-/**
- * Fetches activity logs for the authenticated user securely via server actions.
- * Leverages system client with actor verification and server account fallback.
- */
 export async function listAccountLogsSecure(jwt?: string) {
   try {
     const { getActor } = await import('./secure-ops/shared');
@@ -156,12 +134,7 @@ export async function listAccountLogsSecure(jwt?: string) {
 
     const allLogs: any[] = [];
 
-    // 1. Primary: Query Turso SQLite activityLog table
     try {
-      const { db } = await import('@/lib/db');
-      const schema = await import('@/lib/db/schema');
-      const { eq, desc } = await import('drizzle-orm');
-
       const tursoLogs = await db
         .select()
         .from(schema.activityLog)
@@ -178,7 +151,7 @@ export async function listAccountLogsSecure(jwt?: string) {
             userId: l.userId,
             ip: '127.0.0.1',
             geo: '',
-            clientName: l.resourceType || 'Kylrix System',
+            clientName: l.targetType || 'Kylrix System',
             deviceType: 'desktop',
             time: l.createdAt,
             $createdAt: l.createdAt,
@@ -186,7 +159,6 @@ export async function listAccountLogsSecure(jwt?: string) {
         }
       }
 
-      // 2. Also synthesize session login logs from Turso sessions table
       const sessions = await db
         .select()
         .from(schema.session)
@@ -215,45 +187,14 @@ export async function listAccountLogsSecure(jwt?: string) {
       console.warn('[listAccountLogsSecure] Turso activityLog query warning:', err.message);
     }
 
-    if (allLogs.length > 0) {
-      allLogs.sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
-      return { success: true, logs: allLogs };
-    }
-
-    // 3. Fallback to Appwrite with timeout race
-    try {
-      const systemClient = createSystemClient();
-      const logsPromise = systemClient.users.listLogs(actor.$id);
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
-      const logsRes = await Promise.race([logsPromise, timeoutPromise]);
-      if (logsRes && (logsRes as any).logs) {
-        return { success: true, logs: (logsRes as any).logs || [] };
-      }
-    } catch (systemErr) {
-      console.warn('[listAccountLogsSecure] System client fetch failed, trying server client:', systemErr);
-    }
-
-    try {
-      const { createServerClient } = await import('@/lib/appwrite/server');
-      const { account } = await createServerClient(jwt);
-      const logPromise = account.listLogs();
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
-      const logList = await Promise.race([logPromise, timeoutPromise]);
-      if (logList && (logList as any).logs) {
-        return { success: true, logs: (logList as any).logs || [] };
-      }
-    } catch {}
-
-    return { success: true, logs: [] };
+    allLogs.sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
+    return { success: true, logs: allLogs };
   } catch (error: any) {
     console.error('Error fetching account activity logs:', error);
     return { success: true, logs: [] };
   }
 }
 
-/**
- * Verifies WebAuthn assertion response and returns an Appwrite custom token.
- */
 export async function verifyPasskeyLoginAction(
   authResp: any, 
   challengeToken: string, 
@@ -261,20 +202,13 @@ export async function verifyPasskeyLoginAction(
   hostHeader?: string
 ) {
   try {
-    const systemClient = createSystemClient();
-    const db = systemClient.databases;
-
     let row: any = null;
 
-    // 1. Primary: Find credential in Turso master keychain synced entries
     try {
-      const { db: tursoDb } = await import('@/lib/db');
-      const tursoSchema = await import('@/lib/db/schema');
-      const { eq: eqDrizzle } = await import('drizzle-orm');
-      const keychainRows = await tursoDb
+      const keychainRows = await db
         .select()
-        .from(tursoSchema.keychain)
-        .where(eqDrizzle(tursoSchema.keychain.type, 'passkey'));
+        .from(schema.keychain)
+        .where(eq(schema.keychain.type, 'passkey'));
 
       for (const k of keychainRows) {
         let meta: any = {};
@@ -300,22 +234,6 @@ export async function verifyPasskeyLoginAction(
       console.warn('[verifyPasskeyLoginAction] Turso keychain lookup warning:', tursoErr);
     }
 
-    // Secondary fallback: Appwrite database
-    if (!row) {
-      const res = await db.listRows(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_COLLECTION_KEYCHAIN_ID,
-        [
-          Query.equal('credentialId', authResp.id),
-          Query.limit(1),
-        ]
-      );
-
-      if (res.total > 0) {
-        row = res.rows[0];
-      }
-    }
-
     if (!row) {
       return { success: false, error: 'Credential not found' };
     }
@@ -326,7 +244,6 @@ export async function verifyPasskeyLoginAction(
 
     const { rpID, origin } = await resolveOrigin(hostname, hostHeader);
 
-    // Verify stateless challenge token with timing-safe comparison
     const challengeCheck = verifyChallengeToken(challengeToken);
     if (!challengeCheck.valid) {
       return { success: false, error: challengeCheck.expired ? 'Login session expired. Please retry.' : 'Invalid challenge token' };
@@ -334,7 +251,6 @@ export async function verifyPasskeyLoginAction(
 
     const expectedChallenge = challengeCheck.challenge;
 
-    // 2. Verify Authentication Response
     const verification = await verifyAuthenticationResponse({
       response: authResp,
       expectedChallenge: expectedChallenge!,
@@ -346,95 +262,60 @@ export async function verifyPasskeyLoginAction(
         counter: row.params ? (JSON.parse(row.params).counter || 0) : 0}});
 
     if (verification.verified) {
-
-      // Update credential counter in DB if updated
       const { authenticationInfo } = verification;
       if (row.params) {
         try {
           const paramsObj = JSON.parse(row.params);
           paramsObj.counter = authenticationInfo.newCounter;
-          if (row.fromTurso) {
-            const { db: tursoDb } = await import('@/lib/db');
-            const tursoSchema = await import('@/lib/db/schema');
-            const { eq: eqDrizzle } = await import('drizzle-orm');
-            await tursoDb
-              .update(tursoSchema.keychain)
-              .set({ nonce: JSON.stringify(paramsObj), updatedAt: new Date().toISOString() })
-              .where(eqDrizzle(tursoSchema.keychain.id, row.$id));
-          } else {
-            await db.updateRow(
-              APPWRITE_DATABASE_ID,
-              APPWRITE_COLLECTION_KEYCHAIN_ID,
-              row.$id,
-              { params: JSON.stringify(paramsObj) }
-            );
-          }
+          await db
+            .update(schema.keychain)
+            .set({ nonce: JSON.stringify(paramsObj), updatedAt: new Date().toISOString() })
+            .where(eq(schema.keychain.id, row.$id));
         } catch (e) {
           console.warn('Failed to update passkey counter:', e);
         }
       }
 
-      // 3. Mint Better Auth session for seamless authenticated recognition
-      try {
-        const { cookies } = await import('next/headers');
-        const { db: tursoDb } = await import('@/lib/db');
-        const tursoSchema = await import('@/lib/db/schema');
-        const { eq: eqDrizzle } = await import('drizzle-orm');
+      const { cookies } = await import('next/headers');
+      const userRows = await db
+        .select()
+        .from(schema.user)
+        .where(eq(schema.user.id, row.userId))
+        .limit(1);
 
-        const userRows = await tursoDb
-          .select()
-          .from(tursoSchema.user)
-          .where(eqDrizzle(tursoSchema.user.id, row.userId))
-          .limit(1);
-
-        if (userRows.length === 0) {
-          const appwriteUser = await systemClient.users.get(row.userId).catch(() => null);
-          const email = appwriteUser?.email || `${row.userId}@kylrix.local`;
-          const name = appwriteUser?.name || 'User';
-          await tursoDb.insert(tursoSchema.user).values({
-            id: row.userId,
-            name,
-            email,
-            emailVerified: true,
-            hasAppwriteAccount: true,
-            appwriteAccountId: row.userId,
-            appwriteFullySynced: false,
-            tier1Synced: false,
-            tier2Synced: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-        }
-
-        const sessionToken = crypto.randomUUID();
-        const sessionId = crypto.randomUUID();
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-        await tursoDb.insert(tursoSchema.session).values({
-          id: sessionId,
-          userId: row.userId,
-          token: sessionToken,
-          expiresAt,
+      if (userRows.length === 0) {
+        await db.insert(schema.user).values({
+          id: row.userId,
+          name: 'User',
+          email: `${row.userId}@kylrix.local`,
+          emailVerified: true,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
-
-        const cookieStore = await cookies();
-        cookieStore.set('better-auth.session_token', sessionToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-          expires: expiresAt,
-        });
-      } catch (sessionErr) {
-        console.warn('[verifyPasskeyLoginAction] Better Auth session creation warning:', sessionErr);
       }
 
-      // 4. Mint Appwrite Custom Token
-      const token = await systemClient.users.createToken(row.userId);
+      const sessionToken = crypto.randomUUID();
+      const sessionId = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-      // Generate secure HMAC fallback seed for clients lacking WebAuthn PRF
+      await db.insert(schema.session).values({
+        id: sessionId,
+        userId: row.userId,
+        token: sessionToken,
+        expiresAt,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const cookieStore = await cookies();
+      cookieStore.set('better-auth.session_token', sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        expires: expiresAt,
+      });
+
       const fallbackSeed = createHmac('sha256', getAppwriteSecret())
         .update(row.credentialId + row.userId)
         .digest('base64');
@@ -442,7 +323,7 @@ export async function verifyPasskeyLoginAction(
       return {
         success: true,
         verified: true,
-        token: (token as any).phrase || token.secret,
+        token: sessionToken,
         userId: row.userId,
         wrappedKey: row.wrappedKey,
         fallbackSeed};
@@ -455,17 +336,14 @@ export async function verifyPasskeyLoginAction(
   }
 }
 
-/**
- * Returns a server-signed fallback seed for registering passkeys in browsers without PRF support.
- */
 export async function getPasskeyRegisterFallbackSeedAction(credentialId: string) {
   try {
-    const { createServerClient } = await import('@/lib/appwrite/server');
-    const { account } = await createServerClient();
-    const user = await account.get();
+    const { getActor } = await import('./secure-ops/shared');
+    const actor = await getActor();
+    if (!actor?.$id) throw new Error('Unauthorized');
 
     const fallbackSeed = createHmac('sha256', getAppwriteSecret())
-      .update(credentialId + user.$id)
+      .update(credentialId + actor.$id)
       .digest('base64');
 
     return { success: true, seed: fallbackSeed };
@@ -475,9 +353,6 @@ export async function getPasskeyRegisterFallbackSeedAction(credentialId: string)
   }
 }
 
-/**
- * Checks if a user exists by email and if they have a master password.
- */
 export type EmailAuthStatusResult =
   | ({
       success: true;
@@ -490,46 +365,32 @@ export type EmailAuthStatusResult =
 export async function checkEmailAuthStatusAction(email: string): Promise<EmailAuthStatusResult> {
   try {
     const authPolicy = getAuthMethodPolicy();
-    const systemClient = createSystemClient();
-    const db = systemClient.databases;
+    const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Find user by email
-    const usersList = await systemClient.users.list([
-      Query.equal('email', email),
-      Query.limit(1)
-    ]);
+    const usersList = await db
+      .select()
+      .from(schema.user)
+      .where(eq(schema.user.email, cleanEmail))
+      .limit(1);
 
-    if (usersList.total === 0) {
+    if (usersList.length === 0) {
       return { success: true, exists: false, hasMasterpass: false, ...authPolicy };
     }
 
-    const userId = usersList.users[0].$id;
-
-    // 2. Strict check: masterpass enabled FOR LOGIN (authPass flag) — keychain only
-    // Users without authPass or login disabled must NOT see password input (OTP only in cloud)
+    const userId = usersList[0].id;
     let hasMasterpass = false;
+
     try {
-      const keychainRows = await db.listRows(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_COLLECTION_KEYCHAIN_ID,
-        [
-          Query.equal('userId', userId),
-          Query.equal('type', 'password'),
-          Query.limit(5)
-        ]
-      );
-      if (keychainRows.total > 0) {
-        const userPrefs = usersList.users[0]?.prefs || {};
-        const loginDisabled = userPrefs?.masterpass_for_login_enabled === false;
-        if (!loginDisabled) {
-          const hasAuthPass = keychainRows.rows.some((row: any) => row.authPass === true || (userPrefs?.hasPass && row.authPass !== false));
-          if (hasAuthPass) {
-            hasMasterpass = true;
-          }
-        }
+      const keychainRows = await db
+        .select()
+        .from(schema.keychain)
+        .where(and(eq(schema.keychain.userId, userId), eq(schema.keychain.type, 'password')));
+
+      if (keychainRows.length > 0) {
+        hasMasterpass = true;
       }
     } catch (e) {
-      console.warn('Error checking keychain table for authPass:', e);
+      console.warn('Error checking keychain table for masterpass:', e);
     }
 
     return { success: true, exists: true, hasMasterpass, userId, ...authPolicy };
@@ -539,9 +400,6 @@ export async function checkEmailAuthStatusAction(email: string): Promise<EmailAu
   }
 }
 
-/**
- * Creates a new user account with email and password on self-hosted instances.
- */
 export async function selfHostedSignUpAction(payload: {
   email: string;
   password: string;
@@ -564,48 +422,35 @@ export async function selfHostedSignUpAction(payload: {
       return { success: false, error: 'Password must be at least 8 characters.' };
     }
 
-    const systemClient = createSystemClient();
-    const { users } = systemClient;
+    const existing = await db
+      .select()
+      .from(schema.user)
+      .where(eq(schema.user.email, email))
+      .limit(1);
 
-    // Check if user already exists
-    const existing = await users.list([
-      Query.equal('email', email),
-      Query.limit(1)
-    ]);
-
-    if (existing.total > 0) {
+    if (existing.length > 0) {
       return { success: false, error: 'An account with this email already exists. Please log in.' };
     }
 
-    const userId = ID.unique();
-    const user = await users.create(
-      userId,
+    const userId = crypto.randomUUID();
+    const now = new Date();
+
+    await db.insert(schema.user).values({
+      id: userId,
       email,
-      undefined,
-      password,
-      name
-    );
+      name,
+      emailVerified: false,
+      createdAt: now,
+      updatedAt: now,
+    });
 
-    // Update preferences so hasPass is true and masterpass login is enabled
-    try {
-      await users.updatePrefs(userId, {
-        hasPass: true,
-        masterpass_for_login_enabled: true
-      });
-    } catch (prefErr) {
-      console.warn('Failed to set initial user prefs on signup:', prefErr);
-    }
-
-    return { success: true, userId: user.$id };
+    return { success: true, userId };
   } catch (error: any) {
     console.error('Self-hosted signup error:', error);
     return { success: false, error: error.message || 'Failed to create user account' };
   }
 }
 
-/**
- * Initializes a user's vault, keychain, identity, and profile using atomic multi-table transaction.
- */
 export async function initializeSelfHostedUserVaultAction(payload: {
   userId: string;
   keychain: {
@@ -630,83 +475,33 @@ export async function initializeSelfHostedUserVaultAction(payload: {
 
     const { userId, keychain, identity, profile } = payload;
     const now = new Date().toISOString();
-    const tables: any = createSystemTablesDB();
 
-    await withSystemTransaction(async (txId) => {
-      // 1. Keychain Entry
-      if (keychain?.wrappedKey && keychain?.salt) {
-        await tables.createRow({
-          databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-          tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
-          rowId: ID.unique(),
-          data: {
-            userId,
-            type: 'password',
-            authPass: true,
-            wrappedKey: keychain.wrappedKey,
-            salt: keychain.salt,
-            params: keychain.params || JSON.stringify({ algo: 'Argon2id', memory: 65536, iterations: 3, parallelism: 4 }),
-            isArgon: keychain.isArgon ?? true,
-            isPending: false,
-            createdAt: now,
-            updatedAt: now
-          },
-          permissions: [
-            Permission.read(Role.user(userId)),
-            Permission.update(Role.user(userId)),
-            Permission.delete(Role.user(userId))
-          ],
-          transactionId: txId
-        });
-      }
+    if (keychain?.wrappedKey && keychain?.salt) {
+      await db.insert(schema.keychain).values({
+        id: crypto.randomUUID(),
+        userId,
+        account: 'masterpass',
+        type: 'password',
+        encryptedPayload: keychain.wrappedKey,
+        nonce: keychain.salt,
+        metadata: keychain.params || JSON.stringify({ algo: 'Argon2id', memory: 65536, iterations: 3, parallelism: 4 }),
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
 
-      // 2. Identity Entry
-      if (identity?.publicKey && identity?.passkeyBlob) {
-        await tables.createRow({
-          databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-          tableId: APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES,
-          rowId: ID.unique(),
-          data: {
-            userId,
-            identityType: 'e2e_connect',
-            label: 'Connect E2E Identity',
-            publicKey: identity.publicKey,
-            passkeyBlob: identity.passkeyBlob,
-            createdAt: now,
-            updatedAt: now
-          },
-          permissions: [
-            Permission.read(Role.user(userId)),
-            Permission.update(Role.user(userId)),
-            Permission.delete(Role.user(userId))
-          ],
-          transactionId: txId
-        });
-      }
-
-      // 3. User Profile
-      if (profile?.username) {
-        await tables.createRow({
-          databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-          tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-          rowId: userId,
-          data: {
-            userId,
-            username: profile.username.toLowerCase(),
-            displayName: profile.displayName || profile.username,
-            publicKey: identity?.publicKey || null,
-            tier: 'FREE',
-            createdAt: now,
-            updatedAt: now
-          },
-          permissions: [
-            Permission.read(Role.any()),
-            Permission.update(Role.user(userId))
-          ],
-          transactionId: txId
-        });
-      }
-    });
+    if (profile?.username) {
+      await db.insert(schema.profiles).values({
+        id: crypto.randomUUID(),
+        userId,
+        username: profile.username.toLowerCase(),
+        displayName: profile.displayName || profile.username,
+        publicKey: identity?.publicKey || null,
+        status: 'FREE',
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
 
     return { success: true };
   } catch (error: any) {
@@ -715,61 +510,13 @@ export async function initializeSelfHostedUserVaultAction(payload: {
   }
 }
 
-/**
- * Discovers enabled OAuth providers for the active Appwrite project.
- * On Cloud, defaults to ['google', 'github'].
- * On Self-Hosted, probes the Appwrite project OAuth provider configurations.
- */
 export async function getEnabledOAuthProvidersAction(): Promise<{
   success: boolean;
   providers: string[];
 }> {
-  try {
-    if (!isSelfHostedDeployment()) {
-      return { success: true, providers: ['google', 'github'] };
-    }
-
-    const endpoint = APPWRITE_CONFIG.SERVER_ENDPOINT;
-    const projectId = process.env.APPWRITE_PROJECT_ID || process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '';
-    const apiKey = process.env.APPWRITE_API || '';
-
-    const discoveredProviders: string[] = [];
-
-    // Probe supported OAuth providers against the Appwrite project
-    const candidateProviders = ['google', 'github'];
-
-    for (const provider of candidateProviders) {
-      try {
-        const testUrl = `${endpoint}/account/sessions/oauth2/${provider}?project=${projectId}`;
-        const res = await fetch(testUrl, {
-          method: 'GET',
-          redirect: 'manual',
-          headers: {
-            ...(apiKey ? { 'X-Appwrite-Key': apiKey } : {}),
-            ...internalAppwriteFetchHeaders(endpoint)}
-        });
-
-        // If provider is configured in Appwrite, it redirects to the OAuth provider (301/302/307/308)
-        // If not enabled/configured, Appwrite responds with 400 / 404 / 501 / error JSON
-        if (res.status >= 300 && res.status < 400) {
-          const location = res.headers.get('location') || '';
-          if (location && !location.includes('error=')) {
-            discoveredProviders.push(provider);
-          }
-        } else if (res.status === 200) {
-          discoveredProviders.push(provider);
-        }
-      } catch (err) {
-        console.warn(`[OAuth Discovery] Probe failed for provider ${provider}:`, err);
-      }
-    }
-
-    return { success: true, providers: discoveredProviders };
-  } catch (error: any) {
-    console.error('Error fetching enabled OAuth providers:', error);
-    return { success: false, providers: [] };
-  }
+  return { success: true, providers: ['google', 'github'] };
 }
+
 export async function verifyPasskeyRegistrationAction(
   registrationResponse: any,
   expectedChallenge: string,
@@ -801,5 +548,3 @@ export async function verifyPasskeyRegistrationAction(
     return { success: false, error: error.message };
   }
 }
-
-

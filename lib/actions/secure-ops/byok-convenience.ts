@@ -3,7 +3,7 @@
 import { createServerClient } from '@/lib/appwrite/server';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getActor } from '../secure-ops/shared';
-import { Databases, Query } from 'node-appwrite';
+import { Databases, Query } from '@/lib/appwrite/types';
 import { encryptWithKylrixMek, decryptWithKylrixMek } from '@/lib/crypto/kylrix-mek';
 
 export interface AgentByokKeySummary {

@@ -1,5 +1,5 @@
-import { Query } from 'node-appwrite';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { Query } from '@/lib/appwrite/types';
+import { createSystemClient } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { executeCascadeDeleteSecure } from '@/lib/actions/cascade-delete';
 

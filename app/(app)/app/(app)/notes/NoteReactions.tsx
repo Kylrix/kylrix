@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Box, Chip, Stack, Typography } from '@/lib/openbricks/primitives';
-import { Query } from 'appwrite';
+
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { createReaction, listReactions, deleteReaction } from '@/lib/appwrite';

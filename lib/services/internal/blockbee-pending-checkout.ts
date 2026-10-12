@@ -1,6 +1,6 @@
 import crypto from 'crypto';
-import { Permission, Role } from 'node-appwrite';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { Permission, Role } from '@/lib/appwrite/types';
+import { createSystemClient } from '@/lib/appwrite/types';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 const CHAT_DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;

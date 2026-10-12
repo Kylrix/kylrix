@@ -15,7 +15,7 @@ import {
     Crown
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
-import { Forms } from '@/generated/appwrite/types';
+import { Forms } from '@/types/appwrite';
 import { getEnabledGhostFields, resolveGhostFields } from '@/lib/forms/ghost-fields';
 import { GhostFieldsNotice } from './GhostFieldsNotice';
 import { useDataNexus } from '@/context/DataNexusContext';

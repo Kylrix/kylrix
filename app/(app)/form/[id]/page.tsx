@@ -3,7 +3,7 @@
 import React, { useEffect, useState, use } from 'react';
 import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ArrowLeft, Crown } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
-import { Forms } from '@/generated/appwrite/types';
+import { Forms } from '@/types/appwrite';
 import { getEnabledGhostFields, resolveGhostFields } from '@/lib/forms/ghost-fields';
 import { GhostFieldsNotice } from '@/components/forms/GhostFieldsNotice';
 import { secureUploadFile, createthreadNoteChat } from '@/lib/actions/client-ops';

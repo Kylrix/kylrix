@@ -23,7 +23,7 @@ import {
   Link2,
   EyeOff
 } from 'lucide-react';
-import { ID } from 'appwrite';
+
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { Projects } from '@/types/appwrite';
@@ -230,7 +230,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
         let code = data.inviteCode || activeWorkspace.inviteCode;
         if (!code) {
           // If empty, generate code on the fly, first to local sync engine, then rapidly syncing
-          code = ID.unique();
+          code = crypto.randomUUID();
           data.inviteCode = code;
           void ProjectsService.rotateInviteCode(activeWorkspace.id, code).catch((err) => {
             console.warn('[WorkspaceTab] Failed to sync generated inviteCode:', err);
@@ -286,7 +286,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
   const handleCopyInviteLink = async () => {
     let code = inviteCode || activeWorkspace?.inviteCode || '';
     if (!code) {
-      code = ID.unique();
+      code = crypto.randomUUID();
       setInviteCode(code);
       if (_project) {
         const updated = { ..._project, inviteCode: code };
@@ -309,7 +309,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
   const handleRotateInviteCode = async () => {
     if (!isOwnerOrAdmin || rotatingInviteCode) return;
     setRotatingInviteCode(true);
-    const newCode = ID.unique();
+    const newCode = crypto.randomUUID();
     setInviteCode(newCode);
     if (_project) {
       const updated = { ..._project, inviteCode: newCode };
