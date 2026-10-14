@@ -1,6 +1,6 @@
 /**
  * Security Enclave — LocalEngine partition for vault crypto material.
- * Rows stay encrypted-as-is (same ciphertext as Appwrite). Never stores MEK/plaintext.
+ * Rows stay encrypted-as-is. Never stores MEK/plaintext.
  *
  * Canonical keys (with legacy aliases for migration):
  * - sec_enclave_keychain_{userId}
@@ -11,6 +11,7 @@
  */
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import { systemTables } from '@/lib/data/system-tables';
 
 const PREFIX = 'sec_enclave';
 
@@ -127,7 +128,8 @@ export const SecurityEnclave = {
     await this.touchMeta(userId, {
       keychainCount: list.length,
       hasMasterpass: list.some((e) => e?.type === 'password'),
-      hasPasskey: list.some((e) => e?.type === 'passkey')});
+      hasPasskey: list.some((e) => e?.type === 'passkey'),
+    });
   },
 
   async getPasswordEntry(userId: string): Promise<any | null> {
@@ -172,7 +174,8 @@ export const SecurityEnclave = {
     await LocalEngine.cacheSet(`kylrix_userdoc_${userId}`, doc);
     await this.touchMeta(userId, {
       hasMasterpass: !!(doc?.masterpass === true),
-      hasPasskey: !!(doc?.isPasskey === true)});
+      hasPasskey: !!(doc?.isPasskey === true),
+    });
   },
 
   async getIdentity(userId: string): Promise<any | null> {
@@ -206,11 +209,13 @@ export const SecurityEnclave = {
       hydratedAt: '',
       hasMasterpass: false,
       hasPasskey: false,
-      keychainCount: 0};
+      keychainCount: 0,
+    };
     await LocalEngine.cacheSet(metaKey(userId), {
       ...prev,
       ...patch,
-      hydratedAt: patch.hydratedAt || prev.hydratedAt || new Date().toISOString()});
+      hydratedAt: patch.hydratedAt || prev.hydratedAt || new Date().toISOString(),
+    });
   },
 
   /**
@@ -258,68 +263,27 @@ export const SecurityEnclave = {
     }
 
     try {
-      const { tablesDB } = await import('@/lib/appwrite/client');
-      const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
-      const { Query } = await import('@/lib/appwrite/types');
+      const tables = systemTables();
 
-      const [keychainRes, userRes, identityRes, walletsRes] = await Promise.all([
-        tablesDB
-          .listRows({
-            databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-            tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
-            queries: [Query.equal('userId', userId), Query.limit(50)]})
-          .catch(() => ({ rows: [] as any[] })),
-        tablesDB
-          .listRows({
-            databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-            tableId: APPWRITE_CONFIG.TABLES.VAULT.USER,
-            queries: [Query.equal('userId', userId), Query.limit(1)]})
-          .catch(() => ({ rows: [] as any[] })),
-        tablesDB
-          .listRows({
-            databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-            tableId: APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES,
-            queries: [
-              Query.equal('userId', userId),
-              Query.equal('identityType', 'e2e_connect'),
-              Query.limit(1),
-            ]})
-          .catch(() => ({ rows: [] as any[] })),
-        tablesDB
-          .listRows({
-            databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-            tableId: APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.WALLETS,
-            queries: [
-              Query.equal('ownerId', `user:${userId}`),
-              Query.equal('type', 'main'),
-              Query.limit(100),
-            ]})
-          .catch(() => ({ rows: [] as any[] })),
-      ]);
+      const keychainRes = await tables
+        .listRows({
+          databaseId: 'vault',
+          tableId: 'keychain',
+          queries: [{ type: 'equal', attribute: 'userId', value: userId }, { type: 'limit', value: 50 }],
+        })
+        .catch(() => ({ rows: [] as any[] }));
 
       const keychainRows = Array.isArray(keychainRes.rows) ? keychainRes.rows : [];
       if (keychainRows.length > 0) {
         await this.setKeychain(userId, keychainRows);
       }
 
-      const userDoc = (userRes.rows || [])[0] || null;
-      if (userDoc) await this.setUserDoc(userId, userDoc);
-
-      const identity = (identityRes.rows || [])[0] || null;
-      if (identity) await this.setIdentity(userId, identity);
-
-      const wallets = Array.isArray(walletsRes.rows) ? walletsRes.rows : [];
-      if (wallets.length > 0) await this.setWallets(userId, wallets);
-
       await this.touchMeta(userId, {
         hydratedAt: new Date().toISOString(),
-        hasMasterpass: !!(
-          userDoc?.masterpass === true || keychainRows.some((e: any) => e?.type === 'password')
-        ),
-        hasPasskey: !!(
-          userDoc?.isPasskey === true || keychainRows.some((e: any) => e?.type === 'passkey')
-        ),
-        keychainCount: keychainRows.length || localKeychain.length});
+        hasMasterpass: keychainRows.some((e: any) => e?.type === 'password'),
+        hasPasskey: keychainRows.some((e: any) => e?.type === 'passkey'),
+        keychainCount: keychainRows.length || localKeychain.length,
+      });
 
       return this.getMeta(userId);
     } catch (err) {
@@ -332,4 +296,5 @@ export const SecurityEnclave = {
   async markDirty(userId: string): Promise<void> {
     if (!userId) return;
     await this.touchMeta(userId, { hydratedAt: '' });
-  }};
+  },
+};

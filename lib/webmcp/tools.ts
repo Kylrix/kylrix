@@ -17,11 +17,8 @@ import {
 } from '@/lib/actions/client-ops';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
-import { tablesDB } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { BUILTIN_FLOWS } from '@/lib/flows/builtins';
 import { listInstalledFlowIds } from '@/lib/flows/installed';
-import { Query } from '@/lib/appwrite/types';
 
 /** Helper to format standard JSON content results for WebMCP agents */
 function formatResult(data: any, summary?: string) {
@@ -155,30 +152,10 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const limit = Number(args.limit) || 50;
       const uid = getEffectiveUserId();
 
-      // 1. Try LocalEngine / tablesDB query first
       let rawNotes: any[] = [];
-      try {
-        const queries = [
-          Query.equal('isTrash', false),
-          Query.equal('isDeleted', false),
-          Query.orderDesc('$createdAt'),
-          Query.limit(limit),
-        ];
-        const res = await LocalEngine.query<any>(
-          `webmcp_notes_${limit}`,
-          () =>
-            tablesDB.listRows(
-              APPWRITE_CONFIG.DATABASES.NOTE,
-              APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-              queries,
-            ),
-          { ttl: 30_000 },
-        );
-        rawNotes = res?.rows || [];
-      } catch {}
 
-      // 2. Fallback to RxDB Notes Collection
-      if (!rawNotes.length && typeof window !== 'undefined') {
+      // 1. Fallback to RxDB Notes Collection
+      if (typeof window !== 'undefined') {
         try {
           const db = await getRxDB().catch(() => null);
           if (db?.notes) {
@@ -196,7 +173,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
         } catch {}
       }
 
-      // 3. Fallback to LocalEngine Cache & LocalStorage
+      // 2. Fallback to LocalEngine Cache & LocalStorage
       if (!rawNotes.length) {
         const cached =
           (await LocalEngine.cacheGet<any[]>('notes')) ||
@@ -258,22 +235,12 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       let res: any = null;
 
       try {
-        res = await tablesDB.getRow(
-          APPWRITE_CONFIG.DATABASES.NOTE,
-          APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-          noteId,
-        );
+        const db = await getRxDB().catch(() => null);
+        if (db?.notes) {
+          const doc = await db.notes.findOne(noteId).exec();
+          if (doc) res = doc.toJSON();
+        }
       } catch {}
-
-      if (!res) {
-        try {
-          const db = await getRxDB().catch(() => null);
-          if (db?.notes) {
-            const doc = await db.notes.findOne(noteId).exec();
-            if (doc) res = doc.toJSON();
-          }
-        } catch {}
-      }
 
       if (!res) {
         res =
@@ -358,7 +325,6 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
         $updatedAt: (created as any)?.$updatedAt || new Date().toISOString(),
       };
 
-      // 1. Instantly persist to RxDB and LocalEngine so local-first UI sees it
       if (typeof window !== 'undefined') {
         try {
           const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
@@ -377,7 +343,6 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
           const updatedList = [normalizedDoc, ...cachedList.filter((n: any) => (n.$id || n.id) !== id)];
           await LocalEngine.cacheSet(`f_notes_list_${uid}`, updatedList);
 
-          // 2. Trigger real-time soft refresh across active views
           const { triggerLocalSoftRefresh } = await import('@/lib/sync/local-soft-refresh');
           triggerLocalSoftRefresh('note', id);
         } catch {}
@@ -510,35 +475,13 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const limit = Number(args.limit) || 50;
       const uid = getEffectiveUserId();
 
-      let rawGoals: any[] = [];
-      try {
-        const queries = [Query.orderDesc('$createdAt'), Query.limit(limit)];
-        const res = await LocalEngine.query<any>(
-          `webmcp_goals_${limit}`,
-          () =>
-            tablesDB.listRows(
-              APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-              'goals',
-              queries,
-            ),
-          { ttl: 30_000 },
-        );
-        rawGoals = res?.rows || [];
-      } catch {}
+      const cached =
+        (await LocalEngine.cacheGet<any[]>('goals')) ||
+        (await LocalEngine.cacheGet<any[]>('tasks')) ||
+        readLocalStorageJson<any[]>(`f_tasks_list_${uid}`, []) ||
+        readLocalStorageJson<any[]>('tasks_list_cache', []);
 
-      // Local fallback
-      if (!rawGoals.length) {
-        const cached =
-          (await LocalEngine.cacheGet<any[]>('goals')) ||
-          (await LocalEngine.cacheGet<any[]>('tasks')) ||
-          readLocalStorageJson<any[]>(`f_tasks_list_${uid}`, []) ||
-          readLocalStorageJson<any[]>('tasks_list_cache', []);
-        if (Array.isArray(cached) && cached.length) {
-          rawGoals = cached;
-        }
-      }
-
-      let items = rawGoals;
+      let items = Array.isArray(cached) ? cached : [];
       if (args.status && args.status !== 'all') {
         items = items.filter((g: any) => (g.status || 'active') === args.status);
       }
@@ -570,13 +513,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const id = String(args.id);
-      let goal: any = null;
-      try {
-        goal = await tablesDB.getRow(APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, 'goals', id);
-      } catch {}
-      if (!goal) {
-        goal = await LocalEngine.cacheGet<any>(`local:goal:${id}`);
-      }
+      const goal = await LocalEngine.cacheGet<any>(`local:goal:${id}`);
       if (!goal) {
         throw new Error(`Goal '${id}' not found.`);
       }
@@ -604,7 +541,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const uid = getEffectiveUserId();
 
       const created = await createRow(
-        APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
+        'password_manager',
         'goals',
         {
           title,
@@ -702,35 +639,15 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const limit = Number(args.limit) || 25;
       const uid = getEffectiveUserId();
 
-      let rawWorkspaces: any[] = [];
-      try {
-        const res = await LocalEngine.query<any>(
-          `webmcp_workspaces_${limit}`,
-          () =>
-            tablesDB.listRows(
-              APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-              'projects',
-              [Query.orderDesc('$createdAt'), Query.limit(limit)],
-            ),
-          { ttl: 30_000 },
-        );
-        rawWorkspaces = res?.rows || [];
-      } catch {}
+      const cached =
+        readLocalStorageJson<any[]>(`kylrix_workspaces_${uid}`, []) ||
+        readLocalStorageJson<any[]>(`f_projects_list_${uid}`, []) ||
+        readLocalStorageJson<any[]>('kylrix_all_cached_workspaces', []) ||
+        (await LocalEngine.cacheGet<any[]>('kylrix_workspaces')) ||
+        [];
 
-      // LocalEngine / LocalStorage fallback
-      if (!rawWorkspaces.length) {
-        const cached =
-          readLocalStorageJson<any[]>(`kylrix_workspaces_${uid}`, []) ||
-          readLocalStorageJson<any[]>(`f_projects_list_${uid}`, []) ||
-          readLocalStorageJson<any[]>('kylrix_all_cached_workspaces', []) ||
-          (await LocalEngine.cacheGet<any[]>('kylrix_workspaces')) ||
-          [];
-        if (Array.isArray(cached) && cached.length) {
-          rawWorkspaces = cached;
-        }
-      }
+      let rawWorkspaces = Array.isArray(cached) ? cached : [];
 
-      // Always guarantee personal workspace presence
       const hasPersonal = rawWorkspaces.some((w: any) => (w.$id || w.id) === 'personal' || w.isPersonal);
       if (!hasPersonal) {
         rawWorkspaces.unshift({
@@ -862,28 +779,12 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const limit = Number(args.limit) || 25;
       const uid = getEffectiveUserId();
 
-      let rawEvents: any[] = [];
-      try {
-        const res = await LocalEngine.query<any>(
-          `webmcp_events_${limit}`,
-          () =>
-            tablesDB.listRows(
-              APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-              'events',
-              [Query.orderAsc('startAt'), Query.limit(limit)],
-            ),
-          { ttl: 30_000 },
-        );
-        rawEvents = res?.rows || [];
-      } catch {}
+      const cached =
+        (await LocalEngine.cacheGet<any[]>('events')) ||
+        readLocalStorageJson<any[]>(`f_events_list_${uid}`, []) ||
+        readLocalStorageJson<any[]>('events_list_cache', []);
 
-      if (!rawEvents.length) {
-        const cached =
-          (await LocalEngine.cacheGet<any[]>('events')) ||
-          readLocalStorageJson<any[]>(`f_events_list_${uid}`, []) ||
-          readLocalStorageJson<any[]>('events_list_cache', []);
-        if (Array.isArray(cached) && cached.length) rawEvents = cached;
-      }
+      const rawEvents = Array.isArray(cached) ? cached : [];
 
       const events = rawEvents.slice(0, limit).map((e: any) => ({
         id: e.$id || e.id,
@@ -957,28 +858,12 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const limit = Number(args.limit) || 25;
       const uid = getEffectiveUserId();
 
-      let rawForms: any[] = [];
-      try {
-        const res = await LocalEngine.query<any>(
-          `webmcp_forms_${limit}`,
-          () =>
-            tablesDB.listRows(
-              APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-              'forms',
-              [Query.orderDesc('$createdAt'), Query.limit(limit)],
-            ),
-          { ttl: 30_000 },
-        );
-        rawForms = res?.rows || [];
-      } catch {}
+      const cached =
+        (await LocalEngine.cacheGet<any[]>('forms')) ||
+        readLocalStorageJson<any[]>(`f_forms_list_${uid}`, []) ||
+        readLocalStorageJson<any[]>('forms_list_cache', []);
 
-      if (!rawForms.length) {
-        const cached =
-          (await LocalEngine.cacheGet<any[]>('forms')) ||
-          readLocalStorageJson<any[]>(`f_forms_list_${uid}`, []) ||
-          readLocalStorageJson<any[]>('forms_list_cache', []);
-        if (Array.isArray(cached) && cached.length) rawForms = cached;
-      }
+      const rawForms = Array.isArray(cached) ? cached : [];
 
       const forms = rawForms.slice(0, limit).map((f: any) => ({
         id: f.$id || f.id,
@@ -1007,7 +892,6 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
       const limit = Number(args.limit) || 50;
       const installedIds = listInstalledFlowIds();
 
-      // Combine builtins + installed + community
       const builtinItems = BUILTIN_FLOWS.map((b) => ({
         id: b.id,
         name: b.name,
@@ -1017,29 +901,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
         stepsCount: b.steps?.length || 0,
       }));
 
-      let communityItems: any[] = [];
-      try {
-        const res = await LocalEngine.query<any>(
-          `webmcp_flows_${limit}`,
-          () =>
-            tablesDB.listRows(
-              APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-              'workflows',
-              [Query.orderDesc('$createdAt'), Query.limit(limit)],
-            ),
-          { ttl: 30_000 },
-        );
-        communityItems = (res?.rows || []).map((f: any) => ({
-          id: f.$id || f.id,
-          name: f.name || f.title || 'Untitled Flow',
-          description: f.description || '',
-          source: 'community' as const,
-          isInstalled: installedIds.includes(f.$id || f.id),
-          stepsCount: Array.isArray(f.steps) ? f.steps.length : 0,
-        }));
-      } catch {}
-
-      const all = [...builtinItems, ...communityItems].slice(0, limit);
+      const all = [...builtinItems].slice(0, limit);
       return formatResult(all, `Found ${all.length} flows.`);
     },
   },
@@ -1164,4 +1026,3 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
   },
 ];
-

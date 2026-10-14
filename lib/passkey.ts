@@ -1,7 +1,6 @@
 "use client";
 
 import { startAuthentication } from '@simplewebauthn/browser';
-import { AppwriteService } from '@/lib/appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import {
   resolvePasskeyRpId,
@@ -57,7 +56,7 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
   try {
     // 1. Get passkey rows from security enclave first (offline-safe)
     const { SecurityEnclave } = await import('@/lib/security/enclave');
-    let passkeyEntries = await SecurityEnclave.getPasskeyEntries(userId);
+    const passkeyEntries = await SecurityEnclave.getPasskeyEntries(userId);
 
     const extractCredId = (entry: any): string | null => {
       if (typeof entry?.credentialId === 'string' && entry.credentialId.trim()) {
@@ -83,26 +82,9 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
       return null;
     };
 
-    let validPasskeyEntries = passkeyEntries
+    const validPasskeyEntries = passkeyEntries
       .map((e: any) => ({ ...e, credentialId: extractCredId(e) }))
       .filter((e: any) => Boolean(e.credentialId));
-
-    if (validPasskeyEntries.length === 0) {
-      // Soft-timeout remote fill — never hang unlock on a dead socket
-      const entries = await withTimeout<any[]>(
-        AppwriteService.listKeychainEntries(userId) as Promise<any[]>,
-        4000,
-      );
-      if (Array.isArray(entries) && entries.length > 0) {
-        passkeyEntries = entries.filter((k: any) => k.type === 'passkey');
-        validPasskeyEntries = passkeyEntries
-          .map((e: any) => ({ ...e, credentialId: extractCredId(e) }))
-          .filter((e: any) => Boolean(e.credentialId));
-        if (validPasskeyEntries.length > 0) {
-          void SecurityEnclave.setKeychain(userId, entries).catch(() => {});
-        }
-      }
-    }
 
     if (validPasskeyEntries.length === 0) {
       toast.error("No passkeys registered for this account.");
@@ -200,7 +182,7 @@ export async function unlockWithPasskey(userId: string, signal?: AbortSignal): P
       seedCandidates.push(seedBase64ToBuffer(cachedSeed));
     }
 
-    // Legacy local digest (offline last resort before / after timed-out server)
+    // Legacy local digest (offline last resort)
     {
       const encoder = new TextEncoder();
       const credentialData = encoder.encode(authResp.id + userId);

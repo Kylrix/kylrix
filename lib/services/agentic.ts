@@ -1,36 +1,38 @@
-import { ID, Permission, Query, Role, type Models } from '@/lib/appwrite/types';
-
-import { tablesDB } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { getNamedListCache } from './list-cache';
 
 export type AgentFramework = 'kylrix' | 'openclaw' | 'hermes';
 export type AgentStatus = 'idle' | 'working';
 
-export interface AgentRecord extends Models.Row {
+export interface AgentRecord {
+  $id: string;
+  id: string;
   ownerId: string;
   parentId?: string | null;
   publicKey?: string | null;
   config?: string;
-  status?: string;
+  status?: AgentStatus | string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 const agentsCache = getNamedListCache<AgentRecord[]>('agents', 45000);
 
-function agentPermissions(userId: string) {
-  return [
-    Permission.read(Role.user(userId))];
-}
-
 export const AgenticService = {
   async listMyAgents(userId: string, force = false): Promise<AgentRecord[]> {
     return agentsCache.fetch(async () => {
-      const res = await tablesDB.listRows<AgentRecord>({
-        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-        tableId: APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-        queries: [Query.equal('ownerId', userId), Query.orderDesc('$updatedAt'), Query.limit(100)]});
+      const rows = await db
+        .select()
+        .from(schema.agents)
+        .where(eq(schema.agents.ownerId, userId))
+        .orderBy(desc(schema.agents.createdAt));
 
-      return res.rows ?? [];
+      return rows.map((r) => ({
+        ...r,
+        $id: r.id,
+      })) as AgentRecord[];
     }, force);
   },
 
@@ -41,29 +43,45 @@ export const AgenticService = {
     framework?: AgentFramework;
   }) {
     const framework = input.framework === 'openclaw' || input.framework === 'hermes' ? input.framework : 'kylrix';
-    const agentId = ID.unique();
-    const res = await tablesDB.createRow(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-      agentId,
-      {
-        ownerId: input.userId,
-        parentId: null,
-        publicKey: `pending:${Date.now().toString(36)}`,
-        status: 'idle',
-        config: JSON.stringify({
-          name: input.name.trim(),
-          goal: input.goal?.trim() || null,
-          framework})},
-      agentPermissions(input.userId));
+    const agentId = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const config = JSON.stringify({
+      name: input.name.trim(),
+      goal: input.goal?.trim() || null,
+      framework,
+    });
+
+    await db.insert(schema.agents).values({
+      id: agentId,
+      ownerId: input.userId,
+      parentId: null,
+      publicKey: `pending:${Date.now().toString(36)}`,
+      status: 'idle',
+      config,
+      createdAt: now,
+      updatedAt: now,
+    });
+
     agentsCache.invalidate();
 
-    // Mint Agentic Wallet & Sync Profile in profiles table
+    const res: AgentRecord = {
+      $id: agentId,
+      id: agentId,
+      ownerId: input.userId,
+      parentId: null,
+      publicKey: `pending:${Date.now().toString(36)}`,
+      status: 'idle',
+      config,
+      createdAt: now,
+      updatedAt: now,
+    };
+
     void (async () => {
       try {
         const { AgentIdentityService } = await import('./agent-identity');
         await AgentIdentityService.syncAgentProfile({
-          agentId: res.$id,
+          agentId,
           ownerId: input.userId,
           name: input.name.trim(),
           goal: input.goal?.trim(),
@@ -78,19 +96,13 @@ export const AgenticService = {
   },
 
   async setMyAgentStatus(userId: string, agentId: string, status: AgentStatus) {
-    const agent = await tablesDB.getRow<AgentRecord>(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-      agentId);
-    if (!agent || agent.ownerId !== userId) {
-      throw new Error('Forbidden');
-    }
+    const now = new Date().toISOString();
+    await db
+      .update(schema.agents)
+      .set({ status, updatedAt: now })
+      .where(eq(schema.agents.id, agentId));
 
-    const res = await tablesDB.updateRow(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-      agentId,
-      { status });
     agentsCache.invalidate();
-    return res;
-  }};
+    return { id: agentId, status };
+  },
+};

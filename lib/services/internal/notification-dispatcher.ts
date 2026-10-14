@@ -1,6 +1,5 @@
 import { dispatchEmail } from './emailDispatch';
 import { dispatchTelegramNotification } from './telegram-dispatch';
-import { createSystemClient } from '@/lib/appwrite/types';
 
 export interface SecureNotificationInput {
   targetUserId: string;
@@ -15,28 +14,11 @@ export interface SecureNotificationInput {
   ctaUrl?: string;
 }
 
-/**
- * Structured Secure Notification Dispatcher Layer
- * - High-importance events (e.g. invites): Defaults to email, concurrent/companion Telegram alert if linked.
- * - Standard alerts (e.g. general updates, chatter): Defaults to Telegram first, falls back to email if Telegram is not linked.
- */
 export async function dispatchSecureNotification(input: SecureNotificationInput) {
-  const { users } = createSystemClient();
-  
-  let targetEmail: string | null = null;
-  try {
-    const userDoc = await users.get(input.targetUserId);
-    targetEmail = userDoc.email || null;
-  } catch (err) {
-    console.warn('[dispatchSecureNotification] Failed to fetch target user email:', err);
-  }
-
-  // Derive target CTA invite link or standard link
   const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
   let ctaUrl = input.ctaUrl;
   if (!ctaUrl && input.resourceId) {
     if (input.resourceType === 'project') {
-      // Canonical workspace share link is /workspace/[id] (singular)
       ctaUrl = `${appBaseUrl}/workspace/${input.resourceId}`;
     } else if (input.resourceType === 'note') {
       ctaUrl = `${appBaseUrl}/idea/${input.resourceId}`;
@@ -45,57 +27,36 @@ export async function dispatchSecureNotification(input: SecureNotificationInput)
     }
   }
 
-  const emailPayload = {
-    eventType: input.type === 'invite'
-      ? (input.resourceType === 'project' ? 'project_invited' : 'note_collaborator_added')
-      : 'group_member_added',
-    sourceApp: 'kylrix',
-    actorName: input.actorName || 'A teammate',
-    recipientIds: [input.targetUserId],
-    recipientEmails: targetEmail ? [targetEmail] : [],
-    resourceId: input.resourceId || null,
-    resourceTitle: input.resourceTitle || null,
-    resourceType: input.resourceType || null,
-    rightsLabel: input.permission || null,
-    templateKey: input.type === 'invite' ? 'RESOURCE_SHARED_NOTIFY' : 'STANDARD_NOTIFY',
-    ctaUrl: ctaUrl || null,
-    ctaText: input.type === 'invite' ? 'Join Workspace' : 'Open Notification',
-    metadata: {
-      permissionType: input.permission || 'viewer',
-      iconUrl: 'https://kylrix.space/logo.svg'
-    }
-  };
+  const tgMessage = `🔔 <b>${input.title}</b>\n\n${input.body}${ctaUrl ? `\n\n👉 <a href="${ctaUrl}">View Details</a>` : ''}`;
 
-  // Build high-speed clean Telegram alert
-  let tgMessage = '';
-  if (input.type === 'invite') {
-    tgMessage = `📬 <b>New Invitation</b>\n\n<b>${emailPayload.actorName}</b> has invited you to collaborate on the ${input.resourceType || 'resource'} <b>${input.resourceTitle || 'Untitled'}</b> with <b>${input.permission || 'viewer'}</b> access.\n\n👉 <a href="${ctaUrl || appBaseUrl}">Join Workspace</a>`;
-  } else {
-    tgMessage = `🔔 <b>${input.title}</b>\n\n${input.body}${ctaUrl ? `\n\n👉 <a href="${ctaUrl}">View Details</a>` : ''}`;
-  }
-
-  // Prefer Telegram and ensure at most ONE channel gets the message (never send to both)
   let tgSuccess = false;
   try {
     tgSuccess = await dispatchTelegramNotification(input.targetUserId, tgMessage, {
       notificationType: input.type,
       title: input.title,
       resourceType: input.resourceType,
-      resourceId: input.resourceId});
-    if (tgSuccess) {
-      console.log('[dispatchSecureNotification] Primary Telegram dispatch successful');
-    }
+      resourceId: input.resourceId,
+    });
   } catch (err) {
     console.warn('[dispatchSecureNotification] Telegram dispatch failed:', err);
   }
 
-  // If Telegram is not linked or delivery failed, fallback to Email
-  if (!tgSuccess && targetEmail) {
+  if (!tgSuccess) {
     try {
-      await dispatchEmail(emailPayload);
-    } catch (err) {
-      console.error('[dispatchSecureNotification] Fallback email delivery failed:', err);
-    }
+      await dispatchEmail({
+        eventType: input.type === 'invite' ? 'project_invited' : 'group_member_added',
+        sourceApp: 'kylrix',
+        actorName: input.actorName || 'A teammate',
+        recipientIds: [input.targetUserId],
+        resourceId: input.resourceId || null,
+        resourceTitle: input.resourceTitle || null,
+        resourceType: input.resourceType || null,
+        rightsLabel: input.permission || null,
+        templateKey: input.type === 'invite' ? 'RESOURCE_SHARED_NOTIFY' : 'STANDARD_NOTIFY',
+        ctaUrl: ctaUrl || null,
+        ctaText: input.type === 'invite' ? 'Join Workspace' : 'Open Notification',
+      });
+    } catch {}
   }
 
   return { success: true };

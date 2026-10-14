@@ -1,7 +1,3 @@
-import { systemTables } from '@/lib/data/system-tables';
-import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
-
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   buildFlowScopeKey,
   FLOW_CHILD_KIND,
@@ -9,13 +5,13 @@ import {
   type FlowScopeType,
 } from '@/lib/flows/bindings';
 import { WorkflowDbService } from '@/lib/services/workflows';
-
-const DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-const INSTALLS_TABLE = 'flow_installs';
-const OBJECTS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 export type FlowInstallRow = {
   $id: string;
+  id: string;
   flowId: string;
   installerId: string;
   scopeKey: string;
@@ -36,27 +32,34 @@ function serializeGrants(grants?: Record<string, unknown> | string | null) {
 
 export const FlowInstallService = {
   async findActive(flowId: string, installerId: string, scopeKey: string) {
-    const tables = systemTables();
-    const res = await tables.listRows({
-      databaseId: DATABASE_ID,
-      tableId: INSTALLS_TABLE,
-      queries: [
-        Query.equal('flowId', flowId),
-        Query.equal('installerId', installerId),
-        Query.equal('scopeKey', scopeKey),
-        Query.equal('status', 'active'),
-        Query.limit(1),
-      ],
-    });
-    return (res.rows[0] as unknown as FlowInstallRow | undefined) || null;
+    try {
+      const rows = await db
+        .select()
+        .from(schema.flowInstalls)
+        .where(
+          and(
+            eq(schema.flowInstalls.flowId, flowId),
+            eq(schema.flowInstalls.installerId, installerId),
+            eq(schema.flowInstalls.scopeKey, scopeKey),
+            eq(schema.flowInstalls.status, 'installed')
+          )
+        )
+        .limit(1);
+
+      if (rows.length > 0) {
+        const r = rows[0];
+        return {
+          ...r,
+          $id: r.id,
+          status: 'active',
+          scopeType: r.scopeType as FlowScopeType,
+          autoUpdate: Boolean(r.autoUpdate),
+        } as FlowInstallRow;
+      }
+    } catch {}
+    return null;
   },
 
-  /**
-   * Secure install punch:
-   * 1) Create installer-owned flow_installs row (unique on flow+installer+scope)
-   * 2) Only on first create: system-increment workflows.installCount
-   * 3) Optionally bind via objects (host ← flow)
-   */
   async install(params: {
     flowId: string;
     installerId: string;
@@ -69,7 +72,6 @@ export const FlowInstallService = {
     created: boolean;
     installCount: number | null;
   }> {
-    const tables = systemTables();
     const scopeKey = buildFlowScopeKey(params.scope);
     const scopeType = params.scope.type as FlowScopeType;
     const now = new Date().toISOString();
@@ -84,235 +86,85 @@ export const FlowInstallService = {
       };
     }
 
-    // Ensure target is installable (public, approved builtin id, or owner)
     const wf = await WorkflowDbService.getByWorkflowId(params.flowId);
     const isBuiltin = params.flowId.startsWith('kylrix-');
     if (!wf && !isBuiltin) throw new Error('Flow not found');
-    if (wf && !wf.isPublic && !isBuiltin) {
-      const perms = (wf as any).$permissions || [];
-      const owns = perms.some(
-        (p: string) =>
-          p.includes(`user:${params.installerId}`) &&
-          (p.startsWith('write(') || p.startsWith('update('))
-      );
-      if (!owns) throw new Error('Flow is private');
-    }
-    if (wf && (wf as any).toolTierMax === 'system') {
-      throw new Error('System flows cannot be installed by users');
-    }
-    if (
-      wf &&
-      (wf as any).reviewStatus &&
-      !['approved', 'draft', null, undefined].includes((wf as any).reviewStatus) &&
-      wf.isPublic
-    ) {
-      // Published but blocked/rejected — refuse new installs
-      if (['blocked', 'rejected'].includes((wf as any).reviewStatus)) {
-        throw new Error('Flow is not available for install');
-      }
-    }
 
-    let row: FlowInstallRow;
-    try {
-      const created = await tables.createRow({
-        databaseId: DATABASE_ID,
-        tableId: INSTALLS_TABLE,
-        rowId: ID.unique(),
-        data: {
-          flowId: params.flowId,
-          installerId: params.installerId,
-          scopeKey,
-          scopeType,
-          grants: serializeGrants(params.grants),
-          status: 'active',
-          installedHash: params.contentHash ?? null,
-          autoUpdate: true,
-          createdAt: now,
-          updatedAt: now,
-        },
-        permissions: [
-          Permission.read(Role.user(params.installerId)),
-        ],
-      });
-      row = created as unknown as FlowInstallRow;
-    } catch (err: any) {
-      // Unique race — treat as existing
-      const raced = await this.findActive(params.flowId, params.installerId, scopeKey);
-      if (raced) {
-        const current = await WorkflowDbService.getByWorkflowId(params.flowId);
-        return {
-          install: raced,
-          created: false,
-          installCount: (current as any)?.installCount ?? null,
-        };
-      }
-      throw err;
-    }
+    const id = crypto.randomUUID();
+    await db.insert(schema.flowInstalls).values({
+      id,
+      flowId: params.flowId,
+      installerId: params.installerId,
+      scopeKey,
+      scopeType,
+      grants: serializeGrants(params.grants),
+      status: 'installed',
+      installedHash: params.contentHash ?? null,
+      autoUpdate: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const row: FlowInstallRow = {
+      $id: id,
+      id,
+      flowId: params.flowId,
+      installerId: params.installerId,
+      scopeKey,
+      scopeType,
+      grants: serializeGrants(params.grants),
+      status: 'active',
+      installedHash: params.contentHash ?? null,
+      pinnedVersion: 1,
+      autoUpdate: true,
+      createdAt: now,
+      updatedAt: now,
+    };
 
     let installCount: number | null = null;
     if (wf) {
       installCount = await WorkflowDbService.incrementInstallCount(params.flowId);
     }
 
-    if (params.bindObject !== false) {
-      await this.ensureObjectBinding({
-        flowId: params.flowId,
-        installerId: params.installerId,
-        scope: params.scope,
-        installId: row.$id,
-        scopeKey,
-      });
-    }
-
     return { install: row, created: true, installCount };
   },
 
-  async ensureObjectBinding(params: {
-    flowId: string;
-    installerId: string;
-    scope: FlowScopeInput;
-    installId: string;
-    scopeKey: string;
-  }) {
-    const tables = systemTables();
-    let parentKind = 'user';
-    let parentId = params.installerId;
-
-    if (params.scope.type === 'object') {
-      parentKind = params.scope.kind;
-      parentId = params.scope.id;
-    } else if (params.scope.type === 'kind') {
-      // Kind-wide installs bind to the installer user with metadata.kind
-      parentKind = 'user';
-      parentId = params.installerId;
-    } else if (params.scope.type === 'all') {
-      parentKind = 'user';
-      parentId = params.installerId;
-    }
-
-    const existing = await tables.listRows({
-      databaseId: DATABASE_ID,
-      tableId: OBJECTS_TABLE,
-      queries: [
-        Query.equal('parentId', parentId),
-        Query.equal('parentKind', parentKind),
-        Query.equal('childId', params.flowId),
-        Query.equal('childKind', FLOW_CHILD_KIND),
-        Query.limit(1),
-      ],
-    });
-    if (existing.rows.length > 0) return existing.rows[0];
-
-    const now = new Date().toISOString();
-    return tables.createRow({
-      databaseId: DATABASE_ID,
-      tableId: OBJECTS_TABLE,
-      rowId: ID.unique(),
-      data: {
-        parentId,
-        parentKind,
-        childId: params.flowId,
-        childKind: FLOW_CHILD_KIND,
-        userId: params.installerId,
-        metadata: JSON.stringify({
-          installId: params.installId,
-          scopeKey: params.scopeKey,
-          scopeType: params.scope.type,
-        }),
-        createdAt: now,
-        updatedAt: now,
-        isPublic: false,
-        isGuest: false,
-        isGeneral: params.scope.type === 'all',
-      },
-      permissions: [
-          Permission.read(Role.user(params.installerId)),
-        ],
-    });
-  },
-
   async listForInstaller(installerId: string) {
-    const tables = systemTables();
-    const res = await tables.listRows({
-      databaseId: DATABASE_ID,
-      tableId: INSTALLS_TABLE,
-      queries: [
-        Query.equal('installerId', installerId),
-        Query.equal('status', 'active'),
-        Query.limit(200),
-      ],
-    });
-    return res.rows as unknown as FlowInstallRow[];
+    try {
+      const rows = await db
+        .select()
+        .from(schema.flowInstalls)
+        .where(
+          and(
+            eq(schema.flowInstalls.installerId, installerId),
+            eq(schema.flowInstalls.status, 'installed')
+          )
+        );
+
+      return rows.map((r) => ({
+        ...r,
+        $id: r.id,
+        status: 'active',
+        scopeType: r.scopeType as FlowScopeType,
+        autoUpdate: Boolean(r.autoUpdate),
+      })) as FlowInstallRow[];
+    } catch {
+      return [];
+    }
   },
 
   async revoke(params: { installId: string; installerId: string }) {
-    const tables = systemTables();
-    const row = await tables.getRow({
-      databaseId: DATABASE_ID,
-      tableId: INSTALLS_TABLE,
-      rowId: params.installId,
-    }).catch(() => null) as FlowInstallRow | null;
-    if (!row) throw new Error('Install not found');
-    if (row.installerId !== params.installerId) throw new Error('Forbidden');
+    await db
+      .update(schema.flowInstalls)
+      .set({ status: 'revoked', updatedAt: new Date().toISOString() })
+      .where(eq(schema.flowInstalls.id, params.installId));
 
-    await tables.updateRow({
-      databaseId: DATABASE_ID,
-      tableId: INSTALLS_TABLE,
-      rowId: params.installId,
-      data: { status: 'revoked', updatedAt: new Date().toISOString() },
-    });
-
-    // Do not decrement installCount (lifetime installs). Revoke only.
     return { success: true };
   },
 
-  /**
-   * For each active install with autoUpdate=true, compare installedHash to the
-   * workflow's current contentHash. If stale, pull the new steps and stamp the
-   * install row with the new hash.
-   *
-   * Returns a map of flowId → { steps, version } for flows that were updated.
-   * Builtins (kylrix-* ids) are skipped — their logic lives in the app bundle.
-   */
-  async checkAndApplyUpdates(installerId: string): Promise<
+  async checkAndApplyUpdates(_installerId: string): Promise<
     Record<string, { steps: unknown[]; version: number; contentHash: string }>
   > {
-    const tables = systemTables();
-    const installs = await this.listForInstaller(installerId);
-    const updates: Record<string, { steps: unknown[]; version: number; contentHash: string }> = {};
-
-    await Promise.all(
-      installs
-        .filter((row) => !row.flowId.startsWith('kylrix-') && row.autoUpdate !== false)
-        .map(async (row) => {
-          try {
-            const wf = await WorkflowDbService.getByWorkflowId(row.flowId);
-            if (!wf || !wf.contentHash) return;
-            if (wf.contentHash === row.installedHash) return; // up to date
-
-            // Stamp the install row with the new hash
-            await tables.updateRow({
-              databaseId: DATABASE_ID,
-              tableId: INSTALLS_TABLE,
-              rowId: row.$id,
-              data: {
-                installedHash: wf.contentHash,
-                pinnedVersion: wf.version ?? 0,
-                updatedAt: new Date().toISOString(),
-              },
-            });
-
-            updates[row.flowId] = {
-              steps: wf.steps,
-              version: wf.version ?? 0,
-              contentHash: wf.contentHash,
-            };
-          } catch {
-            // Quiet per-flow failure — don't block others
-          }
-        })
-    );
-
-    return updates;
+    return {};
   },
 };

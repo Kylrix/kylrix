@@ -1,6 +1,3 @@
-/**
- * Appwrite row IDs are at most 36 chars and cannot be local thread placeholders.
- */
 export function isLocalOnlyResourceId(id: string | null | undefined): boolean {
   const trimmed = String(id || '').trim();
   if (!trimmed || trimmed === 'thread' || trimmed.startsWith('thread-')) return true;
@@ -8,12 +5,14 @@ export function isLocalOnlyResourceId(id: string | null | undefined): boolean {
   return false;
 }
 
-export function isValidAppwriteRowId(id: string | null | undefined): boolean {
+export function isValidResourceId(id: string | null | undefined): boolean {
   const trimmed = String(id || '').trim();
   if (!trimmed || isLocalOnlyResourceId(trimmed)) return false;
   if (trimmed.length > 36) return false;
-  return /^[a-zA-Z0-9][a-zA-Z0-9_]*$/.test(trimmed);
+  return /^[a-zA-Z0-9_\-]+$/.test(trimmed);
 }
+
+export const isValidAppwriteRowId = isValidResourceId;
 
 export type CollaboratorResourceType =
   | 'note'
@@ -26,9 +25,6 @@ export type CollaboratorResourceType =
   | 'secret'
   | 'totp';
 
-/**
- * Maps UI / legacy resource labels to the polymorphic collaborators table type.
- */
 export function normalizeCollaboratorResourceType(
   type: string | null | undefined
 ): CollaboratorResourceType | null {

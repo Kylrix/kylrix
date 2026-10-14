@@ -1,6 +1,6 @@
-import { KeychainService } from '@/lib/appwrite/keychain';
 import { UsersService } from '@/lib/services/users';
 import { seedIdentityCache } from '@/lib/identity-cache';
+import { systemTables } from '@/lib/data/system-tables';
 
 export type VerificationState = {
   verified: boolean;
@@ -29,7 +29,8 @@ function toVerificationState(input: any): VerificationState {
       verifiedOn: null,
       checkedAt: null,
       method: null,
-      source: null};
+      source: null,
+    };
   }
 
   return {
@@ -37,7 +38,8 @@ function toVerificationState(input: any): VerificationState {
     verifiedOn: typeof input.verifiedOn === 'string' && input.verifiedOn ? input.verifiedOn : null,
     checkedAt: typeof input.checkedAt === 'string' && input.checkedAt ? input.checkedAt : null,
     method: typeof input.method === 'string' && input.method ? input.method : null,
-    source: typeof input.source === 'string' && input.source ? input.source : null};
+    source: typeof input.source === 'string' && input.source ? input.source : null,
+  };
 }
 
 export function getVerificationState(preferences: PreferencesLike): VerificationState {
@@ -45,10 +47,10 @@ export function getVerificationState(preferences: PreferencesLike): Verification
   return toVerificationState(parsed.verification);
 }
 
-
 function mergeVerificationPreferences(
   preferences: PreferencesLike,
-  verification: Partial<VerificationState>) {
+  verification: Partial<VerificationState>,
+) {
   const parsed = parsePreferences(preferences);
   const existing = toVerificationState(parsed.verification);
   const checkedAt = verification.checkedAt || new Date().toISOString();
@@ -59,9 +61,10 @@ function mergeVerificationPreferences(
     ...verification,
     verified,
     checkedAt,
-    verifiedOn: verified ? (verification.verifiedOn || existing.verifiedOn || checkedAt) : (existing.verifiedOn || null),
+    verifiedOn: verified ? verification.verifiedOn || existing.verifiedOn || checkedAt : existing.verifiedOn || null,
     method: verification.method || existing.method || 'masterpass',
-    source: verification.source || existing.source || 'connect'};
+    source: verification.source || existing.source || 'connect',
+  };
 
   return parsed;
 }
@@ -74,18 +77,28 @@ export async function syncCurrentUserVerification(userId: string) {
   if (!userId) return null;
 
   try {
-    const [profile, hasMasterpass] = await Promise.all([
-      UsersService.getProfileById(userId),
-      KeychainService.hasMasterpass(userId).catch(() => false)]);
+    const tables = systemTables();
+    const kcRes = await tables
+      .listRows({
+        databaseId: 'vault',
+        tableId: 'keychain',
+        queries: [{ type: 'equal', attribute: 'userId', value: userId }],
+      })
+      .catch(() => ({ rows: [] }));
+
+    const hasMasterpass = kcRes.rows.length > 0;
+    const profile = await UsersService.getProfileById(userId);
 
     const nextPrefs = mergeVerificationPreferences(profile?.preferences || null, {
       verified: hasMasterpass,
       checkedAt: new Date().toISOString(),
       method: 'masterpass',
-      source: 'connect'});
+      source: 'connect',
+    });
 
     const updated = await UsersService.updateProfile(userId, {
-      preferences: JSON.stringify(nextPrefs)});
+      preferences: JSON.stringify(nextPrefs),
+    });
 
     if (updated) {
       seedIdentityCache(updated);
