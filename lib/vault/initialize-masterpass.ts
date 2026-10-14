@@ -1,9 +1,8 @@
 'use client';
 
-import { KeychainService } from '@/lib/appwrite/keychain';
-import { setMasterpassFlag } from '@/lib/appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import { systemTables } from '@/lib/data/system-tables';
 
 export type InitializeMasterPassVaultInput = {
   userId: string;
@@ -16,19 +15,20 @@ export type EnsureMasterPassVaultResult = 'initialized' | 'unlocked';
 
 async function userHasPasswordKeychain(userId: string): Promise<boolean> {
   try {
-    const { SecurityEnclave } = await import('@/lib/security/enclave');
-    await SecurityEnclave.hydrateFromRemote(userId, { force: true }).catch(() => {});
+    const tables = systemTables();
+    const res = await tables.listRows({
+      databaseId: 'vault',
+      tableId: 'keychain',
+      queries: [{ type: 'equal', attribute: 'userId', value: userId }],
+    });
+    return res.rows.some((entry: any) => entry.type === 'password');
   } catch {
-    // Non-blocking — fall through to keychain probe
+    return false;
   }
-
-  const entries = await KeychainService.listKeychainEntries(userId);
-  return entries.some((entry) => entry.type === 'password');
 }
 
 /**
  * Canonical first-time vault setup used by signup, sign-in, and Settings.
- * Creates the keychain, marks masterpass configured, and links authPass for login.
  */
 export async function initializeMasterPassVault(
   input: InitializeMasterPassVaultInput
@@ -37,8 +37,6 @@ export async function initializeMasterPassVault(
   const displayName = (input.name || '').trim() || email.split('@')[0];
 
   await masterPassCrypto.setupVault(masterPassword, userId);
-
-  await setMasterpassFlag(userId, email);
 
   try {
     const { syncMasterpassToAccountPassword } = await import('@/lib/actions/client-ops');
@@ -74,8 +72,7 @@ export async function initializeMasterPassVault(
 }
 
 /**
- * After a successful Appwrite password session, ensure vault is configured.
- * Initializes officially when no password keychain exists; otherwise unlocks.
+ * After a successful password session, ensure vault is configured.
  */
 export async function ensureMasterPassVaultConfigured(
   input: InitializeMasterPassVaultInput

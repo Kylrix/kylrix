@@ -1,43 +1,30 @@
 import { purgeRxDB } from '@/lib/webrtc/RxDBManager';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { invalidateCurrentUserCache, clearKylrixPulse } from '@/lib/appwrite/client';
 import { clearSessionProjectsList } from '@/lib/projects/projects-cache';
 import { clearAllChatMemory } from '@/lib/chat/local-chat-cache';
 import { clearInstalledFlowsMemory } from '@/lib/flows/installed';
 
-/**
- * Total Client Compartmentalization & Storage Wipe on Logout / Account Switch.
- * Completely purges RxDB, Dexie databases, LocalEngine baselines, in-memory caches,
- * sessionStorage, user localStorage keys, and cryptographic RAM sessions so that
- * no data leaks between different user accounts.
- */
 export async function purgeAllClientStorageOnLogout(): Promise<void> {
   if (typeof window === 'undefined') return;
 
-  // 1. Lock masterpass & crypto enclaves in RAM
   try {
     masterPassCrypto.lock();
     ecosystemSecurity.lock();
   } catch {}
 
-  // 2. Clear Appwrite user snapshot cache, heartbeat, and in-memory project/chat/flow caches
   try {
-    invalidateCurrentUserCache();
-    clearKylrixPulse();
     clearSessionProjectsList();
     clearAllChatMemory();
     clearInstalledFlowsMemory();
   } catch {}
 
-  // 3. Purge RxDB & Dexie local storage
   try {
     await purgeRxDB();
   } catch (err) {
     console.warn('[purgeAllClientStorageOnLogout] RxDB purge warning:', err);
   }
 
-  // 4. Clear LocalEngine baseline snapshots & memory structures
   try {
     const win = window as any;
     Object.keys(win).forEach((key) => {
@@ -47,12 +34,10 @@ export async function purgeAllClientStorageOnLogout(): Promise<void> {
     });
   } catch {}
 
-  // 5. Clear sessionStorage completely
   try {
     sessionStorage.clear();
   } catch {}
 
-  // 6. Clear user-specific and sensitive localStorage keys
   try {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -78,7 +63,6 @@ export async function purgeAllClientStorageOnLogout(): Promise<void> {
     keysToRemove.forEach((k) => localStorage.removeItem(k));
   } catch {}
 
-  // 7. Dispatch global logout event to instantly reset all React Contexts
   try {
     window.dispatchEvent(new CustomEvent('kylrix:auth:logout'));
     window.dispatchEvent(new CustomEvent('kylrix:nexus:clear'));

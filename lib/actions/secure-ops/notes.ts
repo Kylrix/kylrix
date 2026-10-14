@@ -1,130 +1,62 @@
 'use server';
 
 import { systemTables } from '@/lib/data/system-tables';
+import { q } from '@/lib/data/queries';
 import * as shared from './shared';
-import {
-  ID, Permission, Query, Role, createSystemClient
-} from '@/lib/appwrite/types';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-
-import { validatePublicNoteAccess } from '@/lib/appwrite/note';
 import { broadcastRealtimeEvent } from '@/lib/realtime/partykit';
 import { inferAttachmentMimeType, resolveAttachmentVisualKind } from '@/lib/note-object-visual';
-import {
-  JWTSchema,
-  NoteSchema,
-  SuggestionParamsSchema
-} from '@/lib/validations/schemas';
+import { JWTSchema, NoteSchema, SuggestionParamsSchema } from '@/lib/validations/schemas';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
-// Import interfaces / types from shared
-
-// Bind shared helper properties and variables to local scope for convenience
-const {
-  getActor,
-  verifyResourcePermissionSecure,
-  verifyNotePermission} = shared;
-
-const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-const NOTES_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+const { getActor, verifyNotePermission } = shared;
 
 async function hydrateSharedNoteRow(noteId: string) {
-  const tables = systemTables();
-  let doc: any = await tables.getRow({
-    databaseId: NOTE_DB_ID,
-    tableId: NOTES_TABLE_ID,
-    rowId: noteId,
-  }).catch(() => null);
-
-  if (!doc) {
-    // Turso fallback
-    try {
-      const { getNoteTurso } = await import('@/lib/actions/turso-ops');
-      const tursoRes = await getNoteTurso(noteId);
-      if (tursoRes.success && tursoRes.row && !tursoRes.row.isTrashed) {
-        const r = tursoRes.row;
-        let tags: string[] = [];
-        try {
-          tags = typeof r.tags === 'string' ? JSON.parse(r.tags) : (r.tags || []);
-        } catch {
-          tags = [];
-        }
-        doc = {
-          $id: r.id,
-          id: r.id,
-          title: r.title,
-          content: r.content,
-          userId: r.userId,
-          isPublic: true,
-          isGuest: true,
-          isWorkspace: Boolean(r.isWorkspace),
-          tags,
-          attachments: [],
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-        };
-      }
-    } catch {}
-  }
-
-  if (!doc || doc.isTrash === true || doc.isDeleted === true) {
-    return null;
-  }
-
   try {
-    const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-    const pivot = await tables.listRows({
-      databaseId: NOTE_DB_ID,
-      tableId: noteTagsTable,
-      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any,
-    }).catch(() => ({ rows: [] as any[] }));
-    if (pivot.rows?.length) {
-      const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
-      doc.tags = tags;
+    const { getNoteTurso } = await import('@/lib/actions/turso-ops');
+    const tursoRes = await getNoteTurso(noteId);
+    if (tursoRes.success && tursoRes.row && !tursoRes.row.isTrashed) {
+      const r = tursoRes.row;
+      let tags: string[] = [];
+      try {
+        tags = typeof r.tags === 'string' ? JSON.parse(r.tags) : (r.tags || []);
+      } catch {
+        tags = [];
+      }
+      return {
+        $id: r.id,
+        id: r.id,
+        title: r.title,
+        content: r.content,
+        userId: r.userId,
+        isPublic: true,
+        isGuest: true,
+        isWorkspace: Boolean(r.isWorkspace),
+        tags,
+        attachments: [],
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      };
     }
   } catch {}
-
-  if (!doc.attachments || !Array.isArray(doc.attachments)) {
-    doc.attachments = [];
-  }
-
-  // Sanitize internal permissions and Appwrite system fields to prevent wire leakage
-  const { $permissions, $databaseId, $collectionId, ...cleanDoc } = doc;
-  return cleanDoc;
+  return null;
 }
 
 async function canReadSharedNoteSecure(noteId: string, actorId?: string | null) {
-  const tables = systemTables();
-  let doc: any = null;
   try {
-    doc = await tables.getRow({
-      databaseId: NOTE_DB_ID,
-      tableId: NOTES_TABLE_ID,
-      rowId: noteId,
-    });
-  } catch {
-    doc = null;
-  }
-
-  if (!doc) {
-    // Check Turso fallback
-    try {
-      const { getNoteTurso } = await import('@/lib/actions/turso-ops');
-      const tursoRes = await getNoteTurso(noteId);
-      if (tursoRes.success && tursoRes.row && !tursoRes.row.isTrashed) {
-        return true;
-      }
-    } catch {}
-    return false;
-  }
-
-  if (doc.isTrash === true || doc.isDeleted === true) return false;
+    const { getNoteTurso } = await import('@/lib/actions/turso-ops');
+    const tursoRes = await getNoteTurso(noteId);
+    if (tursoRes.success && tursoRes.row && !tursoRes.row.isTrashed) {
+      if (tursoRes.row.isPublished || tursoRes.row.userId === actorId) return true;
+    }
+  } catch {}
 
   if (actorId) {
     const allowed = await verifyNotePermission(noteId, actorId, 'viewer');
     if (allowed) return true;
   }
-  const publicNote = await validatePublicNoteAccess(noteId);
-  return !!publicNote;
+  return false;
 }
 
 export async function getSharedNoteDataSecure(noteId: string, jwt?: string) {
@@ -171,11 +103,11 @@ export async function getNoteSecondaryObjectPreviewSecure(
       previewDataUrl: null as string | null,
       childKind,
       mimeType,
-      visualKind};
+      visualKind,
+    };
   }
 
   if (childKind === 'file' || childKind === 'image' || childKind === 'voice') {
-    // File storage removed — no preview data available
     return {
       ok: true as const,
       title: fallbackTitle,
@@ -185,32 +117,17 @@ export async function getNoteSecondaryObjectPreviewSecure(
       bucketId: '',
       fileId: childId,
       mimeType,
-      visualKind};
-  }
-
-  const map: Record<string, { db: string; table: string }> = {
-    task: { db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.TASKS },
-    form: { db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.FORMS },
-    note: { db: NOTE_DB_ID, table: NOTES_TABLE_ID },
-    vault: { db: APPWRITE_CONFIG.DATABASES.VAULT, table: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS }};
-  const target = map[childKind];
-  if (!target) {
-    return {
-      ok: true as const,
-      title: fallbackTitle,
-      href: null as string | null,
-      previewDataUrl: null as string | null,
-      childKind,
-      mimeType,
-      visualKind};
+      visualKind,
+    };
   }
 
   try {
     const tables = systemTables();
     const row = await tables.getRow({
-      databaseId: target.db,
-      tableId: target.table,
-      rowId: childId}) as any;
+      databaseId: 'turso',
+      tableId: childKind,
+      rowId: childId,
+    }) as any;
     return {
       ok: true as const,
       title: String(row?.title || row?.name || fallbackTitle).trim(),
@@ -218,7 +135,8 @@ export async function getNoteSecondaryObjectPreviewSecure(
       previewDataUrl: null as string | null,
       childKind,
       mimeType,
-      visualKind};
+      visualKind,
+    };
   } catch {
     return {
       ok: true as const,
@@ -227,15 +145,9 @@ export async function getNoteSecondaryObjectPreviewSecure(
       previewDataUrl: null as string | null,
       childKind,
       mimeType,
-      visualKind};
+      visualKind,
+    };
   }
-}
-
-function _blobMimeFromPreview(dataUrl: string | null | undefined): string | null {
-  if (!dataUrl || !dataUrl.startsWith('data:')) return null;
-  const semi = dataUrl.indexOf(';');
-  if (semi <= 5) return null;
-  return dataUrl.slice(5, semi);
 }
 
 export async function getNoteInheritedFileBlobSecure(
@@ -244,7 +156,6 @@ export async function getNoteInheritedFileBlobSecure(
   _bucketId: string,
   _jwt?: string,
 ) {
-  // File storage removed — blobs are not available
   return {
     dataUrl: null,
     mimeType: 'application/octet-stream',
@@ -253,61 +164,48 @@ export async function getNoteInheritedFileBlobSecure(
 }
 
 export async function getPublicNoteCommentsSecure(noteId: string) {
-  const note = await validatePublicNoteAccess(noteId);
-  if (!note) throw new Error('Note not found or not public');
-
-  const { databases } = createSystemClient();
-  const res = await databases.listRows(
-    APPWRITE_CONFIG.DATABASES.NOTE,
-    APPWRITE_CONFIG.TABLES.NOTE.COMMENTS,
-    [
-      Query.equal('noteId', noteId),
-      Query.orderAsc('$createdAt'),
-      Query.limit(200)
-    ]
-  );
-  const cleanRows = (res.rows || []).map((c: any) => ({
-    $id: c.$id,
-    id: c.$id,
-    noteId: c.noteId,
-    userId: c.userId,
-    content: c.content,
-    createdAt: c.createdAt || c.$createdAt,
-    updatedAt: c.updatedAt || c.$updatedAt,
-  }));
-  return { rows: cleanRows };
+  try {
+    const rows = await db
+      .select()
+      .from(schema.comments)
+      .where(and(eq(schema.comments.resourceId, noteId), eq(schema.comments.resourceType, 'note')));
+    const cleanRows = rows.map((c) => ({
+      $id: c.id,
+      id: c.id,
+      noteId: c.resourceId,
+      userId: c.userId,
+      content: c.content,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+    return { rows: cleanRows };
+  } catch {
+    return { rows: [] };
+  }
 }
 
 export async function getPublicNoteReactionsSecure(noteId: string, targetId?: string, targetType?: string) {
-  const note = await validatePublicNoteAccess(noteId);
-  if (!note) throw new Error('Note not found or not public');
-
-  const { databases } = createSystemClient();
-  const res = await databases.listRows(
-    APPWRITE_CONFIG.DATABASES.NOTE,
-    APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
-    [
-      Query.equal('targetType', targetType || 'note'),
-      Query.equal('targetId', targetId || noteId),
-      Query.orderAsc('$createdAt'),
-      Query.limit(500)
-    ]
-  );
-  const cleanRows = (res.rows || []).map((r: any) => ({
-    $id: r.$id,
-    id: r.$id,
-    targetId: r.targetId,
-    targetType: r.targetType,
-    reactionType: r.reactionType,
-    userId: r.userId,
-    createdAt: r.createdAt || r.$createdAt,
-    updatedAt: r.updatedAt || r.$updatedAt,
-  }));
-  return { rows: cleanRows };
+  try {
+    const rows = await db
+      .select()
+      .from(schema.reactions)
+      .where(and(eq(schema.reactions.resourceId, targetId || noteId), eq(schema.reactions.resourceType, targetType || 'note')));
+    const cleanRows = rows.map((r) => ({
+      $id: r.id,
+      id: r.id,
+      targetId: r.resourceId,
+      targetType: r.resourceType,
+      reactionType: r.emoji,
+      userId: r.userId,
+      createdAt: r.createdAt,
+    }));
+    return { rows: cleanRows };
+  } catch {
+    return { rows: [] };
+  }
 }
 
 export async function getCrossSuggestionsSecure(params: any, jwt?: string) {
-  // Rigorous runtime validation
   const validated = SuggestionParamsSchema.parse(params);
   const validatedJwt = JWTSchema.parse(jwt);
 
@@ -319,19 +217,19 @@ export async function getCrossSuggestionsSecure(params: any, jwt?: string) {
 
   let suggestions = [
     { id: `note:${baseId}`, label: 'Attach Note', description: 'Expose a note-link action.' },
-    { id: `event:${baseId}`, label: 'Create Event', description: 'Expose an event creation action.' }
+    { id: `event:${baseId}`, label: 'Create Event', description: 'Expose an event creation action.' },
   ];
 
   if (sourceApp === 'note' || sourceType === 'note') {
     suggestions = [
       { id: `task:${baseId}`, label: 'Create Task', description: 'Convert the note into an actionable task.' },
       { id: `event:${baseId}`, label: 'Create Event', description: 'Turn the note into a scheduled event.' },
-      { id: `followup:${baseId}`, label: 'Add Follow-up', description: 'Generate a follow-up action from this note.' }
+      { id: `followup:${baseId}`, label: 'Add Follow-up', description: 'Generate a follow-up action from this note.' },
     ];
   } else if (sourceType === 'task' || sourceApp === 'flow') {
     suggestions = [
       { id: `note:${baseId}`, label: 'Attach Note', description: 'Link a source note to this task.' },
-      { id: `event:${baseId}`, label: 'Calendar Event', description: 'Map this task onto a calendar surface.' }
+      { id: `event:${baseId}`, label: 'Calendar Event', description: 'Map this task onto a calendar surface.' },
     ];
   }
 
@@ -342,27 +240,17 @@ export async function syncNotesDeltaSecure(localManifest: { id: string; updatedA
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const { databases } = createSystemClient();
-  const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
-  const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
-
-  // 1. Fetch all server-side note IDs and their updatedAt timestamps for this user
-  // This is a lightweight metadata-only fetch
-  const serverRows = await databases.listRows(dbId, tableId, [
-    Query.equal('userId', actor.$id),
-    Query.select(['$id', '$updatedAt']),
-    Query.limit(5000)
-  ]);
+  const { listNotesTurso } = await import('@/lib/actions/turso-ops');
+  const res = await listNotesTurso(actor.$id);
 
   const serverManifest = new Map<string, string>(
-    serverRows.rows.map((d: any) => [String(d.$id), String(d.$updatedAt)])
+    (res.rows || []).map((d: any) => [String(d.id), String(d.updatedAt)])
   );
-  const localMap = new Map(localManifest.map(m => [m.id, m.updatedAt]));
+  const localMap = new Map(localManifest.map((m) => [m.id, m.updatedAt]));
 
   const toFetch: string[] = [];
   const toDelete: string[] = [];
 
-  // Check for updates or new items
   for (const [sId, sUpdated] of serverManifest.entries()) {
     const lUpdated = localMap.get(sId);
     if (!lUpdated || new Date(sUpdated) > new Date(lUpdated)) {
@@ -370,33 +258,19 @@ export async function syncNotesDeltaSecure(localManifest: { id: string; updatedA
     }
   }
 
-  // Check for deletions
   for (const lId of localMap.keys()) {
     if (!serverManifest.has(lId)) {
       toDelete.push(lId);
     }
   }
 
-  // 2. Surgical Fetch: Only get the full records that have changed
-  let patches: any[] = [];
-  if (toFetch.length > 0) {
-    // Chunk requests if there are too many (Appwrite limit)
-    const CHUNK_SIZE = 100;
-    for (let i = 0; i < toFetch.length; i += CHUNK_SIZE) {
-        const chunk = toFetch.slice(i, i + CHUNK_SIZE);
-        const res = await databases.listRows(dbId, tableId, [
-            Query.equal('$id', chunk),
-            Query.limit(CHUNK_SIZE)
-        ]);
-        patches.push(...res.rows);
-    }
-  }
+  const patches = (res.rows || []).filter((r: any) => toFetch.includes(r.id));
 
   return {
     success: true,
     patches,
     deletedIds: toDelete,
-    serverTime: new Date().toISOString()
+    serverTime: new Date().toISOString(),
   };
 }
 
@@ -404,36 +278,23 @@ export async function pullNotesDeltaSecure(params: { lastCheckpoint: string | nu
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const { databases } = createSystemClient();
-  const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
-  const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+  const { listNotesTurso } = await import('@/lib/actions/turso-ops');
+  const res = await listNotesTurso(actor.$id);
 
-  const queries = [
-    Query.or([
-      Query.equal('userId', actor.$id),
-      Query.equal('creatorId', actor.$id),
-    ]),
-    Query.orderAsc('$updatedAt'),
-    Query.limit(params.limit || 50)
-  ];
-
-  if (params.lastCheckpoint) {
-    queries.push(Query.greaterThan('$updatedAt', params.lastCheckpoint));
-  }
-
-  const res = await databases.listRows(dbId, tableId, queries);
-
-  const documents = res.rows.map((doc: any) => ({
-    id: doc.$id,
+  let documents = (res.rows || []).map((doc: any) => ({
+    id: doc.id,
     title: doc.title,
     content: doc.content,
     userId: doc.userId,
-    metadata: doc.metadata,
-    updatedAt: doc.$updatedAt,
-    crdt: doc.crdt || null,
-    _deleted: doc.isDeleted || false
+    updatedAt: doc.updatedAt,
+    _deleted: doc.isTrashed || false,
   }));
 
+  if (params.lastCheckpoint) {
+    documents = documents.filter((d: any) => new Date(d.updatedAt) > new Date(params.lastCheckpoint!));
+  }
+
+  documents = documents.slice(0, params.limit || 50);
   const lastDoc = documents[documents.length - 1];
   const checkpoint = lastDoc ? { updatedAt: lastDoc.updatedAt, id: lastDoc.id } : null;
 
@@ -444,71 +305,21 @@ export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const { databases } = createSystemClient();
-  const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
-  const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
-
-  const conflicts: any[] = [];
+  const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
 
   for (const row of rows) {
-    const { newDocumentState, assumedMasterState } = row;
-    const noteId = newDocumentState.id;
-
-    // 1. Fetch current master state
-    const currentMaster = await databases.getRow(dbId, tableId, noteId).catch(() => null);
-
-    if (currentMaster) {
-      // 2. Authorization: Verify ownership
-      const ownerId = String(currentMaster.userId || currentMaster.creatorId || currentMaster.ownerId || '').trim();
-      if (ownerId !== actor.$id) {
-          // Check shared access if not owner
-          const hasAccess = await verifyResourcePermissionSecure({
-              databaseId: dbId,
-              tableId: tableId,
-              rowId: noteId,
-              actorId: actor.$id,
-              action: 'update'
-          });
-          if (!hasAccess) {
-              console.warn(`[PushDelta] Unauthorized write attempt for ${noteId} by ${actor.$id}`);
-              continue; 
-          }
-      }
-
-      // 3. Conflict Detection
-      if (!assumedMasterState || currentMaster.$updatedAt !== assumedMasterState.updatedAt) {
-        console.log(`[PushDelta] Conflict detected for ${noteId}. Server: ${currentMaster.$updatedAt}, Client assumed: ${assumedMasterState?.updatedAt}`);
-        conflicts.push({
-            id: currentMaster.$id,
-            title: currentMaster.title,
-            content: currentMaster.content,
-            userId: currentMaster.userId,
-            metadata: currentMaster.metadata,
-            updatedAt: currentMaster.$updatedAt,
-            crdt: currentMaster.crdt || null,
-            _deleted: false
-        });
-        continue;
-      }
-
-      // 4. No conflict: Update
-      await databases.updateRow(dbId, tableId, noteId, {
-        title: newDocumentState.title,
-        content: newDocumentState.content,
-        metadata: newDocumentState.metadata,
-        crdt: typeof newDocumentState.crdt === 'string' ? newDocumentState.crdt : JSON.stringify(newDocumentState.crdt)});
-    } else {
-      // 5. New document: Create
-      await databases.createRow(dbId, tableId, noteId || ID.unique(), {
-        title: newDocumentState.title,
-        content: newDocumentState.content,
-        userId: actor.$id,
-        metadata: newDocumentState.metadata,
-        crdt: typeof newDocumentState.crdt === 'string' ? newDocumentState.crdt : JSON.stringify(newDocumentState.crdt)});
-    }
+    const { newDocumentState } = row;
+    await upsertNoteTurso({
+      id: newDocumentState.id || crypto.randomUUID(),
+      userId: actor.$id,
+      title: newDocumentState.title || '',
+      content: newDocumentState.content || '',
+      createdAt: newDocumentState.createdAt || new Date().toISOString(),
+      updatedAt: newDocumentState.updatedAt || new Date().toISOString(),
+    });
   }
 
-  return conflicts;
+  return [];
 }
 
 export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
@@ -517,251 +328,49 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
-  const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
-  const reservedRowId = [data?.$id, data?.id].find(
-    (id) => typeof id === 'string' && isValidAppwriteRowId(id),
-  ) as string | undefined || (data?.$id || data?.id || ID.unique());
-
-  // Primary write to Turso (decoupled from Appwrite plan limits)
-  void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
-    upsertNoteTurso({
-      id: reservedRowId,
-      userId: actor.$id,
-      title: data?.title || '',
-      content: data?.content || '',
-      isLocked: Boolean(data?.isLocked),
-      isPublished: Boolean(data?.isPublished),
-      isPinned: Boolean(data?.isPinned),
-      isTrashed: Boolean(data?.isTrash || data?.isTrashed),
-      isWorkspace: Boolean(data?.isWorkspace),
-      projectId: data?.projectId || null,
-      workspaceId: data?.projectId || null,
-      category: data?.category || null,
-      tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags || null),
-      createdAt: data?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }).catch(() => {});
-  }).catch(() => {});
-
-  // Idempotent compose: if the reserved ID already exists for this actor, update instead of create.
-  if (reservedRowId) {
-    try {
-      const tablesProbe = systemTables();
-      const existing = await tablesProbe.getRow({
-        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-        tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-        rowId: reservedRowId}) as { userId?: string | null; creatorId?: string | null };
-      const ownerId = String(existing.creatorId || existing.userId || '').trim();
-      if (ownerId && ownerId === actor.$id) {
-        return updateNoteSecure(reservedRowId, data, jwt);
-      }
-    } catch {
-      // Row not found — proceed with create using reserved ID.
-    }
-  }
-
+  const reservedRowId = data?.$id || data?.id || crypto.randomUUID();
   const { clampNoteTitle } = await import('@/constants/noteTitle');
   if (data && typeof data === 'object') {
     data.title = clampNoteTitle((data as any).title, 'Untitled Thought');
   }
   const validated = NoteSchema.parse(data);
 
-  // Mathematically tie the create operation to the current user
-  const noteData: any = {
-    ...validated,
-    title: clampNoteTitle(validated.title, 'Untitled Thought'),
+  const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
+  await upsertNoteTurso({
+    id: reservedRowId,
     userId: actor.$id,
-    creatorId: actor.$id};
+    title: validated.title || '',
+    content: validated.content || '',
+    isLocked: Boolean(data?.isLocked),
+    isPublished: Boolean(data?.isPublished),
+    isPinned: Boolean(data?.isPinned),
+    isTrashed: Boolean(data?.isTrash || data?.isTrashed),
+    isWorkspace: Boolean(data?.isWorkspace),
+    projectId: data?.projectId || null,
+    category: data?.category || null,
+    tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags || null),
+    createdAt: data?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
 
-  const isCreateAllowed = await verifyResourcePermissionSecure({
-    actorId: actor.$id,
-    action: 'create',
-    ownerFields: ['userId'],
-    data: noteData});
-  if (!isCreateAllowed) {
-    throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
-  }
-
-  const contentLength = (noteData.content || '').length;
-  const STANDARD_LIMIT = 65535;
-  const ARTICLE_LIMIT = 655300000;
-  const limit = noteData.article === true ? ARTICLE_LIMIT : STANDARD_LIMIT;
-
-  if (contentLength > limit) {
-    throw new Error(`Content exceeds maximum allowed limit for ${noteData.article === true ? 'articles' : 'standard notes'}`);
-  }
-
-  const tables = systemTables();
-  const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-  const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
-  const APPWRITE_TABLE_ID_TAGS = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
-
-  const { 
-    cleanRowData, 
-    filterNoteData, 
-    getNotePermissions,
-    createNoteCreationService} = await import('@/lib/appwrite/note');
-
-  const syncTags = async ({ noteId, rawTags, userId, now }: any) => {
-    try {
-      const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-      const tagsTable = APPWRITE_TABLE_ID_TAGS;
-      const unique = Array.from(new Set(rawTags.map((tag: any) => tag.trim()))).filter(Boolean) as string[];
-      if (!unique.length) return;
-
-      const existingTagRows: Record<string, any> = {};
-      try {
-        const existingTagsRes = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      queries: [Query.equal('userId', userId), Query.equal('nameLower', unique.map((tag: any) => tag.toLowerCase())), Query.limit(unique.length)] as any});
-        for (const td of existingTagsRes.rows as any[]) {
-          if (td.nameLower) existingTagRows[td.nameLower] = td;
-        }
-      } catch (tagListErr) {
-        console.error('tag preload failed on server', tagListErr);
-      }
-
-      for (const tagName of unique) {
-        const key = tagName.toLowerCase();
-        if (!existingTagRows[key]) {
-          try {
-            const created = await tables.createRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      rowId: ID.unique(),
-      data: { name: tagName, nameLower: key, userId, createdAt: now, usageCount: 0 }});
-            existingTagRows[key] = created;
-          } catch (_createTagErr: any) {
-            try {
-              const retry = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      queries: [Query.equal('userId', userId), Query.equal('nameLower', key), Query.limit(1)] as any});
-              if (retry.rows.length) existingTagRows[key] = retry.rows[0];
-            } catch {}
-          }
-        }
-      }
-
-      const existingPivot = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: noteTagsTable,
-      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(500)] as any});
-      const existingPairs = new Set(existingPivot.rows.map((p: any) => `${p.tagId || ''}::${p.tag || ''}`));
-      for (const tagName of unique) {
-        const key = tagName.toLowerCase();
-        const tagRow = existingTagRows[key];
-        const tagId = tagRow ? (tagRow.$id || tagRow.id) : undefined;
-        if (!tagId) continue;
-        const pairKey = `${tagId}::${tagName}`;
-        
-        try {
-          const res = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      queries: [Query.equal('userId', userId), Query.equal('name', tagName), Query.limit(1)] as any});
-          if (res.rows.length) {
-            const tRow: any = res.rows[0];
-            const current = typeof tRow.usageCount === 'number' && !isNaN(tRow.usageCount) ? tRow.usageCount : 0;
-            await tables.updateRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      rowId: tRow.$id,
-      data: { usageCount: current + 1 }});
-          }
-        } catch {}
-
-        if (existingPairs.has(pairKey)) continue;
-        try {
-          await tables.createRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: noteTagsTable,
-      rowId: ID.unique(),
-      data: { resourceId: noteId, resourceType: 'note', tagId, tag: tagName, userId, createdAt: now }});
-        } catch (e: any) {
-          console.error('note_tags create failed on server', e?.message || e);
-        }
-      }
-    } catch (e: any) {
-      console.error('dual-write note_tags error on server', e);
-    }
+  const createdNote = {
+    $id: reservedRowId,
+    id: reservedRowId,
+    title: validated.title,
+    content: validated.content,
+    userId: actor.$id,
+    createdAt: data?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 
-  const noteCreationServiceServer = createNoteCreationService({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: APPWRITE_TABLE_ID_NOTES,
-    generateId: () => reservedRowId || ID.unique(),
-    getCurrentUser: async () => ({ $id: actor.$id }),
-    createRow: async (databaseId, tableId, data, rowId, permissions) => {
-      return tables.createRow({
-      databaseId: databaseId,
-      tableId: tableId,
-      rowId: rowId || ID.unique(),
-      data: data as any,
-      permissions: permissions}) as any;
-    },
-    getNote: async (noteId) => {
-      const row = await tables.getRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLE_ID_NOTES,
-      rowId: noteId}) as any;
-      try {
-        const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-        const pivot = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: noteTagsTable,
-      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any});
-        if (pivot.rows.length) {
-          const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
-          (row as any).tags = tags;
-        }
-      } catch {}
-      if (!row.attachments || !Array.isArray(row.attachments)) {
-        row.attachments = [];
-      }
-      return row;
-    },
-    getNotePermissions,
-    cleanRowData,
-    filterNoteData,
-    syncTags});
+  void broadcastRealtimeEvent({
+    tableId: 'notes',
+    rowId: reservedRowId,
+    action: 'create',
+    payload: createdNote,
+  });
 
-  try {
-    const note = await noteCreationServiceServer.createNote(noteData);
-    void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
-      upsertNoteTurso({
-        id: note.$id || note.id || reservedRowId,
-        userId: note.userId || actor.$id,
-        title: note.title || '',
-        content: note.content || '',
-        isLocked: Boolean(note.isLocked),
-        isPublished: Boolean(note.isPublished),
-        isPinned: Boolean(note.isPinned),
-        isTrashed: Boolean(note.isTrashed),
-        isWorkspace: Boolean(note.isWorkspace),
-        projectId: note.projectId || null,
-        category: note.category || null,
-        tags: Array.isArray(note.tags) ? JSON.stringify(note.tags) : (note.tags || null),
-        createdAt: note.createdAt || note.$createdAt || new Date().toISOString(),
-        updatedAt: note.updatedAt || note.$updatedAt || new Date().toISOString(),
-      }).catch((err) => console.warn('[turso] Silent note creation mirror error:', err));
-    }).catch(() => {});
-    void broadcastRealtimeEvent({
-      tableId: 'notes',
-      rowId: note.$id || note.id || reservedRowId,
-      action: 'create',
-      payload: note,
-    });
-    return JSON.parse(JSON.stringify(note));
-  } catch (error: any) {
-    const message = String(error?.message || '').toLowerCase();
-    const isDuplicate = message.includes('already exists') || message.includes('duplicate');
-    if (reservedRowId && isDuplicate) {
-      return updateNoteSecure(reservedRowId, data, jwt);
-    }
-    throw error;
-  }
+  return JSON.parse(JSON.stringify(createdNote));
 }
 
 export async function updateNoteSecure(noteId: string, data: any, jwt?: string): Promise<any> {
@@ -770,286 +379,47 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
-  // Primary write to Turso (decoupled from Appwrite plan limits)
-  void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
-    upsertNoteTurso({
-      id: noteId,
-      userId: actor.$id,
-      title: data?.title || '',
-      content: data?.content || '',
-      isLocked: Boolean(data?.isLocked),
-      isPublished: Boolean(data?.isPublished),
-      isPinned: Boolean(data?.isPinned),
-      isTrashed: Boolean(data?.isTrash || data?.isTrashed),
-      isWorkspace: Boolean(data?.isWorkspace),
-      projectId: data?.projectId || null,
-      workspaceId: data?.projectId || null,
-      category: data?.category || null,
-      tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags || null),
-      createdAt: data?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }).catch(() => {});
-  }).catch(() => {});
-
-  const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
-  if (!isValidAppwriteRowId(noteId)) {
-    throw new Error('This idea is saved offline only. Sign in and wait for sync, or save it again while online.');
-  }
-
-  const isAllowed = await verifyNotePermission(noteId, actor.$id, 'editor');
-  if (!isAllowed) {
-    // Check if the note actually exists — if it doesn't, delegate to create instead of throwing Forbidden.
-    // This handles the sync race where a new note's first sync attempt hits updateNoteSecure before the row exists on Appwrite.
-    try {
-      const probeTables = systemTables();
-      const existing = await probeTables.getRow({
-        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-        tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-        rowId: noteId}).catch(() => null);
-      if (!existing) {
-        // Row doesn't exist yet — delegate to create path
-        return createNoteSecure({ ...data, $id: noteId }, jwt);
-      }
-    } catch {
-      // If probe fails, row may not exist — still try to create
-      return createNoteSecure({ ...data, $id: noteId }, jwt);
-    }
-    throw new Error('Forbidden: Insufficient permissions to update this note');
-  }
+  const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
+  const now = new Date().toISOString();
 
   if (data.title !== undefined) {
     const { clampNoteTitle } = await import('@/constants/noteTitle');
     data.title = clampNoteTitle(data.title, 'Untitled Thought');
   }
 
-  const contentLength = (data.content || '').length;
-  const STANDARD_LIMIT = 65535;
-  const ARTICLE_LIMIT = 655300000;
-  const limit = data.article === true ? ARTICLE_LIMIT : STANDARD_LIMIT;
+  await upsertNoteTurso({
+    id: noteId,
+    userId: actor.$id,
+    title: data?.title || '',
+    content: data?.content || '',
+    isLocked: Boolean(data?.isLocked),
+    isPublished: Boolean(data?.isPublished),
+    isPinned: Boolean(data?.isPinned),
+    isTrashed: Boolean(data?.isTrash || data?.isTrashed),
+    isWorkspace: Boolean(data?.isWorkspace),
+    projectId: data?.projectId || null,
+    category: data?.category || null,
+    tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags || null),
+    createdAt: data?.createdAt || now,
+    updatedAt: now,
+  });
 
-  if (contentLength > limit) {
-    throw new Error(`Content exceeds maximum allowed limit for ${data.article === true ? 'articles' : 'standard notes'}`);
-  }
-
-  const tables = systemTables();
-  const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-  const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
-  const APPWRITE_TABLE_ID_TAGS = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
-
-  const { 
-    cleanRowData, 
-    filterNoteData, 
-    getNotePermissions,
-    createNoteCreationService,
-    sanitizeNoteUpdatePatch} = await import('@/lib/appwrite/note');
-
-  const noteRow = await tables.getRow({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: APPWRITE_TABLE_ID_NOTES,
-    rowId: noteId}) as { creatorId?: string | null; userId?: string | null };
-
-  const noteOwnerId = noteRow.creatorId || noteRow.userId || '';
-  const patch = sanitizeNoteUpdatePatch({ ...data }, { actorId: actor.$id, noteOwnerId });
-
-  const hydrateNoteRow = async (rowId: string) => {
-    const hydrated = await tables.getRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLE_ID_NOTES,
-      rowId}) as any;
-    try {
-      const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-      const pivot = await tables.listRows({
-        databaseId: APPWRITE_DATABASE_ID,
-        tableId: noteTagsTable,
-        queries: [Query.equal('resourceId', rowId), Query.equal('resourceType', 'note'), Query.limit(200)] as any});
-      if (pivot.rows.length) {
-        const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
-        hydrated.tags = tags;
-      }
-    } catch {}
-    if (!hydrated.attachments || !Array.isArray(hydrated.attachments)) {
-      hydrated.attachments = [];
-    }
-    return hydrated;
+  const updatedNote = {
+    $id: noteId,
+    id: noteId,
+    userId: actor.$id,
+    ...data,
+    updatedAt: now,
   };
 
-  const noteService = createNoteCreationService({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: APPWRITE_TABLE_ID_NOTES,
-    getCurrentUser: async () => ({ $id: actor.$id }),
-    createRow: async () => {
-      throw new Error('createRow is not available in updateNoteSecure');
-    },
-    updateRow: async (_databaseId, _tableId, rowId, rowData, permissions) => {
-      const ownerPerms =
-        permissions && permissions.length
-          ? permissions
-          : getNotePermissions(noteOwnerId || actor.$id, !!(rowData as any)?.isPublic);
-      return tables.updateRow({
-        databaseId: APPWRITE_DATABASE_ID,
-        tableId: APPWRITE_TABLE_ID_NOTES,
-        rowId,
-        data: rowData as any,
-        permissions: ownerPerms}) as any;
-    },
-    getNote: hydrateNoteRow,
-    getNotePermissions,
-    cleanRowData,
-    filterNoteData});
-
-  const updatedAt = new Date().toISOString();
-  const row = await noteService.updateNote(noteId, patch, { ownerId: noteOwnerId || actor.$id });
   void broadcastRealtimeEvent({
     tableId: 'notes',
     rowId: noteId,
     action: 'update',
-    payload: row,
+    payload: updatedNote,
   });
 
-  try {
-    if (Array.isArray(patch.tags)) {
-      const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-      const tagsTable = APPWRITE_TABLE_ID_TAGS;
-      const incomingRaw: string[] = patch.tags.filter(Boolean).map((t: string) => t.trim());
-      const normalizedIncoming = Array.from(new Set(incomingRaw)).filter(Boolean);
-      const incomingSet = new Set(normalizedIncoming);
-
-      const tagRows: Record<string, any> = {};
-      if (normalizedIncoming.length) {
-        try {
-          const existingTagsRes = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      queries: [Query.equal('userId', actor.$id), Query.equal('nameLower', normalizedIncoming.map(t => t.toLowerCase())), Query.limit(normalizedIncoming.length)] as any});
-          for (const td of existingTagsRes.rows as any[]) {
-            if (td.nameLower) tagRows[td.nameLower] = td;
-          }
-        } catch (preErr) {
-          console.error('updateNoteSecure tag preload failed', preErr);
-        }
-        for (const tagName of normalizedIncoming) {
-          const key = tagName.toLowerCase();
-          if (!tagRows[key]) {
-            try {
-              const created = await tables.createRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      rowId: ID.unique(),
-      data: { name: tagName, nameLower: key, userId: actor.$id, createdAt: updatedAt, usageCount: 0 }});
-              tagRows[key] = created;
-            } catch (_createErr) {
-              try {
-                const retry = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      queries: [Query.equal('userId', actor.$id), Query.equal('nameLower', key), Query.limit(1)] as any});
-                if (retry.rows.length) tagRows[key] = retry.rows[0];
-              } catch {}
-            }
-          }
-        }
-      }
-
-      const existingPivot = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: noteTagsTable,
-      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(500)] as any});
-      const existingByTag: Record<string, any> = {};
-      const existingPairs = new Set<string>();
-      for (const p of existingPivot.rows as any[]) {
-        if (p.tag) existingByTag[p.tag] = p;
-        if (p.tagId && p.tag) existingPairs.add(`${p.tagId}::${p.tag}`);
-      }
-
-      for (const tagName of normalizedIncoming) {
-        const key = tagName.toLowerCase();
-        const tagRow = tagRows[key];
-        const tagId = tagRow ? (tagRow.$id || tagRow.id) : undefined;
-        if (!tagId) continue;
-        const pairKey = `${tagId}::${tagName}`;
-        if (existingPairs.has(pairKey)) continue;
-
-        try {
-          const res = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLE_ID_TAGS,
-      queries: [Query.equal('userId', actor.$id), Query.equal('name', tagName), Query.limit(1)] as any});
-          if (res.rows.length) {
-            const tRow: any = res.rows[0];
-            const current = typeof tRow.usageCount === 'number' && !isNaN(tRow.usageCount) ? tRow.usageCount : 0;
-            await tables.updateRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLE_ID_TAGS,
-      rowId: tRow.$id,
-      data: { usageCount: current + 1 }});
-          }
-        } catch {}
-
-        try {
-          await tables.createRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: noteTagsTable,
-      rowId: ID.unique(),
-      data: { resourceId: noteId, resourceType: 'note', tagId, tag: tagName, userId: actor.$id, createdAt: updatedAt }});
-          existingPairs.add(pairKey);
-        } catch (ie) {
-          console.error('note_tags create (updateNoteSecure) failed', ie);
-        }
-      }
-
-      for (const [tagName, pivotRow] of Object.entries(existingByTag)) {
-        if (!incomingSet.has(tagName)) {
-          try {
-            const res = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLE_ID_TAGS,
-      queries: [Query.equal('userId', actor.$id), Query.equal('name', tagName), Query.limit(1)] as any});
-            if (res.rows.length) {
-              const tRow: any = res.rows[0];
-              const current = typeof tRow.usageCount === 'number' && !isNaN(tRow.usageCount) ? tRow.usageCount : 0;
-              await tables.updateRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLE_ID_TAGS,
-      rowId: tRow.$id,
-      data: { usageCount: Math.max(0, current - 1) }});
-            }
-          } catch {}
-
-          try {
-            await tables.deleteRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: noteTagsTable,
-      rowId: (pivotRow as any).$id});
-          } catch (de) {
-            console.error('note_tags stale delete failed in updateNoteSecure', de);
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.error('dual-write note_tags update error in updateNoteSecure', e);
-  }
-
-  void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
-    upsertNoteTurso({
-      id: noteId,
-      userId: noteOwnerId || actor.$id,
-      title: row?.title || patch?.title || '',
-      content: row?.content || patch?.content || '',
-      isLocked: Boolean(row?.isLocked ?? patch?.isLocked),
-      isPublished: Boolean(row?.isPublished ?? patch?.isPublished),
-      isPinned: Boolean(row?.isPinned ?? patch?.isPinned),
-      isTrashed: Boolean(row?.isTrashed ?? patch?.isTrashed),
-      isWorkspace: Boolean(row?.isWorkspace ?? patch?.isWorkspace),
-      projectId: row?.projectId || patch?.projectId || null,
-      category: row?.category || patch?.category || null,
-      tags: Array.isArray(patch?.tags) ? JSON.stringify(patch.tags) : (row?.tags ? JSON.stringify(row.tags) : null),
-      createdAt: row?.createdAt || row?.$createdAt || new Date().toISOString(),
-      updatedAt: updatedAt,
-    }).catch((err) => console.warn('[turso] Silent note update mirror error:', err));
-  }).catch(() => {});
-
-  return JSON.parse(JSON.stringify(row));
+  return JSON.parse(JSON.stringify(updatedNote));
 }
 
 export async function deleteNoteSecure(noteId: string, jwt?: string) {
@@ -1058,41 +428,10 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
-  const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
-  if (!isValidAppwriteRowId(noteId)) {
-    // Offline-only / ephemeral draft item — local deletion is clean success
-    return { success: true, offline: true };
-  }
+  const { deleteNoteTurso } = await import('@/lib/actions/turso-ops');
+  await deleteNoteTurso(noteId);
 
-  const tables = systemTables();
-  const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-  const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
-
-  const isAllowed = await verifyNotePermission(noteId, actor.$id, 'admin');
-  if (!isAllowed) {
-    try {
-      await tables.getRow({
-        databaseId: APPWRITE_DATABASE_ID,
-        tableId: APPWRITE_TABLE_ID_NOTES,
-        rowId: noteId});
-    } catch {
-      return JSON.parse(JSON.stringify({ $id: noteId, localOnly: true }));
-    }
-    throw new Error('Forbidden: Insufficient permissions to delete this note');
-  }
-
-  const result = await tables.updateRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLE_ID_NOTES,
-      rowId: noteId,
-      data: { isTrash: true }
-    });
-
-  void import('@/lib/actions/turso-ops').then(({ deleteNoteTurso }) => {
-    deleteNoteTurso(noteId).catch((err) => console.warn('[turso] Silent note delete mirror error:', err));
-  }).catch(() => {});
-
-  return JSON.parse(JSON.stringify(result));
+  return JSON.parse(JSON.stringify({ $id: noteId, success: true }));
 }
 
 export async function createthreadNoteSecure(data: {
@@ -1104,70 +443,40 @@ export async function createthreadNoteSecure(data: {
   isEncrypted?: boolean;
   creatorDeletionProofHash?: string;
 }) {
-  const expiresAt = data.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const metadata = JSON.stringify({
-    isthread: true,
-    threadSecret: data.threadSecret,
-    expiresAt: expiresAt,
-    version: 'v2',
-    isEncrypted: data.isEncrypted || false,
-    ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {})});
+  const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
 
-  const tables = systemTables();
-  const result: any = await tables.createRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    rowId: ID.unique(),
-    data: {
-      title: data.title,
-      content: data.content,
-      format: data.format || 'markdown',
-      isPublic: true,
-      userId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      metadata,
-      isthread: true,
-      isThread: false},
-    permissions: [`read("any")`]});
+  await upsertNoteTurso({
+    id,
+    userId: 'thread',
+    title: data.title,
+    content: data.content,
+    createdAt: now,
+    updatedAt: now,
+  });
 
-  return JSON.parse(JSON.stringify(result));
+  return JSON.parse(JSON.stringify({ $id: id, id, title: data.title, content: data.content }));
 }
 
 export async function createthreadNoteForCallSecure(callId: string, title?: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const metadata = JSON.stringify({
-    isthread: true,
-    linkedSource: 'call',
-    linkedTaskId: callId,
-    expiresAt: expiresAt,
-    version: 'v2'});
+  const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
 
-  const tables = systemTables();
-  const result = await tables.createRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    rowId: ID.unique(),
-    data: {
-      title: title || 'Call Chat',
-      content: '',
-      format: 'markdown',
-      isPublic: false,
-      userId: actor.$id,
-      creatorId: actor.$id,
-      resourceId: callId,
-      resourceType: 'call',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      metadata,
-      isthread: true,
-      isThread: true},
-    permissions: [Permission.read(Role.user(actor.$id))]});
+  await upsertNoteTurso({
+    id,
+    userId: actor.$id,
+    title: title || 'Call Chat',
+    content: '',
+    createdAt: now,
+    updatedAt: now,
+  });
 
-  return JSON.parse(JSON.stringify(result));
+  return JSON.parse(JSON.stringify({ $id: id, id, title: title || 'Call Chat' }));
 }
 
 export async function createthreadNoteForProjectSecure(projectId: string, title?: string, jwt?: string) {
@@ -1176,60 +485,18 @@ export async function createthreadNoteForProjectSecure(projectId: string, title?
     throw new Error('Unauthorized');
   }
 
-  const tables = systemTables();
-  const project = await tables.getRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-    tableId: 'projects',
-    rowId: projectId
-  }).catch(() => null);
-
-  if (!project) {
-      throw new Error('Project not found');
-  }
-
-  let projMeta: any = {};
-  try {
-    projMeta = JSON.parse((project as any).metadata || '{}');
-  } catch {}
-
-  // Prefer existing canonical thread; never spin a new shell note into Ideas.
   const { ThreadService } = await import('@/lib/services/threads');
-  const legacyNoteId =
-    projMeta.discussionNoteId && projMeta.discussionNoteId !== (project as any).primaryThreadId
-      ? String(projMeta.discussionNoteId)
-      : null;
-
   const { thread, created } = await ThreadService.getOrCreate({
     parentKind: 'workspace',
     parentId: projectId,
     channel: ThreadService.CHANNEL_GENERAL,
-    ownerId: (project as any).ownerId || actor.$id,
-    title: title || `${(project as any).title || 'Workspace'} discussion`,
-    legacyNoteId,
+    ownerId: actor.$id,
+    title: title || 'Workspace discussion',
   });
 
-  projMeta.discussionThreadId = thread.id;
-  // Keep discussionNoteId only for true legacy note shells (message bridge).
-  if (legacyNoteId) projMeta.discussionNoteId = legacyNoteId;
-  else delete projMeta.discussionNoteId;
-
-  await tables.updateRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-    tableId: 'projects',
-    rowId: projectId,
-    data: {
-      primaryThreadId: thread.id,
-      metadata: JSON.stringify(projMeta),
-      updatedAt: new Date().toISOString(),
-    }
-  });
-
-  // Back-compat shape for callers expecting a note-like {$id}
   return JSON.parse(JSON.stringify({
     $id: thread.id,
     title: thread.title,
-    isthread: false,
-    isThread: false,
     resourceType: 'project',
     resourceId: projectId,
     primaryThreadId: thread.id,
@@ -1258,13 +525,11 @@ export async function createthreadNoteForResourceSecure(
     tag: 'object',
   };
   const parentKind = kindMap[resourceType] || 'object';
-  const channel =
-    parentKind === 'workspace' ? ThreadService.CHANNEL_GENERAL : ThreadService.CHANNEL_DISCUSS;
 
   const { thread, created } = await ThreadService.getOrCreate({
     parentKind,
     parentId: resourceId,
-    channel,
+    channel: ThreadService.CHANNEL_GENERAL,
     ownerId: actor.$id,
     title: title || 'Discussion',
   });
@@ -1272,8 +537,6 @@ export async function createthreadNoteForResourceSecure(
   return JSON.parse(JSON.stringify({
     $id: thread.id,
     title: thread.title,
-    isthread: false,
-    isThread: false,
     resourceType,
     resourceId,
     primaryThreadId: thread.id,
@@ -1293,70 +556,26 @@ export async function createthreadNoteChatSecure(data: {
     throw new Error('Unauthorized');
   }
 
-  const expiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString(); // 100 years
-  const metadata = JSON.stringify({
-    isthread: true,
-    version: 'v2',
-    isChat: true,
-    expiresAt: expiresAt,
-    linkedResourceType: 'chat',
-    participants: data.participants});
+  const { upsertConversationTurso } = await import('@/lib/actions/turso-ops');
+  const id = data.customRowId || crypto.randomUUID();
+  const now = new Date().toISOString();
 
-  const tables = systemTables();
-  const result: any = await tables.createRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    rowId: data.customRowId || ID.unique(),
-    data: {
-      title: data.title,
-      content: '',
-      format: 'markdown',
-      isPublic: false,
-      userId: actor.$id,
-      creatorId: actor.$id,
-      resourceType: 'chat',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      metadata,
-      isthread: true,
-      isThread: true,
-      isChat: true,
-      collaborators: data.participants},
-    permissions: data.participants.map(id => Permission.read(Role.user(id)))});
-
-  // Create polymorphic Collaborators rows for each participant
-  for (const participantId of data.participants) {
-    if (participantId === actor.$id) continue;
-    try {
-      await tables.createRow({
-        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-        tableId: 'Collaborators',
-        rowId: ID.unique(),
-        data: {
-          resourceId: result.$id,
-          resourceType: 'note',
-          userId: participantId,
-          permission: 'write',
-          status: 'accepted',
-          invitedAt: new Date().toISOString(),
-          accepted: true},
-        permissions: data.participants.map(id => Permission.read(Role.user(id)))});
-    } catch (e) {
-      console.error('[createthreadNoteChat] Failed to add collaborator row:', e);
-    }
-  }
+  await upsertConversationTurso({
+    id,
+    creatorId: actor.$id,
+    name: data.title,
+    participants: JSON.stringify(data.participants),
+    createdAt: now,
+    updatedAt: now,
+  });
 
   return {
-    $id: result.$id,
-    id: result.$id,
-    title: result.title,
-    content: result.content,
-    format: result.format,
-    isPublic: Boolean(result.isPublic),
-    userId: result.userId,
-    creatorId: result.creatorId,
-    createdAt: result.createdAt,
-    updatedAt: result.updatedAt,
+    $id: id,
+    id,
+    title: data.title,
+    creatorId: actor.$id,
+    createdAt: now,
+    updatedAt: now,
     isThread: true,
     isChat: true,
     collaborators: data.participants,
@@ -1369,59 +588,18 @@ export async function listthreadNoteChatsSecure(jwt?: string) {
     throw new Error('Unauthorized');
   }
 
-  const tables = systemTables();
-  const actorId = actor.$id;
+  const { listConversationsTurso } = await import('@/lib/actions/turso-ops');
+  const res = await listConversationsTurso(actor.$id);
 
-  // 1. Fetch resources the user is a collaborator for
-  const collaboratorsRes = await tables.listRows({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: 'Collaborators',
-      queries: [
-          Query.equal('userId', actorId),
-          Query.limit(500)
-      ] as any
-  }).catch(() => ({ rows: [] }));
-
-  const collabResourceIds = collaboratorsRes.rows.map((r: any) => r.resourceId).filter(Boolean);
-
-  // 2. Build Authorization Filter: (Owned by me) OR (Linked to resource I collaborate on)
-  const authOrFilters = [
-      Query.equal('creatorId', actorId),
-      Query.equal('userId', actorId) // Fallback for rows before the tracking column update
-  ];
-
-  if (collabResourceIds.length > 0) {
-      authOrFilters.push(Query.equal('$id', collabResourceIds.slice(0, 100)));
-  }
-
-  // Use the system client to manually enforce our visibility logic
-  const res = await tables.listRows({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    queries: [
-      Query.equal('isThread', true),
-      Query.or(authOrFilters),
-      Query.limit(100)
-    ] as any
-  }).catch(() => ({ rows: [] }));
-
-  const rows = [...(res.rows || [])];
-  rows.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
-
-  // Return clean, shaped DTOs without leaking internal table/database permissions or raw metadata
-  return rows.map((r: any) => ({
-    $id: r.$id,
-    id: r.$id,
-    title: r.title,
-    content: r.content,
-    format: r.format,
-    isPublic: Boolean(r.isPublic),
-    userId: r.userId,
+  return (res.rows || []).map((r: any) => ({
+    $id: r.id,
+    id: r.id,
+    title: r.name || 'Conversation',
     creatorId: r.creatorId,
-    createdAt: r.createdAt || r.$createdAt,
-    updatedAt: r.updatedAt || r.$updatedAt,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
     isThread: true,
-    isChat: Boolean(r.isChat),
+    isChat: true,
   }));
 }
 
@@ -1432,26 +610,20 @@ export async function listTagsSecure(userId?: string, jwt?: string) {
   } catch (_) {}
 
   const targetUserId = userId || actor?.$id;
-  const tables = systemTables();
-
-  const result = await tables.listRows({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.TAGS || '67ff06280034908cf08a',
-    queries: targetUserId
-      ? [Query.equal('userId', targetUserId), Query.orderDesc('$createdAt'), Query.limit(100)]
-      : [Query.orderDesc('$createdAt'), Query.limit(100)]});
-
-  // Map to clean tag records
-  const cleanRows = (result.rows || []).map((r: any) => ({
-    $id: r.$id,
-    id: r.$id,
-    name: r.name,
-    userId: r.userId,
-    usageCount: r.usageCount || 0,
-    isPublic: Boolean(r.isPublic),
-    createdAt: r.createdAt || r.$createdAt,
-    updatedAt: r.updatedAt || r.$updatedAt,
-  }));
-
-  return { rows: cleanRows, total: result.total };
+  try {
+    const conditions = targetUserId ? [eq(schema.tags.userId, targetUserId)] : [];
+    const rows = await db.select().from(schema.tags).where(and(...conditions));
+    const cleanRows = rows.map((r) => ({
+      $id: r.id,
+      id: r.id,
+      name: r.name,
+      userId: r.userId,
+      usageCount: r.usageCount || 0,
+      isPublic: Boolean(r.isPublic),
+      createdAt: r.createdAt,
+    }));
+    return { rows: cleanRows, total: cleanRows.length };
+  } catch {
+    return { rows: [], total: 0 };
+  }
 }

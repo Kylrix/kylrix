@@ -3,8 +3,6 @@ import { buildPublicResourceUrl } from './public-url';
 import { masterPassCrypto, looksEncrypted, decryptField } from '@/lib/masterpass-crypto';
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
-import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
-import { hasPaidKylrixPlan } from '@/lib/utils';
 
 function toUrlSafeBase64(base64: string): string {
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -31,9 +29,7 @@ export interface InstantShareResult {
   success: boolean;
   url: string;
   copied: boolean;
-  /** True only after Appwrite isPublic+isGuest columns confirmed via secure-ops. */
   published?: boolean;
-  /** Background publish still running (URL is already usable to copy). */
   pending?: boolean;
   isPublic?: boolean;
   isGuest?: boolean;
@@ -144,8 +140,7 @@ async function enqueueShareFlush(
 const activePublishPromises = new Map<string, Promise<InstantShareResult>>();
 
 /**
- * Flush row + set isPublic/isGuest on Appwrite. Does not build URL.
- * Deduplicates in-flight calls so component unmount or rapid multi-clicks share the same background promise.
+ * Flush row + set isPublic/isGuest. Does not build URL.
  */
 export async function ensureSharePublished(
   resourceType: PublicResourceType,
@@ -174,7 +169,6 @@ export async function ensureSharePublished(
       if (!publishRes?.success || !publishRes.isPublic || !publishRes.isGuest) {
         return {
           success: false,
-          // Always keep client-built URL — Server Actions resolve to kylrix.space
           url,
           copied: false,
           published: false,
@@ -196,11 +190,6 @@ export async function ensureSharePublished(
       };
     } catch (syncErr) {
       const rawMessage = syncErr instanceof Error ? syncErr.message : 'Share sync failed';
-      const isMasked =
-        rawMessage.includes('Server Components render') ||
-        rawMessage.includes('omitted in production') ||
-        rawMessage.includes('digest');
-      const message = isMasked ? 'Could not confirm public sharing on the server' : rawMessage;
       console.error('[InstantShare] Share publish error:', syncErr);
       return {
         success: false,
@@ -208,7 +197,7 @@ export async function ensureSharePublished(
         copied: false,
         published: false,
         pending: false,
-        error: message,
+        error: rawMessage,
       };
     } finally {
       activePublishPromises.delete(cacheKey);
@@ -221,8 +210,6 @@ export async function ensureSharePublished(
 
 /**
  * Share link + publish.
- * Default: await publish (strict).
- * `deferPublish: true`: return URL immediately; publish in background.
  */
 export async function executeInstantShare(
   resourceType: PublicResourceType,
@@ -231,42 +218,11 @@ export async function executeInstantShare(
 ): Promise<InstantShareResult> {
   const {
     dek,
-    resourceTitle,
-    openLoginDrawer,
     openMasterpassPrompt,
     projectId,
     deferPublish = false,
     onPublishSettled,
   } = options;
-
-  const currentUser = getCurrentUserSnapshot();
-  if (!currentUser?.$id && resourceType !== 'moment') {
-    if (openLoginDrawer) {
-      const friendlyName = resourceTitle ? `"${resourceTitle}"` : resourceType;
-      openLoginDrawer({
-        title: `Share ${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}`,
-        subtitle: `Create an account or log in to share ${friendlyName} with others.`,
-        objectKind: resourceType,
-      });
-    }
-    return {
-      success: false,
-      url: '',
-      copied: false,
-      published: false,
-      requiresAuth: true,
-    };
-  }
-
-  if (!hasPaidKylrixPlan(currentUser)) {
-    return {
-      success: false,
-      url: '',
-      copied: false,
-      published: false,
-      error: 'Sharing requires a paid plan.',
-    };
-  }
 
   const { keyFragment, requiresMasterpass } = await resolveDekFragment(dek, openMasterpassPrompt);
   const finalUrl = buildInstantShareUrl(resourceType, resourceId, { projectId, keyFragment });

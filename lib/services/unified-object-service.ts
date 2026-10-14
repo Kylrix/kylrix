@@ -1,202 +1,90 @@
-'use client';
-/**
- * Unified Object Service — single modular interface for all Kylrix objects.
- * Read: client SDK (databases.listRows/getRow) — relies on create-granted read.
- * Create/Update/Delete: server SDK via secure-ops (node-appwrite) — wrapped.
- * System variants: admin SDK for system-level tables (no user owner).
- * Used directly by LocalEngine; UI never touches backend.
- */
+import { systemTables } from '@/lib/data/system-tables';
+import { db } from '@/lib/db';
 
-import { Query, Permission, Role, Models } from '@/lib/appwrite/types';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-
-// ── Kind → table config (extend without touching service logic) ──
 export type ObjectKind =
   | 'note' | 'goal' | 'task' | 'form' | 'event' | 'tag'
   | 'secret' | 'credential' | 'totp' | 'totpSecret'
   | 'project' | 'workspace' | 'moment' | 'chat' | 'message'
   | 'folder' | string;
 
-type TableConfig = {
-  databaseId: string;
-  tableId: string;
-  ownerField: string; // e.g. userId, creatorId, ownerId
-  system?: boolean;
-};
-
-const OBJECT_TABLES: Record<string, TableConfig> = {
-  note:        { databaseId: APPWRITE_CONFIG.DATABASES.NOTE,      tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,       ownerField: 'userId' },
-  goal:        { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,       ownerField: 'userId' },
-  task:        { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,       ownerField: 'userId' },
-  form:        { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,       ownerField: 'userId' },
-  event:       { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,      ownerField: 'userId' },
-  tag:         { databaseId: APPWRITE_CONFIG.DATABASES.NOTE,      tableId: APPWRITE_CONFIG.TABLES.NOTE.TAGS,        ownerField: 'userId' },
-  secret:     { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,ownerField: 'userId' },
-  credential: { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,ownerField: 'userId' },
-  totp:       { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,ownerField: 'userId' },
-  totpSecret: { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,ownerField: 'userId' },
-  project:    { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: (APPWRITE_CONFIG.TABLES.FLOW as any).PROJECTS || (APPWRITE_CONFIG.TABLES as any).PROJECTS || 'projects', ownerField: 'userId' },
-  workspace:  { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: (APPWRITE_CONFIG.TABLES.FLOW as any).PROJECTS || (APPWRITE_CONFIG.TABLES as any).PROJECTS || 'projects', ownerField: 'userId' },
-  conversation: { databaseId: APPWRITE_CONFIG.DATABASES.CHAT,    tableId: 'conversations',                         ownerField: 'userId' },
-  message:    { databaseId: APPWRITE_CONFIG.DATABASES.CHAT,      tableId: 'messages',                              ownerField: 'userId' },
-  comment:    { databaseId: APPWRITE_CONFIG.DATABASES.NOTE,      tableId: 'comments',                              ownerField: 'userId' },
-  reaction:   { databaseId: APPWRITE_CONFIG.DATABASES.NOTE,      tableId: 'reactions',                             ownerField: 'userId' },
-  context:    { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: APPWRITE_CONFIG.TABLES.CONTEXTS, ownerField: 'userId' },
-  knowledge_graph: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: APPWRITE_CONFIG.TABLES.KNOWLEDGE_GRAPH, ownerField: 'userId' },
-  pattern:    { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: APPWRITE_CONFIG.TABLES.PATTERNS, ownerField: 'userId' },
-  agent_byok_key: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'agent_byok_keys',           ownerField: 'userId' },
-  agent_payment_intent: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'agent_payment_intents', ownerField: 'userId' },
-  tool_call:  { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'tool_calls',                     ownerField: 'userId' },
-  session_object: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'session_objects',           ownerField: 'userId' },
-  security_log: { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,   tableId: 'security_logs',                         ownerField: 'userId' },
-  key_mapping: { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,    tableId: 'key_mapping',                           ownerField: 'userId' },
-  user_resource_pin: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'user_resource_pins',     ownerField: 'userId' },
-  wallet:     { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: 'wallets',                               ownerField: 'userId' },
-  web3_transaction: { databaseId: APPWRITE_CONFIG.DATABASES.VAULT, tableId: 'web3_transactions',                   ownerField: 'userId' },
-  subscription: { databaseId: APPWRITE_CONFIG.DATABASES.NOTE,    tableId: 'subscriptions',                         ownerField: 'userId' },
-  coupon:     { databaseId: APPWRITE_CONFIG.DATABASES.NOTE,      tableId: 'coupons',                               ownerField: 'createdBy' },
-  sponsorship: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'sponsorships',                  ownerField: 'sponsorId' },
-  user_badge: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'user_badges',                   ownerField: 'userId' },
-  extension:  { databaseId: APPWRITE_CONFIG.DATABASES.NOTE,      tableId: 'extensions',                            ownerField: 'userId' },
-  activity_log: { databaseId: APPWRITE_CONFIG.DATABASES.NOTE,    tableId: 'activity_log',                          ownerField: 'userId' },
-  // system-level (admin)
-  token_registry: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'token_registry', ownerField: 'userId', system: true },
-};
-
-function resolveConfig(kind: ObjectKind): TableConfig {
-  const key = String(kind).toLowerCase();
-  const cfg = OBJECT_TABLES[key] || OBJECT_TABLES[key.replace(/s$/, '')];
-  if (!cfg) throw new Error(`[unified] unknown kind: ${kind}`);
-  return cfg;
-}
-
-// ── Read (client SDK only) ──
-export async function unifiedRead<T extends Models.Row = Models.Row>(
+export async function unifiedRead<T = any>(
   kind: ObjectKind,
   queries: string[] = [],
   _opts?: { bypassCache?: boolean }
 ): Promise<{ total: number; rows: T[] }> {
-  const { databaseId, tableId } = resolveConfig(kind);
   try {
-    const { databases } = await import('@/lib/appwrite/client');
-    const res = await databases.listRows(databaseId, tableId, queries);
+    const tables = systemTables();
+    const res = await tables.listRows({
+      databaseId: 'turso',
+      tableId: String(kind),
+      queries: queries as any,
+    });
     return { total: res.total, rows: res.rows as unknown as T[] };
-  } catch (e: any) {
-    // Failsafe: missing index / throttled — fallback to unfiltered fetch + client filter
-    console.warn(`[unified] read ${kind} filtered failed, falling back:`, e?.message || e);
-    try {
-      const { databases } = await import('@/lib/appwrite/client');
-      const res = await databases.listRows(databaseId, tableId, []);
-      // client-side filter for owner if queries contained userId
-      const ownerQ = queries.find(q => { try { const p = JSON.parse(q); return p.attribute === 'userId' || p.attribute === 'ownerId' || p.attribute === 'creatorId'; } catch { return false; } });
-      if (ownerQ) {
-        try {
-          const parsed = JSON.parse(ownerQ);
-          const ownerVal = Array.isArray(parsed.value) ? parsed.value[0] : parsed.value;
-          if (ownerVal) {
-            const filtered = (res.rows as any[]).filter(r => r.userId === ownerVal || r.ownerId === ownerVal || r.creatorId === ownerVal);
-            return { total: filtered.length, rows: filtered as unknown as T[] };
-          }
-        } catch {}
-      }
-      return { total: res.total, rows: res.rows as unknown as T[] };
-    } catch (e2) {
-      console.error(`[unified] read ${kind} fallback failed:`, e2);
-      return { total: 0, rows: [] };
-    }
+  } catch {
+    return { total: 0, rows: [] };
   }
 }
 
-export async function unifiedGet<T extends Models.Row = Models.Row>(kind: ObjectKind, id: string): Promise<T | null> {
-  const { databaseId, tableId } = resolveConfig(kind);
+export async function unifiedGet<T = any>(kind: ObjectKind, id: string): Promise<T | null> {
   try {
-    const { databases } = await import('@/lib/appwrite/client');
-    const doc = await databases.getRow(databaseId, tableId, id);
-    if (!doc || (doc as any).isTrash === true || (doc as any).isDeleted === true) {
-      return null;
-    }
+    const tables = systemTables();
+    const doc = await tables.getRow({
+      databaseId: 'turso',
+      tableId: String(kind),
+      rowId: id,
+    });
     return doc as unknown as T;
   } catch {
     return null;
   }
 }
 
-// ── Create (server SDK via secure-ops) ──
-export async function unifiedCreate<T extends Models.Row = Models.Row>(
+export async function unifiedCreate<T = any>(
   kind: ObjectKind,
   data: Record<string, any>,
   opts?: { permissions?: string[]; ownerId?: string }
 ): Promise<T> {
-  const { databaseId, tableId } = resolveConfig(kind);
-  const ownerId = opts?.ownerId || (data.userId as string) || (data.ownerId as string) || '';
-  const perms = opts?.permissions || (ownerId ? [Permission.read(Role.user(ownerId))] : []);
-  try {
-    if (typeof window !== 'undefined') {
-      const { createRow } = await import('@/lib/actions/client-ops');
-      // client-ops wraps to server via secure-ops even on client — single path
-      return await createRow(databaseId, tableId, data, perms) as unknown as T;
-    } else {
-      const { createRowSecure } = await import('@/lib/actions/secure-ops');
-      return await createRowSecure(databaseId, tableId, data, perms) as unknown as T;
-    }
-  } catch (err) {
-    console.warn(`[unifiedCreate] backend write failed for ${kind}, returning optimistic local object:`, err);
-    const localId = data.$id || data.id || `local_${Math.random().toString(36).slice(2, 10)}`;
-    const now = new Date().toISOString();
-    return {
-      $id: localId,
-      id: localId,
-      ...data,
-      $createdAt: data.$createdAt || now,
-      $updatedAt: now,
-      $permissions: perms,
-    } as unknown as T;
-  }
-}
+  const localId = data.$id || data.id || crypto.randomUUID();
+  const now = new Date().toISOString();
 
-export async function systemCreate<T extends Models.Row = Models.Row>(kind: ObjectKind, data: Record<string, any>): Promise<T> {
-  const { databaseId, tableId } = resolveConfig(kind);
   try {
     if (typeof window !== 'undefined') {
       const { createRow } = await import('@/lib/actions/client-ops');
-      return await createRow(databaseId, tableId, data) as unknown as T;
+      return await createRow('turso', String(kind), data, opts?.permissions) as unknown as T;
     } else {
       const { createRowSecure } = await import('@/lib/actions/secure-ops');
-      // system tables bypass owner perm — server will grant admin-scoped
-      return await createRowSecure(databaseId, tableId, data) as unknown as T;
+      return await createRowSecure('turso', String(kind), data, opts?.permissions) as unknown as T;
     }
-  } catch (err) {
-    console.warn(`[systemCreate] backend write failed for ${kind}, returning optimistic local object:`, err);
-    const localId = data.$id || data.id || `local_${Math.random().toString(36).slice(2, 10)}`;
-    const now = new Date().toISOString();
+  } catch {
     return {
       $id: localId,
       id: localId,
       ...data,
-      $createdAt: data.$createdAt || now,
+      $createdAt: now,
       $updatedAt: now,
     } as unknown as T;
   }
 }
 
-// ── Update (server SDK) ──
-export async function unifiedUpdate<T extends Models.Row = Models.Row>(
+export async function systemCreate<T = any>(kind: ObjectKind, data: Record<string, any>): Promise<T> {
+  return unifiedCreate<T>(kind, data);
+}
+
+export async function unifiedUpdate<T = any>(
   kind: ObjectKind,
   id: string,
   data: Record<string, any>,
   opts?: { permissions?: string[] }
 ): Promise<T> {
-  const { databaseId, tableId } = resolveConfig(kind);
   try {
     if (typeof window !== 'undefined') {
       const { updateRow } = await import('@/lib/actions/client-ops');
-      return await updateRow(databaseId, tableId, id, data, opts?.permissions) as unknown as T;
+      return await updateRow('turso', String(kind), id, data, opts?.permissions) as unknown as T;
     } else {
       const { updateRowSecure } = await import('@/lib/actions/secure-ops');
-      return await updateRowSecure(databaseId, tableId, id, data, opts?.permissions) as unknown as T;
+      return await updateRowSecure('turso', String(kind), id, data, opts?.permissions) as unknown as T;
     }
-  } catch (err) {
-    console.warn(`[unifiedUpdate] backend update failed for ${kind}:${id}, returning local optimistic object:`, err);
+  } catch {
     return {
       $id: id,
       id,
@@ -206,43 +94,30 @@ export async function unifiedUpdate<T extends Models.Row = Models.Row>(
   }
 }
 
-export async function systemUpdate<T extends Models.Row = Models.Row>(kind: ObjectKind, id: string, data: Record<string, any>): Promise<T> {
+export async function systemUpdate<T = any>(kind: ObjectKind, id: string, data: Record<string, any>): Promise<T> {
   return unifiedUpdate(kind, id, data);
 }
 
-// ── Delete (server SDK, recursive) ──
 export async function unifiedDelete(
   kind: ObjectKind,
   id: string,
-  opts?: { recursive?: boolean; cascade?: Array<{ kind: ObjectKind; foreignField: string }> }
+  _opts?: { recursive?: boolean; cascade?: Array<{ kind: ObjectKind; foreignField: string }> }
 ): Promise<void> {
-  const { databaseId, tableId } = resolveConfig(kind);
-  if (opts?.recursive && opts?.cascade?.length) {
-    for (const c of opts.cascade) {
-      try {
-        const children = await unifiedRead(c.kind, [Query.equal(c.foreignField, id)]);
-        await Promise.all(children.rows.map(r => unifiedDelete(c.kind, (r as any).$id || (r as any).id).catch(()=>{})));
-      } catch {}
-    }
-  }
   try {
     if (typeof window !== 'undefined') {
       const { deleteRow } = await import('@/lib/actions/client-ops');
-      await deleteRow(databaseId, tableId, id);
+      await deleteRow('turso', String(kind), id);
     } else {
       const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
-      await deleteRowSecure(databaseId, tableId, id);
+      await deleteRowSecure('turso', String(kind), id);
     }
-  } catch (err) {
-    console.warn(`[unifiedDelete] backend delete failed for ${kind}:${id} (offline/budget cap):`, err);
-  }
+  } catch {}
 }
 
 export async function systemDelete(kind: ObjectKind, id: string): Promise<void> {
   return unifiedDelete(kind, id);
 }
 
-// ── LocalEngine bridge — UI calls only LocalEngine, LocalEngine calls unified ──
 export const UnifiedHandles = {
   read: unifiedRead,
   get: unifiedGet,

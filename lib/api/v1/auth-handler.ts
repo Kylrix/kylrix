@@ -1,8 +1,5 @@
 import { systemTables } from '@/lib/data/system-tables';
 import { NextRequest, NextResponse } from 'next/server';
-import { ID, Permission, Role } from '@/lib/appwrite/types';
-
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { PatService } from '@/lib/services/pats';
 import { PAT_SCOPES } from '@/lib/api/scopes';
 import { isEmailPasswordSignupEnabled } from '@/lib/config/auth-methods';
@@ -45,48 +42,41 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
       const { eq } = await import('drizzle-orm');
 
       const existingUsers = await db.select().from(userTable).where(eq(userTable.email, email)).limit(1);
-      const existing = { total: existingUsers.length, users: existingUsers };
 
-      if (existing.total > 0) {
+      if (existingUsers.length > 0) {
         return NextResponse.json(
           { ok: false, error: { code: 'account_exists', message: 'An account with this email already exists. Please sign in.' } },
           { status: 409 }
         );
       }
 
-      const { createSystemClient } = await import('@/lib/appwrite/types');
-      const { users } = createSystemClient();
-      const userId = ID.unique();
-      const user = await users.create(userId, email, undefined, password, name);
+      const userId = `usr_${crypto.randomUUID().replace(/-/g, '')}`;
+      const now = new Date();
 
-      try {
-        await users.updatePrefs(userId, {
-          hasPass: true,
-          masterpass_for_login_enabled: true,
-        });
-      } catch (prefErr) {
-        console.warn('[Auth Handler] Failed to set signup preferences:', prefErr);
-      }
+      await db.insert(userTable).values({
+        id: userId,
+        name,
+        email,
+        emailVerified: false,
+        createdAt: now,
+        updatedAt: now,
+      });
 
-      // Initialize default user profile in CHAT.PROFILES
+      // Initialize default user profile in profiles table
       try {
         const tables = systemTables();
         await tables.createRow({
-          databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-          tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+          databaseId: 'chat',
+          tableId: 'profiles',
           rowId: userId,
           data: {
             userId,
             username: name.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32) || `user_${userId.slice(0, 8)}`,
             displayName: name,
             tier: 'FREE',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
           },
-          permissions: [
-            Permission.read(Role.any()),
-            Permission.update(Role.user(userId)),
-          ],
         });
       } catch (profErr) {
         console.warn('[Auth Handler] Profile creation warning:', profErr);
@@ -94,7 +84,7 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
 
       // Mint a standard CLI PAT token with full scopes
       const patResult = await PatService.create({
-        userId: user.$id,
+        userId,
         name: `CLI Key (${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`,
         scopes: [...PAT_SCOPES],
       });
@@ -104,9 +94,9 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
           ok: true,
           data: {
             user: {
-              id: user.$id,
-              email: user.email,
-              name: user.name,
+              id: userId,
+              email,
+              name,
             },
             token: patResult.token,
             pat: patResult.pat,
@@ -166,7 +156,7 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
 
       // Mint/create a fresh PAT for the CLI/Agent session
       const patResult = await PatService.create({
-        userId: user.$id,
+        userId: user.id,
         name: `CLI Session (${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`,
         scopes: [...PAT_SCOPES],
       });
@@ -176,7 +166,7 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
           ok: true,
           data: {
             user: {
-              id: user.$id,
+              id: user.id,
               email: user.email,
               name: user.name,
             },

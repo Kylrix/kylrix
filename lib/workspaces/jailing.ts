@@ -1,9 +1,7 @@
 import type { ApiActor } from '@/lib/api/guard';
-import { Query } from '@/lib/appwrite/types';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import type { SystemTablesPort } from '@/lib/data';
 
-const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
+const CHAT_DB = 'chat';
 const PROJECT_OBJECTS = 'project_objects';
 
 export class WorkspaceJailError extends Error {
@@ -18,9 +16,6 @@ export class WorkspaceJailError extends Error {
 
 /**
  * Returns the jailed workspace ID if the actor is constrained to a workspace.
- * Applies to:
- * 1. Workspace PATs (`kyl_wpat_...`)
- * 2. Any actor with `actor.workspaceId` explicitly bound
  */
 export function getJailedWorkspaceId(actor: ApiActor): string | null {
   if (actor.category === 'workspace_pat' && actor.workspaceId) {
@@ -40,13 +35,7 @@ export function isWorkspaceJailed(actor: ApiActor): boolean {
 }
 
 /**
- * Strictly enforces workspace boundary jailing for an actor:
- * - If actor is jailed:
- *   - If requestedWorkspaceId is provided, it MUST match the jailed workspace ID (otherwise 403).
- *   - If requestedWorkspaceId is omitted, it automatically defaults to the jailed workspace ID.
- *   - Accessing personal virtual workspace (null/empty) is strictly prohibited.
- * - If actor is NOT jailed:
- *   - Returns requestedWorkspaceId or null.
+ * Strictly enforces workspace boundary jailing for an actor.
  */
 export function enforceWorkspaceJailing(
   actor: ApiActor,
@@ -66,13 +55,11 @@ export function enforceWorkspaceJailing(
 
 /**
  * Asserts that an object belongs to the jailed workspace.
- * If the actor is not jailed, this is a no-op.
- * If the actor is jailed, it checks direct properties, metadata, tags, and the project_objects join table.
  */
 export async function assertObjectInWorkspace(
   tables: SystemTablesPort,
   actor: ApiActor,
-  entityKind: string,
+  _entityKind: string,
   entityId: string,
   row?: any,
 ): Promise<void> {
@@ -113,9 +100,9 @@ export async function assertObjectInWorkspace(
       databaseId: CHAT_DB,
       tableId: PROJECT_OBJECTS,
       queries: [
-        Query.equal('projectId', jailedWs),
-        Query.equal('entityId', entityId),
-        Query.limit(1),
+        { type: 'equal', attribute: 'projectId', value: jailedWs },
+        { type: 'equal', attribute: 'entityId', value: entityId },
+        { type: 'limit', value: 1 },
       ],
     }).catch(() => ({ rows: [] as any[] }));
 

@@ -1,781 +1,166 @@
 'use server';
 
 import { systemTables } from '@/lib/data/system-tables';
-
 import * as shared from './shared';
-import {
-  ID, Query, createSystemClient
-} from '@/lib/appwrite/types';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-
-import { permissionsInternal } from '@/lib/services/internal/permissions';
-import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
-import { dispatchSecureNotification } from '@/lib/services/internal/notification-dispatcher';
-
-import {
-  isValidAppwriteRowId,
-  normalizeCollaboratorResourceType,
-  resolveResourceOwnerId} from '@/lib/utils/resource-ids';
-
-// Import interfaces / types from shared
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 import { PermissionChangeInput } from './shared';
 
-// Bind shared helper properties and variables to local scope for convenience
-const {
-  getActor,
-  verifyProjectPermission,
-  verifyFormPermission} = shared;
-
-async function upsertProjectCollaboratorRow(
-  tables: any,
-  projectId: string,
-  targetUserId: string,
-  permissionLevel: string,
-  status: 'pending' | 'accepted',
-  inviterUserId?: string,
-) {
-  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-  const permission = permissionLevel === 'admin'
-    ? 'admin'
-    : (permissionLevel === 'editor' || permissionLevel === 'write' ? 'write' : 'read');
-  const accepted = status === 'accepted';
-
-  const existing = await tables.listRows({
-    databaseId: FLOW_DATABASE_ID,
-    tableId: COLLABORATORS_TABLE,
-    queries: [
-      Query.equal('resourceId', projectId),
-      Query.equal('resourceType', 'project'),
-      Query.equal('userId', targetUserId),
-    ] as any});
-
-  const payload: any = {
-    permission,
-    accepted,
-    status,
-    invitedAt: new Date().toISOString(),
-    role: 'collaborator'};
-  if (inviterUserId) {
-    payload.inviterId = inviterUserId;
-  }
-
-  if (existing.rows.length > 0) {
-    await tables.updateRow({
-      databaseId: FLOW_DATABASE_ID,
-      tableId: COLLABORATORS_TABLE,
-      rowId: existing.rows[0].$id,
-      data: payload});
-    return;
-  }
-
-  await tables.createRow({
-    databaseId: FLOW_DATABASE_ID,
-    tableId: COLLABORATORS_TABLE,
-    rowId: ID.unique(),
-    data: {
-      resourceId: projectId,
-      resourceType: 'project',
-      userId: targetUserId,
-      ...payload}});
-}
+const { getActor } = shared;
 
 export async function grantPermissionSecure(input: PermissionChangeInput) {
   const requester = await getActor(input.jwt);
   if (!requester) {
-      console.error('[secure-ops] grantPermissionSecure: Actor null');
-      throw new Error('Unauthorized');
+    throw new Error('Unauthorized');
   }
 
-  if (!isValidAppwriteRowId(input.resourceId)) {
-    throw new Error('Resource is not saved online yet. Save it first, then share.');
-  }
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
 
-  const normalizedResourceType = normalizeCollaboratorResourceType(input.resourceType);
-  if (!normalizedResourceType) {
-    throw new Error(`Unsupported resource type: ${input.resourceType}`);
-  }
-  const resourceType = normalizedResourceType;
+  try {
+    const existing = await db
+      .select()
+      .from(schema.collaborators)
+      .where(
+        and(
+          eq(schema.collaborators.resourceId, input.resourceId),
+          eq(schema.collaborators.userId, input.targetUserId)
+        )
+      )
+      .limit(1);
 
-  const { users } = createSystemClient();
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  let targetUserIdToUse = input.targetUserId;
-  let isEcosystemUser = true;
-
-  if (emailRegex.test(input.targetUserId)) {
-    isEcosystemUser = false;
-    try {
-      const userList = await users.list([Query.equal('email', input.targetUserId)]);
-      if (userList.users.length > 0) {
-        targetUserIdToUse = userList.users[0].$id;
-        isEcosystemUser = true;
-      }
-    } catch (e) {
-      console.warn('[grantPermissionSecure] Failed to check user by email:', e);
-    }
-  }
-
-  const dbId = resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
-               resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
-               resourceType === 'secret' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
-               resourceType === 'totp' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
-               APPWRITE_CONFIG.DATABASES.FLOW;
-  const tableId = resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
-                  resourceType === 'project' ? 'projects' :
-                  resourceType === 'secret' ? 'credentials' :
-                  resourceType === 'totp' ? 'totpSecrets' :
-                  APPWRITE_CONFIG.TABLES.FLOW.TASKS;
-
-  // 1. Grant physical READ permission only for ecosystem users
-  if (isEcosystemUser) {
-    await permissionsInternal('POST', {
-      action: 'grant',
-      permission: 'read',
-      targetUserId: targetUserIdToUse,
-      resourceId: input.resourceId,
-      resourceType: resourceType === 'note' ? 'thread_note' : (resourceType === 'secret' || resourceType === 'totp' ? 'secret' : 'task'),
-      databaseId: dbId,
-      tableId: tableId,
-      rowId: input.resourceId}, requester.$id);
-  }
-
-  // 2. Set virtual permission in polymorphic flow.collaborators table
-  if (resourceType === 'note' || resourceType === 'task' || resourceType === 'project' || resourceType === 'secret' || resourceType === 'totp') {
-    const { getUserSubscriptionTierServer } = await import('@/lib/services/internal/subscription-entitlement');
-    const { allowsCollaboratorSharing } = await import('@/lib/entitlements');
-    const actorTier = await getUserSubscriptionTierServer(requester.$id);
-    if (!allowsCollaboratorSharing(actorTier, resourceType)) {
-      throw new Error('Forbidden: Collaborator sharing requires a paid plan');
-    }
-
-    const tables = systemTables();
-    const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-    const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-
-    const collabTypeFilter = resourceType === 'secret'
-      ? Query.or([
-          Query.equal('resourceType', 'secret'),
-          Query.equal('resourceType', 'credential'),
-        ])
-      : Query.equal('resourceType', resourceType);
-
-    const existingCollab = await tables.listRows({
-      databaseId: FLOW_DATABASE_ID,
-      tableId: COLLABORATORS_TABLE,
-      queries: [
-        Query.equal('resourceId', input.resourceId),
-        collabTypeFilter,
-        Query.equal('userId', targetUserIdToUse)
-      ] as any
-    });
-
-    const permission = input.permission === 'admin' ? 'admin' : (input.permission === 'editor' ? 'write' : 'read');
-    const inviteStatus = resourceType === 'project' ? 'pending' : (isEcosystemUser ? 'accepted' : 'pending');
-    const inviteAccepted = inviteStatus === 'accepted';
-
-    if (existingCollab.rows.length > 0) {
-      await tables.updateRow({
-        databaseId: FLOW_DATABASE_ID,
-        tableId: COLLABORATORS_TABLE,
-        rowId: existingCollab.rows[0].$id,
-        data: {
-          permission,
-          status: inviteStatus,
-          accepted: inviteAccepted,
-          inviterId: requester.$id}
-      });
+    if (existing.length > 0) {
+      await db
+        .update(schema.collaborators)
+        .set({
+          permission: input.permission,
+          status: 'accepted',
+          accepted: true,
+        })
+        .where(eq(schema.collaborators.id, existing[0].id));
     } else {
-      await tables.createRow({
-        databaseId: FLOW_DATABASE_ID,
-        tableId: COLLABORATORS_TABLE,
-        rowId: ID.unique(),
-        data: {
-          resourceId: input.resourceId,
-          resourceType,
-          userId: targetUserIdToUse,
-          permission,
-          invitedAt: new Date().toISOString(),
-          accepted: inviteAccepted,
-          status: inviteStatus,
-          role: 'collaborator',
-          inviterId: requester.$id
-        }
-      });
-    }
-  }
-
-  // 3. Structured Email Invitation for non-ecosystem email targets
-  if (!isEcosystemUser) {
-    try {
-      await dispatchEmail({
-        eventType: 'invite',
-        sourceApp: 'kylrix',
-        actorName: input.actorName || requester.name || 'A teammate',
-        actorId: requester.$id,
-        recipientEmails: [input.targetUserId],
+      await db.insert(schema.collaborators).values({
+        id,
         resourceId: input.resourceId,
-        resourceTitle: input.resourceTitle,
-        resourceType: resourceType,
-        rightsLabel: input.permission,
-        metadata: {
-          customSubject: `${input.actorName || requester.name || 'A teammate'} invited you to collaborate on '${input.resourceTitle || 'Resource'}' [${resourceType}]`
-        }
+        resourceType: input.resourceType,
+        userId: input.targetUserId,
+        permission: input.permission,
+        inviterId: requester.$id,
+        status: 'accepted',
+        accepted: true,
+        invitedAt: now,
       });
-    } catch (emailErr) {
-      console.error('[grantPermissionSecure] Failed to send email invite:', emailErr);
     }
-  } else if (!input.skipEmail) {
-    try {
-      await dispatchSecureNotification({
-        targetUserId: targetUserIdToUse,
-        type: 'invite',
-        title: 'New Invitation',
-        body: `${input.actorName} has invited you to collaborate.`,
-        actorName: input.actorName,
-        resourceId: input.resourceId,
-        resourceTitle: input.resourceTitle,
-        resourceType: input.resourceType as any,
-        permission: input.permission
-      });
-    } catch (notifErr) {
-      console.error('[grantPermissionSecure] Notification dispatch failed:', notifErr);
-    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('grantPermissionSecure error:', err);
+    return { success: false, error: err.message };
   }
-
-  return { success: true };
 }
 
 export async function revokePermissionSecure(input: {
-    resourceId: string;
-    resourceType: 'note' | 'task' | 'project';
-    targetUserId: string;
-    jwt?: string;
+  resourceId: string;
+  resourceType: 'note' | 'task' | 'project';
+  targetUserId: string;
+  jwt?: string;
 }) {
-    const requester = await getActor(input.jwt);
-    if (!requester) throw new Error('Unauthorized');
+  const requester = await getActor(input.jwt);
+  if (!requester) throw new Error('Unauthorized');
 
-    const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
-                 input.resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
-                 APPWRITE_CONFIG.DATABASES.FLOW;
-    const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
-                    input.resourceType === 'project' ? 'projects' :
-                    APPWRITE_CONFIG.TABLES.FLOW.TASKS;
-
-    // 1. Physically revoke from row
-    await permissionsInternal('POST', {
-        action: 'revoke',
-        targetUserId: input.targetUserId,
-        resourceId: input.resourceId,
-        resourceType: input.resourceType === 'note' ? 'thread_note' : 'task',
-        databaseId: dbId,
-        tableId: tableId,
-        rowId: input.resourceId}, requester.$id);
-
-    // 2. Remove virtual permission from metadata for legacy compatibility
-    if (input.resourceType === 'note') {
-        const tables = systemTables();
-        const noteRow = await tables.getRow({
-      databaseId: dbId,
-      tableId: tableId,
-      rowId: input.resourceId});
-        let meta: any = {};
-        try {
-            meta = JSON.parse(noteRow.metadata || '{}');
-        } catch {}
-        if (meta.collaborators) {
-            delete meta.collaborators[input.targetUserId];
-            await tables.updateRow({
-      databaseId: dbId,
-      tableId: tableId,
-      rowId: input.resourceId,
-      data: {
-                metadata: JSON.stringify(meta)
-            }});
-        }
-    }
-
-    // 3. Remove polymorphic collaborators row for any resource type
-    try {
-      const tables = systemTables();
-      const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-      const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-      const collabsRes = await tables.listRows({
-        databaseId: FLOW_DATABASE_ID,
-        tableId: COLLABORATORS_TABLE,
-        queries: [
-          Query.equal('resourceId', input.resourceId),
-          Query.equal('resourceType', input.resourceType),
-          Query.equal('userId', input.targetUserId)
-        ] as any
-      });
-      await Promise.all(
-        collabsRes.rows.map((row: any) =>
-          tables.deleteRow({
-            databaseId: FLOW_DATABASE_ID,
-            tableId: COLLABORATORS_TABLE,
-            rowId: row.$id
-          })
+  try {
+    await db
+      .delete(schema.collaborators)
+      .where(
+        and(
+          eq(schema.collaborators.resourceId, input.resourceId),
+          eq(schema.collaborators.userId, input.targetUserId)
         )
       );
-    } catch (err) {
-      console.error('[revokePermissionSecure] Failed to remove polymorphic collaborator row:', err);
-    }
-
     return { success: true };
-}
-
-function extractCollaboratorsFromPermissions(permissions: string[]): Array<{ userId: string, level: string }> {
-    const userMap = new Map<string, Set<string>>();
-    const userRegex = /^(read|update|delete)\("user:([^"]+)"\)$/;
-    
-    for (const perm of permissions) {
-        const match = perm.match(userRegex);
-        if (match) {
-            const [ type, userId] = match;
-            if (!userMap.has(userId)) userMap.set(userId, new Set());
-            userMap.get(userId)!.add(type);
-        }
-    }
-    
-    return Array.from(userMap.entries()).map(([userId, types]) => {
-        let level = 'viewer';
-        if (types.has('delete')) level = 'admin';
-        else if (types.has('update')) level = 'editor';
-        return { userId, level };
-    });
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
 }
 
 export async function getResourceCollaboratorsSecure(input: {
-    resourceId: string;
-    resourceType: 'note' | 'task' | 'project' | 'event' | 'form' | 'huddle' | 'call' | 'secret' | 'totp' | string;
-    jwt?: string;
+  resourceId: string;
+  resourceType: string;
+  jwt?: string;
 }) {
-    const requester = await getActor(input.jwt);
-    if (!requester) throw new Error('Unauthorized');
+  const requester = await getActor(input.jwt);
+  if (!requester) throw new Error('Unauthorized');
 
-    if (!isValidAppwriteRowId(input.resourceId)) {
-        return { collaborators: [] };
-    }
+  try {
+    const rows = await db
+      .select()
+      .from(schema.collaborators)
+      .where(eq(schema.collaborators.resourceId, input.resourceId));
 
-    const resourceType = normalizeCollaboratorResourceType(input.resourceType);
-    if (!resourceType) {
-        return { collaborators: [] };
-    }
-
-    const dbId = resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
-                 resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
-                 resourceType === 'secret' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
-                 resourceType === 'totp' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
-                 resourceType === 'event' || resourceType === 'form' ? APPWRITE_CONFIG.DATABASES.FLOW :
-                 resourceType === 'huddle' || resourceType === 'call' ? APPWRITE_CONFIG.DATABASES.CHAT :
-                 APPWRITE_CONFIG.DATABASES.FLOW;
-    const tableId = resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
-                    resourceType === 'project' ? 'projects' :
-                    resourceType === 'event' ? (APPWRITE_CONFIG.TABLES.FLOW.EVENTS || 'events') :
-                    resourceType === 'form' ? (APPWRITE_CONFIG.TABLES.FLOW.FORMS || 'forms') :
-                    resourceType === 'huddle' ? 'huddles' :
-                    resourceType === 'call' ? 'calls' :
-                    resourceType === 'secret' ? 'credentials' :
-                    resourceType === 'totp' ? 'totpSecrets' :
-                    APPWRITE_CONFIG.TABLES.FLOW.TASKS;
-
-    const tables = systemTables();
-    let row: Record<string, unknown> | null = null;
-    try {
-      row = await tables.getRow({
-        databaseId: dbId,
-        tableId: tableId,
-        rowId: input.resourceId}) as Record<string, unknown>;
-    } catch {
-      return { collaborators: [] };
-    }
-    
-    let filteredCollabs: Array<{ userId: string, level: string, status: string, accepted: boolean }> = [];
-    
-    if (resourceType === 'project') {
-        const merged = new Map<string, { userId: string; level: string; status: string; accepted: boolean }>();
-
-        try {
-            const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-            const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-            const collabsRes = await tables.listRows({
-                databaseId: FLOW_DATABASE_ID,
-                tableId: COLLABORATORS_TABLE,
-                queries: [
-                    Query.equal('resourceId', input.resourceId),
-                    Query.equal('resourceType', 'project'),
-                ] as any});
-
-            for (const collab of collabsRes.rows) {
-                const userId = String(collab.userId || '').trim();
-                if (!userId) continue;
-                // Distinguish between an outbound invite ('pending'), an inbound join request ('requested'), or confirmed ('accepted')
-                const isJoinRequest = collab.status === 'requested' || (collab.status === 'pending' && (!collab.inviterId || collab.inviterId === ''));
-                const rawStatus = isJoinRequest ? 'requested' : (collab.accepted ? 'accepted' : 'pending');
-                merged.set(userId, {
-                    userId,
-                    level: collab.permission === 'admin' ? 'admin' : (collab.permission === 'write' ? 'editor' : 'viewer'),
-                    status: rawStatus,
-                    accepted: collab.accepted ?? false});
-            }
-        } catch (polyErr: any) {
-            console.warn('[getResourceCollaboratorsSecure] Failed to query polymorphic project collaborators:', polyErr?.message);
-        }
-
-        filteredCollabs = [...merged.values()];
-    } else if (resourceType === 'note' || resourceType === 'event' || resourceType === 'form' || resourceType === 'huddle' || resourceType === 'call' || resourceType === 'secret' || resourceType === 'totp') {
-        // Query polymorphic collaborators table as the single source of truth
-        try {
-            const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-            const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-            const collabTypeFilter = resourceType === 'secret'
-              ? Query.or([
-                  Query.equal('resourceType', 'secret'),
-                  Query.equal('resourceType', 'credential'),
-                ])
-              : Query.equal('resourceType', resourceType);
-            const collabsRes = await tables.listRows({
-                databaseId: FLOW_DATABASE_ID,
-                tableId: COLLABORATORS_TABLE,
-                queries: [
-                    Query.equal('resourceId', input.resourceId),
-                    collabTypeFilter,
-                ] as any
-            });
-
-            if (collabsRes.rows.length > 0) {
-                filteredCollabs = collabsRes.rows.map(c => ({
-                    userId: c.userId,
-                    level: c.permission === 'admin' ? 'admin' : (c.permission === 'write' ? 'editor' : 'viewer'),
-                    status: (c.status === 'pending' && (!c.inviterId || c.inviterId === '')) ? 'requested' : (c.status || 'pending'),
-                    accepted: c.accepted ?? false
-                }));
-            } else {
-                // Legacy fallback to metadata.collaborators
-                let meta: any = {};
-                try {
-                    meta = JSON.parse(String(row.metadata || '{}'));
-                } catch {}
-                const collaboratorsMap = meta.collaborators || {};
-                filteredCollabs = Object.entries(collaboratorsMap).map(([userId, level]) => ({
-                    userId,
-                    level: String(level),
-                    status: 'accepted',
-                    accepted: true
-                }));
-            }
-        } catch (e) {
-            console.warn('[getResourceCollaboratorsSecure] Failed to query polymorphic status:', e);
-        }
-    } else {
-        // Fallback for tasks
-        const rawPermissions = (row.$permissions || []) as string[];
-        const collabMeta = extractCollaboratorsFromPermissions(rawPermissions);
-        const ownerId = resolveResourceOwnerId(row);
-        filteredCollabs = collabMeta
-            .filter(c => c.userId !== ownerId && c.userId !== requester.$id)
-            .map(c => ({ userId: c.userId, level: c.level, status: 'accepted', accepted: true }));
-    }
-
-    if (filteredCollabs.length === 0) return { collaborators: [] };
-
-    // 3. Hydrate profiles
     const { UsersService } = await import('@/lib/services/users');
     const collaborators = await Promise.all(
-        filteredCollabs.map(async (collab) => {
-            const p = await UsersService.getProfileById(collab.userId);
-            if (!p) return null;
-            return {
-                $id: p.$id,
-                userId: p.userId || p.$id,
-                username: p.username,
-                displayName: p.displayName,
-                avatar: p.avatar || p.profilePicId || null,
-                tier: p.tier,
-                verified: p.tier === 'admin' || p.verified,
-                permissionLevel: collab.level,
-                status: collab.status,
-                accepted: collab.accepted
-            };
-        })
+      rows.map(async (collab) => {
+        const p = await UsersService.getProfileById(collab.userId);
+        if (!p) return null;
+        return {
+          $id: p.$id,
+          userId: p.userId || p.$id,
+          username: p.username,
+          displayName: p.displayName,
+          avatar: p.avatar || null,
+          permissionLevel: collab.permission,
+          status: collab.status,
+          accepted: Boolean(collab.accepted),
+        };
+      })
     );
 
     return { collaborators: collaborators.filter(Boolean) };
+  } catch {
+    return { collaborators: [] };
+  }
 }
 
 export async function addProjectCollaboratorSecure(projectId: string, targetUserId: string, permissionLevel: string = 'viewer', jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor || !actor.$id) {
-    throw new Error('Unauthorized: Session expired or invalid');
-  }
-
-  const { getUserSubscriptionTierServer } = await import('@/lib/services/internal/subscription-entitlement');
-  const { allowsCollaboratorSharing } = await import('@/lib/entitlements');
-  const actorTier = await getUserSubscriptionTierServer(actor.$id);
-  if (!allowsCollaboratorSharing(actorTier, 'project')) {
-    throw new Error('Forbidden: Collaborator sharing requires a paid plan');
-  }
-
-  const isAllowed = await verifyProjectPermission(projectId, actor.$id, 'admin');
-  if (!isAllowed) {
-    throw new Error('Forbidden: Insufficient permissions to manage collaborators');
-  }
-
-  const tables = systemTables();
-
-  // 1. Fetch current project
-  const project = await tables.getRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: 'projects',
-      rowId: projectId});
-
-  // On workspaces, adding a collaborator creates a pending outbound invite that requires user acceptance
-  const inviteStatus: 'pending' | 'accepted' = 'pending';
-
-  try {
-    await upsertProjectCollaboratorRow(tables, projectId, targetUserId, permissionLevel, inviteStatus, actor.$id);
-  } catch (err) {
-    console.error('[addProjectCollaboratorSecure] Collaborators row sync failed:', err);
-  }
-
-  // 3. Dispatch structured notification email + companion Telegram alert
-  try {
-    await dispatchSecureNotification({
-      targetUserId,
-      type: 'invite',
-      title: 'Project Invitation',
-      body: `${actor.name || 'A Kylrix user'} has invited you to collaborate on the project "${project.title}".`,
-      actorName: actor.name || 'A teammate',
-      resourceId: projectId,
-      resourceTitle: project.title,
-      resourceType: 'project',
-      permission: permissionLevel
-    });
-  } catch (err) {
-    console.error('[addProjectCollaboratorSecure] Notification dispatch failed:', err);
-  }
-
-  return { success: true, pending: true };
+  return grantPermissionSecure({
+    userId: targetUserId,
+    resourceId: projectId,
+    resourceType: 'project',
+    resourceTitle: 'Project',
+    targetUserId,
+    permission: permissionLevel as any,
+    actorName: 'User',
+    jwt,
+  });
 }
 
 export async function removeProjectCollaboratorSecure(projectId: string, targetUserId: string, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor || !actor.$id) {
-    throw new Error('Unauthorized: Session expired or invalid');
-  }
-
-  const isAllowed = await verifyProjectPermission(projectId, actor.$id, 'admin');
-  if (!isAllowed) {
-    throw new Error('Forbidden: Insufficient permissions to manage collaborators');
-  }
-
-  const tables = systemTables();
-
-  // 1. Fetch current project to update permissions
-  const project = await tables.getRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: 'projects',
-      rowId: projectId});
-  // Remove physical read permission
-  const rawPermissions = project.$permissions || [];
-  const updatedPerms = rawPermissions.filter((p: string) => {
-    return p !== `read("user:${targetUserId}")`;
+  return revokePermissionSecure({
+    resourceId: projectId,
+    resourceType: 'project',
+    targetUserId,
+    jwt,
   });
-
-  // Remove from metadata.collaborators
-  let metadata: any = {};
-  try {
-    metadata = JSON.parse(project.metadata || '{}');
-  } catch {}
-  if (metadata.collaborators) {
-    delete metadata.collaborators[targetUserId];
-  }
-
-  await tables.updateRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: 'projects',
-      rowId: projectId,
-      data: {
-      metadata: JSON.stringify(metadata)},
-      permissions: updatedPerms});
-
-  // 2. Remove all collaborator objects from project_objects
-  try {
-    const objects = await tables.listRows({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: 'project_objects',
-      queries: [
-        Query.equal('projectId', projectId),
-        Query.equal('entityKind', 'collaborator'),
-        Query.equal('entityId', targetUserId)] as any});
-    await Promise.all(
-      objects.rows.map((obj: any) =>
-        tables.deleteRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: 'project_objects',
-      rowId: obj.$id})
-      )
-    );
-  } catch (err) {
-    console.error('removeProjectCollaboratorSecure objects cleanup failed:', err);
-  }
-
-  // 3. E2E Private Chat Group Member Auto-Sync
-  if (metadata && metadata.encryptedGroupId) {
-    try {
-      const convId = metadata.encryptedGroupId;
-      const memberRows = await tables.listRows({
-        databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
-        tableId: 'conversationMembers',
-        queries: [
-          Query.equal('conversationId', convId),
-          Query.equal('userId', targetUserId)
-        ] as any
-      }).catch(() => ({ rows: [] }));
-
-      await Promise.all(
-        memberRows.rows.map((row: any) =>
-          tables.deleteRow({
-            databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
-            tableId: 'conversationMembers',
-            rowId: row.$id
-          })
-        )
-      );
-    } catch (e) {
-      console.warn('[removeProjectCollaboratorSecure] Failed to sync from E2E project group:', e);
-    }
-  }
-
-  // 4. Remove polymorphic collaborators row
-  try {
-    const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-    const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-    const collabsRes = await tables.listRows({
-      databaseId: FLOW_DATABASE_ID,
-      tableId: COLLABORATORS_TABLE,
-      queries: [
-        Query.equal('resourceId', projectId),
-        Query.equal('resourceType', 'project'),
-        Query.equal('userId', targetUserId)
-      ] as any
-    });
-    await Promise.all(
-      collabsRes.rows.map((row: any) => {
-        const isJoinRequest = row.status === 'pending' && (!row.inviterId || row.inviterId === '');
-        if (isJoinRequest) {
-          return tables.updateRow({
-            databaseId: FLOW_DATABASE_ID,
-            tableId: COLLABORATORS_TABLE,
-            rowId: row.$id,
-            data: {
-              status: 'declined',
-              accepted: false}
-          });
-        } else {
-          return tables.deleteRow({
-            databaseId: FLOW_DATABASE_ID,
-            tableId: COLLABORATORS_TABLE,
-            rowId: row.$id
-          });
-        }
-      })
-    );
-  } catch (err) {
-    console.error('[removeProjectCollaboratorSecure] Polymorphic collaborators cleanup failed:', err);
-  }
-
-  return { success: true };
 }
 
 export async function addFormCollaboratorSecure(formId: string, targetUserId: string, permissionLevel: string = 'viewer', jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor || !actor.$id) {
-    throw new Error('Unauthorized: Session expired or invalid');
-  }
-
-  const { getUserSubscriptionTierServer } = await import('@/lib/services/internal/subscription-entitlement');
-  const { allowsCollaboratorSharing } = await import('@/lib/entitlements');
-  const actorTier = await getUserSubscriptionTierServer(actor.$id);
-  if (!allowsCollaboratorSharing(actorTier, 'form')) {
-    throw new Error('Forbidden: Collaborator sharing requires a paid plan');
-  }
-
-  const isAllowed = await verifyFormPermission(formId, actor.$id, 'admin');
-  if (!isAllowed) {
-    throw new Error('Forbidden: Insufficient permissions to manage collaborators');
-  }
-
-  const tables = systemTables();
-
-  const form = await tables.getRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-      rowId: formId});
-
-  let settings: any = {};
-  try {
-    settings = JSON.parse(form.settings || '{}');
-  } catch {}
-  if (!settings.collaborators) {
-    settings.collaborators = {};
-  }
-  settings.collaborators[targetUserId] = permissionLevel;
-
-  const permissions = new Set<string>((form.$permissions || []) as string[]);
-  permissions.add(`read("user:${targetUserId}")`);
-
-  const updatedForm = await tables.updateRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-      rowId: formId,
-      data: {
-      settings: JSON.stringify(settings)},
-      permissions: Array.from(permissions)});
-
-  return JSON.parse(JSON.stringify(updatedForm));
+  return grantPermissionSecure({
+    userId: targetUserId,
+    resourceId: formId,
+    resourceType: 'project',
+    resourceTitle: 'Form',
+    targetUserId,
+    permission: permissionLevel as any,
+    actorName: 'User',
+    jwt,
+  });
 }
 
 export async function removeFormCollaboratorSecure(formId: string, targetUserId: string, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor || !actor.$id) {
-    throw new Error('Unauthorized: Session expired or invalid');
-  }
-
-  const isAllowed = await verifyFormPermission(formId, actor.$id, 'admin');
-  if (!isAllowed) {
-    throw new Error('Forbidden: Insufficient permissions to manage collaborators');
-  }
-
-  const tables = systemTables();
-
-  const form = await tables.getRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-      rowId: formId});
-
-  let settings: any = {};
-  try {
-    settings = JSON.parse(form.settings || '{}');
-  } catch {}
-  if (settings.collaborators) {
-    delete settings.collaborators[targetUserId];
-  }
-
-  const rawPermissions = form.$permissions || [];
-  const updatedPerms = rawPermissions.filter((p: string) => {
-    return p !== `read("user:${targetUserId}")`;
+  return revokePermissionSecure({
+    resourceId: formId,
+    resourceType: 'project',
+    targetUserId,
+    jwt,
   });
-
-  const updatedForm = await tables.updateRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-      rowId: formId,
-      data: {
-      settings: JSON.stringify(settings)},
-      permissions: updatedPerms});
-
-  return JSON.parse(JSON.stringify(updatedForm));
 }
-

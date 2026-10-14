@@ -1,7 +1,4 @@
-import { createServerClient } from '@/lib/appwrite/server';
-
-export async function getAuthenticatedUserForBillingAction(options?: { jwt?: string | null }) {
-  // 1. Check Better Auth session first
+export async function getAuthenticatedUserForBillingAction(_options?: { jwt?: string | null }) {
   try {
     const { auth } = await import('@/lib/auth/better-auth');
     const { headers } = await import('next/headers');
@@ -16,16 +13,7 @@ export async function getAuthenticatedUserForBillingAction(options?: { jwt?: str
         name: session.user.name,
       } as any;
     }
-  } catch {
-    // fallback
-  }
+  } catch {}
 
-  // 2. Secondary fallback via Appwrite
-  const optJwt = String(options?.jwt || '').trim() || undefined;
-  const { account } = await createServerClient(optJwt);
-  try {
-    return await account.get();
-  } catch {
-    return null;
-  }
+  return null;
 }
