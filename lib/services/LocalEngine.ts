@@ -4,25 +4,16 @@
  * LocalEngine — Decoupled universal local storage substrate for local copy & RxDB IndexedDB.
  * Independent of SyncEngine, readable and writable by all application engines (Sync, Spine, Neural).
  */
-import type { Models } from '@/lib/appwrite/types';
 
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
 import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
-import { realtime } from '@/lib/appwrite/client';
 
-/** Realtime subscription registry — one per channel, survives HMR */
 const realtimeSubs = new Map<string, { unsubscribe: () => void; refCount: number }>();
-/** Batch queue for high-activity writes — flushed every 2s or 10 items */
 const batchQueue = new Map<string, { data: any; mutator: () => Promise<any>; ts: number }>();
 let batchTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function getFreshJWT(): Promise<string | undefined> {
-  try {
-    const { account } = await import('@/lib/appwrite/client');
-    const jwtPromise = account.createJWT().then((r: any) => r?.jwt).catch(() => undefined);
-    const timeoutPromise = new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 1200));
-    return await Promise.race([jwtPromise, timeoutPromise]);
-  } catch { return undefined; }
+  return undefined;
 }
 
 function scheduleBatchFlush() {
@@ -38,15 +29,9 @@ function scheduleBatchFlush() {
   }, 2000);
 }
 
-/** Inflight query deduplication registry to coalesce simultaneous calls */
 const inflightQueries = new Map<string, Promise<any>>();
-/** Cooldown registry for background revalidations (cooldown: 2 minutes) */
 const backgroundRevalidationCooldowns = new Map<string, number>();
-
-/** In-memory snapshot registry to deduplicate identical cache writes and prevent microtask saturation */
 const inMemoryCacheSnapshots = new Map<string, string>();
-
-/** Local deleted tombstones registry */
 const inMemoryDeletedIds = new Set<string>();
 
 function ensureDeletedIdsLoaded(userId?: string): Set<string> {
@@ -67,7 +52,6 @@ function ensureDeletedIdsLoaded(userId?: string): Set<string> {
 }
 
 export const LocalEngine = {
-  /** Mark an object ID as locally deleted (tombstone) and purge from all local caches */
   async markDeleted(id: string, userId?: string): Promise<void> {
     if (!id || typeof window === 'undefined') return;
     const uid = userId || 'guest';
@@ -78,7 +62,6 @@ export const LocalEngine = {
       localStorage.setItem(`f_deleted_ids_${uid}`, JSON.stringify(Array.from(inMemoryDeletedIds)));
     } catch {}
 
-    // Invalidate baseline and cancel any pending sync mutation
     delete (window as any)[`__kylrix_baseline_${id}`];
     try {
       const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
@@ -87,7 +70,6 @@ export const LocalEngine = {
       autonomicSyncEngine.cancelPending(`form:${id}`);
     } catch {}
 
-    // Synchronously purge from caches
     await Promise.all([
       this.cacheDelete(`local:note:${id}`),
       this.cacheDelete(`local:goal:${id}`),
@@ -99,7 +81,6 @@ export const LocalEngine = {
       this.cacheDelete(id),
     ]);
 
-    // Purge from list caches
     const listKeys = [
       `f_notes_list_${uid}`,
       `f_ideas_${uid}`,
@@ -126,7 +107,6 @@ export const LocalEngine = {
       } catch {}
     }
 
-    // Purge from RxDB
     try {
       const db = await getRxDB().catch(() => null);
       if (db) {
@@ -144,7 +124,6 @@ export const LocalEngine = {
     window.dispatchEvent(new CustomEvent('kylrix:nexus:delete', { detail: { id, userId: uid } }));
   },
 
-  /** Unmark a restored object ID from local tombstones */
   async unmarkDeleted(id: string, userId?: string): Promise<void> {
     if (!id || typeof window === 'undefined') return;
     const uid = userId || 'guest';
@@ -162,7 +141,6 @@ export const LocalEngine = {
     window.dispatchEvent(new CustomEvent('kylrix:nexus:restore', { detail: { id, userId: uid } }));
   },
 
-  /** Check if an object ID is marked as deleted locally */
   isDeleted(id: string, userId?: string): boolean {
     if (!id || typeof window === 'undefined') return false;
     const uid = userId || 'guest';
@@ -170,12 +148,11 @@ export const LocalEngine = {
     return inMemoryDeletedIds.has(id);
   },
 
-  /** Get all deleted object IDs for a user */
   getDeletedIds(userId?: string): Set<string> {
     const uid = userId || 'guest';
     return ensureDeletedIdsLoaded(uid);
   },
-  /** Retrieve generic cached payload by key */
+
   async cacheGet<T = any>(id: string, maxAgeMs?: number): Promise<T | null> {
     if (typeof window === 'undefined') return null;
     try {
@@ -195,7 +172,6 @@ export const LocalEngine = {
     }
   },
 
-  /** Upsert generic cached payload by key */
   async cacheSet<T = any>(id: string, data: T): Promise<void> {
     if (typeof window === 'undefined') return;
     try {
@@ -227,7 +203,6 @@ export const LocalEngine = {
     }
   },
 
-  /** Remove cached payload by key */
   async cacheDelete(id: string): Promise<void> {
     if (typeof window === 'undefined') return;
     inMemoryCacheSnapshots.delete(id);
@@ -241,7 +216,6 @@ export const LocalEngine = {
     }
   },
 
-  /** Persist telemetry & engine logs to local engine storage */
   async writeTelemetry(kind: string, payload: Record<string, any>): Promise<void> {
     if (typeof window === 'undefined') return;
     const telemetryId = `telemetry_${kind}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -251,7 +225,6 @@ export const LocalEngine = {
       createdAt: new Date().toISOString()});
   },
 
-  /** Store a clean baseline snapshot for an object ID when loaded from server/clean state. */
   snapshotBaseline(id: string, payload: any): void {
     if (typeof window === 'undefined' || !id || !payload) return;
     const canonicalId = id.includes(':') ? id.slice(id.indexOf(':') + 1).trim() : id.trim();
@@ -262,16 +235,11 @@ export const LocalEngine = {
     } catch {}
   },
 
-  /** Check if a incoming payload has actual structural differences against its baseline snapshot. */
   hasObjectDiff(id: string, payload: any): boolean {
-    // Fail open: missing id/payload must not block enqueue (sync death otherwise).
     if (typeof window === 'undefined' || !id || !payload) return true;
     const canonicalId = id.includes(':') ? id.slice(id.indexOf(':') + 1).trim() : id.trim();
     const baseline = (window as any)[`__kylrix_baseline_${canonicalId}`];
     if (!baseline) {
-      // No baseline = never hydrated from remote / never ack'd.
-      // MUST return true so first create/edit enters the pending queue.
-      // Baseline is set only on ack / remote hydrate — never here.
       return true;
     }
     try {
@@ -282,14 +250,12 @@ export const LocalEngine = {
     }
   },
 
-  /** True when a remote/ack baseline exists for this id. */
   hasBaseline(id: string): boolean {
     if (typeof window === 'undefined' || !id) return false;
     const canonicalId = id.includes(':') ? id.slice(id.indexOf(':') + 1).trim() : id.trim();
     return Boolean((window as any)[`__kylrix_baseline_${canonicalId}`]);
   },
 
-  /** Clear baseline (e.g. after local delete) so next write re-enqueues. */
   clearBaseline(id: string): void {
     if (typeof window === 'undefined' || !id) return;
     const canonicalId = id.includes(':') ? id.slice(id.indexOf(':') + 1).trim() : id.trim();
@@ -298,9 +264,6 @@ export const LocalEngine = {
     } catch {}
   },
 
-  // ── Unified Gateway — sole Appwrite touchpoint (UI must not import appwrite directly) ──
-
-  /** Instant toggle: write local immediately, sync to Appwrite in background, revert on failure */
   async instantWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
     await this.cacheSet(cacheKey, data);
     this.broadcastRealtime(cacheKey, data);
@@ -311,14 +274,13 @@ export const LocalEngine = {
           const jwt = await getFreshJWT();
           await mutator(jwt);
         } catch (e: any) {
-          console.warn('[LocalEngine instantWrite] sync failed, revert may be needed', e);
+          console.warn('[LocalEngine instantWrite] sync failed', e);
         }
       })();
     }
     return data;
   },
 
-  /** Lazy write: local immediately, debounced sync (800ms) */
   async lazyWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
     await this.cacheSet(cacheKey, data);
     this.broadcastRealtime(cacheKey, data);
@@ -331,7 +293,6 @@ export const LocalEngine = {
     return data;
   },
 
-  /** Batched write: queue and flush every 2s or 10 items — for high activity */
   async batchedWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
     await this.cacheSet(cacheKey, data);
     this.broadcastRealtime(cacheKey, data);
@@ -345,14 +306,11 @@ export const LocalEngine = {
     return data;
   },
 
-  /** Broadcast a realtime event across devices for this user/workspace via Cloudflare Durable Objects */
   broadcastRealtime(channel: string, payload: any, userId?: string): void {
     if (typeof window === 'undefined' || !payload) return;
     try {
       const { realtimeRelay } = require('@/lib/realtime/client');
-      const { getCurrentUserSnapshot } = require('@/lib/appwrite/client');
-      const u = getCurrentUserSnapshot();
-      const uid = userId || payload.userId || payload.creatorId || u?.$id || (u as any)?.id;
+      const uid = userId || payload.userId || payload.creatorId;
       if (uid && uid !== 'guest') {
         const isDelete = payload.isDeleted === true || payload.isTrash === true;
         realtimeRelay.broadcastToUser(uid, {
@@ -367,116 +325,15 @@ export const LocalEngine = {
     } catch {}
   },
 
-  /** Subscribe to Realtime events for a channel and pipe to local cache */
-  subscribeRealtime(channel: string, handler?: (event: any) => void): () => void {
-    if (typeof window === 'undefined') return () => {};
-    if (isDogfoodSafetyActive()) return () => {};
-    if (realtimeSubs.has(channel)) {
-      const existing = realtimeSubs.get(channel)!;
-      existing.refCount++;
-      return () => { existing.refCount--; if (existing.refCount <= 0) { existing.unsubscribe(); realtimeSubs.delete(channel); } };
-    }
-
-    let unsubRelay: (() => void) | null = null;
-    try {
-      const { realtimeRelay } = require('@/lib/realtime/client');
-      const { getCurrentUserSnapshot } = require('@/lib/appwrite/client');
-      const u = getCurrentUserSnapshot();
-      const uid = u?.$id || (u as any)?.id;
-      if (uid && uid !== 'guest') {
-        realtimeRelay.init(uid);
-        unsubRelay = realtimeRelay.subscribe(`user-${uid}`, async (msg: any) => {
-          try {
-            if (!msg) return;
-            const msgChannel = String(msg.channel || '');
-            const targetChannel = String(channel || '');
-            const isMatch =
-              msgChannel === targetChannel ||
-              msgChannel.includes(targetChannel) ||
-              targetChannel.includes(msgChannel) ||
-              (msg.kind && targetChannel.toLowerCase().includes(String(msg.kind).toLowerCase()));
-
-            if (!isMatch && msgChannel) return;
-
-            const doc = msg.data || { $id: msg.id, id: msg.id };
-            const docId = msg.id || doc.$id || doc.id;
-            if (!docId) return;
-            const cacheKey = `${channel}:${docId}`;
-            const isDelete = msg.type === 'delete' || doc.isTrash === true || doc.isDeleted === true;
-
-            if (isDelete) {
-              await this.cacheDelete(cacheKey);
-              await this.cacheDelete(`note_${docId}`);
-              await this.cacheDelete(`goal_${docId}`);
-              await this.cacheDelete(docId);
-              if (typeof window !== 'undefined') {
-                delete (window as any)[`__kylrix_baseline_${docId}`];
-                window.dispatchEvent(new CustomEvent('kylrix:nexus:delete', { detail: { key: cacheKey, id: docId } }));
-              }
-            } else {
-              await this.cacheSet(cacheKey, doc);
-              LocalEngine.snapshotBaseline(docId, doc);
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data: doc } }));
-              }
-            }
-            if (handler) handler(doc);
-          } catch {}
-        });
-      }
-    } catch {}
-
-    try {
-      const unsubscribe = realtime.subscribe(channel, async (event: any) => {
-        try {
-          if (event?.payload && event?.events?.[0]) {
-            const doc = event.payload;
-            const docId = doc.$id || doc.id;
-            const cacheKey = `${channel}:${docId}`;
-            const isDelete = event.events.some((e: string) => e.endsWith('.delete')) || doc.isTrash === true || doc.isDeleted === true;
-            if (isDelete) {
-              await this.cacheDelete(cacheKey);
-              await this.cacheDelete(`note_${docId}`);
-              await this.cacheDelete(`goal_${docId}`);
-              await this.cacheDelete(docId);
-              if (typeof window !== 'undefined') {
-                delete (window as any)[`__kylrix_baseline_${docId}`];
-                window.dispatchEvent(new CustomEvent('kylrix:nexus:delete', { detail: { key: cacheKey, id: docId } }));
-              }
-            } else {
-              await this.cacheSet(cacheKey, doc);
-              LocalEngine.snapshotBaseline(docId, doc);
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data: doc } }));
-              }
-            }
-            if (handler) handler(doc);
-          } else if (handler) handler(event);
-        } catch {}
-      });
-      const entry = {
-        unsubscribe: () => {
-          if (typeof unsubscribe === 'function') unsubscribe();
-          if (unsubRelay) unsubRelay();
-        },
-        refCount: 1,
-      };
-      realtimeSubs.set(channel, entry);
-      return () => { entry.refCount--; if (entry.refCount <= 0) { entry.unsubscribe(); realtimeSubs.delete(channel); } };
-    } catch {
-      return () => { if (unsubRelay) unsubRelay(); };
-    }
+  subscribeRealtime(_channel: string, _handler?: (event: any) => void): () => void {
+    return () => {};
   },
 
-  /** Unified query: RxDB first, coalesced network fetch with revalidation throttle — UI never calls Appwrite directly */
   async query<T>(cacheKey: string, fetcher: (jwt?: string) => Promise<T>, opts?: { ttl?: number; realtimeChannel?: string; force?: boolean }): Promise<T> {
-    const ttl = opts?.ttl ?? 1000 * 60 * 5; // 5 min default TTL
+    const ttl = opts?.ttl ?? 1000 * 60 * 5;
     const cached = opts?.force ? null : await this.cacheGet<T>(cacheKey, ttl);
 
     if (cached) {
-      if (opts?.realtimeChannel && !isDogfoodSafetyActive()) void this.subscribeRealtime(opts.realtimeChannel);
-
-      // Throttled background revalidation: at most once every 3 minutes per cacheKey (disabled in Dogfood Safety)
       if (isDogfoodSafetyActive()) {
         return cached;
       }
@@ -507,7 +364,6 @@ export const LocalEngine = {
       return (Array.isArray(cached) ? [] : { total: 0, rows: [] }) as unknown as T;
     }
 
-    // Cache miss: coalesce concurrent inflight queries
     if (inflightQueries.has(cacheKey)) {
       return inflightQueries.get(cacheKey)!;
     }
@@ -518,7 +374,6 @@ export const LocalEngine = {
         const fresh = await fetcher(jwt);
         await this.cacheSet(cacheKey, fresh as any);
         backgroundRevalidationCooldowns.set(cacheKey, Date.now());
-        if (opts?.realtimeChannel) void this.subscribeRealtime(opts.realtimeChannel);
         return fresh;
       } finally {
         inflightQueries.delete(cacheKey);
@@ -529,16 +384,13 @@ export const LocalEngine = {
     return queryPromise;
   },
 
-  /** Unified mutate: local optimistic + tiered sync — UI never calls secure-ops directly */
   async mutate<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>, tier: 'instant' | 'lazy' | 'batch' = 'instant'): Promise<T> {
     if (tier === 'instant') return this.instantWrite(cacheKey, data, mutator);
     if (tier === 'lazy') return this.lazyWrite(cacheKey, data, mutator);
     return this.batchedWrite(cacheKey, data, mutator);
   },
 
-  // ── Unified object handles — UI calls these, never backend directly ──
-  /** Manual fetch handle: UI can force refresh when cache feels stale/empty */
-  async fetch<T extends Models.Row>(kind: string, queries: string[] = [], opts?: { force?: boolean; cacheKey?: string; ttl?: number }): Promise<{ total: number; rows: T[] }> {
+  async fetch<T>(kind: string, queries: string[] = [], opts?: { force?: boolean; cacheKey?: string; ttl?: number }): Promise<{ total: number; rows: T[] }> {
     const { unifiedRead } = await import('./unified-object-service');
     const cacheKey = opts?.cacheKey || `local:${kind}:${JSON.stringify(queries)}`;
     const ttl = opts?.ttl ?? 1000 * 60 * 5;
@@ -546,19 +398,6 @@ export const LocalEngine = {
     if (!opts?.force) {
       const cached = await this.cacheGet<{ total: number; rows: T[] }>(cacheKey, ttl);
       if (cached && Array.isArray((cached as any).rows) && (cached as any).rows.length) {
-        const lastReval = backgroundRevalidationCooldowns.get(cacheKey) || 0;
-        const now = Date.now();
-        if (now - lastReval > 1000 * 60 * 3 && !inflightQueries.has(cacheKey)) {
-          backgroundRevalidationCooldowns.set(cacheKey, now);
-          const revalPromise = unifiedRead<T>(kind, queries).then(fresh => {
-            const isFreshEmpty = (fresh as any)?.rows ? (fresh as any).rows.length === 0 : !fresh;
-            if (isFreshEmpty) return;
-            return this.cacheSet(cacheKey, fresh);
-          }).catch(() => {}).finally(() => {
-            inflightQueries.delete(cacheKey);
-          });
-          inflightQueries.set(cacheKey, revalPromise);
-        }
         return cached;
       }
     }
@@ -582,7 +421,7 @@ export const LocalEngine = {
     return fetchPromise;
   },
 
-  async get<T extends Models.Row>(kind: string, id: string, opts?: { force?: boolean }): Promise<T | null> {
+  async get<T>(kind: string, id: string, opts?: { force?: boolean }): Promise<T | null> {
     const { unifiedGet } = await import('./unified-object-service');
     const cacheKey = `local:${kind}:${id}`;
     if (!opts?.force) {
@@ -594,17 +433,16 @@ export const LocalEngine = {
     return doc;
   },
 
-  async create<T extends Models.Row>(kind: string, data: Record<string, any>): Promise<T> {
+  async create<T>(kind: string, data: Record<string, any>): Promise<T> {
     const { unifiedCreate } = await import('./unified-object-service');
     const row = await unifiedCreate<T>(kind, data);
-    // optimistic cache & live broadcast
     const rowId = (row as any).$id || (row as any).id;
     await this.cacheSet(`local:${kind}:${rowId}`, row as any);
     this.broadcastRealtime(`local:${kind}:${rowId}`, row as any);
     return row;
   },
 
-  async update<T extends Models.Row>(kind: string, id: string, data: Record<string, any>): Promise<T> {
+  async update<T>(kind: string, id: string, data: Record<string, any>): Promise<T> {
     const { unifiedUpdate } = await import('./unified-object-service');
     const row = await unifiedUpdate<T>(kind, id, data);
     await this.cacheSet(`local:${kind}:${id}`, row as any);
@@ -619,11 +457,11 @@ export const LocalEngine = {
     this.broadcastRealtime(`local:${kind}:${id}`, { id, isDeleted: true });
   },
 
-  async systemCreate<T extends Models.Row>(kind: string, data: Record<string, any>): Promise<T> {
+  async systemCreate<T>(kind: string, data: Record<string, any>): Promise<T> {
     const { systemCreate } = await import('./unified-object-service');
     return systemCreate<T>(kind, data);
   },
-  async systemUpdate<T extends Models.Row>(kind: string, id: string, data: Record<string, any>): Promise<T> {
+  async systemUpdate<T>(kind: string, id: string, data: Record<string, any>): Promise<T> {
     const { systemUpdate } = await import('./unified-object-service');
     return systemUpdate<T>(kind, id, data);
   },
@@ -632,7 +470,6 @@ export const LocalEngine = {
     return (systemDelete as any)(kind, id);
   },
 
-  /** Move a hangout (conversation or thread) to local trash */
   async trashHangout(item: { id: string; title: string; kind: 'secure' | 'thread'; rawData?: any }, userId?: string): Promise<void> {
     if (typeof window === 'undefined' || !item?.id) return;
     const uid = userId || 'guest';
@@ -656,7 +493,6 @@ export const LocalEngine = {
     } catch {}
   },
 
-  /** Get all trashed hangouts for a user */
   async getTrashedHangouts(userId?: string): Promise<any[]> {
     if (typeof window === 'undefined') return [];
     const uid = userId || 'guest';
@@ -673,7 +509,6 @@ export const LocalEngine = {
     return [];
   },
 
-  /** Restore a trashed hangout */
   async restoreTrashedHangout(id: string, userId?: string): Promise<void> {
     if (typeof window === 'undefined' || !id) return;
     const uid = userId || 'guest';
@@ -687,7 +522,6 @@ export const LocalEngine = {
     } catch {}
   },
 
-  /** Purge a trashed hangout permanently */
   async purgeTrashedHangout(id: string, userId?: string): Promise<void> {
     if (typeof window === 'undefined' || !id) return;
     const uid = userId || 'guest';

@@ -1,42 +1,13 @@
-import { systemTables } from '@/lib/data/system-tables';
-/**
- * Pairing Service — RFC 8628-inspired Device Authorization & Punch Grant Engine.
- * 
- * Supports:
- * - First-party CLI headless login (`kylrix auth login`)
- * - Self-hosted to Cloud pairing flow (zero-token-copying sync handshake)
- * - Future companion mobile apps scanning a short pairing code
- * 
- * Stored in `oauth_consent_requests` (reused as the canonical authorization request table)
- * and issues user-scoped punch tokens via `PatService` (`kyl_punch_...`).
- */
-
 import { randomBytes } from 'crypto';
-import { ID, Query } from '@/lib/appwrite/types';
-
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { PatService } from '@/lib/services/pats';
 import { normalizeScopes } from '@/lib/api/scopes';
-import { 
-  shapePairingSession, 
-  type PairingSessionRecord, 
-  type PairingExchangeResult,
-  type PairingRequestInput 
-} from '@/sdk/contracts/pairing';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
-const DB = APPWRITE_CONFIG.DATABASES.NOTE || 'passwordManagerDb';
-const REQUESTS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.OAUTH_CONSENT_REQUESTS || 'oauth_consent_requests';
-
-// Pairing code validity duration: 15 minutes (900 seconds)
 const PAIRING_EXPIRY_SECONDS = 900;
-// Polling interval required of clients: 5 seconds
 const POLLING_INTERVAL_SECONDS = 5;
 
-/**
- * Generate a high-entropy, human-friendly 8-character code formatted as XXXX-XXXX (e.g. 7K9M-4W2P).
- * Uses Crockford-style Base32 characters (omitting ambiguous 0, O, 1, I, L) for error-free input.
- * 31^8 = ~852.8 billion combinations (~39.6 bits of cryptographic entropy).
- */
 function generateHumanUserCode(): string {
   const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
   const bytes = randomBytes(8);
@@ -49,10 +20,6 @@ function generateHumanUserCode(): string {
   return `${p1}-${p2}`;
 }
 
-/**
- * Normalizes user code input for robust lookups:
- * Trims whitespace, uppercases, and handles both XXXX-XXXX and XXXXXXXX.
- */
 export function normalizeUserCode(input: string): string {
   let clean = input.trim().toUpperCase().replace(/\s+/g, '');
   if (/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/.test(clean)) {
@@ -90,14 +57,11 @@ function pruneMemorySessions() {
 }
 
 export const PairingService = {
-  /**
-   * Initiate a pairing session for a client (CLI, sync daemon, mobile app).
-   */
   async requestPairing(
-    input: PairingRequestInput,
+    input: any,
     baseUrl = 'https://www.kylrix.space'
-  ): Promise<PairingSessionRecord> {
-    const requestId = ID.unique();
+  ) {
+    const requestId = crypto.randomUUID();
     const deviceCode = `dev_${randomBytes(24).toString('base64url')}`;
     const userCode = generateHumanUserCode();
     const now = new Date();
@@ -106,15 +70,6 @@ export const PairingService = {
     const clientName = input.clientName || 'Kylrix Client';
     const clientType = input.clientType || 'cli';
     const requestedScopes = normalizeScopes(input.requestedScopes);
-
-    const requestMeta = JSON.stringify({
-      isPairing: true,
-      deviceCode,
-      userCode,
-      clientName,
-      clientType,
-      pairingMetadata: input.pairingMetadata || {},
-    });
 
     const verificationUri = `${baseUrl}/pair`;
     const verificationUriComplete = `${baseUrl}/pair?code=${encodeURIComponent(userCode)}`;
@@ -128,39 +83,20 @@ export const PairingService = {
       deviceCode,
       userCode,
       status: 'pending',
-      requestMeta,
+      requestMeta: JSON.stringify({
+        isPairing: true,
+        deviceCode,
+        userCode,
+        clientName,
+        clientType,
+      }),
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
     };
     memorySessionsByUserCode.set(normalizeUserCode(userCode), memoryRecord);
     memorySessionsByDeviceCode.set(deviceCode, memoryRecord);
 
-    try {
-      if (process.env.APPWRITE_API_KEY) {
-        const tables = systemTables();
-        await tables.createRow({
-          databaseId: DB,
-          tableId: REQUESTS_TABLE,
-          rowId: requestId,
-          data: {
-            clientId: `pairing_${clientType}`,
-            redirectUri: verificationUri,
-            requestedScopes: JSON.stringify(requestedScopes),
-            state: deviceCode, // state column stores the secret deviceCode
-            nonce: userCode, // nonce column stores the human-friendly userCode
-            responseType: 'punch_token',
-            status: 'pending',
-            requestMeta,
-            createdAt: now.toISOString(),
-            expiresAt: expiresAt.toISOString(),
-          },
-        });
-      }
-    } catch {
-      // In standalone / self-host mode without Appwrite, in-memory store handles pairing cleanly
-    }
-
-    return shapePairingSession({
+    return {
       id: requestId,
       deviceCode,
       userCode,
@@ -174,20 +110,10 @@ export const PairingService = {
       status: 'pending',
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
-    });
+    };
   },
 
-  /**
-   * Look up a pairing request by userCode for web-based user confirmation.
-   */
-  async lookupByUserCode(userCode: string): Promise<{
-    id: string;
-    clientName: string;
-    clientType: string;
-    requestedScopes: string[];
-    status: string;
-    expiresAt: string;
-  } | null> {
+  async lookupByUserCode(userCode: string) {
     const rawClean = userCode.trim().toUpperCase();
     const normalized = normalizeUserCode(rawClean);
 
@@ -213,50 +139,9 @@ export const PairingService = {
       };
     }
 
-    try {
-      if (process.env.APPWRITE_API_KEY) {
-        const tables = systemTables();
-        const codesToTry = [normalized];
-        if (rawClean !== normalized) codesToTry.push(rawClean);
-
-        for (const codeToSearch of codesToTry) {
-          const res = await tables.listRows({
-            databaseId: DB,
-            tableId: REQUESTS_TABLE,
-            queries: [
-              Query.equal('nonce', codeToSearch),
-              Query.limit(1),
-            ],
-          }).catch(() => ({ rows: [] as any[] }));
-
-          const row = res.rows[0];
-          if (row) {
-            let meta: any = {};
-            try {
-              meta = JSON.parse(row.requestMeta || '{}');
-            } catch {}
-
-            if (!meta.isPairing) return null;
-
-            return {
-              id: row.$id,
-              clientName: meta.clientName || 'Kylrix Client',
-              clientType: meta.clientType || 'cli',
-              requestedScopes: normalizeScopes(row.requestedScopes),
-              status: row.status,
-              expiresAt: row.expiresAt,
-            };
-          }
-        }
-      }
-    } catch {}
-
     return null;
   },
 
-  /**
-   * User approves or denies the pairing request from their authenticated web session.
-   */
   async decidePairing(params: {
     userCode: string;
     userId: string;
@@ -315,110 +200,10 @@ export const PairingService = {
       return { ok: true };
     }
 
-    try {
-      if (process.env.APPWRITE_API_KEY) {
-        const tables = systemTables();
-        const codesToTry = [normalized];
-        if (rawClean !== normalized) codesToTry.push(rawClean);
-
-        let row: any = null;
-        for (const codeToSearch of codesToTry) {
-          const res = await tables.listRows({
-            databaseId: DB,
-            tableId: REQUESTS_TABLE,
-            queries: [
-              Query.equal('nonce', codeToSearch),
-              Query.limit(1),
-            ],
-          }).catch(() => ({ rows: [] as any[] }));
-          if (res.rows.length > 0) {
-            row = res.rows[0];
-            break;
-          }
-        }
-        if (!row) {
-          return { ok: false, error: 'Pairing session not found or expired.' };
-        }
-
-        if (row.status !== 'pending') {
-          return { ok: false, error: `Pairing session has already been ${row.status}.` };
-        }
-
-        if (new Date(row.expiresAt).getTime() < Date.now()) {
-          await tables.updateRow({
-            databaseId: DB,
-            tableId: REQUESTS_TABLE,
-            rowId: row.$id,
-            data: { status: 'expired' },
-          }).catch(() => null);
-          return { ok: false, error: 'Pairing session has expired.' };
-        }
-
-        if (params.action === 'deny') {
-          await tables.updateRow({
-            databaseId: DB,
-            tableId: REQUESTS_TABLE,
-            rowId: row.$id,
-            data: {
-              status: 'denied',
-              decidedAt: new Date().toISOString(),
-            },
-          });
-          return { ok: true };
-        }
-
-        let meta: any = {};
-        try {
-          meta = JSON.parse(row.requestMeta || '{}');
-        } catch {}
-
-        const scopes = params.grantedScopes && params.grantedScopes.length > 0
-          ? normalizeScopes(params.grantedScopes)
-          : normalizeScopes(row.requestedScopes);
-
-        const finalScopes = scopes.length > 0 ? scopes : normalizeScopes(['*']);
-        const clientName = meta.clientName || 'Paired Client';
-
-        const { token, pat } = await PatService.create({
-          userId: params.userId,
-          name: `${clientName} (Punch Grant)`,
-          scopes: finalScopes,
-          keyCategory: 'punch_token',
-        });
-
-        const updatedMeta = JSON.stringify({
-          ...meta,
-          punchToken: token,
-          punchPatId: pat.id,
-          grantedUserId: params.userId,
-          grantedScopes: scopes,
-        });
-
-        await tables.updateRow({
-          databaseId: DB,
-          tableId: REQUESTS_TABLE,
-          rowId: row.$id,
-          data: {
-            userId: params.userId,
-            status: 'approved',
-            requestMeta: updatedMeta,
-            decidedAt: new Date().toISOString(),
-          },
-        });
-
-        return { ok: true };
-      }
-    } catch (err: any) {
-      return { ok: false, error: err.message || 'Failed to decide pairing' };
-    }
-
     return { ok: false, error: 'Pairing session not found or expired.' };
   },
 
-  /**
-   * Client polls exchange with deviceCode to receive the punch token upon user approval.
-   */
-  async exchangeDeviceCode(deviceCode: string): Promise<PairingExchangeResult> {
+  async exchangeDeviceCode(deviceCode: string) {
     const cleanDeviceCode = deviceCode.trim();
     if (!cleanDeviceCode) {
       return { status: 'access_denied', error: 'device_code is required' };
@@ -450,7 +235,6 @@ export const PairingService = {
           return { status: 'access_denied', error: 'Punch token missing from approval record' };
         }
 
-        // One-time exchange burn: remove secret token
         meta.punchToken = '[exchanged]';
         meta.exchangedAt = new Date().toISOString();
         mem.requestMeta = JSON.stringify(meta);
@@ -464,72 +248,6 @@ export const PairingService = {
         };
       }
     }
-
-    try {
-      if (process.env.APPWRITE_API_KEY) {
-        const tables = systemTables();
-        const res = await tables.listRows({
-          databaseId: DB,
-          tableId: REQUESTS_TABLE,
-          queries: [
-            Query.equal('state', cleanDeviceCode),
-            Query.limit(1),
-          ],
-        }).catch(() => ({ rows: [] as any[] }));
-
-        const row = res.rows[0];
-        if (!row) {
-          return { status: 'access_denied', error: 'Invalid device_code' };
-        }
-
-        if (new Date(row.expiresAt).getTime() < Date.now() || row.status === 'expired') {
-          return { status: 'expired', error: 'Pairing code expired' };
-        }
-
-        if (row.status === 'denied') {
-          return { status: 'access_denied', error: 'User denied authorization' };
-        }
-
-        if (row.status === 'pending') {
-          return { status: 'authorization_pending' };
-        }
-
-        if (row.status === 'approved') {
-          let meta: any = {};
-          try {
-            meta = JSON.parse(row.requestMeta || '{}');
-          } catch {}
-
-          const punchToken = meta.punchToken;
-          if (!punchToken) {
-            return { status: 'access_denied', error: 'Punch token missing from approval record' };
-          }
-
-          const sanitizedMeta = JSON.stringify({
-            ...meta,
-            punchToken: '[exchanged]',
-            exchangedAt: new Date().toISOString(),
-          });
-
-          await tables.updateRow({
-            databaseId: DB,
-            tableId: REQUESTS_TABLE,
-            rowId: row.$id,
-            data: {
-              requestMeta: sanitizedMeta,
-            },
-          }).catch(() => null);
-
-          return {
-            status: 'approved',
-            token: punchToken,
-            tokenType: 'Bearer',
-            userId: row.userId,
-            scopes: meta.grantedScopes || normalizeScopes(row.requestedScopes),
-          };
-        }
-      }
-    } catch {}
 
     return { status: 'access_denied', error: 'Invalid pairing session state' };
   },

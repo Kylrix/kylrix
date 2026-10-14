@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { AppwriteProvider } from '@/app/(app)/vault/appwrite-provider';
+import { VaultProvider } from '@/app/(app)/vault/vault-provider';
 import { ThemeProvider } from '@/lib/theme-context';
 import { ToastProvider } from '@/components/ui/Toast';
 import { UnifiedDrawerProvider } from '@/context/UnifiedDrawerContext';
@@ -82,7 +82,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   UnifiedMediaProvider,
   UnifiedFileDrawerProvider,
   DrawerStateProvider,
-  AppwriteProvider,
+  VaultProvider,
   LocalContextProvider,
   AppChromeProvider,
   ThemeProvider,

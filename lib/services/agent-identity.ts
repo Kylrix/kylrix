@@ -1,9 +1,9 @@
 import * as secp256k1 from '@noble/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3.js';
-import { tablesDB } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Permission, Role, Query } from '@/lib/appwrite/types';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
@@ -13,25 +13,19 @@ function bytesToHex(bytes: Uint8Array): string {
 
 export interface AgentCryptoIdentity {
   agentId: string;
-  agentUserId: string; // e.g. "agent_65..."
-  username: string; // e.g. "ag_kylie"
-  walletAddress: string; // e.g. "0x..."
+  agentUserId: string;
+  username: string;
+  walletAddress: string;
   ownerId: string;
   framework: string;
 }
 
 export const AgentIdentityService = {
-  /**
-   * Derives or mints deterministic cryptographic keys for an agent:
-   * 1. EVM Wallet Address (secp256k1 + keccak256)
-   * 2. Autonomous MEK wrapper for owner inspection
-   */
   async generateAgentKeys(agentId: string, ownerId: string): Promise<{
     walletAddress: string;
     encryptedKeyBlob?: string;
   }> {
     try {
-      // 1. Generate 32 bytes of secure entropy for this agent
       const rawEntropy = new Uint8Array(32);
       if (typeof window !== 'undefined' && window.crypto) {
         window.crypto.getRandomValues(rawEntropy);
@@ -40,13 +34,11 @@ export const AgentIdentityService = {
         nodeCrypto.randomFillSync(rawEntropy);
       }
 
-      // 2. Derive EVM Wallet Address
       const secpPriv = rawEntropy;
       const secpPub = secp256k1.getPublicKey(secpPriv, false).slice(1);
       const evmHash = keccak_256(secpPub);
       const walletAddress = '0x' + bytesToHex(evmHash.slice(-20)).toLowerCase();
 
-      // 3. Encrypt keys with owner MEK if available
       let encryptedKeyBlob: string | undefined;
       try {
         if (ecosystemSecurity.status.isUnlocked) {
@@ -76,10 +68,6 @@ export const AgentIdentityService = {
     }
   },
 
-  /**
-   * Creates or updates the agent's profile in the ecosystem `profiles` table.
-   * Agent user IDs are distinctly prefixed with `agent_${agentId}`.
-   */
   async syncAgentProfile(params: {
     agentId: string;
     ownerId: string;
@@ -107,6 +95,7 @@ export const AgentIdentityService = {
     });
 
     const profileData = {
+      id: `p-${agentUserId}`,
       userId: agentUserId,
       username: cleanHandle,
       displayName: `${name.trim()} (Smart Agent)`,
@@ -120,141 +109,64 @@ export const AgentIdentityService = {
       isAvatar: true,
       isContact: true,
       isOnlineVisible: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     try {
-      // Check if profile exists by userId
-      const existing = await tablesDB.listRows<any>(
-        APPWRITE_CONFIG.DATABASES.CHAT,
-        APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-        [Query.equal('userId', agentUserId), Query.limit(1)]
-      );
+      const existing = await db
+        .select()
+        .from(schema.profiles)
+        .where(eq(schema.profiles.userId, agentUserId))
+        .limit(1);
 
-      if (existing.rows && existing.rows.length > 0) {
-        const rowId = existing.rows[0].$id;
-        return await tablesDB.updateRow(
-          APPWRITE_CONFIG.DATABASES.CHAT,
-          APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-          rowId,
-          profileData
-        );
+      if (existing.length > 0) {
+        await db
+          .update(schema.profiles)
+          .set(profileData)
+          .where(eq(schema.profiles.id, existing[0].id));
+        return profileData;
       } else {
-        return await tablesDB.createRow(
-          APPWRITE_CONFIG.DATABASES.CHAT,
-          APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-          agentUserId,
-          profileData,
-          [Permission.read(Role.any()), Permission.update(Role.user(ownerId))]
-        );
+        await db.insert(schema.profiles).values(profileData);
+        return profileData;
       }
     } catch (err: any) {
-      console.warn('[AgentIdentity] Failed to sync agent profile to tablesDB:', err?.message || err);
+      console.warn('[AgentIdentity] Failed to sync agent profile:', err?.message || err);
       return null;
     }
   },
 
-  /**
-   * Retrieves an agentic profile by agent ID or prefixed agent user ID.
-   */
   async getAgentProfile(agentId: string): Promise<any | null> {
     const agentUserId = agentId.startsWith('agent_') ? agentId : `agent_${agentId}`;
     try {
-      const res = await tablesDB.listRows<any>(
-        APPWRITE_CONFIG.DATABASES.CHAT,
-        APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-        [Query.equal('userId', agentUserId), Query.limit(1)]
-      );
-      return res.rows?.[0] || null;
+      const rows = await db
+        .select()
+        .from(schema.profiles)
+        .where(eq(schema.profiles.userId, agentUserId))
+        .limit(1);
+      return rows[0] || null;
     } catch {
       return null;
     }
   },
 
-  /**
-   * Resolves the agent's MEK in hex format.
-   * If stored in agent's config/identity directly or encrypted under owner MEK,
-   * it retrieves and unwraps it seamlessly.
-   */
   async getAgentMekHex(agentId: string): Promise<string | null> {
     const rawId = agentId.replace(/^agent_/, '');
     try {
-      // 1. Try fetching from agents table directly
-      const agentRes = await tablesDB.getRow<any>(
-        APPWRITE_CONFIG.DATABASES.FLOW,
-        APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-        rawId
-      ).catch(() => null);
-
-      if (agentRes?.config) {
-        try {
-          const parsed = JSON.parse(agentRes.config);
-          if (parsed.mekHex) return String(parsed.mekHex);
-          if (parsed.entropyHex) return String(parsed.entropyHex);
-        } catch {}
-      }
-
-      // 1b. Try querying agents table by workspaceId
-      try {
-        const agentByWs = await tablesDB.listRows<any>(
-          APPWRITE_CONFIG.DATABASES.FLOW,
-          APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-          [Query.equal('workspaceId', rawId), Query.limit(1)]
-        );
-        if (agentByWs.rows && agentByWs.rows.length > 0 && agentByWs.rows[0].config) {
-          const parsed = JSON.parse(agentByWs.rows[0].config);
-          if (parsed.mekHex) return String(parsed.mekHex);
-          if (parsed.entropyHex) return String(parsed.entropyHex);
-        }
-      } catch {}
-
-      // 1c. Try querying projects table to find linked agentId
-      try {
-        const projectRow = await tablesDB.getRow<any>(
-          APPWRITE_CONFIG.DATABASES.FLOW,
-          (APPWRITE_CONFIG.TABLES as any).PROJECTS || 'projects',
-          rawId
-        ).catch(() => null);
-
-        if (projectRow) {
-          let nestedAgentId = projectRow.agentId;
-          if (!nestedAgentId && projectRow.metadata) {
-            try {
-              const meta = typeof projectRow.metadata === 'string' ? JSON.parse(projectRow.metadata) : projectRow.metadata;
-              if (meta.agentId) nestedAgentId = meta.agentId;
-            } catch {}
-          }
-          if (nestedAgentId) {
-            const nestedMek = await this.getAgentMekHex(String(nestedAgentId));
-            if (nestedMek) return nestedMek;
-          }
-        }
-      } catch {}
-
-      // 2. Try fetching from profiles table
       const profile = await this.getAgentProfile(rawId);
       if (profile?.preferences) {
         try {
           const pref = typeof profile.preferences === 'string' ? JSON.parse(profile.preferences) : profile.preferences;
           if (pref.mekHex) return String(pref.mekHex);
           if (pref.entropyHex) return String(pref.entropyHex);
-          if (pref.encryptedKeyBlob && ecosystemSecurity.status.isUnlocked) {
-            const decryptedJson = await ecosystemSecurity.decrypt(pref.encryptedKeyBlob);
-            const decrypted = JSON.parse(decryptedJson);
-            if (decrypted.mekHex) return String(decrypted.mekHex);
-            if (decrypted.entropyHex) return String(decrypted.entropyHex);
-          }
         } catch {}
       }
-
       return null;
     } catch {
       return null;
     }
   },
 
-  /**
-   * Imports and returns the Agent's MEK as a WebCrypto CryptoKey.
-   */
   async getAgentCryptoKey(agentId: string): Promise<CryptoKey | null> {
     const hex = await this.getAgentMekHex(agentId);
     if (!hex || hex.length < 32) return null;

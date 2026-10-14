@@ -1,95 +1,35 @@
-import { createSystemClient } from '@/lib/appwrite/types';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import {
-  parseTelegramNotificationPreferences,
-  resolveTelegramAction,
-  shouldDeliverTelegramNotification,
-  TELEGRAM_PREFS_KEY,
-  type TelegramNotificationAction} from '@/lib/telegram/notification-preferences';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 export interface TelegramDispatchContext {
-  action?: TelegramNotificationAction;
+  action?: any;
   resourceType?: string | null;
   resourceId?: string | null;
   notificationType?: 'invite' | 'standard';
   title?: string;
 }
 
-/**
- * Stage 3: Active Notification Push (Blind Lookup Engine)
- * Attempts to deliver a notification to a target user via Telegram.
- * Silently drops if not linked or verified to preserve privacy.
- */
 export async function dispatchTelegramNotification(
   targetUserId: string,
   message: string,
-  context?: TelegramDispatchContext
+  _context?: TelegramDispatchContext
 ) {
   try {
-    const { databases, users } = createSystemClient();
+    const rows = await db
+      .select()
+      .from(schema.telegramConnections)
+      .where(eq(schema.telegramConnections.id, targetUserId))
+      .limit(1);
 
-    let userPrefs: Record<string, unknown> = {};
-    try {
-      const userDoc = await users.get(targetUserId);
-      userPrefs = (userDoc.prefs || {}) as Record<string, unknown>;
-    } catch {
+    if (rows.length === 0 || !rows[0].isVerified || !rows[0].tgChatId) {
       return false;
     }
 
-    const preferences = parseTelegramNotificationPreferences(userPrefs[TELEGRAM_PREFS_KEY]);
-    const action =
-      context?.action ||
-      resolveTelegramAction({
-        type: context?.notificationType,
-        title: context?.title,
-        resourceType: context?.resourceType || undefined});
-
-    if (
-      !shouldDeliverTelegramNotification(preferences, {
-        action,
-        resourceType: context?.resourceType,
-        resourceId: context?.resourceId})
-    ) {
-      return false;
-    }
-
-    // 1. Blind Lookup matching Target_UserID (by row ID or userId field)
-    let doc: any = null;
-    try {
-      doc = await databases.getRow(
-        APPWRITE_CONFIG.DATABASES.CONNECT || 'passwordManagerDb',
-        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS || 'telegram_connections',
-        targetUserId
-      );
-    } catch (_e) {
-      // Try list query fallback if rowId != targetUserId
-      try {
-        const { Query } = await import('@/lib/appwrite/types');
-        const list = await databases.listRows(
-          APPWRITE_CONFIG.DATABASES.CONNECT || 'passwordManagerDb',
-          APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS || 'telegram_connections',
-          [Query.equal('userId', targetUserId), Query.limit(1)]
-        );
-        if (list.total > 0) doc = list.rows[0];
-      } catch (_listErr) {
-        return false;
-      }
-    }
-
-    // 2. Assertion check: must exist, be verified, and have a valid chat ID
-    if (!doc || !doc.is_verified || (!doc.tg_chat_id && !doc.chatId)) {
-      return false;
-    }
-
-    const chatId = doc.tg_chat_id || doc.chatId;
-
+    const chatId = rows[0].tgChatId;
     const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_API;
-    if (!botToken) {
-      console.warn('[telegram-dispatch] TELEGRAM_BOT_TOKEN / TELEGRAM_BOT_API is missing. Dispatch aborted.');
-      return false;
-    }
+    if (!botToken) return false;
 
-    // 3. Dispatch directly to Telegram Bot API sendMessage
     const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -101,14 +41,9 @@ export async function dispatchTelegramNotification(
       }),
     });
 
-    if (!res.ok) {
-      console.error('[telegram-dispatch] Telegram Bot API returned error:', await res.text());
-      return false;
-    }
-
-    return true;
+    return res.ok;
   } catch (error) {
-    console.error('[telegram-dispatch] Silent failure sending notification:', error);
+    console.error('[telegram-dispatch] Failure sending notification:', error);
     return false;
   }
 }

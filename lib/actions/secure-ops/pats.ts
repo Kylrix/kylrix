@@ -1,12 +1,10 @@
 'use server';
 
-import { systemTables } from '@/lib/data/system-tables';
-
-import { getActor } from '@/lib/actions/secure-ops';
+import { getActor } from '@/lib/actions/secure-ops/shared';
 import { PatService } from '@/lib/services/pats';
-import { Query } from '@/lib/appwrite/types';
-
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 export async function createPatSecure(params: {
   name: string;
@@ -60,15 +58,13 @@ export async function revokePatSecure(params: { patId: string; jwt?: string }) {
 export async function listOAuthAppInstallsSecure(jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
-  const tables = systemTables();
-  const res = await tables.listRows({
-    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-    tableId: 'oauth_app_installs',
-    queries: [
-      Query.equal('userId', actor.$id),
-      Query.equal('status', 'active'),
-      Query.limit(50),
-    ],
-  });
-  return { success: true, data: res.rows };
+  try {
+    const rows = await db
+      .select()
+      .from(schema.oauthConsent)
+      .where(eq(schema.oauthConsent.userId, actor.$id));
+    return { success: true, data: rows };
+  } catch {
+    return { success: true, data: [] };
+  }
 }

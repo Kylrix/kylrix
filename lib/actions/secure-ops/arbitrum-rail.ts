@@ -1,10 +1,6 @@
 "use server";
 
 import { systemTables } from '@/lib/data/system-tables';
-
-import { ID } from '@/lib/appwrite/types';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-
 import * as shared from './shared';
 
 const { getActor } = shared;
@@ -21,9 +17,6 @@ export interface PaymentIntentInput {
     chainId: number;
 }
 
-/**
- * Creates a new agent payment intent.
- */
 export async function createPaymentIntentAction(input: PaymentIntentInput) {
     const actor = await getActor(input.jwt);
     if (!actor) {
@@ -31,12 +24,12 @@ export async function createPaymentIntentAction(input: PaymentIntentInput) {
     }
 
     const tablesDB = systemTables();
-    const intentId = ID.unique();
+    const intentId = crypto.randomUUID();
     const payloadStr = JSON.stringify(input.contextPayload || {});
 
     const newIntent: any = await tablesDB.createRow({
-        databaseId: APPWRITE_CONFIG.DATABASE_ID,
-        tableId: APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
+        databaseId: 'turso',
+        tableId: 'agent_payment_intents',
         rowId: intentId,
         data: {
             userId: actor.$id,
@@ -52,21 +45,18 @@ export async function createPaymentIntentAction(input: PaymentIntentInput) {
     return {
         success: true,
         intent: {
-            id: newIntent.$id,
-            userId: newIntent.userId,
-            agentId: newIntent.agentId,
-            amount: newIntent.amount,
-            status: newIntent.status,
-            payload: newIntent.payload,
-            chainId: newIntent.chainId,
-            txHash: newIntent.txHash
+            id: newIntent.$id || intentId,
+            userId: actor.$id,
+            agentId: input.agentId,
+            amount: input.amount,
+            status: 'pending',
+            payload: payloadStr,
+            chainId: input.chainId,
+            txHash: ''
         }
     };
 }
 
-/**
- * Submits signed EIP-712 transaction bytes to the gas relay and broadcasts to live JSON-RPC.
- */
 export async function submitGasRelayAction(input: {
     jwt?: string;
     intentId: string;
@@ -83,12 +73,11 @@ export async function submitGasRelayAction(input: {
 
     const tablesDB = systemTables();
 
-    // Retrieve the active payment intent row
     const intent = await tablesDB.getRow({
-        databaseId: APPWRITE_CONFIG.DATABASE_ID,
-        tableId: APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
+        databaseId: 'turso',
+        tableId: 'agent_payment_intents',
         rowId: input.intentId
-    });
+    }).catch(() => null);
 
     if (!intent || intent.userId !== actor.$id) {
         throw new Error('Intent not found or unauthorized access');
@@ -103,7 +92,6 @@ export async function submitGasRelayAction(input: {
         : 'https://arb1.arbitrum.io/rpc';
 
     try {
-        // 1. Perform EIP-712 Signature Verification
         const domain = {
             name: 'KylrixAgentPayment',
             version: '1',
@@ -138,7 +126,6 @@ export async function submitGasRelayAction(input: {
             throw new Error('EIP-712 signature verification failed');
         }
 
-        // 2. Broadcast live transaction using Elevated Server-Side System Wallet
         const privateKey = process.env.SYSTEM_WALLET_PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
         const account = privateKeyToAccount(privateKey as `0x${string}`);
         const chainConfig = input.chainId === 421614 ? arbitrumSepolia : arbitrum;
@@ -154,10 +141,9 @@ export async function submitGasRelayAction(input: {
             value: BigInt(input.amount)
         });
 
-        // 3. Update payment intent database record to complete
         await tablesDB.updateRow({
-            databaseId: APPWRITE_CONFIG.DATABASE_ID,
-            tableId: APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
+            databaseId: 'turso',
+            tableId: 'agent_payment_intents',
             rowId: input.intentId,
             data: {
                 status: 'completed',
@@ -172,13 +158,13 @@ export async function submitGasRelayAction(input: {
         };
     } catch (err: any) {
         await tablesDB.updateRow({
-            databaseId: APPWRITE_CONFIG.DATABASE_ID,
-            tableId: APPWRITE_CONFIG.TABLES.AGENT_PAYMENT_INTENTS,
+            databaseId: 'turso',
+            tableId: 'agent_payment_intents',
             rowId: input.intentId,
             data: {
                 status: 'failed'
             }
-        });
+        }).catch(() => {});
         throw new Error(`Gas relay submission failed: ${err.message}`);
     }
 }

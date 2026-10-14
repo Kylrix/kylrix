@@ -1,13 +1,12 @@
 /**
  * Client-only pending-sync bridge.
- * Never serialized to Appwrite — sync engine reads live payloads via getters.
+ * Sync engine reads live payloads via getters.
  */
 
-import type { Notes } from '@/types/appwrite';
 import type { Task, Event } from '@/types';
 import { toCanonicalDocumentId } from '@/lib/sync/goal-keys';
 
-type LiveNoteGetter = (noteId: string) => Notes | null | undefined;
+type LiveNoteGetter = (noteId: string) => Record<string, any> | null | undefined;
 type LiveGoalGetter = (goalId: string) => Task | null | undefined;
 type LiveEventGetter = (eventId: string) => Event | null | undefined;
 
@@ -19,7 +18,7 @@ export function registerLiveNoteGetter(getter: LiveNoteGetter | null): void {
   liveNoteGetter = getter;
 }
 
-export function getLiveNoteForSync(noteId: string): Notes | null {
+export function getLiveNoteForSync(noteId: string): Record<string, any> | null {
   const id = toCanonicalDocumentId(noteId);
   if (!id || !liveNoteGetter) return null;
   return liveNoteGetter(id) || null;
