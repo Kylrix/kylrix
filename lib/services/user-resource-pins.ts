@@ -1,8 +1,8 @@
 'use client';
 
-import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
-import { databases } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 export type PinnableResourceType =
   | 'note'
@@ -20,73 +20,107 @@ export type PinnableResourceType =
 
 export interface UserResourcePinRow {
   $id: string;
+  id: string;
   userId: string;
   resourceType: PinnableResourceType;
   resourceId: string;
   pinnedAt?: string | null;
 }
 
-const DATABASE_ID = APPWRITE_CONFIG.DATABASE_ID;
-const TABLE_ID = 'user_resource_pins';
-
-function pinPermissions(userId: string) {
-  return [
-    Permission.read(Role.user(userId)),
-  ];
-}
-
 export const UserResourcePinService = {
   async listForUser(userId: string, resourceType?: PinnableResourceType): Promise<UserResourcePinRow[]> {
-    const queries = [Query.equal('userId', userId), Query.limit(500), Query.orderDesc('pinnedAt')];
-    if (resourceType) {
-      queries.unshift(Query.equal('resourceType', resourceType));
+    try {
+      const conditions = [eq(schema.userResourcePins.userId, userId)];
+      if (resourceType) {
+        conditions.push(eq(schema.userResourcePins.resourceType, resourceType));
+      }
+      const rows = await db
+        .select()
+        .from(schema.userResourcePins)
+        .where(and(...conditions));
+
+      return rows.map((r) => ({
+        ...r,
+        $id: r.id,
+        resourceType: r.resourceType as PinnableResourceType,
+      }));
+    } catch {
+      return [];
     }
-    const res: any = await databases.listRows(DATABASE_ID, TABLE_ID, queries).catch(() => ({ rows: [] }));
-    const rows = res?.rows ?? res?.documents ?? [];
-    return Array.isArray(rows) ? rows : [];
   },
 
   async pin(userId: string, resourceType: PinnableResourceType, resourceId: string): Promise<UserResourcePinRow> {
     const existing = await this.findPin(userId, resourceType, resourceId);
     if (existing) return existing;
 
+    const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    return await databases.createRow(
-      DATABASE_ID,
-      TABLE_ID,
-      ID.unique(),
-      {
-        userId,
-        resourceType,
-        resourceId,
-        pinnedAt: now},
-      pinPermissions(userId));
+
+    const row = {
+      id,
+      userId,
+      resourceType,
+      resourceId,
+      pinnedAt: now,
+    };
+
+    try {
+      await db.insert(schema.userResourcePins).values(row);
+    } catch {}
+
+    return { ...row, $id: id };
   },
 
   async unpin(userId: string, resourceType: PinnableResourceType, resourceId: string): Promise<void> {
-    const existing = await this.findPin(userId, resourceType, resourceId);
-    if (!existing) return;
-    await databases.deleteRow(DATABASE_ID, TABLE_ID, existing.$id);
+    try {
+      await db
+        .delete(schema.userResourcePins)
+        .where(
+          and(
+            eq(schema.userResourcePins.userId, userId),
+            eq(schema.userResourcePins.resourceType, resourceType),
+            eq(schema.userResourcePins.resourceId, resourceId)
+          )
+        );
+    } catch {}
   },
 
   async findPin(
     userId: string,
     resourceType: PinnableResourceType,
-    resourceId: string): Promise<UserResourcePinRow | null> {
-    const res: any = await databases.listRows(DATABASE_ID, TABLE_ID, [
-      Query.equal('userId', userId),
-      Query.equal('resourceType', resourceType),
-      Query.equal('resourceId', resourceId),
-      Query.limit(1),
-    ]).catch(() => ({ rows: [] }));
-    const rows = res?.rows ?? res?.documents ?? [];
-    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+    resourceId: string
+  ): Promise<UserResourcePinRow | null> {
+    try {
+      const rows = await db
+        .select()
+        .from(schema.userResourcePins)
+        .where(
+          and(
+            eq(schema.userResourcePins.userId, userId),
+            eq(schema.userResourcePins.resourceType, resourceType),
+            eq(schema.userResourcePins.resourceId, resourceId)
+          )
+        )
+        .limit(1);
+
+      if (rows.length > 0) {
+        const r = rows[0];
+        return {
+          ...r,
+          $id: r.id,
+          resourceType: r.resourceType as PinnableResourceType,
+        };
+      }
+    } catch {}
+
+    return null;
   },
 
   async isPinned(userId: string, resourceType: PinnableResourceType, resourceId: string): Promise<boolean> {
     const row = await this.findPin(userId, resourceType, resourceId);
     return !!row;
-  }};
+  },
+};
 
 export function resolveEffectivePinned(
   actorId: string | null | undefined,
@@ -94,7 +128,8 @@ export function resolveEffectivePinned(
   resourceId: string,
   rowIsPinned: boolean | string[] | null | undefined,
   collaboratorPinIds: ReadonlySet<string>,
-  resourceType?: PinnableResourceType): boolean {
+  resourceType?: PinnableResourceType
+): boolean {
   if (!actorId) return false;
 
   if (resourceType === 'message') {

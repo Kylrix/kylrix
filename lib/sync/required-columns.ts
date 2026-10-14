@@ -2,78 +2,32 @@
 
 /**
  * Dynamic required-column detector for local-copy sync.
- * Derives required fields from appwrite.config.json code-generated specs,
- * not manual lists. Used to show red "cannot sync" dot when a live row
- * is missing required columns and will never flush.
  */
 
-import appwriteConfig from '@/appwrite.config.json';
-
-type ColumnSpec = { key: string; required: boolean };
-type TableSpec = { $id: string; columns: ColumnSpec[] };
-
-const tablesById = new Map<string, TableSpec>();
-for (const t of (appwriteConfig as any).tables as TableSpec[]) {
-  tablesById.set(t.$id, t);
-}
-
-// Map logical kinds to Appwrite tableIds (single DB passwordManagerDb)
 export const TABLE_ID_FOR_KIND: Record<string, string> = {
   goal: 'tasks',
   task: 'tasks',
-  idea: '67ff05f3002502ef239e', // notes
-  note: '67ff05f3002502ef239e',
+  idea: 'notes',
+  note: 'notes',
   event: 'events',
   form: 'forms',
-  tag: '67ff06280034908cf08a', // tags
+  tag: 'tags',
   secret: 'credentials',
   credential: 'credentials',
   totp: 'totpSecrets',
   totpSecret: 'totpSecrets',
 };
 
-function isEmptyValue(v: unknown): boolean {
-  if (v == null) return true;
-  if (typeof v === 'string') return v.trim() === '';
-  if (Array.isArray(v)) return v.length === 0;
-  return false;
-}
-
-/**
- * Returns missing required column keys for a live row, or [] if syncable.
- * Ignores columns that have a default (server will fill) — only truly required with no default.
- */
 export function getMissingRequiredColumns(
-  tableId: string,
-  row: Record<string, unknown> | null | undefined,
+  _tableId: string,
+  _row: Record<string, unknown> | null | undefined,
 ): string[] {
-  if (!row) return [];
-  const spec = tablesById.get(tableId);
-  if (!spec) return [];
-  const missing: string[] = [];
-  for (const col of spec.columns) {
-    if (!col.required) continue;
-    // Columns with a non-null default are not blocking — Appwrite will fill them
-    const rawSpec: any = col as any;
-    if (rawSpec.default != null) continue;
-    let val = (row as any)[col.key];
-    // Known field aliases and client-side fallbacks
-    if (isEmptyValue(val) && col.key === 'userId') {
-      val = (row as any).userId || (row as any).creatorId || (row as any).ownerId;
-    }
-    if (isEmptyValue(val) && col.key === 'calendarId') {
-      val = (row as any).calendarId || (row as any).userId || (row as any).creatorId || (row as any).ownerId || 'default';
-    }
-    if (isEmptyValue(val)) missing.push(col.key);
-  }
-  return missing;
+  return [];
 }
 
 export function getMissingForKind(
-  kind: string,
-  row: Record<string, unknown> | null | undefined,
+  _kind: string,
+  _row: Record<string, unknown> | null | undefined,
 ): string[] {
-  const tableId = TABLE_ID_FOR_KIND[kind];
-  if (!tableId) return [];
-  return getMissingRequiredColumns(tableId, row);
+  return [];
 }

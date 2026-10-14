@@ -5,13 +5,9 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Lock, ArrowRight } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { resolveWorkspaceShareAccessSecure, joinWorkspaceByInviteCodeSecure } from '@/lib/actions/secure-ops';
-import { account } from '@/lib/appwrite/client';
 
 /**
  * Canonical workspace share entry point: /workspace/[id]
- * Lazily verifies workspace accessibility (public first, then owner/collaborator access).
- * If access is granted: switches active workspace and routes to /app.
- * If access is denied: retains existing active workspace, alerts the user, and routes back to /app on confirmation.
  */
 export default function WorkspaceSharePage() {
   const params = useParams();
@@ -38,17 +34,8 @@ export default function WorkspaceSharePage() {
 
     void (async () => {
       try {
-        let jwt: string | undefined = undefined;
-        try {
-          const res = await Promise.race([
-            account.createJWT(),
-            new Promise<null>((r) => setTimeout(() => r(null), 1000)),
-          ]);
-          jwt = res?.jwt;
-        } catch {}
-
         if (inviteCodeQuery) {
-          const joinRes = await joinWorkspaceByInviteCodeSecure(id, inviteCodeQuery, jwt).catch(() => null);
+          const joinRes = await joinWorkspaceByInviteCodeSecure(id, inviteCodeQuery).catch(() => null);
           if (joinRes && joinRes.success && joinRes.workspace) {
             try {
               await registerSharedWorkspace({
@@ -73,7 +60,7 @@ export default function WorkspaceSharePage() {
           }
         }
 
-        const access = await resolveWorkspaceShareAccessSecure(id, jwt);
+        const access = await resolveWorkspaceShareAccessSecure(id);
 
         if (access.success && access.workspace) {
           try {
@@ -90,7 +77,6 @@ export default function WorkspaceSharePage() {
           } catch {}
 
           router.replace('/app');
-          // Guaranteed fallback redirect if router transition delays
           setTimeout(() => {
             if (typeof window !== 'undefined' && window.location.pathname.startsWith('/workspace/')) {
               window.location.replace('/app');

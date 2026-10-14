@@ -4,16 +4,9 @@
  * Enables self-hosted Kylrix instances to selectively & bi-directionally replicate
  * user data (notes, goals, tags) to and from Kylrix Cloud (or another remote Kylrix node)
  * via the authenticated Kylrix HTTP API (/api/v1).
- *
- * Adheres to:
- * 1. OpenBricks local-first principles.
- * 2. Cloud account tier-feature mismatch guards (checks target cloud account quotas before pushing).
- * 3. Timestamp-based delta syncing & safe merging (does not clobber newer edits or dirty drafts).
  */
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { listNotes, createNote, updateNote } from '@/lib/appwrite/note';
-import { Notes } from '@/types/appwrite';
 
 export const CLOUD_SYNC_CONFIG_KEY = 'kylrix_cloud_sync_config_v1';
 export const DEFAULT_CLOUD_API_ENDPOINT = 'https://www.kylrix.space/api/v1';
@@ -170,7 +163,6 @@ export async function verifyCloudConnection(
       },
     };
 
-    // Attempt node handshake probe for instance nature discovery
     try {
       const hsRes = await fetch(`${cleanEndpoint}/sync/handshake`, {
         method: 'GET',
@@ -191,9 +183,7 @@ export async function verifyCloudConnection(
           };
         }
       }
-    } catch (_e) {
-      // Non-fatal handshake probe fallback
-    }
+    } catch (_e) {}
 
     return { ok: true, account };
   } catch (err: any) {
@@ -232,14 +222,8 @@ export async function executeCloudSync(
 
   const endpoint = normalizeCloudEndpoint(config.cloudEndpoint);
   const token = config.token.trim();
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
 
   try {
-    // 1. Verify remote account status & refresh quotas
     onProgress?.('Verifying Cloud account tier and connection...', stats);
     const conn = await verifyCloudConnection(endpoint, token);
     if (!conn.ok || !conn.account) {
@@ -254,7 +238,6 @@ export async function executeCloudSync(
       throw new Error('Cloud sync requires a paid plan. Upgrade your Cloud account to enable replication.');
     }
 
-    // Priority 1: Account Identity & Master Encryption Keychain Replication
     onProgress?.('Replicating account identity & master encryption keychain...', stats);
     try {
       const { replicateAccountAndKeychainSecure } = await import('@/lib/actions/secure-ops/misc');
@@ -271,174 +254,6 @@ export async function executeCloudSync(
       }
     } catch (err: any) {
       stats.errors.push(`Account/Keychain replication error: ${err?.message || err}`);
-    }
-
-    const lastSyncTime = config.lastSyncAt ? new Date(config.lastSyncAt).getTime() : 0;
-
-    // 2. Synchronize Notes
-    if (config.syncNotes) {
-      onProgress?.('Replicating notes...', stats);
-
-      // Fetch cloud notes via REST
-      let cloudNotes: any[] = [];
-      try {
-        const cloudRes = await fetch(`${endpoint}/notes?limit=100`, { headers });
-        if (cloudRes.ok) {
-          const cloudData = await cloudRes.json();
-          cloudNotes = Array.isArray(cloudData) ? cloudData : (cloudData?.data || cloudData?.notes || []);
-        } else {
-          const errBody = await cloudRes.json().catch(() => null);
-          stats.errors.push(`Failed to list cloud notes: ${errBody?.error || cloudRes.statusText}`);
-        }
-      } catch (err: any) {
-        stats.errors.push(`Cloud notes fetch error: ${err.message}`);
-      }
-
-      // Fetch local notes
-      let localNotes: Notes[] = [];
-      try {
-        const localListRes = await listNotes([], 100);
-        localNotes = (localListRes?.rows || []) as Notes[];
-      } catch (err: any) {
-        stats.errors.push(`Local notes fetch error: ${err.message}`);
-      }
-
-      const localNoteMap = new Map<string, Notes>();
-      for (const ln of localNotes) {
-        if (ln?.$id) localNoteMap.set(ln.$id, ln);
-      }
-
-      const cloudNoteMap = new Map<string, any>();
-      for (const cn of cloudNotes) {
-        if (cn?.id) cloudNoteMap.set(cn.id, cn);
-      }
-
-      // A. PULL FROM CLOUD (if bidirectional or pull_only)
-      if (config.syncDirection === 'bidirectional' || config.syncDirection === 'pull_only') {
-        for (const cn of cloudNotes) {
-          try {
-            const local = localNoteMap.get(cn.id);
-            const cloudUpdatedAt = new Date(cn.updatedAt || cn.createdAt || 0).getTime();
-
-            if (!local) {
-              // Note does not exist locally -> pull & create locally
-              await createNote({
-                title: cn.title || 'Untitled',
-                content: cn.content || '',
-                isPublic: cn.isPublic ?? false,
-                isGuest: cn.isGuest ?? false,
-                tags: Array.isArray(cn.tags) ? cn.tags : [],
-              });
-              stats.notesPulled++;
-            } else {
-              const localUpdatedAt = new Date(local.$updatedAt || local.updatedAt || local.$createdAt || 0).getTime();
-              // If cloud is newer and modified after lastSyncTime, update local
-              if (cloudUpdatedAt > localUpdatedAt && cloudUpdatedAt > lastSyncTime) {
-                await updateNote(local.$id, {
-                  title: cn.title,
-                  content: cn.content,
-                  isPublic: cn.isPublic,
-                  isGuest: cn.isGuest,
-                });
-                stats.notesPulled++;
-                stats.conflictsResolved++;
-              }
-            }
-          } catch (err: any) {
-            stats.errors.push(`Note pull error (${cn.id}): ${err.message}`);
-          }
-        }
-      }
-
-      // B. PUSH TO CLOUD (if bidirectional or push_only)
-      if (config.syncDirection === 'bidirectional' || config.syncDirection === 'push_only') {
-        for (const ln of localNotes) {
-          try {
-            // Guard: Feature mismatch for FREE accounts
-            // If the note has encrypted contents or specialized tags that Free tier might restrict,
-            // we safely push the title & content while sanitizing
-            const cn = cloudNoteMap.get(ln.$id);
-            const localUpdatedAt = new Date(ln.$updatedAt || ln.updatedAt || ln.$createdAt || 0).getTime();
-
-            if (!cn) {
-              // Remote note doesn't exist yet -> Push create
-              // Free accounts quota check: if Free tier account already has 500+ objects, skip or warn
-              const res = await fetch(`${endpoint}/notes`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                  title: ln.title || 'Untitled Thought',
-                  content: ln.content || '',
-                  isPublic: Boolean(ln.isPublic),
-                  isGuest: Boolean(ln.isGuest),
-                  tags: Array.isArray(ln.tags) ? ln.tags : [],
-                }),
-              });
-
-              if (res.ok) {
-                stats.notesPushed++;
-              } else {
-                const errBody = await res.json().catch(() => null);
-                stats.errors.push(`Failed to push note (${ln.title}): ${errBody?.error || res.statusText}`);
-              }
-            } else {
-              // Remote note exists -> compare timestamps
-              const cloudUpdatedAt = new Date(cn.updatedAt || cn.createdAt || 0).getTime();
-              if (localUpdatedAt > cloudUpdatedAt && localUpdatedAt > lastSyncTime) {
-                const res = await fetch(`${endpoint}/notes/${cn.id}`, {
-                  method: 'PUT',
-                  headers,
-                  body: JSON.stringify({
-                    title: ln.title || 'Untitled Thought',
-                    content: ln.content || '',
-                    isPublic: Boolean(ln.isPublic),
-                    isGuest: Boolean(ln.isGuest),
-                    tags: Array.isArray(ln.tags) ? ln.tags : [],
-                  }),
-                });
-
-                if (res.ok) {
-                  stats.notesPushed++;
-                  stats.conflictsResolved++;
-                } else {
-                  const errBody = await res.json().catch(() => null);
-                  stats.errors.push(`Failed to update cloud note (${cn.id}): ${errBody?.error || res.statusText}`);
-                }
-              } else {
-                stats.notesSkipped++;
-              }
-            }
-          } catch (err: any) {
-            stats.errors.push(`Note push error (${ln.$id}): ${err.message}`);
-          }
-        }
-      }
-    }
-
-    // 3. Synchronize Goals
-    if (config.syncGoals) {
-      onProgress?.('Replicating goals...', stats);
-
-      let cloudGoals: any[] = [];
-      try {
-        const cloudRes = await fetch(`${endpoint}/goals?limit=100`, { headers });
-        if (cloudRes.ok) {
-          const cloudData = await cloudRes.json();
-          cloudGoals = Array.isArray(cloudData) ? cloudData : (cloudData?.data || cloudData?.goals || []);
-        } else {
-          const errBody = await cloudRes.json().catch(() => null);
-          stats.errors.push(`Failed to list cloud goals: ${errBody?.error || cloudRes.statusText}`);
-        }
-      } catch (err: any) {
-        stats.errors.push(`Cloud goals fetch error: ${err.message}`);
-      }
-
-      // Delta goals push/pull via REST
-      if (config.syncDirection === 'bidirectional' || config.syncDirection === 'pull_only') {
-        for (let i = 0; i < cloudGoals.length; i++) {
-          stats.goalsPulled++;
-        }
-      }
     }
 
     const now = Date.now();

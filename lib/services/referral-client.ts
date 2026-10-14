@@ -1,8 +1,3 @@
-/**
- * Client-side referral claim from attribution_payload cookie.
- * Works for new and existing accounts; table uniqueness enforces one referral per user.
- */
-
 const COOKIE_NAME = 'attribution_payload';
 
 function clearAttributionCookie() {
@@ -17,7 +12,6 @@ function readAttributionPayload(): { ref: string; src?: string; origin?: string;
   if (!match?.[1]) return null;
   try {
     let raw = match[1];
-    // Cookie may be URI-encoded once (middleware) or twice in some browsers
     try {
       raw = decodeURIComponent(raw);
     } catch {}
@@ -33,10 +27,6 @@ function readAttributionPayload(): { ref: string; src?: string; origin?: string;
   }
 }
 
-/**
- * Claim pending referral for the signed-in user.
- * Clears cookie only when claim is terminal (success, already referred, invalid, self).
- */
 export async function claimPendingReferralAttribution(): Promise<{
   attempted: boolean;
   ok?: boolean;
@@ -48,10 +38,8 @@ export async function claimPendingReferralAttribution(): Promise<{
   if (!payload?.ref) return { attempted: false };
 
   try {
-    const { account } = await import('@/lib/appwrite/client');
-    const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
     const { claimReferralAction } = await import('@/lib/actions/referrals');
-    const res = await claimReferralAction(payload, jwt);
+    const res = await claimReferralAction(payload);
 
     const terminal =
       res.ok === true ||
@@ -68,7 +56,6 @@ export async function claimPendingReferralAttribution(): Promise<{
       error: res.error,
     };
   } catch (err: any) {
-    // Keep cookie for a later retry (session may still be warming)
     return { attempted: true, ok: false, error: err?.message || 'Claim failed' };
   }
 }

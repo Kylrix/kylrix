@@ -1,12 +1,8 @@
-import { systemTables } from '@/lib/data/system-tables';
-import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
-
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { detectFlowPii } from '@/lib/flows/pii';
 import { WorkflowDbService } from '@/lib/services/workflows';
-
-const DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-const TABLE_ID = 'flow_reviews';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, desc } from 'drizzle-orm';
 
 export type FlowReviewVerdict =
   | 'pending'
@@ -24,48 +20,40 @@ export const FlowReviewService = {
     findings?: Record<string, unknown>;
     piiSummary?: string | null;
   }): Promise<any> {
-    const tables = systemTables();
     const now = new Date().toISOString();
-    return tables.createRow({
-      databaseId: DATABASE_ID,
-      tableId: TABLE_ID,
-      rowId: ID.unique(),
-      data: {
-        flowId: params.flowId,
-        actorId: params.actorId,
-        sessionId: params.sessionId || null,
-        verdict: 'pending',
-        toolTierMax: params.toolTierMax || 'general',
-        findings: params.findings ? JSON.stringify(params.findings) : null,
-        piiSummary: params.piiSummary || null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      permissions: [
-        Permission.read(Role.user(params.actorId)),
-      ],
+    const id = crypto.randomUUID();
+
+    await db.insert(schema.flowReviews).values({
+      id,
+      flowId: params.flowId,
+      actorId: params.actorId,
+      sessionId: params.sessionId || null,
+      verdict: 'pending',
+      toolTierMax: params.toolTierMax || 'general',
+      findings: params.findings ? JSON.stringify(params.findings) : null,
+      piiSummary: params.piiSummary || null,
+      createdAt: now,
+      updatedAt: now,
     });
+
+    return { $id: id, id, ...params, verdict: 'pending', createdAt: now };
   },
 
   async latestForFlow(flowId: string) {
-    const tables = systemTables();
-    const res = await tables.listRows({
-      databaseId: DATABASE_ID,
-      tableId: TABLE_ID,
-      queries: [
-        Query.equal('flowId', flowId),
-        Query.orderDesc('$createdAt'),
-        Query.limit(1),
-      ],
-    });
-    return res.rows[0] || null;
+    try {
+      const rows = await db
+        .select()
+        .from(schema.flowReviews)
+        .where(eq(schema.flowReviews.flowId, flowId))
+        .orderBy(desc(schema.flowReviews.createdAt))
+        .limit(1);
+
+      return rows[0] || null;
+    } catch {
+      return null;
+    }
   },
 
-  /**
-   * Agentic publish gate punch-hole.
-   * Always creates a review row. Approves immediately only for general-tier
-   * with no PII and no system tools — otherwise stays pending for agent.
-   */
   async requestPublishReview(params: {
     flowId: string;
     actorId: string;
@@ -107,20 +95,17 @@ export const FlowReviewService = {
         : null,
     });
 
-    const tables = systemTables();
-
     if (isRisky) {
       const verdict = hasNetwork || hasDeceptive ? 'blocked' : 'rejected';
-      await tables.updateRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLE_ID,
-        rowId: review.$id,
-        data: {
+      await db
+        .update(schema.flowReviews)
+        .set({
           verdict,
           updatedAt: new Date().toISOString(),
           findings: JSON.stringify({ ...findings, autoApproved: false, verdictReason: 'Security policy violation' }),
-        },
-      });
+        })
+        .where(eq(schema.flowReviews.id, review.$id));
+
       await WorkflowDbService.setReviewStatus(params.flowId, verdict);
       return {
         reviewId: review.$id,
@@ -132,23 +117,22 @@ export const FlowReviewService = {
       };
     }
 
-    // Clean flow -> Instant approval
-    await tables.updateRow({
-      databaseId: DATABASE_ID,
-      tableId: TABLE_ID,
-      rowId: review.$id,
-      data: {
+    await db
+      .update(schema.flowReviews)
+      .set({
         verdict: 'approved',
         updatedAt: new Date().toISOString(),
         findings: JSON.stringify({ ...findings, autoApproved: true }),
-      },
-    });
+      })
+      .where(eq(schema.flowReviews.id, review.$id));
+
     await WorkflowDbService.setPublishState(params.flowId, {
       isPublic: true,
       isGuest: true,
       actorId: params.actorId,
       reviewStatus: 'approved',
     });
+
     return {
       reviewId: review.$id,
       verdict: 'approved' as FlowReviewVerdict,
