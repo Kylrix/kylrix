@@ -232,7 +232,6 @@ function TOTPCardStable({
       if (!currentDek) {
         const { decryptField, encryptField } = await import('@/lib/masterpass-crypto');
         const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
-        const { VaultService } = await import('@/lib/appwrite/vault');
         const newDek = await ecosystemSecurity.generateRandomMEK();
         const rawKey = await crypto.subtle.exportKey("raw", newDek);
         const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
