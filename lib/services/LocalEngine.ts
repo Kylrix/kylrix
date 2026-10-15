@@ -8,7 +8,6 @@
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
 import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
 
-const realtimeSubs = new Map<string, { unsubscribe: () => void; refCount: number }>();
 const batchQueue = new Map<string, { data: any; mutator: () => Promise<any>; ts: number }>();
 let batchTimer: ReturnType<typeof setTimeout> | null = null;
 

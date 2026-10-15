@@ -1,22 +1,17 @@
 'use server';
 
-import { systemTables } from '@/lib/data/system-tables';
 import * as shared from './shared';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
-import { eq, and, or } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import {
   ProjectSchema
 } from '@/lib/validations/schemas';
 import { filterRootWorkspaceProjects } from '@/lib/projects/sub-projects';
 import { DEFAULT_FEEDBACK_FORM_ID, DEFAULT_FEEDBACK_FORM_ROW } from '@/constants/forms';
-import { broadcastRealtimeEvent } from '@/lib/realtime/partykit';
 
 const {
   getActor,
-  verifyProjectPermission,
-  verifyFormPermission,
-  verifyEventPermission,
 } = shared;
 
 export async function getPublicFormDataSecure(formId: string) {
@@ -403,11 +398,11 @@ export async function deleteEventSecure(eventId: string, jwt?: string) {
   return { success: true };
 }
 
-export async function addEventManagerSecure(eventId: string, targetUserId: string, permissionLevel: string = 'viewer', jwt?: string) {
+export async function addEventManagerSecure(_eventId: string, _targetUserId: string, _permissionLevel: string = 'viewer', _jwt?: string) {
   return { success: true };
 }
 
-export async function removeEventManagerSecure(eventId: string, targetUserId: string, jwt?: string) {
+export async function removeEventManagerSecure(_eventId: string, _targetUserId: string, _jwt?: string) {
   return { success: true };
 }
 
@@ -443,7 +438,7 @@ export async function initGoalDiscussionSecure(taskId: string, jwt?: string) {
   return { discussionId: thread.id, threadId: thread.id, created };
 }
 
-export async function approveProjectJoinRequestSecure(projectId: string, targetUserId: string, permissionLevel: 'admin' | 'editor' | 'viewer' = 'viewer', jwt?: string) {
+export async function approveProjectJoinRequestSecure(_projectId: string, _targetUserId: string, _permissionLevel: 'admin' | 'editor' | 'viewer' = 'viewer', _jwt?: string) {
   return { success: true };
 }
 
