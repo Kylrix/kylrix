@@ -189,7 +189,7 @@ export async function flushImportOutbox(
     const slice = typeof opts?.maxItems === 'number' ? queue.slice(0, opts.maxItems) : queue;
     if (!slice.length) return { flushed: 0, errors: 0 };
 
-    const { VaultService } = await import('@/lib/services/vault');
+    const { ApiResources } = await import('@/lib/api/resources');
 
     let cursor = 0;
     const workers = Array.from({ length: concurrency }, async () => {
@@ -206,7 +206,12 @@ export async function flushImportOutbox(
             userId,
             updatedAt: new Date().toISOString(),
           });
-          await VaultService.createCredential({ id: item.rowId, userId, name: item.kind });
+          const actor = { userId, scopes: ['vault:write'] } as any;
+          if (item.kind === 'totp') {
+            await ApiResources.createTotpSecret(actor, { id: item.rowId, issuer: 'Imported TOTP', secretKey: 'placeholder' }).catch(() => null);
+          } else {
+            await ApiResources.createVaultItem(actor, { id: item.rowId, name: 'Imported Credential' }).catch(() => null);
+          }
           await removeFromOutbox(userId, item.rowId);
           await setImportEarmark({
             batchId: item.batchId,

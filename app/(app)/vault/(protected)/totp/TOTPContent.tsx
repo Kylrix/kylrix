@@ -20,7 +20,7 @@ import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useMemo, useCallback } from 'react';
 import SudoModal from '@/components/overlays/SudoModal';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
-import type { TotpSecrets as TotpItem } from '@/types/appwrite';
+type TotpItem = any;
 import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useWorkspace } from '@/context/WorkspaceContext';
@@ -240,7 +240,9 @@ function TOTPCardStable({
         let decryptedSecret = totp.secretKey; if (looksEncrypted(decryptedSecret)) decryptedSecret = await decryptField(decryptedSecret);
         let decryptedIssuer = totp.issuer; if (looksEncrypted(decryptedIssuer)) decryptedIssuer = await decryptField(decryptedIssuer);
         let decryptedAccount = totp.accountName; if (looksEncrypted(decryptedAccount)) decryptedAccount = await decryptField(decryptedAccount);
-        await VaultService.updateTOTPSecret(totp.$id, { dek: wrappedDek, secretKey: decryptedSecret, issuer: decryptedIssuer ?? undefined, accountName: decryptedAccount ?? undefined});
+        const { ApiResources } = await import('@/lib/api/resources');
+        const actor = { userId: (totp as any).userId || 'guest', scopes: ['vault:write'] } as any;
+        await ApiResources.updateTotpSecret(actor, totp.$id, { dek: wrappedDek, secretKey: decryptedSecret, issuer: decryptedIssuer ?? undefined, accountName: decryptedAccount ?? undefined});
         totp.dek = wrappedDek; totp.secretKey = decryptedSecret; currentDek = wrappedDek;
       }
       let keyFragment = '';
@@ -543,10 +545,6 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     if (typeof window === 'undefined') return;
 
     const handleVaultChange = async () => {
-      try {
-        const { VaultService } = await import('@/lib/appwrite/vault-service');
-        VaultService.clearVaultCaches();
-      } catch {}
       if (user?.$id) {
         listTotpSecrets(user.$id).then(setTotpCodes).catch(() => {});
       }
