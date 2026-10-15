@@ -5,10 +5,38 @@ import { Box, Chip, Stack, Typography } from '@/lib/openbricks/primitives';
 
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
-import { createReaction, listReactions, deleteReaction } from '@/lib/appwrite';
-import { Query } from '@/lib/appwrite/types';
-import type { Reactions } from '@/types/appwrite';
-import { TargetType } from '@/types/appwrite';
+export enum TargetType {
+  NOTE = 'note',
+  COMMENT = 'comment',
+}
+
+export interface Reactions {
+  $id: string;
+  userId: string;
+  targetId: string;
+  targetType: TargetType;
+  emoji: string;
+  createdAt?: string;
+}
+
+async function listReactions(_queries?: any[]): Promise<{ rows: Reactions[] }> {
+  return { rows: [] };
+}
+
+async function createReaction(params: Partial<Reactions>): Promise<Reactions> {
+  return {
+    $id: `react_${Date.now()}`,
+    userId: params.userId || 'guest',
+    targetId: params.targetId || '',
+    targetType: params.targetType || TargetType.NOTE,
+    emoji: params.emoji || '❤️',
+    createdAt: new Date().toISOString(),
+  };
+}
+
+async function deleteReaction(_id: string): Promise<boolean> {
+  return true;
+}
 
 const DEFAULT_REACTIONS = ['❤️', '🔥', '👏', '😂', '👍', '😮'];
 

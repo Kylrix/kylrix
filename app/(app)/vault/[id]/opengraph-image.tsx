@@ -1,5 +1,9 @@
 import { ImageResponse } from 'next/og';
-import { validatePublicVaultAccess } from '@/lib/appwrite/vault';
+import { ApiResources } from '@/lib/api/resources';
+
+async function validatePublicVaultAccess(id: string) {
+  return ApiResources.getPublicVaultItem(id).catch(() => null);
+}
 import { renderKylrixShareCard } from '@/lib/og/share-card';
 
 export const runtime = 'nodejs';

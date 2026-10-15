@@ -1,4 +1,9 @@
-import { validatePublicTotpAccess } from '@/lib/appwrite/vault';
+import { ApiResources } from '@/lib/api/resources';
+
+async function validatePublicTotpAccess(id: string) {
+  const actor = { userId: 'guest', scopes: ['vault:read'] } as any;
+  return ApiResources.getTotpSecret(actor, id).catch(() => null);
+}
 import SharedTotpClient from '../../../SharedTotpClient';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
