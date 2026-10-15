@@ -1,9 +1,9 @@
 'use server';
 
-import { ID, Query } from '@/lib/appwrite/types';
+import { ID, Query } from '@/lib/data';
 import { getActor } from '@/lib/actions/secure-ops';
 import { requireAdmin } from '@/lib/services/internal/admin';
-import { createAdminClient } from '@/lib/appwrite/types';
+import { createAdminClient } from '@/lib/data';
 import { getEmailTemplateMeta } from '@/lib/email-template-catalog';
 import { renderEmailTemplate } from '@/lib/email-renderer';
 

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ShieldCheck, ShieldX, Loader2, UserCheck, Users } from 'lucide-react';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getApp } from '@/lib/oauth2/apps';
 import {

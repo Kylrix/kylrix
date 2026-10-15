@@ -2,9 +2,9 @@
 
 import { systemTables } from '@/lib/data/system-tables';
 
-import { Query, Permission, Role, ID } from '@/lib/appwrite/types';
+import { Query, Permission, Role, ID } from '@/lib/data';
 
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { getActor } from '@/lib/actions/secure-ops/shared';
 import { ContextObject, KnowledgeGraphEdge, PatternMatch } from './types';
 

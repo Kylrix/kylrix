@@ -1,6 +1,6 @@
-import { Query } from '@/lib/appwrite/types';
-import { tablesDB } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { Query } from '@/lib/data';
+import { tablesDB } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { peekChatsListMemory, writeChatsListLocal } from '@/lib/chat/local-chat-cache';
 import { parseObjectBlocks, serializeObjectBlock } from '@/lib/note-object-secondary';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';

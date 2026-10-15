@@ -479,7 +479,7 @@ export async function loadExistingVaultForDedupe(userId: string): Promise<{
     ((await LocalEngine.cacheGet<any[]>(`vault_totp_${userId}`).catch(() => null)) as any[]) || [];
 
   try {
-    const { VaultService } = await import('@/lib/appwrite/vault-service');
+    const { VaultService } = await import('@/lib/data');
     const [remoteCreds, remoteTotps] = await Promise.all([
       VaultService.listAllCredentials(userId).catch(() => [] as any[]),
       VaultService.listTOTPSecrets(userId).catch(() => [] as any[]),

@@ -1,4 +1,4 @@
-import { Permission, Role } from '@/lib/appwrite/types';
+import { Permission, Role } from '@/lib/data';
 import { APPWRITE_CONFIG } from './appwrite/config';
 
 const {} = APPWRITE_CONFIG;

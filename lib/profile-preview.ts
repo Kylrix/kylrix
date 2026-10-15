@@ -1,4 +1,4 @@
-import { getProfilePicturePreview, setKylrixPulse, getKylrixPulse } from '@/lib/appwrite';
+import { getProfilePicturePreview, setKylrixPulse, getKylrixPulse } from '@/lib/data';
 
 const previewCache = new Map<string, string | null>();
 const PREVIEW_STORE_KEY = 'kylrix_avatar_cache_v2';

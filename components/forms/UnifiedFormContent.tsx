@@ -15,12 +15,12 @@ import {
     Crown
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
-import { Forms } from '@/types/appwrite';
+import { Forms } from '@/lib/data';
 import { getEnabledGhostFields, resolveGhostFields } from '@/lib/forms/ghost-fields';
 import { GhostFieldsNotice } from './GhostFieldsNotice';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { secureUploadFile } from '@/lib/actions/client-ops';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 

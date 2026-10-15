@@ -6,9 +6,9 @@ import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { tablesDB, realtime } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Query } from '@/lib/appwrite/types';
+import { tablesDB, realtime } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
+import { Query } from '@/lib/data';
 import { formatTime } from '@/lib/time-util';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import {

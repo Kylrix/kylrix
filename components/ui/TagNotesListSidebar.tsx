@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Notes, Tags } from '@/types/appwrite';
-import { getNotesByTag } from '@/lib/appwrite';
+import { Notes, Tags } from '@/lib/data';
+import { getNotesByTag } from '@/lib/data';
 import { Box, Typography, IconButton, Stack, Alert } from '@/lib/openbricks/primitives';
 import { ArrowBack as ArrowBackIcon } from '@/lib/openbricks/icons';
 import { NoteDetailSidebar } from './NoteDetailSidebar';

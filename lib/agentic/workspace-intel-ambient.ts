@@ -212,7 +212,7 @@ export async function maybeEmitWorkspaceIntelNudge(opts: {
         '@/lib/agentic/offline-complete'
       );
       if (await shouldAllowAiInference('workspace_ambient')) {
-        const { account } = await import('@/lib/appwrite/client');
+        const { account } = await import('@/lib/data');
         const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
         if (jwt) {
           await recordAiInference('workspace_ambient');

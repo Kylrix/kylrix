@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 
 const DEV_MODE_STORAGE_KEY = 'kylrix:dev_mode';
 const DEV_MODE_EVENT = 'kylrix:dev_mode_change';

@@ -1,5 +1,5 @@
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { getSettings, updateSettings, createSettings } from '@/lib/appwrite/note';
+import { getSettings, updateSettings, createSettings } from '@/lib/data';
 
 const DISABLE_KEY = 'kylrix_disable_link_previews';
 
@@ -73,7 +73,7 @@ if (typeof window !== 'undefined') {
       if (typeof v === 'boolean') (window as any).__KylrixDisableLinkPreviews = v;
       // also try user-specific if available via account
       try {
-        const { getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
+        const { getCurrentUserSnapshot } = await import('@/lib/data');
         const u = getCurrentUserSnapshot();
         if (u?.$id) {
           const uv = await LocalEngine.cacheGet<boolean>(disablePreviewsCacheKey(u.$id)).catch(() => null);

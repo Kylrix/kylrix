@@ -9,7 +9,7 @@ import {
   Sun, 
   Laptop
 } from 'lucide-react';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { useTheme } from '@/lib/theme-context';
 import { useDevMode } from '@/lib/dev-mode';
 import { LocalEngine } from '@/lib/services/LocalEngine';

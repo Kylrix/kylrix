@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Notes } from '@/types/appwrite';
+import { Notes } from '@/lib/data';
 
 import { AgenticDiffViewer } from '@/components/agentic/AgenticDiffViewer';
 import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
@@ -72,9 +72,9 @@ import {
   getCurrentPublicNoteShareUrl, 
   getNotePublicState, 
   decryptPublicEncryptedNote
-} from '@/lib/appwrite';
+} from '@/lib/data';
 import { convertNoteToGoalAgentic } from '@/lib/ai-actions';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { StorageService } from '@/lib/services/storage';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -87,7 +87,7 @@ import {
   getRemovedObjectBlocks,
   serializeObjectBlock,
   type ParsedObjectBlock} from '@/lib/note-object-secondary';
-import { storage } from '@/lib/appwrite/client';
+import { storage } from '@/lib/data';
 import CommentsSection from '@/app/(app)/app/(app)/notes/Comments';
 
 export type NoteAccessRole = 'owner' | 'write-collab' | 'read-collab' | 'guest' | 'public';

@@ -21,14 +21,14 @@ import {
 import { Drawer, Box, Typography } from '@/lib/openbricks/primitives';
 import { StorageService } from '@/lib/services/storage';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
-import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
+import { pickNoteAutosavePayload } from '@/lib/data';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
-import { getNote, getNotePublicState, toggleNoteVisibility } from '@/lib/appwrite';
+import { getNote, getNotePublicState, toggleNoteVisibility } from '@/lib/data';
 import { createNote, updateNote, attachObject } from '@/lib/actions/client-ops';
-import type { Notes } from '@/types/appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import type { Notes } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { serializeObjectBlock } from '@/lib/note-object-secondary';
 import type { ParsedObjectBlock } from '@/lib/note-object-secondary';
 import { useNotes } from '@/context/NotesContext';

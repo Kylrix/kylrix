@@ -15,8 +15,8 @@ import {
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { AppwriteService } from '@/lib/appwrite';
-import { account } from '@/lib/appwrite/client';
+import { AppwriteService } from '@/lib/data';
+import { account } from '@/lib/data';
 import { getMyCouponsAction } from '@/lib/actions/billing/coupons';
 
 interface BillingDrawerProps {

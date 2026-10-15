@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { validatePublicNoteAccess } from '@/lib/appwrite';
+import { validatePublicNoteAccess } from '@/lib/data';
 import { renderKylrixShareCard } from '@/lib/og/share-card';
 import { resolveOwnerForOg } from '@/lib/og/resolve-avatar';
 import { getProductName } from '@/lib/config/product';

@@ -2,12 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { getDevMode, setDevMode, syncDevModeFromPrefs, useDevMode } from './dev-mode';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 
 // @ts-expect-error IS_REACT_ACT_ENVIRONMENT flag
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-vi.mock('@/lib/appwrite/client', () => ({
+vi.mock('@/lib/data', () => ({
   account: {
     getPrefs: vi.fn(),
     updatePrefs: vi.fn(),

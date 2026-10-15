@@ -11,7 +11,7 @@ import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitleme
 import type { BillingUiTier } from '@/lib/subscription/tier-resolution';
 import type { SubscriptionTier, PaymentMethod, RegionConfig } from '@/lib/subscription/ppp';
 import { PPP_DATA, calculateSubscriptionPrice } from '@/lib/subscription/ppp';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { useAuth } from '@/context/auth/AuthContext';
 import { BillingCacheService } from '@/lib/services/billing';
 import type { WalletSummary } from '@/lib/services/wallets';

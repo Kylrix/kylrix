@@ -30,8 +30,8 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { ChatService } from '@/lib/services/chat';
 import { UsersService } from '@/lib/services/users';
-import { realtime } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { realtime } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import {
   peekChatsListMemory,

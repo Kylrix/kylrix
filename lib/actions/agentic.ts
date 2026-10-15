@@ -2,10 +2,10 @@
 
 import { systemTables } from '@/lib/data/system-tables';
 
-import { ID, Query } from '@/lib/appwrite/types';
+import { ID, Query } from '@/lib/data';
 
-import { createSystemClient } from '@/lib/appwrite/types';
-import { createServerClient } from '@/lib/appwrite/server';
+import { createSystemClient } from '@/lib/data';
+import { createServerClient } from '@/lib/data';
 import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
 import { AI_REQUIRES_PRO_MESSAGE } from '@/lib/agentic/access';
 import { resolveAgenticError, type AgenticErrorCode } from '@/lib/agentic/errors';

@@ -37,7 +37,7 @@ export function TagSelectorDrawer() {
     void (async () => {
       try {
         const { readLocalTagRows, writeLocalTagRows } = await import('@/lib/data');
-        const { account } = await import('@/lib/appwrite/client');
+        const { account } = await import('@/lib/data');
         const user = await account.get().catch(() => null);
         const uid = user?.$id || 'guest';
 
@@ -45,7 +45,7 @@ export function TagSelectorDrawer() {
         if (found.length > 0) {
           setDirectLocalTags(found);
         } else if (uid !== 'guest') {
-          const { getAllTags, listTags } = await import('@/lib/appwrite');
+          const { getAllTags, listTags } = await import('@/lib/data');
           const res = await getAllTags().catch(() => listTags());
           const rows = Array.isArray(res) ? res : (Array.isArray(res?.rows) ? res.rows : []);
           if (rows.length > 0) {

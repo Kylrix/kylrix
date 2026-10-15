@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ImportService } from './import-service';
 
-vi.mock('@/lib/appwrite', () => ({
+vi.mock('@/lib/data', () => ({
   createFolder: vi.fn().mockImplementation((folder) => Promise.resolve({ $id: `folder-${folder.name}`, name: folder.name })),
   AppwriteService: {
     listFolders: vi.fn().mockResolvedValue([{ $id: 'f-existing', name: 'Existing Workspace' }]),
   },
 }));
 
-vi.mock('@/lib/appwrite/vault-service', () => ({
+vi.mock('@/lib/data', () => ({
   VaultService: {
     stageCredentialImport: vi.fn().mockResolvedValue({ $id: 'cred-1' }),
     stageTotpImport: vi.fn().mockResolvedValue({ $id: 'totp-1' }),

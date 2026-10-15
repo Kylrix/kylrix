@@ -5,8 +5,8 @@ import { createPortal } from 'react-dom';
 import {
   createCredential,
   updateCredential,
-} from '@/lib/appwrite';
-import type { Credentials, CredentialsCreate } from '@/lib/appwrite/types';
+} from '@/lib/data';
+import type { Credentials, CredentialsCreate } from '@/lib/data';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { generateRandomPassword } from '@/utils/password';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
@@ -407,7 +407,7 @@ export default function CredentialDialog({
     setUploadingAttachment(true);
     setError(null);
     try {
-      const { addAttachmentToCredential } = await import('@/lib/appwrite/vault');
+      const { addAttachmentToCredential } = await import('@/lib/data/vault');
       const updated = await addAttachmentToCredential(initial.$id, file);
       setAttachments(updated.attachments ? JSON.parse(updated.attachments) : []);
     } catch (err: any) {
@@ -421,7 +421,7 @@ export default function CredentialDialog({
     if (!initial?.$id) return;
     setError(null);
     try {
-      const { deleteCredentialAttachment } = await import('@/lib/appwrite/vault');
+      const { deleteCredentialAttachment } = await import('@/lib/data/vault');
       const updated = await deleteCredentialAttachment(initial.$id, fileId);
       setAttachments(updated.attachments ? JSON.parse(updated.attachments) : []);
     } catch (err: any) {

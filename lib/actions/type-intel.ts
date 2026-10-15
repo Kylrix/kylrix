@@ -1,7 +1,7 @@
 'use server';
 
-import { Query } from '@/lib/appwrite/types';
-import { createSystemClient } from '@/lib/appwrite/types';
+import { Query } from '@/lib/data';
+import { createSystemClient } from '@/lib/data';
 import { generateAiSdkCompletion } from '@/lib/agentic/llm-provider';
 import {
   buildTypeIntelCompletePrompt,

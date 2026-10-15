@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChatService } from './chat';
 import { ThreadService } from './threads';
 
-vi.mock('@/lib/appwrite/client', () => ({
+vi.mock('@/lib/data', () => ({
   account: {
     createJWT: vi.fn().mockResolvedValue({ jwt: 'mock-jwt' }),
   },
@@ -13,7 +13,7 @@ vi.mock('@/lib/appwrite/client', () => ({
   },
 }));
 
-vi.mock('@/lib/appwrite-admin', () => ({
+vi.mock('@/lib/data-admin', () => ({
   createSystemClient: vi.fn().mockReturnValue({
     databases: {
       getRow: vi.fn().mockRejectedValue(new Error('Document not found')),

@@ -108,7 +108,7 @@ export function FlowDetailDrawer({
   const doPublish = async () => {
     if (!aware) return;
     setBusy(true);
-    const jwt = await import('@/lib/appwrite/client').then(m => m.account.createJWT()).then(r => r?.jwt).catch(() => undefined);
+    const jwt = await import('@/lib/data').then(m => m.account.createJWT()).then(r => r?.jwt).catch(() => undefined);
     const res = await publishFlowAction(local.id, { confirmAware: true, jwt });
     setBusy(false);
     if (!res.success) {
@@ -134,7 +134,7 @@ export function FlowDetailDrawer({
 
   const doUnpublish = async () => {
     setBusy(true);
-    const jwt = await import('@/lib/appwrite/client').then(m => m.account.createJWT()).then(r => r?.jwt).catch(() => undefined);
+    const jwt = await import('@/lib/data').then(m => m.account.createJWT()).then(r => r?.jwt).catch(() => undefined);
     const res = await unpublishFlowAction(local.id, jwt);
     setBusy(false);
     if (!res.success) {

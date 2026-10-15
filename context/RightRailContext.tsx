@@ -22,7 +22,7 @@ import {
   type SidebarMemoryDoc,
   type SidebarRestoreHint,
 } from '@/lib/sidebar/native-sidebar-memory';
-import { getSettings, updateSettings, createSettings } from '@/lib/appwrite/note';
+import { getSettings, updateSettings, createSettings } from '@/lib/data';
 
 export type NativeSidebarOpenOptions = {
   key?: string;

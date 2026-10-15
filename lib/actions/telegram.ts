@@ -3,8 +3,8 @@
 import { systemTables } from '@/lib/data/system-tables';
 
 
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Permission, Role, Query, createSystemClient } from '@/lib/appwrite/types';
+import { APPWRITE_CONFIG } from '@/lib/data';
+import { Permission, Role, Query, createSystemClient } from '@/lib/data';
 import { z } from 'zod';
 import { JWTSchema } from '@/lib/validations/schemas';
 import {

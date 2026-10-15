@@ -1,4 +1,4 @@
-import type { Projects, ProjectObjects, Notes } from '@/types/appwrite';
+import type { Projects, ProjectObjects, Notes } from '@/lib/data';
 import { filterRootWorkspaceProjects } from '@/lib/projects/sub-projects';
 
 export const PROJECTS_LIST_TTL = 1000 * 60 * 30; // 30 min

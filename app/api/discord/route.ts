@@ -6,7 +6,7 @@ import type { ApiActor } from '@/lib/api/guard';
 import { PairingService } from '@/lib/services/pairing';
 import { PatService } from '@/lib/services/pats';
 import { systemTables } from '@/lib/data/system-tables';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 
 interface DiscordInteractionContext {
   isExistingEphemeral: boolean;

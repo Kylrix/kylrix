@@ -29,8 +29,8 @@ import {
   Tag as TagIcon,
   ClipboardList,
   KeyRound} from 'lucide-react';
-import { listFlowTasks, listKeepCredentials, Query, listTagsByUser } from '@/lib/appwrite';
-import { ProjectsService } from '@/lib/appwrite/projects';
+import { listFlowTasks, listKeepCredentials, Query, listTagsByUser } from '@/lib/data';
+import { ProjectsService } from '@/lib/data';
 import { useToast } from '@/components/ui/Toast';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -251,7 +251,7 @@ export default function ProjectAddObjectModal({
         // Mark row as workspace-scoped so default views hide it — batched via LocalEngine (high activity)
         try {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+          const { APPWRITE_CONFIG } = await import('@/lib/data');
           const tableByKind: Record<string, string> = {
             note: APPWRITE_CONFIG.TABLES.NOTES,
             goal: APPWRITE_CONFIG.TABLES.TASKS,
@@ -267,7 +267,7 @@ export default function ProjectAddObjectModal({
             const cacheKey = `isWorkspace:${tableId}:${entityId}`;
             await LocalEngine.batchedWrite(cacheKey, { isWorkspace: true }, async (_jwt) => {
               // Use LocalEngine's batched path — increases write frequency but coalesces under high activity
-              const { databases } = await import('@/lib/appwrite/client');
+              const { databases } = await import('@/lib/data');
               return databases.updateRow(APPWRITE_CONFIG.DATABASE_ID, tableId, entityId, { isWorkspace: true });
             });
           }

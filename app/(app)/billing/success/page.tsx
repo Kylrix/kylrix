@@ -4,7 +4,7 @@ import React from 'react';
 import { CheckCircle2, ShieldCheck, Zap, Globe, AlertCircle } from 'lucide-react';
 import NextLink from 'next/link';
 import { useAuth } from '@/context/auth/AuthContext';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { verifyProEntitlementAction } from '@/lib/actions/billing/billing';
 
 type VerifyState =

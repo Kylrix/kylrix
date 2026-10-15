@@ -1,6 +1,6 @@
-import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
+import { ID, Permission, Query, Role } from '@/lib/data';
 import { systemTables, type SystemTablesPort } from '@/lib/data';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import type { ApiActor } from '@/lib/api/guard';
 import { requireScope } from '@/lib/api/guard';
 import { resolveParentRef } from '@/lib/api/v1/query';
@@ -10,7 +10,7 @@ import { clampNoteTitle } from '@/constants/noteTitle';
 import {
   cleanRowData,
   filterNoteData,
-} from '@/lib/appwrite/note';
+} from '@/lib/data';
 import { WorkflowDbService } from '@/lib/services/workflows';
 import {
   generateRandomVaultSecret,
@@ -468,7 +468,7 @@ export const ApiResources = {
       throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
     }
     const tables = systemTables();
-    const { isExcludedNote, ideaListExclusionQueries } = await import('@/lib/appwrite/note');
+    const { isExcludedNote, ideaListExclusionQueries } = await import('@/lib/data');
 
     if (wsId) {
       const noteIds = await getWorkspaceObjectIds(tables, wsId, 'note');
@@ -3986,7 +3986,7 @@ export const ApiResources = {
 
   async syncAccount(actor: ApiActor, body: Record<string, unknown>) {
     await assertPaidActor(actor, 'Cloud synchronization requires a paid Kylrix Pro plan.');
-    const { createSystemClient } = await import('@/lib/appwrite/types');
+    const { createSystemClient } = await import('@/lib/data');
     const { isSelfHostedDeployment, isKylrixCloud } = await import('@/lib/deployment/surface');
 
     const accountObj = (body.account || {}) as Record<string, any>;
@@ -4137,7 +4137,7 @@ export const ApiResources = {
     const ticker = input.ticker || input.coin;
     const couponId = input.couponId ? String(input.couponId).trim() : undefined;
 
-    const { createSystemClient } = await import('@/lib/appwrite/types');
+    const { createSystemClient } = await import('@/lib/data');
     const { calculateSubscriptionPrice } = await import('@/lib/subscription/ppp');
     const { BlockBeeBillingAdapter } = await import('@/lib/billing/providers/blockbee');
     const { resolveBillingNotifyUrl, resolveBillingSuccessUrl } = await import('@/lib/billing/callback-urls');
@@ -4235,7 +4235,7 @@ export const ApiResources = {
     requireScope(actor, 'billing:read');
     const { getVerifiedProEntitlementForUser } = await import('@/lib/services/internal/subscription-entitlement');
     const { InternalKylrixTokenService } = await import('@/lib/services/internal/kylrix-token');
-    const { createSystemClient } = await import('@/lib/appwrite/types');
+    const { createSystemClient } = await import('@/lib/data');
 
     const [entitlement, balance, txList] = await Promise.all([
       getVerifiedProEntitlementForUser(actor.userId).catch(() => ({

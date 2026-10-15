@@ -42,7 +42,7 @@ import {
   isGoalLocked,
   lockGoal,
   unlockGoal,
-} from '@/lib/appwrite/goal-crypto';
+} from '@/lib/data';
 import { toast } from 'react-hot-toast';
 
 type Props = {

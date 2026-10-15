@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Event } from '@/types';
 import { events as eventApi, subscribeToTable } from '@/lib/kylrixflow';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { mergeServerPageWithLocalCopy } from '@/lib/sync/local-copy-sync';
@@ -120,7 +120,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       // 2. Fetch remote and merge using timestamp comparison & pending guards
       let remoteItems: any[] = [];
       try {
-        const { Query } = await import('@/lib/appwrite/types');
+        const { Query } = await import('@/lib/data');
         const queries = userId !== 'guest' ? [Query.equal('userId', userId), Query.limit(100)] : [Query.limit(100)];
         const res = await eventApi.list(queries);
         remoteItems = res?.rows || (Array.isArray(res) ? res : []);

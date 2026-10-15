@@ -1,5 +1,5 @@
 import { dispatchEmailSecure } from '@/lib/actions/secure-ops';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 
 export async function sendKylrixEmailNotification(payload: Record<string, unknown>) {
   try {
