@@ -11,27 +11,27 @@ export const InternalKylrixTokenService = {
     return { initialized: true };
   },
 
-  async mintForActivity(input: any) {
+  async mintForActivity(_input: any) {
     return { accepted: true, amountMicro: '0', amount: '0', symbol: '$KYLRIX' };
   },
 
-  async transfer(input: any) {
+  async transfer(_input: any) {
     return { accepted: true, amountMicro: '0', amount: '0', symbol: '$KYLRIX' };
   },
 
-  async zapObject(input: any) {
+  async zapObject(_input: any) {
     return { accepted: true, amountMicro: '0', amount: '0', symbol: '$KYLRIX' };
   },
 
-  async fineToRoot(input: any) {
+  async fineToRoot(_input: any) {
     return { accepted: true };
   },
 
-  async lockClaim(input: any) {
+  async lockClaim(_input: any) {
     return { accepted: true };
   },
 
-  async settleClaim(input: any) {
+  async settleClaim(_input: any) {
     return { accepted: true };
   },
 

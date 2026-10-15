@@ -1,5 +1,4 @@
 import { systemTables } from '@/lib/data/system-tables';
-import { db } from '@/lib/db';
 
 export type ObjectKind =
   | 'note' | 'goal' | 'task' | 'form' | 'event' | 'tag'

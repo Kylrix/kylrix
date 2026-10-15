@@ -3,16 +3,11 @@ import * as schema from '@/lib/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import {
   buildThreadScopeKey,
-  isThreadParentKind,
   THREAD_CHANNEL_DISCUSS,
   THREAD_CHANNEL_GENERAL,
   type ThreadParentKind,
 } from '@/lib/threads/types';
 
-function previewOf(content: string, max = 200): string {
-  const t = String(content || '').replace(/\s+/g, ' ').trim();
-  return t.length <= max ? t : `${t.slice(0, max - 1)}…`;
-}
 
 export const ThreadService = {
   buildScopeKey: buildThreadScopeKey,

@@ -2,82 +2,12 @@
 
 import { markNotePersistedRemote, markComposePersisted, markComposeDraft } from '@/lib/notes/compose-draft-registry';
 import { updateNote, createNote } from '@/lib/actions/client-ops';
-import { getLiveNoteForSync, getLiveGoalForSync, getLiveEventForSync } from '@/lib/sync/pending-sync-bridge';
+import { getLiveNoteForSync, getLiveGoalForSync } from '@/lib/sync/pending-sync-bridge';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
 import { parseGoalPendingKey, goalPendingKey } from '@/lib/sync/goal-keys';
 import { pickGoalAutosavePayload } from '@/lib/goals/pick-goal-autosave-payload';
 
-function safeIsoString(val: any): string {
-  if (!val) return new Date().toISOString();
-  if (typeof val?.toISOString === 'function') {
-    try {
-      const iso = val.toISOString();
-      if (iso && iso !== 'Invalid Date') return iso;
-    } catch {}
-  }
-  if (typeof val === 'number') {
-    return Number.isFinite(val) ? new Date(val).toISOString() : new Date().toISOString();
-  }
-  const t = Date.parse(String(val));
-  return Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString();
-}
-
-async function flushEventPending(
-  pendingKey: string,
-  eventId: string,
-  queuedRevision: string,
-  db: any,
-  activeUserId: string | null
-) {
-  let payload = pendingPayloads.get(pendingKey) || pendingPayloads.get(eventId) || getLiveEventForSync(eventId);
-
-  if (!payload && db) {
-    try {
-      const doc = await db.cache.findOne(`event_${eventId}`).exec();
-      payload = doc?.data || null;
-    } catch {
-      payload = null;
-    }
-  }
-
-  if (!payload || !activeUserId) {
-    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
-    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
-    notifyStatusListeners();
-    return;
-  }
-
-  const { events: eventApi } = await import('@/lib/kylrixflow');
-  const flushRevision = queuedRevision || new Date().toISOString();
-
-  const basePayload: any = {
-    title: payload.title,
-    description: payload.description,
-    startTime: safeIsoString(payload.startTime),
-    endTime: safeIsoString(payload.endTime),
-    location: payload.location,
-    meetingUrl: (payload as any).meetingUrl || payload.url,
-    visibility: (payload as any).visibility || (payload.isPublic !== false ? 'public' : 'private'),
-    isPublic: payload.isPublic !== false,
-    isGuest: payload.isGuest !== false,
-    attendeeCount: (payload as any).attendeeCount,
-  };
-
-  try {
-    await eventApi.update(eventId, basePayload);
-
-    failedSyncAttempts.delete(pendingKey);
-    failedSyncAttempts.delete(eventId);
-    autonomicSyncEngine.ack(pendingKey, flushRevision);
-    autonomicSyncEngine.ack(eventId, flushRevision);
-  } catch (err: any) {
-    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
-    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
-    notifyStatusListeners();
-    throw err;
-  }
-}
 
 const PENDING_QUEUE_KEY = 'kylrix:sync:pending-queue';
 const PENDING_PAYLOADS_KEY = 'kylrix:sync:pending-payloads';
