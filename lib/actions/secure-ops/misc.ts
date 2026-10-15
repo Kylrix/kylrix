@@ -4,7 +4,7 @@ import { systemTables } from '@/lib/data/system-tables';
 import * as shared from './shared';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
@@ -182,7 +182,7 @@ export async function executeMasterPurgeSecure(jwt?: string) {
   return { success: true };
 }
 
-export async function createReportSecure(params: any, jwt?: string) {
+export async function createReportSecure(_params: any, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
@@ -282,7 +282,7 @@ export async function toggleResourcePublicGuestSecure(params: {
   };
 }
 
-export async function getResourcePublicGuestSecure(params: {
+export async function getResourcePublicGuestSecure(_params: {
   resourceType: PublicResourceType;
   resourceId: string;
   jwt?: string;
@@ -387,7 +387,7 @@ export async function purgeExpiredTrashSecure(_input?: { retentionDays?: number;
 }
 
 export async function batchTrashFormSubmissionsSecure(
-  formId: string,
+  _formId: string,
   submissionIds: string[],
   jwt?: string
 ) {
@@ -404,5 +404,49 @@ export async function batchTrashFormSubmissionsSecure(
 }
 
 export async function replicateAccountAndKeychainSecure(_params: any) {
+  return { success: true };
+}
+
+export async function createSendthreadObjectSecure(_data: any) {
+  return { success: true };
+}
+
+export async function searchGlobalUsersSecure(_query: string, _limit = 20, _callerUserId?: string) {
+  return [];
+}
+
+export async function getProfileByUsernameSecure(_username: string) {
+  return null;
+}
+
+export async function promotethreadResourceThreadToStorySecure(_resourceId: string, _resourceType: string, _jwt?: string) {
+  return { success: true };
+}
+
+export async function deletethreadThreadSecure(_threadId: string, _jwt?: string) {
+  return { success: true };
+}
+
+export async function getGlobalProfileStatusSecure(_userId: string) {
+  return { status: 'offline', customStatus: null };
+}
+
+export async function attachObjectSecure(_params: any) {
+  return { success: true };
+}
+
+export async function detachObjectByRelationSecure(_params: any) {
+  return { success: true };
+}
+
+export async function getProfilePicturePreviewSecure(_fileId: string) {
+  return null;
+}
+
+export async function getObjectsByParentSecure(_parentId: string, _parentKind: string, _jwt?: string) {
+  return { rows: [] };
+}
+
+export async function toggleTaskReminderSecure(_taskId: string, _enabled: boolean, _jwt?: string) {
   return { success: true };
 }

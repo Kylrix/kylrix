@@ -18,7 +18,6 @@ import {
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
 import { BUILTIN_FLOWS } from '@/lib/flows/builtins';
-import { listInstalledFlowIds } from '@/lib/flows/installed';
 
 /** Helper to format standard JSON content results for WebMCP agents */
 function formatResult(data: any, summary?: string) {
@@ -890,8 +889,6 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
     },
     execute: async (args) => {
       const limit = Number(args.limit) || 50;
-      const installedIds = listInstalledFlowIds();
-
       const builtinItems = BUILTIN_FLOWS.map((b) => ({
         id: b.id,
         name: b.name,

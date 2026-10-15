@@ -4,7 +4,7 @@ import { getActor } from '@/lib/actions/secure-ops/shared';
 import { PatService } from '@/lib/services/pats';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 export async function createPatSecure(params: {
   name: string;

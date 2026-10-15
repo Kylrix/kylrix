@@ -14,7 +14,7 @@ export type TelemetryNiche =
 export type NotificationType = 'direct' | 'suggested';
 
 export const TelemetryService = {
-  async startThread(params: {
+  async startThread(_params: {
     niche: TelemetryNiche;
     app: string;
     parentThreadId?: string | null;
@@ -45,7 +45,7 @@ export const TelemetryService = {
     } catch {}
   },
 
-  async recordTelemetry(params: {
+  async recordTelemetry(_params: {
     niche: TelemetryNiche;
     app: string;
     action: string;

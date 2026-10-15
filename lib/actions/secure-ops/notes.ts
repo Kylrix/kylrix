@@ -1,7 +1,6 @@
 'use server';
 
 import { systemTables } from '@/lib/data/system-tables';
-import { q } from '@/lib/data/queries';
 import * as shared from './shared';
 import { broadcastRealtimeEvent } from '@/lib/realtime/partykit';
 import { inferAttachmentMimeType, resolveAttachmentVisualKind } from '@/lib/note-object-visual';

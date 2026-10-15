@@ -1,6 +1,5 @@
 'use server';
 
-import { systemTables } from '@/lib/data/system-tables';
 import * as shared from './shared';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';

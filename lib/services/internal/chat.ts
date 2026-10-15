@@ -73,7 +73,7 @@ export async function nuclearWipeConversationInternal(payload: {
   return deleteConversationFullyInternal(payload);
 }
 
-export async function toggleReactionInternal(payload: {
+export async function toggleReactionInternal(_payload: {
   conversationId: string;
   messageId: string;
   emoji: string;
