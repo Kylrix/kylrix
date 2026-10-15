@@ -1,9 +1,6 @@
 import { randomBytes } from 'crypto';
 import { PatService } from '@/lib/services/pats';
 import { normalizeScopes } from '@/lib/api/scopes';
-import { db } from '@/lib/db';
-import * as schema from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
 
 const PAIRING_EXPIRY_SECONDS = 900;
 const POLLING_INTERVAL_SECONDS = 5;

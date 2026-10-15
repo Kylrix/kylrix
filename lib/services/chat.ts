@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import {
   getConversationsAction,
   createMessageAction,

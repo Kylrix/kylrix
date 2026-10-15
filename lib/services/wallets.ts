@@ -1,7 +1,6 @@
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { UsersService } from './users';
 
 export type SupportedWalletChain =
     | 'eth'

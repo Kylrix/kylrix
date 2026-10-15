@@ -166,6 +166,19 @@ export async function removeTotpFactor(password?: string): Promise<void> {
   await authClient.twoFactor.disable({ password: password || undefined }).catch(() => {});
 }
 
+export async function removeEmailFactor(password?: string): Promise<void> {
+  const { authClient } = await import('@/lib/auth/better-auth-client');
+  await authClient.twoFactor.disable({ password: password || undefined }).catch(() => {});
+}
+
+export async function enableAccountMfa(_password?: string): Promise<void> {
+  // Better Auth enables MFA via createTotpAuthenticator/verifyTotpAuthenticator
+}
+
+export function getCurrentLoginMethod(): MfaLoginMethod {
+  return 'password';
+}
+
 export async function disableAllMfaFactors(password?: string): Promise<void> {
   const { authClient } = await import('@/lib/auth/better-auth-client');
   await authClient.twoFactor.disable({ password: password || undefined }).catch(() => {});

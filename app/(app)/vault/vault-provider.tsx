@@ -5,8 +5,7 @@ import {
   useState,
   useCallback,
   useMemo,
-  ReactNode,
-  useRef
+  ReactNode
 } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';

@@ -121,7 +121,7 @@ export const WorkflowDbService = {
     }
   },
 
-  async incrementInstallCount(workflowId: string): Promise<number> {
+  async incrementInstallCount(_workflowId: string): Promise<number> {
     return 1;
   },
 

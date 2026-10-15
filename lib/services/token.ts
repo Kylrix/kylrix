@@ -1,6 +1,5 @@
 import {
   createKylrixTokenContract,
-  DEFAULT_KYLRIX_TOKEN_POLICY,
   type KylrixActivityType,
 } from '@/sdk/token';
 import { db } from '@/lib/db';
