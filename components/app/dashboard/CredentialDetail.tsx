@@ -2,8 +2,12 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ProjectLinker from '@/components/projects/ProjectLinker';
-import type { Credentials } from '@/lib/appwrite/types';
-import { storage, deleteCredential } from '@/lib/appwrite';
+type Credentials = any;
+const deleteCredential = async (id: string) => {
+  const { ApiResources } = await import('@/lib/api/resources');
+  const actor = { userId: 'guest', scopes: ['vault:write'] } as any;
+  await ApiResources.deleteVaultItem(actor, id);
+};
 import { useSudo } from '@/context/SudoContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import {
@@ -251,7 +255,7 @@ export default function CredentialDetail({
       let currentDek = credential.dek;
       if (!currentDek) {
         const { decryptField, encryptField } = await import('@/lib/masterpass-crypto');
-        const { VaultService } = await import('@/lib/appwrite/vault');
+        const { ApiResources } = await import('@/lib/api/resources');
         const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
 
         const newDek = await ecosystemSecurity.generateRandomMEK();
@@ -274,7 +278,8 @@ export default function CredentialDetail({
           }
         }
 
-        await VaultService.updateCredential(credential.$id, plaintextFields as any);
+        const actor = { userId: credential.userId || 'guest', scopes: ['vault:write'] } as any;
+        await ApiResources.updateVaultItem(actor, credential.$id, plaintextFields as any);
         credential.dek = wrappedDek;
         currentDek = wrappedDek;
       }

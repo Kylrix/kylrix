@@ -150,8 +150,9 @@ function registerCoreTools() {
       visibility: { type: 'string', description: 'private | shared | public' },
     },
     execute: async (params, context) => {
-      const { ProjectsService } = await import('@/lib/services/projects');
-      const doc = await ProjectsService.createProject({ ...params, userId: context?.userId });
+      const { ApiResources } = await import('@/lib/api/resources');
+      const actor = { userId: context?.userId || 'guest', scopes: ['workspaces:write'] } as any;
+      const doc = await ApiResources.createWorkspace(actor, params);
       return { success: true, data: doc };
     },
   });
@@ -166,12 +167,13 @@ function registerCoreTools() {
       id: { type: 'string', description: 'Workspace ID' },
     },
     execute: async (params, context) => {
-      const { ProjectsService } = await import('@/lib/services/projects');
+      const { ApiResources } = await import('@/lib/api/resources');
+      const actor = { userId: context?.userId || 'guest', scopes: ['workspaces:read'] } as any;
       if (params.id) {
-        const doc = await ProjectsService.getProject(params.id);
+        const doc = await ApiResources.getWorkspace(actor, params.id);
         return { success: true, data: doc };
       }
-      const list = await ProjectsService.listProjects(context?.userId);
+      const list = await ApiResources.listWorkspaces(actor);
       return { success: true, data: list };
     },
   });
@@ -188,9 +190,10 @@ function registerCoreTools() {
       summary: { type: 'string', description: 'New summary' },
       visibility: { type: 'string', description: 'private | shared | public' },
     },
-    execute: async (params) => {
-      const { ProjectsService } = await import('@/lib/services/projects');
-      const doc = await ProjectsService.updateProject(params.id, params as any);
+    execute: async (params, context) => {
+      const { ApiResources } = await import('@/lib/api/resources');
+      const actor = { userId: context?.userId || 'guest', scopes: ['workspaces:write'] } as any;
+      const doc = await ApiResources.updateWorkspace(actor, params.id, params as any);
       return { success: true, data: doc };
     },
   });
@@ -204,9 +207,10 @@ function registerCoreTools() {
     parameters: {
       id: { type: 'string', description: 'Workspace ID', required: true },
     },
-    execute: async (params) => {
-      const { ProjectsService } = await import('@/lib/services/projects');
-      await ProjectsService.deleteProject(params.id);
+    execute: async (params, context) => {
+      const { ApiResources } = await import('@/lib/api/resources');
+      const actor = { userId: context?.userId || 'guest', scopes: ['workspaces:write'] } as any;
+      await ApiResources.deleteWorkspace(actor, params.id);
       return { success: true, data: { deletedId: params.id } };
     },
   });
@@ -471,8 +475,9 @@ function registerCoreTools() {
       username: { type: 'string', description: 'Username or login ID' },
     },
     execute: async (params, context) => {
-      const { VaultService } = await import('@/lib/services/vault');
-      const created = await VaultService.createCredential({ ...params, userId: context?.userId });
+      const { ApiResources } = await import('@/lib/api/resources');
+      const actor = { userId: context?.userId || 'guest', scopes: ['vault:write', 'vault:read'] } as any;
+      const created = await ApiResources.createVaultItem(actor, params);
       return { success: true, data: redactPIIAndSensitiveFields(created) };
     },
   });
@@ -486,8 +491,9 @@ function registerCoreTools() {
     isSecure: true,
     parameters: {},
     execute: async (_params, context) => {
-      const { VaultService } = await import('@/lib/services/vault');
-      const res = await VaultService.listCredentials(context?.userId);
+      const { ApiResources } = await import('@/lib/api/resources');
+      const actor = { userId: context?.userId || 'guest', scopes: ['vault:read'] } as any;
+      const res = await ApiResources.listVaultItems(actor);
       return { success: true, data: redactPIIAndSensitiveFields(res) };
     },
   });
@@ -501,9 +507,10 @@ function registerCoreTools() {
     parameters: {
       id: { type: 'string', description: 'Secret ID', required: true },
     },
-    execute: async (params) => {
-      const { VaultService } = await import('@/lib/services/vault');
-      await VaultService.deleteCredential(params.id);
+    execute: async (params, context) => {
+      const { ApiResources } = await import('@/lib/api/resources');
+      const actor = { userId: context?.userId || 'guest', scopes: ['vault:write'] } as any;
+      await ApiResources.deleteVaultItem(actor, params.id);
       return { success: true, data: { deletedId: params.id } };
     },
   });
@@ -519,8 +526,9 @@ function registerCoreTools() {
       query: { type: 'string', description: 'Search term', required: true },
     },
     execute: async (params, context) => {
-      const { VaultService } = await import('@/lib/services/vault');
-      const res = await VaultService.listCredentials(context?.userId);
+      const { ApiResources } = await import('@/lib/api/resources');
+      const actor = { userId: context?.userId || 'guest', scopes: ['vault:read'] } as any;
+      const res = await ApiResources.listVaultItems(actor);
       const term = String(params.query || '').toLowerCase();
       const matched = (res || []).filter((c: any) => c.name?.toLowerCase().includes(term));
       return { success: true, data: redactPIIAndSensitiveFields(matched) };

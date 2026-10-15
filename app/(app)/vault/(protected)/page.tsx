@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Credentials } from '@/lib/appwrite/types';
+type Credentials = any;
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import {
@@ -595,8 +595,6 @@ function DashboardPageContent() {
                           <button
                             onClick={async () => {
                               try {
-                                const { VaultService } = await import('@/lib/appwrite/vault-service');
-                                VaultService.clearVaultCaches();
                                 const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
                                 const db = await getRxDB().catch(() => null);
                                 if (db && user?.$id) {

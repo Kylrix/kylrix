@@ -55,7 +55,6 @@ import { APP_BASE_PATHS } from '@/lib/constants';
 import { type KylrixApp } from '@/sdk/design';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtTop } from '@/sdk/topbar';
-import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/sdk/appwrite';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
@@ -330,7 +329,7 @@ export default function ConnectTopbar({
     }
   }, [passiveNotification, isDesktop]);
 
-  const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
+  const profilePicId = getUserProfilePicId(user);
   const appAccent = getAppColor(activeApp);
   const { profile: myProfile } = useProfile();
   const cachedIdentity = (user as any)?.$id ? getCachedIdentityById((user as any).$id) : null;
@@ -364,15 +363,6 @@ export default function ConnectTopbar({
       userId: (user as any)?.$id || null}),
     [profileAvatarUrl, profileDisplayName, profilePicId, profileUsername, user]);
 
-  const previewManager = useMemo(
-    () =>
-      createProfilePreviewManager(async (fileId, width, height) => {
-        const { fetchProfilePreview } = await import('@/lib/profile-preview');
-        const preview = await fetchProfilePreview(fileId, width, height);
-        return typeof preview === 'string' ? preview : null;
-      }),
-    []);
-
   useEffect(() => {
     let mounted = true;
 
@@ -382,14 +372,15 @@ export default function ConnectTopbar({
         return;
       }
 
-      const cached = previewManager.getCachedProfilePreview(profilePicId);
+      const { fetchProfilePreview, getCachedProfilePreview } = await import('@/lib/profile-preview');
+      const cached = getCachedProfilePreview(profilePicId);
       if (cached !== undefined) {
         if (mounted) setProfileAvatarUrl(cached ?? null);
         return;
       }
 
       try {
-        const url = await previewManager.fetchProfilePreview(profilePicId, 64, 64);
+        const url = await fetchProfilePreview(profilePicId, 64, 64);
         if (mounted) setProfileAvatarUrl(url);
       } catch {
         if (mounted) setProfileAvatarUrl(null);
@@ -400,7 +391,7 @@ export default function ConnectTopbar({
     return () => {
       mounted = false;
     };
-  }, [previewManager, profilePicId]);
+  }, [profilePicId]);
 
   const openSearch = useCallback(() => {
     setProfileMenuAnchorEl(null);
