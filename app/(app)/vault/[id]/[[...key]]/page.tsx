@@ -1,5 +1,9 @@
 import React from 'react';
-import { validatePublicVaultAccess } from '@/lib/appwrite/vault';
+import { ApiResources } from '@/lib/api/resources';
+
+async function validatePublicVaultAccess(id: string) {
+  return ApiResources.getPublicVaultItem(id).catch(() => null);
+}
 import SharedVaultClient from '../../SharedVaultClient';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';

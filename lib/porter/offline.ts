@@ -303,7 +303,8 @@ export async function exportVaultPlaintext(userId: string): Promise<{
     throw new Error('Unlock your vault before exporting.');
   }
 
-  const { VaultService } = await import('@/lib/appwrite/vault-service');
+  const { ApiResources } = await import('@/lib/api/resources');
+  const actor = { userId, scopes: ['vault:read'] } as any;
 
   let creds =
     ((await LocalEngine.cacheGet<any[]>(`vault_credentials_${userId}`).catch(() => null)) as any[]) ||
@@ -312,9 +313,9 @@ export async function exportVaultPlaintext(userId: string): Promise<{
     ((await LocalEngine.cacheGet<any[]>(`vault_totp_${userId}`).catch(() => null)) as any[]) || [];
 
   const [remoteCreds, remoteTotps, remoteFolders] = await Promise.all([
-    VaultService.listAllCredentials(userId).catch(() => [] as any[]),
-    VaultService.listTOTPSecrets(userId).catch(() => [] as any[]),
-    VaultService.listFolders(userId).catch(() => [] as any[]),
+    ApiResources.listVaultItems(actor).catch(() => [] as any[]),
+    ApiResources.listTotpSecrets(actor).catch(() => [] as any[]),
+    ApiResources.listWorkspaces(actor).catch(() => [] as any[]),
   ]);
 
   // Prefer decrypted remote lists when populated
@@ -328,7 +329,7 @@ export async function exportVaultPlaintext(userId: string): Promise<{
       const id = row?.$id || row?.id;
       if (!id) continue;
       try {
-        decrypted.push(await VaultService.getCredential(String(id)));
+        decrypted.push(await ApiResources.getVaultItem(actor, String(id)));
       } catch {
         decrypted.push(row);
       }
@@ -342,7 +343,7 @@ export async function exportVaultPlaintext(userId: string): Promise<{
       const id = row?.$id || row?.id;
       if (!id) continue;
       try {
-        decrypted.push(await VaultService.getTOTPSecret(String(id)));
+        decrypted.push(await ApiResources.getTotpSecret(actor, String(id)));
       } catch {
         decrypted.push(row);
       }

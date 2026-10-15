@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Credentials } from '@/lib/appwrite/types';
+type Credentials = any;
 import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Wand2, Share2, ShieldCheck, FileCode2, FolderInput, Copy } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
@@ -517,7 +517,7 @@ export default function CredentialItem({
             if (!currentDek) {
               const { decryptField, encryptField } = await import('@/lib/masterpass-crypto');
               const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
-              const { VaultService } = await import('@/lib/appwrite/vault');
+              const { ApiResources } = await import('@/lib/api/resources');
               
               const newDek = await ecosystemSecurity.generateRandomMEK();
               const rawKey = await crypto.subtle.exportKey("raw", newDek);
@@ -540,8 +540,8 @@ export default function CredentialItem({
                 }
               }
               
-              // VaultService.updateCredential will encrypt fields with the new DEK
-              await VaultService.updateCredential(credential.$id, plaintextFields as any);
+              const actor = { userId: credential.userId || 'guest', scopes: ['vault:write'] } as any;
+              await ApiResources.updateVaultItem(actor, credential.$id, plaintextFields as any);
               credential.dek = wrappedDek;
               for (const field of fieldsToProcess) {
                 if (plaintextFields[field] !== undefined) (credential as any)[field] = plaintextFields[field];
