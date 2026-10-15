@@ -3,8 +3,8 @@
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { realtime } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { realtime } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { useAuth } from '@/lib/auth';
 import { ChatService } from '@/lib/services/chat';
 import { UsersService } from '@/lib/services/users';

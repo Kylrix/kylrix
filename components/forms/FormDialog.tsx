@@ -26,7 +26,7 @@ import { GHOST_FIELDS_REGISTRY, getEnabledGhostFields } from '@/lib/forms/ghost-
 import { Drawer } from '@/lib/openbricks/primitives';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
-import { Forms } from '@/types/appwrite';
+import { Forms } from '@/lib/data';
 type FormsStatus = 'draft' | 'published' | 'archived';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';

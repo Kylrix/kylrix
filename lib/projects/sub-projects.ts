@@ -3,7 +3,7 @@
  * Sub-projects are eliminated; all items are top-level workspaces.
  */
 
-import type { Projects } from '@/types/appwrite';
+import type { Projects } from '@/lib/data';
 
 export type ProjectKind = 'workspace';
 

@@ -1,12 +1,12 @@
 'use server';
 
-import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
+import { ID, Permission, Query, Role } from '@/lib/data';
 import { billingManager, resolveProviderAdapterId } from '@/lib/billing/provider-factory';
 import { PaymentMethod } from '@/lib/billing/types';
 import { registerPendingCheckoutWithAdapter } from '@/lib/billing/pending-checkout';
 import { isPaymentMethodEnabled } from '@/lib/billing/providers/registry';
-import { createSystemClient } from '@/lib/appwrite/types';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { createSystemClient } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { notifySubscriptionActivated } from '@/lib/billing/subscription-notifications';
 import { resolveBillingSuccessUrl } from '@/lib/billing/callback-urls';

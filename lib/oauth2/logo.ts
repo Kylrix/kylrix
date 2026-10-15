@@ -1,8 +1,8 @@
 'use client';
 
-import { ID, Permission, Role } from '@/lib/appwrite/types';
-import { account, storage } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { ID, Permission, Role } from '@/lib/data';
+import { account, storage } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { compressImageToWebP, validateFileUploadLimit } from '@/lib/storage/framework';
 
 const BUCKET = APPWRITE_CONFIG.BUCKETS.APP_LOGOS;

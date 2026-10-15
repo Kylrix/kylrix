@@ -1,4 +1,4 @@
-import { ID, Models, Permission, Role, Query } from '@/lib/appwrite/types';
+import { ID, Models, Permission, Role, Query } from '@/lib/data';
 import { tablesDB, realtime } from './appwrite/client';
 import { APPWRITE_CONFIG } from './appwrite/config';
 import { getEcosystemUrl } from './constants';

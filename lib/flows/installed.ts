@@ -100,7 +100,7 @@ export async function pullAndSyncUserFlowInstalls(targetUserId?: string | null):
     let userId = targetUserId;
     if (typeof window !== 'undefined') {
       try {
-        const { account } = await import('@/lib/appwrite/client');
+        const { account } = await import('@/lib/data');
         const u = await account.get().catch(() => null);
         if (u?.$id) userId = u.$id;
         const tokenRes = await account.createJWT().catch(() => null);

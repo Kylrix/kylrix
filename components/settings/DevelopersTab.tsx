@@ -12,7 +12,7 @@ import {
   KYLRIX_AGENTS_SKILL_INSTALL,
 } from '@/lib/api/public';
 import { listPats, revokePat } from '@/lib/actions/client-ops';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { listMyApps, type OauthApp } from '@/lib/oauth2/apps';
 import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
 import { CreateOAuthAppDrawer } from '@/components/settings/CreateOAuthAppDrawer';

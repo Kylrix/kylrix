@@ -1,7 +1,7 @@
-import { Notes } from '@/types/appwrite';
+import { Notes } from '@/lib/data';
 import { generateAIContent } from '@/lib/actions/ai';
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { createTaskFromNote } from '@/lib/appwrite';
+import { createTaskFromNote } from '@/lib/data';
 
 export async function generateAIAction(note: Notes, action: 'summarize' | 'grammar' | 'expand') {
   const noteProjectId = (note as any)?.projectId;
@@ -48,7 +48,7 @@ export async function readTheRoom(currentNoteId?: string): Promise<string[]> {
     if (typeof window === 'undefined') return [];
 
     // 1. Attempt to fetch from LocalEngine note lists or RxDB
-    const { getCurrentUser } = await import('@/lib/appwrite/client');
+    const { getCurrentUser } = await import('@/lib/data');
     const user = await getCurrentUser().catch(() => null);
     const uid = user?.$id || 'guest';
 

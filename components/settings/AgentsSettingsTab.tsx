@@ -116,8 +116,8 @@ export function AgentsSettingsTab() {
     if (!id) return;
     if (!confirm(`Delete custom agent "${agentName}"?`)) return;
     try {
-      const { tablesDB } = await import('@/lib/appwrite/client');
-      const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+      const { tablesDB } = await import('@/lib/data');
+      const { APPWRITE_CONFIG } = await import('@/lib/data');
       await tablesDB.deleteRow(
         APPWRITE_CONFIG.DATABASES.FLOW,
         APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
@@ -146,7 +146,7 @@ export function AgentsSettingsTab() {
     try {
       setLoadingCompute(true);
       const { getComputeBalanceAction } = await import('@/lib/actions/ai');
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => undefined);
       const res = await getComputeBalanceAction(jwt);
       if (res) {

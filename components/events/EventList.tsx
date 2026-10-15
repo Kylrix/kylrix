@@ -146,7 +146,7 @@ export default function EventList() {
 
     void (async () => {
       try {
-        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const { ProjectsService } = await import('@/lib/data');
         const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
         if (tagged?.events && Array.isArray(tagged.events) && tagged.events.length > 0 && !cancelled) {
           tagged.events.forEach((e: any) => {

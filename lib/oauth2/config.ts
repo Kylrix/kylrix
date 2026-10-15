@@ -1,4 +1,4 @@
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { PAT_SCOPES, PAT_SCOPE_META } from '@/lib/api/scopes';
 
 /** Live OAuth2 server — matches Auth → OAuth2 server in Console. */

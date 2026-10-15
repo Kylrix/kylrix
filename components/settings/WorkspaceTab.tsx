@@ -25,8 +25,8 @@ import {
 } from 'lucide-react';
 
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { ProjectsService } from '@/lib/appwrite/projects';
-import { Projects } from '@/types/appwrite';
+import { ProjectsService } from '@/lib/data';
+import { Projects } from '@/lib/data';
 import { useAuth } from '@/context/auth/AuthContext';
 import { toast } from 'react-hot-toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -97,7 +97,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
     try {
       let jwt: string | undefined = undefined;
       try {
-        const { account } = await import('@/lib/appwrite/client');
+        const { account } = await import('@/lib/data');
         const tokenRes = await account.createJWT().catch(() => null);
         jwt = tokenRes?.jwt;
       } catch {}

@@ -3,16 +3,16 @@
 import React, { useEffect, useState, use } from 'react';
 import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ArrowLeft, Crown } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
-import { Forms } from '@/types/appwrite';
+import { Forms } from '@/lib/data';
 import { getEnabledGhostFields, resolveGhostFields } from '@/lib/forms/ghost-fields';
 import { GhostFieldsNotice } from '@/components/forms/GhostFieldsNotice';
 import { secureUploadFile, createthreadNoteChat } from '@/lib/actions/client-ops';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import UserSearch from '@/components/UserSearch';
 import { UsersService } from '@/lib/services/users';
 import { ChatService } from '@/lib/services/chat';
-import { createComment, getNote } from '@/lib/appwrite/note';
+import { createComment, getNote } from '@/lib/data';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import toast from 'react-hot-toast';
@@ -73,7 +73,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     return;
                 }
 
-                const { hasAuthSessionHint, getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
+                const { hasAuthSessionHint, getCurrentUserSnapshot } = await import('@/lib/data');
                 let user = getCurrentUserSnapshot();
 
                 if (!user && hasAuthSessionHint()) {
@@ -159,7 +159,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
         let unsub: any;
         void (async () => {
             try {
-                const { realtime } = await import('@/lib/appwrite/client');
+                const { realtime } = await import('@/lib/data');
                 const channels = [
                     `forms:${resolvedParams.id}`,
                     `forms`,

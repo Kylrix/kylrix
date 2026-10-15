@@ -5,9 +5,9 @@
  */
 
 import { MeshProtocol } from './mesh';
-import { tablesDB } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Query, ID } from '@/lib/appwrite/types';
+import { tablesDB } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
+import { Query, ID } from '@/lib/data';
 import { decodeBase64ToBytes, normalizeStoredSecretString } from '@/lib/crypto/public-key';
 
 const PW_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
@@ -146,7 +146,7 @@ class EcosystemSecurity {
       const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
       if (!offline) {
         try {
-          const { KeychainService } = await import('@/lib/appwrite/keychain');
+          const { KeychainService } = await import('@/lib/data');
           keychainEntries = await KeychainService.listKeychainEntries(resolvedUserId);
           userDoc = await SecurityEnclave.getUserDoc(resolvedUserId);
 

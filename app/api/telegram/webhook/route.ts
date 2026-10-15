@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { systemTables } from '@/lib/data/system-tables';
 import { ApiResources } from '@/lib/api/resources';
 import type { ApiActor } from '@/lib/api/guard';

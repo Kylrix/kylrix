@@ -11,7 +11,7 @@ import {
 } from '@/lib/actions/billing/payment-intent';
 import { Sparkles, ArrowRight, X } from 'lucide-react';
 import { hasEffectivePaidAccess } from '@/lib/utils';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 
 interface PaymentReminderContextType {
   pendingIntent: PaymentIntentRecord | null;

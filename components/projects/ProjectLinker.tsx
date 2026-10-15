@@ -18,9 +18,9 @@ import {
   X, 
   FolderKanban, 
   Plus} from 'lucide-react';
-import { ProjectsService } from '@/lib/appwrite/projects';
+import { ProjectsService } from '@/lib/data';
 import { useToast } from '@/components/ui/Toast';
-import { Projects } from '@/types/appwrite';
+import { Projects } from '@/lib/data';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { warmProjectsList } from '@/lib/projects/warm-projects-list';

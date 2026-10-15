@@ -66,7 +66,7 @@ export function ObjectAssistDrawer({
         const token = await getJWT();
         if (token) return token;
       }
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const res = await account.createJWT();
       return res?.jwt || undefined;
     } catch {

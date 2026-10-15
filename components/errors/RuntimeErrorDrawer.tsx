@@ -24,7 +24,7 @@ export default function RuntimeErrorDrawer({
     async function loadEngineerDetails() {
       let jwt: string | undefined;
       try {
-        const { account } = await import('@/lib/appwrite/client');
+        const { account } = await import('@/lib/data');
         const res = await account.createJWT().catch(() => null);
         jwt = res?.jwt;
       } catch {}

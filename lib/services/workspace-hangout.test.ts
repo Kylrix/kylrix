@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { findWorkspaceConversationInternal, createConversationTransactionalInternal } from './internal/chat';
 
-vi.mock('@/lib/appwrite/server', () => ({
+vi.mock('@/lib/data', () => ({
   createServerClient: vi.fn(),
 }));
 
-vi.mock('@/lib/appwrite/config', () => ({
+vi.mock('@/lib/data', () => ({
   APPWRITE_CONFIG: {
     DATABASES: { CHAT: 'chat_db', PASSWORD_MANAGER: 'pm_db' },
     TABLES: {
@@ -27,7 +27,7 @@ const mockGetRow = vi.fn();
 const mockListRows = vi.fn();
 const mockCreateRow = vi.fn();
 
-vi.mock('@/lib/appwrite-admin', () => ({
+vi.mock('@/lib/data-admin', () => ({
   createSystemClient: () => ({
     databases: {
       getRow: mockGetRow,

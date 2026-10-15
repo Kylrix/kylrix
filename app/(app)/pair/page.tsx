@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ShieldCheck, ShieldAlert, CheckCircle2, Loader2, ArrowRight, Laptop, Key } from 'lucide-react';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import toast from 'react-hot-toast';
 
 export default function PairPage() {

@@ -2,8 +2,8 @@
 
 import { systemTables } from '@/lib/data/system-tables';
 
-import { Query, createSystemClient } from '@/lib/appwrite/types';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { Query, createSystemClient } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 
 import { withSystemTransaction } from '@/lib/services/internal/transaction';
 

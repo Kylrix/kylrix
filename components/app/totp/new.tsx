@@ -1,6 +1,6 @@
 "use client";
 
-import { createTotpSecret, updateTotpSecret } from '@/lib/appwrite';
+import { createTotpSecret, updateTotpSecret } from '@/lib/data';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';

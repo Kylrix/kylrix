@@ -14,7 +14,7 @@ import {
   alpha} from '@/lib/openbricks/primitives';
 import { Users, ShieldCheck, ArrowRight } from 'lucide-react';
 
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { useAuth } from '@/lib/auth';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 

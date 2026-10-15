@@ -27,7 +27,7 @@ vi.mock('@/lib/actions/contributor-ops', () => ({
   verifyAndApplyContributorStatus: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('@/lib/appwrite-admin', () => ({
+vi.mock('@/lib/data-admin', () => ({
   createSystemClient: vi.fn(() => ({
     databases: {
       listRows: mockListRows,

@@ -3,7 +3,7 @@
  * Context notes → RxDB notes → LocalEngine f_notes_list → Nexus initial_notes_{userId}.
  */
 
-import type { Notes } from '@/types/appwrite';
+import type { Notes } from '@/lib/data';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 
 export type InitialNotesCachePayload = {

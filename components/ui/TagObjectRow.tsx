@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Tag as TagIcon, Edit2 as EditIcon, Trash2 as TrashIcon, Clock as ClockIcon } from 'lucide-react';
-import type { Tags } from '@/types/appwrite';
+import type { Tags } from '@/lib/data';
 import { ObjectCard } from '@/components/objects/ObjectCard';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { formatDateWithFallback } from '@/lib/date-utils';

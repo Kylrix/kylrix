@@ -21,7 +21,7 @@ import { useContextMenu } from './ContextMenuContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useNotes } from '@/context/NotesContext';
-import type { Notes } from '@/types/appwrite';
+import type { Notes } from '@/lib/data';
 import { useSelection } from '@/context/SelectionContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSection } from '@/context/SectionContext';
@@ -32,7 +32,7 @@ import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu
 import { useWorkspace } from '@/context/WorkspaceContext';
 
 import { resolveNoteCardTitle, isEncryptedCiphertext } from '@/constants/noteTitle';
-import { getNotePublicState, lockNote, unlockNote } from '@/lib/appwrite';
+import { getNotePublicState, lockNote, unlockNote } from '@/lib/data';
 import { updateNote, deleteNote as deleteNoteAction } from '@/lib/actions/client-ops';
 import { useToast } from './Toast';
 import { useSudo } from '@/context/SudoContext';
@@ -44,7 +44,7 @@ import { ObjectCard } from '@/components/objects/ObjectCard';
 import { ObjectCardMeta } from '@/components/objects/ObjectCardMeta';
 import { noteToCard } from '@/lib/objects/adapters';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 
 interface NoteCardProps {
   note: Notes;
@@ -99,7 +99,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         // Add to local trash cache immediately so /trash reflects it with 0ms delay
         const trashCacheKey = `trash_all_${uid}`;
         const existingTrash = (await LocalEngine.cacheGet<any[]>(trashCacheKey)) || [];
-        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const { APPWRITE_CONFIG } = await import('@/lib/data');
         const newTrashItem = {
           id: note.$id,
           title: note.title || 'Untitled Note',
@@ -128,10 +128,10 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   const resolveNoteShareUrl = React.useCallback(async () => {
     if (note.dek) {
-      const { getNoteShareUrlWithDek } = await import('@/lib/appwrite/goal-crypto');
+      const { getNoteShareUrlWithDek } = await import('@/lib/data');
       return getNoteShareUrlWithDek(note.$id, note.dek);
     }
-    const { getCurrentPublicNoteShareUrl } = await import('@/lib/appwrite');
+    const { getCurrentPublicNoteShareUrl } = await import('@/lib/data');
     const url = await getCurrentPublicNoteShareUrl(note.$id, note);
     if (url) return url;
     const { buildPublicResourceUrl } = await import('@/lib/share/public-url');

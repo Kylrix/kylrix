@@ -6,7 +6,7 @@ import { Lock, ArrowRight, UserPlus, LogIn } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { joinWorkspaceByInviteCodeSecure } from '@/lib/actions/secure-ops';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { useAuth } from '@/context/auth/AuthContext';
 import { toast } from 'react-hot-toast';
 

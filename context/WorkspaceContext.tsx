@@ -4,13 +4,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
-import { ProjectsService } from '@/lib/appwrite/projects';
+import { ProjectsService } from '@/lib/data';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
 import { getSessionProjectsList, projectObjectsCacheKey, projectObjectsKindCacheKey } from '@/lib/projects/projects-cache';
 import { normalizeProjectsList, warmProjectsList } from '@/lib/projects/warm-projects-list';
 import { isWorkspaceRecord } from '@/lib/projects/sub-projects';
 import { sortWorkspacesByActive } from '@/lib/workspaces/sort-workspaces';
-import type { ProjectObjects } from '@/types/appwrite';
+import type { ProjectObjects } from '@/lib/data';
 
 export interface WorkspaceItem {
   id: string;
@@ -685,7 +685,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     void (async () => {
       try {
         const { resolveWorkspaceShareAccessSecure } = await import('@/lib/actions/secure-ops');
-        const { account } = await import('@/lib/appwrite/client');
+        const { account } = await import('@/lib/data');
         let jwt: string | undefined = undefined;
         try {
           const res = await Promise.race([
@@ -733,7 +733,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     let unsub: any;
     void (async () => {
       try {
-        const { realtime } = await import('@/lib/appwrite/client');
+        const { realtime } = await import('@/lib/data');
         const channels = ['projects', 'project_objects', 'Collaborators'];
         unsub = realtime.subscribe(channels, (response: any) => {
           if (response?.events?.some((evt: string) => evt.includes('.create') || evt.includes('.update') || evt.includes('.delete'))) {
@@ -943,8 +943,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           });
           // Mark row as workspace-scoped in background
           try {
-            const { databases } = await import('@/lib/appwrite/client');
-            const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+            const { databases } = await import('@/lib/data');
+            const { APPWRITE_CONFIG } = await import('@/lib/data');
             const tableByKind: Record<string, string> = {
               note: APPWRITE_CONFIG.TABLES.NOTES,
               idea: APPWRITE_CONFIG.TABLES.NOTES,
@@ -1003,8 +1003,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const setEntityPersonalWorkspaceState = useCallback(
     async (entityKind: string, entityId: string, inPersonal: boolean) => {
       try {
-        const { databases } = await import('@/lib/appwrite/client');
-        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const { databases } = await import('@/lib/data');
+        const { APPWRITE_CONFIG } = await import('@/lib/data');
         const tableByKind: Record<string, string> = {
           note: APPWRITE_CONFIG.TABLES.NOTES,
           idea: APPWRITE_CONFIG.TABLES.NOTES,

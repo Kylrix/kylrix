@@ -12,7 +12,7 @@ import {
 import { Check, X, Users } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { acceptProjectInviteSecure } from '@/lib/actions/secure-ops';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { useToast } from '@/components/ui/Toast';
 
 export interface ProjectInviteDrawerData {
