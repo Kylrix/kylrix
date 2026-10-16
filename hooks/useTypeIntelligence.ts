@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { refreshTypeIntelVoice } from '@/lib/agentic/type-intel-local';
 import type { TypeIntelVoiceSample } from '@/lib/agentic/prompts/type-intel';

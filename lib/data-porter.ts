@@ -5,9 +5,7 @@
  * Handles import/export operations with progress tracking and fallback.
  */
 
-import { Functions, ExecutionMethod } from '@/lib/data';
-import { client } from '@/lib/data';
-import { APPWRITE_CONFIG } from '@/lib/data';
+import { Functions, ExecutionMethod, client, APPWRITE_CONFIG } from '@/lib/data';
 
 const functions = new Functions(client);
 
@@ -127,7 +125,3 @@ export async function porterExport(userId: string): Promise<PorterExportResult> 
         throw error;
     }
 }
-
-/**
- * Download export data as a JSON file.
- */

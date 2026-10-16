@@ -1,6 +1,4 @@
-import { ID, Models, Permission, Role, Query } from '@/lib/data';
-import { tablesDB, realtime } from './appwrite/client';
-import { APPWRITE_CONFIG } from './appwrite/config';
+import { ID, Models, Permission, Role, Query, tablesDB, realtime, APPWRITE_CONFIG } from '@/lib/data';
 import { getEcosystemUrl } from './constants';
 import { Calendar, Task, Event, EventGuest } from '../types/kylrixflow';
 import type { CollaboratorPermission, TaskCollaborator } from '../types';
