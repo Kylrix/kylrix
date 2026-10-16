@@ -1,2 +1,3 @@
-export { APPWRITE_CONFIG } from '@/lib/data';
-export default { APPWRITE_CONFIG };
+import { APPWRITE_CONFIG } from '@/lib/data';
+export { APPWRITE_CONFIG };
+export default APPWRITE_CONFIG;

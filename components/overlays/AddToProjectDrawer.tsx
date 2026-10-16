@@ -35,7 +35,7 @@ export function AddToProjectDrawerHost() {
   const data = (drawerData || {}) as AddToProjectDrawerData;
 
   const parentWorkspaceId = data.workspaceId || activeWorkspace?.id || null;
-  const isPersonal = parentWorkspaceId === user?.$id || activeWorkspace?.isPersonal;
+  const isPersonal = parentWorkspaceId === (user?.id || user?.$id) || activeWorkspace?.isPersonal;
 
   const [projects, setProjects] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -45,7 +45,7 @@ export function AddToProjectDrawerHost() {
     if (isOpen && !isPersonal) {
       setLoading(true);
       ProjectsService.listProjects()
-        .then((res) => setProjects(res.rows || []))
+        .then((res) => setProjects(Array.isArray(res) ? res : (res as any)?.rows || []))
         .catch(() => setProjects([]))
         .finally(() => setLoading(false));
     }

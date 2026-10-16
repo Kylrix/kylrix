@@ -166,9 +166,22 @@ export const FormsService = {
     };
   },
 
+  async updateSubmission(submissionId: string, data: any) {
+    await db
+      .update(schema.formSubmissions)
+      .set(data)
+      .where(eq(schema.formSubmissions.id, submissionId));
+    return { $id: submissionId, id: submissionId, ...data };
+  },
+
   async deleteSubmission(submissionId: string) {
     await db.delete(schema.formSubmissions).where(eq(schema.formSubmissions.id, submissionId));
     return { success: true };
+  },
+
+  async getCurrentUser() {
+    const { getCurrentUser } = await import('@/lib/data');
+    return getCurrentUser();
   },
 
   async batchTrashSubmissions(formId: string, submissionIds: string[]) {

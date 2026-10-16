@@ -193,18 +193,20 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
 
             // Apply surgical patches
             for (const patch of result.patches) {
+                const patchId = patch.id || patch.$id;
+                const patchUpdatedAt = patch.updatedAt || patch.$updatedAt || new Date().toISOString();
                 // Update RxDB notes collection
                 await db.notes.upsert({
-                    id: patch.$id,
-                    title: patch.title,
-                    content: patch.content,
-                    userId: patch.userId,
-                    metadata: patch.metadata,
-                    updatedAt: patch.$updatedAt,
+                    id: patchId,
+                    title: patch.title || '',
+                    content: patch.content || '',
+                    userId: patch.userId || '',
+                    metadata: JSON.stringify(patch),
+                    updatedAt: patchUpdatedAt,
                     _deleted: false
                 });
                 // Also update memory mirror if it was there
-                memoryCache.current.set(`note:${patch.$id}`, { data: patch, timestamp: Date.now() });
+                memoryCache.current.set(`note:${patchId}`, { data: patch, timestamp: Date.now() });
             }
 
             // Remove deleted items

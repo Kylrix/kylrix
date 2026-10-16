@@ -3,7 +3,7 @@ import type {
     Tasks as TaskRow,
     Events as EventRow,
     EventGuests as EventGuestRow
-} from "./appwrite";
+} from "@/lib/data";
 
 export type Calendar = CalendarRow;
 export type Task = TaskRow;

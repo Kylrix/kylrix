@@ -64,7 +64,11 @@ export async function listMyApps(userId: string): Promise<OauthApp[]> {
       images: [],
       supportUrl: '',
       dataDeletionUrl: '',
-      redirectUris: typeof r.redirectUris === 'string' ? JSON.parse(r.redirectUris) : r.redirectUris || [],
+      redirectUris: Array.isArray(r.redirectUris)
+        ? r.redirectUris.map(String)
+        : typeof r.redirectUris === 'string'
+        ? JSON.parse(r.redirectUris)
+        : [],
       postLogoutRedirectUris: [],
       enabled: !r.disabled,
       type: r.clientSecret ? 'confidential' : 'public',
@@ -104,7 +108,11 @@ export async function listApps(): Promise<OauthApp[]> {
       images: [],
       supportUrl: '',
       dataDeletionUrl: '',
-      redirectUris: typeof r.redirectUris === 'string' ? JSON.parse(r.redirectUris) : r.redirectUris || [],
+      redirectUris: Array.isArray(r.redirectUris)
+        ? r.redirectUris.map(String)
+        : typeof r.redirectUris === 'string'
+        ? JSON.parse(r.redirectUris)
+        : [],
       postLogoutRedirectUris: [],
       enabled: !r.disabled,
       type: r.clientSecret ? 'confidential' : 'public',
@@ -145,7 +153,11 @@ export async function getApp(appId: string): Promise<OauthApp> {
         images: [],
         supportUrl: '',
         dataDeletionUrl: '',
-        redirectUris: typeof r.redirectUris === 'string' ? JSON.parse(r.redirectUris) : r.redirectUris || [],
+        redirectUris: Array.isArray(r.redirectUris)
+          ? r.redirectUris.map(String)
+          : typeof r.redirectUris === 'string'
+          ? JSON.parse(r.redirectUris)
+          : [],
         postLogoutRedirectUris: [],
         enabled: !r.disabled,
         type: r.clientSecret ? 'confidential' : 'public',
@@ -192,8 +204,6 @@ export async function createApp(params: {
   postLogoutRedirectUris?: string[];
   deviceFlow?: boolean;
 }): Promise<OauthApp> {
-  // Create with name + redirects + type in one shot (docs shape).
-  // Multipart encodes redirectUris as redirectUris[] — required for Apps API.
   const created = await appwriteSessionFetch<OauthApp>('POST', '/apps', {
     encode: 'multipart',
     body: {
@@ -218,7 +228,6 @@ export async function createApp(params: {
   const missing = params.redirectUris.filter((u) => !saved.includes(u));
   if (missing.length === 0) return created;
 
-  // Retry via update if create dropped redirects.
   const updated = await updateApp(created.$id, {
     name: params.name,
     redirectUris: params.redirectUris,

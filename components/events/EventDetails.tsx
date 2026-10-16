@@ -193,8 +193,8 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
         try {
           const { getGlobalProfileStatusSecure } = await import('@/lib/actions/secure-ops');
           const res = await getGlobalProfileStatusSecure(userId);
-          if (res?.exists) {
-            setOrganizer(res.profile);
+          if ((res as any)?.exists) {
+            setOrganizer((res as any).profile);
           }
         } catch (err) {
           console.error('Failed to fetch organizer profile', err);

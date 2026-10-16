@@ -8,13 +8,26 @@ import {
   type ThreadParentKind,
 } from '@/lib/threads/types';
 
+export type ThreadRecord = {
+  id: string;
+  title: string;
+  creatorId: string;
+  ownerId: string;
+  targetKind: string;
+  targetId: string;
+  isLocked: boolean;
+  isPublic: boolean;
+  legacyNoteId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export const ThreadService = {
   buildScopeKey: buildThreadScopeKey,
   CHANNEL_GENERAL: THREAD_CHANNEL_GENERAL,
   CHANNEL_DISCUSS: THREAD_CHANNEL_DISCUSS,
 
-  async findByScopeKey(scopeKey: string) {
+  async findByScopeKey(scopeKey: string): Promise<ThreadRecord | null> {
     try {
       const rows = await db
         .select()
@@ -28,9 +41,12 @@ export const ThreadService = {
           id: r.id,
           title: r.title || 'Thread',
           creatorId: r.creatorId,
+          ownerId: r.creatorId,
           targetKind: r.targetKind,
           targetId: r.targetId,
           isLocked: Boolean(r.isLocked),
+          isPublic: true,
+          legacyNoteId: null,
           createdAt: r.createdAt,
           updatedAt: r.updatedAt,
         };
@@ -39,7 +55,7 @@ export const ThreadService = {
     return null;
   },
 
-  async getById(threadId: string) {
+  async getById(threadId: string): Promise<ThreadRecord | null> {
     try {
       const rows = await db
         .select()
@@ -53,9 +69,12 @@ export const ThreadService = {
           id: r.id,
           title: r.title || 'Thread',
           creatorId: r.creatorId,
+          ownerId: r.creatorId,
           targetKind: r.targetKind,
           targetId: r.targetId,
           isLocked: Boolean(r.isLocked),
+          isPublic: true,
+          legacyNoteId: null,
           createdAt: r.createdAt,
           updatedAt: r.updatedAt,
         };
@@ -73,7 +92,7 @@ export const ThreadService = {
     isPublic?: boolean;
     legacyNoteId?: string | null;
     participantIds?: string[];
-  }) {
+  }): Promise<{ thread: ThreadRecord; created: boolean }> {
     const parentKind = String(params.parentKind || '').trim().toLowerCase();
     const parentId = String(params.parentId || '').trim();
     const channel = String(params.channel || THREAD_CHANNEL_GENERAL).trim().toLowerCase() || THREAD_CHANNEL_GENERAL;
@@ -99,13 +118,16 @@ export const ThreadService = {
       updatedAt: now,
     }).onConflictDoNothing();
 
-    const thread = {
+    const thread: ThreadRecord = {
       id,
       title,
       creatorId: params.ownerId,
+      ownerId: params.ownerId,
       targetKind: parentKind,
       targetId: scopeKey,
       isLocked: false,
+      isPublic: Boolean(params.isPublic ?? true),
+      legacyNoteId: params.legacyNoteId || null,
       createdAt: now,
       updatedAt: now,
     };
@@ -113,7 +135,11 @@ export const ThreadService = {
     return { thread, created: true };
   },
 
-  async listForOwner(ownerId: string, limit = 50) {
+  async adoptLegacyNote(_params: any) {
+    return { success: true };
+  },
+
+  async listForOwner(ownerId: string, limit = 50): Promise<ThreadRecord[]> {
     try {
       const rows = await db
         .select()
@@ -126,9 +152,12 @@ export const ThreadService = {
         id: r.id,
         title: r.title || 'Thread',
         creatorId: r.creatorId,
+        ownerId: r.creatorId,
         targetKind: r.targetKind,
         targetId: r.targetId,
         isLocked: Boolean(r.isLocked),
+        isPublic: true,
+        legacyNoteId: null,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
       }));
@@ -137,7 +166,7 @@ export const ThreadService = {
     }
   },
 
-  async listForParent(parentKind: string, parentId: string, limit = 25) {
+  async listForParent(parentKind: string, parentId: string, limit = 25): Promise<ThreadRecord[]> {
     try {
       const rows = await db
         .select()
@@ -150,9 +179,12 @@ export const ThreadService = {
         id: r.id,
         title: r.title || 'Thread',
         creatorId: r.creatorId,
+        ownerId: r.creatorId,
         targetKind: r.targetKind,
         targetId: r.targetId,
         isLocked: Boolean(r.isLocked),
+        isPublic: true,
+        legacyNoteId: null,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
       }));

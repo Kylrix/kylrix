@@ -44,6 +44,11 @@ export type Forms = {
   [key: string]: any;
 };
 
+export type Calendars = any;
+export type Tasks = any;
+export type Events = any;
+export type EventGuests = any;
+
 export type Credentials = any;
 export type CredentialsCreate = any;
 export type TotpSecrets = any;
@@ -59,7 +64,10 @@ export const APPWRITE_DATABASE_ID = 'passwordManagerDb';
 export const KYLRIX_AUTH_URI = process.env.NEXT_PUBLIC_APP_URL || 'https://kylrix.space';
 
 export const APPWRITE_CONFIG = {
+  PROJECT_ID: 'kylrix',
+  ENDPOINT: process.env.NEXT_PUBLIC_APP_URL || 'https://kylrix.space',
   SYSTEM: { DOMAIN: 'kylrix.space' },
+  DATABASE_ID: 'passwordManagerDb',
   DATABASES: {
     NOTE: 'passwordManagerDb',
     CHAT: 'passwordManagerDb',
@@ -70,20 +78,30 @@ export const APPWRITE_CONFIG = {
     KYLRIXFLOW: 'passwordManagerDb',
   },
   TABLES: {
-    NOTE: { NOTES: 'notes', COMMENTS: 'comments', REACTIONS: 'reactions', COLLABORATORS: 'collaborators', NOTE_TAGS: 'note_tags', TAGS: 'tags', SUBSCRIPTIONS: 'subscriptions', COUPONS: 'coupons' },
-    CHAT: { CONVERSATIONS: 'conversations', MESSAGES: 'messages', CALL_LINKS: 'call_links', ACCOUNT_EVENTS: 'account_events', PROFILES: 'profiles' },
-    VAULT: { CREDENTIALS: 'credentials', USER: 'users', KEYCHAIN: 'keychain' },
-    FLOW: { TASKS: 'tasks', FORMS: 'forms', EVENTS: 'events', GUESTS: 'guests', OBJECTS: 'objects', COLLABORATORS: 'collaborators' },
-    PASSWORD_MANAGER: { WALLETS: 'wallets', IDENTITIES: 'identities' },
-    CONNECT: { TELEGRAM_CONNECTIONS: 'telegram_connections' },
+    NOTES: 'notes',
+    TASKS: 'tasks',
+    EVENTS: 'events',
+    TAGS: 'tags',
+    CALENDARS: 'calendars',
+    CONTEXTS: 'contexts',
+    KNOWLEDGE_GRAPH: 'knowledge_graph',
+    PATTERNS: 'patterns',
+    NOTE: { NOTES: 'notes', COMMENTS: 'comments', REACTIONS: 'reactions', COLLABORATORS: 'collaborators', NOTE_TAGS: 'note_tags', TAGS: 'tags', SUBSCRIPTIONS: 'subscriptions', COUPONS: 'coupons', THREADS: 'threads' },
+    CHAT: { CONVERSATIONS: 'conversations', MESSAGES: 'messages', CALL_LINKS: 'call_links', ACCOUNT_EVENTS: 'account_events', PROFILES: 'profiles', EPOCHS: 'epochs', APP_ACTIVITY: 'app_activity_logs', MESSAGE_REACTIONS: 'message_reactions' },
+    VAULT: { CREDENTIALS: 'credentials', USER: 'users', KEYCHAIN: 'keychain', TOTP_SECRETS: 'totp_secrets' },
+    FLOW: { TASKS: 'tasks', FORMS: 'forms', EVENTS: 'events', GUESTS: 'guests', OBJECTS: 'objects', COLLABORATORS: 'collaborators', AGENTS: 'agents' },
+    PASSWORD_MANAGER: { WALLETS: 'wallets', IDENTITIES: 'identities', KEY_MAPPING: 'key_mapping' },
+    CONNECT: { TELEGRAM_CONNECTIONS: 'telegram_connections', CONVERSATIONS: 'conversations', MESSAGES: 'messages' },
   },
   BUCKETS: {
+    GENERAL_STORAGE: 'chat_uploads',
     VOICE: 'voice',
     NOTES_ATTACHMENTS: 'notes_attachments',
     CHAT_UPLOADS: 'chat_uploads',
     FORM_ATTACHMENTS: 'form_attachments',
     EVENT_COVERS: 'event_covers',
     SEND_EPHEMERAL: 'send_ephemeral',
+    APP_LOGOS: 'app_logos',
   },
   FUNCTIONS: {
     DATA_PORTER: 'data-porter',
@@ -96,24 +114,24 @@ export const ID = {
 };
 
 export const Query = {
-  equal: (field: string, val: any) => [field, '=', val],
-  equalOrNull: (field: string, val: any) => [field, '=', val],
-  notEqual: (field: string, val: any) => [field, '!=', val],
-  greaterThan: (field: string, val: any) => [field, '>', val],
-  greaterThanEqual: (field: string, val: any) => [field, '>=', val],
-  lessThan: (field: string, val: any) => [field, '<', val],
-  lessThanEqual: (field: string, val: any) => [field, '<=', val],
-  search: (field: string, val: any) => [field, 'search', val],
-  orderDesc: (field: string) => ['orderDesc', field],
-  orderAsc: (field: string) => ['orderAsc', field],
-  limit: (limit: number) => ['limit', limit],
-  offset: (offset: number) => ['offset', offset],
-  select: (fields: string[]) => ['select', fields],
-  isNull: (field: string) => [field, 'isNull'],
-  isNotNull: (field: string) => [field, 'isNotNull'],
-  or: (queries: any[]) => ['or', queries],
-  startsWith: (field: string, val: any) => [field, 'startsWith', val],
-  contains: (field: string, val: any) => [field, 'contains', val],
+  equal: (attribute: string, value: any): any => ({ type: 'equal', attribute, value }),
+  equalOrNull: (attribute: string, value: any): any => ({ type: 'equal', attribute, value }),
+  notEqual: (attribute: string, value: any): any => ({ type: 'notEqual', attribute, value }),
+  greaterThan: (attribute: string, value: any): any => ({ type: 'greaterThan', attribute, value }),
+  greaterThanEqual: (attribute: string, value: any): any => ({ type: 'greaterThanEqual', attribute, value }),
+  lessThan: (attribute: string, value: any): any => ({ type: 'lessThan', attribute, value }),
+  lessThanEqual: (attribute: string, value: any): any => ({ type: 'lessThanEqual', attribute, value }),
+  search: (attribute: string, value: any): any => ({ type: 'search', attribute, value }),
+  orderDesc: (attribute: string): any => ({ type: 'orderDesc', attribute }),
+  orderAsc: (attribute: string): any => ({ type: 'orderAsc', attribute }),
+  limit: (value: number): any => ({ type: 'limit', value }),
+  offset: (value: number): any => ({ type: 'offset', value }),
+  select: (value: string[]): any => ({ type: 'select', value }),
+  isNull: (attribute: string): any => ({ type: 'isNull', attribute }),
+  isNotNull: (attribute: string): any => ({ type: 'isNotNull', attribute }),
+  or: (queries: any[]): any => ({ type: 'or', queries }),
+  startsWith: (attribute: string, value: any): any => ({ type: 'startsWith', attribute, value }),
+  contains: (attribute: string, value: any): any => ({ type: 'contains', attribute, value }),
 };
 
 export const Permission = {
@@ -135,6 +153,13 @@ export const Models = {
   Document: class {},
   Row: class {},
 };
+
+export namespace Models {
+  export type Document = any;
+  export type Row = any;
+  export type DefaultRow = any;
+  export type RowList<T = any> = { total: number; rows: T[] };
+}
 
 export const OAuthProvider = {
   Google: 'google',
@@ -168,7 +193,10 @@ export class Databases {
 export class Storage {
   constructor(_client?: any) {}
   getFilePreview(..._args: any[]): string { return ''; }
+  getFileView(..._args: any[]): string { return ''; }
   getFileDownload(..._args: any[]): string { return ''; }
+  async getFile(..._args: any[]): Promise<any> { return {}; }
+  async updateFile(..._args: any[]): Promise<any> { return {}; }
   async createFile(..._args: any[]): Promise<any> { return {}; }
   async deleteFile(..._args: any[]): Promise<any> { return {}; }
 }
@@ -176,10 +204,10 @@ export class Storage {
 export const client = {};
 
 export const tablesDB = {
-  async getRow(..._args: any[]): Promise<any> { return null; },
-  async listRows(..._args: any[]): Promise<any> { return { rows: [], total: 0 }; },
-  async createRow(..._args: any[]): Promise<any> { return {}; },
-  async updateRow(..._args: any[]): Promise<any> { return {}; },
+  async getRow<T = any>(..._args: any[]): Promise<T | null> { return null; },
+  async listRows<T = any>(..._args: any[]): Promise<{ rows: T[]; total: number }> { return { rows: [], total: 0 }; },
+  async createRow<T = any>(..._args: any[]): Promise<T> { return {} as T; },
+  async updateRow<T = any>(..._args: any[]): Promise<T> { return {} as T; },
   async deleteRow(..._args: any[]): Promise<any> { return {}; },
 };
 
@@ -188,22 +216,61 @@ export const databases = tablesDB;
 export const account = {
   async get(): Promise<any> { return null; },
   async createSession(..._args: any[]): Promise<any> { return {}; },
+  async createEmailPasswordSession(..._args: any[]): Promise<any> { return {}; },
   async deleteSession(..._args: any[]): Promise<any> { return {}; },
   async getPrefs(): Promise<any> { return {}; },
   async updatePrefs(..._args: any[]): Promise<any> { return {}; },
+  async updateName(_name: string): Promise<any> { return { success: true }; },
+  async hasMasterpass(): Promise<boolean> { return false; },
+  async searchGlobalProfiles(..._args: any[]): Promise<any[]> { return []; },
+  async getGlobalProfileStatus(..._args: any[]): Promise<any> { return { status: 'offline' }; },
+  async listLogs(): Promise<any> { return { logs: [] }; },
   async createOAuth2Session(provider: string, _success?: string, _failure?: string) {
     if (typeof window !== 'undefined') {
       window.location.href = `/api/auth/oauth/${provider}`;
     }
     return { success: true };
   },
+  async createJWT(): Promise<any> { return { jwt: '' }; },
 };
 
 export const storage = {
   getFilePreview(..._args: any[]): string { return ''; },
+  getFileView(..._args: any[]): string { return ''; },
   getFileDownload(..._args: any[]): string { return ''; },
+  async getFile(..._args: any[]): Promise<any> { return {}; },
+  async updateFile(..._args: any[]): Promise<any> { return {}; },
   async createFile(..._args: any[]): Promise<any> { return {}; },
   async deleteFile(..._args: any[]): Promise<any> { return {}; },
+};
+
+export const users = {
+  async get(id: string): Promise<any> { return null; },
+  async getPrefs(_id?: string): Promise<any> { return {}; },
+  async list(_queries?: any[]): Promise<{ total: number; users: any[] }> { return { total: 0, users: [] }; },
+  async create(_id: string, _email: string, _phone?: string, _password?: string, _name?: string): Promise<any> { return { $id: _id }; },
+  async updatePrefs(_id: string, _prefs: any): Promise<any> { return {}; },
+};
+
+export const teams = {
+  async get(id: string): Promise<any> { return null; },
+  async list(_queries?: any[]): Promise<{ total: number; teams: any[] }> { return { total: 0, teams: [] }; },
+  async create(_id: string, _name: string, _roles?: any[]): Promise<any> { return { $id: _id }; },
+  async delete(_id: string): Promise<any> { return { success: true }; },
+  async createMembership(..._args: any[]): Promise<any> { return {}; },
+  async deleteMembership(..._args: any[]): Promise<any> { return {}; },
+  async listMemberships(..._args: any[]): Promise<any> { return { total: 0, memberships: [] }; },
+};
+
+export const functions = {
+  async createExecution(..._args: any[]): Promise<any> {
+    return { status: 'completed', responseBody: JSON.stringify({ success: true }) };
+  },
+};
+
+export const messaging = {
+  async createSms(..._args: any[]): Promise<any> { return {}; },
+  async createEmail(..._args: any[]): Promise<any> { return {}; },
 };
 
 export const AppwriteService = {
@@ -211,6 +278,18 @@ export const AppwriteService = {
   databases,
   client,
   storage,
+  teams,
+  messaging,
+  functions,
+  async searchGlobalProfiles(...args: any[]): Promise<any[]> { return account.searchGlobalProfiles(...args); },
+  async getGlobalProfileStatus(...args: any[]): Promise<any> { return account.getGlobalProfileStatus(...args); },
+  async getUserDoc(_userId: string): Promise<any> { return null; },
+  async setMasterpassFlag(_userId: string, _email?: string): Promise<any> { return { success: true }; },
+  async listKeychainEntries(_userId: string): Promise<any[]> { return []; },
+  async deleteKeychainEntry(_id: string): Promise<any> { return { success: true }; },
+  async createKeychainEntry(_data: any): Promise<any> { return null; },
+  async createSecurityLog(_data: any): Promise<any> { return { success: true }; },
+  async hasMasterpass(userId?: string): Promise<boolean> { return KeychainService.hasMasterpass(userId); },
 };
 
 export const realtime = {
@@ -220,15 +299,59 @@ export const realtime = {
 };
 
 export function createSystemClient() {
-  return { tablesDB, account, storage, client };
+  return { tablesDB, account, storage, client, users, teams, messaging, functions, databases: tablesDB };
 }
 
-export function createServerClient() {
-  return { tablesDB, account, storage, client };
+export function createServerClient(_jwt?: string) {
+  return { tablesDB, account, storage, client, users, teams, messaging, functions, databases: tablesDB };
 }
 
 export function createAdminClient() {
-  return { tablesDB, account, storage, client };
+  return { tablesDB, account, storage, client, users, teams, messaging, functions, databases: tablesDB };
+}
+
+export async function tryOwnerDirectUpdateNote(id: string, data: any): Promise<any> {
+  return updateNote(id, data);
+}
+
+export async function tryOwnerDirectUpdateGoal(id: string, data: any): Promise<any> {
+  const { systemTables } = await import('./system-tables');
+  return systemTables().updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+    rowId: id,
+    data,
+  });
+}
+
+export async function tryOwnerDirectUpdateProject(id: string, data: any): Promise<any> {
+  const { systemTables } = await import('./system-tables');
+  return systemTables().updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.OBJECTS,
+    rowId: id,
+    data,
+  });
+}
+
+export async function tryOwnerDirectUpdateForm(id: string, data: any): Promise<any> {
+  const { systemTables } = await import('./system-tables');
+  return systemTables().updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+    rowId: id,
+    data,
+  });
+}
+
+export async function tryOwnerDirectUpdateEvent(id: string, data: any): Promise<any> {
+  const { systemTables } = await import('./system-tables');
+  return systemTables().updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+    rowId: id,
+    data,
+  });
 }
 
 export async function getSettings(_id?: string): Promise<any> {
@@ -251,135 +374,188 @@ export async function listActivityLogs(): Promise<any[]> {
   return [];
 }
 
-export async function createTag(name: string, color?: string): Promise<any> {
+export async function createTag(arg1: any, arg2?: any): Promise<any> {
+  const name = typeof arg1 === 'string' ? arg1 : arg1?.name || 'Tag';
+  const color = typeof arg1 === 'string' ? arg2 : arg1?.color;
+  const userId = typeof arg1 === 'object' ? arg1?.userId || 'system' : 'system';
   const { upsertLocalTag } = await import('./local/tags');
-  return upsertLocalTag({ id: `tag_${Date.now()}`, name, color: color || '#6366f1' });
+  return upsertLocalTag(userId, { id: `tag_${Date.now()}`, name, color: color || '#6366f1' });
 }
 
 export async function updateTag(tagId: string, data: any): Promise<any> {
   const { upsertLocalTag } = await import('./local/tags');
-  return upsertLocalTag({ id: tagId, ...data });
+  return upsertLocalTag('system', { id: tagId, ...data });
 }
 
 export async function deleteTag(id: string): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  return systemTables().tags.delete(id);
+  const db = systemTables();
+  return (db.deleteRow as any)({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.TAGS,
+    rowId: id,
+  });
 }
 
 export async function getAllTags(): Promise<any[]> {
   const { systemTables } = await import('./system-tables');
-  return systemTables().tags.list();
+  const db = systemTables();
+  const res = await (db.listRows as any)({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.TAGS,
+  });
+  return res.rows;
 }
 
 export async function listTagsByUser(): Promise<any[]> {
-  const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.tags.list();
+  return getAllTags();
+}
+
+export async function listTags(): Promise<any[]> {
+  return getAllTags();
 }
 
 export async function createTotpSecret(data: any): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.totpSecrets.create({ id: `totp_${Date.now()}`, ...data });
+  const id = `totp_${Date.now()}`;
+  return systemTables().createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+    tableId: 'totp_secrets',
+    rowId: id,
+    data: { id, ...data },
+  });
 }
 
 export async function updateTotpSecret(id: string, data: any): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.totpSecrets.update(id, data);
+  return systemTables().updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+    tableId: 'totp_secrets',
+    rowId: id,
+    data,
+  });
 }
 
 export async function deleteTotpSecret(id: string): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.totpSecrets.delete(id);
+  return systemTables().deleteRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+    tableId: 'totp_secrets',
+    rowId: id,
+  });
 }
 
 export async function listTotpSecrets(): Promise<any[]> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.totpSecrets.list();
+  const res = await systemTables().listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+    tableId: 'totp_secrets',
+  });
+  return res.rows;
 }
 
 export async function createCredential(data: any): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.credentials.create({ id: `cred_${Date.now()}`, ...data });
+  const id = `cred_${Date.now()}`;
+  return systemTables().createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+    tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+    rowId: id,
+    data: { id, ...data },
+  });
 }
 
 export async function updateCredential(id: string, data: any): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.credentials.update(id, data);
+  return systemTables().updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+    tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+    rowId: id,
+    data,
+  });
 }
 
 export async function deleteCredential(id: string): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.credentials.delete(id);
+  return systemTables().deleteRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+    tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+    rowId: id,
+  });
 }
 
 export async function setCredentialPinned(id: string, isPinned: boolean): Promise<any> {
-  const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.credentials.update(id, { isPinned });
+  return updateCredential(id, { isPinned });
 }
 
 export async function setTotpPinned(id: string, isPinned: boolean): Promise<any> {
-  const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.totpSecrets.update(id, { isPinned });
+  return updateTotpSecret(id, { isPinned });
 }
 
 export async function validatePublicNoteAccess(noteId: string): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  const note = await db.notes.get(noteId).catch(() => null);
-  if (!note) return null;
-  return note;
+  return systemTables().getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    rowId: noteId,
+  }).catch(() => null);
 }
 
 export async function createComment(noteId: string, content: string): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
   const id = `comment_${Date.now()}`;
-  return db.comments.create({
-    id,
-    noteId,
-    content,
-    createdAt: new Date().toISOString(),
+  return systemTables().createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.COMMENTS,
+    rowId: id,
+    data: {
+      id,
+      noteId,
+      content,
+      createdAt: new Date().toISOString(),
+    },
   });
 }
 
 export async function getNote(noteId: string): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.notes.get(noteId);
+  return systemTables().getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    rowId: noteId,
+  });
 }
 
 export async function listNotes(): Promise<any[]> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.notes.list();
+  const res = await systemTables().listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+  });
+  return res.rows;
 }
 
 export async function listNotesByUser(): Promise<any[]> {
-  const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.notes.list();
+  return listNotes();
 }
 
-export async function listNotesPaginated(): Promise<{ rows: any[]; total: number }> {
+export async function listNotesPaginated(_options?: any): Promise<{ rows: any[]; total: number; hasMore?: boolean; nextCursor?: string | null }> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  const rows = await db.notes.list();
-  return { rows, total: rows.length };
+  const res = await systemTables().listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+  });
+  return { rows: res.rows, total: res.total, hasMore: false, nextCursor: null };
 }
 
 export async function updateNote(id: string, data: any): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.notes.update(id, data);
+  return systemTables().updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    rowId: id,
+    data,
+  });
 }
 
 export function pickNoteAutosavePayload(data: any): any {
@@ -390,10 +566,12 @@ export function isExcludedNote(_note: any): boolean {
   return false;
 }
 
+export function createDirectUpdateEvent(_data: any) {}
+export function invalidateNoteRowClientCache(_id?: string) {}
+export function ideaListExclusionQueries(): any[] { return []; }
+
 export async function getNotesByTag(tagId: string): Promise<any[]> {
-  const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  const rows = await db.notes.list();
+  const rows = await listNotes();
   return rows.filter((n: any) => Array.isArray(n.tags) && n.tags.includes(tagId));
 }
 
@@ -443,22 +621,31 @@ export async function getCurrentPublicNoteShareUrl(id: string): Promise<string> 
   return getShareableUrl(id);
 }
 
-export async function listFlowTasks(): Promise<any[]> {
+export async function listFlowTasks(_queries?: any[]): Promise<{ rows: any[]; total: number }> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.tasks.list();
+  const res = await systemTables().listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+  });
+  return { rows: res.rows, total: res.total };
 }
 
-export async function listFlowEvents(): Promise<any[]> {
+export async function listFlowEvents(_queries?: any[]): Promise<{ rows: any[]; total: number }> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.events.list();
+  const res = await systemTables().listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+  });
+  return { rows: res.rows, total: res.total };
 }
 
-export async function listKeepCredentials(): Promise<any[]> {
+export async function listKeepCredentials(_queries?: any[]): Promise<{ rows: any[]; total: number }> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.credentials.list();
+  const res = await systemTables().listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+    tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+  });
+  return { rows: res.rows, total: res.total };
 }
 
 export async function getGoalShareUrlWithDek(id: string, dek?: string | null): Promise<string> {
@@ -472,14 +659,22 @@ export function isGoalLocked(goal: any): boolean {
 
 export async function lockGoal(id: string): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.tasks.update(id, { isLocked: true });
+  return systemTables().updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+    rowId: id,
+    data: { isLocked: true },
+  });
 }
 
 export async function unlockGoal(id: string): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const db = systemTables();
-  return db.tasks.update(id, { isLocked: false });
+  return systemTables().updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+    rowId: id,
+    data: { isLocked: false },
+  });
 }
 
 export function hasAuthSessionHint(): boolean {
@@ -511,8 +706,8 @@ export async function getCurrentUser(): Promise<any> {
   return getCurrentUserSnapshot();
 }
 
-export async function createTaskFromNote(noteId: string): Promise<any> {
-  return { success: true, noteId };
+export async function createTaskFromNote(note: any): Promise<any> {
+  return { success: true, note };
 }
 
 export function cleanRowData(data: any): any {
@@ -523,11 +718,11 @@ export function filterNoteData(data: any): any {
   return data;
 }
 
-export function getProfilePicturePreview(_id?: string): string {
+export function getProfilePicturePreview(_id?: string, _width?: number, _height?: number): string {
   return '';
 }
 
-export function setKylrixPulse(_pulse: any): void {}
+export function setKylrixPulse(_pulse: any, _avatarBase64?: any): void {}
 
 export function getKylrixPulse(): any {
   return null;
@@ -537,11 +732,47 @@ export const ProjectsService = {
   async listUserProjects(): Promise<{ rows: any[]; total: number }> {
     return { rows: [], total: 0 };
   },
-  async getProject(): Promise<any> {
+  async getProject(_id?: string): Promise<any> {
     return null;
+  },
+  async listProjects(..._args: any[]): Promise<any> {
+    return { rows: [], total: 0 };
+  },
+  async createProject(..._args: any[]): Promise<any> {
+    return {};
+  },
+  async updateProject(..._args: any[]): Promise<any> {
+    return {};
+  },
+  async deleteProject(..._args: any[]): Promise<any> {
+    return { success: true };
+  },
+  async removeCollaborator(..._args: any[]): Promise<any> {
+    return { success: true };
+  },
+  async addCollaborator(..._args: any[]): Promise<any> {
+    return { success: true };
+  },
+  async rotateInviteCode(..._args: any[]): Promise<any> {
+    return { inviteCode: 'code' };
+  },
+  async listProjectCollaborators(..._args: any[]): Promise<any> {
+    return { rows: [], total: 0 };
+  },
+  async approveJoinRequest(..._args: any[]): Promise<any> {
+    return { success: true };
+  },
+  async listProjectObjectsByKind(..._args: any[]): Promise<any[]> {
+    return [];
   },
   async listTaggedResources(_wsId: string): Promise<any> {
     return { totps: [], notes: [], tasks: [], events: [] };
+  },
+  async addObjectToProject(..._args: any[]): Promise<any> {
+    return { success: true };
+  },
+  async fetchRemoteProjects(..._args: any[]): Promise<any[]> {
+    return [];
   },
 };
 
@@ -549,6 +780,8 @@ export const KeychainService = {
   async getKeychainCount(): Promise<number> { return 0; },
   async getMasterpassState(): Promise<any> { return null; },
   async unwrapDekWithPassword(): Promise<any> { return null; },
+  async listKeychainEntries(_userId?: string): Promise<any[]> { return []; },
+  async hasMasterpass(_userId?: string): Promise<boolean> { return false; },
 };
 
 export const VaultService = {
@@ -556,4 +789,8 @@ export const VaultService = {
   async updateTOTPSecret(id: string, data: any): Promise<any> {
     return updateTotpSecret(id, data);
   },
+  async listAllCredentials(_userId?: string): Promise<any[]> { return []; },
+  async listTOTPSecrets(_userId?: string): Promise<any[]> { return []; },
+  async getCredential(id: string): Promise<any> { return null; },
+  async getTOTPSecret(id: string): Promise<any> { return null; },
 };

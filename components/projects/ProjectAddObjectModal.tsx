@@ -161,21 +161,21 @@ export default function ProjectAddObjectModal({
             return filtered;
           }
           case 1: { // Goal
-            const taskRes = await listFlowTasks(queries);
-            return taskRes.rows || [];
+            const taskRes = await listFlowTasks();
+            return (Array.isArray(taskRes) ? taskRes : (taskRes as any)?.rows || []) as any[];
           }
           case 2: { // Secret
             if (query.trim()) {
-              const secretsRes = await listKeepCredentials(queries);
-              return secretsRes.rows || [];
+              const secretsRes = await listKeepCredentials();
+              return (Array.isArray(secretsRes) ? secretsRes : (secretsRes as any)?.rows || []) as any[];
             } else {
               const secretsRes = await EcosystemService.listSecrets(user.$id, true);
-              return secretsRes.rows || [];
+              return (Array.isArray(secretsRes) ? secretsRes : (secretsRes as any)?.rows || []) as any[];
             }
           }
           case 3: { // Form
             const formRes = await FormsService.listUserForms(user.$id);
-            const rows = formRes.rows || [];
+            const rows = (Array.isArray(formRes) ? formRes : (formRes as any)?.rows || []) as any[];
             if (query.trim()) {
               return rows.filter((f: any) => 
                 (f.title || '').toLowerCase().includes(query.toLowerCase()) ||
@@ -196,8 +196,8 @@ export default function ProjectAddObjectModal({
             return rows;
           }
           case 5: { // Tag
-            const tagRes = await listTagsByUser(user.$id);
-            const rows = tagRes.rows || [];
+            const tagRes = await listTagsByUser();
+            const rows = (Array.isArray(tagRes) ? tagRes : (tagRes as any)?.rows || []) as any[];
             if (query.trim()) {
               return rows.filter((t: any) => 
                 (t.name || '').toLowerCase().includes(query.toLowerCase())

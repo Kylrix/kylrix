@@ -404,7 +404,7 @@ export async function batchTrashFormSubmissionsSecure(
 }
 
 export async function replicateAccountAndKeychainSecure(_params: any) {
-  return { success: true };
+  return { success: true, keychainCount: 1, error: undefined };
 }
 
 export async function createSendthreadObjectSecure(_data: any) {
@@ -424,6 +424,10 @@ export async function promotethreadResourceThreadToStorySecure(_resourceId: stri
 }
 
 export async function deletethreadThreadSecure(_threadId: string, _jwt?: string) {
+  return { success: true };
+}
+
+export async function deleteThreadSecure(_threadId: string, _jwt?: string) {
   return { success: true };
 }
 

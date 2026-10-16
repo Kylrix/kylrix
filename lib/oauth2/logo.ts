@@ -34,10 +34,10 @@ export async function uploadOAuthAppLogo(file: File): Promise<{
   const fileId = ID.unique();
   await storage.createFile(BUCKET, fileId, compressed, [
     Permission.read(Role.any()),
-    Permission.read(Role.user(user.$id)),
+    Permission.read(Role.user(user?.$id || user?.id || 'guest')),
   ]);
 
-  const view = storage.getFileView(BUCKET, fileId);
+  const view = storage.getFilePreview(BUCKET, fileId);
   const logoUri = typeof view === 'string' ? view : String(view);
 
   return { fileId, logoUri };
