@@ -1,5 +1,4 @@
-import { Permission, Role } from '@/lib/data';
-import { APPWRITE_CONFIG } from './appwrite/config';
+import { Permission, Role, APPWRITE_CONFIG } from '@/lib/data';
 
 const {} = APPWRITE_CONFIG;
 
@@ -9,7 +8,7 @@ const {} = APPWRITE_CONFIG;
 export type EventVisibility = 'public' | 'private' | 'unlisted';
 
 /**
- * Permission helper functions for Appwrite
+ * Permission helper functions
  */
 export const permissions = {
   /**
@@ -27,7 +26,6 @@ export const permissions = {
 
   /**
    * Get permissions array for unlisted (anyone with link can read, but not discoverable)
-   * In Appwrite, this is similar to public but we track it via visibility field
    */
   unlistedRead: (userId: string) => [
     Permission.read(Role.any()),
@@ -46,9 +44,5 @@ export const permissions = {
       default:
         return permissions.privateOnly(userId);
     }
-  }};
-
-/**
- * Event permission management
- */
-
+  }
+};

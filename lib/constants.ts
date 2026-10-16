@@ -1,5 +1,4 @@
-import { APPWRITE_CONFIG } from './appwrite/config';
-
+import { APPWRITE_CONFIG } from '@/lib/data';
 
 export const APP_BASE_PATHS: Record<string, string> = {
   accounts: '/accounts',
@@ -8,13 +7,13 @@ export const APP_BASE_PATHS: Record<string, string> = {
   flow: '/flows',
   connect: '/app',
   projects: '/app',
-  kylrix: '/'};
+  kylrix: '/'
+};
 
 export const KYLRIX_AUTH_URI =
   typeof window !== 'undefined'
     ? `${window.location.origin}${APP_BASE_PATHS.accounts}`
-    : `https://${APPWRITE_CONFIG.SYSTEM.AUTH_SUBDOMAIN}.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
-
+    : `https://${(APPWRITE_CONFIG.SYSTEM as any).AUTH_SUBDOMAIN || 'auth'}.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
 
 export function getEcosystemUrl(subdomain: string, path = '') {
   if (!subdomain) {
@@ -31,7 +30,8 @@ export function getEcosystemUrl(subdomain: string, path = '') {
       flow: '/flows',
       connect: '/app',
       projects: '/app',
-      kylrix: '/'};
+      kylrix: '/'
+    };
     basePath = rawPaths[subdomain] || `/${subdomain}`;
   } else {
     basePath = APP_BASE_PATHS[subdomain] || `/${subdomain}`;
