@@ -348,8 +348,8 @@ const mapAppwriteCalendarToProject = (doc: AppwriteCalendar): Project => ({
 
 const mapEcosystemTagsToLabels = (tags: Tags[]): Label[] =>
   tags
-    .filter((tag): tag is Tags & { name: string } => Boolean(tag.name))
-    .map((tag) => ({
+    .filter((tag: any): tag is Tags & { name: string } => Boolean(tag.name))
+    .map((tag: any) => ({
       id: tag.name,
       name: tag.name,
       color: (tag as Tags & { color?: string }).color || '#9B9691',
@@ -839,7 +839,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const goalProjectObjectIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     goalProjectObjectIdsRef.current = new Set(
-      goalProjectObjects.map((po) => po.entityId).filter(Boolean) as string[]
+      (goalProjectObjects || []).map((po: any) => po.entityId).filter(Boolean) as string[]
     );
   }, [goalProjectObjects]);
 
@@ -926,7 +926,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     } catch {}
 
     try {
-      const { rows } = await getAllTags();
+      const res = await getAllTags();
+      const rows = Array.isArray(res) ? res : (res as any)?.rows || [];
       dispatch({ type: 'SET_ECOSYSTEM_TAGS', payload: rows });
       if (uid !== 'guest') {
         void setCachedData(tagsKey, { rows, total: rows.length });
@@ -999,10 +1000,12 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       tursoGoals.length > 0 ? Promise.resolve({ rows: [] }) : fetchOptimized(tasksKey, () => taskApi.list(taskQueries), force ? 0 : FLOW_WARM_TTL),
       fetchOptimized(calsKey, () => calendarApi.list(calQueries), force ? 0 : FLOW_WARM_TTL)]);
 
+    const tRows = (tList as any)?.rows || (Array.isArray(tList) ? tList : []);
+
     // Opportunistic Turso migration: persist fetched goals to Turso so Turso becomes permanent primary
-    if (tursoGoals.length === 0 && Array.isArray(tList?.rows) && tList.rows.length > 0 && uid && uid !== 'guest') {
+    if (tursoGoals.length === 0 && Array.isArray(tRows) && tRows.length > 0 && uid && uid !== 'guest') {
       void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
-        for (const row of tList.rows) {
+        for (const row of tRows) {
           const m = mapAppwriteTaskToTask(row);
           void upsertGoalTurso({
             id: m.id,
@@ -1024,7 +1027,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       }).catch(() => {});
     }
 
-    const appwriteTasks = (tList?.rows || []).map(mapAppwriteTaskToTask);
+    const appwriteTasks = (tRows || []).map(mapAppwriteTaskToTask);
     const taskMap = new Map<string, Task>();
     appwriteTasks.forEach((t) => taskMap.set(t.id, t));
     tursoGoals.forEach((t) => {
@@ -1042,7 +1045,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     return { 
       tasks: Array.from(taskMap.values()), 
-      projects: (cList?.rows || []).map(mapAppwriteCalendarToProject) 
+      projects: ((cList as any)?.rows || (Array.isArray(cList) ? cList : [])).map(mapAppwriteCalendarToProject)
     };
 
   }, [fetchOptimized]);
@@ -1364,7 +1367,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     const initRealtime = async () => {
       // Subscribe to Tasks
-      unsubTasks = await subscribeToTable<AppwriteTask>(APPWRITE_CONFIG.TABLES.TASKS, ({ type, payload }) => {
+      unsubTasks = await subscribeToTable<AppwriteTask>(APPWRITE_CONFIG.TABLES.FLOW.TASKS, ({ type, payload }) => {
         const payloadId = payload.$id || payload.id;
         if (!payloadId) return;
         const isBelonging = Boolean(
@@ -1407,7 +1410,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       });
 
       // Subscribe to Calendars/Projects
-      unsubProjects = await subscribeToTable<AppwriteCalendar>(APPWRITE_CONFIG.TABLES.CALENDARS, ({ type, payload }) => {
+      unsubProjects = await subscribeToTable<AppwriteCalendar>('calendars', ({ type, payload }) => {
         if (payload.userId !== state.userId) return;
 
         if (type === 'create') {
@@ -1740,7 +1743,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           payload: {
             id,
             updates: {
-              scheduled: updatedDoc.scheduled}
+              scheduled: Boolean((updatedDoc as any)?.scheduled)}
           }
         });
         invalidateTasksNexus(state.userId || 'guest');

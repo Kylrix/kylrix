@@ -33,7 +33,7 @@ export async function persistMfaRecoveryCodes(
     isDeleted: false};
 
   if (existing) {
-    await ApiResources.updateVaultItem(actor, existing.id || existing.$id, payload);
+    await ApiResources.updateVaultItem(actor, (existing as any).id || (existing as any).$id, payload);
     return;
   }
 

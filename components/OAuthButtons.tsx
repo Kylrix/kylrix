@@ -78,7 +78,7 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
     return null;
   }
 
-  const handleLogin = async (provider: OAuthProvider) => {
+  const handleLogin = async (provider: string) => {
     setLoading(true);
     setError(null);
 

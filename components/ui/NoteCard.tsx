@@ -132,7 +132,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       return getNoteShareUrlWithDek(note.$id, note.dek);
     }
     const { getCurrentPublicNoteShareUrl } = await import('@/lib/data');
-    const url = await getCurrentPublicNoteShareUrl(note.$id, note);
+    const url = await getCurrentPublicNoteShareUrl(note.$id);
     if (url) return url;
     const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
     return buildPublicResourceUrl('note', note.$id);

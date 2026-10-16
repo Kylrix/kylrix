@@ -451,7 +451,7 @@ export function NoteDetailSidebar({
           getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'tasks', rowId: id },
           () => listFlowTasks([Query.equal('$id', id)]).then(res => res.rows[0] || null))
         ));
-        setLinkedTasks(resolved.filter(Boolean));
+        setLinkedTasks(resolved.filter(Boolean) as any[]);
       } finally { setIsLoadingTasks(false); }
     };
     fetchTasks();
@@ -466,7 +466,7 @@ export function NoteDetailSidebar({
           getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'events', rowId: id },
           () => listFlowEvents([Query.equal('$id', id)]).then(res => res.rows[0] || null))
         ));
-        setLinkedEvents(resolved.filter(Boolean));
+        setLinkedEvents(resolved.filter(Boolean) as any[]);
       } finally { setIsLoadingEvents(false); }
     };
     fetchEvents();
@@ -481,7 +481,7 @@ export function NoteDetailSidebar({
           getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.VAULT, tableId: 'credentials', rowId: id },
           () => listKeepCredentials([Query.equal('$id', id)]).then(res => res.rows[0] || null))
         ));
-        setLinkedSecrets(resolved.filter(Boolean));
+        setLinkedSecrets(resolved.filter(Boolean) as any[]);
       } finally { setIsLoadingSecrets(false); }
     };
     fetchSecrets();
@@ -495,7 +495,7 @@ export function NoteDetailSidebar({
       try {
         const { getResourceCollaborators } = await import('@/lib/actions/client-ops');
         const { collaborators } = await getResourceCollaborators({ resourceId: liveNote.$id, resourceType: 'note' });
-        if (active) setCollaboratorProfiles(collaborators);
+        if (active) setCollaboratorProfiles(Array.isArray(collaborators) ? collaborators : []);
       } catch (err) {
         console.error('Failed to fetch collaborators:', err);
       } finally {
@@ -1593,14 +1593,14 @@ export function NoteDetailSidebar({
 
             {(() => {
               const seenLower = new Set<string>();
-              const uniqueTags = (ecosystemTags || []).filter((tag) => {
+              const uniqueTags = (ecosystemTags || []).filter((tag: any) => {
                 const key = String(tag.name || '').trim().toLowerCase();
                 if (!key || seenLower.has(key)) return false;
                 seenLower.add(key);
                 return true;
               });
 
-              return uniqueTags.map((tag) => {
+              return uniqueTags.map((tag: any) => {
                 const currentTagsArray = tags.split(',').map((t: string) => t.trim()).filter(Boolean);
                 const tagLower = (tag.name || '').trim().toLowerCase();
                 const isSelected = currentTagsArray.some((t) => t.toLowerCase() === tagLower);

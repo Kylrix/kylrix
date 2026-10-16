@@ -26,8 +26,8 @@ async function _fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes
   const missing = ids.filter((id) => !byId.has(id));
   if (missing.length) {
     try {
-      const res = await listNotes([Query.equal('$id', missing)], Math.max(missing.length, 1));
-      for (const row of (res.rows || []) as Notes[]) {
+      const res = await listNotes();
+      for (const row of (Array.isArray(res) ? res : (res as any)?.rows || []) as Notes[]) {
         if (row?.$id) byId.set(row.$id, row);
       }
     } catch {

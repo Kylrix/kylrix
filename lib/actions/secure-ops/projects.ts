@@ -174,7 +174,7 @@ export async function createProjectSecure(data: any, jwt?: string) {
     updatedAt: now,
   });
 
-  return JSON.parse(JSON.stringify({ $id: projectId, id: projectId, creatorId: actor.$id, name: validated.title }));
+  return JSON.parse(JSON.stringify({ $id: projectId, id: projectId, creatorId: actor.$id, name: validated.title, createdAt: now, updatedAt: now }));
 }
 
 export async function updateProjectSecure(projectId: string, data: any, _permissions?: string[], jwt?: string) {
@@ -191,10 +191,11 @@ export async function updateProjectSecure(projectId: string, data: any, _permiss
     creatorId: actor.$id,
     name: data.title || data.name || 'Workspace',
     description: data.summary || data.description || '',
+    createdAt: now,
     updatedAt: now,
   });
 
-  return JSON.parse(JSON.stringify({ $id: projectId, id: projectId, ...data }));
+  return JSON.parse(JSON.stringify({ $id: projectId, id: projectId, creatorId: actor.$id, updatedAt: now, ...data }));
 }
 
 export async function deleteProjectSecure(
@@ -557,5 +558,5 @@ export async function resolveAgentKeyBlobSecure(
   agentOrWorkspaceId: string,
   _jwt?: string
 ) {
-  return { success: true, agentId: agentOrWorkspaceId };
+  return { success: true, agentId: agentOrWorkspaceId, encryptedKeyBlob: null, mekHex: null };
 }

@@ -47,7 +47,7 @@ export function TagSelectorDrawer() {
         } else if (uid !== 'guest') {
           const { getAllTags, listTags } = await import('@/lib/data');
           const res = await getAllTags().catch(() => listTags());
-          const rows = Array.isArray(res) ? res : (Array.isArray(res?.rows) ? res.rows : []);
+          const rows = Array.isArray(res) ? res : (Array.isArray((res as any)?.rows) ? (res as any).rows : []);
           if (rows.length > 0) {
             setDirectLocalTags(rows);
             await writeLocalTagRows(uid, rows);

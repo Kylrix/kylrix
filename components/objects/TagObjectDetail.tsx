@@ -56,15 +56,15 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded: _embed
   const hasMore = visibleTags.length < tags.length;
 
   const fetchTags = useCallback(async () => {
-    if (!user?.$id) return;
+    if (!user?.id && !user?.$id) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await listTagsByUser(user.$id);
-      const rows = (res.rows || []) as Tags[];
+      const res = await listTagsByUser();
+      const rows = (Array.isArray(res) ? res : (res as any)?.rows || []) as Tags[];
       setTags(rows);
       if (initialTagId) {
-        const found = rows.find((t) => t.$id === initialTagId);
+        const found = rows.find((t) => (t.id || t.$id) === initialTagId);
         if (found) setSelectedTag(found);
       }
     } catch (err: any) {
@@ -72,7 +72,7 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded: _embed
     } finally {
       setLoading(false);
     }
-  }, [user?.$id, initialTagId]);
+  }, [user?.id, user?.$id, initialTagId]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -87,7 +87,7 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded: _embed
     setResolvingResources(true);
     try {
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      const uid = user?.$id || 'guest';
+      const uid = user?.id || user?.$id || 'guest';
       const [notes, tasks, creds, totps, events, forms] = await Promise.all([
         LocalEngine.cacheGet<any[]>(`f_notes_list_${uid}`).catch(() => []),
         LocalEngine.cacheGet<any[]>(`f_goals_list_${uid}`).catch(() => []),
