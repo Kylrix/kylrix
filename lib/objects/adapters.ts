@@ -1,4 +1,4 @@
-import type { Notes } from '@/types/appwrite';
+import type { Notes } from '@/lib/data';
 import type { Task } from '@/types';
 import type { UnifiedObjectCardModel, UnifiedObjectDetailModel } from '@/lib/objects/types';
 import { isEncryptedCiphertext, resolveNoteCardTitle } from '@/constants/noteTitle';

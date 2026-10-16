@@ -1,4 +1,4 @@
-import { client } from '@/lib/appwrite/client';
+import { client } from '@/lib/data';
 
 export class OAuth2HttpError extends Error {
   status: number;

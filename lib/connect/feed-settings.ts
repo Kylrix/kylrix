@@ -1,7 +1,7 @@
 'use client';
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 
 export type ConnectFeedSettings = {
   topics: string[];

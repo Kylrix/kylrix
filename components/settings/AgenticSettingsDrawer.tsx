@@ -175,7 +175,7 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
     setSaving(true);
     try {
       const { AgenticService } = await import('@/lib/services/agentic');
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const user = await account.get().catch(() => null);
       if (!user?.$id) throw new Error('Sign in required');
 
@@ -189,8 +189,8 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
         toast.success(`${name} created successfully!`);
         mode.onCreated?.(created);
       } else if (mode.type === 'edit_custom') {
-        const { tablesDB } = await import('@/lib/appwrite/client');
-        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const { tablesDB } = await import('@/lib/data');
+        const { APPWRITE_CONFIG } = await import('@/lib/data');
         await tablesDB.updateRow(
           APPWRITE_CONFIG.DATABASES.FLOW,
           APPWRITE_CONFIG.TABLES.FLOW.AGENTS,

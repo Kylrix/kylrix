@@ -1,4 +1,4 @@
-import { ID, Query } from '@/lib/appwrite/types';
+import { ID, Query } from '@/lib/data';
 import { appwriteSessionFetch } from './http';
 
 export type OauthApp = {

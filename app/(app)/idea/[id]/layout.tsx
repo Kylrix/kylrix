@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { validatePublicNoteAccess } from '@/lib/appwrite';
+import { validatePublicNoteAccess } from '@/lib/data';
 import { buildOgMetadata } from '@/lib/og/share-card';
 
 export async function generateMetadata({

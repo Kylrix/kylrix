@@ -12,7 +12,7 @@ import {
   Wand2
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
-import { Forms } from '@/types/appwrite';
+import { Forms } from '@/lib/data';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';

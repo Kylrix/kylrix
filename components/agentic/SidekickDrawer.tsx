@@ -239,7 +239,7 @@ export function SidekickDrawer({
       setPendingAttachments([]);
       setAttachedSessionObjects([]);
       try {
-        const { account } = await import('@/lib/appwrite/client');
+        const { account } = await import('@/lib/data');
         const jwt = await account.createJWT().then((r: any) => r.jwt || '').catch(() => undefined);
         const { AgenticSessionLocalStore } = await import('@/lib/agentic/session-local-store');
         const user = await account.get().catch(() => null);
@@ -352,7 +352,7 @@ export function SidekickDrawer({
       } else if (actionType === 'form') {
         const { generateObjectAssistSchemaAction } = await import('@/lib/actions/ai');
         const formPrompt = promptText || `Create a form tailored for ${target.type}: ${target.title || 'Untitled'}. Content context: ${target.content?.slice(0, 500) || ''}`;
-        const { account } = await import('@/lib/appwrite/client');
+        const { account } = await import('@/lib/data');
         const jwt = await account.createJWT().then((r: any) => r.jwt || '').catch(() => undefined);
         const schemaRes = await generateObjectAssistSchemaAction({ kind: 'form', prompt: formPrompt, jwt });
         const generated = schemaRes?.data || {};
@@ -479,7 +479,7 @@ export function SidekickDrawer({
     if (draftKey) LocalEngine.cacheSet(draftKey, '').catch(()=>{});
     await LocalEngine.cacheSet(`sidekick:chat:${target.type}:${target.id}`, next).catch(()=>{});
     try {
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const jwt = await account.createJWT().then((r:any)=> r.jwt || '').catch(()=> undefined);
       const { executeSidekickChat } = await import('@/lib/actions/sidekick');
       const res: any = await executeSidekickChat({ target, message: promptWithAttachments, sessionId: sessionId || undefined, jwt }).catch((err: any) => ({
@@ -535,7 +535,7 @@ export function SidekickDrawer({
         if (parsed?.oneLiner) { setResult(parsed); await LocalEngine.cacheSet(`sidekick:result:${target.type}:${target.id}`, parsed).catch(()=>{}); }
       } catch {}
       // Also upsert agentic local store
-      const { account: acc } = await import('@/lib/appwrite/client');
+      const { account: acc } = await import('@/lib/data');
       const user = await acc.get().catch(()=>null);
       if (user?.$id && (res?.sessionId || sessionId)) {
         const sid = res?.sessionId || sessionId!;

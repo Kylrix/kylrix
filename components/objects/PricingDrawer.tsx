@@ -21,7 +21,7 @@ import toast from 'react-hot-toast';
 
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { createBillingCheckoutSessionAction } from '@/lib/actions/billing/billing';
 import { recordPaymentIntentAction } from '@/lib/actions/billing/payment-intent';
 import { calculateTotalSubscriptionPrice, getBundledFreeMonths, getYearlyDiscountedPrice, getYearlyListPrice } from '@/lib/subscription/ppp';

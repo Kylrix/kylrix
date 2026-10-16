@@ -17,12 +17,12 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { NoteDetailSidebar, NoteAccessRole } from '@/components/ui/NoteDetailSidebar';
-import type { Notes } from '@/types/appwrite';
+import type { Notes } from '@/lib/data';
 import {
   realtime,
   APPWRITE_DATABASE_ID,
-  isNoteEditableByAnyone} from '@/lib/appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+  isNoteEditableByAnyone} from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { resolveResourceOwnerId } from '@/lib/utils/resource-ids';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { decryptThreadData } from '@/lib/encryption/thread-crypto';

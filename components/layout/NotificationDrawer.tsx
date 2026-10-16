@@ -32,7 +32,7 @@ import { downloadBugReportMarkdown } from '@/lib/errors/download-bug-report';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 import { sanitizeInAppHref } from '@/lib/routing/app-paths';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';

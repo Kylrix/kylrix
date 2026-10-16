@@ -25,7 +25,7 @@ vi.mock('@/lib/db', () => ({
   },
 }));
 
-vi.mock('@/lib/appwrite-admin', () => ({
+vi.mock('@/lib/data-admin', () => ({
   createSystemTablesDB: vi.fn().mockReturnValue({
     listRows: vi.fn().mockResolvedValue({ rows: [] }),
     createRow: vi.fn().mockResolvedValue({ $id: 'row_created' }),

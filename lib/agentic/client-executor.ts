@@ -161,7 +161,7 @@ async function executeAgenticToolCall(
       const tags = Array.isArray(args.tags) ? args.tags : args.tags ? [args.tags] : [];
       const isPublic = args.isPublic === true || args.isPublic === 'true';
 
-      const { ID } = await import('@/lib/appwrite/types');
+      const { ID } = await import('@/lib/data');
       const { resolveNoteCardTitle } = await import('@/constants/noteTitle');
       const { markNotePersistedRemote } = await import('@/lib/notes/compose-draft-registry');
       const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
@@ -257,7 +257,7 @@ async function executeAgenticToolCall(
 
     if ((key === 'get_note' || key === 'objects.idea.read') && (call.specifier || (args as any).id)) {
       const nid = (call.specifier || (args as any).id) as string;
-      const { getNote } = await import('@/lib/appwrite/note');
+      const { getNote } = await import('@/lib/data');
       const note = await getNote(nid);
       ctx.pushLiveNote?.(note, { pending: false });
       await ctx.recordSessionObject?.({
@@ -376,7 +376,7 @@ async function executeAgenticToolCall(
 
     // ── Projects ────────────────────────────────────────────────
     if (key === 'create_project' || key === 'objects.workspace.create') {
-      const { ProjectsService } = await import('@/lib/appwrite/projects');
+      const { ProjectsService } = await import('@/lib/data');
       const project = await ProjectsService.createProject({
         ownerId: ctx.user?.$id || 'guest',
         title: String(args.title || 'Untitled Project'),

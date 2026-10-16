@@ -5,7 +5,7 @@ import TaskDetails from '@/components/tasks/TaskDetails';
 import { ObjectDetailHost } from '@/components/objects/ObjectDetailHost';
 import { goalToDetail } from '@/lib/objects/adapters';
 import { useTask } from '@/context/TaskContext';
-import { isGoalLocked, decryptGoalForView } from '@/lib/appwrite/goal-crypto';
+import { isGoalLocked, decryptGoalForView } from '@/lib/data';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useSudo } from '@/context/SudoContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';

@@ -84,12 +84,12 @@ export function UniversalSelectionActions() {
             } catch {}
           } else if (activeKind === 'credential') {
             try {
-              const { deleteCredential } = await import('@/lib/appwrite');
+              const { deleteCredential } = await import('@/lib/data');
               await deleteCredential(id).catch(() => null);
             } catch {}
           } else if (activeKind === 'totp') {
             try {
-              const { deleteTotpSecret } = await import('@/lib/appwrite');
+              const { deleteTotpSecret } = await import('@/lib/data');
               await deleteTotpSecret(id).catch(() => null);
             } catch {}
           }

@@ -11,7 +11,7 @@ import { getCurrentLoginMethod, isMfaRequiredError } from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { account, invalidateCurrentUserCache } from '@/lib/appwrite/client';
+import { account, invalidateCurrentUserCache } from '@/lib/data';
 import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction, selfHostedSignUpAction } from '@/lib/actions/auth-actions';
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
 import { KYLRIX_AGENTS_SKILL_INSTALL } from '@/lib/api/public';

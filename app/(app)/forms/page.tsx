@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
-import { Forms } from '@/types/appwrite';
+import { Forms } from '@/lib/data';
 import FormDialog from '@/components/forms/FormDialog';
 import FormSettingsDialog from '@/components/forms/FormSettingsDialog';
 import { FormDetail } from '@/components/forms/FormDetail';
@@ -250,8 +250,8 @@ export default function FormsDashboard() {
         let unsubscribe: (() => void) | undefined;
         void (async () => {
             try {
-                const { realtime } = await import('@/lib/appwrite/client');
-                const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+                const { realtime } = await import('@/lib/data');
+                const { APPWRITE_CONFIG } = await import('@/lib/data');
                 const dbId = APPWRITE_CONFIG.DATABASES.FLOW;
                 const tableId = APPWRITE_CONFIG.TABLES.FLOW.FORMS;
                 const channel = `databases.${dbId}.collections.${tableId}.documents`;
@@ -276,7 +276,7 @@ export default function FormsDashboard() {
 
         void (async () => {
             try {
-                const { ProjectsService } = await import('@/lib/appwrite/projects');
+                const { ProjectsService } = await import('@/lib/data');
                 const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
                 if (tagged?.forms && Array.isArray(tagged.forms) && tagged.forms.length > 0 && !cancelled) {
                     setForms((prev) => {

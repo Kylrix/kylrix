@@ -7,7 +7,7 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
-import { ProjectsService } from '@/lib/appwrite/projects';
+import { ProjectsService } from '@/lib/data';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
 import { userCanUseProjects } from '@/lib/projects/feature-gate-client';
 import { getUserSubscriptionTier } from '@/lib/utils';

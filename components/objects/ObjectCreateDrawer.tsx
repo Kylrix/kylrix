@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import type { ObjectKind } from '@/lib/objects/types';
-import type { Notes } from '@/types/appwrite';
+import type { Notes } from '@/lib/data';
 import type { Task } from '@/types';
 import type { Event } from '@/types';
 import type { ChatCreateMode } from '@/components/objects/CreateChatComposer';

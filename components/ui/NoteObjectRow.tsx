@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { Notes } from '@/types/appwrite';
+import type { Notes } from '@/lib/data';
 import NoteCard from '@/components/ui/NoteCard';
 
 type Props = {

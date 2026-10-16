@@ -4,11 +4,11 @@ import {
   getCachedProfilePreview,
   invalidateProfilePreview,
 } from './profile-preview';
-import { getProfilePicturePreview, getKylrixPulse, setKylrixPulse } from '@/lib/appwrite';
+import { getProfilePicturePreview, getKylrixPulse, setKylrixPulse } from '@/lib/data';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { getProfilePicturePreviewSecure } from '@/lib/actions/secure-ops';
 
-vi.mock('@/lib/appwrite', () => ({
+vi.mock('@/lib/data', () => ({
   getProfilePicturePreview: vi.fn(),
   getKylrixPulse: vi.fn(),
   setKylrixPulse: vi.fn(),

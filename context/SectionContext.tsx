@@ -16,7 +16,7 @@ import { ChatWindow } from '@/components/chat/ChatWindow';
 
 // Helper imports for note detail (live-copy plugin — no open-path getNote)
 import { useAuth } from '@/context/auth/AuthContext';
-import { Notes } from '@/types/appwrite';
+import { Notes } from '@/lib/data';
 import { deleteNote } from '@/lib/actions/client-ops';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useToast } from '@/components/ui/Toast';
@@ -77,7 +77,7 @@ const DEFAULT_LAYOUTS: Record<string, PanelType[]> = {
   '/send': ['stash'],
 };
 
-import { getSettings, updateSettings, createSettings } from '@/lib/appwrite/note';
+import { getSettings, updateSettings, createSettings } from '@/lib/data';
 
 export function SectionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

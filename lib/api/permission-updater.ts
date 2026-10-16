@@ -1,6 +1,6 @@
-import { Databases, ID, Permission, Query, Role, Storage } from '@/lib/appwrite/types';
+import { Databases, ID, Permission, Query, Role, Storage } from '@/lib/data';
 import { createHash } from 'node:crypto';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 
 function getResourceTypeFromTableId(tableId: string): string | null {
   if (tableId === APPWRITE_CONFIG.TABLES.NOTE.NOTES) return 'note';

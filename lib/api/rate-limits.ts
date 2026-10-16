@@ -1,6 +1,6 @@
-import { Permission, Query, Role } from '@/lib/appwrite/types';
+import { Permission, Query, Role } from '@/lib/data';
 import { systemTables } from '@/lib/data';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { ledgerMeetsFeature } from '@/lib/config/pricing-plans';
 import { getVerifiedProEntitlementForUser } from '@/lib/services/internal/subscription-entitlement';
 import { BillingUiTier } from '@/lib/subscription/tier-resolution';

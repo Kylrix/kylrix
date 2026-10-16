@@ -20,7 +20,7 @@ import { parseObjectBlocks, serializeObjectBlock, type SecondaryObjectPayload } 
 import { Paperclip, Loader2 } from 'lucide-react';
 import { StorageService } from '@/lib/services/storage';
 import { attachObject, detachObjectByRelation } from '@/lib/actions/client-ops';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';

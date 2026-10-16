@@ -1,7 +1,7 @@
 'use server';
 
-import { createSystemClient } from '@/lib/appwrite/types';
-import { ID, Query } from '@/lib/appwrite/types';
+import { createSystemClient } from '@/lib/data';
+import { ID, Query } from '@/lib/data';
 import { resolveEffectiveBillingTier } from '@/lib/entitlements/policy';
 import { getActor } from './secure-ops/shared';
 

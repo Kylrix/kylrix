@@ -14,7 +14,7 @@ import {
   User,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import {
   createSponsorshipCheckoutAction,
   getPublicSponsorsAction,

@@ -1,4 +1,4 @@
-import type { Users } from '@/types/appwrite';
+import type { Users } from '@/lib/data';
 
 const CACHE_KEY = 'kylrix_comment_identity_cache_v1';
 

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Tags } from '@/types/appwrite';
-import { listTagsByUser, deleteTag } from '@/lib/appwrite';
+import { Tags } from '@/lib/data';
+import { listTagsByUser, deleteTag } from '@/lib/data';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useToast } from '@/components/ui/Toast';

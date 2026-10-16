@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Logo from "@/components/common/Logo";
 import { ecosystemSecurity } from "@/lib/ecosystem/security";
-import { AppwriteService } from "@/lib/appwrite";
+import { AppwriteService } from "@/lib/data";
 import { useAuth } from "@/context/auth/AuthContext";
 import { unlockWithPasskey } from "@/lib/passkey";
 import { PasskeySetup } from "./PasskeySetup";

@@ -1,4 +1,4 @@
-import type { Notes } from '@/types/appwrite';
+import type { Notes } from '@/lib/data';
 
 /** Client-side encrypted note guard (metadata + legacy column). */
 export function isClientEncryptedNote(note: Notes | null | undefined): boolean {

@@ -31,7 +31,7 @@ export function AgenticMessageActions({
       return;
     }
     try {
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const jwt = await account.createJWT().then((r: { jwt?: string }) => r?.jwt || '').catch(() => undefined);
       const { toggleAgentConversationShareAction } = await import('@/lib/actions/agentic');
       const mode = shared ? 'make_private' : 'publish';

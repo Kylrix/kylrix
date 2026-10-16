@@ -10,12 +10,12 @@ import {
   getNotePublicState,
   decryptPublicEncryptedNote,
   getCurrentUserSnapshot,
-} from '@/lib/appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import type { Notes } from '@/types/appwrite';
+} from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
+import type { Notes } from '@/lib/data';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { isExcludedNote } from '@/lib/appwrite/note';
+import { isExcludedNote } from '@/lib/data';
 import { useDataNexus } from './DataNexusContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { resolveNoteCardTitle } from '@/constants/noteTitle';
@@ -952,7 +952,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         invalidate(`note_${payload.$id}`);
         scheduleInvalidateInitialNotesPage();
         try {
-          const { invalidateNoteRowClientCache } = require('@/lib/appwrite/note');
+          const { invalidateNoteRowClientCache } = require('@/lib/data');
           invalidateNoteRowClientCache(payload.$id);
         } catch {}
         return;
@@ -1137,7 +1137,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
     void (async () => {
       try {
-        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const { ProjectsService } = await import('@/lib/data');
         const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
         if (tagged?.notes && Array.isArray(tagged.notes) && tagged.notes.length > 0 && !cancelled) {
           tagged.notes.forEach((n: any) => {

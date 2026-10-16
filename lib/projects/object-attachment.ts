@@ -1,4 +1,4 @@
-import { ProjectsService } from '@/lib/appwrite/projects';
+import { ProjectsService } from '@/lib/data';
 
 export type ProjectObjectKind =
   | 'note'

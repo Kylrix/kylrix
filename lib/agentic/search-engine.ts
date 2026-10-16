@@ -126,7 +126,7 @@ export async function executeEcosystemSearch(
       if (domain === 'idea') {
         let rows: any[] = Array.isArray(opts?.localNotes) ? opts!.localNotes! : [];
         if (!rows.length) {
-          const { listNotes } = await import('@/lib/appwrite/note');
+          const { listNotes } = await import('@/lib/data');
           const res = await listNotes();
           rows = res.rows || [];
         }
@@ -147,7 +147,7 @@ export async function executeEcosystemSearch(
       } else if (domain === 'goal') {
         let rows: any[] = Array.isArray(opts?.localTasks) ? opts!.localTasks! : [];
         if (!rows.length) {
-          const { listFlowTasks } = await import('@/lib/appwrite/note');
+          const { listFlowTasks } = await import('@/lib/data');
           const res = await listFlowTasks();
           rows = res.rows || [];
         }
@@ -211,7 +211,7 @@ export async function executeEcosystemSearch(
           }
         }
       } else if (domain === 'project') {
-        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const { ProjectsService } = await import('@/lib/data');
         const list = await ProjectsService.listProjects(true);
         for (const row of list.rows || []) {
           const title = String((row as any).title || 'Untitled');

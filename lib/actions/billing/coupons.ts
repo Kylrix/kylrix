@@ -1,9 +1,9 @@
 'use server';
 
-import { ID, Permission, Query, Role } from '@/lib/appwrite/types';
+import { ID, Permission, Query, Role } from '@/lib/data';
 import { getActor } from '@/lib/actions/secure-ops';
-import { createAdminClient, createSystemClient } from '@/lib/appwrite/types';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { createAdminClient, createSystemClient } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { requireAdmin } from '@/lib/services/internal/admin';
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;

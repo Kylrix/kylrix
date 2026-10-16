@@ -1,4 +1,4 @@
-import { KYLRIX_AUTH_URI } from '@/lib/appwrite/config';
+import { KYLRIX_AUTH_URI } from '@/lib/data';
 
 export type UnorganicEmailSource = 'flow' | 'connect' | 'note' | 'vault' | 'accounts';
 

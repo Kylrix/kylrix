@@ -3,7 +3,7 @@
 import { useCallback, useRef } from 'react';
 import { useNotes } from '@/context/NotesContext';
 import { useDataNexus } from '@/context/DataNexusContext';
-import type { Notes } from '@/types/appwrite';
+import type { Notes } from '@/lib/data';
 
 /**
  * Hardcore instant input hook — flow.realtime-input-rxdb-sync

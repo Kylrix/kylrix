@@ -14,7 +14,7 @@ import {
   useMediaQuery,
   Divider} from '@/lib/openbricks/primitives';
 import { startRegistration } from '@simplewebauthn/browser';
-import { AppwriteService } from '@/lib/appwrite';
+import { AppwriteService } from '@/lib/data';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';

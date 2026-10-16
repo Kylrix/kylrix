@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { claimCouponAction } from '@/lib/actions/billing/billing';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 
 type CouponClaimResponse = {
   ok?: boolean;
