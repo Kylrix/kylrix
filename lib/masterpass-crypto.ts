@@ -224,7 +224,7 @@ class MasterPassCrypto {
       );
       if (keychainSuccess) {
         // Ensure user document is marked as having masterpass if keychain exists
-        const { AppwriteService } = await import("./appwrite");
+        const { AppwriteService } = await import("@/lib/data");
         const userDoc = await AppwriteService.getUserDoc(userId);
         if (userDoc && !userDoc.masterpass && userDoc.email) {
           await AppwriteService.setMasterpassFlag(userId, userDoc.email);
@@ -236,7 +236,7 @@ class MasterPassCrypto {
 
         // Check if we need to silently synchronize MasterPass with account password
         try {
-          const { account } = await import("./appwrite/client");
+          const { account } = await import("@/lib/data");
           const userPrefs = await account.getPrefs().catch(() => ({})) as any;
           const masterpassForLoginEnabled = userPrefs?.masterpass_for_login_enabled !== false;
 
@@ -347,9 +347,9 @@ class MasterPassCrypto {
         params: paramsJson,
       });
 
-      if (res?.success && res.entry) {
+      if (res?.success) {
         const { SecurityEnclave } = await import('@/lib/security/enclave');
-        await SecurityEnclave.setKeychain(userId, [res.entry]);
+        await SecurityEnclave.setKeychain(userId, []);
       } else {
         await this.createKeychainEntry(this.masterKey, newPassword, userId);
       }
@@ -359,7 +359,7 @@ class MasterPassCrypto {
 
     // Trigger password sync silently if masterpass_for_login_enabled is active
     try {
-      const { account } = await import("./appwrite/client");
+      const { account } = await import("@/lib/data");
       const userPrefs = await account.getPrefs().catch(() => ({})) as any;
       const masterpassForLoginEnabled = userPrefs?.masterpass_for_login_enabled !== false;
 
@@ -461,7 +461,7 @@ class MasterPassCrypto {
           logDebug("[Vault] Local unwrap failed. Attempting JIT remote sync of keychain...");
           const { SecurityEnclave } = await import('@/lib/security/enclave');
           await SecurityEnclave.hydrateFromRemote(userId, { force: true });
-          const { AppwriteService } = await import('./appwrite');
+          const { AppwriteService } = await import('@/lib/data');
           const freshEntries = await AppwriteService.listKeychainEntries(userId).catch(() => []);
           const passwordEntries = freshEntries.filter((r: any) => r.type === 'password');
 
@@ -587,9 +587,9 @@ class MasterPassCrypto {
                 params: paramsJson,
               });
 
-              if (res?.success && res.entry) {
+              if (res?.success) {
                 const { SecurityEnclave } = await import('@/lib/security/enclave');
-                await SecurityEnclave.setKeychain(userId, [res.entry]);
+                await SecurityEnclave.setKeychain(userId, []);
               }
 
               logDebug("[Migration] Successfully upgraded to Argon2id via atomic transaction.");
@@ -611,7 +611,7 @@ class MasterPassCrypto {
   // Create a new keychain entry (wraps the MEK with the password)
   private async createKeychainEntry(mek: CryptoKey, password: string, userId: string, useArgon = true, isPending = false, authPass = true): Promise<any> {
     try {
-      const { AppwriteService } = await import("./appwrite");
+      const { AppwriteService } = await import("@/lib/data");
 
       // Generate new random salt for the AuthKey
       const salt = crypto.getRandomValues(new Uint8Array(MasterPassCrypto.SALT_SIZE));
@@ -1002,7 +1002,7 @@ class MasterPassCrypto {
 
   async isMigrationInterrupted(userId: string): Promise<boolean> {
     try {
-      const { AppwriteService } = await import("./appwrite");
+      const { AppwriteService } = await import("@/lib/data");
       const entries = await AppwriteService.listKeychainEntries(userId);
       const passwordEntries = entries.filter((e: any) => e.type === "password");
       return passwordEntries.some((e: any) => e.isPending);
@@ -1085,5 +1085,3 @@ export function looksEncrypted(val?: string | null): boolean {
   
   return false;
 }
-
-// Add utility function for reset

@@ -371,7 +371,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
           setIsRestored(true);
           setHasUnsavedChanges(true);
         } else {
-          setTitle(form.title);
+          setTitle(form.title || '');
           setDescription(form.description || '');
           setStatus(form.status as any);
           try {

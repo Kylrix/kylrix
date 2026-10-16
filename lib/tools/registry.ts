@@ -279,13 +279,13 @@ function registerCoreTools() {
     parameters: {
       id: { type: 'string', description: 'Note ID' },
     },
-    execute: async (params, context) => {
+    execute: async (params) => {
       const { getNoteAction, listNotesAction } = await import('@/lib/actions/notes');
       if (params.id) {
         const note = await getNoteAction(params.id);
         return { success: true, data: note };
       }
-      const res = await listNotesAction(context?.userId);
+      const res = await listNotesAction();
       return { success: true, data: res };
     },
   });
@@ -350,9 +350,9 @@ function registerCoreTools() {
     parameters: {
       query: { type: 'string', description: 'Search term', required: true },
     },
-    execute: async (params, context) => {
+    execute: async (params) => {
       const { listNotesAction } = await import('@/lib/actions/notes');
-      const res = await listNotesAction(context?.userId);
+      const res = await listNotesAction();
       const term = String(params.query || '').toLowerCase();
       const matched = (res || []).filter(
         (n: any) => n.title?.toLowerCase().includes(term) || n.content?.toLowerCase().includes(term)

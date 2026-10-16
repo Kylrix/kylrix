@@ -51,7 +51,7 @@ export async function listThreadMessagesSecure(
   if (!actor?.$id) throw new Error('Unauthorized');
   const thread = await ThreadService.getById(threadId);
   if (!thread) throw new Error('Thread not found');
-  if (thread.ownerId !== actor.$id && !thread.isPublic) throw new Error('Forbidden');
+  if ((thread as any).ownerId !== actor.$id && !(thread as any).isPublic) throw new Error('Forbidden');
   return ThreadService.listMessages(threadId, {
     limit: opts?.limit,
     rootMessageId: opts?.rootMessageId,
@@ -70,7 +70,7 @@ export async function postThreadMessageSecure(data: {
   if (!actor?.$id) throw new Error('Unauthorized');
   const thread = await ThreadService.getById(data.threadId);
   if (!thread) throw new Error('Thread not found');
-  if (thread.ownerId !== actor.$id && !thread.isPublic) throw new Error('Forbidden');
+  if ((thread as any).ownerId !== actor.$id && !(thread as any).isPublic) throw new Error('Forbidden');
   return ThreadService.postMessage({
     threadId: data.threadId,
     userId: actor.$id,

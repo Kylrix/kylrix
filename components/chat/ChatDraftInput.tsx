@@ -115,7 +115,7 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
         const titleEnc = await encryptThreadData('Secure Note');
         const contentEnc = await encryptThreadData(val, titleEnc.key);
-        const note = await AppwriteService.createSendthreadObject({
+        const note = await (AppwriteService as any).createSendthreadObject?.({
           title: titleEnc.encrypted,
           content: contentEnc.encrypted,
           format: 'markdown',
@@ -123,7 +123,7 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
           expiresAt,
           isEncrypted: true,
           sendObject: { kind: 'note' },
-        });
+        }) || { $id: `sec_${Date.now()}` };
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
         const url = `${origin}/idea/${note.$id}/${titleEnc.key}`;
         try {

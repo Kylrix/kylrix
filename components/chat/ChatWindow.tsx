@@ -404,11 +404,11 @@ export const ChatWindow = ({
             }
 
             if (ecosystemSecurity.status.isUnlocked) {
-                void UsersService.forceSyncProfileWithIdentity(user);
+                void UsersService.ensureProfileForUser(user);
             }
             let conv: any = null;
             try {
-              conv = await ChatService.getConversationById(conversationId, user.$id);
+              conv = await ChatService.getConversationById(conversationId);
               if (!conv) throw new Error('Conversation not found');
             } catch (e) {
               // Not a secure conversation — maybe a thread/discussion hangout. Fallback to thread + local roster cache.
@@ -624,16 +624,15 @@ export const ChatWindow = ({
 
             startTransition(() => setMessageReactions({}));
             if (user?.$id && ecosystemSecurity.status.isUnlocked) {
-                void UsersService.forceSyncProfileWithIdentity(user);
+                void UsersService.ensureProfileForUser(user);
             }
             let conv: any = null;
             try {
-              conv = await ChatService.getConversationById(conversationId, user?.$id);
+              conv = await ChatService.getConversationById(conversationId);
             } catch {}
             let response: any = null;
             try {
-              response = await ChatService.getMessages(conversationId, 50, 0, user?.$id, {
-                  prefetchedConversation: conv || undefined});
+              response = await ChatService.getMessages(conversationId, 50);
             } catch (e) {
               console.warn('[ChatWindow] getMessages failed, will try thread fallback', e);
             }
@@ -1265,8 +1264,8 @@ export const ChatWindow = ({
                         await ChatService.clearChatForMe(conversationId, currentUserId);
                         toast.success("Chat cleared for you");
                     } else if (mode === 'everyone') {
-                        const res = await ChatService.wipeMyFootprint(conversationId, currentUserId);
-                        toast.success(`Removed ${res.count} messages and ${res.reactionsDeleted || 0} reactions for everyone`);
+                        await ChatService.wipeMyFootprint(conversationId, currentUserId);
+                        toast.success(`Removed messages for everyone`);
                     } else if (mode === 'nuclear') {
                         const wipeRes: any = await ChatService.nuclearWipe(conversationId);
                         const newId = wipeRes?.regeneratedConversationId;

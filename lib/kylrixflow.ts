@@ -4,13 +4,11 @@ import { Calendar, Task, Event, EventGuest } from '../types/kylrixflow';
 import type { CollaboratorPermission, TaskCollaborator } from '../types';
 import { sendKylrixEmailNotification } from './email-notifications';
 
-const FLOW_DATABASE_ID = APPWRITE_CONFIG.FLOW_DATABASE_ID || APPWRITE_CONFIG.DATABASES.FLOW;
+const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
 const { TABLES } = APPWRITE_CONFIG;
 const TASK_COLLABORATOR_RESOURCE_PREFIX = 'task:';
 const TASK_COLLABORATOR_TABLE = TABLES.FLOW.COLLABORATORS;
 const TASK_COLLABORATOR_DATABASE = FLOW_DATABASE_ID;
-
-;
 
 export function subscribeToTable<T extends Models.Row>(
     tableId: string,
@@ -135,7 +133,6 @@ export const buildTaskPermissions = (creatorId: string | null, assigneeIds: stri
     );
 };
 
-
 async function listTaskCollaborators(taskId: string): Promise<TaskCollaborator[]> {
     const res = await tablesDB.listRows<any>({
         databaseId: TASK_COLLABORATOR_DATABASE,
@@ -257,7 +254,7 @@ async function getRow<T extends Models.Row>(tableId: string, rowId: string): Pro
         rowId
     });
     queryCache.set(key, { data: res, expires: Date.now() + CACHE_TTL });
-    return res;
+    return (res || {}) as T;
 }
 
 function clearCache(tableId: string) {
@@ -306,23 +303,21 @@ async function deleteRow(
     clearCache(tableId);
 }
 
-
 // --- Calendars ---
 
 export const calendars = {
-    list: (queries?: string[]) => listRows<Calendar>(TABLES.CALENDARS, queries),
-    create: (data: TableCreateData<Calendar>) => createRow<Calendar>(TABLES.CALENDARS, data),
-    get: (id: string) => getRow<Calendar>(TABLES.CALENDARS, id),
-    update: (id: string, data: TableUpdateData<Calendar>) => updateRow<Calendar>(TABLES.CALENDARS, id, data),
-    delete: (id: string) => deleteRow(TABLES.CALENDARS, id)
+    list: (queries?: string[]) => listRows<Calendar>('calendars', queries),
+    create: (data: TableCreateData<Calendar>) => createRow<Calendar>('calendars', data),
+    get: (id: string) => getRow<Calendar>('calendars', id),
+    update: (id: string, data: TableUpdateData<Calendar>) => updateRow<Calendar>('calendars', id, data),
+    delete: (id: string) => deleteRow('calendars', id)
 };
 
 // --- Tasks ---
 
 export const tasks = {
     list: (queries?: string[]) => {
-        // Read via client SDK — create granted read ensures single-index reliability
-        return listRows<Task>(TABLES.TASKS, queries);
+        return listRows<Task>(TABLES.FLOW.TASKS, queries);
     },
     create: async (data: TableCreateData<Task> & { $id?: string }, permissions?: string[]) => {
         try {
@@ -336,16 +331,16 @@ export const tasks = {
                 : typeof (data as any)?.id === 'string' && (data as any).id.trim()
                   ? String((data as any).id).trim()
                   : ID.unique();
-        return createRow<Task>(TABLES.TASKS, { ...(data as any), $id: reservedId }, permissions, reservedId);
+        return createRow<Task>(TABLES.FLOW.TASKS, { ...(data as any), $id: reservedId }, permissions, reservedId);
     },
-    get: (id: string) => getRow<Task>(TABLES.TASKS, id),
+    get: (id: string) => getRow<Task>(TABLES.FLOW.TASKS, id),
     update: async (id: string, data: TableUpdateData<Task>, permissions?: string[]) => {
         try {
             const { updateGoal } = await import('@/lib/actions/client-ops');
             const row = await updateGoal(id, data);
             if ((row as any)?.$id || (row as any)?.id) return row as unknown as Task;
         } catch {}
-        return updateRow<Task>(TABLES.TASKS, id, data, permissions, FLOW_DATABASE_ID);
+        return updateRow<Task>(TABLES.FLOW.TASKS, id, data, permissions, FLOW_DATABASE_ID);
     },
     delete: async (id: string) => {
         try {
@@ -353,7 +348,7 @@ export const tasks = {
             await deleteGoal(id);
             return;
         } catch {}
-        return deleteRow(TABLES.TASKS, id);
+        return deleteRow(TABLES.FLOW.TASKS, id);
     }
 };
 
@@ -368,7 +363,7 @@ export const taskCollaborators = {
 // --- Events ---
 
 export const events = {
-    list: (queries?: string[]) => listRows<Event>(TABLES.EVENTS, queries), // read via client SDK
+    list: (queries?: string[]) => listRows<Event>(TABLES.FLOW.EVENTS, queries),
     create: async (data: TableCreateData<Event>, _permissions?: string[]) => {
         try {
             const { unifiedCreate } = await import('@/lib/services/unified-object-service');
@@ -382,7 +377,7 @@ export const events = {
         const { createEventSecure } = await import('@/lib/actions/secure-ops');
         return await createEventSecure(data);
     },
-    get: (id: string) => getRow<Event>(TABLES.EVENTS, id),
+    get: (id: string) => getRow<Event>(TABLES.FLOW.EVENTS, id),
     update: async (id: string, data: TableUpdateData<Event>) => {
         try {
             const { unifiedUpdate } = await import('@/lib/services/unified-object-service');
@@ -430,9 +425,9 @@ export const events = {
 // --- Event Guests ---
 
 export const eventGuests = {
-    list: (queries?: string[]) => listRows<EventGuest>(TABLES.EVENT_GUESTS, queries),
+    list: (queries?: string[]) => listRows<EventGuest>('guests', queries),
     create: async (data: TableCreateData<EventGuest>) => {
-        const row = await createRow<EventGuest>(TABLES.EVENT_GUESTS, data);
+        const row = await createRow<EventGuest>('guests', data);
         try {
             const event = await events.get(String((data as any).eventId || '')).catch(() => null);
             const ownerId = String(event?.userId || '').trim();
@@ -456,34 +451,28 @@ export const eventGuests = {
         }
         return row;
     },
-    get: (id: string) => getRow<EventGuest>(TABLES.EVENT_GUESTS, id),
-    update: (id: string, data: TableUpdateData<EventGuest>) => updateRow<EventGuest>(TABLES.EVENT_GUESTS, id, data),
-    delete: (id: string) => deleteRow(TABLES.EVENT_GUESTS, id)
+    get: (id: string) => getRow<EventGuest>('guests', id),
+    update: (id: string, data: TableUpdateData<EventGuest>) => updateRow<EventGuest>('guests', id, data),
+    delete: (id: string) => deleteRow('guests', id)
 };
-
-// --- Focus Sessions ---
-
 
 // --- Notes ---
 
 export const notes = {
     list: (queries?: string[]) => tablesDB.listRows({
-        databaseId: APPWRITE_CONFIG.NOTE_DATABASE_ID,
-        tableId: TABLES.NOTES,
+        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+        tableId: TABLES.NOTE.NOTES,
         queries
     }),
     get: (id: string) => tablesDB.getRow({
-        databaseId: APPWRITE_CONFIG.NOTE_DATABASE_ID,
-        tableId: TABLES.NOTES,
+        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+        tableId: TABLES.NOTE.NOTES,
         rowId: id
     }),
     update: (id: string, data: any) => tablesDB.updateRow({
-        databaseId: APPWRITE_CONFIG.NOTE_DATABASE_ID,
-        tableId: TABLES.NOTES,
+        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+        tableId: TABLES.NOTE.NOTES,
         rowId: id,
         data
     })
 };
-
-// --- Secrets (Keep) ---
-

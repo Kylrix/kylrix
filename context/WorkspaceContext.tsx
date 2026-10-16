@@ -699,7 +699,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
         const isOwner = access.workspace.ownerId === userId && userId !== 'guest';
         const isAgentic = Boolean(access.workspace.isAgentic);
-        const agentId = access.workspace.agentId || null;
+        const agentId = (access.workspace as any)?.agentId || null;
         setWorkspaces((prev) => {
           const existing = prev.find((w) => w.id === targetId);
           const effectiveIsAgentic = isAgentic || Boolean(existing?.isAgentic);
