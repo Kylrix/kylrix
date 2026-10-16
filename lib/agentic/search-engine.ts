@@ -69,7 +69,8 @@ function planSearchQuery(query: string): SearchPlan {
   return {
     domains: Array.from(domainSet),
     reasoning: reasons.join('; ') || 'keyword routing',
-    temporal};
+    temporal,
+  };
 }
 
 const STOP_WORDS = new Set([
@@ -94,7 +95,6 @@ function scoreMatch(hay: string, needle: string): number {
   return (hit / Math.max(tokensToUse.length, 1)) * 0.7;
 }
 
-
 function isToday(iso?: string | null): boolean {
   if (!iso) return false;
   const d = new Date(iso);
@@ -113,7 +113,8 @@ export async function executeEcosystemSearch(
     userId?: string;
     localNotes?: any[];
     localTasks?: any[];
-  }): Promise<{ plan: SearchPlan; hits: SearchHit[] }> {
+  }
+): Promise<{ plan: SearchPlan; hits: SearchHit[] }> {
   const limit = opts?.limit ?? 20;
   const plan = planSearchQuery(query);
   const hits: SearchHit[] = [];
@@ -128,7 +129,7 @@ export async function executeEcosystemSearch(
         if (!rows.length) {
           const { listNotes } = await import('@/lib/data');
           const res = await listNotes();
-          rows = res.rows || [];
+          rows = Array.isArray(res) ? res : (res as any)?.rows || [];
         }
         for (const row of rows) {
           const title = String((row as any).title || 'Untitled');
@@ -137,11 +138,12 @@ export async function executeEcosystemSearch(
           if (score > 0.2 || plan.domains.includes('all')) {
             hits.push({
               domain: 'idea',
-              id: (row as any).$id,
+              id: (row as any).$id || (row as any).id,
               title,
               snippet: content.slice(0, 120),
-              route: `/app/${(row as any).$id}`,
-              score});
+              route: `/app/${(row as any).$id || (row as any).id}`,
+              score,
+            });
           }
         }
       } else if (domain === 'goal') {
@@ -149,7 +151,7 @@ export async function executeEcosystemSearch(
         if (!rows.length) {
           const { listFlowTasks } = await import('@/lib/data');
           const res = await listFlowTasks();
-          rows = res.rows || [];
+          rows = Array.isArray(res) ? res : (res as any)?.rows || [];
         }
         for (const row of rows) {
           const title = String((row as any).title || 'Untitled');
@@ -161,12 +163,13 @@ export async function executeEcosystemSearch(
           if (score > 0.2 || plan.temporal !== 'none') {
             hits.push({
               domain: 'goal',
-              id: (row as any).$id,
+              id: (row as any).$id || (row as any).id,
               title,
               snippet: desc.slice(0, 120),
               route: '/goals',
               score,
-              meta: { dueDate: due, status: (row as any).status }});
+              meta: { dueDate: due, status: (row as any).status },
+            });
           }
         }
       } else if (domain === 'ui') {
@@ -179,7 +182,8 @@ export async function executeEcosystemSearch(
             title: resolved.label,
             snippet: resolved.description,
             route: resolved.route,
-            score: 0.95});
+            score: 0.95,
+          });
         } else {
           for (const d of UI_DESTINATIONS) {
             const score = scoreMatch([d.label, ...d.aliases].join(' '), query);
@@ -190,7 +194,8 @@ export async function executeEcosystemSearch(
                 title: d.label,
                 snippet: d.description,
                 route: d.route,
-                score});
+                score,
+              });
             }
           }
         }
@@ -204,25 +209,28 @@ export async function executeEcosystemSearch(
           if (score > 0.2) {
             hits.push({
               domain: 'form',
-              id: row.$id,
+              id: row.$id || row.id,
               title,
-              route: `/forms/${row.$id}`,
-              score});
+              route: `/forms/${row.$id || row.id}`,
+              score,
+            });
           }
         }
       } else if (domain === 'project') {
         const { ProjectsService } = await import('@/lib/data');
-        const list = await ProjectsService.listProjects(true);
-        for (const row of list.rows || []) {
-          const title = String((row as any).title || 'Untitled');
-          const score = scoreMatch(title + ' ' + ((row as any).summary || ''), query);
+        const res = await ProjectsService.listProjects(true as any);
+        const rows = Array.isArray(res) ? res : (res as any)?.rows || [];
+        for (const row of rows) {
+          const title = String((row as any).title || (row as any).name || 'Untitled');
+          const score = scoreMatch(title + ' ' + ((row as any).summary || (row as any).description || ''), query);
           if (score > 0.2) {
             hits.push({
               domain: 'project',
-              id: (row as any).$id,
+              id: (row as any).$id || (row as any).id,
               title,
-              route: `/workspace/${(row as any).$id}`,
-              score});
+              route: `/workspace/${(row as any).$id || (row as any).id}`,
+              score,
+            });
           }
         }
       }
@@ -234,5 +242,6 @@ export async function executeEcosystemSearch(
   const ranked = hits.sort((a: any, b: any) => b.score - a.score).slice(0, limit);
   return {
     plan,
-    hits: redactPIIAndSensitiveFields(ranked) as SearchHit[]};
+    hits: redactPIIAndSensitiveFields(ranked) as SearchHit[],
+  };
 }

@@ -15,9 +15,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDataNexus } from '@/context/DataNexusContext';
-import { ProjectsService } from '@/lib/data';
+import { ProjectsService, type ProjectObjects } from '@/lib/data';
 import { projectObjectsKindCacheKey } from '@/lib/projects/projects-cache';
-import type { ProjectObjects } from '@/types/appwrite';
 
 interface UseProjectObjectsResult {
   /** All project_object rows of the requested entityKind for the given project. */
@@ -87,10 +86,10 @@ export function useProjectObjects(
         const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
         if (force) nexusInvalidate(cacheKey);
         const result = await ProjectsService.listProjectObjectsByKind(projectId, entityKind);
-        const remoteList: ProjectObjects[] = Array.isArray(result?.rows)
-          ? result.rows
+        const remoteList: ProjectObjects[] = Array.isArray((result as any)?.rows)
+          ? (result as any).rows
           : Array.isArray(result)
-            ? result
+            ? (result as any)
             : [];
         if (mountedRef.current) {
           setRows(remoteList);
@@ -144,12 +143,12 @@ export function useProjectObjects(
 
           const isDeleted = payload.isDeleted === true || payload.isTrash === true;
           if (isDeleted) {
-            setRows((prev) => prev.filter((r) => r.$id !== payload.$id && r.entityId !== payload.entityId));
+            setRows((prev) => prev.filter((r: any) => r.$id !== payload.$id && r.entityId !== payload.entityId));
             return;
           }
 
           setRows((prev) => {
-            const idx = prev.findIndex((r) => r.$id === payload.$id || (r.entityId && r.entityId === payload.entityId));
+            const idx = prev.findIndex((r: any) => r.$id === payload.$id || (r.entityId && r.entityId === payload.entityId));
             if (idx >= 0) {
               const updated = [...prev];
               updated[idx] = { ...updated[idx], ...payload };

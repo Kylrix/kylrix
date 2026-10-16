@@ -75,14 +75,14 @@ export function NewProjectDrawer() {
         template?.id === 'event-command-center'
       ) {
         const res = await FormsService.listUserForms(user.$id);
-        setResources(res?.rows || []);
+        setResources((Array.isArray(res) ? res : (res as any)?.rows || []) as any[]);
       } else if (
         template?.id === 'idea-to-execution' ||
         template?.id === 'wiki-knowledge-hub' ||
         template?.id === 'product-roadmap'
       ) {
         const res = await listNotesByUser(user.$id);
-        setResources(res?.rows || []);
+        setResources((Array.isArray(res) ? res : (res as any)?.rows || []) as any[]);
       }
     } catch (e) {
       console.error('Failed to fetch resources', e);

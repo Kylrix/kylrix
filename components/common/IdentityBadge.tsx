@@ -106,7 +106,7 @@ export function IdentityAvatar({
         const { getGlobalProfileStatus } = await import('@/lib/actions/client-ops');
         const identity = await resolveIdentityById(userId, async () => {
           const res = await getGlobalProfileStatus(userId);
-          return res?.exists ? res.profile : null;
+          return (res as any)?.exists ? (res as any).profile : null;
         });
         if (identity && active) {
           setProfileRecord(identity);

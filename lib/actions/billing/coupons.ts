@@ -19,7 +19,7 @@ export async function listCouponsAction(jwt?: string) {
   // 1. Try Appwrite if configured
   try {
     if (process.env.APPWRITE_API) {
-      const { databases } = createAdminClient(user.email);
+      const { databases } = createAdminClient();
       const result = await databases.listRows(NOTE_DB_ID, COUPONS_TABLE_ID, [
         Query.orderDesc('$createdAt'),
         Query.limit(100)
@@ -77,7 +77,7 @@ export async function invalidateCouponAction(couponId: string, jwt?: string) {
   
   try {
     if (process.env.APPWRITE_API) {
-      const { databases } = createAdminClient(user.email);
+      const { databases } = createAdminClient();
       await databases.updateRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId, {
         status: 'revoked'
       });
@@ -106,7 +106,7 @@ export async function deleteCouponByIdAction(couponId: string, jwt?: string) {
 
   try {
     if (process.env.APPWRITE_API) {
-      const { databases } = createAdminClient(user.email);
+      const { databases } = createAdminClient();
       await databases.deleteRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId);
     }
   } catch (err: any) {
@@ -137,7 +137,7 @@ export async function deleteCouponsBulkAction(
   // 1. Appwrite deletion if configured
   try {
     if (process.env.APPWRITE_API) {
-      const { databases } = createAdminClient(user.email);
+      const { databases } = createAdminClient();
       let pageOffset = 0;
       const batchSize = 100;
       let allRows: any[] = [];
@@ -274,7 +274,7 @@ export async function createCouponAction(input: {
     let row: any = null;
     try {
       if (process.env.APPWRITE_API) {
-        const { databases } = createAdminClient(user.email);
+        const { databases } = createAdminClient();
         row = await databases.createRow(
           NOTE_DB_ID,
           COUPONS_TABLE_ID,

@@ -489,7 +489,7 @@ export function LoginDrawer() {
       navigateToAppAfterAuth();
     } catch (err: unknown) {
       if (isMfaRequiredError(err)) {
-        const loginMethod = await getCurrentLoginMethod().catch(() => 'email-otp' as const);
+        const loginMethod = getCurrentLoginMethod() || 'email-otp';
         setMfaLoginMethod(loginMethod);
         setMfaDrawerOpen(true);
         setOtp('');

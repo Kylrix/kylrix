@@ -109,8 +109,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                 try {
                     const conversation = await ChatService.getConversationById(message.conversationId, user.$id);
                     if (conversation?.type === 'direct') {
-                        const history = await ChatService.getMessages(message.conversationId, 50, 0, user.$id, {
-                            prefetchedConversation: conversation});
+                        const history = await ChatService.getMessages(message.conversationId, 50);
                         hasReplied = history.rows.some((row: any) => row.senderId === user.$id);
                     } else {
                         hasReplied = true;
