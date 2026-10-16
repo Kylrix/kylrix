@@ -52,7 +52,7 @@ function BareBonesMasterpassUnlock() {
     if (!user?.$id) return;
     try {
       const { SecurityEnclave } = await import('@/lib/security/enclave');
-      const { KeychainService } = await import('@/lib/appwrite/keychain');
+      const { KeychainService } = await import('@/lib/data');
 
       let entries = await SecurityEnclave.getKeychain(user.$id);
       if ((!entries.length || entries.length === 0) && typeof navigator !== 'undefined' && navigator.onLine) {
@@ -141,8 +141,8 @@ function BareBonesMasterpassUnlock() {
       addLog(`User ID: "${user.$id}", Email: "${user.email || 'N/A'}"`);
       
       const { SecurityEnclave } = await import('@/lib/security/enclave');
-      const { AppwriteService } = await import('@/lib/appwrite');
-      const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+      const { AppwriteService } = await import('@/lib/data');
+      const { APPWRITE_CONFIG } = await import('@/lib/data');
 
       // 1. Inspect User Document
       try {

@@ -1,7 +1,7 @@
 import {
   isPublicResumePath,
   LAST_ROUTE_COOKIE} from '@/lib/ecosystem/resume-route';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/data';
 
 const STATE_STORAGE_KEY = 'kylrix_ecosystem_state_tracker';
 const MAX_HISTORY = 15;

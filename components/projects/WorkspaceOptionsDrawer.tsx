@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAuth } from '@/context/auth/AuthContext';
-import { ProjectsService } from '@/lib/appwrite/projects';
+import { ProjectsService } from '@/lib/data';
 
 interface WorkspaceOptionsDrawerProps {
   isOpen: boolean;

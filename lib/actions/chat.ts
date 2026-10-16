@@ -14,8 +14,8 @@ import {
   updateConversationInternal,
   createConversationTransactionalInternal
 } from '@/lib/services/internal/chat';
-import { Query } from '@/lib/appwrite/types';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { Query } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 
 
 import { 

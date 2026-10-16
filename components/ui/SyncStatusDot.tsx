@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { getMissingRequiredColumns, TABLE_ID_FOR_KIND } from '@/lib/sync/required-columns';
 import { getLiveNoteForSync, getLiveGoalForSync, getLiveEventForSync } from '@/lib/sync/pending-sync-bridge';
-import { getCurrentUserSnapshot, onCurrentUserChanged } from '@/lib/appwrite/client';
+import { getCurrentUserSnapshot, onCurrentUserChanged } from '@/lib/data';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 
 function useIsProUser() {

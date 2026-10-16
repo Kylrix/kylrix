@@ -25,7 +25,7 @@ import { useSetup } from '@/context/SetupContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { UsersService, buildUsernameHandleSuggestions, invalidateUsersProfileRowCache } from '@/lib/services/users';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import toast from 'react-hot-toast';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';

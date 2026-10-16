@@ -7,10 +7,10 @@ import {
   updateRow,
   APPWRITE_DATABASE_ID, 
   APPWRITE_TABLE_ID_ACTIVITYLOG 
-} from '@/lib/appwrite';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+} from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
 import { useAuth } from '@/context/auth/AuthContext';
-import type { ActivityLog } from '@/types/appwrite';
+import type { ActivityLog } from '@/lib/data';
 
 interface NotificationMetadata {
   read?: boolean;

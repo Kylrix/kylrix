@@ -85,7 +85,7 @@ import {
 import { getAgenticUserMessage } from '@/lib/agentic/errors';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { WalletService } from '@/lib/services/wallets';
 import { toast } from 'react-hot-toast';
 import { ContextMenu } from '@/components/ui/ContextMenu';
@@ -309,7 +309,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
     void (async () => {
       try {
-        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const { ProjectsService } = await import('@/lib/data');
         const tagged: any = await ProjectsService.listTaggedResources(wsId).catch(() => null);
         if (tagged?.sessions && Array.isArray(tagged.sessions) && tagged.sessions.length > 0 && !cancelled) {
           setSessions((prev) => {
@@ -431,7 +431,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           const local = await AgenticSessionLocalStore.getSession(reusableSessionId);
           setMessages((local?.chatHistory as any) || []);
           try {
-            const { account } = await import('@/lib/appwrite/client');
+            const { account } = await import('@/lib/data');
             const prefs = await account.getPrefs().catch(() => ({}));
             await account.updatePrefs({ ...prefs, activeAgentSessionId: reusableSessionId }).catch(() => {});
           } catch {}
@@ -442,7 +442,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
       // 2. Otherwise request fresh session from server action (which also reuses/prunes empty)
       const { startNewAgentSession } = await import('@/lib/actions/agentic');
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       const res = await startNewAgentSession(jwt);
       if (res?.sessionId) {
@@ -485,7 +485,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     }
     try {
       const { listAgentSessions } = await import('@/lib/actions/agentic');
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       const list = await listAgentSessions(jwt, activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined);
       setSessions(list);
@@ -519,7 +519,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       }
 
       const { selectAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       const res = await selectAgentSession(sessionId, jwt);
       if (res.success) {
@@ -568,7 +568,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       onConfirm: async () => {
         try {
           const { deleteAgentSession } = await import('@/lib/actions/agentic');
-          const { account } = await import('@/lib/appwrite/client');
+          const { account } = await import('@/lib/data');
           const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
           await deleteAgentSession(sessionId, jwt);
           if (user?.$id) await AgenticSessionLocalStore.removeSession(sessionId, user.$id);
@@ -590,7 +590,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     try {
       const { toggleAgentSessionShareAction } = await import('@/lib/actions/agentic');
       const { getResourcePublicGuestSecure } = await import('@/lib/actions/secure-ops/misc');
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       const mode = currentlyShared ? 'make_private' : 'publish';
       const shareRes = await toggleAgentSessionShareAction(sessionId, mode, jwt);
@@ -631,7 +631,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const handleToggleSessionPinned = async (sessionId: string, pinned: boolean) => {
     try {
       const { setAgentSessionPinnedAction } = await import('@/lib/actions/agentic');
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       await setAgentSessionPinnedAction(sessionId, pinned, jwt);
       const nextSessions = sessions
@@ -724,7 +724,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     nextSteps: m.nextSteps})));
                 await AgenticSessionLocalStore.setActiveSessionId(user.$id, general.id);
                 try {
-                  const { account } = await import('@/lib/appwrite/client');
+                  const { account } = await import('@/lib/data');
                   const prefs = await account.getPrefs().catch(() => ({}));
                   await account.updatePrefs({ ...prefs, activeAgentSessionId: general.id }).catch(() => {});
                 } catch {}
@@ -740,7 +740,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         /* non-fatal */
       }
       try {
-        const { account } = await import('@/lib/appwrite/client');
+        const { account } = await import('@/lib/data');
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
         const { getAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
         const customWsId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined;

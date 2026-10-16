@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 type Credentials = any;
 import { useAppwriteVault } from '@/context/appwrite-context';
-import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
+import { getCurrentUserSnapshot } from '@/lib/data';
 import {
-  deleteCredential} from '@/lib/appwrite';
+  deleteCredential} from '@/lib/data';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import toast from 'react-hot-toast';
 import CredentialItem from '@/components/app/dashboard/CredentialItem';
@@ -194,13 +194,13 @@ function DashboardPageContent() {
 
     try {
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+      const { APPWRITE_CONFIG } = await import('@/lib/data');
 
       if (!cursorToUse) {
         const rows = await LocalEngine.query<Credentials[]>(
           cacheKey,
           async () => {
-            const { TablesDB, Client, Query } = await import('@/lib/appwrite/types');
+            const { TablesDB, Client, Query } = await import('@/lib/data');
             const client = new Client()
               .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
               .setProject(APPWRITE_CONFIG.PROJECT_ID);
@@ -231,7 +231,7 @@ function DashboardPageContent() {
         setHasMore(unique.length === 50);
         setNextCursor(unique.length === 50 && unique.length ? (unique[unique.length - 1] as any).$id : null);
       } else {
-        const { TablesDB, Client, Query } = await import('@/lib/appwrite/types');
+        const { TablesDB, Client, Query } = await import('@/lib/data');
         const client = new Client()
           .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
           .setProject(APPWRITE_CONFIG.PROJECT_ID);
@@ -299,7 +299,7 @@ function DashboardPageContent() {
     (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const { APPWRITE_CONFIG } = await import('@/lib/data');
         const credsChannel = `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.tables.${APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS}.rows`;
 
         const cleanup = await LocalEngine.subscribeRealtime(credsChannel, (payload: any) => {
@@ -378,7 +378,7 @@ function DashboardPageContent() {
         ownerId,
         rowIsPinned: credential.isPinned,
         setOwnerRowPin: async (pinned) => {
-          const { setCredentialPinned } = await import('@/lib/appwrite');
+          const { setCredentialPinned } = await import('@/lib/data');
           await setCredentialPinned(id, pinned);
         }});
       if (isOwner) {
@@ -406,7 +406,7 @@ function DashboardPageContent() {
 
     void (async () => {
       try {
-        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const { ProjectsService } = await import('@/lib/data');
         const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
         if (tagged?.credentials && Array.isArray(tagged.credentials) && tagged.credentials.length > 0 && !cancelled) {
           setAllCredentials((prev) => {

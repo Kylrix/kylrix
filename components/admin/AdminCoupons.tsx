@@ -8,7 +8,7 @@ import { createCouponAction, listCouponsAction, invalidateCouponAction, deleteCo
 import { getAdminUserByIdAction, searchAdminUserByIdAction, searchAdminUserByEmailAction } from '@/lib/actions/billing/admin';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { AppwriteService } from '@/lib/appwrite';
+import { AppwriteService } from '@/lib/data';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { getAdminCouponsCacheKey } from '@/lib/admin/admin-cache';
 import { getCachedIdentityById, resolveIdentityById, seedIdentityCache, CachedIdentity } from '@/lib/identity-cache';

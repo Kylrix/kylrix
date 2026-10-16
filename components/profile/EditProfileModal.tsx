@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { UsersService } from '@/lib/services/users';
 import { useAuth } from '@/lib/auth';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan, getEffectiveUsername } from '@/lib/utils';

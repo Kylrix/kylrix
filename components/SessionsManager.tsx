@@ -2,7 +2,7 @@
 import { useColors } from '@/lib/theme-context';
 
 import { useState, useEffect, useCallback } from 'react';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { useDataNexus } from '@/context/DataNexusContext';
 import {
   Box,
@@ -22,7 +22,7 @@ import {
   Delete as DeleteIcon,
   PhoneIcon} from '@/lib/openbricks/icons';
 import { Laptop, Tablet, RefreshCw } from 'lucide-react';
-import { Models } from '@/lib/appwrite/types';
+import { Models } from '@/lib/data';
 import { AccountSwitcher } from '@/components/auth/AccountSwitcher';
 
 interface Session extends Models.Session {

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Trash2, Shield, FileX, Database, HardDrive, Clock, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -43,7 +43,7 @@ export function DeleteAccountFlow({ onClose }: { onClose?: () => void }) {
       const { executeMasterPurgeSecure } = await import('@/lib/actions/secure-ops');
       // Fire Appwrite function async for deep storage sweep (fire-and-forget, server purges first)
       try {
-        const { functions } = await import('@/lib/appwrite/client');
+        const { functions } = await import('@/lib/data');
         // @ts-ignore - dynamic function id from env or fallback to account-cleanup
         const fid = (process.env.NEXT_PUBLIC_APPWRITE_FUNC_PURGE || 'account-cleanup');
         // functions.createExecution is fire-and-forget; no await needed for UX

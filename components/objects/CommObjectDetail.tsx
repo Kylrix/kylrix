@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ObjectDetailHost } from '@/components/objects/ObjectDetailHost';
 import { ChatWindow } from '@/components/chat/ChatWindow';
-import { getNote } from '@/lib/appwrite/note';
+import { getNote } from '@/lib/data';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { chatConversationCacheKey } from '@/lib/chat/local-chat-cache';
 import { isGenericConversationName } from '@/lib/chat/conversation-list-label';

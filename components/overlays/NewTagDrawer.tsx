@@ -18,8 +18,8 @@ import {
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
-import { Tags } from '@/types/appwrite';
-import { createTag, updateTag } from '@/lib/appwrite';
+import { Tags } from '@/lib/data';
+import { createTag, updateTag } from '@/lib/data';
 import { useAuth } from '@/context/auth/AuthContext';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';

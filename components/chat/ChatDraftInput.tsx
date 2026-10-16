@@ -106,7 +106,7 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
       }
       setDraft('Securing message...');
       try {
-        const { AppwriteService } = await import('@/lib/appwrite');
+        const { AppwriteService } = await import('@/lib/data');
         const { encryptThreadData } = await import('@/lib/encryption/thread-crypto');
         const threadSecret =
           typeof crypto !== 'undefined' && crypto.randomUUID

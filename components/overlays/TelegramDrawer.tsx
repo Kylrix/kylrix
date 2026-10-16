@@ -70,7 +70,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
   const getOrUpdateJWT = React.useCallback(async () => {
     if (jwtRef.current) return jwtRef.current;
     try {
-      const { account } = await import('@/lib/appwrite/client');
+      const { account } = await import('@/lib/data');
       const { jwt } = await account.createJWT();
       jwtRef.current = jwt;
       return jwt;
@@ -183,8 +183,8 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
 
     const setupRealtime = async () => {
       try {
-        const { realtime } = await import('@/lib/appwrite/client');
-        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const { realtime } = await import('@/lib/data');
+        const { APPWRITE_CONFIG } = await import('@/lib/data');
         
         if (!isSubscribed) return;
 

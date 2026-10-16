@@ -17,7 +17,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { executeInstantShare, buildInstantShareUrl, ensureSharePublished } from '@/lib/share/instant-share';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { exportToMarkdown, exportToICS } from '@/lib/utils/export';
 import { sanitizeClientErrorMessage } from '@/lib/errors/sanitize';

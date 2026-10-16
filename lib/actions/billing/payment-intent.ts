@@ -1,10 +1,10 @@
 'use server';
 
-import { createSystemClient } from '@/lib/appwrite/types';
+import { createSystemClient } from '@/lib/data';
 import { getActor } from '@/lib/actions/secure-ops';
 import { dispatchTelegramNotification } from '@/lib/services/internal/telegram-dispatch';
 import { renderEmailTemplate } from '@/lib/email-renderer';
-import { ID } from '@/lib/appwrite/types';
+import { ID } from '@/lib/data';
 
 export interface PaymentIntentRecord {
   tier: string;

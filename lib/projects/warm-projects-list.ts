@@ -1,5 +1,5 @@
-import { ProjectsService } from '@/lib/appwrite/projects';
-import type { Projects } from '@/types/appwrite';
+import { ProjectsService } from '@/lib/data';
+import type { Projects } from '@/lib/data';
 import {
   getSessionProjectsList,
   setSessionProjectsList,
@@ -62,7 +62,7 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
       {
         ttl: PROJECTS_LIST_TTL,
         force,
-        realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents`,
+        realtimeChannel: `databases.${(await import('@/lib/data')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents`,
       }
     );
     let rows = filterRootWorkspaceProjects(normalizeProjectsList(raw));
@@ -74,7 +74,7 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
         {
           ttl: PROJECTS_LIST_TTL,
           force: true,
-          realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents`,
+          realtimeChannel: `databases.${(await import('@/lib/data')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents`,
         }
       );
       rows = filterRootWorkspaceProjects(normalizeProjectsList(healedRaw));

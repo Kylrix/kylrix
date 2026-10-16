@@ -35,14 +35,14 @@ import {
 import { QRCodeCanvas } from './QRCodeCanvas';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { toast } from 'react-hot-toast';
 import { WalletService, type SupportedWalletChain, type WalletSummary } from '@/lib/services/wallets';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { KylrixTokenService } from '@/lib/services/token';
-import { KeychainService } from '@/lib/appwrite/keychain';
+import { KeychainService } from '@/lib/data';
 import { useTokenOps } from '@/context/TokenOpsContext';
 import type { TokenWalletIntent } from '@/context/WalletOverlayContext';
 import {

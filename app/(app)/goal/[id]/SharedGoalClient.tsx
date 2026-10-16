@@ -101,7 +101,7 @@ export default function SharedGoalClient({
     void (async () => {
       try {
         const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
-        const { getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
+        const { getCurrentUserSnapshot } = await import('@/lib/data');
         const currentUser = getCurrentUserSnapshot();
 
         await SharedOfflineSubstrate.syncSharedRoute<PublicGoal>({

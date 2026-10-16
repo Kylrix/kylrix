@@ -192,12 +192,12 @@ export function UniversalFABDeprecated() {
               } catch {}
             } else if (selection.activeKind === 'credential') {
               try {
-                const { deleteCredential } = await import('@/lib/appwrite');
+                const { deleteCredential } = await import('@/lib/data');
                 await deleteCredential(id).catch(() => null);
               } catch {}
             } else if (selection.activeKind === 'totp') {
               try {
-                const { deleteTotpSecret } = await import('@/lib/appwrite');
+                const { deleteTotpSecret } = await import('@/lib/data');
                 await deleteTotpSecret(id).catch(() => null);
               } catch {}
             }

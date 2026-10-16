@@ -55,10 +55,10 @@ export const ThreadNoteClaimer = () => {
                                 const { tasks: taskApi } = await import('@/lib/kylrixflow');
                                 await taskApi.delete(item.id);
                             } else if (kind === 'password') {
-                                const { deleteCredential } = await import('@/lib/appwrite/vault');
+                                const { deleteCredential } = await import('@/lib/data/vault');
                                 await deleteCredential(item.id);
                             } else if (kind === 'totp') {
-                                const { deleteTotpSecret } = await import('@/lib/appwrite/vault');
+                                const { deleteTotpSecret } = await import('@/lib/data/vault');
                                 await deleteTotpSecret(item.id);
                             } else {
                                 const { deleteNote } = await import('@/lib/actions/client-ops');
@@ -83,7 +83,7 @@ export const ThreadNoteClaimer = () => {
                                     try { return JSON.parse(decryptedContent); } catch { return null; }
                                 })();
                                 if (payload) {
-                                    const { updateCredential } = await import('@/lib/appwrite/vault');
+                                    const { updateCredential } = await import('@/lib/data/vault');
                                     await updateCredential(item.id, {
                                         name: decryptedTitle,
                                         username: payload.username || null,
@@ -95,7 +95,7 @@ export const ThreadNoteClaimer = () => {
                                     try { return JSON.parse(decryptedContent); } catch { return null; }
                                 })();
                                 if (payload) {
-                                    const { updateTotpSecret } = await import('@/lib/appwrite/vault');
+                                    const { updateTotpSecret } = await import('@/lib/data/vault');
                                     await updateTotpSecret(item.id, {
                                         issuer: payload.issuer || decryptedTitle || 'Imported',
                                         accountName: payload.account || payload.accountName || decryptedTitle || 'Authenticator',
@@ -135,7 +135,7 @@ export const ThreadNoteClaimer = () => {
                                 try { return JSON.parse(decryptedContent); } catch { return null; }
                             })();
                             if (payload) {
-                                const { createCredential } = await import('@/lib/appwrite/vault');
+                                const { createCredential } = await import('@/lib/data/vault');
                                 await createCredential({
                                     userId: user.$id,
                                     itemType: 'login',
@@ -150,7 +150,7 @@ export const ThreadNoteClaimer = () => {
                                 try { return JSON.parse(decryptedContent); } catch { return null; }
                             })();
                             if (payload) {
-                                const { createTotpSecret } = await import('@/lib/appwrite/vault');
+                                const { createTotpSecret } = await import('@/lib/data/vault');
                                 await createTotpSecret({
                                     userId: user.$id,
                                     issuer: payload.issuer || decryptedTitle || 'Imported',
@@ -164,7 +164,7 @@ export const ThreadNoteClaimer = () => {
                             const payload = (() => {
                                 try { return JSON.parse(decryptedContent); } catch { return null; }
                             })();
-                            const { ProjectsService } = await import('@/lib/appwrite/projects');
+                            const { ProjectsService } = await import('@/lib/data');
                             await ProjectsService.createProject({
                                 title: decryptedTitle,
                                 summary: payload?.description || '',

@@ -1,6 +1,6 @@
 'use client';
 
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import {
   createNoteSecure,
   updateNoteSecure,
@@ -75,7 +75,7 @@ export async function createNote(data: any) {
   let userId = data?.userId || data?.creatorId;
   if (!userId && typeof window !== 'undefined') {
     try {
-      const { getKylrixPulse, getCurrentUser } = await import('@/lib/appwrite/client');
+      const { getKylrixPulse, getCurrentUser } = await import('@/lib/data');
       const pulse = getKylrixPulse();
       if (pulse?.$id) {
         userId = pulse.$id;
@@ -126,7 +126,7 @@ export async function updateNote(noteId: string, data: any) {
   let userId = data?.userId || data?.creatorId;
   if (!userId && typeof window !== 'undefined') {
     try {
-      const { getKylrixPulse, getCurrentUser } = await import('@/lib/appwrite/client');
+      const { getKylrixPulse, getCurrentUser } = await import('@/lib/data');
       const pulse = getKylrixPulse();
       if (pulse?.$id) {
         userId = pulse.$id;
@@ -161,7 +161,7 @@ export async function updateNote(noteId: string, data: any) {
   }
 
   // 2. Direct Appwrite write (legacy fast-path if user is logged into Appwrite)
-  const { tryOwnerDirectUpdateNote } = await import('@/lib/appwrite/owner-direct-write');
+  const { tryOwnerDirectUpdateNote } = await import('@/lib/data');
   const direct = await tryOwnerDirectUpdateNote(noteId, data).catch(() => null);
   if (direct) return direct;
 
@@ -196,7 +196,7 @@ export async function createGoal(data: any) {
   let userId = data?.userId || data?.creatorId;
   if (!userId && typeof window !== 'undefined') {
     try {
-      const { getKylrixPulse, getCurrentUser } = await import('@/lib/appwrite/client');
+      const { getKylrixPulse, getCurrentUser } = await import('@/lib/data');
       const pulse = getKylrixPulse();
       if (pulse?.$id) {
         userId = pulse.$id;
@@ -247,7 +247,7 @@ export async function updateGoal(goalId: string, data: any) {
   let userId = data?.userId || data?.creatorId;
   if (!userId && typeof window !== 'undefined') {
     try {
-      const { getKylrixPulse, getCurrentUser } = await import('@/lib/appwrite/client');
+      const { getKylrixPulse, getCurrentUser } = await import('@/lib/data');
       const pulse = getKylrixPulse();
       if (pulse?.$id) {
         userId = pulse.$id;
@@ -281,7 +281,7 @@ export async function updateGoal(goalId: string, data: any) {
   }
 
   // 2. Direct Appwrite write
-  const { tryOwnerDirectUpdateGoal } = await import('@/lib/appwrite/owner-direct-write');
+  const { tryOwnerDirectUpdateGoal } = await import('@/lib/data');
   const direct = await tryOwnerDirectUpdateGoal(goalId, data).catch(() => null);
   if (direct) return direct;
 
@@ -361,7 +361,7 @@ export async function createProject(data: any) {
 
 export async function updateProject(projectId: string, data: any, permissions?: string[]) {
   if (!permissions) {
-    const { tryOwnerDirectUpdateProject } = await import('@/lib/appwrite/owner-direct-write');
+    const { tryOwnerDirectUpdateProject } = await import('@/lib/data');
     const direct = await tryOwnerDirectUpdateProject(projectId, data).catch(() => null);
     if (direct) return direct;
   }
@@ -425,7 +425,7 @@ export async function listUserForms(userId: string) {
 }
 
 export async function updateForm(formId: string, data: any) {
-  const { tryOwnerDirectUpdateForm } = await import('@/lib/appwrite/owner-direct-write');
+  const { tryOwnerDirectUpdateForm } = await import('@/lib/data');
   const direct = await tryOwnerDirectUpdateForm(formId, data).catch(() => null);
   if (direct) return direct;
   const jwt = await getJwt();
@@ -460,7 +460,7 @@ export async function createEvent(data: any) {
 }
 
 export async function updateEvent(eventId: string, data: any) {
-  const { tryOwnerDirectUpdateEvent } = await import('@/lib/appwrite/owner-direct-write');
+  const { tryOwnerDirectUpdateEvent } = await import('@/lib/data');
   const direct = await tryOwnerDirectUpdateEvent(eventId, data).catch(() => null);
   if (direct) return direct;
   const jwt = await getJwt();
@@ -621,14 +621,14 @@ export async function toggleResourcePublicGuest(params: {
 
   try {
     if (typeof window !== 'undefined') {
-      const { getCurrentUser } = await import('@/lib/appwrite/client');
+      const { getCurrentUser } = await import('@/lib/data');
       const currentUser = await getCurrentUser().catch(() => null);
       
       if (params.resourceType === 'note') {
-        const { invalidateNoteRowClientCache } = await import('@/lib/appwrite/note');
+        const { invalidateNoteRowClientCache } = await import('@/lib/data');
         invalidateNoteRowClientCache(params.resourceId);
       } else if (params.resourceType === 'credential' || params.resourceType === 'totp') {
-        const { VaultService } = await import('@/lib/appwrite/vault');
+        const { VaultService } = await import('@/lib/data/vault');
         if (currentUser?.$id) {
           (VaultService as any).clearCredentialCache(currentUser.$id);
         }

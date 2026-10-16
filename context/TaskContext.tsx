@@ -4,18 +4,18 @@ import React, { createContext, useContext, useReducer, useCallback, ReactNode, u
 import { usePathname } from 'next/navigation';
 
 import { tasks as taskApi, calendars as calendarApi, taskCollaborators, subscribeToTable, buildTaskPermissions } from '@/lib/kylrixflow';
-import { getCurrentUser, getCurrentUserSnapshot } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Query } from '@/lib/appwrite/types';
+import { getCurrentUser, getCurrentUserSnapshot } from '@/lib/data';
+import { APPWRITE_CONFIG } from '@/lib/data';
+import { Query } from '@/lib/data';
 import { getEcosystemUrl } from '@/lib/constants';
 import { Task as AppwriteTask, Calendar as AppwriteCalendar } from '@/types/kylrixflow';
 import { useDataNexus } from './DataNexusContext';
 import { sendKylrixEmailNotification } from '@/lib/email-notifications';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
-import { getAllTags } from '@/lib/appwrite';
+import { getAllTags } from '@/lib/data';
 import { tagsCacheKey } from '@/lib/data';
-import type { Tags } from '@/types/appwrite';
+import type { Tags } from '@/lib/data';
 import { parseSourceNoteIdsFromTags } from '@/sdk/crosslinks';
 import {
   Task,
@@ -1583,7 +1583,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     void (async () => {
       try {
-        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const { ProjectsService } = await import('@/lib/data');
         const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
         if (tagged?.tasks && Array.isArray(tagged.tasks) && tagged.tasks.length > 0 && !cancelled) {
           tagged.tasks.forEach((t: any) => {

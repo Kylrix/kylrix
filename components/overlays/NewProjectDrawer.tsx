@@ -19,13 +19,13 @@ import {
   Globe,
   Check,
 } from 'lucide-react';
-import { ProjectsService } from '@/lib/appwrite/projects';
+import { ProjectsService } from '@/lib/data';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { FormsService } from '@/lib/services/forms';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { listNotesByUser } from '@/lib/appwrite/note';
+import { listNotesByUser } from '@/lib/data';
 import { tasks } from '@/lib/kylrixflow';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
 

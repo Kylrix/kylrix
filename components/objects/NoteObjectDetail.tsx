@@ -4,7 +4,7 @@ import React, { useCallback, useMemo } from 'react';
 import { NoteDetailSidebar, type NoteAccessRole } from '@/components/ui/NoteDetailSidebar';
 import { ObjectDetailHost } from '@/components/objects/ObjectDetailHost';
 import { noteToDetail } from '@/lib/objects/adapters';
-import type { Notes } from '@/types/appwrite';
+import type { Notes } from '@/lib/data';
 import { useNotes } from '@/context/NotesContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';

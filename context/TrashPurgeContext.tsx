@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useCallback, useRef } from
 import { useAuth } from '@/context/auth/AuthContext';
 import { purgeExpiredTrash } from '@/lib/actions/client-ops';
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { getSettings, updateSettings, createSettings } from '@/lib/appwrite/note';
+import { getSettings, updateSettings, createSettings } from '@/lib/data';
 
 interface TrashPurgeContextType {
   runTrashPurge: (force?: boolean) => Promise<{ success: boolean; purgedCount: number }>;

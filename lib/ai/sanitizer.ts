@@ -1,4 +1,4 @@
-import type { Credentials } from '@/lib/appwrite/types';
+import type { Credentials } from '@/lib/data';
 import { AnalysisMode } from './types';
 
 /**

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Rocket, Heart, Globe, Clock } from 'lucide-react';
 import { calculateTotalSubscriptionPrice } from '@/lib/subscription/ppp';
 import { createBillingCheckoutSessionAction } from '@/lib/actions/billing/billing';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 
 function LoadingSpinner({ size = 28 }: { size?: number }) {
   return (

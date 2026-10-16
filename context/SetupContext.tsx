@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { UsersService, invalidateUsersProfileRowCache } from '@/lib/services/users';
-import { KeychainService } from '@/lib/appwrite/keychain';
+import { KeychainService } from '@/lib/data';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { usePathname } from 'next/navigation';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';

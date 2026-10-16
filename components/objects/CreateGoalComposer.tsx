@@ -741,7 +741,7 @@ export function CreateGoalComposer({
                   const val = input?.value?.trim();
                   if (!val) return;
                   try {
-                    const { createTag } = await import('@/lib/appwrite');
+                    const { createTag } = await import('@/lib/data');
                     await createTag({ name: val, description: '', color: '#A855F7' });
                     await refreshEcosystemTags();
                     appendTag(val);
