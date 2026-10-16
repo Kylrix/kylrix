@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { account } from '@/lib/appwrite/client';
+import { account } from '@/lib/data';
 import {
   UNLOCK_ON_DEMAND_DEFAULT,
   UNLOCK_ON_DEMAND_PREF_KEY,

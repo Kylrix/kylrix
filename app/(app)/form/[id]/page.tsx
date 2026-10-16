@@ -73,21 +73,13 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     return;
                 }
 
-                const { hasAuthSessionHint, getCurrentUserSnapshot } = await import('@/lib/data');
+                const { hasAuthSessionHint, getCurrentUserSnapshot, getCurrentUser } = await import('@/lib/data');
                 let user = getCurrentUserSnapshot();
 
                 if (!user && hasAuthSessionHint()) {
-                    void FormsService.getCurrentUser().then((u) => {
+                    void getCurrentUser().then((u) => {
                         if (u) {
                             setCurrentUser(u);
-                            // Check for remote draft if user is populated later
-                            FormsService.getDraft(resolvedParams.id, u.$id).then((draft) => {
-                                if (draft && draft.payload) {
-                                    try {
-                                        setFormData(JSON.parse(draft.payload));
-                                    } catch (_e) {}
-                                }
-                            }).catch(() => {});
                         }
                     }).catch(() => {});
                 } else if (user) {
