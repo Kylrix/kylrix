@@ -1,5 +1,3 @@
-import { databases, CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, Query } from '../appwrite';
-
 /**
  * Ensures the user has a record in the global Kylrix Connect Directory.
  * This is the 'Universal Identity Hook' that enables ecosystem discovery.
@@ -41,14 +39,11 @@ export async function searchGlobalUsers(query: string, limit = 10, callerUserId?
         }
     }
 
-    // Primary: secure directory search via system client (bypasses RLS, respects isPublic)
-    // This fixes "no results" where client-side listRows is blocked by rowSecurity.
     try {
         const { searchGlobalUsersSecure } = await import('@/lib/actions/secure-ops');
         const secureRows = await searchGlobalUsersSecure(cleaned, limit);
         if (Array.isArray(secureRows) && secureRows.length > 0) {
-            // Normalize secure rows to same shape as direct search
-            const mapped = secureRows.map((doc: any) => ({
+            return secureRows.map((doc: any) => ({
                 id: doc.$id || doc.id || doc.userId,
                 userId: doc.$id || doc.userId || doc.id,
                 type: 'user' as const,
@@ -66,116 +61,10 @@ export async function searchGlobalUsers(query: string, limit = 10, callerUserId?
                 email: doc.email || null,
                 apps: doc.appsActive || [],
             }));
-            if (mapped.length >= 1) return mapped;
         }
     } catch (e: any) {
-        console.warn('[Identity] Secure search failed, falling back to client query:', e?.message);
+        console.warn('[Identity] Secure search failed:', e?.message);
     }
 
-    try {
-        // Fallback client-side search: ONLY username (indexed)
-        let results: any[] = [];
-        try {
-            const queries = [
-                Query.or([
-                    Query.startsWith('username', cleaned.toLowerCase()),
-                    Query.startsWith('displayName', cleaned)
-                ]),
-                Query.limit(limit),
-                Query.select(['$id', 'username', 'displayName', 'bio', 'avatar', 'walletAddress', 'publicKey'])
-            ];
-
-            const res = await databases.listRows(
-                CONNECT_DATABASE_ID,
-                CONNECT_TABLE_ID_USERS,
-                queries
-            );
-            results = res.rows.map((doc: any) => ({
-                id: doc.$id,
-                userId: doc.$id,
-                type: 'user' as const,
-                displayName: doc.displayName || null,
-                title: doc.displayName || (doc.username ? `@${doc.username}` : 'Kylrix User'),
-                subtitle: doc.username ? `@${doc.username}` : '',
-                icon: 'person',
-                avatar: doc.avatar,
-                createdAt: doc.$createdAt || doc.createdAt || null,
-                lastUsernameEdit: doc.last_username_edit || null,
-                username: doc.username || null,
-                bio: doc.bio || null,
-                tier: doc.tier || null,
-                publicKey: doc.publicKey || null,
-                apps: doc.appsActive || []
-            }));
-        } catch (e: any) {
-            console.warn('[Identity] Username search failed:', e);
-            if (e.message?.includes('Query.or')) {
-                const res = await databases.listRows(
-                    CONNECT_DATABASE_ID,
-                    CONNECT_TABLE_ID_USERS,
-                    [
-                        Query.startsWith('username', cleaned.toLowerCase()),
-                        Query.limit(limit),
-                        Query.select(['$id', 'username', 'displayName', 'bio', 'avatar', 'walletAddress', 'publicKey'])
-                    ]
-                );
-                results = res.rows.map((doc: any) => ({
-                    id: doc.$id,
-                    userId: doc.$id,
-                    type: 'user' as const,
-                    displayName: doc.displayName || null,
-                    title: doc.displayName || (doc.username ? `@${doc.username}` : 'Kylrix User'),
-                    subtitle: doc.username ? `@${doc.username}` : '',
-                    icon: 'person',
-                    avatar: doc.avatar,
-                    createdAt: doc.$createdAt || doc.createdAt || null,
-                    lastUsernameEdit: doc.last_username_edit || null,
-                    username: doc.username || null,
-                    bio: doc.bio || null,
-                    tier: doc.tier || null,
-                    publicKey: doc.publicKey || null,
-                    apps: doc.appsActive || []
-                }));
-            }
-        }
-
-        if (results.length < 5) {
-            try {
-                const noteRes = await databases.listRows(
-                    CONNECT_DATABASE_ID,
-                    CONNECT_TABLE_ID_USERS,
-                    [
-                        Query.search('displayName', cleaned),
-                        Query.limit(5)
-                    ]
-                );
-                for (const doc of noteRes.rows) {
-                    if (!results.find((r: any) => r.id === doc.$id)) {
-                        results.push({
-                            id: doc.$id,
-                            userId: doc.$id,
-                            type: 'user' as const,
-                            displayName: doc.displayName || null,
-                            title: doc.displayName || (doc.username ? `@${doc.username}` : 'Kylrix User'),
-                            subtitle: doc.username ? `@${doc.username}` : '',
-                            icon: 'person',
-                            avatar: doc.avatar || null,
-                            createdAt: doc.$createdAt || doc.createdAt || null,
-                            lastUsernameEdit: doc.last_username_edit || null,
-                            username: doc.username || null,
-                            bio: doc.bio || null,
-                            tier: doc.tier || null,
-                            publicKey: doc.publicKey || null,
-                            apps: ['note']
-                        });
-                    }
-                }
-            } catch (_err: any) {}
-        }
-
-        return results;
-    } catch (error: any) {
-        console.error('[Identity] Global search failed:', error);
-        return [];
-    }
+    return [];
 }
