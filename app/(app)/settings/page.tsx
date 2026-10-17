@@ -388,7 +388,8 @@ function SettingsPageInner() {
           if (response?.accepted) {
             toast.success('Tokens minted successfully!');
           } else {
-            toast.error(response?.reason === 'IDEMPOTENCY_CONFLICT' ? "Check back tomorrow! You've already collected today's reward." : (response?.reason || 'Minting failed'));
+            const reason = (response as any)?.reason;
+            toast.error(reason === 'IDEMPOTENCY_CONFLICT' ? "Check back tomorrow! You've already collected today's reward." : (reason || 'Minting failed'));
           }
         } catch (e: any) {
           toast.error(e.message || 'Minting failed');

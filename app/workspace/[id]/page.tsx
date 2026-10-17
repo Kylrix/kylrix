@@ -87,7 +87,7 @@ export default function WorkspaceSharePage() {
 
         // Access denied
         setDeniedInfo({
-          ownerName: access.ownerName || 'the workspace owner',
+          ownerName: (access as any).ownerName || 'the workspace owner',
           message:
             access.message ||
             'No access to workspace. Ask the owner to make it public or add you to collaborators.',

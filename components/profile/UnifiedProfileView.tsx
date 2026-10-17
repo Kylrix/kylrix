@@ -291,7 +291,7 @@ export function UnifiedProfileView({
           } catch {}
 
           setResolvedProfile(prev => ({
-            name: prof.displayName || prof.name || prev.name,
+            name: prof.displayName || (prof as any).name || prev.name,
             username: typeof prof.username === 'string' && isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : prev.username,
             avatar: prof.avatar || prof.avatarUrl || prev.avatar,
             bio: prof.bio ?? prev.bio,

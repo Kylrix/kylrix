@@ -401,32 +401,6 @@ export async function resolveWorkspaceMekBytes(
     } catch {}
   }
 
-  // C. Check local filesystem sovereign store (~/.kylrix/agents/)
-  if (typeof process !== 'undefined') {
-    try {
-      const fs = await import('fs');
-      const path = await import('path');
-      const os = await import('os');
-      const agentsDir = path.join(os.homedir(), '.kylrix', 'agents');
-      if (fs.existsSync(agentsDir)) {
-        const files = fs.readdirSync(agentsDir);
-        for (const file of files) {
-          if (file.endsWith('.json')) {
-            const fullPath = path.join(agentsDir, file);
-            const content = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
-            if (
-              ((targetAgentId && (content.agentId === targetAgentId || content.agentUserId === `agent_${targetAgentId}`)) ||
-                (opts?.workspaceId && (content.workspaceId === opts.workspaceId || content.defaultWorkspaceId === opts.workspaceId))) &&
-              content.mekHex
-            ) {
-              return parseMekToBytes(content.mekHex);
-            }
-          }
-        }
-      }
-    } catch {}
-  }
-
   return null;
 }
 

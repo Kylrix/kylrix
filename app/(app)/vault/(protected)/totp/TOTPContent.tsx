@@ -70,7 +70,7 @@ function TOTPCardStable({
     } catch { return !!ecosystemSecurity.status.isUnlocked; }
   });
   useEffect(() => {
-    setDisplayTotp((prev) => (prev.$id === totp.$id ? prev : totp));
+    setDisplayTotp((prev: TotpItem) => (prev.$id === totp.$id ? prev : totp));
   }, [totp.$id]);
   useEffect(() => {
     if (!isVaultUnlockedState && (looksEncrypted(totp.issuer) || looksEncrypted(totp.accountName) || looksEncrypted(totp.secretKey))) {
@@ -545,7 +545,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
     const handleVaultChange = async () => {
       if (user?.$id) {
-        listTotpSecrets(user.$id).then(setTotpCodes).catch(() => {});
+        listTotpSecrets(user.$id).then((rows) => setTotpCodes(Array.isArray(rows) ? rows : rows.rows || [])).catch(() => {});
       }
     };
 

@@ -513,7 +513,7 @@ export function NoteDetailSidebar({
       try {
         const { getObjectsByParent } = await import('@/lib/actions/client-ops');
         const rows = await getObjectsByParent(liveNote.$id, 'note');
-        if (active) setAttachedObjects(rows);
+        if (active) setAttachedObjects(Array.isArray(rows) ? rows : rows?.rows || []);
       } catch (err) {
         console.warn('[NoteDetailSidebar] Failed to load attached objects:', err);
       }
@@ -573,7 +573,7 @@ export function NoteDetailSidebar({
 
   const handleTogglePublic = useCallback(async () => {
     try {
-      const updated = await toggleNoteVisibility(liveNote.$id);
+      const updated = await toggleNoteVisibility(liveNote.$id, !isPublic);
       if (updated) {
         updateLocalAndParentNote(updated);
         showSuccess(updated.isPublic ? 'Note is now Public' : 'Note is now Private');
@@ -620,7 +620,7 @@ export function NoteDetailSidebar({
     }
 
     const url = isT4Encrypted
-      ? await getCurrentPublicNoteShareUrl(liveNote.$id, liveNote as any)
+      ? await getCurrentPublicNoteShareUrl(liveNote.$id)
       : getShareableUrl(liveNote.$id);
 
     if (url) {
@@ -1003,7 +1003,7 @@ export function NoteDetailSidebar({
       appTheme: theme as any,
       label: payload.item?.title || payload.item?.name || payload.item?.issuer || payload.item?.caption || undefined}));
     const { getObjectsByParent } = await import('@/lib/actions/client-ops');
-    setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
+    { const rows = await getObjectsByParent(liveNote.$id, 'note'); setAttachedObjects(Array.isArray(rows) ? rows : rows?.rows || []); }
   }, [canAttachSecondaryObject, showError, liveNote.$id, getCursorLineNumber, insertObjectBlockAtCursor]);
 
   const onPickExternalFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1026,7 +1026,7 @@ export function NoteDetailSidebar({
         childKind,
         metadata: { bucketId, fileName: file.name, mimeType: file.type, size: file.size, insertLine: getCursorLineNumber() }});
       await insertObjectBlockAtCursor(serializeObjectBlock({
-        objectId: relation?.$id,
+        objectId: (relation as any)?.$id || (relation as any)?.id,
         childId: uploaded.$id,
         childKind,
         bucketId,
@@ -1035,7 +1035,7 @@ export function NoteDetailSidebar({
         appTheme: 'idea',
         metadata: { mimeType: file.type, fileName: file.name }}));
       const { getObjectsByParent } = await import('@/lib/actions/client-ops');
-      setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
+      { const rows = await getObjectsByParent(liveNote.$id, 'note'); setAttachedObjects(Array.isArray(rows) ? rows : rows?.rows || []); }
       showSuccess('Attachment added');
     } catch (err: any) {
       showError('Attach failed', err?.message || 'Unable to upload and attach file.');
@@ -1072,7 +1072,7 @@ export function NoteDetailSidebar({
           })
         );
         const { getObjectsByParent } = await import('@/lib/actions/client-ops');
-        setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
+        { const rows = await getObjectsByParent(liveNote.$id, 'note'); setAttachedObjects(Array.isArray(rows) ? rows : rows?.rows || []); }
       } catch (err) {
         console.warn('Failed object reconciliation after markdown update:', err);
       }
@@ -1419,7 +1419,7 @@ export function NoteDetailSidebar({
                     <button
                       type="button"
                       onClick={() => {
-                        const newTags = displayTags.filter((t) => t !== tag);
+                        const newTags = displayTags.filter((t: string) => t !== tag);
                         handleTagsChange(newTags.join(', '));
                       }}
                       className="hover:text-white"
@@ -1603,7 +1603,7 @@ export function NoteDetailSidebar({
               return uniqueTags.map((tag: any) => {
                 const currentTagsArray = tags.split(',').map((t: string) => t.trim()).filter(Boolean);
                 const tagLower = (tag.name || '').trim().toLowerCase();
-                const isSelected = currentTagsArray.some((t) => t.toLowerCase() === tagLower);
+                const isSelected = currentTagsArray.some((t: string) => t.toLowerCase() === tagLower);
                 const color = (tag as any).color || '#9B9691';
 
                 return (
@@ -1804,7 +1804,7 @@ export function NoteDetailSidebar({
                   try {
                     const { detachObjectByRelation, getObjectsByParent } = await import('@/lib/actions/client-ops');
                     await detachObjectByRelation({ parentId: liveNote.$id, childId: block.payload.childId });
-                    setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
+                    { const rows = await getObjectsByParent(liveNote.$id, 'note'); setAttachedObjects(Array.isArray(rows) ? rows : rows?.rows || []); }
                   } catch {}
                   setPendingBlockDelete(null);
                 }}

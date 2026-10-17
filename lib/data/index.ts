@@ -239,7 +239,7 @@ export const account = {
   async listLogs(): Promise<any> { return { logs: [] }; },
   async createOAuth2Session(provider: string, _success?: string, _failure?: string) {
     if (typeof window !== 'undefined') {
-      window.location.href = `/api/auth/oauth/${provider}`;
+      window.location.assign(`/api/auth/oauth/${provider}`);
     }
     return { success: true };
   },
@@ -459,7 +459,7 @@ export async function deleteTotpSecret(id: string): Promise<any> {
   });
 }
 
-export async function listTotpSecrets(): Promise<any[]> {
+export async function listTotpSecrets(_userId?: string): Promise<any> {
   const { systemTables } = await import('./system-tables');
   const res = await systemTables().listRows({
     databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
@@ -549,7 +549,7 @@ export async function listNotes(): Promise<any[]> {
   return res.rows;
 }
 
-export async function listNotesByUser(): Promise<any[]> {
+export async function listNotesByUser(_userId?: string): Promise<any> {
   return listNotes();
 }
 
@@ -597,7 +597,7 @@ export function isNoteEditableByAnyone(_note: any): boolean {
   return false;
 }
 
-export async function toggleNoteVisibility(id: string, isPublic: boolean): Promise<any> {
+export async function toggleNoteVisibility(id: string, isPublic = true): Promise<any> {
   return updateNote(id, { isPublic });
 }
 
@@ -626,7 +626,7 @@ export async function rotatePublicNoteLink(id: string): Promise<any> {
   return { id };
 }
 
-export async function getShareableUrl(id: string): Promise<string> {
+export function getShareableUrl(id: string, _dek?: string | null): string {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://kylrix.space';
   return `${baseUrl}/idea/${id}`;
 }

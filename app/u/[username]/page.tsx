@@ -24,7 +24,7 @@ export async function generateMetadata({
       : `View @${username}'s profile on Kylrix.`;
     const handle = profile.username || username;
     const previewImage = `/u/${handle}/opengraph-image?v=${encodeURIComponent(
-      profile.$updatedAt || profile.avatar || handle
+      profile.updatedAt || profile.avatar || handle
     )}`;
 
     return buildOgMetadata({
