@@ -112,51 +112,6 @@ export default function LandingPage() {
         <div className="absolute top-[40%] right-[-10%] w-[600px] h-[400px] bg-amber-500/5 blur-[140px] rounded-full" />
       </div>
 
-      {/* Navigation Header */}
-      <header className="relative z-20 border-b border-white/[0.06] bg-[#0A0908]/80 backdrop-blur-md sticky top-0">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-              K
-            </div>
-            <span className="font-extrabold text-lg tracking-tight text-white font-clash">
-              Kylrix
-            </span>
-          </Link>
-
-          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-white/60">
-            <a href="#features" className="hover:text-white transition-colors">
-              Features
-            </a>
-            <a href="#vault" className="hover:text-white transition-colors">
-              Security
-            </a>
-            <a href="#mcp" className="hover:text-white transition-colors">
-              AI Tools
-            </a>
-            <a href="#selfhost" className="hover:text-white transition-colors">
-              Self-Host
-            </a>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white/80 hover:text-white hover:bg-white/[0.06] transition-all"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/app"
-              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 transition-all flex items-center gap-1.5"
-            >
-              <span>Open App</span>
-              <ChevronRight size={14} />
-            </Link>
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section */}
       <section className="relative z-10 pt-20 pb-16 sm:pt-28 sm:pb-24 px-4 sm:px-6 max-w-5xl mx-auto text-center">
         {/* Release / Status Pill */}
