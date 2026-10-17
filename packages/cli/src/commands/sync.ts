@@ -29,6 +29,8 @@ export async function syncCommand(opts: { url?: string; token?: string; workspac
     }
     return;
   }
+
+  const verdict = evaluateOfflineAutoSync(env.apiUrl, env.userId);
   if (verdict.canAutoSync && verdict.sourceContainer && verdict.itemCount > 0) {
     if (!opts.json) {
       console.log(pc.dim(`Migrating ${verdict.itemCount} items from offline container "${verdict.sourceContainer}" to active account...`));

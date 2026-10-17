@@ -239,6 +239,36 @@ describe('CLI Base URI Partitioning and Multi-Account Silos', () => {
     });
   });
 
+  describe('Sync Command', () => {
+    it('handles syncCommand for free accounts and authenticated evaluateOfflineAutoSync path', async () => {
+      saveConfig({
+        apiUrl: 'https://www.kylrix.space',
+        userId: 'usr_free',
+        email: 'free@example.com',
+        token: 'token_free',
+        tier: 'FREE',
+      });
+
+      const { syncCommand } = await import('./commands/sync');
+
+      // Free tier syncCommand returns early without network call or ReferenceError
+      await syncCommand({ token: 'token_free', json: true });
+
+      // Verify evaluateOfflineAutoSync does not throw ReferenceError when called on Pro account
+      saveConfig({
+        apiUrl: 'https://www.kylrix.space',
+        userId: 'usr_pro',
+        email: 'pro@example.com',
+        token: 'token_pro',
+        tier: 'PRO',
+      });
+
+      const verdict = evaluateOfflineAutoSync('https://www.kylrix.space', 'usr_pro');
+      expect(verdict).toBeDefined();
+      expect(typeof verdict.canAutoSync).toBe('boolean');
+    });
+  });
+
   describe('Local-First Store & Bidirectional Sync Resilience', () => {
     it('creates ideas locally with sync_status=unsynced and retains them', () => {
       const idea = LocalStore.createIdea({
