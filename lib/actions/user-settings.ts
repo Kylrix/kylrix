@@ -146,12 +146,6 @@ export async function listUserIdentitiesAction(jwt?: string) {
     const { db } = await import('@/lib/db');
     const { account: accountTable, oauthConsent, oauthClient, user: userTable } = await import('@/lib/db/schema');
     const { eq, inArray } = await import('drizzle-orm');
-    const { consolidateUserByEmail } = await import('@/lib/actions/turso-ops');
-
-    if (actor.email) {
-      await consolidateUserByEmail(actor.email, { id: actor.$id, name: actor.name }).catch(() => {});
-    }
-
     const allUserIds = [actor.$id];
     if (actor.email) {
       const matchingUsers = await db

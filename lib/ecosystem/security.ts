@@ -146,8 +146,26 @@ class EcosystemSecurity {
       const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
       if (!offline) {
         try {
-          const { KeychainService } = await import('@/lib/data');
-          keychainEntries = await KeychainService.listKeychainEntries(resolvedUserId);
+          const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
+          const remoteResult = await listKeychainTurso(resolvedUserId);
+          keychainEntries = (remoteResult.rows || []).map((row: any) => {
+            const metadata = typeof row.metadata === 'string'
+              ? (() => { try { return JSON.parse(row.metadata); } catch { return {}; } })()
+              : (row.metadata || {});
+            let params = metadata.params;
+            if (typeof params === 'string') {
+              try { params = JSON.parse(params); } catch {}
+            }
+            return {
+              ...row,
+              $id: row.id,
+              wrappedKey: row.encryptedPayload,
+              salt: metadata.salt || row.nonce,
+              params,
+              isArgon: metadata.isArgon,
+              credentialId: metadata.credentialId || (row.type === 'passkey' ? row.account : null),
+            };
+          });
           userDoc = await SecurityEnclave.getUserDoc(resolvedUserId);
 
           this.hasMasterpassState = !!(

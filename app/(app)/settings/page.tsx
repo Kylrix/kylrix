@@ -368,11 +368,6 @@ function SettingsPageInner() {
         setMinting(true);
         try {
             const { mintDailyLoginSecure } = await import('@/lib/actions/secure-ops');
-            let userJwt: string | undefined;
-            try {
-                userJwt = (await getJWT()) || undefined;
-            } catch {}
-
             const today = new Date();
             today.setUTCHours(0, 0, 0, 0);
             const dateKey = today.toISOString();
@@ -382,7 +377,6 @@ function SettingsPageInner() {
             const response = await mintDailyLoginSecure({
                 userId: user.$id,
                 dateKey: dateKey,
-                jwt: userJwt
             });
 
           if (response?.accepted) {
@@ -407,8 +401,8 @@ function SettingsPageInner() {
 
     useEffect(() => {
         if (user?.$id && effUsername) {
-            getJWT()
-                .then(jwt => import('@/lib/actions/referrals').then(m => m.getReferralStatsAction(effUsername, jwt || undefined)))
+            import('@/lib/actions/referrals')
+                .then(m => m.getReferralStatsAction(effUsername))
                 .then(stats => setReferralStats(stats))
                 .catch(() => null);
         }
@@ -435,8 +429,7 @@ function SettingsPageInner() {
             if (!user?.$id) return;
             try {
                 const { isUserAdmin } = await import('@/lib/actions/admin/check-admin');
-                const jwt = await getJWT();
-                const result = await isUserAdmin(jwt || undefined);
+                const result = await isUserAdmin();
                 if (active) setIsAdmin(result);
             } catch (err) {
                 console.error('Failed to check admin status:', err);
