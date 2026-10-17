@@ -8,6 +8,7 @@ import { JWTSchema, NoteSchema, SuggestionParamsSchema } from '@/lib/validations
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { ulid } from '@/lib/utils/ulid';
 
 const { getActor, verifyNotePermission } = shared;
 
@@ -309,7 +310,7 @@ export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
   for (const row of rows) {
     const { newDocumentState } = row;
     await upsertNoteTurso({
-      id: newDocumentState.id || crypto.randomUUID(),
+      id: newDocumentState.id || (await import('@/lib/utils/ulid')).ulid(),
       userId: actor.$id,
       title: newDocumentState.title || '',
       content: newDocumentState.content || '',
@@ -327,7 +328,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
-  const reservedRowId = data?.$id || data?.id || crypto.randomUUID();
+  const reservedRowId = data?.$id || data?.id || (await import('@/lib/utils/ulid')).ulid();
   const { clampNoteTitle } = await import('@/constants/noteTitle');
   if (data && typeof data === 'object') {
     data.title = clampNoteTitle((data as any).title, 'Untitled Thought');
@@ -443,7 +444,7 @@ export async function createthreadNoteSecure(data: {
   creatorDeletionProofHash?: string;
 }) {
   const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
-  const id = crypto.randomUUID();
+  const id = ulid();
   const now = new Date().toISOString();
 
   await upsertNoteTurso({
@@ -463,7 +464,7 @@ export async function createthreadNoteForCallSecure(callId: string, title?: stri
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
-  const id = crypto.randomUUID();
+  const id = ulid();
   const now = new Date().toISOString();
 
   await upsertNoteTurso({
@@ -556,7 +557,7 @@ export async function createthreadNoteChatSecure(data: {
   }
 
   const { upsertConversationTurso } = await import('@/lib/actions/turso-ops');
-  const id = data.customRowId || crypto.randomUUID();
+  const id = data.customRowId || ulid();
   const now = new Date().toISOString();
 
   await upsertConversationTurso({

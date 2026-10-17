@@ -169,7 +169,7 @@ function DashboardPageContent() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const loadAllCredentials = useCallback(async (background = false, cursorToUse: string | null = null, force = false) => {
-    const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
+    const activeUserId = user?.id || user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.id || getCurrentUserSnapshot()?.$id || '') : '');
     if (!activeUserId) { setLoading(false); return; }
     if (!background && !cursorToUse) setLoading(true);
     if (cursorToUse) setLoadingMore(true);
@@ -194,32 +194,21 @@ function DashboardPageContent() {
 
     try {
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      const { APPWRITE_CONFIG } = await import('@/lib/data');
 
       if (!cursorToUse) {
         const rows = await LocalEngine.query<Credentials[]>(
           cacheKey,
           async () => {
-            const { TablesDB, Client, Query } = await import('@/lib/data');
-            const client = new Client()
-              .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-              .setProject(APPWRITE_CONFIG.PROJECT_ID);
-            const tablesDB = new TablesDB(client);
-            const res = await tablesDB.listRows(
-              APPWRITE_CONFIG.DATABASES.VAULT,
-              APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
-              [
-                Query.equal('userId', activeUserId),
-                Query.limit(50),
-                Query.orderDesc('$updatedAt')
-              ]
-            );
-            return dedupeCredentialsById((Array.isArray(res?.rows) ? res.rows : []) as unknown as Credentials[]);
+            const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
+            const res = await listVaultItemsTurso(activeUserId);
+            return dedupeCredentialsById((res.rows || []).map((row: any) => ({
+              ...row,
+              $id: row.$id || row.id,
+            })) as Credentials[]);
           },
           {
             ttl: 1000 * 60 * 5,
             force,
-            realtimeChannel: `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.tables.${APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS}.rows`
           }
         );
 
@@ -230,36 +219,6 @@ function DashboardPageContent() {
         setAllCredentials(unique);
         setHasMore(unique.length === 50);
         setNextCursor(unique.length === 50 && unique.length ? (unique[unique.length - 1] as any).$id : null);
-      } else {
-        const { TablesDB, Client, Query } = await import('@/lib/data');
-        const client = new Client()
-          .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-          .setProject(APPWRITE_CONFIG.PROJECT_ID);
-        const tablesDB = new TablesDB(client);
-        const res = await tablesDB.listRows(
-          APPWRITE_CONFIG.DATABASES.VAULT,
-          APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
-          [
-            Query.equal('userId', activeUserId),
-            Query.limit(50),
-            Query.orderDesc('$updatedAt'),
-            Query.cursorAfter(cursorToUse)
-          ]
-        );
-        const rows = Array.isArray(res?.rows) ? res.rows : [];
-        const batchHasMore = rows.length === 50;
-        const newCursor = batchHasMore && rows.length ? rows[rows.length - 1].$id : null;
-        setHasMore(batchHasMore);
-        setNextCursor(newCursor);
-
-        setAllCredentials((prev) => {
-          const updated = dedupeCredentialsById([
-            ...prev,
-            ...(rows as unknown as Credentials[]),
-          ]);
-          void LocalEngine.cacheSet(cacheKey, updated);
-          return updated;
-        });
       }
     } catch (error: unknown) {
       console.error("[Vault] Failed to load credentials:", error);
@@ -291,7 +250,7 @@ function DashboardPageContent() {
 
   // Realtime live updates for credentials
   useEffect(() => {
-    const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
+    const activeUserId = user?.id || user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.id || getCurrentUserSnapshot()?.$id || '') : '');
     if (!activeUserId) return;
     let unsub: (() => void) | null = null;
     let cancelled = false;

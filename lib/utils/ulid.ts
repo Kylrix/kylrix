@@ -1,5 +1,3 @@
-import { randomBytes } from 'crypto';
-
 const ENCODING = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // Crockford's Base32
 const ENCODING_LEN = ENCODING.length;
 
@@ -17,7 +15,12 @@ export function ulid(seedTime: number = Date.now()): string {
   }
 
   // 80 bits of cryptographically secure randomness
-  const bytes = randomBytes(10);
+  const bytes = new Uint8Array(10);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  }
   let randStr = '';
   for (let i = 0; i < 16; i++) {
     const byte = bytes[i % 10];

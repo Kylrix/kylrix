@@ -16,6 +16,7 @@ import { TypeIntelToggle, TypeIntelGhostLayer } from '@/components/agentic/TypeI
 import { useContextualAutocomplete } from '@/lib/contextual-engine';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
+import { ulid } from '@/lib/utils/ulid';
 
 type Props = {
   onClose?: () => void;
@@ -154,7 +155,7 @@ export function CreateEventComposer({
   const ensureId = useCallback(() => {
     const existing = resolvedId || liveIdRef.current;
     if (existing) return existing;
-    const id = crypto.randomUUID();
+    const id = ulid();
     liveIdRef.current = id;
     setResolvedId(id);
     return id;
