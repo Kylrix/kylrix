@@ -15,8 +15,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useFAB } from '@/context/FABContext';
 import EventDetails from './EventDetails';
-import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
-import { useProjectObjects } from '@/hooks/useProjectObjects';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { useWorkspace } from '@/context/WorkspaceContext';
 
 function mapRemoteEvent(doc: any): Event {
@@ -162,31 +161,20 @@ export default function EventList() {
     };
   }, [activeWorkspace?.id, pushLiveEvent]);
 
-  const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
-  const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
-  const { rows: workspaceProjectObjects } = useProjectObjects(customWorkspaceId, 'event');
+  const { filteredItems: scopedEvents } = useWorkspaceFilteredItems(events, 'event');
 
   const visibleEventsAll = useMemo(() => {
-    let list = events;
-    if (!activeWorkspace || activeWorkspace.isPersonal) {
-      list = list.filter((e) => isDefaultWorkspaceObject(e as any));
-    } else {
-      const registeredIds = new Set(workspaceProjectObjects.map((po) => po.entityId).filter(Boolean));
-      const pid = activeWorkspace.id;
-      list = list.filter(
-        (e: any) => registeredIds.has(e.$id || e.id) || e.projectId === pid
-      );
-    }
+    let list = scopedEvents;
     if (tabValue === 1) {
       list = list.filter((e) => {
         const t = new Date(e.startTime).getTime();
         return !Number.isNaN(t) && t < Date.parse(new Date().toISOString());
       });
     } else if (tabValue === 2 && userId) {
-      list = list.filter((e) => e.creatorId === userId);
+      list = list.filter((e) => e.creatorId === userId || e.userId === userId);
     }
     return list;
-  }, [activeWorkspace, workspaceProjectObjects, events, tabValue, userId]);
+  }, [scopedEvents, tabValue, userId]);
 
   const EVENT_PAGE_SIZE = 20;
   const [eventPage, setEventPage] = useState(1);

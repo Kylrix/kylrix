@@ -108,7 +108,12 @@ export function EventsProvider({ children }: { children: ReactNode }) {
 
       const cacheKey = `f_events_list_${userId}`;
       if (localItems.length === 0) {
-        localItems = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
+        const [userList, unPrefixedList, guestList] = await Promise.all([
+          LocalEngine.cacheGet<any[]>(cacheKey).catch(() => null),
+          LocalEngine.cacheGet<any[]>('f_events_list').catch(() => null),
+          LocalEngine.cacheGet<any[]>('f_events_list_guest').catch(() => null),
+        ]);
+        localItems = (userList?.length ? userList : (unPrefixedList?.length ? unPrefixedList : guestList)) || [];
       }
 
       if (localItems.length > 0) {
