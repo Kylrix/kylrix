@@ -49,14 +49,15 @@ function BareBonesMasterpassUnlock() {
   });
 
   const detectLiveEngine = React.useCallback(async () => {
-    if (!user?.$id) return;
+    const userId = (user as any)?.id || user?.$id;
+    if (!userId) return;
     try {
       const { SecurityEnclave } = await import('@/lib/security/enclave');
       const { KeychainService } = await import('@/lib/data');
 
-      let entries = await SecurityEnclave.getKeychain(user.$id);
+      let entries = await SecurityEnclave.getKeychain(userId);
       if ((!entries.length || entries.length === 0) && typeof navigator !== 'undefined' && navigator.onLine) {
-        entries = await KeychainService.listKeychainEntries(user.$id).catch(() => []);
+        entries = await KeychainService.listKeychainEntries(userId).catch(() => []);
       }
 
       if (!entries.length) {
@@ -115,7 +116,7 @@ function BareBonesMasterpassUnlock() {
     } catch {
       setDetectedEngine(prev => ({ ...prev, algo: 'None' }));
     }
-  }, [user?.$id]);
+  }, [(user as any)?.id, user?.$id]);
 
   React.useEffect(() => {
     detectLiveEngine();
@@ -131,36 +132,36 @@ function BareBonesMasterpassUnlock() {
 
   const handleTestUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pwd || !user?.$id) return;
+    const userId = (user as any)?.id || user?.$id;
+    if (!pwd || !userId) return;
     setBusy(true);
     setLogs([]);
     const addLog = (msg: string) => setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
 
     try {
       addLog(`=== STARTING DIRECT CRYPTO PROBE ===`);
-      addLog(`User ID: "${user.$id}", Email: "${user.email || 'N/A'}"`);
+      addLog(`User ID: "${userId}", Email: "${user.email || 'N/A'}"`);
       
       const { SecurityEnclave } = await import('@/lib/security/enclave');
-      const { AppwriteService } = await import('@/lib/data');
-      const { APPWRITE_CONFIG } = await import('@/lib/data');
+      const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
 
       // 1. Inspect User Document
       try {
-        const userDoc = await AppwriteService.getUserDoc(user.$id);
-        addLog(`UserDoc: exists=${Boolean(userDoc)}, masterpass=${userDoc?.masterpass}, isPasskey=${userDoc?.isPasskey}, authPass=${Boolean(userDoc?.authPass)}`);
+        addLog('User profile: Better Auth session active');
       } catch (err: any) {
         addLog(`UserDoc fetch error: ${err?.message || err}`);
       }
 
       // 2. Fetch Enclave and Remote Keychain
-      const localKeychain = await SecurityEnclave.getKeychain(user.$id);
+      const localKeychain = await SecurityEnclave.getKeychain(userId);
       addLog(`Enclave Local Cache Rows: ${localKeychain.length}`);
 
-      const remoteEntries = await AppwriteService.listKeychainEntries(user.$id).catch((err: any) => {
+      const remoteResult = await listKeychainTurso((user as any).id || user.$id).catch((err: any) => {
         addLog(`Remote listKeychainEntries error: ${err?.message || err}`);
-        return [];
+        return { rows: [] };
       });
-      addLog(`Remote Database (${APPWRITE_CONFIG.DATABASES.VAULT}.${APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN}) Rows: ${remoteEntries.length}`);
+      const remoteEntries = remoteResult.rows || [];
+      addLog(`Remote Turso keychain rows: ${remoteEntries.length}`);
 
       const allEntries = remoteEntries.length > 0 ? remoteEntries : localKeychain;
       if (allEntries.length === 0) {
@@ -240,7 +241,7 @@ function BareBonesMasterpassUnlock() {
 
       // 5. Run full masterPassCrypto.unlock()
       addLog(`\n>>> Running official masterPassCrypto.unlock() <<<`);
-      const success = await masterPassCrypto.unlock(pwd, user.$id, false);
+      const success = await masterPassCrypto.unlock(pwd, userId, false);
 
       if (success) {
         addLog(`=== VERDICT: UNLOCK SUCCEEDED! Vault is active in memory. ===`);

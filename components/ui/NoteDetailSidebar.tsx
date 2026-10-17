@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Notes } from '@/lib/data';
+import { Notes, getCurrentUserSnapshot } from '@/lib/data';
 
 import { AgenticDiffViewer } from '@/components/agentic/AgenticDiffViewer';
 import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
@@ -447,10 +447,8 @@ export function NoteDetailSidebar({
       if (!linkedTaskIds.length) { setLinkedTasks([]); return; }
       setIsLoadingTasks(true);
       try {
-        const resolved = await Promise.all(linkedTaskIds.map((id: string) => 
-          getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'tasks', rowId: id },
-          () => listFlowTasks([Query.equal('$id', id)]).then(res => res.rows[0] || null))
-        ));
+        const { getGoalTurso } = await import('@/lib/actions/turso-ops');
+        const resolved = await Promise.all(linkedTaskIds.map(async (id: string) => (await getGoalTurso(id)).row));
         setLinkedTasks(resolved.filter(Boolean) as any[]);
       } finally { setIsLoadingTasks(false); }
     };
@@ -462,10 +460,11 @@ export function NoteDetailSidebar({
       if (!linkedEventIds.length) { setLinkedEvents([]); return; }
       setIsLoadingEvents(true);
       try {
-        const resolved = await Promise.all(linkedEventIds.map((id: string) => 
-          getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'events', rowId: id },
-          () => listFlowEvents([Query.equal('$id', id)]).then(res => res.rows[0] || null))
-        ));
+        const { listEventsTurso } = await import('@/lib/actions/turso-ops');
+        const userId = (getCurrentUserSnapshot() as any)?.id || (getCurrentUserSnapshot() as any)?.$id;
+        const result = userId ? await listEventsTurso(userId) : { rows: [] };
+        const byId = new Map((result.rows || []).map((row: any) => [row.id, row]));
+        const resolved = linkedEventIds.map((id: string) => byId.get(id) || null);
         setLinkedEvents(resolved.filter(Boolean) as any[]);
       } finally { setIsLoadingEvents(false); }
     };
@@ -477,10 +476,11 @@ export function NoteDetailSidebar({
       if (!linkedCredentialIds.length) { setLinkedSecrets([]); return; }
       setIsLoadingSecrets(true);
       try {
-        const resolved = await Promise.all(linkedCredentialIds.map((id: string) => 
-          getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.VAULT, tableId: 'credentials', rowId: id },
-          () => listKeepCredentials([Query.equal('$id', id)]).then(res => res.rows[0] || null))
-        ));
+        const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
+        const userId = (getCurrentUserSnapshot() as any)?.id || (getCurrentUserSnapshot() as any)?.$id;
+        const result = userId ? await listVaultItemsTurso(userId) : { rows: [] };
+        const byId = new Map((result.rows || []).map((row: any) => [row.id, row]));
+        const resolved = linkedCredentialIds.map((id: string) => byId.get(id) || null);
         setLinkedSecrets(resolved.filter(Boolean) as any[]);
       } finally { setIsLoadingSecrets(false); }
     };

@@ -64,12 +64,8 @@ export const FormsService = {
   },
 
   async listUserForms(userId: string) {
-    if (typeof window !== 'undefined') {
-      const { listUserForms } = await import('@/lib/actions/client-ops');
-      return await listUserForms(userId);
-    }
-    const { listUserFormsSecure } = await import('@/lib/actions/secure-ops');
-    return await listUserFormsSecure(userId);
+    const { listFormsTurso } = await import('@/lib/actions/turso-ops');
+    return await listFormsTurso(userId);
   },
 
   async togglePin(formId: string) {

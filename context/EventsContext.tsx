@@ -2,8 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Event } from '@/types';
-import { events as eventApi, subscribeToTable } from '@/lib/kylrixflow';
-import { APPWRITE_CONFIG } from '@/lib/data';
+import { subscribeToTable } from '@/lib/kylrixflow';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { mergeServerPageWithLocalCopy } from '@/lib/sync/local-copy-sync';
@@ -71,7 +70,7 @@ import { registerLiveEventGetter } from '@/lib/sync/pending-sync-bridge';
 
 export function EventsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const userId = user?.$id || 'guest';
+  const userId = (user as any)?.id || user?.$id || 'guest';
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -120,10 +119,9 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       // 2. Fetch remote and merge using timestamp comparison & pending guards
       let remoteItems: any[] = [];
       try {
-        const { Query } = await import('@/lib/data');
-        const queries = userId !== 'guest' ? [Query.equal('userId', userId), Query.limit(100)] : [Query.limit(100)];
-        const res = await eventApi.list(queries);
-        remoteItems = res?.rows || (Array.isArray(res) ? res : []);
+        const { listEventsTurso } = await import('@/lib/actions/turso-ops');
+        const res = await listEventsTurso(userId);
+        remoteItems = res?.rows || [];
       } catch {
         /* keep local */
       }
@@ -153,7 +151,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
 
     let unsub: any;
     try {
-      unsub = subscribeToTable<any>(APPWRITE_CONFIG.TABLES.EVENTS, ({ type, payload }) => {
+      unsub = subscribeToTable<any>('events', ({ type, payload }) => {
         if (!payload?.$id) return;
         const normalized = mapRemoteEvent(payload);
 
