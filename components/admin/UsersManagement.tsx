@@ -34,7 +34,7 @@ export default function UsersManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, getJWT } = useAuth();
+  const { user } = useAuth();
 
   const fetchUsers = useCallback(async (force = false) => {
     const cacheKey = getAdminUsersCacheKey(user?.$id, searchTerm);
@@ -45,14 +45,13 @@ export default function UsersManagement() {
     setLoading(true);
     setError(null);
     try {
-      const jwt = await getJWT();
       const data = await LocalEngine.query(
         cacheKey,
         async () => await getAdminUsersAction({
           search: searchTerm,
           verifiedOnly: false,
           limit: 100
-        }, jwt || undefined),
+        }),
         { ttl: 3 * 60 * 1000, force }
       );
       setUsers(data?.users || []);
@@ -61,7 +60,7 @@ export default function UsersManagement() {
     } finally {
       setLoading(false);
     }
-  }, [user?.$id, searchTerm, getJWT]);
+  }, [user?.$id, searchTerm]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

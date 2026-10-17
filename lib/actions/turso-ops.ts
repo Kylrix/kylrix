@@ -364,7 +364,25 @@ export async function listVaultItemsTurso(userId: string) {
       .select()
       .from(schema.vaultItems)
       .where(and(eq(schema.vaultItems.userId, userId), eq(schema.vaultItems.isTrashed, false)));
-    return { success: true, rows };
+    const normalizedRows = rows.map((row: any) => {
+      let nested = row.metadata;
+      for (let i = 0; i < 3 && typeof nested === 'string'; i += 1) {
+        try { nested = JSON.parse(nested); } catch { break; }
+      }
+      const fields = nested && typeof nested === 'object' ? nested : {};
+      return {
+        ...row,
+        $id: row.id,
+        name: fields.name || row.title,
+        username: fields.username || '',
+        url: fields.url || '',
+        password: fields.password || '',
+        notes: fields.notes || '',
+        type: fields.itemType || row.type,
+        dek: fields.dek || row.dek || null,
+      };
+    });
+    return { success: true, rows: normalizedRows };
   } catch (err: any) {
     console.error('[turso-ops] listVaultItemsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
@@ -413,7 +431,17 @@ export async function listTotpSecretsTurso(userId: string) {
       .select()
       .from(schema.totpSecrets)
       .where(eq(schema.totpSecrets.userId, userId));
-    return { success: true, rows };
+    const normalizedRows = rows.map((row: any) => ({
+      ...row,
+      $id: row.id,
+      secretKey: row.encryptedSecret,
+      accountName: row.account,
+      issuer: (() => {
+        if (!row.metadata) return '';
+        try { return JSON.parse(row.metadata)?.issuer || ''; } catch { return ''; }
+      })(),
+    }));
+    return { success: true, rows: normalizedRows };
   } catch (err: any) {
     console.error('[turso-ops] listTotpSecretsTurso failed:', err);
     return { success: false, rows: [], error: err.message };

@@ -20,7 +20,7 @@ import { getAdminStatsCacheKey } from '@/lib/admin/admin-cache';
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { user, getJWT } = useAuth();
+  const { user } = useAuth();
 
   const fetchStats = useCallback(async (force = false) => {
     const cacheKey = getAdminStatsCacheKey(user?.$id);
@@ -30,10 +30,9 @@ export default function AdminDashboard() {
     }
     setLoading(true);
     try {
-      const jwt = await getJWT();
       const data = await LocalEngine.query(
         cacheKey,
-        async () => await getAdminStatsAction(jwt || undefined),
+        async () => await getAdminStatsAction(),
         { ttl: 5 * 60 * 1000, force }
       );
       setStats(data);
@@ -43,7 +42,7 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user?.$id, getJWT]);
+  }, [user?.$id]);
 
   useEffect(() => {
     fetchStats();
