@@ -232,7 +232,7 @@ export async function updateGoal(goalId: string, data: any) {
   if (userId && userId !== 'guest') {
     try {
       const { upsertGoalTurso } = await import('@/lib/actions/turso-ops');
-      void upsertGoalTurso({
+      const result = await upsertGoalTurso({
         id: goalId,
         userId,
         title: data?.title,
@@ -246,23 +246,14 @@ export async function updateGoal(goalId: string, data: any) {
         workspaceId: data?.projectId,
         tags: Array.isArray(data?.tags || data?.labels) ? JSON.stringify(data.tags || data.labels) : (data?.tags ?? undefined),
         updatedAt: new Date().toISOString(),
-      } as any).catch((e) => console.warn('[client-ops] Turso updateGoal mirror failed:', e));
-    } catch {}
-  }
-
-  // 2. Direct Appwrite write
-  const { tryOwnerDirectUpdateGoal } = await import('@/lib/data');
-  const direct = await tryOwnerDirectUpdateGoal(goalId, data).catch(() => null);
-  if (direct) return direct;
-
-  const jwt = await getJwt();
-  if (jwt) {
-    try {
-      const { updateGoalSecure } = await import('./secure-ops');
-      return await updateGoalSecure(goalId, data, jwt);
-    } catch (err: any) {
-      console.warn('[client-ops] Appwrite updateGoalSecure bypassed (saved to Turso):', err?.message);
-      return { $id: goalId, ...data };
+      } as any);
+      if (!result.success) {
+        throw new Error(result.error || 'Turso goal update failed');
+      }
+      return { $id: goalId, id: goalId, ...data, userId };
+    } catch (err) {
+      console.error('[client-ops] Turso updateGoal failed:', err);
+      throw err;
     }
   }
   return { $id: goalId, ...data };
