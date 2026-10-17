@@ -2,8 +2,6 @@
 
 import { account } from '@/lib/data';
 import {
-  createNoteSecure,
-  updateNoteSecure,
   deleteNoteSecure,
   listTagsSecure,
   grantPermissionSecure,

@@ -170,7 +170,7 @@ async function flushGoalPending(
     return;
   }
 
-  const dataPayload = {
+  const dataPayload: any = {
     ...pickGoalAutosavePayload(payload),
     userId: activeUserId,
   };
