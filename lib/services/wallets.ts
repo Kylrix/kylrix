@@ -24,8 +24,13 @@ export interface WalletSummary {
 }
 
 export const WalletService = {
-    defaultChains: ['sol', 'eth', 'usdc', 'btc'],
-    supportedChains: ['eth', 'usdc', 'sol', 'btc', 'sui', 'base', 'polygon', 'arbitrum'],
+    networkDefinitions: {
+        eth: { label: 'Ethereum' }, usdc: { label: 'USDC' }, sol: { label: 'Solana' },
+        btc: { label: 'Bitcoin' }, sui: { label: 'Sui' }, base: { label: 'Base' },
+        polygon: { label: 'Polygon' }, arbitrum: { label: 'Arbitrum' },
+    } satisfies Record<SupportedWalletChain, { label: string }>,
+    defaultChains: ['sol', 'eth', 'usdc', 'btc'] as SupportedWalletChain[],
+    supportedChains: ['eth', 'usdc', 'sol', 'btc', 'sui', 'base', 'polygon', 'arbitrum'] as SupportedWalletChain[],
 
     async listMainWallets(userId: string): Promise<WalletSummary[]> {
         try {

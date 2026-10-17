@@ -43,7 +43,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
             const ensuredProfile = needsBaseProfile ? await UsersService.ensureProfileForUser(currentUser) : existing;
 
             if (ecosystemSecurity.status.isUnlocked) {
-                const syncedProfile = await UsersService.forceSyncProfileWithIdentity(currentUser).catch((error) => {
+                const syncedProfile = await UsersService.forceSyncProfileWithIdentity(currentUser).catch((error: unknown) => {
                     console.error('[ProfileProvider] Background E2E sync failed:', error);
                     return null;
                 });

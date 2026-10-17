@@ -33,7 +33,7 @@ export default async function UserProfileOGImage({
           typeof profile.preferences === 'string'
             ? JSON.parse(profile.preferences)
             : profile.preferences || {};
-        const tags = (prefs.tags || profile.tags || []) as string[];
+        const tags = (prefs.tags || (profile as any).tags || []) as string[];
         const tagChips = tags.slice(0, 2).map((t) => `#${t}`);
         chips = [`@${username}`, ...tagChips];
         if (prefs.tipEnabled) chips = ['Tips on', ...chips].slice(0, 3);
@@ -41,7 +41,7 @@ export default async function UserProfileOGImage({
         /* ignore */
       }
       avatarDataUrl = await resolveProfileAvatarDataUrl(
-        profile.avatar || profile.profilePicId || null
+        profile.avatar || (profile as any).profilePicId || null
       );
     }
   } catch (err) {

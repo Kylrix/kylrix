@@ -62,7 +62,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
         }
       }, 1000 * 60 * 10);
       
-      const formattedSessions = (sessionList.sessions || []).map((session: any) => ({
+      const formattedSessions = ((Array.isArray(sessionList) ? sessionList : sessionList.sessions) || []).map((session: any) => ({
         ...session,
         deviceType: getDeviceType((session as any).userAgent || session.clientName || '')}));
       setSessions(formattedSessions);

@@ -193,8 +193,8 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
 
             // Apply surgical patches
             for (const patch of result.patches) {
-                const patchId = patch.id || patch.$id;
-                const patchUpdatedAt = patch.updatedAt || patch.$updatedAt || new Date().toISOString();
+                const patchId = patch.id || (patch as any).$id;
+                const patchUpdatedAt = patch.updatedAt || (patch as any).$updatedAt || new Date().toISOString();
                 // Update RxDB notes collection
                 await db.notes.upsert({
                     id: patchId,

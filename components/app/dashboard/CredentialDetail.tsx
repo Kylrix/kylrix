@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { storage } from '@/lib/data';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 type Credentials = any;
 const deleteCredential = async (id: string) => {
@@ -780,7 +781,7 @@ export default function CredentialDetail({
               {attachments.map((att: any, index: number) => {
                 let fileUrl = '';
                 try {
-                  fileUrl = String(storage.getFileView('vault_attachments', att.id));
+                  fileUrl = String(storage.getFileView(att.id, 'vault_attachments'));
                 } catch {}
                 return (
                   <div

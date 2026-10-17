@@ -527,7 +527,7 @@ export function KylrixWYSIWYGEditor({
               size: file.size,
             },
           });
-          objectId = relation?.$id;
+          objectId = (relation as any)?.$id || (relation as any)?.id;
         } catch {}
       }
 

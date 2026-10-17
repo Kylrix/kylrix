@@ -1029,8 +1029,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     const appwriteTasks = (tRows || []).map(mapAppwriteTaskToTask);
     const taskMap = new Map<string, Task>();
-    appwriteTasks.forEach((t) => taskMap.set(t.id, t));
-    tursoGoals.forEach((t) => {
+    appwriteTasks.forEach((t: Task) => taskMap.set(t.id, t));
+    tursoGoals.forEach((t: Task) => {
       const existing = taskMap.get(t.id);
       if (!existing) {
         taskMap.set(t.id, t);

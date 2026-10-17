@@ -15,7 +15,7 @@ export const ChatService = {
     return parts.length === 1 && parts[0] === userId;
   },
 
-  async getConversationKey(_convOrId: any, _userId: string) {
+  async getConversationKey(_convOrId: any, _userId: string, ..._args: any[]) {
     return null;
   },
 
@@ -40,7 +40,7 @@ export const ChatService = {
     return null;
   },
 
-  async getConversations(userId: string) {
+  async getConversations(userId: string, _options?: any) {
     try {
       const res = await getConversationsAction({ userId });
       return {
@@ -163,7 +163,7 @@ export const ChatService = {
     return await this.createConversation([userId || 'user'], 'group', name);
   },
 
-  async decryptMessageRows(rows: any[], _userId: string) {
+  async decryptMessageRows(rows: any[], _conversationOrUserId: any, _userId?: string, _options?: any) {
     return rows;
   },
 

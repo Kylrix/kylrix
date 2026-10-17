@@ -440,7 +440,7 @@ export function SidekickDrawer({
       const { detachObjectByRelation, getObjectsByParent } = await import('@/lib/actions/client-ops');
       await detachObjectByRelation({ parentId: currentSessionId, childId });
       const updated = await getObjectsByParent(currentSessionId, 'sidekick').catch(() => []);
-      setAttachedSessionObjects(updated);
+      setAttachedSessionObjects(Array.isArray(updated) ? updated : updated?.rows || []);
       const cacheKey = `sidekick:attachments:${currentSessionId}`;
       LocalEngine.cacheSet(cacheKey, updated).catch(() => {});
       if (target) {
@@ -519,7 +519,7 @@ export function SidekickDrawer({
             )
           );
           const updatedObjs = await getObjectsByParent(activeSid, 'sidekick').catch(() => []);
-          setAttachedSessionObjects(updatedObjs);
+          setAttachedSessionObjects(Array.isArray(updatedObjs) ? updatedObjs : updatedObjs?.rows || []);
           const cacheKey = `sidekick:attachments:${activeSid}`;
           LocalEngine.cacheSet(cacheKey, updatedObjs).catch(() => {});
           if (target) {

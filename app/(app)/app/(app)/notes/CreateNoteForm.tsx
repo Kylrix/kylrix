@@ -222,7 +222,7 @@ export default function CreateNoteForm({
         metadata: { bucketId, fileName: file.name, mimeType: file.type, size: file.size },
       });
       insertObjectBlock(serializeObjectBlock({
-        objectId: relation?.$id,
+        objectId: (relation as any)?.$id || (relation as any)?.id,
         childId: uploaded.$id,
         childKind,
         bucketId,
@@ -987,12 +987,12 @@ export default function CreateNoteForm({
 
     if (isPublic !== persistedIsPublic) {
       try {
-        saved = (await toggleNoteVisibility(saved.$id)) as Notes;
+        saved = (await toggleNoteVisibility(saved.$id, true)) as Notes;
       } catch (error: any) {
         if (error?.message === 'VAULT_LOCKED') {
           const unlocked = await promptSudo();
           if (!unlocked) throw new Error('Vault unlock required to make this note public.');
-          saved = (await toggleNoteVisibility(saved.$id)) as Notes;
+          saved = (await toggleNoteVisibility(saved.$id, true)) as Notes;
         } else {
           throw error;
         }

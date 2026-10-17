@@ -74,6 +74,9 @@ export function invalidateUsersProfileRowCache(userId?: string | null) {
 }
 
 export const UsersService = {
+  async forceSyncProfileWithIdentity(user: { $id: string }): Promise<any | null> {
+    return this.getProfileById(user.$id);
+  },
   async getProfileById(userId: string): Promise<any | null> {
     if (!userId) return null;
 
@@ -188,7 +191,7 @@ export const UsersService = {
     }
   },
 
-  async getProfile(username: string) {
+  async getProfile(username: string): Promise<any | null> {
     if (!username) return null;
     const normalized = username.replace(/^@/, '').toLowerCase().trim();
 
