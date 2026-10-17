@@ -9,7 +9,6 @@ import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { Notes } from '@/lib/data';
 import { listNotes, getNote } from '@/lib/data';
-import { Query } from '@/lib/data';
 import { isClientEncryptedNote } from '@/lib/note/note-visibility';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { NoteObjectDetail } from '@/components/objects/NoteObjectDetail';

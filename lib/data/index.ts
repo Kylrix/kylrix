@@ -89,7 +89,7 @@ export const APPWRITE_CONFIG = {
     NOTE: { NOTES: 'notes', COMMENTS: 'comments', REACTIONS: 'reactions', COLLABORATORS: 'collaborators', NOTE_TAGS: 'note_tags', TAGS: 'tags', SUBSCRIPTIONS: 'subscriptions', COUPONS: 'coupons', THREADS: 'threads' },
     CHAT: { CONVERSATIONS: 'conversations', MESSAGES: 'messages', CALL_LINKS: 'call_links', ACCOUNT_EVENTS: 'account_events', PROFILES: 'profiles', EPOCHS: 'epochs', APP_ACTIVITY: 'app_activity_logs', MESSAGE_REACTIONS: 'message_reactions' },
     VAULT: { CREDENTIALS: 'credentials', USER: 'users', KEYCHAIN: 'keychain', TOTP_SECRETS: 'totp_secrets' },
-    FLOW: { TASKS: 'tasks', FORMS: 'forms', EVENTS: 'events', GUESTS: 'guests', OBJECTS: 'objects', COLLABORATORS: 'collaborators', AGENTS: 'agents' },
+    FLOW: { TASKS: 'tasks', FORMS: 'forms', EVENTS: 'events', GUESTS: 'guests', OBJECTS: 'objects', COLLABORATORS: 'collaborators',     AGENTS: 'agents', OAUTH_CONSENT_REQUESTS: 'oauth_consent_requests' },
     PASSWORD_MANAGER: { WALLETS: 'wallets', IDENTITIES: 'identities', KEY_MAPPING: 'key_mapping' },
     CONNECT: { TELEGRAM_CONNECTIONS: 'telegram_connections', CONVERSATIONS: 'conversations', MESSAGES: 'messages' },
   },
@@ -132,6 +132,7 @@ export const Query = {
   or: (queries: any[]): any => ({ type: 'or', queries }),
   startsWith: (attribute: string, value: any): any => ({ type: 'startsWith', attribute, value }),
   contains: (attribute: string, value: any): any => ({ type: 'contains', attribute, value }),
+  cursorAfter: (value: string): any => ({ type: 'cursorAfter', value }),
 };
 
 export const Permission = {
@@ -159,7 +160,11 @@ export namespace Models {
   export type Row = any;
   export type DefaultRow = any;
   export type RowList<T = any> = { total: number; rows: T[] };
+  export type Log = any;
+  export type Session = any;
 }
+
+export type FormSubmissions = any;
 
 export const OAuthProvider = {
   Google: 'google',
@@ -189,6 +194,13 @@ export class Databases {
   async updateRow(..._args: any[]): Promise<any> { return {}; }
   async deleteRow(..._args: any[]): Promise<any> { return {}; }
 }
+
+export class Client {
+  setEndpoint(_endpoint: string): this { return this; }
+  setProject(_project: string): this { return this; }
+}
+
+export class TablesDB extends Databases {}
 
 export class Storage {
   constructor(_client?: any) {}
@@ -232,6 +244,8 @@ export const account = {
     return { success: true };
   },
   async createJWT(): Promise<any> { return { jwt: '' }; },
+  async listSessions(): Promise<any[]> { return []; },
+  async deleteSessions(): Promise<any> { return { success: true }; },
 };
 
 export const storage = {
@@ -245,7 +259,7 @@ export const storage = {
 };
 
 export const users = {
-  async get(id: string): Promise<any> { return null; },
+  async get(_id: string): Promise<any> { return null; },
   async getPrefs(_id?: string): Promise<any> { return {}; },
   async list(_queries?: any[]): Promise<{ total: number; users: any[] }> { return { total: 0, users: [] }; },
   async create(_id: string, _email: string, _phone?: string, _password?: string, _name?: string): Promise<any> { return { $id: _id }; },
@@ -253,7 +267,7 @@ export const users = {
 };
 
 export const teams = {
-  async get(id: string): Promise<any> { return null; },
+  async get(_id: string): Promise<any> { return null; },
   async list(_queries?: any[]): Promise<{ total: number; teams: any[] }> { return { total: 0, teams: [] }; },
   async create(_id: string, _name: string, _roles?: any[]): Promise<any> { return { $id: _id }; },
   async delete(_id: string): Promise<any> { return { success: true }; },
@@ -782,6 +796,7 @@ export const KeychainService = {
   async unwrapDekWithPassword(): Promise<any> { return null; },
   async listKeychainEntries(_userId?: string): Promise<any[]> { return []; },
   async hasMasterpass(_userId?: string): Promise<boolean> { return false; },
+  async deleteKeychainEntry(_id: string): Promise<any> { return { success: true }; },
 };
 
 export const VaultService = {
@@ -791,6 +806,6 @@ export const VaultService = {
   },
   async listAllCredentials(_userId?: string): Promise<any[]> { return []; },
   async listTOTPSecrets(_userId?: string): Promise<any[]> { return []; },
-  async getCredential(id: string): Promise<any> { return null; },
-  async getTOTPSecret(id: string): Promise<any> { return null; },
+  async getCredential(_id: string): Promise<any> { return null; },
+  async getTOTPSecret(_id: string): Promise<any> { return null; },
 };
