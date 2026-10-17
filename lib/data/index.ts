@@ -237,9 +237,12 @@ export const account = {
   async searchGlobalProfiles(..._args: any[]): Promise<any[]> { return []; },
   async getGlobalProfileStatus(..._args: any[]): Promise<any> { return { status: 'offline' }; },
   async listLogs(): Promise<any> { return { logs: [] }; },
-  async createOAuth2Session(provider: string, _success?: string, _failure?: string) {
+  async createOAuth2Session(provider: string, success?: string, _failure?: string) {
     if (typeof window !== 'undefined') {
-      window.location.assign(`/api/auth/oauth/${provider}`);
+      const callbackURL = success || `${window.location.origin}/app?auth=success`;
+      window.location.assign(
+        `/api/auth/oauth/${encodeURIComponent(provider)}?callbackURL=${encodeURIComponent(callbackURL)}`,
+      );
     }
     return { success: true };
   },
