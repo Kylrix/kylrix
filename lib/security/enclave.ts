@@ -11,7 +11,6 @@
  */
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { systemTables } from '@/lib/data/system-tables';
 
 const PREFIX = 'sec_enclave';
 
