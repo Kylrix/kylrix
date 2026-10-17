@@ -235,7 +235,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
           display: 'flex',
           width: '100%',
           minHeight: '100vh',
-          pt: isSpecificPostPage ? 0 : { xs: '84px', sm: '88px', md: '96px' },
+          pt: isSpecificPostPage || isLandingPage ? 0 : { xs: '84px', sm: '88px', md: '96px' },
           position: 'relative'}}
       >
         {showLeftSidebar && <UnifiedLeftSidebar />}
@@ -293,7 +293,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       </Box>
 
       {/* --- LAYER 1: CHROME --- */}
-      {!isSpecificPostPage && (
+      {!isSpecificPostPage && !isLandingPage && (
         <Box 
           sx={{ 
               position: 'fixed', 
@@ -352,4 +352,3 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     </Box>
     );
     };
-
