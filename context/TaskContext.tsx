@@ -4,7 +4,7 @@ import React, { createContext, useContext, useReducer, useCallback, ReactNode, u
 import { usePathname } from 'next/navigation';
 
 import { tasks as taskApi, calendars as calendarApi, taskCollaborators, subscribeToTable, buildTaskPermissions } from '@/lib/kylrixflow';
-import { getCurrentUser, getCurrentUserSnapshot } from '@/lib/data';
+import { getCurrentUserSnapshot } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/data';
 import { Query } from '@/lib/data';
 import { getEcosystemUrl } from '@/lib/constants';

@@ -81,6 +81,7 @@ function parseSchemaSafe(schema: unknown): any[] {
 
 export default function FormsDashboard() {
     const { user } = useAuth();
+    const userId = user?.id || user?.$id;
     const { isPinned: isResourcePinned, togglePin } = useResourcePins();
     const { open: openDrawer } = useUnifiedDrawer();
     const { openSidebar, closeSidebar } = useDynamicSidebar();
@@ -237,7 +238,7 @@ export default function FormsDashboard() {
         } finally {
             setLoading(false);
         }
-    }, [(user as any)?.id, user?.$id, sortForms]);
+    }, [userId, sortForms]);
     const fetchFormsRef = useRef(fetchForms);
     useEffect(() => {
         fetchFormsRef.current = fetchForms;

@@ -29,6 +29,7 @@ import { toast } from 'react-hot-toast';
 
 function BareBonesMasterpassUnlock() {
   const { user } = useAuth();
+  const userId = user?.id || user?.$id;
   const [pwd, setPwd] = useState('');
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -116,7 +117,7 @@ function BareBonesMasterpassUnlock() {
     } catch {
       setDetectedEngine(prev => ({ ...prev, algo: 'None' }));
     }
-  }, [(user as any)?.id, user?.$id]);
+  }, [userId]);
 
   React.useEffect(() => {
     detectLiveEngine();
@@ -140,7 +141,7 @@ function BareBonesMasterpassUnlock() {
 
     try {
       addLog(`=== STARTING DIRECT CRYPTO PROBE ===`);
-      addLog(`User ID: "${userId}", Email: "${user.email || 'N/A'}"`);
+      addLog(`User ID: "${userId}", Email: "${user?.email || 'N/A'}"`);
       
       const { SecurityEnclave } = await import('@/lib/security/enclave');
       const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
@@ -156,7 +157,7 @@ function BareBonesMasterpassUnlock() {
       const localKeychain = await SecurityEnclave.getKeychain(userId);
       addLog(`Enclave Local Cache Rows: ${localKeychain.length}`);
 
-      const remoteResult = await listKeychainTurso((user as any).id || user.$id).catch((err: any) => {
+      const remoteResult = await listKeychainTurso(userId).catch((err: any) => {
         addLog(`Remote listKeychainEntries error: ${err?.message || err}`);
         return { rows: [] };
       });

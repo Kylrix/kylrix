@@ -7,7 +7,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSelection } from '@/context/SelectionContext';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { getCurrentUserSnapshot } from '@/lib/data';
-import { listTotpSecrets, deleteTotpSecret } from '@/lib/data';
+import { deleteTotpSecret } from '@/lib/data';
 import { generateTOTP } from '@/lib/totp-util';
 import toast from 'react-hot-toast';
 import NewTotpDialog from '@/components/app/totp/new';

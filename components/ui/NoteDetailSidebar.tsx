@@ -60,12 +60,7 @@ import { useSection } from '@/context/SectionContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
-import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
 import { 
-  listFlowTasks, 
-  listFlowEvents, 
-  listKeepCredentials, 
-  Query, 
   toggleNoteVisibility, 
   rotatePublicNoteLink, 
   getShareableUrl, 

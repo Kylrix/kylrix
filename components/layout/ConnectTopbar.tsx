@@ -87,7 +87,6 @@ import { SyncIndicator } from './SyncIndicator';
 import { NotificationDrawer, CompactNotificationPill, type KylrixNotification } from './NotificationDrawer';
 import { useLayout } from '@/context/LayoutContext';
 import { executeNotificationAction } from '@/lib/notifications/resolve-notification-action';
-import { toast } from 'react-hot-toast';
 
 
 
@@ -110,7 +109,6 @@ export default function ConnectTopbar({
   const pathname = usePathname();
   const { setIsCollapsed } = useSidebar();
   const { activeWorkspace, workspaces, setActiveWorkspaceId, markWorkspacePublic, loadingWorkspaces } = useWorkspace();
-  const isWorkspacePrivacyMode = Boolean(activeWorkspace?.privacyMode);
   const { notes = [] } = useNotes();
   const { tasks = [], projects = [], selectTask } = useTask();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
