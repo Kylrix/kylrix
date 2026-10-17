@@ -69,20 +69,24 @@ async function getJwt(): Promise<string | undefined> {
   }
 }
 
+async function getBetterAuthUserId(): Promise<string | undefined> {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    const session = await authClient.getSession();
+    return session?.data?.user?.id || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // --- Notes CRUD ---
 export async function createNote(data: any) {
   const noteId = data?.$id || data?.id || `note_${Date.now()}`;
   let userId = data?.userId || data?.creatorId;
   if (!userId && typeof window !== 'undefined') {
     try {
-      const { getKylrixPulse, getCurrentUser } = await import('@/lib/data');
-      const pulse = getKylrixPulse();
-      if (pulse?.$id) {
-        userId = pulse.$id;
-      } else {
-        const u = await getCurrentUser().catch(() => null);
-        if (u?.$id) userId = u.$id;
-      }
+      userId = await getBetterAuthUserId();
     } catch {}
   }
 
@@ -90,7 +94,7 @@ export async function createNote(data: any) {
   if (userId && userId !== 'guest') {
     try {
       const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
-      void upsertNoteTurso({
+      await upsertNoteTurso({
         id: noteId,
         userId,
         title: data?.title || '',
@@ -106,19 +110,13 @@ export async function createNote(data: any) {
         tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags || null),
         createdAt: data?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      }).catch((e) => console.warn('[client-ops] Turso createNote mirror failed:', e));
+      }).catch((e) => {
+        console.error('[client-ops] Turso createNote failed:', e);
+        throw e;
+      });
     } catch {}
   }
 
-  const jwt = await getJwt();
-  if (jwt) {
-    try {
-      return await createNoteSecure(data, jwt);
-    } catch (err: any) {
-      console.warn('[client-ops] Appwrite createNoteSecure bypassed (saved to Turso):', err?.message);
-      return { $id: noteId, ...data };
-    }
-  }
   return { $id: noteId, ...data };
 }
 
@@ -126,14 +124,7 @@ export async function updateNote(noteId: string, data: any) {
   let userId = data?.userId || data?.creatorId;
   if (!userId && typeof window !== 'undefined') {
     try {
-      const { getKylrixPulse, getCurrentUser } = await import('@/lib/data');
-      const pulse = getKylrixPulse();
-      if (pulse?.$id) {
-        userId = pulse.$id;
-      } else {
-        const u = await getCurrentUser().catch(() => null);
-        if (u?.$id) userId = u.$id;
-      }
+      userId = await getBetterAuthUserId();
     } catch {}
   }
 
@@ -141,7 +132,7 @@ export async function updateNote(noteId: string, data: any) {
   if (userId && userId !== 'guest') {
     try {
       const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
-      void upsertNoteTurso({
+      await upsertNoteTurso({
         id: noteId,
         userId,
         title: data?.title,
@@ -156,24 +147,10 @@ export async function updateNote(noteId: string, data: any) {
         category: data?.category,
         tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags ?? undefined),
         updatedAt: new Date().toISOString(),
-      } as any).catch((e) => console.warn('[client-ops] Turso updateNote mirror failed:', e));
+      } as any);
     } catch {}
   }
 
-  // 2. Direct Appwrite write (legacy fast-path if user is logged into Appwrite)
-  const { tryOwnerDirectUpdateNote } = await import('@/lib/data');
-  const direct = await tryOwnerDirectUpdateNote(noteId, data).catch(() => null);
-  if (direct) return direct;
-
-  const jwt = await getJwt();
-  if (jwt) {
-    try {
-      return await updateNoteSecure(noteId, data, jwt);
-    } catch (err: any) {
-      console.warn('[client-ops] Appwrite updateNoteSecure bypassed (saved to Turso):', err?.message);
-      return { $id: noteId, ...data };
-    }
-  }
   return { $id: noteId, ...data };
 }
 
@@ -758,4 +735,3 @@ export async function purgeExpiredTrash(retentionDays: number = 90) {
   const { purgeExpiredTrashSecure } = await import('./secure-ops');
   return purgeExpiredTrashSecure({ retentionDays, jwt });
 }
-

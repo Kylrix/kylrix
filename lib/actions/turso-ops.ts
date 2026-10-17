@@ -53,12 +53,35 @@ export async function consolidateUserByEmail(
       return newUser;
     }
 
-    let canonicalUser = matchingUsers[0];
-    for (const u of matchingUsers) {
-      const uCreated = u.createdAt ? new Date(u.createdAt).getTime() : Date.now();
-      const canCreated = canonicalUser.createdAt ? new Date(canonicalUser.createdAt).getTime() : Date.now();
-      if (uCreated < canCreated) {
-        canonicalUser = u;
+    if (candidateData?.id && !matchingUsers.some((u) => u.id === candidateData.id)) {
+      const now = new Date();
+      await db.insert(schema.user).values({
+        id: candidateData.id,
+        name: candidateData.name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        emailVerified: Boolean(candidateData.emailVerified),
+        image: candidateData.image || null,
+        createdAt: now,
+        updatedAt: now,
+      }).onConflictDoNothing();
+      const candidateUser = await db
+        .select()
+        .from(schema.user)
+        .where(eq(schema.user.id, candidateData.id))
+        .limit(1);
+      if (candidateUser.length > 0) matchingUsers.push(candidateUser[0]);
+    }
+
+    let canonicalUser = candidateData?.id
+      ? matchingUsers.find((u) => u.id === candidateData.id) || matchingUsers[0]
+      : matchingUsers[0];
+    if (!candidateData?.id) {
+      for (const u of matchingUsers) {
+        const uCreated = u.createdAt ? new Date(u.createdAt).getTime() : Date.now();
+        const canCreated = canonicalUser.createdAt ? new Date(canonicalUser.createdAt).getTime() : Date.now();
+        if (uCreated < canCreated) {
+          canonicalUser = u;
+        }
       }
     }
 

@@ -557,12 +557,18 @@ export async function listNotesByUser(_userId?: string): Promise<any> {
 }
 
 export async function listNotesPaginated(_options?: any): Promise<{ rows: any[]; total: number; hasMore?: boolean; nextCursor?: string | null }> {
-  const { systemTables } = await import('./system-tables');
-  const res = await systemTables().listRows({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-  });
-  return { rows: res.rows, total: res.total, hasMore: false, nextCursor: null };
+  try {
+    const { authClient } = await import('@/lib/auth/better-auth-client');
+    const session = await authClient.getSession();
+    const userId = session?.data?.user?.id;
+    if (!userId) return { rows: [], total: 0, hasMore: false, nextCursor: null };
+    const { listNotesTurso } = await import('@/lib/actions/turso-ops');
+    const res = await listNotesTurso(userId);
+    return { rows: res.rows, total: res.rows.length, hasMore: false, nextCursor: null };
+  } catch (err) {
+    console.warn('[data] Turso note list failed:', err);
+    return { rows: [], total: 0, hasMore: false, nextCursor: null };
+  }
 }
 
 export async function updateNote(id: string, data: any): Promise<any> {
@@ -789,7 +795,18 @@ export const ProjectsService = {
     return { success: true };
   },
   async fetchRemoteProjects(..._args: any[]): Promise<any[]> {
-    return [];
+    try {
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      const session = await authClient.getSession();
+      const userId = session?.data?.user?.id;
+      if (!userId) return [];
+      const { listWorkspacesTurso } = await import('@/lib/actions/turso-ops');
+      const res = await listWorkspacesTurso(userId);
+      return res.rows || [];
+    } catch (err) {
+      console.warn('[ProjectsService] Turso workspace list failed:', err);
+      return [];
+    }
   },
 };
 
