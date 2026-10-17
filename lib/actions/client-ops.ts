@@ -92,29 +92,24 @@ export async function createNote(data: any) {
 
   // Primary write to Turso
   if (userId && userId !== 'guest') {
-    try {
-      const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
-      await upsertNoteTurso({
-        id: noteId,
-        userId,
-        title: data?.title || '',
-        content: data?.content || '',
-        isLocked: Boolean(data?.isLocked),
-        isPublished: Boolean(data?.isPublished),
-        isPinned: Boolean(data?.isPinned),
-        isTrashed: Boolean(data?.isTrash || data?.isTrashed),
-        isWorkspace: Boolean(data?.isWorkspace),
-        projectId: data?.projectId || null,
-        workspaceId: data?.projectId || null,
-        category: data?.category || null,
-        tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags || null),
-        createdAt: data?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }).catch((e) => {
-        console.error('[client-ops] Turso createNote failed:', e);
-        throw e;
-      });
-    } catch {}
+    const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
+    await upsertNoteTurso({
+     id: noteId,
+     userId,
+     title: data?.title || '',
+     content: data?.content || '',
+     isLocked: Boolean(data?.isLocked),
+     isPublished: Boolean(data?.isPublished),
+     isPinned: Boolean(data?.isPinned),
+     isTrashed: Boolean(data?.isTrash || data?.isTrashed),
+     isWorkspace: Boolean(data?.isWorkspace),
+     projectId: data?.projectId || null,
+     workspaceId: data?.projectId || null,
+     category: data?.category || null,
+     tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags || null),
+     createdAt: data?.createdAt || new Date().toISOString(),
+     updatedAt: new Date().toISOString(),
+    });
   }
 
   return { $id: noteId, ...data };
@@ -130,25 +125,23 @@ export async function updateNote(noteId: string, data: any) {
 
   // 1. Primary write to Turso (MUST happen unconditionally so Turso stays in sync)
   if (userId && userId !== 'guest') {
-    try {
-      const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
-      await upsertNoteTurso({
-        id: noteId,
-        userId,
-        title: data?.title,
-        content: data?.content,
-        isLocked: typeof data?.isLocked === 'boolean' ? data.isLocked : undefined,
-        isPublished: typeof data?.isPublished === 'boolean' ? data.isPublished : undefined,
-        isPinned: typeof data?.isPinned === 'boolean' ? data.isPinned : undefined,
-        isTrashed: typeof (data?.isTrash ?? data?.isTrashed) === 'boolean' ? Boolean(data?.isTrash ?? data?.isTrashed) : undefined,
-        isWorkspace: typeof data?.isWorkspace === 'boolean' ? data.isWorkspace : undefined,
-        projectId: data?.projectId,
-        workspaceId: data?.projectId || data?.workspaceId,
-        category: data?.category,
-        tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags ?? undefined),
-        updatedAt: new Date().toISOString(),
-      } as any);
-    } catch {}
+    const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
+    await upsertNoteTurso({
+     id: noteId,
+     userId,
+     title: data?.title,
+     content: data?.content,
+     isLocked: typeof data?.isLocked === 'boolean' ? data.isLocked : undefined,
+     isPublished: typeof data?.isPublished === 'boolean' ? data.isPublished : undefined,
+     isPinned: typeof data?.isPinned === 'boolean' ? data.isPinned : undefined,
+     isTrashed: typeof (data?.isTrash ?? data?.isTrashed) === 'boolean' ? Boolean(data?.isTrash ?? data?.isTrashed) : undefined,
+     isWorkspace: typeof data?.isWorkspace === 'boolean' ? data.isWorkspace : undefined,
+     projectId: data?.projectId,
+     workspaceId: data?.projectId || data?.workspaceId,
+     category: data?.category,
+     tags: Array.isArray(data?.tags) ? JSON.stringify(data.tags) : (data?.tags ?? undefined),
+     updatedAt: new Date().toISOString(),
+    } as any);
   }
 
   return { $id: noteId, ...data };
