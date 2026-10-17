@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import { JetBrains_Mono, Outfit, Space_Grotesk } from 'next/font/google';
 import { getProductName, getProductSiteUrl } from '@/lib/config/product';
 import './globals.css';
@@ -77,7 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={`${mono.variable} ${outfit.variable} ${spaceGrotesk.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `
+        <Script id="kylrix-pulse-bootstrap" strategy="beforeInteractive">{`
           (function() {
             try {
               var match = document.cookie.match(new RegExp('(^| )kylrix_pulse_v2=([^;]+)'));
@@ -93,7 +94,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               }
             } catch(e) {}
           })();
-        `}} />
+        `}</Script>
         
         <link 
           href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&f[]=satoshi@300,400,500,700,900&display=swap" 
