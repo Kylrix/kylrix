@@ -105,7 +105,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         })
         .map((p: any) => {
           const id = String(p.$id || p.id || '').trim();
-          const ownerId = p.ownerId || p.userId || '';
+          const ownerId = p.ownerId || p.userId || p.creatorId || '';
           const isAgentic = p.isAgentic === true || String(p.isAgentic) === 'true';
           const isExternal = p.isExternal === true || String(p.isExternal) === 'true';
           const externalClient = p.externalClient || null;

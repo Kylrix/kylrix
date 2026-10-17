@@ -425,6 +425,10 @@ export const subscriptions = sqliteTable('subscriptions', {
   status: text('status').notNull().default('active'),
   referralCode: text('referral_code'),
   metadata: text('metadata'),
+  plan: text('plan'),
+  seats: integer('seats').default(1),
+  currentPeriodStart: text('current_period_start'),
+  currentPeriodEnd: integer('current_period_end', { mode: 'timestamp' }),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

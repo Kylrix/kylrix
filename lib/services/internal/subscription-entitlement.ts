@@ -47,13 +47,17 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
 
     if (tursoSub.length > 0 && tursoSub[0].status === 'active') {
       const tierUpper = String(tursoSub[0].tier || 'free').toUpperCase();
-      if (tierUpper !== 'FREE') {
+      const periodEnd = tursoSub[0].currentPeriodEnd
+        ? new Date(tursoSub[0].currentPeriodEnd).getTime()
+        : null;
+      const active = periodEnd === null || periodEnd > Date.now();
+      if (tierUpper !== 'FREE' && active) {
         const resTier = (tierUpper === 'PRO' || tierUpper === 'TEAMS' || tierUpper === 'LIFETIME' || tierUpper === 'CONTRIBUTOR')
           ? (tierUpper as BillingUiTier)
           : 'PRO';
         return {
           active: true,
-          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          expiresAt: periodEnd ? new Date(periodEnd).toISOString() : null,
           source: 'subscription_row',
           uiTier: resTier,
         };
@@ -62,17 +66,19 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
   } catch {}
 
   return {
-    active: true,
+    active: false,
     expiresAt: null,
-    source: 'prefs_lifetime',
-    uiTier: 'LIFETIME',
+    source: 'none',
+    uiTier: 'FREE',
   };
 }
 
-export async function hasPaidKylrixPlanServer(_userId: string): Promise<boolean> {
-  return true;
+export async function hasPaidKylrixPlanServer(userId: string): Promise<boolean> {
+  const entitlement = await getVerifiedProEntitlementForUser(userId);
+  return entitlement.active;
 }
 
-export async function getUserSubscriptionTierServer(_userId: string): Promise<BillingUiTier> {
-  return 'LIFETIME';
+export async function getUserSubscriptionTierServer(userId: string): Promise<BillingUiTier> {
+  const entitlement = await getVerifiedProEntitlementForUser(userId);
+  return entitlement.uiTier;
 }
