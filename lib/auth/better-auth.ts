@@ -7,8 +7,11 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { PAT_SCOPES } from '@/lib/api/scopes';
 
-const BETTER_AUTH_BASE_URL =
-  process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3005';
+const configuredAppURL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3005';
+const isLocalAppURL = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredAppURL);
+const BETTER_AUTH_BASE_URL = isLocalAppURL
+  ? configuredAppURL
+  : process.env.BETTER_AUTH_URL || configuredAppURL;
 
 export const KYLRIX_OAUTH_SCOPES = [
   'openid',
