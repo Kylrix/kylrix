@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
-import { eq, and, or } from 'drizzle-orm';
+import { eq, and, or, inArray } from 'drizzle-orm';
 
 /**
  * Consolidates duplicate user entries matching the same email into a single canonical user ID.
@@ -458,10 +458,21 @@ export async function upsertProjectTurso(data: typeof schema.projects.$inferInse
 
 export async function listWorkspacesTurso(userId: string) {
   try {
-    const rows = await db
+    const ownedRows = await db
       .select()
       .from(schema.projects)
       .where(eq(schema.projects.creatorId, userId));
+    const memberships = await db
+      .select({ workspaceId: schema.projectObjects.workspaceId })
+      .from(schema.projectObjects)
+      .where(eq(schema.projectObjects.userId, userId));
+    const memberIds = memberships.map((row) => row.workspaceId).filter(Boolean);
+    const sharedRows = memberIds.length
+      ? await db.select().from(schema.projects).where(inArray(schema.projects.id, memberIds))
+      : [];
+    const rows = Array.from(new Map(
+      [...ownedRows, ...sharedRows].map((row) => [row.id, row]),
+    ).values());
     return { success: true, rows };
   } catch (err: any) {
     console.error('[turso-ops] listWorkspacesTurso failed:', err);

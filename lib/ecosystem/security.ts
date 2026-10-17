@@ -1186,10 +1186,8 @@ class EcosystemSecurity {
     const { value: rows } = await raceNetworkOrLocal({
       timeoutMs: 2500,
       network: async () => {
-        const res = await tablesDB.listRows(
-          APPWRITE_CONFIG.DATABASES.VAULT,
-          APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
-          [Query.equal('userId', userId), Query.limit(50)]);
+        const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
+        const res = await listKeychainTurso(userId);
         return res.rows || [];
       },
       local: async () => localRows});

@@ -5,7 +5,13 @@ import { getActor } from '@/lib/actions/secure-ops/shared';
 
 export async function getReferralStatsAction(username?: string | null, jwt?: string): Promise<ReferralStats> {
   const actor = await getActor(jwt);
-  const userId = actor?.$id;
+  let userId = actor?.$id;
+  try {
+    const { headers } = await import('next/headers');
+    const { auth } = await import('@/lib/auth/better-auth');
+    const session = await auth.api.getSession({ headers: await headers() });
+    userId = session?.user?.id || userId;
+  } catch {}
   if (!userId) {
     return {
       totalReferred: 0,
@@ -25,7 +31,13 @@ export async function claimReferralAction(payload: AttributionPayload, jwt?: str
   error?: string;
 }> {
   const actor = await getActor(jwt);
-  const userId = actor?.$id;
+  let userId = actor?.$id;
+  try {
+    const { headers } = await import('next/headers');
+    const { auth } = await import('@/lib/auth/better-auth');
+    const session = await auth.api.getSession({ headers: await headers() });
+    userId = session?.user?.id || userId;
+  } catch {}
   if (!userId) {
     return { ok: false, error: 'Unauthorized' };
   }
