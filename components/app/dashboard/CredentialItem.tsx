@@ -424,7 +424,7 @@ export default function CredentialItem({
           <img src={faviconUrl} className="w-8 h-8 object-contain" alt="" />
         ) : (
           <span className="font-black text-[#10B981] text-[1.3rem] font-clash">
-            {(displayCredential as any).name?.charAt(0)?.toUpperCase() || "?"}
+            {(displayCredential as any).name?.charAt(0)?.toUpperCase() || "E"}
           </span>
         )}
       </div>

@@ -551,7 +551,7 @@ export default function CredentialDetail({
                 <img src={faviconUrl} className="w-6 h-6 object-contain" alt="" />
               ) : (
                 <span className="text-lg font-black text-white font-clash">
-                  {liveCredential.name?.charAt(0)?.toUpperCase() || '?'}
+                  {liveCredential.name?.charAt(0)?.toUpperCase() || 'E'}
                 </span>
               )}
             </div>

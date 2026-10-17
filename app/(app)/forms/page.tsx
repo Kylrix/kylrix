@@ -145,7 +145,7 @@ export default function FormsDashboard() {
     }, [isResourcePinned]);
 
     const fetchForms = useCallback(async (showLoading = true) => {
-        const userId = user?.$id || 'guest';
+        const userId = (user as any)?.id || user?.$id || 'guest';
         const isStateEmpty = formsRef.current.length === 0;
         if (showLoading && isStateEmpty) setLoading(true);
 
@@ -237,7 +237,7 @@ export default function FormsDashboard() {
         } finally {
             setLoading(false);
         }
-    }, [user?.$id, sortForms]);
+    }, [(user as any)?.id, user?.$id, sortForms]);
     const fetchFormsRef = useRef(fetchForms);
     useEffect(() => {
         fetchFormsRef.current = fetchForms;
@@ -246,27 +246,8 @@ export default function FormsDashboard() {
     useEffect(() => {
         void fetchForms(false);
 
-        // Realtime subscription: live sync for forms mutations (initialized once per user)
-        let unsubscribe: (() => void) | undefined;
-        void (async () => {
-            try {
-                const { realtime } = await import('@/lib/data');
-                const { APPWRITE_CONFIG } = await import('@/lib/data');
-                const dbId = APPWRITE_CONFIG.DATABASES.FLOW;
-                const tableId = APPWRITE_CONFIG.TABLES.FLOW.FORMS;
-                const channel = `databases.${dbId}.collections.${tableId}.documents`;
-                unsubscribe = realtime.subscribe(channel, (response: any) => {
-                    if (response?.events?.some((event: string) => event.includes('.create') || event.includes('.update') || event.includes('.delete'))) {
-                        void fetchFormsRef.current(false);
-                    }
-                });
-            } catch {}
-        })();
-
-        return () => {
-            if (unsubscribe) unsubscribe();
-        };
-    }, [user?.$id]);
+        return undefined;
+    }, [(user as any)?.id, user?.$id]);
 
     // Eagerly pull custom workspace forms into local state when switching workspaces
     useEffect(() => {

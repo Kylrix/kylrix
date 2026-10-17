@@ -16,21 +16,6 @@ export async function listCouponsAction(jwt?: string) {
   }
   requireAdmin(user);
 
-  // 1. Try Appwrite if configured
-  try {
-    if (process.env.APPWRITE_API) {
-      const { databases } = createAdminClient();
-      const result = await databases.listRows(NOTE_DB_ID, COUPONS_TABLE_ID, [
-        Query.orderDesc('$createdAt'),
-        Query.limit(100)
-      ]);
-      return result.rows;
-    }
-  } catch (err: any) {
-    console.warn('[listCouponsAction] Appwrite query failed, falling back to Turso:', err.message);
-  }
-
-  // 2. Fallback to Turso / SQLite
   try {
     const { listCouponsTurso } = await import('@/lib/actions/turso-ops');
     const res = await listCouponsTurso();
