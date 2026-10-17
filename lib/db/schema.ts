@@ -474,7 +474,7 @@ export const forms = sqliteTable('forms', {
   userId: text('user_id').notNull(),
   title: text('title').notNull().default(''),
   description: text('description').default(''),
-  schema: text('schema').notNull().default('[]'),
+  schema: text('schema_json').notNull().default('[]'),
   settings: text('settings').default('{}'),
   status: text('status').default('active'),
   visibility: text('visibility').default('private'),
@@ -509,7 +509,7 @@ export const formSubmissions = sqliteTable('form_submissions', {
 // 2. Events & Calendars
 export const events = sqliteTable('events', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
+  userId: text('creator_id').notNull(),
   calendarId: text('calendar_id').notNull().default('default'),
   title: text('title').notNull().default(''),
   description: text('description').default(''),
