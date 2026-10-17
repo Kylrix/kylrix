@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/better-auth';
 
 const SOCIAL_PROVIDERS = new Set(['google', 'github']);
@@ -13,11 +13,17 @@ export async function GET(
   }
 
   const callbackURL = request.nextUrl.searchParams.get('callbackURL') || '/app';
-  return auth.api.signInSocial({
+  const result = await auth.api.signInSocial({
     body: {
       provider,
       callbackURL,
     },
     headers: request.headers,
   });
+
+  if (result && typeof result === 'object' && 'url' in result && typeof result.url === 'string') {
+    return NextResponse.redirect(new URL(result.url, request.url));
+  }
+
+  return NextResponse.json(result, { status: 400 });
 }

@@ -120,7 +120,7 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
       }
       return;
     } catch (betterAuthErr) {
-      console.warn('[OAuthButtons] Better Auth social sign-in fallback to Appwrite:', betterAuthErr);
+      console.warn('[OAuthButtons] Better Auth social sign-in fallback:', betterAuthErr);
     }
 
     // 2. Secondary fallback via Appwrite

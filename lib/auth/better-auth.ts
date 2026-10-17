@@ -7,6 +7,9 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { PAT_SCOPES } from '@/lib/api/scopes';
 
+const BETTER_AUTH_BASE_URL =
+  process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3005';
+
 export const KYLRIX_OAUTH_SCOPES = [
   'openid',
   'profile',
@@ -39,7 +42,12 @@ export const auth = betterAuth({
     },
   }),
   secret: process.env.BETTER_AUTH_SECRET || 'kylrix_default_dev_secret_must_be_32_chars_long_min',
-  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3005',
+  baseURL: BETTER_AUTH_BASE_URL,
+  trustedOrigins: [
+    BETTER_AUTH_BASE_URL,
+    'http://localhost:3005',
+    'http://127.0.0.1:3005',
+  ],
   socialProviders: {
     ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
       ? {
